@@ -215,6 +215,10 @@ cp -pr Examples $baseDropPath
 echo "Copying Tutorials..." >&3
 cp -pr Tutorials $baseDropPath
 
+# Copy PretrainedModels
+echo "Copying PretrainedModels..." >&3
+cp -pr PretrainedModels $baseDropPath
+
 # Copy Manual
 echo "Copying Manual..." >&3
 cp -pr Manual $baseDropPath

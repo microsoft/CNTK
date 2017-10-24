@@ -140,18 +140,18 @@ def create_alexnet():
     }
 
 # Create trainer
-def create_trainer(network, epoch_size, num_quantization_bits, printer, block_size, warm_up):
+def create_trainer(network, epoch_size, num_quantization_bits, printer, block_size, warm_up, minibatch_size):
     # Set learning parameters
     lr_per_mb         = [0.01]*25 + [0.001]*25 + [0.0001]*25 + [0.00001]*25 + [0.000001]
-    lr_schedule       = C.learning_rate_schedule(lr_per_mb, unit=C.learners.UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule       = C.learners.momentum_schedule(0.9)
+    lr_schedule       = C.learning_parameter_schedule(lr_per_mb, minibatch_size=minibatch_size, epoch_size=epoch_size)
+    mm_schedule       = C.learners.momentum_schedule(0.9, minibatch_size=minibatch_size)
     l2_reg_weight     = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
 
     if block_size != None and num_quantization_bits != 32:
         raise RuntimeError("Block momentum cannot be used with quantization, please remove quantized_bits option.")
 
     # Create learner
-    local_learner = C.learners.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
+    local_learner = C.learners.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, minibatch_size=minibatch_size, unit_gain=False, l2_regularization_weight=l2_reg_weight)
     # Since we reuse parameter settings (learning rate, momentum) from Caffe, we set unit_gain to False to ensure consistency
 
     # Create trainer
@@ -195,7 +195,7 @@ def alexnet_train_and_eval(train_data, test_data, num_quantization_bits=32, bloc
         num_epochs=max_epochs)
 
     network = create_alexnet()
-    trainer = create_trainer(network, epoch_size, num_quantization_bits, progress_printer, block_size, warm_up)
+    trainer = create_trainer(network, epoch_size, num_quantization_bits, progress_printer, block_size, warm_up, minibatch_size=minibatch_size)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
     train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore)

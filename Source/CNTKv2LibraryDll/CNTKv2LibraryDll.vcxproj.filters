@@ -37,6 +37,69 @@
     <ClCompile Include="ProgressWriter.cpp" />
     <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="UserDefinedFunction.cpp" />
+    <ClCompile Include="proto\onnx\protobuf\graph.pb.cc.VS_wrapper.cpp">
+      <Filter>proto\onnx\protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\CNTKToONNX.cpp">
+      <Filter>proto\onnx</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\ONNX.cpp">
+      <Filter>proto\onnx</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\ONNXToCNTK.cpp">
+      <Filter>proto\onnx</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\Operators.cpp">
+      <Filter>proto\onnx</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\constants.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\graph.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\model.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\op.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\opsignature.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\shape_inference.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\status.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\utils.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\experiments\defs.cpp">
+      <Filter>proto\onnx\defs\experiments</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\generator\defs.cpp">
+      <Filter>proto\onnx\defs\generator</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\logical\defs.cpp">
+      <Filter>proto\onnx\defs\logical</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\math\defs.cpp">
+      <Filter>proto\onnx\defs\math</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\nn\defs.cpp">
+      <Filter>proto\onnx\defs\nn</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\reduction\defs.cpp">
+      <Filter>proto\onnx\defs\reduction</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\rnn\defs.cpp">
+      <Filter>proto\onnx\defs\rnn</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\tensor\defs.cpp">
+      <Filter>proto\onnx\defs\tensor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -69,6 +132,42 @@
     <ClInclude Include="Variable.h" />
     <ClInclude Include="UserFunctionFactory.h" />
     <ClInclude Include="UserDefinedFunction.h" />
+    <ClInclude Include="proto\onnx\CNTKToONNX.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\ONNX.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\ONNXToCNTK.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\Operators.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\constants.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\graph.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\model.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\op.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\opsignature.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\shape_inference.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\status.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\utils.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
@@ -80,6 +179,42 @@
     <Filter Include="tensorboard">
       <UniqueIdentifier>{4242f3a9-0e06-4bf5-b2c2-85b292fe0b43}</UniqueIdentifier>
     </Filter>
+    <Filter Include="proto\onnx">
+      <UniqueIdentifier>{ca68761d-44d4-41a9-b055-4b192402ed0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\protobuf">
+      <UniqueIdentifier>{77b30c82-208d-4c0d-825c-9b0eda61caa6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\core">
+      <UniqueIdentifier>{ac45f7f4-5f65-40d4-9163-46580266ae16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs">
+      <UniqueIdentifier>{cb1e39c1-bd5e-4d7f-8c83-39de28e70307}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\experiments">
+      <UniqueIdentifier>{6168d648-8e32-4ad7-b16d-78d6a2e7a461}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\generator">
+      <UniqueIdentifier>{e52f27a1-b8c4-4d67-874f-51aa43b04815}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\logical">
+      <UniqueIdentifier>{e8f5863d-409a-4b02-814b-a93241e4e56d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\math">
+      <UniqueIdentifier>{6a99c5c8-2686-4007-83ed-988b1e1ae852}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\nn">
+      <UniqueIdentifier>{7a757445-6a05-4bd2-b37d-6d95da3112fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\reduction">
+      <UniqueIdentifier>{cd1c3786-8e2a-44bf-a7fc-28114019cf2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\rnn">
+      <UniqueIdentifier>{4bc38915-7be4-42e2-951b-9445abf8038c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\tensor">
+      <UniqueIdentifier>{deb73515-13a1-4926-b5fc-e8c6e97f7784}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Proto Include="proto\CNTK.proto">
@@ -87,6 +222,9 @@
     </Proto>
     <Proto Include="tensorboard\tensorboard.proto">
       <Filter>tensorboard</Filter>
+    </Proto>
+    <Proto Include="proto\onnx\protobuf\graph.proto">
+      <Filter>proto\onnx\protobuf</Filter>
     </Proto>
   </ItemGroup>
 </Project>

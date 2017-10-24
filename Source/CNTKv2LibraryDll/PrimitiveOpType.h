@@ -94,6 +94,8 @@ namespace CNTK
         Acos = 82,
         Pad = 83,
         Crop = 84,
+        Atanh = 85,
+        Asinh = 86,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

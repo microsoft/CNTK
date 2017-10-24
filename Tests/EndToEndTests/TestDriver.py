@@ -400,6 +400,7 @@ class Test:
         'Quadro K2000' : 3,
         'Quadro M2000M': 5,
         'Quadro M4000': 5,
+        'Tesla M60' : 5,
       }
       cc = sys.maxsize
       try:
@@ -691,7 +692,7 @@ def runCommand(args):
     pyPaths['py35'] = convertPythonPath(args.py35_paths)
   if args.py36_paths:
     pyPaths['py36'] = convertPythonPath(args.py36_paths)
-  # If no Python was explicitly specifed, go against current.
+  # If no Python was explicitly specified, go against current.
   if not pyPaths:
     pyPaths['py'] = ''
 

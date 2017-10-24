@@ -23,7 +23,7 @@
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup>
-    <CntkCsAssemblyVersion>2.1</CntkCsAssemblyVersion>
+    <CntkCsAssemblyVersion>2.2</CntkCsAssemblyVersion>
     <CntkCsAssemblyVersion Condition="$(DebugBuild)">$(CntkCsAssemblyVersion)d</CntkCsAssemblyVersion>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">
@@ -63,19 +63,22 @@
     <Compile Include="..\..\..\..\Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs">
       <Link>CNTKImageProcessing.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\CifarResNetClassifier.cs">
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\CifarResNetClassifier.cs">
       <Link>CifarResNetClassifier.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\LSTMSequenceClassifier.cs">
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\LogisticRegression.cs">
+      <Link>LogisticRegression.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\LSTMSequenceClassifier.cs">
       <Link>LSTMSequenceClassifier.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\MNISTClassifier.cs">
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\MNISTClassifier.cs">
       <Link>MNISTClassifier.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\TestHelper.cs">
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\TestHelper.cs">
       <Link>TestHelper.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\Examples\TrainingCShape\Common\TransferLearning.cs">
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\TransferLearning.cs">
       <Link>TransferLearning.cs</Link>
     </Compile>
     <Compile Include="Program.cs" />

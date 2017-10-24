@@ -382,7 +382,8 @@ public:
         if (!GetAutoPad(dim))
             return (int)m_lowerPad[m_lowerPad.size() == 1 ? 0 : dim];
 
-        int kernSize = (int)m_kernelShape[dim];
+        int dilation = (int)GetDilation(dim);
+        int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
         int inpSize = (int)m_inputShape[dim];
         int outSize = (int)m_outputShape[dim];
         int stride = (int)GetStride(dim);
@@ -401,7 +402,8 @@ public:
         if (!GetAutoPad(dim))
             return (int)m_upperPad[m_upperPad.size() == 1 ? 0 : dim];
 
-        int kernSize = (int)m_kernelShape[dim];
+        int dilation = (int)GetDilation(dim);
+        int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
         int inpSize = (int)m_inputShape[dim];
         int outSize = (int)m_outputShape[dim];
         int stride = (int)GetStride(dim);

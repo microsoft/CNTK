@@ -79,6 +79,9 @@ namespace CNTKLibraryCSEvalExamples
 
                 MemoryTests.ValueCopyToSparseCSCTest<float>(device);
                 MemoryTests.ValueCopyToSparseCSCTest<double>(device);
+
+                CNTKLibraryManagedExamples.EvaluateIntermediateLayer(device);
+                CNTKLibraryManagedExamples.EvaluateCombinedOutputs(device);
             }
 
             if (ShouldRunOnGpu())
@@ -105,6 +108,9 @@ namespace CNTKLibraryCSEvalExamples
 
                 MemoryTests.ValueCopyToSparseCSCTest<float>(device);
                 MemoryTests.ValueCopyToSparseCSCTest<double>(device);
+
+                CNTKLibraryManagedExamples.EvaluateIntermediateLayer(device);
+                CNTKLibraryManagedExamples.EvaluateCombinedOutputs(device);
             }
 
             Console.WriteLine("======== Evaluation completes. ========");

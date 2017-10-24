@@ -121,7 +121,7 @@ else
 fi
 
 # Additional packages for ImageReader
-PACKAGES+=" libjasper1 libjpeg8 libpng12-0"
+PACKAGES+=" libjasper1 libjpeg8 libpng12-0 libtiff5"
 
 if dpkg -s $PACKAGES 1>/dev/null 2>/dev/null; then
   printf "Packages already installed, skipping.\n"

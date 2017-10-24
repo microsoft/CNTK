@@ -164,7 +164,7 @@ TextInputIndexBuilder::TextInputIndexBuilder(const FileWrapper& input)
 
 /*virtual*/ wstring TextInputIndexBuilder::GetCacheFilename() /*override*/
 {
-    // What follows are all the options that affect the outcome of indexing (i.e., specifing a 'main' stream 
+    // What follows are all the options that affect the outcome of indexing (i.e., specifying a 'main' stream 
     // using the definesMBsize flag will affect the sequence length in terms of number of samples). 
     // We could compute a (SHA1) hash of all these options and add it instead to the filename (+ embed the
     // values themselves into the cache header), but given that there're only a few of them, encoding them

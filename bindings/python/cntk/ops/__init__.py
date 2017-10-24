@@ -12,7 +12,7 @@ from __future__ import print_function
 import numpy as np
 import numbers
 from . import sequence
-from .functions import CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
+from .functions import ModelFormat, CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, sanitize_multi_axis_reduction_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
@@ -220,7 +220,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], dilation=(1,), max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], dilation=(1,), reduction_rank=1, groups=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -234,7 +234,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     `convolution` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
     ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
     The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
-    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input, which can be ignored if `reduction_rank` is `0`.
     The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
     dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
@@ -264,6 +264,11 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
         dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+        reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
+        groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+         which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
+         divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
+         Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -277,11 +282,11 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     dilation = sanitize_shape(dilation)
     return convolution(convolution_map, operand, strides, sharing, auto_padding, dilation,
-                       max_temp_mem_size_in_samples, name)
+                       reduction_rank, groups, max_temp_mem_size_in_samples, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
-                          auto_padding=[True], output_shape=None, dilation=(1,), max_temp_mem_size_in_samples=0, name=''):
+                          auto_padding=[True], output_shape=None, dilation=(1,), reduction_rank=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -327,6 +332,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          the input dimension. The last value that lines up with the number of input channels must be false.
         output_shape: user expected output shape after convolution transpose.
         dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+        reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -343,7 +349,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     output_shape = sanitize_shape(output_shape)
     dilation = sanitize_shape(dilation)
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
-                                 output_shape, dilation, max_temp_mem_size_in_samples, name)
+                                 output_shape, dilation, reduction_rank, max_temp_mem_size_in_samples, name)
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
@@ -510,6 +516,34 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     return batch_normalization(operand, scale, bias, running_mean, running_inv_std, running_count, spatial,
                                normalization_time_constant, blend_time_constant,
                                epsilon, use_cudnn_engine, name)
+
+@typemap
+def local_response_normalization(operand, depth_radius, bias, alpha, beta, name=''):
+    '''
+    Local Response Normalization layer. See Section 3.3 of the paper:
+
+    https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+
+    The mathematical equation is:
+
+    ``b_{x,y}^i=a_{x,y}^i/(bias+\alpha\sum_{j=max(0,i-depth_radius)}^{min(N-1, i+depth_radius)}(a_{x,y}^j)^2)^\beta``
+
+    where a_{x,y}^i is the activity of a neuron computed by applying kernel i at position (x,y)
+    N is the total number of kernels, depth_radius is half normalization width.
+
+    Args:
+        operand: input of the Local Response Normalization.
+        depth_radius (int): the radius on the channel dimension to apply the normalization.
+        bias (double): a bias term to avoid divide by zero.
+        alpha (double): the alpha term of the above equation.
+        beta (double): the beta term of the above equation.
+        name (str, optional): the name of the Function instance in the network.
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import local_response_normalization
+    operand = sanitize_input(operand)
+    return local_response_normalization(operand, depth_radius, bias, alpha, beta, name)
 
 ##########################################################################
 # comparison ops
@@ -846,8 +880,6 @@ def element_times(left, right, name=''):
     right = sanitize_input(right, dtype)
     return cntk_py_element_times(left, right, name)
 
-
-# TODO: move element_max/min to C++
 @associative_multi_arg
 @typemap
 def element_max(left, right, name=''):
@@ -863,10 +895,11 @@ def element_max(left, right, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    gt = greater(left, right)
-    # TODO: use as_block()
-    return element_select(gt, left, right, name)
-
+    from cntk.cntk_py import element_max as cntk_py_element_max
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    right = sanitize_input(right, dtype)
+    return cntk_py_element_max(left, right, name)
 
 @associative_multi_arg
 @typemap
@@ -883,10 +916,11 @@ def element_min(left, right, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    lt = less(left, right)
-    # TODO: use as_block()
-    return element_select(lt, left, right, name)
-
+    from cntk.cntk_py import element_min as cntk_py_element_min
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    right = sanitize_input(right, dtype)
+    return cntk_py_element_min(left, right, name)
 
 @typemap
 def element_divide(left, right, name=''):
@@ -1441,6 +1475,28 @@ def tanh(x, name=''):
     return tanh(x, name)
 
 @typemap
+def atanh(x, name=''):
+    '''
+    Computes the element-wise atanh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.atanh([[0.9,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.47222,  0.54931],
+               [-0.25541, -0.97296]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import atanh
+    x = sanitize_input(x)
+    return atanh(x, name)
+
+@typemap
 def sin(x, name=''):
     '''
     Computes the element-wise sine of ``x``:
@@ -1571,6 +1627,28 @@ def cosh(x, name=''):
     from cntk.cntk_py import cosh
     x = sanitize_input(x)
     return cosh(x, name)
+
+@typemap
+def asinh(x, name=''):
+    '''
+    Computes the element-wise asinh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.asinh([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 0.88137,  0.48121],
+               [-0.24747, -0.69315]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import asinh
+    x = sanitize_input(x)
+    return asinh(x, name)
 
 
 @typemap
@@ -2755,7 +2833,7 @@ def random_sample_inclusion_frequency(
     seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
     '''
-    For weighted sampling with the specifed sample size (`num_samples`)
+    For weighted sampling with the specified sample size (`num_samples`)
     this operation computes the expected number of occurrences of each class
     in the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the

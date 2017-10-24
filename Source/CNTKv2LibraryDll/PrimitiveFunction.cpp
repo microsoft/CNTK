@@ -111,6 +111,14 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingFoot = L"paddingFoot";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingMode = L"paddingMode";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingConstantValue = L"paddingConstantValue";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameAlpha = L"alpha";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameBeta = L"beta";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameGamma = L"gamma";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameKernelShape = L"kernelShape";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameBias = L"bias";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDepthRadius = L"depthRadius";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomAttributes = L"customAttributes";
+
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -391,6 +399,7 @@ namespace CNTK
                         case PrimitiveOpType::Negate:
                         case PrimitiveOpType::Sigmoid:
                         case PrimitiveOpType::Tanh:
+                        case PrimitiveOpType::Atanh:
                         case PrimitiveOpType::ReLU:
                         case PrimitiveOpType::Exp:
                         case PrimitiveOpType::Log:
@@ -407,6 +416,7 @@ namespace CNTK
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Cosh:
+                        case PrimitiveOpType::Asinh:
                         case PrimitiveOpType::Sinh:
                         case PrimitiveOpType::Pass:
                         case PrimitiveOpType::LabelsToGraph:
@@ -690,9 +700,6 @@ namespace CNTK
                             std::vector<bool> sharing = { true };
                             auto inputShape = m_inputs[0].Shape();
 
-                            if (inputShape.HasFreeDimension())
-                                LogicError("Function '%S': Currently pooling does not support operands with free static axes dimensions.", AsString().c_str());
-
                             // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
                             if (poolingWindowsShape.IsUnknown() && !inputShape.SubShape(0, inputShape.Rank() - 1).HasUnboundDimension())
                             {
@@ -712,8 +719,6 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
 
                             auto inputShape = m_inputs[0].Shape();
-                            if (inputShape.HasFreeDimension())
-                                LogicError("Function '%S': Currently unpooling does not support operands with free static axes dimensions.", AsString().c_str());
 
                             outputShape = m_inputs[1].Shape();
                             PoolingType unpoolingType = (PoolingType)(m_attributes[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
@@ -879,6 +884,7 @@ namespace CNTK
                             m_attributes[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
                             m_attributes[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
                             m_attributes[PrimitiveFunction::AttributeNameDilation] = dilation;
+                            m_attributes[PrimitiveFunction::AttributeNameKernelShape] = kernelShape;
                             break;
                         }
                         case PrimitiveOpType::CrossEntropyWithSoftmax:

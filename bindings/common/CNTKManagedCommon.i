@@ -25,9 +25,6 @@
 
 %{
     #include "CNTKLibrary.h"
-#ifdef SWIGCSHARP
-    #include "MomentumAsTimeConstantScheduleCS.h"
-#endif
     #pragma warning(disable : 4100) //unreferenced formal parameter
 %}
 
@@ -94,7 +91,7 @@
 
 // temaplate definitions
 #ifdef SWIGCSHARP
-// char/int/bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
+// unsigned char/char/int/bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
 SWIG_STD_VECTOR_ENHANCED(size_t)
 SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
 SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
@@ -134,6 +131,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Learner)
 %shared_ptr(CNTK::DistributedLearner);
 %shared_ptr(CNTK::Trainer);
 %shared_ptr(CNTK::MinibatchSource);
+%shared_ptr(CNTK::Evaluator);
+%template(UnsignedCharVector) std::vector<unsigned char>;
 %template(DictionaryVector) std::vector<CNTK::Dictionary>;
 %template (UnorderedMapStreamInformationMinibatchData) std::unordered_map<CNTK::StreamInformation, CNTK::MinibatchData>;
 %template(UnorderedMapVariableMinibatchData) std::unordered_map<CNTK::Variable, CNTK::MinibatchData>;
@@ -176,7 +175,10 @@ IGNORE_CLASS CNTK::IDictionarySerializable;
 // To suppress SWIG warning 302: Identifier redefined.
 %ignore CNTK::DictionaryValue::operator=;
 %ignore CNTK::DictionaryValue::Value;
+%ignore CNTK::NDArrayView::AdjustSparseBlockColumn;
+
 IGNORE_CLASS CNTK::ParameterInitializer;
+
 %ignore CNTK::SentinelValueForAutoSelectRandomSeed;
 %ignore CNTK::DefaultParamInitOutputRank;
 %ignore CNTK::DefaultParamInitFilterRank;
@@ -207,26 +209,32 @@ IGNORE_FUNCTION CNTK::operator-;
 IGNORE_FUNCTION CNTK::AsBlock;
 IGNORE_FUNCTION CNTK::NCELoss;
 
+
+#ifndef SWIGCSHARP
+IGNORE_CLASS CNTK::TrainingParameterSchedule;
+#else
+%ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
+%ignore CNTK::TrainingParameterSchedule::operator=;
+%ignore CNTK::TrainingParameterSchedule::Transform;
+#endif
+
 IGNORE_CLASS CNTK::TrainingParameterPerMinibatchSchedule;
-IGNORE_CLASS CNTK::LearningRatePerSampleSchedule;
-IGNORE_CLASS CNTK::LearningRatePerMinibatchSchedule;
 IGNORE_CLASS CNTK::MinibatchSizeSchedule;
 IGNORE_CLASS CNTK::LearningRateSchedule;
 IGNORE_CLASS CNTK::MomentumSchedule;
-IGNORE_CLASS CNTK::MomentumPerSampleSchedule;
-IGNORE_CLASS CNTK::MomentumPerMinibatchSchedule;
-IGNORE_CLASS CNTK::MomentumAsTimeConstantSchedule;
 IGNORE_FUNCTION CNTK::DefaultUnitGainValue;
 IGNORE_FUNCTION CNTK::SetDefaultUnitGainValue;
 IGNORE_FUNCTION CNTK::NesterovLearner;
 IGNORE_VARIABLE CNTK::DefaultVarianceMomentum;
+
+IGNORE_FUNCTION CNTK::Learner::GetOptions;
+
+IGNORE_FUNCTION CNTK::UniversalLearner;
 IGNORE_FUNCTION CNTK::Internal::UniversalLearner;
 IGNORE_CLASS CNTK::DistributedLearner;
 IGNORE_FUNCTION CNTK::CreateDataParallelDistributedLearner;
 IGNORE_FUNCTION CNTK::CreateQuantizedDataParallelDistributedLearner;
 IGNORE_FUNCTION CNTK::CreateBlockMomentumDistributedLearner;
-IGNORE_CLASS CNTK::Evaluator;
-IGNORE_FUNCTION CNTK::CreateEvaluator;
 IGNORE_STRUCT std::hash<::CNTK::StreamInformation>;
 %ignore operator==(const StreamInformation& left, const StreamInformation& right);
 IGNORE_STRUCT CNTK::DistributedWorkerDescriptor;
@@ -426,12 +434,14 @@ IGNORE_ENUM_CLASS CNTK::PoolingType;
 IGNORE_FUNCTION CNTK::Negate;
 IGNORE_FUNCTION CNTK::Sigmoid;
 IGNORE_FUNCTION CNTK::Tanh;
+IGNORE_FUNCTION CNTK::Atanh;
 IGNORE_FUNCTION CNTK::Sin;
 IGNORE_FUNCTION CNTK::Cos;
 IGNORE_FUNCTION CNTK::Acos;
 IGNORE_FUNCTION CNTK::Asin;
 IGNORE_FUNCTION CNTK::Cosh;
 IGNORE_FUNCTION CNTK::Sinh;
+IGNORE_FUNCTION CNTK::Asinh;
 IGNORE_FUNCTION CNTK::ReLU;
 IGNORE_FUNCTION CNTK::Exp;
 IGNORE_FUNCTION CNTK::Log;
@@ -518,9 +528,8 @@ IGNORE_FUNCTION CNTK::CTFDeserializer;
 IGNORE_FUNCTION CNTK::CBFDeserializer;
 IGNORE_FUNCTION CNTK::HTKFeatureDeserializer;
 IGNORE_FUNCTION CNTK::HTKMLFDeserializer;
+IGNORE_FUNCTION CNTK::MomentumAsTimeConstantSchedule;
 IGNORE_CLASS CNTK::TrainingParameterSchedule;
-IGNORE_CLASS CNTK::TrainingParameterPerUnitSchedule;
-IGNORE_CLASS CNTK::TrainingParameterPerSampleSchedule;
 IGNORE_STRUCT CNTK::AdditionalLearningOptions;
 IGNORE_CLASS CNTK::Learner;
 IGNORE_FUNCTION CNTK::SGDLearner;
@@ -658,6 +667,8 @@ MAKE_GETTER(CNTK::Axis, StaticAxisIndex);
 %rename (copyFrom) CNTK::NDArrayView::CopyFrom;
 %rename (changeDevice) CNTK::NDArrayView::ChangeDevice;
 %rename (toString) CNTK::NDArrayView::AsString;
+IGNORE_CLASS CNTK::Evaluator;
+IGNORE_FUNCTION CNTK::CreateEvaluator;
 #else
 %rename(SequenceIsFirst) CNTK::Sequence::IsFirst;
 %rename(SequenceIsLast) CNTK::Sequence::IsLast;
@@ -785,6 +796,9 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, RandomUniformDouble);
 // define typemap for dataBuffer
 %apply float INPUT[]  { float *dataBuffer }
 %apply double INPUT[]  { double *dataBuffer }
+
+// ProgressWriters returns unordered_set which is not supportted by swig CCharp
+IGNORE_FUNCTION CNTK::Evaluator::ProgressWriters;
 #endif
 
 %include "CNTKValueExtend.i"
