@@ -4516,6 +4516,51 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
     m_outputs.assign(nullptr/*1*/, move(output));
 }
 
+// Static invocation
+//  - a static graph can be invoked with input arguments that substitute for its Placeholders
+//  - this is done via the Invocable class
+//  - invocation:
+//     - an invocation translates into a single node in the graph, which links to the static graph via m_composite
+//     - multiple invocations share the same underlying static graph
+//     - static graphs can be called both during dynamic computation ("dynamic invocation"), as well as during construction of other static graphs ("static invocation")
+//     - upon first dynamic invocation, the static graph's shapes are determined
+//        - to support stacking, the last axis of each input may be variable. It is stored and inferred in the static graph as FreeDimension.
+//        - at static-graph construction time, input shapes are not known. For now, user must tell at that location what the stacking axis is.
+//          E.g. a static graph Times(W,_) can be applied to inputs with variable #columns. Pass freeAxis = 1 here to allow stacking them.
+//     - static graphs can be invoked in two modes:
+//        - early inlining (isBasicBlock=false): static graph gets inlined into the dynamic graph before any batching decisions
+//          Allows for fine-grained auto-batching, as if the static graph's operations were just dynamically unrolled.
+//        - late inlining (isBasicBlock=true): static graph gets treated like a PrimitiveFunction for purpose of batching.
+//          Allows to cut overhead of the auto-batching algorithm, and also acts as an auto-batching constraint.
+//  - variable batch dimension (FreeDimension):
+//     - static graphs get their shapes inferred only once, upon first invocation
+//       This is to save time. Due to this, early inlining of a static graph is more restrictive than regular dynamic invocation.
+//     - static graph can only have one free dimension, in the "free axis" which must be the last. This is implemented via CNTK's FreeDimension mechanism.
+//     - user must declare the free axis location for all arguments
+//     - upon invocation, either all or no actual argument must have that axis.  --TODO: I think they no longer need to.
+//       If they do, they must all have the same dimension in their respective axis, which the output will also have. If not, the output will not have the axis.
+//        - early inlining:
+//           - allowed: f([I x *], [J x K x *]) -> [N x *],
+//                      invocable as f([I x T], [J x K x T]) -> [N x T]
+//                      or as f([I], [J x K]) -> [N]
+//           - not supported: f([I x *], [J x K]) -> [N x ?] (second arg has no free dimension)
+//           - not supported: invoke as f([I x T], [J x K]) -> [N x ?] (second arg has no free dimension)
+//             TODO: This ^^ is actually doable with just a little more code.
+//        - late inlining:
+//           - the batch axis must be the same for all args, and no intermediate op may touch that axis
+//             TODO: We could relax this, but for now it simplifies things a lot. (TODO: revisit later to see if it really does)
+//           - allowed: f([I x *], [J x *]) -> [N x *]
+//           - not supported: f([I x *], [J x K x *]) -> [N x *] (batch dim not at same location)
+//  - batching
+//     - any invocation with free dimension can use stacking or batching
+//        - batching if all inputs have matching dimension in the respective free axes. Batching adds one more axis.
+//          { [I x J X T], [I x J x T] } -> [I x J x T x 2], with T=batch axis
+//          In this situation, the actual execution will see tensors with one axis to the right of the free axis. TODO: So don't use back() on operands!
+//        - stacking if free-dimension values differ
+//          { [I x J X T1], [I x J x T2] } -> [I x J x (T1+T2)]
+//        - none at all if not batchable
+//     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the free axis
+
 /*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
     m_arity(arity), m_isBasicBlock(isBasicBlock  )// &&false) // for now, disable basic blocks
 {
@@ -4620,51 +4665,6 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
         SetOperand(i, m_noArg);
     return res;
 }
-
-// Static invocation
-//  - a static graph can be invoked with input arguments that substitute for its Placeholders
-//  - this is done via the Invocable class
-//  - invocation:
-//     - an invocation translates into a single node in the graph, which links to the static graph via m_composite
-//     - multiple invocations share the same underlying static graph
-//     - static graphs can be called both during dynamic computation ("dynamic invocation"), as well as during construction of other static graphs ("static invocation")
-//     - upon first dynamic invocation, the static graph's shapes are determined
-//        - to support stacking, the last axis of each input may be variable. It is stored and inferred in the static graph as FreeDimension.
-//        - at static-graph construction time, input shapes are not known. For now, user must tell at that location what the stacking axis is.
-//          E.g. a static graph Times(W,_) can be applied to inputs with variable #columns. Pass freeAxis = 1 here to allow stacking them.
-//     - static graphs can be invoked in two modes:
-//        - early inlining (isBasicBlock=false): static graph gets inlined into the dynamic graph before any batching decisions
-//          Allows for fine-grained auto-batching, as if the static graph's operations were just dynamically unrolled.
-//        - late inlining (isBasicBlock=true): static graph gets treated like a PrimitiveFunction for purpose of batching.
-//          Allows to cut overhead of the auto-batching algorithm, and also acts as an auto-batching constraint.
-//  - variable batch dimension (FreeDimension):
-//     - static graphs get their shapes inferred only once, upon first invocation
-//       This is to save time. Due to this, early inlining of a static graph is more restrictive than regular dynamic invocation.
-//     - static graph can only have one free dimension, in the "free axis" which must be the last. This is implemented via CNTK's FreeDimension mechanism.
-//     - user must declare the free axis location for all arguments
-//     - upon invocation, either all or no actual argument must have that axis.  --TODO: I think they no longer need to.
-//       If they do, they must all have the same dimension in their respective axis, which the output will also have. If not, the output will not have the axis.
-//        - early inlining:
-//           - allowed: f([I x *], [J x K x *]) -> [N x *],
-//                      invocable as f([I x T], [J x K x T]) -> [N x T]
-//                      or as f([I], [J x K]) -> [N]
-//           - not supported: f([I x *], [J x K]) -> [N x ?] (second arg has no free dimension)
-//           - not supported: invoke as f([I x T], [J x K]) -> [N x ?] (second arg has no free dimension)
-//             TODO: This ^^ is actually doable with just a little more code.
-//        - late inlining:
-//           - the batch axis must be the same for all args, and no intermediate op may touch that axis
-//             TODO: We could relax this, but for now it simplifies things a lot. (TODO: revisit later to see if it really does)
-//           - allowed: f([I x *], [J x *]) -> [N x *]
-//           - not supported: f([I x *], [J x K x *]) -> [N x *] (batch dim not at same location)
-//  - batching
-//     - any invocation with free dimension can use stacking or batching
-//        - batching if all inputs have matching dimension in the respective free axes. Batching adds one more axis.
-//          { [I x J X T], [I x J x T] } -> [I x J x T x 2], with T=batch axis
-//          In this situation, the actual execution will see tensors with one axis to the right of the free axis. TODO: So don't use back() on operands!
-//        - stacking if free-dimension values differ
-//          { [I x J X T1], [I x J x T2] } -> [I x J x (T1+T2)]
-//        - none at all if not batchable
-//     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the free axis
 
 // determine "the" free dimension of an invocation, using a hack (fixed axis := 1)
 // The result is either the dim (if all inputs have a batch dim) or ABSENT_FREE_DIMENSION (if no input has a batch dim), or an error.
