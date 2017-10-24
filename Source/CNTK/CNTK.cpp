@@ -774,7 +774,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 // new_handler to print call stack upon allocation failure
 void AllocationFailureHandler()
 {
-    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack(true);
     std::set_new_handler(nullptr);
     throw std::bad_alloc();
 }
