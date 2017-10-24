@@ -239,6 +239,14 @@ namespace CNTK
             return CNTKLib.InputVariable(shape, isSparse, dataType, needsGradient, name, dynamicAxesVector);
         }
 
+        public static Variable InputVariable(NDShape shape, DataType dataType, string name = "", IList<Axis> dynamicAxes = null, bool isSparse = false, bool needsGradient = false)
+        {
+            if (dynamicAxes == null)
+                dynamicAxes = Axis.DefaultInputVariableDynamicAxes();
+            AxisVector dynamicAxesVector = Helper.AsAxisVector(dynamicAxes);
+            return CNTKLib.InputVariable(shape, isSparse, dataType, needsGradient, name, dynamicAxesVector);
+        }
+
         /// <summary>
         /// Create a Placeholder variable to be used as a temporary/placeholder input to a Function.
         /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.

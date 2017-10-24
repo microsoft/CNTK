@@ -223,5 +223,12 @@ namespace CNTK
             }
             return inputVector;
         }
+
+        internal static IList<NDArrayView> FromArrayViewVector(NDArrayViewPtrVector ndArrayViewPtrVector)
+        {
+            NDArrayView[] ndArrayViewList = new NDArrayView[ndArrayViewPtrVector.Count];
+            ndArrayViewPtrVector.CopyTo(ndArrayViewList);
+            return ndArrayViewList;
+        }
     }
 }

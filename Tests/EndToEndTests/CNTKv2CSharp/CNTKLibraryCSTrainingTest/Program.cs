@@ -22,7 +22,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 #else
             Console.WriteLine("======== Train model using GPU build ========");
 #endif
-
+            SequenceToSequenceTranslator.TrainAndEvaluate(DeviceDescriptor.CPUDevice, false, true);
             List<DeviceDescriptor> devices = new List<DeviceDescriptor>();
             if (ShouldRunOnCpu())
             {

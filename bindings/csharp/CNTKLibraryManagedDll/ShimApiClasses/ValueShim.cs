@@ -893,5 +893,10 @@ namespace CNTK
             return _Alias(readOnly);
         }
 
+        public IList<NDArrayView> UnpackVariableValue(Variable variable, DeviceDescriptor device)
+        {
+            NDArrayViewPtrVector ndArrayViewPtrVector = _UnpackVariableValue(variable, device);
+            return Helper.FromArrayViewVector(ndArrayViewPtrVector);
+        }
     }
 }

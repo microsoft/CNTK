@@ -233,6 +233,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
             decodingFunction->Forward({ { decodingFunction->Arguments()[0], minibatchData[rawInputStreamInfo].data }, { decodingFunction->Arguments()[1], minibatchData[rawLabelsStreamInfo].data } },
                 outputs,
                 device);
+			std::vector<std::vector<float>> seqs;
+			outputs[decodingFunction]->CopyVariableValueTo<float>(decodingFunction, seqs);
         }
     }
 }
@@ -243,8 +245,7 @@ void TrainSequenceToSequenceTranslator()
 
     if (ShouldRunOnCpu())
     {
-        TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, false, true, true);
-        TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), true, false, false, false, true, true);
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), true, false, false, true, false, false);
     }
 
     if (ShouldRunOnGpu())

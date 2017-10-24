@@ -96,6 +96,7 @@
     <Compile Include="SwigProxyClasses\PairFloatFloat.cs" />
     <Compile Include="SwigProxyClasses\PairIntInt.cs" />
     <Compile Include="SwigProxyClasses\PairNDArrayViewPtrNDArrayViewPtr.cs" />
+    <Compile Include="SwigProxyClasses\PairNDArrayViewPtrVectorBool.cs" />
     <Compile Include="SwigProxyClasses\PairSizeTDouble.cs" />
     <Compile Include="SwigProxyClasses\PairSizeTInt.cs" />
     <Compile Include="SwigProxyClasses\PairSizeTSizeT.cs" />
