@@ -344,6 +344,132 @@ BOOST_AUTO_TEST_CASE(MKLBatchNormalizationForward)
     }
 }
 
+BOOST_AUTO_TEST_CASE(MKLBatchNormalizationBackward)
+{
+	std::mt19937 rng(0);
+	boost::random::normal_distribution<float> nd(5.0, 1.0);
+
+	auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
+	{
+		data.resize(r * 3 * c);
+		std::fill(begin(data), end(data), std::numeric_limits<float>::quiet_NaN());
+		std::generate(begin(data) + r * c, begin(data) + 2 * r * c, [&] { return nd(rng); });
+		buf.SetValue(r, 3 * c, buf.GetDeviceId(), data.data());
+		// Get center slice.
+		return buf.ColumnSlice(c, c);
+	};
+
+	int baseDeviceId = 0;
+	for (int deviceId : {-1})
+	{
+		for (const auto& cfg : GenerateBNTestConfigs())
+		{
+			const auto& inOutT = std::get<0>(cfg);
+			size_t batchSize = std::get<1>(cfg);
+			bool spatial = std::get<2>(cfg);
+
+			auto engCudnn = BNEng::Create(baseDeviceId, inOutT, spatial, ImageLayoutKind::CHW, BatchNormEngineKind::CuDnn);
+			auto engCntk = BNEng::Create(deviceId, inOutT, spatial, ImageLayoutKind::CHW, BatchNormEngineKind::MKL2017);
+			
+			size_t crow = inOutT.GetNumElements();
+			size_t ccol = batchSize;
+
+			vec buf(crow * ccol);
+			std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+			SingleMatrix x(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+			SingleMatrix xB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
+
+			std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+			SingleMatrix dy(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+			SingleMatrix dyB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
+
+			size_t crowScaleBias = spatial ? inOutT[2] : inOutT.GetNumElements();
+			buf.resize(crowScaleBias);
+
+			std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+			SingleMatrix scale(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+			SingleMatrix scaleB(crowScaleBias, 1, buf.data(), baseDeviceId, matrixFlagNormal);
+
+			std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+			SingleMatrix saveMean(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+			SingleMatrix saveMeanB(crowScaleBias, 1, buf.data(), baseDeviceId, matrixFlagNormal);
+
+			std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+			SingleMatrix saveInvStdDev(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+			SingleMatrix saveInvStdDevB(crowScaleBias, 1, buf.data(), baseDeviceId, matrixFlagNormal);
+
+
+			std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+			SingleMatrix dScale(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+			SingleMatrix dScaleB(crowScaleBias, 1, buf.data(), baseDeviceId, matrixFlagNormal);
+
+			std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+			SingleMatrix dBias(crowScaleBias, 1, buf.data(), deviceId, matrixFlagNormal);
+			SingleMatrix dBiasB(crowScaleBias, 1, buf.data(), baseDeviceId, matrixFlagNormal);
+
+			std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+			SingleMatrix dx(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+			SingleMatrix dxB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
+
+			CudaTimer time1;
+			time1.Start();
+			engCntk->Backward(x, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias, false );
+			time1.Stop();
+
+			CudaTimer time2;
+			time2.Start();
+			engCudnn->Backward(xB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB, false);
+			time2.Stop();
+
+			cout << "inOut tensor: " << (std::string)inOutT << std::endl;
+
+			std::stringstream tmsg;
+			tmsg << "inOut tensor: " << (std::string)inOutT
+				<< ", spatial = " << (spatial ? "true" : "false");
+			std::string msg = " are not equal, " + tmsg.str();
+			std::string msgNan = " has NaNs, " + tmsg.str();
+			std::string msgNotNan = " has buffer overflow/underflow, " + tmsg.str();
+
+			float relErr = Err<float>::Rel;
+			float absErr = Err<float>::Abs;
+			std::string emsg;
+
+			BOOST_REQUIRE_MESSAGE(!dx.HasNan("dx"), "dx" << msgNan);
+			BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxB, emsg, relErr * 16, absErr * 16), "dx" << msg << ". " << emsg);
+			// BUGBUG: Why does this pass for CNTK engine?
+			//BOOST_REQUIRE_MESSAGE(CountNans(dxBuf) == crow * 2 * ccol, "out" << msgNotNan);
+			// REVIEW alexeyk: add cases for testing numerical stability.
+
+			BOOST_REQUIRE_MESSAGE(!dScale.HasNan("dScale"), "dScale" << msgNan);
+			// After using boost norm_distribution, we have to adapt the tolerance value. But we get the same result on Windows and Linux.
+			// When using std norm_distribution, different tolerance values are needed for Windows than for Linux.
+			BOOST_REQUIRE_MESSAGE(CheckEqual(dScale, dScaleB, emsg, relErr * 88, absErr * 16), "dScale" << msg << ". " << emsg);
+			//BOOST_REQUIRE_MESSAGE(CountNans(dScaleBuf) == crowScaleBias * 2, "dScale" << msgNotNan);
+
+			BOOST_REQUIRE_MESSAGE(!dBias.HasNan("dBias"), "dBias" << msgNan);
+			BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasB, emsg, relErr * 50, absErr * 16), "dBias" << msg << ". " << emsg);
+			//BOOST_REQUIRE_MESSAGE(CountNans(dBiasBuf) == crowScaleBias * 2, "dBias" << msgNotNan);
+
+#if 0
+#ifndef _DEBUG
+			float elapsedCntk = time1.Elapsed();
+			float elapsedCudnn = time2.Elapsed();
+			// Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
+			// For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
+			// Production version is about the same.
+			if (crow >= 32 && ccol >= 32)
+			{
+				// Use conservative estimates.
+				float speedup = 1.0f;
+				BOOST_REQUIRE_MESSAGE(speedup * elapsedCntk < elapsedCudnn,
+					"CNTK implementation (" << elapsedCntk << "ms) must be faster than cuDNN (" << elapsedCudnn << "ms) by at least " << speedup << "x, what's changed? " << tmsg.str());
+			}
+#endif
+#endif
+		}
+	}
+}
+
 BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
 {
     std::mt19937 rng(0);
