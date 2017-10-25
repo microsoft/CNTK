@@ -363,16 +363,129 @@ protected:
         }
 
     }
-
 	void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
 		Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) override
 	{
-		fprintf(stderr, "WARNING: MKL2017 Batch normalization Bwd pass not implemented. Using reference implementation now. \n");
+		bool spatial = in.GetNumRows() != scale.GetNumRows();
 
-		if (!accumulateDataGrad)
-			grad.SetValue((ElemType)0);
+		if (!spatial) {
+			fprintf(stderr, "WARNING: MKL2017 Batch normalization does not support spatial == False. Using reference implementation now. \n");
 
-		srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad);
+			if (!accumulateDataGrad)
+				grad.SetValue((ElemType)0);
+
+			srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad);
+			return;
+		}
+
+		if (m_inOutT.size() != 3) {
+			fprintf(stderr, "WARNING: MKL2017 Batch normalization supports 3D input tensors only. Using reference implementation now for %dD input tensor \n", (int)m_inOutT.size());
+
+			if (!accumulateDataGrad)
+				grad.SetValue((ElemType)0);
+
+			srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad);
+			return;
+		}
+
+		//TODO: Pass eps from forward pass
+		float eps = 1e-5;
+
+		size_t n = in.GetNumCols(); //batch_size
+		size_t iw = m_inOutT[0];    //input width
+		size_t ih = m_inOutT[1];    //input height
+		size_t ic = m_inOutT[2];    //input num channels
+		size_t dim = 4;
+		outputSize = new size_t[dim];
+		outputStrides = new size_t[dim];
+		inputSize = new size_t[dim];
+		inputStrides = new size_t[dim];
+		user_input = in.Data();
+		user_in_grad = srcGrad.Data();
+		user_out_grad = grad.Data();
+		blendTimeConstant = blendFactor;
+		saved_mean_buf = reinterpret_cast<float*>(savedMean.Data());
+		saved_Std_Dev = reinterpret_cast<float*>(savedInvStdDev.Data());
+
+		if (pBatchNormalizationBwd == NULL) {
+			/*Create input strides for the user input layout*/
+			inputSize[0] = iw;
+			inputSize[1] = ih;
+			inputSize[2] = ic;
+			inputSize[3] = n;
+
+			inputStrides[0] = 1;
+			inputStrides[1] = iw;
+			inputStrides[2] = iw * ih;
+			inputStrides[3] = iw * ih * ic;
+
+			assert(dnnLayoutCreate_F32(&lt_user_input, dim, inputSize, inputStrides) == E_SUCCESS);
+
+			outputSize[0] = iw;
+			outputSize[1] = ih;
+			outputSize[2] = ic;
+			outputSize[3] = n;
+
+			outputStrides[0] = 1;
+			outputStrides[1] = iw;
+			outputStrides[2] = iw * ih;
+			outputStrides[3] = iw * ih * ic;
+
+			assert(dnnLayoutCreate_F32(&lt_user_output, dim, outputSize, outputStrides) == E_SUCCESS);
+			dnnPrimitiveAttributes_t primAttr = NULL;
+
+			//assert(dnnBatchNormalizationCreateBackward_v2_F32(&pBatchNormalizationBwd, primAttr, lt_user_input, eps, dnnUseInputMeanVariance | dnnUseScaleShift) == E_SUCCESS);
+			assert(dnnBatchNormalizationCreateBackward_v2_F32(&pBatchNormalizationBwd, primAttr, lt_user_input, eps, dnnUseScaleShift) == E_SUCCESS);
+
+			//Compare input layout with primitive layout
+			assert(dnnLayoutCreateFromPrimitive_F32(&lt_batchNorm_bwd_input, pBatchNormalizationBwd, dnnResourceSrc) == E_SUCCESS);
+
+			if (!dnnLayoutCompare_F32(lt_batchNorm_bwd_input, lt_user_input)) {
+				assert(dnnConversionCreate_F32(&cv_user_input_to_batchNorm_bwd_input, lt_user_input, lt_batchNorm_bwd_input) == E_SUCCESS);
+				assert(dnnAllocateBuffer_F32(&in_buffer, lt_batchNorm_bwd_input) == E_SUCCESS);
+				assert(dnnConversionExecute_F32(cv_user_input_to_batchNorm_bwd_input, user_input, in_buffer) == E_SUCCESS);
+			}
+
+			//Compare out grad layout with primitive layout
+			assert(dnnLayoutCreateFromPrimitive_F32(&lt_batchNorm_bwd_outgrad, pBatchNormalizationBwd, dnnResourceDiffDst) == E_SUCCESS);
+
+			if (!dnnLayoutCompare_F32(lt_batchNorm_bwd_outgrad, lt_user_output)) {
+				assert(dnnConversionCreate_F32(&batchNorm_bwd_outgrad_to_user_output, lt_user_output, lt_batchNorm_bwd_outgrad) == E_SUCCESS);
+				assert(dnnAllocateBuffer_F32(&outgrad_buffer, lt_batchNorm_bwd_outgrad) == E_SUCCESS);
+				assert(dnnConversionExecute_F32(batchNorm_bwd_outgrad_to_user_output, user_out_grad, outgrad_buffer) == E_SUCCESS);
+			}
+
+			//Initialize scaleshift buffer from primitive
+			assert(dnnLayoutCreateFromPrimitive_F32(&lt_batchNorm_bwd_scaleShift, pBatchNormalizationBwd, dnnResourceScaleShift) == E_SUCCESS);
+			assert(dnnAllocateBuffer_F32(&scaleShift_buffer, lt_batchNorm_bwd_scaleShift) == E_SUCCESS);
+
+			//Initialize scaleshift grad buffer from primitive			
+			assert(dnnLayoutCreateFromPrimitive_F32(&lt_batchNorm_bwd_scaleShift_grad, pBatchNormalizationBwd, dnnResourceDiffScaleShift) == E_SUCCESS);
+			assert(dnnAllocateBuffer_F32(&scaleShift_grad_buffer, lt_batchNorm_bwd_scaleShift_grad) == E_SUCCESS);
+		}
+
+		if (!dnnLayoutCompare_F32(lt_batchNorm_bwd_input, lt_user_input)) {
+			BatchNorm_res[dnnResourceSrc] = (void*)in_buffer;
+		}
+		else {
+			BatchNorm_res[dnnResourceSrc] = user_input;
+		}
+
+		if (!dnnLayoutCompare_F32(lt_batchNorm_bwd_outgrad, lt_user_output)) {
+			BatchNorm_res[dnnResourceDiffDst] = (void*)outgrad_buffer;
+		}
+		else {
+			BatchNorm_res[dnnResourceDiffDst] = user_out_grad;
+		}
+
+		BatchNorm_res[dnnResourceMean] = savedMean.Data();
+		BatchNorm_res[dnnResourceVariance] = savedInvStdDev.Data();
+		BatchNorm_res[dnnResourceScaleShift] = scaleShift_buffer;
+		BatchNorm_res[dnnResourceDiffSrc] = user_in_grad;
+		BatchNorm_res[dnnResourceDiffScaleShift] = scaleShift_grad_buffer;
+
+		assert(dnnExecute_F32(pBatchNormalizationBwd, BatchNorm_res) == E_SUCCESS);
+
 	}
 
 };
