@@ -57,6 +57,7 @@ size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
 size_t subMinibatches = 1;
+double learningRate = 0.0003662109375;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -67,6 +68,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
         subMinibatches = 10;
+        learningRate *= 10;
     }
     else if (systemId == "chs_enu_small")
     {
@@ -75,6 +77,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
         subMinibatches = 10;
+        learningRate *= 10;
     }
     else if (systemId == "rom_enu")
     {
@@ -387,8 +390,8 @@ void Train(string systemId, wstring outputDirectory)
     //  - LR is specified for av gradient
     //  - numer should be /minibatchSize
     //  - denom should be /sqrt(minibatchSize)
-    let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;//         *10;
-    let lr0 = 0.0003662109375 * f;
+    let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
+    let lr0 = learningRate * f;
     auto baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
         MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
         learnerOptions);
