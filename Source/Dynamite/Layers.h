@@ -531,7 +531,8 @@ public:
     }
 };
 
-// layer normalization without bias term (which makes not much sense since we have a bias outside anyway in many cases)
+// layer normalization without bias term. Normalize each sample to zero mean and length 1, then scale it back up, element-wise.
+// This is meant to be invoked via Dense(), where users can select that a bias term should be used as well.
 static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
 {
 #ifdef DISABLE_NORMALIZATIONS
@@ -545,75 +546,42 @@ static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
     let eps       = Constant::Scalar(CurrentDataType(), 1e-16, CurrentDevice());
     let minusHalf = Constant::Scalar(CurrentDataType(), -0.5,  CurrentDevice());
     let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
-#if 1
 
-    // for efficiency, we set this up as a static graph
+    // for efficiency, we set this up as a set of static graphs
+    // subtract a sample's mean
     let doMeanNorm = StaticModel(/*isBasicBlock=*/true, [=](const Variable& x) -> Variable
     {
         CountAPICalls(2);
         let mean = ReduceMean(x, axis);
         return x - mean;
     }, Named("doMeanNorm"));
-    // for efficiency, we set this up as a static graph
-    let doGetLength = StaticModel(/*isBasicBlock=*/true, [=](const Variable& x0) -> Variable
+    // determine the length (L2 norm) of each sample
+    let doGetInverseOfL2Norm = StaticModel(/*isBasicBlock=*/true, [=](const Variable& x0) -> Variable
     {
         CountAPICalls(3);
         let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
         return invLen;
-    }, Named("doGetLength"));
+    }, Named("doGetInverseOfL2Norm"));
+    // perform the length-normalization operation
     let doLengthNorm = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
     {
         let prevProfiler = Function::SetDynamicProfiler(profiler);
-#if 1
         let x0 = doMeanNorm(x);
-        let invLen = doGetLength(x0); // this can be batched totally. But don't force invLen*scale in there
-#else
-        let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
-        let x0 = x - mean;
-        //let invLen = Pow(ReduceSum(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct
-        let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
-#endif
-        CountAPICalls(2);
-        let res = x0 * (invLen * scale); // note: (invLen*scale), a scalar product, can be batched across multiple invocations
+        let invLen = doGetInverseOfL2Norm(x0);
+        let res = x0 * (invLen * scale); CountAPICalls(2); // note: (invLen*scale), a scalar product, can be batched across multiple invocations
         Function::SetDynamicProfiler(prevProfiler);
         return res;
     }, Named("lengthNorm"));
 
-    // Note: Arguments() is slow. Don't call this inside graph generation.
-    return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x) //mutable
-    {
-#if 1
-        return doLengthNorm(x);
-#else
-        argBuf.front().second = x; // (avoid the repeated malloc)
-        let res = Invoke(lengthNormGraph, argBuf, /*isBasicBlock=*/false); // FOR NOW, can't handle basic block yet
-        return res;
-#endif
-    });
-#else
+    // this is the actual function
     return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x)
     {
-        let prevProfiler = Function::SetDynamicProfiler(profiler);
-        let mean = ReduceMean(x, axis); // it would be faster to say mean(x*x)-mu*mu, except that we need to consider rounding errors
-        let x0 = x - mean;
-        //LOG(x0);
-        // BUGBUG: Sqrt() seems hosed!!
-        let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
-        //let invLen = Pow(ReduceMean(x0 * x0, axis) + eps, minusHalf); // TODO: change to InnerProduct (but we don't have the dims upfront)
-        //LOG(len);
-        // Note: ^^ this parallelizes, while this vv does not
-        //let len = Sqrt(TransposeTimes(x, x));
-        //let res = x * (invLen /*+ eps*/) * scale;
-        //LOG(scale);
-        //LOG(res);
-        let res = x0 * (invLen * scale);
-        Function::SetDynamicProfiler(prevProfiler);
-        return res;
+        return doLengthNorm(x);
     });
-#endif
 #endif
 }
 
+#if 0 // TODO: complete this
 static BinaryModel RNNStep(size_t outputDim)
 {
     auto W = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
@@ -625,6 +593,7 @@ static BinaryModel RNNStep(size_t outputDim)
         return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), Named("RNNStep.h"));
     });
 }
+#endif
 
 #if 0
 static BinaryModel GRU(size_t outputDim)
