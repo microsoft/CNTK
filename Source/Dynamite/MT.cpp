@@ -78,8 +78,8 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
         subMinibatches = 10;
         learningRate *= 10;
-        size_t numEncoderLayers = 1;
-        size_t numDecoderResNetProjections = 0;
+        numEncoderLayers = 1;
+        numDecoderResNetProjections = 0;
     }
     else if (systemId == "rom_enu")
     {
@@ -126,6 +126,7 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
             h = layers[i](h, h);
             // after each additional layer, so batch norm
             // BUGBUG: Why not the first? Seems like a bug.
+            // But BN after this does not help, so probably it should be between those layers, not after.
             h = bns[i - 1](h);
         }
         return h;
@@ -263,13 +264,13 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 fun CreateModelFunction()
 {
     let embedFwd = Embedding(embeddingDim, Named("embedFwd"));
-    let embedBwd = Embedding(embeddingDim, Named("embedBwd"));
+    //let embedBwd = Embedding(embeddingDim, Named("embedBwd"));
     let encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
     return BinaryModel({},
     {
         { L"embedSourceFwd", embedFwd },
-        { L"embedSourceBwd", embedBwd },
+        //{ L"embedSourceBwd", embedBwd },
         { L"encode",         encode   },
         { L"decode",         decode   }
     },
@@ -277,7 +278,7 @@ fun CreateModelFunction()
     {
         // embedding
         let eFwd = embedFwd(sourceSeq);
-        let eBwd = embedBwd(sourceSeq);
+        let eBwd = eFwd;// embedBwd(sourceSeq);
         // encoder
         let hSeq = encode(eFwd, eBwd);
         // decoder (outputting log probs of words)
