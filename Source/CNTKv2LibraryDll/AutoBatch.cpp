@@ -3156,8 +3156,10 @@ class InternalVariable::AutoBatch
                 {
                     // if this input broadcasts in the batch-axis dimension, we must manually unroll it.
                     // This implements broadcasting with non-uniform dimensions in the stacking case.
-                    auto broadcastShape = MakeVector(inputFields.m_shape.Dimensions()); // PERF BUGBUG: Do this without malloc
-                    broadcastShape.resize(batchAxis);
+                    auto& broadcastShape = m_CreateBatchedInputFor_outputShapeBuffer; // reuse a shared object to avoid malloc
+                    let& inputDims = inputFields.m_shape.Dimensions();
+                    broadcastShape.assign(inputDims.begin(), inputDims.end());
+                    broadcastShape.resize(batchAxis, 1);
                     broadcastShape.push_back(f.m_autoBatchState.m_batchDim); // this is the shape we want
                     // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
                     return CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(nullptr/*1*/, input), broadcastShape,
@@ -3711,7 +3713,7 @@ public:
         //    fprintf(stderr, "%S --> %d\n", f.m_inputs[1].Shape().AsString().c_str(), (int)f.m_inputs[1].IsSparse());
         // Special case for DENSE * SPARSE -> DENSE, which leads to a SPARSE gradient for input0 (common for embedding).
         if (f.m_op == PrimitiveOpType::Times && index == 0 && f.m_inputs.back().IsSparse())
-            return StorageFormat::Dense;// SparseBlockCol;
+            return StorageFormat::SparseBlockCol;
         else
             return StorageFormat::Dense;
     }
