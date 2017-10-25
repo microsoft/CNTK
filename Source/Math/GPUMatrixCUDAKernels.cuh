@@ -5393,6 +5393,53 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemT
     }
 }
 
+#if 1
+// [fseide] Hacked version that
+//  - applies the decay process only to non-zero gradients (idea: zero ones are "absent" rather than "zero" for purpose of statistics estimation)
+//  - no momentum (because this way I can reuse the momentum buffer for the denominator--that's why it's a HACK)
+template <class ElemType>
+__global__ void _adam4BlockSparseCol(CUDA_LONG size,
+    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
+{
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
+        ElemType w;
+        if (!adamax)
+        {
+            if (g == 0) // if zero then skip all of the below, to save some effort
+                continue;
+            ElemType* smoothDenom = smoothMom; // reusing this
+            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+            smoothAda[idx] = adaSqr;
+            ElemType adaDenom = adaWeight * smoothDenom[idx] + (1.0f - adaWeight) /* * 1*/;
+            smoothDenom[idx] = adaDenom;
+            // no adaMul, which is the bias correction. We already use the correct denominator.
+            w = sqrt(adaDenom / (adaSqr + epsilon * epsilon));
+            // no momentum; we use smoothMom to store the denominator
+            //g = mom * smoothMom[idx] + unitGainFactor * g;
+            //smoothMom[idx] = g;
+        }
+        else
+        {
+            // AdaMax implementation has not been hacked, it remains standard
+            ElemType gAbs = fabs_(g);
+            smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
+            w = adaMul / smoothAda[idx];
+            // apply momentum
+            g = mom * smoothMom[idx] + unitGainFactor * g;
+            smoothMom[idx] = g;
+        }
+
+        g = lr*g*w;
+        val[idx] -= g;
+    }
+}
+#else
 template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
@@ -5409,37 +5456,41 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
         {
             ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
             smoothAda[idx] = adaSqr;
-
-            if (sizeof(ElemType) == sizeof(double))
-            {
-                w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
-            }
-            else
-            {
-                w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
-            }
+            w = adaMul / (sqrt_(adaSqr) + epsilon);
+            //if (sizeof(ElemType) == sizeof(double))
+            //{
+            //    w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
+            //}
+            //else
+            //{
+            //    w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
+            //}
         }
         else
         {
-            ElemType gAbs;
-            if (sizeof(ElemType) == sizeof(double))
-            {
-                gAbs = fabs(g);
-            }
-            else
-            {
-                gAbs = fabsf(g);
-            }
+            ElemType gAbs = fabs_(g);
+            //ElemType gAbs;
+            //if (sizeof(ElemType) == sizeof(double))
+            //{
+            //    gAbs = fabs(g);
+            //}
+            //else
+            //{
+            //    gAbs = fabsf(g);
+            //}
             smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
             w = adaMul / smoothAda[idx];
         }
 
+#if 0
         g = mom * smoothMom[idx] + unitGainFactor * g;
         smoothMom[idx] = g;
+#endif
         g = lr*g*w;
         val[idx] -= g;
     }
 }
+#endif
 
 template <class ElemType>
 __global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
