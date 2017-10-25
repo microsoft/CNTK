@@ -3711,7 +3711,7 @@ public:
         //    fprintf(stderr, "%S --> %d\n", f.m_inputs[1].Shape().AsString().c_str(), (int)f.m_inputs[1].IsSparse());
         // Special case for DENSE * SPARSE -> DENSE, which leads to a SPARSE gradient for input0 (common for embedding).
         if (f.m_op == PrimitiveOpType::Times && index == 0 && f.m_inputs.back().IsSparse())
-            return StorageFormat::SparseBlockCol;
+            return StorageFormat::Dense;// SparseBlockCol;
         else
             return StorageFormat::Dense;
     }
