@@ -312,6 +312,16 @@ __global__ void _elementWiseTanhOnCuda(
     res[id] = tanh_(a[id]);
 };
 
+template <class ElemType>
+__global__ void _elementWiseAtanhOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = atanh_(a[id]);
+};
+
 //to prevent negative values caused by floating operations, we force inputs to be >=0
 //this may, however, hide problems in the caller.
 template <class ElemType>
@@ -412,6 +422,16 @@ __global__ void _elementWiseSinhOnCuda(
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     res[id] = sinh_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseAsinhOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = asinh_(a[id]);
 };
 
 template <class ElemType>

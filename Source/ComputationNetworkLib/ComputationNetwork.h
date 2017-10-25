@@ -1292,7 +1292,7 @@ private:
     public:
         ExecutionGraph(const std::vector<ComputationNodeBasePtr>& roots) : m_roots(roots) {}
 
-        const std::vector<ComputationNodeBasePtr>& Predecessors(const ComputationNodeBasePtr& node) const override
+        std::vector<ComputationNodeBasePtr> Predecessors(const ComputationNodeBasePtr& node) const override
         {
             return node->GetInputs();
         }

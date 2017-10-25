@@ -219,7 +219,7 @@
         "category": ["Image"],
         "name":  "Generative Adversarial Networks (GAN)",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206A_Basic_GAN.ipynb",
-        "description":  "This tutorial is a basic implementation of GAN networks. This allows us generate realistic looking MNIST images with no human input (unsupervised learning).",
+        "description":  "This tutorial is a basic implementation of GAN networks. This allows us to generate realistic looking MNIST images with no human input (unsupervised learning).",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/14/2017"
@@ -228,10 +228,19 @@
         "category": ["Image"],
         "name":  "Deep Convolutional Generative Adversarial Networks (DCGAN)",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206B_DCGAN.ipynb",
-        "description":  "This tutorial is an implementation of deep convolutional GAN (DCGAN) networks. This allows us generate realistic looking MNIST images with no human input (unsupervised learning).",
+        "description":  "This tutorial is an implementation of deep convolutional GAN (DCGAN) networks. This allows us to generate realistic looking MNIST images with no human input (unsupervised learning).",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Wasserstein and Loss Sensitive Generative Adversarial Networks (WGAN and LSGAN)",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206C_WGAN_LSGAN.ipynb",
+        "description":  "This tutorial is an implementation of Wasserstein and Loss Sensitive GAN networks. This allows us to generate CIFAR images with no human input (unsupervised learning).",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
     },
     {
         "category": ["Image"],
@@ -574,5 +583,14 @@
         "language": ["Python"],
         "type": ["Recipe"],
         "dataadded": "07/21/2017"
+    },
+    {
+        "category": ["Text"],
+        "name":  "Deep semantic modeling",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.ipynb",
+        "description":  "Compare two documents using deep semantic similarity.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	    "dateadded": "10/11/2017"
     }
 ]

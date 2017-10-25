@@ -47,10 +47,10 @@ namespace CNTK
         /// <param name="arguments">minibatch data as variable value pairs</param>
         /// <param name="computeDevice">device</param>
         /// <returns></returns>
-        public bool TrainMinibatch(IDictionary<Variable, Value> arguments, DeviceDescriptor computeDevice)
+        public bool TrainMinibatch(IDictionary<Variable, Value> arguments, bool isSweepEndInarguments, DeviceDescriptor computeDevice)
         {
             UnorderedMapVariableValuePtr mapData = Helper.AsUnorderedMapVariableValue(arguments);
-            return TrainMinibatch(mapData, computeDevice);
+            return TrainMinibatch(mapData, isSweepEndInarguments, computeDevice);
         }
     }
 }

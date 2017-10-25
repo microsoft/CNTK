@@ -229,6 +229,9 @@ public:
     CPUMatrix<ElemType>& InplaceTanh();
     CPUMatrix<ElemType>& AssignTanhOf(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& InplaceAtanh();
+    CPUMatrix<ElemType>& AssignAtanhOf(const CPUMatrix<ElemType>& a);
+
     CPUMatrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     CPUMatrix<ElemType>& AssignLogSoftmaxOf(const CPUMatrix<ElemType>& a, const bool isColWise);
 
@@ -268,6 +271,9 @@ public:
 
     CPUMatrix<ElemType>& InplaceSinh();
     CPUMatrix<ElemType>& AssignSinhOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAsinh();
+    CPUMatrix<ElemType>& AssignAsinhOf(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& InplaceAbs();
     CPUMatrix<ElemType>& AssignAbsOf(const CPUMatrix<ElemType>& a);

@@ -235,11 +235,13 @@ namespace CNTK
             return funcPtrList;
         }
 
-        public void Save(char[] buffer)
+        public byte[] Save()
         {
-            CharVector vectorBuf = new CharVector(); 
+            UnsignedCharVector vectorBuf = new UnsignedCharVector(); 
             this._Save(vectorBuf);
+            byte[] buffer = new byte[vectorBuf.Count];
             vectorBuf.CopyTo(buffer);
+            return buffer;
         }
 
         public void Save(string filepath)

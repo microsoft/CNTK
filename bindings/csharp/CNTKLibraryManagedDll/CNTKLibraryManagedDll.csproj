@@ -77,8 +77,10 @@
     <Compile Include="SwigProxyClasses\CNTKDictionary.cs" />
     <Compile Include="SwigProxyClasses\Constant.cs" />
     <Compile Include="SwigProxyClasses\ConstantVector.cs" />
+    <Compile Include="SwigProxyClasses\DataUnit.cs" />
     <Compile Include="SwigProxyClasses\DictionaryValue.cs" />
     <Compile Include="SwigProxyClasses\DictionaryVector.cs" />
+    <Compile Include="SwigProxyClasses\Evaluator.cs" />
     <Compile Include="SwigProxyClasses\HTKFeatureConfiguration.cs" />
     <Compile Include="SwigProxyClasses\HTKFeatureConfigurationVector.cs" />
     <Compile Include="SwigProxyClasses\IntVector.cs" />
@@ -113,6 +115,7 @@
     <Compile Include="SwigProxyClasses\UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapStringDictionaryValue.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableMinibatchData.cs" />
+    <Compile Include="SwigProxyClasses\UnsignedCharVector.cs" />
     <Compile Include="SwigProxyClasses\VectorPairSizeTDouble.cs" />
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />

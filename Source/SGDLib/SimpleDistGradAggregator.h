@@ -315,8 +315,8 @@ private:
         size_t numGradientIndex = m_gradientIndexToAggregate.size();
         if (numGradientIndex > 0)
         {
-            // non-GDR && GPU
-            if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE))
+            // non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU
+            if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl.IsSupported())
             {
                 Matrix<ElemType>* gpuCopyBuffer = m_aggregationBuffer.get();
 
@@ -376,7 +376,7 @@ private:
                     currentGradientIndex = nextGradientIndex;
                 }
             }
-            // non-NCCL 
+            // non-NCCL, using CPU, using GDR
             else if (!m_nccl.IsSupported())
             {
                 ElemType* reductionBuffer;

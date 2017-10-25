@@ -948,3 +948,104 @@ def test_group_conv(groups, num_output_channels, num_input_channels, input_tenso
     output_ref = group_conv.eval({x_ref:data}, device = dev)
 
     assert np.allclose(output_test, output_ref, atol=1e-4)
+
+FREE_STATIC_AXES_MAX_POOLING_DATA = [
+    ((1, 4, 6, 6), # warmup_input_size: Defines the input size used for first run with free static axes.
+     (1, 4, 6, 9), # second_input_size: Defines the input size used for second run with free static axes.
+     (2, 2),       # pooling_window: Dimensions of the pooling window.
+     (2, 2)        # strides
+     )
+]
+# This test point exercises maxpooling with free static axes twice (first for warmup, second for actual test), 
+# and ensures that the result is the same as with fixed axes.
+@pytest.mark.parametrize("warmup_input_size, second_input_size, pooling_window, strides", FREE_STATIC_AXES_MAX_POOLING_DATA)
+def test_max_pooling_free_static_axes(warmup_input_size, second_input_size, pooling_window, strides, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # Exercise operation twice - once with warmup input, second time to get the test output.
+    x = C.input_variable((warmup_input_size[0:2]+ tuple([C.FreeDimension]*(len(warmup_input_size)-2))))
+    y = C.pooling(x, C.MAX_POOLING, pooling_window, strides)
+    
+    x_data_warmup = np.arange(np.prod(warmup_input_size), dtype=dt)
+    x_data_warmup = x_data_warmup.reshape(warmup_input_size)
+    output_warmup = y.eval({x:x_data_warmup}, device=dev)
+    
+    x_data_test = np.arange(np.prod(second_input_size), dtype=dt)
+    x_data_test = x_data_test.reshape(second_input_size)
+    output_test = y.eval({x:x_data_test}, device=dev)
+    
+    # Generate reference output using fixed axes.
+    x_ref = C.input_variable(second_input_size)
+    y_ref = C.pooling(x_ref, C.MAX_POOLING, pooling_window, strides)
+    output_ref = y_ref.eval({x_ref:x_data_test}, device=dev)
+
+    assert np.allclose(output_test, output_ref, atol=1e-4)
+
+FREE_STATIC_AXES_AVG_POOLING_DATA = [
+    ((1, 4, 6, 6), # warmup_input_size: Defines the input size used for first run with free static axes.
+     (1, 4, 6, 9), # second_input_size: Defines the input size used for second run with free static axes.
+     (2, 2),       # pooling_window: Dimensions of the pooling window.
+     (2, 2)        # strides
+     )
+]
+# This test point exercises average pooling with free static axes twice (first for warmup, second for actual test), 
+# and ensures that the result is the same as with fixed axes.
+@pytest.mark.parametrize("warmup_input_size, second_input_size, pooling_window, strides", FREE_STATIC_AXES_AVG_POOLING_DATA)
+def test_avg_pooling_free_static_axes(warmup_input_size, second_input_size, pooling_window, strides, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # Exercise operation twice - once with warmup input, second time to get the test output.
+    x = C.input_variable((warmup_input_size[0:2]+ tuple([C.FreeDimension]*(len(warmup_input_size)-2))))
+    y = C.pooling(x, C.AVG_POOLING, pooling_window, strides)
+    
+    x_data_warmup = np.arange(np.prod(warmup_input_size), dtype=dt)
+    x_data_warmup = x_data_warmup.reshape(warmup_input_size)
+    output_warmup = y.eval({x:x_data_warmup}, device=dev)
+    
+    x_data_test = np.arange(np.prod(second_input_size), dtype=dt)
+    x_data_test = x_data_test.reshape(second_input_size)
+    output_test = y.eval({x:x_data_test}, device=dev)
+    
+    # Generate reference output using fixed axes.
+    x_ref = C.input_variable(second_input_size)
+    y_ref = C.pooling(x_ref, C.AVG_POOLING, pooling_window, strides)
+    output_ref = y_ref.eval({x_ref:x_data_test}, device=dev)
+
+    assert np.allclose(output_test, output_ref, atol=1e-4)
+
+FREE_STATIC_AXES_MAX_UNPOOLING_DATA = [
+    ((1, 4, 6, 6), # warmup_input_size: Defines the input size used for first run with free static axes.
+     (1, 4, 6, 9), # second_input_size: Defines the input size used for second run with free static axes.
+     (2, 2),       # pooling_window: Dimensions of the pooling window.
+     (2, 2)        # strides
+     )
+]
+# This test point exercises max unpooling with free static axes twice (first for warmup, second for actual test), 
+# and ensures that the result is the same as with fixed axes.
+@pytest.mark.parametrize("warmup_input_size, second_input_size, pooling_window, strides", FREE_STATIC_AXES_MAX_UNPOOLING_DATA)
+def test_max_unpooling_free_static_axes(warmup_input_size, second_input_size, pooling_window, strides, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # Exercise operation twice - once with warmup input, second time to get the test output.
+    x = C.input_variable((warmup_input_size[0:2]+ tuple([C.FreeDimension]*(len(warmup_input_size)-2))))
+    y = C.pooling(x, C.MAX_POOLING, pooling_window, strides)
+    z = C.unpooling(y, x, C.MAX_UNPOOLING, pooling_window, strides)
+    
+    x_data_warmup = np.arange(np.prod(warmup_input_size), dtype=dt)
+    x_data_warmup = x_data_warmup.reshape(warmup_input_size)
+    output_warmup = z.eval({x:x_data_warmup}, device=dev)
+    
+    x_data_test = np.arange(np.prod(second_input_size), dtype=dt)
+    x_data_test = x_data_test.reshape(second_input_size)
+    output_test = z.eval({x:x_data_test}, device=dev)
+    
+    # Generate reference output using fixed axes.
+    x_ref = C.input_variable(second_input_size)
+    y_ref = C.pooling(x_ref, C.MAX_POOLING, pooling_window, strides)
+    z_ref = C.unpooling(y_ref, x_ref, C.MAX_UNPOOLING, pooling_window, strides)
+    output_ref = z_ref.eval({x_ref:x_data_test}, device=dev)
+
+    assert np.allclose(output_test, output_ref, atol=1e-4)
