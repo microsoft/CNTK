@@ -141,6 +141,20 @@ namespace CNTK
             }
             else
             inputs = std::vector<Variable>(m_inputs);
+#if 1
+            // Dynamite: If this is a basic block invocation, we do not include the inner Parameters
+            // in m_inputs. Therefore, we must also explicitly add the inner Parameters.
+            if (primitiveFunction->m_op == PrimitiveOpType::Block)
+            {
+                const BlockFunction *blockFunction = dynamic_cast<const BlockFunction*>(this);
+                if (blockFunction->m_compositeIsShared)
+                {
+                    const auto parameters = blockFunction->Composite()->Parameters();
+                    if (!parameters.empty())
+                        inputs.insert(inputs.end(), parameters.begin(), parameters.end());
+                }
+            }
+#endif
         }
         else
             inputs = compositeFunction->DetermineInputs(pythonOperandOrder);

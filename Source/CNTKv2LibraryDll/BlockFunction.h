@@ -263,6 +263,7 @@ namespace CNTK
         // Instead, we use Placeholder::m_compositeArgumentIndex. The following conceptual equivalence
         // should hold: plVar->More().m_blockFunctionVariableMapping === m_inputs[plVar->m_compositeArgumentIndex].
         // TODO: Can we switch BlockFunction to this at large?
+        friend class Function;
         bool m_compositeIsShared = false; // true for Dynamite
         bool m_isBasicBlock = false;      // if true then keep as primitive operation for all batching decisions
 

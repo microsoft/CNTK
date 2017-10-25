@@ -1510,35 +1510,57 @@ class InternalVariable::AutoBatch
                 // using weak_ptr so that we can detect whether a composite has been deleted, and remove it from the list,
                 // and eventually recycle unique ids. TODO.
                 vector<vector<weak_ptr<CompositeFunction>>> allComposites; // [m_basicBlockInfo.m_batchableCompositeId]
-                // Note: This handles the special case of Times() via AreBatchable().
+                // Note: This function implicitly handles the special case of Times() via AreBatchable().
                 // Any embedded Times() operation must match object identity of the first argument.
                 // That will never match if that argument is computed inside the basic block,
                 // but it will work if it is a Parameter or a value computed outside that is the same object.
-                static bool AreCompositesBatchable(const PrimitiveFunction& a, const PrimitiveFunction& b)
+                // This runs only once, so it can take its time.
+                static bool AreCompositesBatchable(const CompositeFunctionPtr& compositePtr, const CompositeFunctionPtr& otherCompositePtr)
                 {
-                    if (&a == &b)
-                        return true;
+                    fail_if(compositePtr == otherCompositePtr, "AreCompositesBatchable comparing with itself??");
 #if 0               // BUGBUG: I noticed a slight loss after I added batching of composites. It is not clear where it is from. Verify this!
+                    //         Actually it seems that Parameters did not get replaced by batched versions.
                     return false;
 #else
-                    if (!AreBatchable(a, b))
+                    // parameters must be the same
+                    // BUGBUG: This is too restrictive, but for now, the late inlining code cannot handle batching of Parameters.
+                    //         So for now, require them to be identical, not just matching shape.
+                    //         BUGBUG: ^^ Somehow the code seemed (seems) to indeed handle it, but I cannot see how it did that; I think it is buggy.
+                    let aParameters =      compositePtr->Parameters();
+                    let bParameters = otherCompositePtr->Parameters();
+                    if (aParameters != bParameters)
                         return false;
-                    for (size_t i = 0; i < a.m_inputs.size(); i++)
+                    // we must compare the two composites' graphs
+                    vector<PrimitiveFunctionPtr> aNodes, bNodes;
+                    Function::PreorderTraverseFunctions(     compositePtr->RootFunction(), [&](const FunctionPtr& fPtr) { aNodes.push_back(static_pointer_cast<PrimitiveFunction>(fPtr)); });
+                    Function::PreorderTraverseFunctions(otherCompositePtr->RootFunction(), [&](const FunctionPtr& fPtr) { bNodes.push_back(static_pointer_cast<PrimitiveFunction>(fPtr)); });
+                    if (aNodes.size() != bNodes.size())
+                        return false;
+                    // BUGBUG: This compares the original graph, not the short-circuited one. Is that sufficient?
+                    for (size_t i = 0; i < aNodes.size(); i++)
                     {
-                        fail_if(a.m_inputs[i].Shape().IsUnknown(), "AreCompositesBatchable called for unknown shape??");
-                        let& aInputFields = GetInputFields(a.m_inputs[i]);
-                        let& bInputFields = GetInputFields(b.m_inputs[i]);
-                        if (aInputFields.m_redirection.empty() != aInputFields.m_redirection.empty())
+                        let& a = *aNodes[i];
+                        let& b = *bNodes[i];
+                        //fail_if(a.m_inputs[i].Shape().IsUnknown(), "AreCompositesBatchable called for unknown shape??");
+                        if (!AreBatchable(a, b))
                             return false;
-                        if (!aInputFields.m_redirection.empty())
-                        {
-                            // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly.
-                            // BUGBUG: We also must compare the actual graph link structure, not just the unrolled tree.
-                            // BIG BUGBUG: AreBatchable considers m_batchAxis etc., which have not been set up for Primitives inside the composite.
-                            if (!AreBatchable(*aInputFields.m_redirection.m_function, *bInputFields.m_redirection.m_function))
-                                return false;
-                        }
                     }
+                    //for (size_t i = 0; i < a.m_inputs.size(); i++)
+                    //{
+                    //    let& aInputFields = GetInputFields(a.m_inputs[i]);
+                    //    let& bInputFields = GetInputFields(b.m_inputs[i]);
+                    //    if (aInputFields.m_redirection.empty() != aInputFields.m_redirection.empty())
+                    //        return false;
+                    //    if (!aInputFields.m_redirection.empty())
+                    //    {
+                    //        // BUGBUG: we retraverse multiple paths for now. This will be rewritten and done properly.
+                    //        // BUGBUG: We also must compare the actual graph link structure, not just the unrolled tree.
+                    //        // BIG BUGBUG: AreBatchable considers m_batchAxis etc., which have not been set up for Primitives inside the composite.
+                    //        //             ^^ Isn't this addressed in MatchAndRememberComposite(), which traverses the composite to set these?
+                    //        if (!AreBatchable(*aInputFields.m_redirection.m_function, *bInputFields.m_redirection.m_function))
+                    //            return false;
+                    //    }
+                    //}
                     return true;
 #endif
                 }
@@ -1566,7 +1588,7 @@ class InternalVariable::AutoBatch
                             continue; // TODO: keep looking for a non-expired one
                         //if (compositePtr->Name() == L"dense.normWeight5" || otherCompositePtr->Name() == L"dense.normWeight5")
                         //    Break;
-                        let areBatchable = AreCompositesBatchable(static_cast<const PrimitiveFunction&>(*compositePtr->RootFunction()), static_cast<const PrimitiveFunction&>(*otherCompositePtr->RootFunction()));
+                        let areBatchable = AreCompositesBatchable(compositePtr, otherCompositePtr);
                         // found a match
                         if (areBatchable)
                         {
@@ -2492,11 +2514,12 @@ class InternalVariable::AutoBatch
             VerifyFreeDimensionReplacement(clonee.m_inputs, fCloned->m_inputs, newInputsFreeDim);
 #endif
         // initialize the output
-        let dataType = fCloned->m_inputs.front().GetDataType();
+        //let dataType = fCloned->m_inputs.front().GetDataType();
+        fail_if(output.GetDataType() == DataType::Unknown, "ClonePrimitiveFunction: output has no determined data type yet??");
         if (mustReplaceFreeDimension)
-            fCloned->InitOutput(Variable(NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)), VariableKind::Output, dataType, output.NeedsGradient(), output.IsSparse()));
+            fCloned->InitOutput(Variable(NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)), VariableKind::Output, output.GetDataType(), output.NeedsGradient(), output.IsSparse()));
         else
-            fCloned->InitOutput(Variable(NDShape(output.Shape()), VariableKind::Output, dataType, output.NeedsGradient(), output.IsSparse()));
+            fCloned->InitOutput(Variable(NDShape(output.Shape()), VariableKind::Output, output.GetDataType(), output.NeedsGradient(), output.IsSparse()));
         // Note: Somehow, OutputVariable() above does not get inlined, even with __forceinline.
         // add additional initializations for auto-batch only
         FinishConstructingPrimitiveFunction(*fCloned, clonee.m_profiler, /*logPrefix=*/nullptr);
@@ -2888,13 +2911,18 @@ class InternalVariable::AutoBatch
     }
 
     // subroutine to determine the max Rank() over f's m_inputs
-    // Only use this for element-wise ops (and not, e.g., for Times or Convolution).
+    // This function is currently only used in an error check.
     size_t DetermineMaxElementwiseInputRank(const PrimitiveFunction& f)
     {
-        let numArgs = f.m_inputs.size();
-        size_t maxInputRank = IsMatrixProduct(f.m_op) ? 0 : f.m_inputs.front().Shape().Rank();
-        for (size_t i = 1; i < numArgs; i++)
-            maxInputRank = max(f.m_inputs[1].Shape().Rank(), maxInputRank);
+        if (IsMatrixProduct(f.m_op)) // special case for Times
+            return f.m_inputs.back().Shape().Rank();
+        size_t maxInputRank = 0;
+        for (let& input : f.m_inputs)
+            maxInputRank = max(input.Shape().Rank(), maxInputRank);
+        //let numArgs = f.m_inputs.size();
+        //size_t maxInputRank = f.m_inputs.front().Shape().Rank();
+        //for (size_t i = 1; i < numArgs; i++)
+        //    maxInputRank = max(f.m_inputs[i].Shape().Rank(), maxInputRank);
         return maxInputRank;
     }
 
@@ -3408,15 +3436,14 @@ class InternalVariable::AutoBatch
         }
         fail_if(stackingMode == StackingMode::STACKING_BUT_MAY_BATCH, "StackingMode::STACKING_BUT_MAY_BATCH should have been decided by now??");
         let commonInputBatchAxis = batchAxis; // TODO: remove this extra name
-        //let maxInputRank = DetermineMaxElementwiseInputRank(f0);
-        //if (isTimes)
-        //    Break;
         let outputBatchAxis = isTimes ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : batchAxis;
-        if (!isTimes && op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
+        if (!isTimes &&
+            op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && op != PrimitiveOpType::Block &&
+            f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
             LogicError("elementwise op that increases rank??");
         //if (op == PrimitiveOpType::Block && stackingMode == StackingMode::BATCHING)
         //    Break;
-        //else if (op == PrimitiveOpType::Block)
+        //if (op == PrimitiveOpType::Block && f0.m_inputs.empty())
         //    Break;
 #endif
 
@@ -4562,7 +4589,7 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
 //     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the free axis
 
 /*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
-    m_arity(arity), m_isBasicBlock(isBasicBlock  )// &&false) // for now, disable basic blocks
+    m_arity(arity), m_isBasicBlock(isBasicBlock)
 {
     // for debugging, we can disable static invocation altogether
     if (m_forceImmediate)
@@ -4602,6 +4629,8 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
     // Some of these are used for composites that are declared as basic blocks, but also for those
     // invoked by basic blocks even if not declared as such. Hence, we must initialize this always.
     // (we probably only need m_freeAxis; the others are only used for sceduling).
+    // TODO: Review how these propagate into nested composites. Do we need to copy them in below, and can freeAxis move around?
+    //        Seems this is done in the cached comparison of composites.
     fCompositePtr->m_basicBlockInfo.m_freeAxis = m_argumentFreeAxes.empty() ? SIZE_MAX : freeAxis; // remember the one axis used for all ops inside the basic block
     fCompositePtr->m_basicBlockInfo.m_batchableCompositeId = SIZE_MAX; // composites with the same id are batchable
     fCompositePtr->m_basicBlockInfo.m_batchNormIds = make_unique<vector<size_t>>();
@@ -4623,12 +4652,15 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
     // -- prep this class for Invoke(). Complete the m_argsMap pairs by including all learnable Parameters in it as well.
     // This is needed so that the auto-batcher can see all Parameters that are inside, without having to traverse it.
     m_operands.resize(m_argumentList.size());
+#if 0 // instead we explicitly expand it in InputsImpl()
     for (let& p : m_composite->Parameters())
     {
         m_argumentList.push_back(p);            // presently also must pass all Parameters
         m_operands.push_back(p);                // we prepopulate the operands here, these are not changed afterwards
+        // BUGBUG: This is not correct! We must batch the parameters. How is that accomplished?
         m_argumentFreeAxes.push_back(SIZE_MAX); // make sure we can index these elements, too
     }
+#endif
     m_stillNeedsToInferShapes = true;
 }
 
