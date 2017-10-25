@@ -57,8 +57,9 @@ class Parameters():
         self.cntk_momentum_time_constant = -1    # set per data set below
 
         # for Distributed learner
-        self.num_quantization_bits = 1   # set for distributed learner 
-        self.warm_up = 1                 # set for distributed learner
+        self.distributed_flg = False     # If distributed learning set 'True'
+        self.num_quantization_bits = 32  # set for distributed learner 
+        self.warm_up = 0                 # set for distributed learner
 
 ############################
 # project-specific parameters

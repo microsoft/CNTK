@@ -154,8 +154,16 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
     # Instantiate the trainer object
-    learner = momentum_sgd(frcn_output.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    if distributed_flg:
+        from cntk import distributed
+        learner = distributed.data_parallel_distributed_learner(
+            learner = learner,
+            num_quantization_bits = num_quantization_bits,   # non-quantized gradient accumulation
+            distributed_after = distributed_after)           # no warm start as default            
+        progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs, rank=distributed.Communicator.rank())
+    else:
+        learner = momentum_sgd(frcn_output.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
+        progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
     trainer = Trainer(frcn_output, (ce, pe), learner, progress_printer)
 
     # Get minibatches of images and perform model training
@@ -171,6 +179,9 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
         trainer.summarize_training_progress()
         if debug_output:
             frcn_output.save(os.path.join(abs_path, "Output", "frcn_py_%s.model" % (epoch+1)))
+
+    if distributed_flg:
+        distributed.Communicator.finalize()
 
     return frcn_output
 

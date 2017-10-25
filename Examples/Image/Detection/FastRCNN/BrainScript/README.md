@@ -106,13 +106,15 @@ If you carefully examine the [fastrcnn.cntk](./fastrcnn.cntk) file, you would no
 
 ### Running Fast R-CNN distributed training
 
-The python code `python A2_RunWithPyModel_distributed.py` was prepared for multi-GPU machine.
+In case of distributed training, set `distributed_flg` to `True` in [PARAMETERS.py](./PARAMETERS.py).
+It will cause `python A2_RunWithPyModel.py` for distributed learning with multi-GPU environment.
 Note: This example requires a multi-GPU machine to distribute.
 
 Simple aggregation with a 2-GPU machine:
-`mpiexec -n 2 python A2_RunWithPyModel_distributed.py`
+`mpiexec -n 2 python A2_RunWithPyModel.py`
 
 Please check 2 parameters `num_quantization_bits`, `warm_up` in [PARAMETERS.py](./PARAMETERS.py) for distributed learning.
+Here is a [quick reference](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#2-configuring-parallel-training-in-cntk-in-python) for distributed learning with python.
 
 ### Evaluate trained model
 
