@@ -1964,7 +1964,7 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
     },
     { NOT_IMPLEMENTED; },
     { gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
-        (ElemType)learnRatePerSample, (ElemType)meanMomentum, 
+        (ElemType)learnRatePerSample, (ElemType)meanMomentum,
         (ElemType)varMomentum, biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
         SetDataLocation(GPU); });
 

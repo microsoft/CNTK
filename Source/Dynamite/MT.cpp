@@ -74,10 +74,12 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
     {
         srcVocabSize = 78440;
         tgtVocabSize = 79439;
-        srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
-        tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.small.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
+        srcTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt"; srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
+        tgtTxtFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt"; tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
         subMinibatches = 10;
         learningRate *= 10;
+        size_t numEncoderLayers = 1;
+        size_t numDecoderResNetProjections = 0;
     }
     else if (systemId == "rom_enu")
     {

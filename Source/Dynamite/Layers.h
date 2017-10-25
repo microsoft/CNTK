@@ -581,7 +581,6 @@ static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
 #endif
 }
 
-#if 0 // TODO: complete this
 static BinaryModel RNNStep(size_t outputDim)
 {
     auto W = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
@@ -593,7 +592,6 @@ static BinaryModel RNNStep(size_t outputDim)
         return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), Named("RNNStep.h"));
     });
 }
-#endif
 
 #if 0
 static BinaryModel GRU(size_t outputDim)
@@ -747,7 +745,7 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
     auto W                  = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
     auto b                  = Parameter({                   outputDim                             }, CurrentDataType(), 0.0f,                       CurrentDevice(), L"b");
-    auto scale              = Parameter({                                                         },            CurrentDataType(), 1.0,                        CurrentDevice(), L"scale");
+    auto scale              = Parameter({                                                         }, CurrentDataType(), 1.0,                        CurrentDevice(), L"scale");
     auto weightNormRescale  = Parameter({                   outputDim                             }, CurrentDataType(), 1.0,                        CurrentDevice(), L"weightNormRescale");
     let weightNormMinusHalf = Constant::Scalar(                                    CurrentDataType(), -0.5,                       CurrentDevice());
     let batchNorm = hasBatchNorm ? BatchNormalization(/*axis=*/1, Named("DenseBN")) : Identity;
@@ -764,7 +762,6 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         nested[L"batchNorm"] = batchNorm;
     if (hasLengthNorm)
         nested[L"lengthNorm"] = lengthNorm;
-    // BUGBUG: if isBasicBlock 'true' then this fails with projectInput.weightNormRescale not a parameter
     let normWeight = StaticModel(/*isBasicBlock=*/true , [=]() -> Variable
     {
         if (!hasWeightNorm)
@@ -777,6 +774,8 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
         // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
         // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
         let invLen = Pow(rowNorm, weightNormMinusHalf);
+        //if (hasBatchNorm && !hasLengthNorm) // batchNorm does element-wise rescaling, so no need to do it here as well
+        //    return invLen;
         let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
         return scale1;
         //y = scale1 * y;
