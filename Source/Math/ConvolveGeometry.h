@@ -588,18 +588,15 @@ public:
         return res.str();
     }
 
-    bool IsAsymmetricPadding(size_t* asymmIndexPtr = nullptr) const
+    bool IsAsymmetricPadding() const
     {
         for (size_t i = 0; i < KernelShape().size(); i++)
         {
             auto lowerPad = GetLowerPad(i);
             auto upperPad = GetUpperPad(i);
             auto stride = GetStride(i);
-            if ((KernelShape()[i] % 2 == 0) &&
-                (lowerPad != upperPad) &&
-                (stride < InputShape()[i]))
+            if ((lowerPad != upperPad) && (stride < InputShape()[i]))
             {
-                if (asymmIndexPtr) *asymmIndexPtr = i;
                 return true;
             }
         }
