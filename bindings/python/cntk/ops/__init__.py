@@ -2314,7 +2314,7 @@ def to_batch(x, name=''):
     return to_batch(x, name)
 
 @typemap
-def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
+def one_hot(x, num_classes, sparse_output=True, axis=-1, name=''):
     '''
     Create one hot tensor based on the input tensor
 
@@ -2333,7 +2333,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     Args:
         x: input tensor, the value must be positive integer and less than num_class
         num_classes: the number of class in one hot tensor
-        sparse_output: if set as True, we will create the one hot tensor as sparse.
+        sparse_output: if set as True, we will create the one hot tensor as sparse (default: True).
         axis: The axis to fill (default: -1, a new inner-most axis).
         name (str, optional, keyword only): the name of the Function instance in the network
 
