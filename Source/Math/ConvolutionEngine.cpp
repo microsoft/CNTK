@@ -693,6 +693,8 @@ protected:
     {
 #ifdef USE_MKLDNN
         if (BackwardDataMKL(srcGrad, kernel, grad, accumulateGradient, workspace)) return;
+#else
+        UNUSED(accumulateGradient);
 #endif
 
         size_t batchSize = srcGrad.GetNumCols();
@@ -790,6 +792,8 @@ protected:
     {
 #ifdef USE_MKLDNN
         if (BackwardKernelMKL(srcGrad, in, kernelGrad, accumulateGradient, workspace)) return;
+#else
+        UNUSED(accumulateGradient);
 #endif
 
         size_t batchSize = srcGrad.GetNumCols();
