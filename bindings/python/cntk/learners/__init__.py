@@ -101,7 +101,7 @@ class Learner(cntk_py.Learner):
     To instantiate a concrete learner, use the factory methods in this module.
     '''
 
-    def update(self, gradient_values, training_sample_count):
+    def update(self, gradient_values, training_sample_count, is_sweep_end=False):
         '''
         Update the parameters associated with this learner.
 
@@ -110,6 +110,7 @@ class Learner(cntk_py.Learner):
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
             training_sample_count (int): number of samples in the minibatch
+            is_sweep_end (bool): a flag indicating whether it is at the end of a sweep of data
 
         Returns:
             bool: `False` to indicate that learning has stopped for all of the parameters associated with this learner
@@ -117,7 +118,7 @@ class Learner(cntk_py.Learner):
         var_nd_map = {var: NDArrayView.from_data(val) for var, val in
                       gradient_values.items()}
 
-        return super(Learner, self)._update(var_nd_map, training_sample_count)
+        return super(Learner, self)._update(var_nd_map, training_sample_count, is_sweep_end)
 
     @property
     @typemap
