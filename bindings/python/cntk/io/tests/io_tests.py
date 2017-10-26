@@ -1361,9 +1361,13 @@ def test_user_deserializer_sequence_mode():
     d = GenDeserializer(stream_infos=streams, num_chunks=15, 
                         num_sequences=100, max_sequence_len=10)
     mbs = MinibatchSource([d], randomize=False, max_sweeps=2)
+    state = mbs.get_checkpoint_state()
+    mbs.restore_from_checkpoint(state)
     run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=200)
     # Randomized
     mbs = MinibatchSource([d], randomize=True, max_sweeps=2, randomization_window_in_chunks=5)
+    state = mbs.get_checkpoint_state()
+    mbs.restore_from_checkpoint(state)
     run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=200)
 
     # Small chunks of 1
@@ -1419,4 +1423,3 @@ def test_index_caching(tmpdir):
         timeWithCache += (end - start)
 
     assert timeWithCache < timeWithoutCache
-

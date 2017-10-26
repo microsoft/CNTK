@@ -88,6 +88,7 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Cosh, L"Cosh"},
+        {PrimitiveOpType::Asinh, L"Asinh"},
         {PrimitiveOpType::Sinh, L"Sinh"},
         {PrimitiveOpType::Pass, L"Pass"},
         {PrimitiveOpType::Block, L"Block"},

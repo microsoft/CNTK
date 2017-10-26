@@ -170,6 +170,7 @@
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
+    <ClInclude Include="PrimitiveFunctionAttributes.h"/>
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />

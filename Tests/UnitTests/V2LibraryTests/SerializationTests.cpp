@@ -345,7 +345,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Acos) == 82 &&
                   static_cast<size_t>(PrimitiveOpType::Pad) == 83 &&
                   static_cast<size_t>(PrimitiveOpType::Crop) == 84 &&
-                  static_cast<size_t>(PrimitiveOpType::Atanh) == 85,
+                  static_cast<size_t>(PrimitiveOpType::Atanh) == 85 &&
+                  static_cast<size_t>(PrimitiveOpType::Asinh) == 86,
                   "PrimitiveOpType enum value was modified.");
 }
 

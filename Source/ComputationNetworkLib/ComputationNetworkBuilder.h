@@ -116,6 +116,7 @@ public:
     ComputationNodePtr Abs(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Acos(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Asin(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr Asinh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Atanh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Less(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Equal(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
