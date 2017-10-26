@@ -374,7 +374,8 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
         CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame,
             uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
-        
+        //alpha.Print("alpha");
+        //beta.Print("beta");
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
         rowSum.Resize(1, numCols);
 
