@@ -1468,6 +1468,7 @@ namespace CNTK
         if (!name.empty())
             fprintf(f, "%S : %s%S =\n", name.c_str(), DataTypeName(GetDataType()), Shape().AsString().c_str());
         fprintf(f, "%s\n", asString.c_str());
+        fflush(f); // flush right away since most likely users are debugging
     }
 
     // Explicit template instantiations

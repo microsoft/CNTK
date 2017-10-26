@@ -1938,9 +1938,9 @@ class InternalVariable::AutoBatch
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
             InvalidArgument("Dynamic Value() must not depend on Input or Placeholder.");
         let isParameterOrConstant = fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant;
-        if (fields.m_value || isParameterOrConstant)
+        if (isParameterOrConstant)
         {
-            if (isParameterOrConstant && !fields.m_value)
+            if (!fields.m_value)
             {
                 var.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
                 fail_if(!fields.m_value, "Parameter/Constant has no Value()??");
@@ -1949,6 +1949,8 @@ class InternalVariable::AutoBatch
             m_stats.numLeafNodes++;
             return;
         }
+        if (fields.m_value) // this is a function that has been computed before
+            return;
 
         // see through ops that do nothing
         auto& f = *fields.m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
@@ -1974,7 +1976,8 @@ class InternalVariable::AutoBatch
             let& output = inlinedRootPtr->m_outputs.front();
             RBuildForwardGraphAndSchedule(output, depth + 1);
             // set up linkage in our overlaid structure
-            fields.m_redirection = GetInputFields(output).m_redirection; // we redirect to whatever the inlined one redirects to
+            let& redirectedFields = GetInputFields(output);
+            fields.m_redirection = redirectedFields.m_redirection; // we redirect to whatever the inlined one redirects to
             // the ref count:
             //  - If the inlined block root is a redirect that holds a ref count, then that is a redirect itself.
             //    Hence, the root Function has been short-circuited, and no ref-count should be held to it (it gets freed right here).
@@ -1998,10 +2001,10 @@ class InternalVariable::AutoBatch
             m_stats.numShortCircuitedNodes++;
             let& input = f.m_inputs.front();
             RBuildForwardGraphAndSchedule(input, depth + 1);
-            auto& redirectedFields = GetInputFields(input);
+            let &redirectedFields = GetInputFields(input);
             //fail_if(fields.m_redirection, "redirection set up here twice??");
             fields.m_redirection = redirectedFields.m_redirection; // we redirect to whatever the input redirects to
-            // BUGBUG:!!!! How aboud the gradient?? We must know how to find the gradient!
+            // BUGBUG:!!!! How about the gradient?? We must know how to find the gradient!
             //        One solution is to redirect to the operation directly on top of the Parameter, not the parameter itself.
             if (fields.m_redirection.empty()) // redirects to leaves are currently not handled correctly (since redirects are based on Function, not Variable)  --TODO: change that
                 InvalidArgument("Value(): See-through ops on leaves are currently not implemented.");
@@ -2052,13 +2055,10 @@ class InternalVariable::AutoBatch
             let& input = inputs[i];
             // recursively traverse
             RBuildForwardGraphAndSchedule(input, depth + 1);
-            let& inputFields = GetInputFields(input);
-            if (!inputFields.m_value) // (if input is a leaf, it has a value)
+            auto& inputFields = GetInputFields(input);
+            auto& outputFields = inputFields.m_redirection.empty() ? inputFields : GetOutputFields(*inputFields.m_redirection.m_function);
+            if (!outputFields.m_value) // (if input is a leaf, or the result of a prior invocation, it has a value)
             {
-                //if (inputFields.m_varKind == VariableKind::Placeholder) // Placeholder in Block inlining
-                //    continue;
-                fail_if(inputFields.m_redirection.empty(), "input has no value and is not a function either??");
-                auto& outputFields = GetOutputFields(*inputFields.m_redirection.m_function);
                 pendingInputs++;
                 // record ourselves as a consumer of the input
                 // Note that RBuildForwardGraphAndSchedule() will have reset this upon first visit of 'input'.
