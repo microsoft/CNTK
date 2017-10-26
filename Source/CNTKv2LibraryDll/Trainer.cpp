@@ -341,8 +341,8 @@ namespace CNTK
     void Trainer::SummarizeTrainingProgress()
     {
         DistributedCommunicatorPtr communicator = MPICommunicator();
-        std::cout << "Entering SummarizeTrainingProgress " << communicator->CurrentWorker().m_globalRank << std::endl;
-        std::cout.flush();
+        //std::cout << "Entering SummarizeTrainingProgress " << communicator->CurrentWorker().m_globalRank << std::endl;
+        //std::cout.flush();
 
         // Aggregate across workers training loss and eval criteria if BMUF like learner.
         if (m_distributed && m_parameterLearners->MetricsAggregationIfNeededLamda)
