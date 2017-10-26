@@ -294,7 +294,7 @@ namespace CNTK
     {
         CheckWorkers(sendToWorkers);
 
-        if (m_mpi->NumNodesInUse() == 1) // No need to aggregate anything.
+        if (m_mpi->NumNodesInUse() == 1 && !ALWAYS_COMMUNICATE) // No need to aggregate anything.
             return;
 
         assert(inputValues.size() == outputValues.size());

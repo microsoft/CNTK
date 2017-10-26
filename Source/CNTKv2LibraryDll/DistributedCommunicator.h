@@ -143,5 +143,7 @@ namespace CNTK
 
         template <typename ElemType>
         void AllReduceData(ElemType* inputData, ElemType* outputData, size_t numElements, std::vector<MPI_Request>* pAllReduceRequests, bool dataOnCPU, MPI_Op op = MPI_SUM, bool forceSync = false);
+    public:
+        static const bool ALWAYS_COMMUNICATE = false; // for debugging: if true then do data exchange on a single machine
     };
 }
