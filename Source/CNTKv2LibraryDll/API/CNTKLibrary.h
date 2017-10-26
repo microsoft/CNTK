@@ -4923,9 +4923,9 @@ namespace CNTK
         }
 
         // Whether the loss and eval metrics should be aggregated across workers before summarization or not. Eg BlockMomentumUpdateAndFiltering BMUF needs an aggregation
-        virtual bool IsLossEvalAggregationNeededBeforeReporting()
+        virtual void DoMetricsAggregationIfNeeded(AccumulatorPtr&, AccumulatorPtr&)
         {
-            return false;
+            return;
         }
 
     protected:

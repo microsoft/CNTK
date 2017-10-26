@@ -9,7 +9,7 @@
 #include "CNTKLibrary.h"
 #include "fileutil.h"
 #include "PerformanceProfiler.h"
-
+#include <iostream>
 namespace CNTK
 {
     using namespace std;
@@ -213,6 +213,7 @@ namespace CNTK
 
             // Peform actions if required.
             size_t totalNumberOfSamples = Trainer()->TotalNumberOfSamplesSeen();
+            //std::cout << "Total samples " << totalNumberOfSamples << " Rank " << MPICommunicator()->CurrentWorker().m_globalRank << std::endl;
             for (auto& action : m_actions)
             {
                 size_t index = totalNumberOfSamples / action.frequency;

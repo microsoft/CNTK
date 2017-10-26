@@ -294,10 +294,10 @@ namespace CNTK
     }
 
     void Trainer::DoDistributedLossEvalAveraging()
-    {
+    {/*
         DistributedCommunicatorPtr communicator = MPICommunicator();
 
-        //std::cout << "Entering DoDistributedLossEvalAveraging " << communicator->CurrentWorker().m_globalRank << std::endl;
+        std::cout << "Entering DoDistributedLossEvalAveraging " << communicator->CurrentWorker().m_globalRank << std::endl;
         float averageTrainingLoss = 0;
         bool aggregateTrainingLoss = false;
         if (m_aggregatedTrainingLossValue && m_aggregatedTrainingLossValue->IsInitialized())
@@ -321,7 +321,7 @@ namespace CNTK
         
         if (aggregateTrainingLoss || aggregateEvalCriterion)
         {
-            //communicator->AggregateInPlace(inPlaceAggregateVector, communicator->Workers());
+            communicator->AggregateInPlace(inPlaceAggregateVector, communicator->Workers());
         }
 
         if (aggregateTrainingLoss)
@@ -335,14 +335,20 @@ namespace CNTK
             inPlaceAggregateEvalCriterion->SetValue(inPlaceAggregateEvalCriterion->AsScalar<float>() / communicator->Workers().size());
             m_aggregatedTrainingEvalCriterionValue->CopyFrom(Value(inPlaceAggregateEvalCriterion));
         }
+        */
     }
 
     void Trainer::SummarizeTrainingProgress()
     {
+        DistributedCommunicatorPtr communicator = MPICommunicator();
+        std::cout << "Entering SummarizeTrainingProgress " << communicator->CurrentWorker().m_globalRank << std::endl;
+        std::cout.flush();
+
         // Aggregate across workers training loss and eval criteria if BMUF like learner.
-        if (m_distributed && m_parameterLearners->IsLossEvalAggregationNeededBeforeReporting())
+        if (m_distributed && m_parameterLearners->MetricsAggregationIfNeededLamda)
         {
-            DoDistributedLossEvalAveraging();
+            m_parameterLearners->MetricsAggregationIfNeededLamda(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
+            //this->DoDistributedLossEvalAveraging();
         }
 
         for (auto& progressWriter : m_progressWriters)

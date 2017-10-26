@@ -645,18 +645,15 @@ namespace CNTK
         {
             return m_isDistributed;
         }
-        bool IsLossEvalAggregationNeededBeforeReporting() const
-        {
-            return m_isLossEvalAggregationNeededBeforeReporting;
-        }
+
+        std::function<void(AccumulatorPtr&, AccumulatorPtr&)> MetricsAggregationIfNeededLamda;
         
     private:
         void GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients);
         void CheckDistributedLearners();
 
         std::vector<LearnerPtr> m_learners;
-        bool m_isDistributed;
-        bool m_isLossEvalAggregationNeededBeforeReporting;  //Needed in case of BMUF like algorithms
+        bool m_isDistributed;        
     };
 
     class Utils
