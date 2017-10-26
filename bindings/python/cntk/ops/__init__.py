@@ -2933,7 +2933,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
@@ -2959,7 +2959,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
@@ -2990,7 +2990,7 @@ def output_variable(shape, dtype, dynamic_axes, needs_gradient=True, name=''):
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type
+        dtype (np.float32 or np.float64 or np.float16): data type
         dynamic_axes (list or tuple): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
 

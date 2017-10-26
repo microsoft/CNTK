@@ -21,7 +21,7 @@ def get_data_type(*args):
         args (number, list, NumPy array, :class:`~cntk.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
 
     Returns:
-        np.float32, np.float64, or None
+        np.float32, np.float64, np.float16 or None
     """
     from ..variables import Variable
 
@@ -39,11 +39,13 @@ def get_data_type(*args):
                 cntk_dtypes.add(np.float64)
             elif cntk_py.DataType_Float == arg.get_data_type():
                 cntk_dtypes.add(np.float32)
+            elif cntk_py.DataType_Float16 == arg.get_data_type():
+                cntk_dtypes.add(np.float16)
         elif isinstance(arg, (np.ndarray, np.inexact)):
             # https://docs.scipy.org/doc/numpy/reference/arrays.scalars.html
             # integer are not np.inexact -> np.float32
             # only accepts numpy types
-            if arg.dtype not in (np.float32, np.float64):
+            if arg.dtype not in (np.float32, np.float64, np.float16):
                 raise ValueError(
                     'NumPy type "%s" is not supported' % arg.dtype)
             numpy_dtypes.add(arg.dtype.type)
@@ -56,8 +58,10 @@ def get_data_type(*args):
             var_type = var_outputs[0].get_data_type()
             if cntk_py.DataType_Double == var_type:
                 cntk_dtypes.add(np.float64)
-            else:
+            elif cntk_py.DataType_Float == var_type:
                 cntk_dtypes.add(np.float32)
+            elif cntk_py.DataType_Float16 == var_type:
+                cntk_dtypes.add(np.float16)
         else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.
@@ -70,11 +74,15 @@ def get_data_type(*args):
             return np.float64
         elif np.float32 in cntk_dtypes:
             return np.float32
+        elif np.float16 in cntk_dtypes:
+            return np.float16
     else:
         if np.float64 in numpy_dtypes:
             return np.float64
         elif np.float32 in numpy_dtypes:
             return np.float32
+        elif np.float16 in numpy_dtypes:
+            return np.float16
 
 def get_python_function_arguments(f):
     '''
@@ -167,7 +175,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the sequence in the same slot of the previous
          minibatch (`False`)
-        precision (str or None): precision being 'float32', 'float64', or
+        precision (str or None): precision being 'float32', 'float64', 'float16', or
          None, in which case it will be determined by inspecting the operator
          (costly)
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
