@@ -58,6 +58,7 @@ size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
 size_t subMinibatches = 1;
 double learningRate = 0.0003662109375;
+bool use1BitSgd = false;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -326,7 +327,14 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
 void Train(string systemId, wstring outputDirectory)
 {
     SetConfigurationVariablesFor(systemId);
-    let communicator = MPICommunicator();
+    let communicator = use1BitSgd ? QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/1) : MPICommunicator();
+    let wrapDistributedLearnerFn = [&](const LearnerPtr& baseLearner)
+    {
+        if (use1BitSgd)
+            return CreateQuantizedDataParallelDistributedLearner(static_pointer_cast<QuantizedDistributedCommunicator>(communicator), baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
+        else
+            return CreateDataParallelDistributedLearner(communicator, baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
+    };
 #if 1 // while we are running with MPI, we always start from start
     let numGpus = DeviceDescriptor::AllDevices().size() -1;
     let ourRank = communicator->CurrentWorker().m_globalRank;
@@ -396,10 +404,10 @@ void Train(string systemId, wstring outputDirectory)
     let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
     let lr0 = learningRate * f;
     auto baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
-        MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
-        learnerOptions);
+                                   MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
+                                   learnerOptions);
 #endif
-    let& learner = CreateDataParallelDistributedLearner(communicator, baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
+    let& learner = wrapDistributedLearnerFn(baseLearner);
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters)
         gradients[p] = nullptr;
