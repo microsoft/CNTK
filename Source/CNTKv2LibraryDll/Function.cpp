@@ -1501,9 +1501,49 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Reshape, operand, std::move(additionalProperties), name);
     }
 
+    std::vector<Variable> AutoBroadcastSequence(PrimitiveOpType op, const Variable& left, const Variable& right)
+    {
+        auto left_axis = left.DynamicAxes();
+        int left_num_seqs = (int)std::count_if(left_axis.begin(), left_axis.end(), [](Axis a) {return a.IsSequenceAxis(); });
+        auto right_axis = right.DynamicAxes();
+        int right_num_seqs = (int)std::count_if(right_axis.begin(), right_axis.end(), [](Axis a) {return a.IsSequenceAxis(); });
+
+        vector<Variable> result;
+        if ( op != PrimitiveOpType::PastValue &&
+             op != PrimitiveOpType::FutureValue &&
+             op != PrimitiveOpType::ToSequence &&
+             op != PrimitiveOpType::ToSequenceLike &&
+             left_axis.size() > 0 &&
+             right_axis.size() > 0 &&
+            (left_num_seqs + right_num_seqs) == 1)
+        {
+            if (left_num_seqs == 1)
+            {
+                auto new_right = CNTK::Sequence::BroadcastAs(right, left);
+                result.push_back(left);
+                result.push_back(new_right);
+            }
+            else
+            {
+                auto new_left = CNTK::Sequence::BroadcastAs(left, right);
+                result.push_back(new_left);
+                result.push_back(right);
+
+            }
+        }
+        else
+        {
+            result.push_back(left);
+            result.push_back(right);
+        }
+
+        return result;
+
+    }
+
     FunctionPtr BinaryOp(PrimitiveOpType op, const Variable& leftOperand, const Variable& rightOperand, Dictionary&& opConfig, const std::wstring& name)
     {
-        std::vector<Variable> operands = { leftOperand, rightOperand };
+        std::vector<Variable> operands = AutoBroadcastSequence(op, leftOperand, rightOperand);
         return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
