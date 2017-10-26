@@ -13,9 +13,6 @@
     <CudaCompile Include="MatrixQuantizerGPU.cu">
       <Filter>GPU\1bitSGD</Filter>
     </CudaCompile>
-    <CudaCompile Include="MatrixQuantizer_kernel.cu">
-      <Filter>GPU\1bitSGD</Filter>
-    </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
       <Filter>GPU\SequenceTraining</Filter>
     </CudaCompile>
@@ -33,6 +30,9 @@
     </CudaCompile>
     <CudaCompile Include="GPURNGHandle.cu">
       <Filter>GPU</Filter>
+    </CudaCompile>
+    <CudaCompile Include="MatrixQuantizer_kernel.cuh">
+      <Filter>GPU\1bitSGD</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

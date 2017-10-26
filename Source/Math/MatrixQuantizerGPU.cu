@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "MatrixQuantizerGPU.h"
-#include "MatrixQuantizer_kernel.cu"
+#include "MatrixQuantizer_kernel.cuh"
 #include "GPUMatrix.h"
 #include "GPUDataTransferer.h"
 

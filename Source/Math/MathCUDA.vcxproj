@@ -175,7 +175,7 @@ xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <CudaCompile Include="MatrixQuantizerGPU.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <CudaCompile Include="MatrixQuantizer_kernel.cu">
+    <CudaCompile Include="MatrixQuantizer_kernel.cuh">
       <ExcludedFromBuild>true</ExcludedFromBuild>
       <FileType>CppCode</FileType>
     </CudaCompile>
