@@ -77,8 +77,6 @@ def test_factor_dense():
 
     input = C.input_variable(input_dim)
     z = _create_model_dense(input, input_dim, hidden_layer_dim, num_output_classes)
-    blocks = C.logging.graph.depth_first_search(
-                z, lambda x : type(x) == C.Function and x.root_function.is_block, depth = 0)
     
     newz = nc.factor_dense(z, projection_function=_get_rank_same_size, filter_function = _filter)
     newblocks = C.logging.graph.depth_first_search(
