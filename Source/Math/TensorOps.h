@@ -300,6 +300,8 @@ DefBinaryOp(Pow, safepow_(a, b));
 DefBinaryOp(DivBySqrt, a / sqrt(b)); // TODO: CUDA has an rqsrt function; use it
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
+DefBinaryOp(Argmax, b > a); // dummy implementation, as this is handled by a special case
+DefBinaryOp(Argmin, b < a); // dummy implementation, likewise
 DefBinaryOp(Equal, a == b);
 DefBinaryOp(NotEqual, a != b);
 DefBinaryOp(Greater, a > b);

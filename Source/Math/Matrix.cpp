@@ -246,7 +246,7 @@ void Matrix<ElemType>::ShallowMoveFrom(Matrix<ElemType>&& other)
 template <class ElemType>
 void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType type) const
 {
-    assert(location == CurrentDataLocation::CPU || location == CurrentDataLocation::GPU || location == CurrentDataLocation::BOTH);
+    assert(location != CurrentDataLocation::NONE);
 
     // if the object used to live on BOTH, this will collapse it to 'location' (unless we actually wrote into BOTH)
     // In that case, we do a sanity check here that the object is a singleton view,
@@ -3057,8 +3057,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignHardmaxOf(const Matrix<ElemType>& a, c
     DecideAndMoveToRightDevice(a, *this);
     SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-    DISPATCH_MATRIX_ON_FLAG(&a,
-                            this,
+    DISPATCH_MATRIX_ON_FLAG(&a, this,
                             m_CPUMatrix->AssignHardmaxOf(*a.m_CPUMatrix, isColWise),
                             m_GPUMatrix->AssignHardmaxOf(*a.m_GPUMatrix, isColWise),
                             NOT_IMPLEMENTED,
@@ -3067,11 +3066,29 @@ Matrix<ElemType>& Matrix<ElemType>::AssignHardmaxOf(const Matrix<ElemType>& a, c
     return *this;
 }
 
+// this is used to implement Argmax for TensorView for sparse matrices only (dense are handled as Tensor op)
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignColumnwiseArgmaxOf(const Matrix<ElemType>& a)
+{
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a, nullptr/*don't SetDataLocation()*/,
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED,
+        {
+            GPUSparseMatrix<ElemType>::AssignColumnwiseArgmaxTo(*m_GPUMatrix, *a.m_GPUSparseMatrix);
+            SetDataLocation(CurrentDataLocation::GPU);
+        });
+
+    return *this;
+}
+
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::InplaceSqrt()
 {
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            this,
+    DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->InplaceSqrt(),
                             m_GPUMatrix->InplaceSqrt(),
                             NOT_IMPLEMENTED,

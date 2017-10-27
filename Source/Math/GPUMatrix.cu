@@ -5199,57 +5199,60 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
         reductionOp != ElementWiseOperator::opLogSum &&
         reductionOp != ElementWiseOperator::opMin    &&
         reductionOp != ElementWiseOperator::opMax    &&
+        reductionOp != ElementWiseOperator::opArgmin &&
+        reductionOp != ElementWiseOperator::opArgmax &&
         reductionOp != ElementWiseOperator::opElementwiseProduct)
-        InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
+        InvalidArgument("TensorOp: Unary reduction operations other than opSum, opLogSum, opMax, opMin, opArgmax, or opArgmin are not implemented.");
 
     a.PrepareDevice();
     if (a.GetComputeDeviceId() != GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
 
-    // special case: linear processing
-    // The case statement has measurable impact for unary ops (but not for binary ops it seems, due to double mem access).
-    // Linear gap-free unary ops happen so regularly that we will eliminate the case statement from the CUDA kernel, and instead expand all.
-    if (regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && reducingOpDims.size() == 0)
+    if (reductionOp == ElementWiseOperator::opSum &&
+        regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1) // we are processing a column
     {
-        // special case: for copy, use cudaMemcpy() instead, or cublas_axpy()
-        // TODO: We should observe if these actually make a speed difference, and if not, remove these special cases.
-        if (op == ElementWiseOperator::opCopy && beta == 0 && alpha == 1)
-            return CUDA_CALL(cudaMemcpy(Data()+ offsets[1], a.Data()+ offsets[0], sizeof(ElemType) * regularOpDims[0], cudaMemcpyDeviceToDevice));
-        else if (op == ElementWiseOperator::opCopy && beta == 1)
-            return CUBLAS_CALL(cublas_axpy(GetCublasHandle(GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data()+ offsets[0], 1, Data()+ offsets[1], 1));
-        else
-            return LaunchUnaryTensorOp<ElemType>(beta, a.Data()+ offsets[0], Data()+ offsets[1], alpha, op, regularOpDims[0]);
-    }
-
-    // special case: sum-reducing a matrix onto a column vector; can be done with SGEMM
-    // Note: A minor risk is that with this, our own reduction function will rarely be used.
-    // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
-    else if (op == ElementWiseOperator::opCopy && // we are just adding to target without any further operation
-             reductionOp == ElementWiseOperator::opSum &&
+        // special case: linear processing
+        // The case statement has measurable impact for unary ops (but not for binary ops it seems, due to double mem access).
+        // Linear gap-free unary ops happen so regularly that we will eliminate the case statement from the CUDA kernel, and instead expand all.
+        if (reducingOpDims.size() == 0)
+        {
+            // special case: for copy, use cudaMemcpy() instead, or cublas_axpy()
+            // TODO: We should observe if these actually make a speed difference, and if not, remove these special cases.
+            if (op == ElementWiseOperator::opCopy && beta == 0 && alpha == 1)
+                return CUDA_CALL(cudaMemcpy(Data()+ offsets[1], a.Data()+ offsets[0], sizeof(ElemType) * regularOpDims[0], cudaMemcpyDeviceToDevice));
+            else if (op == ElementWiseOperator::opCopy && beta == 1)
+                return CUBLAS_CALL(cublas_axpy(GetCublasHandle(GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data()+ offsets[0], 1, Data()+ offsets[1], 1));
+            else
+                return LaunchUnaryTensorOp<ElemType>(beta, a.Data()+ offsets[0], Data()+ offsets[1], alpha, op, regularOpDims[0]);
+        }
+    
+        // special case: sum-reducing a matrix onto a column vector; can be done with SGEMM
+        // Note: A minor risk is that with this, our own reduction function will rarely be used.
+        // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
+        else if (op == ElementWiseOperator::opCopy && // we are just adding to target without any further operation
 #ifdef _DEBUG
-             sizeof(ElemType) == sizeof(float) && // in debug don't shortcut 'double' so we have some test of our own codepath
+                 sizeof(ElemType) == sizeof(float) && // in debug don't shortcut 'double' so we have some test of our own codepath
 #endif
-             regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && // we are processing a column
-             reducingOpDims.size() == 1 && reducingStrides[0][0] >= (ptrdiff_t) regularOpDims[0])   // reducing across columns and no overlap
-    {
-        assert(reducingStrides[1][0] == 0);
-        auto ARows = regularOpDims[0];    // vertical steps
-        auto ACols = reducingOpDims[0];   // horizontal steps (reduction)
-        auto ALd = reducingStrides[0][0]; // horizontal step width through matrix
-        cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
-        SyncGuard syncGuard;
-        CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
-                                /*A00=*/a.Data()+ offsets[0], (int) ALd,
-                                /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->Data(), (int) /*BRows=*/ACols, &beta,
-                                /*C00=*/Data()+ offsets[1], (int) /*CRows=*/ARows));
-        return;
+                 reducingOpDims.size() == 1 && reducingStrides[0][0] >= (ptrdiff_t) regularOpDims[0])   // reducing across columns and no overlap
+        {
+            assert(reducingStrides[1][0] == 0);
+            auto ARows = regularOpDims[0];    // vertical steps
+            auto ACols = reducingOpDims[0];   // horizontal steps (reduction)
+            auto ALd = reducingStrides[0][0]; // horizontal step width through matrix
+            cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+            SyncGuard syncGuard;
+            CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
+                                    /*A00=*/a.Data()+ offsets[0], (int) ALd,
+                                    /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->Data(), (int) /*BRows=*/ACols, &beta,
+                                    /*C00=*/Data()+ offsets[1], (int) /*CRows=*/ARows));
+            return;
+        }
     }
 
     // TODO: Add a special case for tensor bias reduction. cudnn is ~7% faster on Image/QuickE2E.
 
     // regular case
-    else
-        return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides

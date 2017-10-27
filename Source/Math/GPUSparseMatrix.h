@@ -543,6 +543,7 @@ public:
     GPUSparseMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
 
     GPUSparseMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
+    static void AssignColumnwiseArgmaxTo(GPUMatrix<ElemType>& b, const GPUSparseMatrix<ElemType>& a);
 
     ElemType SumOfElements() const;    // sum of all elements
     ElemType SumOfAbsElements() const; // sum of all abs(elements)

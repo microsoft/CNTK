@@ -162,9 +162,11 @@ enum ElementWiseOperator
     Macro(ElementwiseQuotient);                                              \
     Macro(LogSum);                                                           \
     Macro(Pow);                                                              \
-    Macro(DivBySqrt);                                                         \
+    Macro(DivBySqrt);                                                        \
     Macro(Max);                                                              \
     Macro(Min);                                                              \
+    Macro(Argmax);                                                           \
+    Macro(Argmin);                                                           \
     Macro(Equal);                                                            \
     Macro(NotEqual);                                                         \
     Macro(Greater);                                                          \

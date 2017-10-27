@@ -3362,6 +3362,50 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatr
     return *this;
 }
 
+// determines the row index of the row with the largest value in a column
+template<class ElemType>
+__global__ void _assignCSCArgmaxTo(ElemType *outData, CUDA_LONG numCols,
+    const ElemType* nzValues,                 // base of nz-value array
+    const GPUSPARSE_INDEX_TYPE* nzRowIndices, // base of corresponding row-index array
+    const GPUSPARSE_INDEX_TYPE* colOffsets)   // array of offsets into nz array (including slice-view offset)
+{
+    // each thread processes one column, in a serial loop which is fine since this is meant for use with one-hot data
+    const CUDA_LONG j = blockIdx.x;      // index of the column to process
+    auto beginNZIndex = colOffsets[j];   // nz elements of this columns have this index range in the nz arrays
+    auto endNZIndex   = colOffsets[j+1];
+    ElemType bestVal = 0;   // (dummy)
+    auto bestRowIndex = -1; // result for empty rows
+    for (auto nzIndex = beginNZIndex; nzIndex != endNZIndex; nzIndex++)
+    {
+        if (bestRowIndex == -1 || bestVal < nzValues[nzIndex])
+        {
+            bestVal      = nzValues[nzIndex];
+            bestRowIndex = nzRowIndices[nzIndex];
+        }
+    }
+    outData[j] = (ElemType)bestRowIndex;
+}
+
+template <class ElemType>
+/*static*/ void GPUSparseMatrix<ElemType>::AssignColumnwiseArgmaxTo(GPUMatrix<ElemType>& lhs, const GPUSparseMatrix<ElemType>& rhs)
+{
+    if (rhs.GetFormat() != matrixFormatSparseCSC)
+        LogicError("AssignColumnwiseHardmaxTo: Argument must be in CSC format.");
+
+    // output is a row vector
+    let numCols = rhs.GetNumCols();
+    lhs.Resize(1, numCols);
+
+    // one thread per column (it's simple enough)
+    SyncGuard syncGuard;
+    if (numCols > 0)
+        _assignCSCArgmaxTo<ElemType> <<<numCols, 1, 0, t_stream>>> (
+            lhs.Data(), lhs.GetNumCols(), // target
+            rhs.Buffer(),       // [nzIndex] rhs nz-element array base, without potential slice-view offset.
+            rhs.RowLocation(),  // [nzIndex] rhs index array base, without potential slice-view offset.
+            rhs.ColLocation()); // [colIndex] first nzIndex for rhs given column, with potential slice-view offset. End nzIndex is that of the next column.
+}
+
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {

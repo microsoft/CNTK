@@ -806,9 +806,10 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, Ele
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
-    if ((reductionOp == ElementWiseOperator::opArgmax) ||
-        (reductionOp == ElementWiseOperator::opArgmin))
+    if (reductionOp == ElementWiseOperator::opArgmax || reductionOp == ElementWiseOperator::opArgmin)
     {
+        if (alpha != 1 || beta != 0 || op != opCopy)
+            InvalidArgument("LaunchTensorOp: Argmin/max reductions require opCopy, alpha=1, and beta=0");
         _launchTensorArgOp<ElemType, N, /*M=*/0, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (pointers, reductionOp,
                                                                                                                         regularOpStrides, regularStrides, grid.m_N,
                                                                                                                         reducingOpDims, reducingStrides,

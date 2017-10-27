@@ -425,6 +425,8 @@ public:
     Matrix<ElemType>& InplaceHardmax(const bool isColWise);
     Matrix<ElemType>& AssignHardmaxOf(const Matrix<ElemType>& a, const bool isColWise);
 
+    Matrix<ElemType>& AssignColumnwiseArgmaxOf(const Matrix<ElemType>& a);
+
     // sequence training
     Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType& threshhold);
     Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);

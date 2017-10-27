@@ -7211,13 +7211,6 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOpe
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides)
 {
-    if (reductionOp != ElementWiseOperator::opSum    &&
-        reductionOp != ElementWiseOperator::opLogSum &&
-        reductionOp != ElementWiseOperator::opMin    &&
-        reductionOp != ElementWiseOperator::opMax    &&
-        reductionOp != ElementWiseOperator::opElementwiseProduct)
-        InvalidArgument("TensorOp: Nullary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
-
 // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
 #define CaseNullaryTensorOp(oper)                                                        \
     case ElementWiseOperator::op##oper:                                                \
@@ -7244,6 +7237,14 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
+    if (reductionOp == ElementWiseOperator::opArgmax || reductionOp == ElementWiseOperator::opArgmin)
+    {
+        // note: this code path is untested for now. GPU version is tested.
+        if (alpha != 1 || beta != 0 || op != opCopy)
+            InvalidArgument("LaunchTensorOp: Argmin/max reductions require opCopy, alpha=1, and beta=0");
+        return TensorArgOp(a, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    }
+
     if (reductionOp != ElementWiseOperator::opSum    &&
         reductionOp != ElementWiseOperator::opLogSum &&
         reductionOp != ElementWiseOperator::opMin    &&

@@ -272,7 +272,20 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
         CheckDifferentObject(a, *this);
 
     // now perform the operation
-    GetSOB().TensorOp(beta, a.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    let& aSob = a.GetSOB();
+    if (aSob.GetMatrixType() == MatrixType::SPARSE) // special handling of sparse op
+    {
+        // argmax reduction over sparse columns
+        if (op == opCopy && reductionOp == opArgmax &&
+            reducingOpDims.size() == 1 && reducingOpDims[0]/*.front()*/ == aSob.GetNumRows())
+        {
+            GetSOB().AssignColumnwiseArgmaxOf(*a.GetSOBViewPtr());
+            return;
+        }
+    }
+
+    // regular op
+    GetSOB().TensorOp(beta, aSob, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 template <class ElemType>
