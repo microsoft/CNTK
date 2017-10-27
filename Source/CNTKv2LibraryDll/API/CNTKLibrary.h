@@ -1882,6 +1882,14 @@ namespace CNTK
             float m_float;
             double m_double;
             void* m_ptr;
+            // these are for use in debugging only
+            std::wstring* m_ptrAsString;
+            NDShape* m_ptrAsNDShape;
+            Axis* m_ptrAsAxis;
+            std::vector<DictionaryValue>* m_ptrAsVector;
+            Dictionary* m_ptrAsDictionary;
+            NDArrayView* m_ptrAsNDArrayView;
+            TrainingParameterSchedule<double>* m_ptrAsTrainingParameterSchedule;
         } m_data;
 
          static const size_t s_version;
