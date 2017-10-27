@@ -61,10 +61,12 @@ def factor_dense(model, projection_function = None, filter_function = None,
         raise ValueError("Dense: default factor function (svd) requires a projection_function.")
     
     dense_filter = (lambda x: type(x) == cntk.Function 
-                       and x.op_name == 'Dense' 
-                       and filter_function(x) if filter_function else True)
+                                            and x.op_name == 'Dense' 
+                                            and x.is_block
+                                            and (filter_function(x) if filter_function else True))
    
-    def dense_converter(model):        
+    def dense_converter(model): 
+        print("INPUTS", model.inputs)
         W, b = model.W.value, model.b.value
 
         ht, wdth = W.shape
