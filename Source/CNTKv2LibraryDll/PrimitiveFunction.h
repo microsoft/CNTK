@@ -636,7 +636,14 @@ namespace CNTK
                     numReductionAxes++;
                 }
             }
-
+            if ((inferInputRankToMap >= 0) && (leftOperandShape[leftOperandShape.Rank() - 1] == NDShape::FreeDimension)) // if given, we pad if needed
+            {
+                while ((numReductionAxes + (size_t)inferInputRankToMap) < rightOperand.Shape().Rank())
+                {
+                    leftOperandShape = leftOperandShape.AppendShape({ NDShape::FreeDimension });
+                    numReductionAxes++;
+                }
+            }
             for (size_t i = 0; i < numReductionAxes; ++i)
             {
                 if ((leftOperandShape[outputRank + i] != NDShape::InferredDimension
@@ -656,7 +663,7 @@ namespace CNTK
                 }
                 else if (leftOperandShape[outputRank + i] == NDShape::InferredDimension || leftOperandShape[outputRank + i] == NDShape::FreeDimension)
                 {
-                    if (rightOperandShape[i] == NDShape::FreeDimension)
+                    if (leftOperandShape[outputRank + i] == NDShape::InferredDimension && rightOperandShape[i] == NDShape::FreeDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
                             Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
                             leftOperand.AsString().c_str(),
@@ -669,7 +676,7 @@ namespace CNTK
                 }
                 else if (rightOperandShape[i] == NDShape::InferredDimension || rightOperandShape[i] == NDShape::FreeDimension)
                 {
-                    if (leftOperandShape[outputRank + i] == NDShape::FreeDimension)
+                    if (rightOperandShape[i] == NDShape::InferredDimension && leftOperandShape[outputRank + i] == NDShape::FreeDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
                             Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
                             rightOperand.AsString().c_str(),
