@@ -210,8 +210,9 @@ __global__ void UnquantizeStripejOneQWord(ElemType* us, const long M, const long
 template<class ElemType>
 struct Item
 {
-    static const CUDA_LONG K = 8*sizeof(ElemType);
-    ElemType val;
+    static const CUDA_LONG top = 4;
+    static const CUDA_LONG K = 8 * sizeof(ElemType) * top;
+    ElemType val;  // absolute value
     CUDA_LONG pos; // position
 };
 __device__ float  fabs_(float  x) { return fabsf(x); }
@@ -222,68 +223,96 @@ __device__ CUDA_LONG ExtractPos(float  val) { return __float_as_int      (val) &
 __device__ CUDA_LONG ExtractPos(double val) { return __double_as_longlong(val) & ~-Item<double>::K; }
 template<class ElemType>
 __global__ void CompressKernel(const ElemType* us, ElemType* curResidual, CUDA_LONG NN,
-                               ElemType* compressed, ElemType* newResidual)
+                               ElemType* compressed, CUDA_LONG Nnz, ElemType* newResidual)
 {
     static const CUDA_LONG K = Item<ElemType>::K;
-    __shared__ Item<ElemType> items[K];
+    static const CUDA_LONG top = Item<ElemType>::top;
+
+    // our shared memory  --note: keep the CUDA launch call in sync with this
+    __shared__ Item<ElemType> sortedItems[K]; // temp memory for sorting
+
     CUDA_LONG pos = threadIdx.x; // 0..K-1
     CUDA_LONG blk = blockIdx.x;  // 0..#elements / K -1
-    CUDA_LONG i = K/*=blockDim.x*/ * blk + pos; // absolute index in linearized matrix
-    auto val = i < NN ? us[i] + curResidual[i] : 0; // get the matrix value
-    // reduce-argmax
-    items[pos].pos = pos;
-    items[pos].val = val;
-    for (CUDA_LONG step = 2; step <= K; step *= 2)
+    // K = #elements in this block; blk = block index
+
+    // each CUDA thread operates on a single input value, and we find the top amongst K consecutive values
+    CUDA_LONG i = K/*=blockDim.x*/ * blk + pos;     // absolute index in linearized weight tensor
+    auto val = i < NN ? us[i] + curResidual[i] : 0; // get the weight value for this thread
+
+    // find the top values
+    sortedItems[pos].val = val; // we sort this array
+    sortedItems[pos].pos = pos;
+    __syncthreads();
+    for (CUDA_LONG topIndex = 0; topIndex < top; topIndex++) // each iteration finds the next-highest element
     {
-        CUDA_LONG k1 = pos * step;
-        CUDA_LONG k2 = k1 + (step / 2);
-        if (k1 < K)
+        // find the largest item, starting from topIndex (the ones before are already sorted)
+        for (CUDA_LONG step = 2; step <= K; step *= 2)
         {
-            if (fabs_(items[k2].val) > fabs_(items[k1].val))
-                items[k1] = items[k2];
-            // now only the items at multiples of 'step' are valid
+            CUDA_LONG k1 = pos * step + topIndex;
+            CUDA_LONG k2 = k1 + (step / 2);
+            if (k2 < K) // got data left to swap from?
+            {
+                if (fabs_(sortedItems[k2].val) > fabs_(sortedItems[k1].val))
+                {
+                    Item<ElemType> tmp = sortedItems[k1]; // (swap() for arbitrary PODs does not seem to exist on CUDA)
+                    sortedItems[k1] = sortedItems[k2];
+                    sortedItems[k2] = tmp;
+                }
+            }
+            __syncthreads();
         }
-        __syncthreads();
+        // now the position of the max item is in sortedItems[topIndex].pos; all others are randomly shuffled around
+        // The next loop iteration will no longer include this element.
     }
-    // now the index of the max item is in items[0]
-    ElemType err;
-    if (pos == items[0].pos) // we are the survivor
+    // now we have the top elements and their positions in sortedItems[0..top-1]
+    if (pos < top) // prepare those elements for transmission
     {
+        CUDA_LONG topIndex = pos;
         // implant the index in the least significant mantissa bits
-        ElemType itemVal = ImplantPos(val, pos);
-        // and store result in target buffer
-        compressed[blk] = itemVal;
-        err = val - itemVal; // we are missing this much (this also considers the implanted index)
+        ElemType transmittedValWithPos = ImplantPos(sortedItems[topIndex].val, sortedItems[topIndex].pos); // this is the value the receiver will see, with the index implanted
+        // store result in target buffer
+        CUDA_LONG j = blk * top + topIndex;
+        if (j < Nnz)
+            compressed[j] = transmittedValWithPos;
+        else
+            transmittedValWithPos = 0; // at end: not transmitted
+        // and remember it here as well for error computation, which is next
+        sortedItems[topIndex].val = transmittedValWithPos;
     }
-    else
-        err = val; // all other values are completely missing
-    // and finally compute the residual
+    __syncthreads(); // since we updated sortedItems[]
+    // finally compute the residual
     if (i < NN)
-        newResidual[i] = err;
+    {
+        ElemType err = val; // items that are not transmitted have maximum error
+        for (CUDA_LONG topIndex = 0; topIndex < top; topIndex++) // each iteration finds the next-highest element
+        {
+            if (sortedItems[topIndex].pos == pos)
+            {
+                err -= sortedItems[topIndex].val; // this value was transmitted
+                break;
+            }
+        }
+        newResidual[i] = err; // vals now has the errors
+    }
 }
 template <class ElemType>
-__global__ void UncompressKernel(const ElemType* compressed, ElemType* us, const long NN, bool add)
+__global__ void UncompressKernel(const ElemType* compressed, CUDA_LONG Nnz, ElemType* us, CUDA_LONG NN)
 {
-    CUDA_LONG pos = threadIdx.x;
-    CUDA_LONG blk = blockIdx.x * blockDim.y + threadIdx.y;
-    CUDA_LONG i = blk * blockDim.x + pos;
-
-    //CUDA_LONG NN = (CUDA_LONG)(M * N);
-    //CUDA_LONG K = Item<ElemType>::K;
-    //CUDA_LONG numWarps = 512 / K * K; // (must be a multiple of K)
-    //UncompressKernel<ElemType> << <(NN + numWarps - 1) / numWarps, dim3(K, numWarps / K), 0, stream >> >((const ElemType*)gpuBuffer, us, NN, add);
-
-
-    if (i >= NN)
+    CUDA_LONG j = blockIdx.x * blockDim.x + threadIdx.x; // index into compressed[]
+    // get the compressed value
+    if (j >= Nnz) // out of bounds
         return;
-    ElemType itemVal = compressed[blk];
-    CUDA_LONG itemPos = ExtractPos(itemVal);
-    if (itemPos != pos)
-        itemVal = 0; // not the selected value: compressed as "0"
-    if (!add)
-        us[i] = itemVal;
-    else if (itemVal)
-        us[i] += itemVal;
+    ElemType transmittedValWithPos = compressed[j];
+
+    // add to weight tensor
+    static const CUDA_LONG K = Item<ElemType>::K;
+    static const CUDA_LONG top = Item<ElemType>::top;
+
+    CUDA_LONG blk = j / top; // block number
+    CUDA_LONG i0 = blk * K;  // block begins at this offset in the target weight tensor
+    CUDA_LONG itemPos = ExtractPos(transmittedValWithPos); // index inside the block
+    CUDA_LONG i = i0 + itemPos;
+    us[i] += transmittedValWithPos; // this kernel always adds to target
 }
 #endif
 
@@ -294,25 +323,35 @@ void _QuantizeMatrix(
     ElemType* curResidual,
     long M, long N,
     char* qPackage,
-    size_t Nbits,
+    size_t nBits,
     cudaStream_t stream,
     ElemType* newResidual,
     bool zeroThresholdFor1Bit)
 {
 #ifdef NEW_COMPRESSION
-    if (Nbits == 1)
+    if (nBits == 1)
     {
+stream = NULL;
         CUDA_LONG NN = (CUDA_LONG)(M * N);
         CUDA_LONG K = Item<ElemType>::K;
-        CompressKernel<ElemType><<<(NN + K - 1) / K, K, K * sizeof(Item<ElemType>), stream>>>(us, curResidual, NN, (ElemType*)qPackage, newResidual);
+        CUDA_LONG top = Item<ElemType>::top;
+        CUDA_LONG Nnz = (NN * top + K-1) / K; // number of elements we must process
+        if (Nnz * sizeof(ElemType) > QuantizedColumn<ElemType>::QuantizedColumnSize(nBits, M) * N)
+            LogicError("_UnquantizeMatrix: dimension of patch to be unquantized exceeds size of quantized data??");
+        CompressKernel<ElemType><<<(NN + K - 1) / K, K, K * sizeof(Item<ElemType>), stream>>>(us, curResidual, NN, (ElemType*)qPackage, Nnz, newResidual);
         //if (NN >= 320)
         //{
         //    ElemType usData[320];
         //    ElemType resData[320];
         //    ElemType compressed[10];
+        //    CUDA_LONG compressedPos[10];
         //    cudaMemcpy(usData ,    us,                  sizeof(ElemType) * 320, cudaMemcpyDeviceToHost);
         //    cudaMemcpy(resData,    newResidual,         sizeof(ElemType) * 320, cudaMemcpyDeviceToHost);
         //    cudaMemcpy(compressed, (ElemType*)qPackage, sizeof(ElemType) * 10 , cudaMemcpyDeviceToHost);
+        //    cudaMemcpy(compressedPos, (ElemType*)qPackage, sizeof(ElemType) * 10, cudaMemcpyDeviceToHost);
+        //    for (auto& i : compressedPos)
+        //        i = i & ~- Item<ElemType>::K;
+        //    usData, resData, compressed, compressedPos;
         //    fprintf(stderr, "");
         //}
         return;
@@ -328,7 +367,7 @@ void _QuantizeMatrix(
         if (gpubuffer.size() == 0)      // empty buffer: empty matrix, we are done (explicit test needed since launch will fail with 0 threads)
         return;*/
     // determine mean and variance -> value range (stored in quant package)   --for 1 bit, refine it in a second pass
-    const size_t ldNbits = ValueQuantizer<ElemType>::ld(Nbits);
+    const size_t ldNbits = ValueQuantizer<ElemType>::ld(nBits);
 
     size_t nRow = M;
     size_t nCol = N;
@@ -359,10 +398,10 @@ void _QuantizeMatrix(
     //     - re-linearize block index and thread index
     //     - map to (i,j) coordinate (start of the set of floats)
 
-    const size_t numQWordsPerCol = Microsoft::MSR::CNTK::ColumnQuantizer<ElemType>::QWordsPerCol(nRow, Nbits);
+    const size_t numQWordsPerCol = Microsoft::MSR::CNTK::ColumnQuantizer<ElemType>::QWordsPerCol(nRow, nBits);
     const size_t totalQWords = nCol * numQWordsPerCol;
 
-    const size_t colsizebyte = Microsoft::MSR::CNTK::QuantizedColumn<ElemType>::QuantizedColumnSize(Nbits, nRow);
+    const size_t colsizebyte = Microsoft::MSR::CNTK::QuantizedColumn<ElemType>::QuantizedColumnSize(nBits, nRow);
 
     dim3 griddim, blockdim;
     ParallelizeOverRangeDim(totalQWords, griddim, blockdim, 256);
@@ -383,28 +422,55 @@ void _UnquantizeMatrix(const char* gpuBuffer, size_t gpuBufferSize,
                        ElemType* us, long M, long N,
                        size_t nBits, bool add, cudaStream_t stream)
 {
-#ifdef NEW_COMPRESSION
-    if (nBits == 1)
-    {
-        CUDA_LONG NN = (CUDA_LONG)(M * N);
-        CUDA_LONG K = Item<ElemType>::K;
-        CUDA_LONG numWarps = 512 / K * K; // (must be a multiple of K)
-        UncompressKernel<ElemType><<<(NN + numWarps - 1) / numWarps, dim3(K, numWarps / K), 0, stream>>>((const ElemType*)gpuBuffer, us, NN, add);
-        return;
-    }
-#endif
     // verify buffer allocation size
     /*if (msra::math::matrixquantizer::buffersize(bits, rows(), cols()) != gpubuffer.size())
-            LogicError("unquantizestripe: dimension of patch to be unquantized does not match size of quantized data");
-        if (gpubuffer.size() == 0)      // empty buffer: empty matrix, we are done (explicit test needed since launch will fail with 0 threads)
-            return;
-        */
+    LogicError("unquantizestripe: dimension of patch to be unquantized does not match size of quantized data");
+    if (gpubuffer.size() == 0)      // empty buffer: empty matrix, we are done (explicit test needed since launch will fail with 0 threads)
+    return;
+    */
     size_t qSize = QuantizedColumn<ElemType>::QuantizedColumnSize(nBits, M) * N;
     if (qSize != gpuBufferSize)
         LogicError("unquantizestripe: dimension of patch to be unquantized does not match size of quantized data");
     if (gpuBufferSize == 0) // empty buffer: empty matrix, we are done (explicit test needed since launch will fail with 0 threads)
         return;
 
+#ifdef NEW_COMPRESSION
+    if (nBits == 1)
+    {
+stream = NULL;
+        CUDA_LONG NN = (CUDA_LONG)(M * N);
+        if (!add)
+            cudaMemsetAsync(us, 0, NN * sizeof(ElemType), stream);
+        //if (NN >= 320)
+        //{
+        //    ElemType usData1[320];
+        //    cudaStreamSynchronize(stream);
+        //    cudaMemcpy(usData1, us, sizeof(ElemType) * 320, cudaMemcpyDeviceToHost);
+        //    fprintf(stderr, "");
+        //}
+        CUDA_LONG K = Item<ElemType>::K;
+        CUDA_LONG top = Item<ElemType>::top;
+        CUDA_LONG Nnz = (NN * top + K-1) / K; // number of elements we must process
+        CUDA_LONG threadsPerBlock = 512;
+        if (Nnz * sizeof(ElemType) > QuantizedColumn<ElemType>::QuantizedColumnSize(nBits, M) * N)
+            LogicError("_UnquantizeMatrix: dimension of patch to be unquantized exceeds size of quantized data??");
+        UncompressKernel<ElemType><<<(Nnz + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, stream>>>((const ElemType*)gpuBuffer, Nnz, us, NN);
+        //if (NN >= 320)
+        //{
+        //    ElemType usData[320];
+        //    ElemType compressed[10];
+        //    CUDA_LONG compressedPos[10];
+        //    cudaStreamSynchronize(stream);
+        //    cudaMemcpy(usData, us, sizeof(ElemType) * 320, cudaMemcpyDeviceToHost);
+        //    cudaMemcpy(compressed, (ElemType*)gpuBuffer, sizeof(ElemType) * 10, cudaMemcpyDeviceToHost);
+        //    cudaMemcpy(compressedPos, (ElemType*)gpuBuffer, sizeof(ElemType) * 10, cudaMemcpyDeviceToHost);
+        //    for (auto& i : compressedPos)
+        //        i = i & ~- Item<ElemType>::K;
+        //    fprintf(stderr, "");
+        //}
+        return;
+    }
+#endif
     // #bits must be a power of two; we operate on shift values
     const size_t ldNbits = ValueQuantizer<ElemType>::ld(nBits);
     // unquantize in the same thread layout as quantize(), see there
