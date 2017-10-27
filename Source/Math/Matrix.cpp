@@ -595,7 +595,12 @@ template <class ElemType>
 {
     if (deviceId >= 0)
         return GPUMatrix<ElemType>::SyncDevice(deviceId);
+#if 1
+    else
+        return GPUMatrix<ElemType>::SyncDevice(-1); // used as sentinel for now to force-sync
+#else
     return 0;
+#endif
 }
 
 template <class ElemType>

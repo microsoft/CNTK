@@ -273,14 +273,14 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
 
 // PrepareDevice - Set up the correct cuda context for an operation
 // deviceId - the device on which the operation will take place
+THREAD_LOCAL static DEVICEID_TYPE s_currentDevice = DEVICEID_NOTYETDETERMINED;
 void PrepareDevice(DEVICEID_TYPE deviceId)
 {
-    THREAD_LOCAL static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
     // and if we last set the device to be this device we are good
-    if (deviceId == currentDevice)
+    if (deviceId == s_currentDevice)
         return;
     CUDA_CALL(cudaSetDevice(deviceId));
-    currentDevice = deviceId;
+    s_currentDevice = deviceId;
 }
 
 #pragma region DeviceBoundNumber class
@@ -344,10 +344,15 @@ void GPUMatrix<ElemType>::SetDevice(DEVICEID_TYPE deviceId)
 template <class ElemType>
 /*static*/ double GPUMatrix<ElemType>::SyncDevice(DEVICEID_TYPE deviceId)
 {
+    if (deviceId < 0)
+    {
+        if (s_currentDevice != DEVICEID_NOTYETDETERMINED)
+            CUDA_CALL(cudaDeviceSynchronize());
+        return 0;
+    }
     assert(deviceId >= 0);
     Microsoft::MSR::CNTK::PrepareDevice(deviceId);
     double r = SyncGuard::Elapsed();
-    //CUDA_CALL(cudaDeviceSynchronize());
     return r;
 }
 
