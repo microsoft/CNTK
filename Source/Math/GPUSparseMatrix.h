@@ -184,10 +184,52 @@ public:
     //   This stores a matrix with zero or non-zero columns.
     //     struct SBCLayout
     //     {
-    //         ElemType nzArray[numRows,numStoredCols], gap[.];    // [rowIndex, storageIndex] nz array. Allocated as [m_elemSizeAllocated], but valid only as [rowIndex, storageIndex]
-    //         GPUSPARSE_INDEX_TYPE majorIndex[numCols];           // [colIndex] -> storageIndex or Id_NotAssigned (empty) (or Id_Pending)
-    //         GPUSPARSE_INDEX_TYPE secondaryIndex[numStoredCols]; // [storageIndex] -> colIndex. Note: allocated as [numCols], but valid only as [numStoredCols]
+    //       typedef ElemType E;
+    //       typedef GPUSPARSE_INDEX_TYPE I;
+    //       E block_storage           [num_rows, num_blocks];                      // [rowIndex, block_id]
+    //       E block_storage_reserved  [num_rows, num_allocated_blocks-num_blocks]; // [rowIndex, extra block_id]
+    //       I block_id_to_col         [num_blocks];         // [block_id] -> col_index
+    //       I block_id_to_col_padding [num_cols-num_blocks] // [extra block_id]
+    //                       // TODO: is the padding region uninitialized  or SparseIndex_NotAssigned?
+    //       I col_to_block_id         [num_cols];           // [col_index] -> block id, or SparseIndex_NotAssigned, or SparseIndex_Pending
+    //       // where _ names are concepts, camelCase is actual members, and PascalCase are actual method names
     //     };
+    //    Terms:
+    //     - block_storage := a matrix formed by the non-zero columns
+    //     - "(stored) block" := a non=zero column in block storage. We do not call those columns as to separate the concepts
+    //     - col_index, "(nominal) column index", [0,num_cols) := index of column of the uncompressed matrix that this object represents
+    //     - num_rows := number of rows
+    //     - num_cols := number of columns in the uncompressed matrix that this object represents
+    //     - block_id, "block index", [0,num_blocks) := index of a stored block
+    //     - num_blocks := number of stored blocks == number of non-zero columns
+    //     - block_storage_reserved  := additional reserved space for more stored blocks, can be grown like std::vector::reserve
+    //     - block_id_to_col_padding := block_id_to_col and block_id_to_col_padding together are always num_cols long
+    //    Synonyms used at places:
+    //     - nzArray := refers to block_storage (plus -Reserved depending on context)
+    //     - nzCount == size of block storage, in elements
+    //               == num_blocks * num_rows
+    //     - "major index" := col_to_block_id table
+    //     - "secondary index" := block_id_to_col table (plus -Padding depending on context)
+    //    Relevant class members:
+    //     - m_pArray == address of entire data
+    //                == &block_storage[0,0]
+    //     - m_blockSize == size of block storage, in blocks
+    //                   == number of non-zero columns stored in block storage
+    //                   == num_blocks
+    //     - m_elemSizeAllocated == size of block_storage plus reserved, in elements (not in bytes, not in columns)
+    //                           == num_rows * num_allocated_blocks
+    //                           == size of block_storage and block_storage_reserved, in elements
+    //                              // block_id_to_col follows after this in memory, and then col_to_block_id
+    //    Relevant methods:
+    //     - Buffer() == m_pArray
+    //     - GetSizeAllocated() == m_elemSizeAllocated
+    //     - GetBlockSize() == m_blockSize == num_blocks
+    //     - BlockId2ColOrRow() == &block_id_to_col[0]
+    //                          == MajorIndexLocation() == Buffer() + GetSizeAllocated() == m_pArray + m_elemSizeAllocated
+    //     - ColOrRow2BlockId() == &col_to_block_id[0]
+    //                          == SecondaryIndexLocation() == MajorIndexLocation() + GetNumCols()
+    //     - GetNumCols() == num_cols
+    //     - GetNumRows() == num_rows
 
     // The sparse matrix representation of CSC/CSR uses one large value array (m_pArray) with offsets to the Major/Secondary index location.
     // m_pArray [0,nz] are the nz elements, [nz+1,2*nz+1] is the major index location, and [2*nz+2,2*nz+2+ numcols/rows] is the secondary

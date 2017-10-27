@@ -1455,10 +1455,10 @@ template <class ElemType>
         size_t rhs_nz = rhs.NzCount();
 
         // Block col storage format (target matrix):
-        //  - GetBlockSize()                  :                  number of non-zero columns
-        //  - ColOrRow2BlockId()[colIndex]    : [numCols]        storage index (=index into the compact matrix), or SparseIndex_Pending if not determined yet, or SparseIndex_NotAssigned if empty
-        //  - BlockId2ColOrRow()[storageIndex]: [GetBlockSize()] column index (=logical index into the matrix that this object represents)
-        //                                                       This array is allocated as numCols, but only elements up to GetBlockSize()-1 are used.
+        //  - GetBlockSize()               :                  number of non-zero columns
+        //  - ColOrRow2BlockId()[colIndex] : [numCols]        storage index (=index into the compact matrix), or SparseIndex_Pending if not determined yet, or SparseIndex_NotAssigned if empty
+        //  - BlockId2ColOrRow()[blockId]  : [GetBlockSize()] column index (=logical index into the matrix that this object represents)
+        //                                                     This array is allocated as numCols, but only elements up to GetBlockSize()-1 are used.
         // The storage indices can be in any order (they are not sorted).
         size_t blockSizePrev = c.GetBlockSize(); // number of non-zero columns in target matrix. Compact storage contains this many columns.
         if (blockSizePrev == 0)
@@ -1531,7 +1531,7 @@ template <class ElemType>
         if (blockSizeCurr > blockSizePrev)
         {
             //fprintf(stderr, "MultiplyAndAdd: growing #non-zero columns from %d to %d, for %d items\n", (int)blockSizePrev, (int)blockSizeCurr, (int)k), fflush(stderr);
-            // zero initialize newly added non-zero columns in the compact storage
+            // zero-initialize new blocks that were just added to block storage
             size_t nnz = m * blockSizeCurr;
             c.RequireSizeAndAllocate(m, n, nnz, true, true); // we need to keep the col2blockid and blockid2col info when resizing.
             CUDA_CALL(cudaMemsetAsync(c.Buffer() + m * blockSizePrev, 0, sizeof(ElemType) * m * (blockSizeCurr - blockSizePrev), t_stream));
