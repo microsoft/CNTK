@@ -560,6 +560,8 @@ namespace CNTK
 
     void Function::Save(std::vector<char> &vectorBuf)
     {
+        if (IsPrimitive())
+            return CompositeFunction::Create(static_pointer_cast<PrimitiveFunction>(shared_from_this()), Name(), Internal::GenerateUid(L"CompositeFunction"))->Save(vectorBuf);
         Dictionary model = Serialize();
         std::ostringstream stream;
         stream << model;
@@ -572,6 +574,10 @@ namespace CNTK
 
     void Function::Save(const std::wstring& filepath)
     {
+        // for Dynamite, we must re-wrap the model for saving/restoring
+        // BUGBUG: How about Load()?
+        if (IsPrimitive())
+            return CompositeFunction::Create(static_pointer_cast<PrimitiveFunction>(shared_from_this()), Name(), Internal::GenerateUid(L"CompositeFunction"))->Save(filepath);
         Dictionary model = Serialize();
         auto stream = GetFstream(filepath, false);
         *stream << model;
@@ -627,6 +633,9 @@ namespace CNTK
 
     void Function::Restore(const std::wstring& filepath)
     {
+        // for Dynamite, we must re-wrap the model for saving/restoring
+        if (IsPrimitive())
+            return CompositeFunction::Create(static_pointer_cast<PrimitiveFunction>(shared_from_this()), Name(), Internal::GenerateUid(L"CompositeFunction"))->Restore(filepath);
         auto stream = GetFstream(filepath, true);
         if (!Internal::IsLegacyModel(*stream))
         {
@@ -2150,10 +2159,7 @@ namespace CNTK
 
     FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name)
     {
-        auto rootFunction = MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name);
-        //return CompositeFunction::Create(combinePrimitive);
-        // for Dynamite, we call the more complex Create() directly, because for Combine we need the composite (it is used for saving)
-        return CompositeFunction::Create(rootFunction, rootFunction->Name(), Internal::GenerateUid(L"CompositeFunction"));
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name));
     }
 
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)
