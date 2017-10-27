@@ -779,18 +779,30 @@ namespace CNTK
 
         ///
         /// Returns a read-only pointer to the data buffer underlying 'this' view
+        /// The buffer may be a GPU buffer that cannot be directly accessed.
         ///
         template <typename ElementType>
         CNTK_API const ElementType* DataBuffer() const;
 
         ///
-        /// Returns a read-only pointer to the data buffer in sparse CSC format underlying 'this' view
+        /// Copies the data buffer to the given vector
+        /// The resulting vector will have a size equal to the number of elements.
+        /// For now, this is only implemented for dense data.
+        /// If the result type differs from DataType, it will be type-cast without warning.
+        ///
+        template <typename ResultType>
+        CNTK_API void CopyDataTo(std::vector<ResultType>& outputBuffer) const;
+
+        ///
+        /// Returns a read-only pointer to the data buffers in sparse CSC format underlying 'this' view
+        /// The buffers may be a GPU buffer that cannot be directly accessed.
         ///
         template <typename ElementType>
         CNTK_API std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> SparseCSCDataBuffers() const;
 
         ///
-        /// Returns a read-only pointer to the data buffer in sparse block column format underlying 'this' view
+        /// Returns a read-only pointer to the data buffers in sparse block column format underlying 'this' view
+        /// The buffers may be a GPU buffer that cannot be directly accessed.
         /// 
         template <typename ElementType>
         CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> SparseBlockColumnDataBuffers() const;
@@ -969,6 +981,48 @@ namespace CNTK
         /// BUGBUG: This is covered by SliceView() with too short extent[], so remove this function and use SliceView() instead.
         ///
         CNTK_API NDArrayViewPtr IndexLastAxis(size_t index, bool readOnly = false) const;
+
+#if 0
+        ///
+        /// vector/iteration interface
+        ///
+        // Not ideal. We operate on shared_ptrs, so one would need to say "for (x : *s)". TODO: Remove this again, but reuse this for Variable.
+        class iterator : public std::iterator<std::random_access_iterator_tag, NDArrayViewPtr>
+        {
+            iterator(const std::shared_ptr<const NDArrayView> ths, size_t index) : m_value(ths), m_currentIndex(index) { }
+        public:
+            iterator(const NDArrayView*   ths, size_t index) : m_value(ths->shared_from_this()), m_currentIndex(index) { }
+            iterator(      NDArrayView*   ths, size_t index) : m_value(ths->shared_from_this()), m_currentIndex(index) { }
+            iterator operator++() { auto cur = *this; m_currentIndex++; return cur; }
+            iterator operator++(int) { m_currentIndex++; return *this; }
+            NDArrayViewPtr operator*() const { return m_value->IndexLastAxis(m_currentIndex); }
+            //auto operator->() const { return m_value->IndexLastAxis(m_currentIndex); }
+            bool operator==(const iterator& other) const { return m_value == m_value && m_currentIndex == other.m_currentIndex; }
+            bool operator!=(const iterator& other) const { return !operator==(other); }
+            iterator operator+(difference_type offset) const { return iterator(m_value, (size_t)((ptrdiff_t)m_currentIndex + offset)); }
+            iterator operator-(difference_type offset) const { return iterator(m_value, (size_t)((ptrdiff_t)m_currentIndex - offset)); }
+            difference_type operator-(const iterator& other) const { return m_currentIndex - other.m_currentIndex; }
+        private:
+            std::shared_ptr<const NDArrayView> m_value;
+            size_t m_currentIndex; // current position
+        };
+        typedef iterator const_iterator;
+        typedef NDArrayViewPtr value_type;
+        const_iterator cbegin() const { return const_iterator(this, 0); }
+        const_iterator cend()   const { return const_iterator(this, size()); }
+        const_iterator begin()  const { return cbegin(); }
+        const_iterator end()    const { return cend(); }
+        iterator       begin()        { return iterator(this, 0); }
+        iterator       end()          { return iterator(this, size()); }
+#endif
+        bool empty()  const { return Shape().Dimensions().begin() == Shape().Dimensions().end(); }
+        size_t size() const
+        {
+            if (empty())
+                InvalidArgument("size() cannot be applied to scalars");
+            return Shape().Dimensions().back();
+        }
+        NDArrayViewPtr operator[](size_t index) const { return IndexLastAxis(index, IsReadOnly()); }
 
         ///
         /// Creates a new NDArrayView which is an alias of 'this' view but with a new shape.
@@ -4643,12 +4697,12 @@ namespace CNTK
     }
 
     ///
-    /// Create an instance of the CNTK build-in operation to get the one_hot tensor on specified input along the specified axis
+    /// Create an instance of the CNTK built-in operation to get the one_hot tensor on specified input along the specified axis
     ///
     CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = std::wstring());
 
     ///
-    /// Create an instance of the CNTK build-in operation to get a tensor that is gathered from reference tensor by indices.
+    /// Create an instance of the CNTK built-in operation to get a tensor that is gathered from reference tensor by indices.
     ///
     CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name = L"");
 

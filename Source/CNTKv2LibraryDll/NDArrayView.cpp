@@ -1234,6 +1234,54 @@ namespace CNTK
         return dataBuffer;
     }
 
+    // copy dense data to a CPU-side data buffer, possibly with type casting
+    template <typename ElementType, typename ResultType>
+    static void DoCopyDataTo(const typename Matrix<ElementType>::MatrixPtr& from, std::vector<ResultType>& to)
+    {
+        if (from->GetMatrixType() != MatrixType::DENSE)
+            InvalidArgument("NDArrayView::CopyDataTo is presently only implemented for dense data.");
+        size_t numElements = from->GetNumElements();
+        to.resize(numElements);
+        // get a CPU-side pointer to the source data
+        // If it lives on the GPU, then we must make a copy; otherwise we point to the source buffer directly.
+        ElementType* data;
+        std::vector<ElementType> intermediateCPUCopy;
+        if (from->GetCurrentMatrixLocation() != CurrentDataLocation::CPU) // must transfer
+        {
+            if (std::is_same<ElementType, ResultType>::value) // if the type is right, transfer directly into target buffer
+                data = (ElementType*)to.data();
+            else
+            {
+                intermediateCPUCopy.resize(numElements); // otherwise use the intermediate buffer
+                data = intermediateCPUCopy.data();
+            }
+            from->CopySection(from->GetNumRows(), from->GetNumCols(), data, /*colStride=*/from->GetNumRows());
+        }
+        else
+            data = from->Data(); // lives on CPU: no need to copy
+        // copy and type-cast, unless we had to transfer it, and were able to transfer directly to target
+        if (data != (ElementType*)to.data())
+        {
+            for (size_t i = 0; i < numElements; i++)
+                to[i] = (ResultType)data[i];
+        }
+    }
+
+    // helper to copy dense data from NDArrayView object to a CPU-side data buffer
+    template <typename ResultType>
+    void NDArrayView::CopyDataTo(std::vector<ResultType>& outputBuffer) const
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            return DoCopyDataTo<float>(NativeTensorView<float>().GetSOBViewPtr(), outputBuffer);
+        case DataType::Double:
+            return DoCopyDataTo<double>(NativeTensorView<double>().GetSOBViewPtr(), outputBuffer);
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+        }
+    }
+
     template <typename ElementType>
     std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers() const
     {
@@ -1480,6 +1528,12 @@ namespace CNTK
 
     template CNTK_API const float* NDArrayView::DataBuffer<float>() const;
     template CNTK_API const double* NDArrayView::DataBuffer<double>() const;
+
+    template CNTK_API void NDArrayView::CopyDataTo<float>(std::vector<float>& outputBuffer) const;
+    template CNTK_API void NDArrayView::CopyDataTo<double>(std::vector<double>& outputBuffer) const;
+    template CNTK_API void NDArrayView::CopyDataTo<size_t>(std::vector<size_t>& outputBuffer) const;
+    template CNTK_API void NDArrayView::CopyDataTo<int>(std::vector<int>& outputBuffer) const;
+    template CNTK_API void NDArrayView::CopyDataTo<unsigned int>(std::vector<unsigned int>& outputBuffer) const;
 
     // TODO: Was this changed inconsistently between master and fseide/dynamite? Check!
     //template CNTK_API const TensorView<float>* NDArrayView::GetTensorView<float>() const;
