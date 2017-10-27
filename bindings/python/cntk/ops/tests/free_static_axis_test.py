@@ -159,6 +159,7 @@ def test_free_static_times():
     assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
     assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
 
+
 def test_free_static_axis_times_free_static_axis():
     x = C.input_variable((C.FreeDimension, C.FreeDimension))
     y = C.input_variable((C.FreeDimension, C.FreeDimension))
@@ -175,6 +176,7 @@ def test_free_static_axis_times_free_static_axis():
     t1 = C.times_transpose(xx, yy)    
     t = C.times(t1, yy) #select among yy
     assert np.array_equal(np.matmul(np.matmul(x_data, y_data.T), y_data), t.eval({x: x_data, y: y_data}))
+
 
 FREE_STATIC_AXES_POOLING_DATA = [
     ((C.FreeDimension, C.FreeDimension, C.FreeDimension),
