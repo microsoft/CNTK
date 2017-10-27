@@ -340,7 +340,7 @@ namespace CNTK
 
     void Trainer::SummarizeTrainingProgress()
     {
-        DistributedCommunicatorPtr communicator = MPICommunicator();
+        //DistributedCommunicatorPtr communicator = MPICommunicator();
         //std::cout << "Entering SummarizeTrainingProgress " << communicator->CurrentWorker().m_globalRank << std::endl;
         //std::cout.flush();
 
