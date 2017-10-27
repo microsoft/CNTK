@@ -255,7 +255,14 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(MinusNode))
                     opType = PrimitiveOpType::Minus;
                 else if (node->OperationName() == OperationNameOf(ElementTimesNode))
+                {
                     opType = PrimitiveOpType::ElementTimes;
+                }
+                // legacy support for DiagTimesNode
+                else if (node->OperationName() == OperationNameOf(DiagTimesNode))
+                {
+                    opType = PrimitiveOpType::ElementTimes;
+                }
                 else if (node->OperationName() == OperationNameOf(EqualNode))
                     opType = PrimitiveOpType::Equal;
                 else if (node->OperationName() == OperationNameOf(NotEqualNode))
