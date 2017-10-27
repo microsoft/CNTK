@@ -219,12 +219,26 @@ protected:
     void *scaleShift_buffer_;
     void *out_buffer;
     void *in_buffer;
+	
+	//For backprop 
+	dnnPrimitive_t pBatchNormalizationBwd = NULL;
+	dnnLayout_t lt_batchNorm_bwd_input;
+	dnnLayout_t lt_batchNorm_bwd_outgrad;
+	dnnLayout_t lt_batchNorm_bwd_scaleShift;
+	dnnLayout_t lt_batchNorm_bwd_scaleShift_grad;
+	dnnPrimitive_t cv_user_input_to_batchNorm_bwd_input = NULL;
+	dnnPrimitive_t batchNorm_bwd_outgrad_to_user_output = NULL;
 
-    float* saved_mean_buf;
-    float* saved_Std_Dev;
-    bool inference;
-    double AvgFactor;
-    double blendTimeConstant;
+	void *outgrad_buffer;
+	void *user_in_grad = NULL;
+	void *user_out_grad = NULL;
+	void *scaleShift_buffer;
+	void *scaleShift_grad_buffer;
+	float* saved_mean_buf;
+	float* saved_Std_Dev;
+	bool inference;
+	double AvgFactor;
+	double blendTimeConstant;
 
     void EnsureCompatible() override
     {
