@@ -96,11 +96,54 @@ public:
         quantimid = 0.5f * (quantimax + quantimin);
     }
 
+    // log-linearly quantize to a "N-bit float" that only stores the exponent
+//#ifndef __CUDACC__ // TODO: figure out how to use the native device functions for the CUDA compilation, and these for the CPU code
+    static cudasharedcode int __float_as_int(float f) { return *((int*)&f); }
+    static cudasharedcode float __int_as_float(int i) { return *((float*)&i); }
+//#endif
+    static cudasharedcode int QuantizeLogarithmically(float x, float stddev, int nBits)
+    {
+        int expRange = (1 << (nBits - 1)); // numeric range of exponent without the sign
+        float xn = x / stddev;
+        int xi = __float_as_int(xn);
+        bool isNeg = x < 0;
+        int exp = (xi >> 23) & 0xff;
+        int qval = exp + expRange / 2 - 127; // half-way is exponent of 0
+        if (qval < 0)
+            qval = 0;
+        else if (qval >= expRange)
+            qval = expRange - 1;
+        if (isNeg)
+            qval |= expRange;
+        return qval;
+    }
+    static cudasharedcode float UnquantizeLogarithmically(int qval, float stddev, int nBits)
+    {
+        int expRange = (1 << (nBits - 1)); // numeric range of exponent without the sign
+        bool isNeg = qval > 7;
+        int exp = qval & (expRange - 1);
+        if (exp == 0) // quantize the smallest values to 0
+            return 0;
+        exp -= expRange / 2 - 127;
+        if (isNeg)
+            exp |= 256;
+        int xi = exp << 23;
+        return __int_as_float(xi) * stddev * 1.4f; // 1.4f is an empirical correction factor, which I was too lazy to figure out
+    }
+
     // quantize one value
     // TODO: we can optimize for 1 bit here - very simply use a template arg 'isonebit'
+    cudasharedcode float RecoverStdDev() const { return (float)(quantimax - quantimin) / 2.0f/*one-sided*/ / 4.0f/*they are 4*stddev*/; }
     template <bool ZeroThresholdFor1Bit>
     cudasharedcode QWordVal Quantize(ElemType u) const
     {
+#if 1
+        if (Nbits == 4)
+        {
+            return (QWordVal)QuantizeLogarithmically((float)u, RecoverStdDev(), (int)Nbits);
+        }
+        else
+#endif
         if (Nbits == QWordNumBits)
         {
             return QuantizeToFullQWord(u);
@@ -130,6 +173,13 @@ public:
     // unquantize one value
     cudasharedcode ElemType Unquantize(QWordVal u) const
     {
+#if 1
+        if (Nbits == 4)
+        {
+            return (ElemType)UnquantizeLogarithmically((int)u, RecoverStdDev(), (int)Nbits);
+        }
+        else
+#endif
         // special branch that does not quantize at all, for testing
         if (Nbits == QWordNumBits)
         {
@@ -220,8 +270,6 @@ protected:
     // and for unquantizing
     ElemType ufactor;
 };
-}
-}
-}
+}}}
 
 #endif // __VALUE_QUANTIZER_H__
