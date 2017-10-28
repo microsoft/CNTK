@@ -2085,6 +2085,7 @@ public:
         if (inputIndex == 1) //only right operand need calculate gradient
         {
             let&  indices = InputRef(0).Value();
+            //only right operand need calculate gradient: which is InputRef(1)
             auto& sourceGradient = InputRef(1).Gradient();
             auto& outputGradient = Gradient();
             const auto& sampleLayout = InputRef(1).GetSampleLayout();
@@ -2105,7 +2106,8 @@ public:
         }
         else
         {
-            LogicError("%ls operation doesn't expect gradient on left operand", OperationName().c_str());
+            //No graidents pass through left operand (index), so do nothing
+            //LogicError("%ls operation doesn't expect gradient on left operand", OperationName().c_str());
         }
     }
 
