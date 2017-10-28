@@ -6322,10 +6322,10 @@ namespace CNTK
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
         CNTK_API virtual void AllReduceSparseBlockColumn(
-            std::vector<NDArrayViewPtr>&)
-        {
-            LogicError("This function should not be reached.");
-        }
+            std::vector<NDArrayViewPtr>&) = 0;
+        //{
+        //    LogicError("This function should not be reached.");
+        //}
 
         CNTK_API virtual void Aggregate(
             const std::vector<NDArrayViewPtr>& values,
@@ -6367,6 +6367,8 @@ namespace CNTK
             std::vector<NDArrayViewPtr>& stripeQuantizationResidues,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
+        CNTK_API virtual void AllReduceSparseBlockColumn(
+            std::vector<NDArrayViewPtr>&) = 0;
     protected:
         QuantizedDistributedCommunicator() {};
     };
