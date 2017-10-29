@@ -49,13 +49,13 @@ namespace CNTK
     void DictionaryValue::AllocateDataPtr(const T& value)
     {
         static_assert(is_same<T, NDShape>::value ||
-            is_same<T, Axis>::value ||
-            is_same<T, wstring>::value ||
-            is_same<T, vector<DictionaryValue>>::value ||
-            is_same<T, Dictionary>::value ||
-            is_same<T, TrainingParameterSchedule<double>>::value ||
-            is_same<T, NDArrayView>::value,
-            "AllocateDataPtr called with invalid type");
+                      is_same<T, Axis>::value ||
+                      is_same<T, wstring>::value ||
+                      is_same<T, vector<DictionaryValue>>::value ||
+                      is_same<T, Dictionary>::value ||
+                      is_same<T, TrainingParameterSchedule<double>>::value ||
+                      is_same<T, NDArrayView>::value,
+                      "AllocateDataPtr called with invalid type");
         m_data.m_ptr = CreateDataPtr<T>(value);
     }
 
@@ -80,7 +80,7 @@ namespace CNTK
         {
             return false;
         }
-
+        
         switch (m_valueType)
         {
         case DictionaryValue::Type::Bool:
@@ -139,7 +139,7 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
     }
-
+    
     bool DictionaryValue::operator!=(const DictionaryValue& other) const
     {
         return !(*this == other);
@@ -219,7 +219,7 @@ namespace CNTK
         {
             return false;
         }
-
+        
         for (const auto& kv : *m_dictionaryData)
         {
             auto result = other.m_dictionaryData->find(kv.first);
@@ -271,7 +271,7 @@ namespace CNTK
 
     template <typename T>
     TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<std::pair<size_t, T>>& schedule, size_t epochSize, size_t minibatchSize)
-        : m_epochSize(epochSize), m_minibatchSize(minibatchSize)
+        :  m_epochSize(epochSize), m_minibatchSize(minibatchSize)
     {
         ConstructSchedule(schedule);
     }
@@ -626,11 +626,11 @@ namespace CNTK
 
         if (valueShape.Rank() < varShape.Rank())
             InvalidArgument("Value's rank (%d) should be >= the Variable's rank (%d); Variable = '%S', Value shape = '%S'.",
-            (int)valueShape.Rank(), (int)varShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
+                            (int)valueShape.Rank(), (int)varShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
 
         if (valueShape.Rank() > (varShape.Rank() + maxAddionalValueAxes))
             InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
-            (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
+                            (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
 
         if (valueShape.Rank() > (varShape.Rank() + numDynamicAxes))
         {
@@ -638,7 +638,7 @@ namespace CNTK
             {
                 if (valueShape[varShape.Rank() + i] != 1)
                     InvalidArgument("The dimension size (%d) of the axis (%d) of the Value ('%S') must be 1, because this axis is not specified as a dynamic axis of the Variable ('%S').",
-                    (int)valueShape[varShape.Rank() + i], (int)(varShape.Rank() + i), valueShape.AsString().c_str(), var.AsString().c_str());
+                                    (int)valueShape[varShape.Rank() + i], (int)(varShape.Rank() + i), valueShape.AsString().c_str(), var.AsString().c_str());
             }
         }
 
@@ -652,10 +652,10 @@ namespace CNTK
                 else if (varShape[i] != valueVarSubshape[i])
                 {
                     InvalidArgument("The %s dimensions of the Value shape '%S' do not match the Variable '%S' shape '%S'.",
-                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
-                        valueShape.AsString().c_str(),
-                        var.AsString().c_str(),
-                        varShape.AsString().c_str());
+                                    Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
+                                    valueShape.AsString().c_str(),
+                                    var.AsString().c_str(),
+                                    varShape.AsString().c_str());
                 }
             }
         }
@@ -666,8 +666,8 @@ namespace CNTK
             if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             {
                 InvalidArgument("Invalid Value object: sum of the rank (%d) of the mask and Variable rank (%d) does not equal "
-                    "the Value's rank (%d); Variable = '%S', Value shape = '%S'.",
-                    (int)mask->Shape().Rank(), (int)varShape.Rank(), (int)valueShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
+                                "the Value's rank (%d); Variable = '%S', Value shape = '%S'.",
+                                (int)mask->Shape().Rank(), (int)varShape.Rank(), (int)valueShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
             }
         }
 
@@ -682,14 +682,14 @@ namespace CNTK
 
     template <typename ElementType>
     std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape,
-        const std::shared_ptr<Matrix<ElementType>>& outputMatrixStorage,
-        const std::shared_ptr<Matrix<ElementType>>& tempIndicesStorage)
+                                                                                                                          const std::shared_ptr<Matrix<ElementType>>& outputMatrixStorage,
+                                                                                                                          const std::shared_ptr<Matrix<ElementType>>& tempIndicesStorage)
     {
         VerifyVariableValueCompatibility(var, value, inferredVarShape);
 
         if (AsDataType<ElementType>() != value->GetDataType())
             LogicError("The specified ElementType %s does not match the Value object's DataType %s for Variable '%S'",
-                typeid(ElementType).name(), DataTypeName(value->GetDataType()), var.AsString().c_str());
+                        typeid(ElementType).name(), DataTypeName(value->GetDataType()), var.AsString().c_str());
 
         auto CreateLayoutWithUnitBatchSizeAndSequenceLength = []() {
             auto layout = std::make_shared<MBLayout>();
@@ -992,7 +992,7 @@ namespace CNTK
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),
         m_isDistributed(false),
-        MetricsAggregationIfNeededLamda(nullptr)
+        DoMetricsAggregationIfNeededLamda(nullptr)
     {
         if (learners.empty())
             InvalidArgument("These must be at least one learner.");
@@ -1004,7 +1004,7 @@ namespace CNTK
             if (distLearner)
             {
                 m_isDistributed = true;
-                MetricsAggregationIfNeededLamda = std::bind(&DistributedLearner::DoMetricsAggregationIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
+                DoMetricsAggregationIfNeededLamda = std::bind(&DistributedLearner::DoMetricsAggregationIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
             }
 
             const auto& currentLearnerParameters = learner->Parameters();

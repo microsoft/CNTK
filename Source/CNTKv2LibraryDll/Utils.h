@@ -646,14 +646,14 @@ namespace CNTK
             return m_isDistributed;
         }
 
-        std::function<void(AccumulatorPtr&, AccumulatorPtr&)> MetricsAggregationIfNeededLamda;
+        std::function<void(AccumulatorPtr&, AccumulatorPtr&)> DoMetricsAggregationIfNeededLamda;
         
     private:
         void GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients);
         void CheckDistributedLearners();
 
         std::vector<LearnerPtr> m_learners;
-        bool m_isDistributed;        
+        bool m_isDistributed;
     };
 
     class Utils

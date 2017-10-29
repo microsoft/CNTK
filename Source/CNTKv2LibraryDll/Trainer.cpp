@@ -293,62 +293,12 @@ namespace CNTK
         }
     }
 
-    void Trainer::DoDistributedLossEvalAveraging()
-    {/*
-        DistributedCommunicatorPtr communicator = MPICommunicator();
-
-        std::cout << "Entering DoDistributedLossEvalAveraging " << communicator->CurrentWorker().m_globalRank << std::endl;
-        float averageTrainingLoss = 0;
-        bool aggregateTrainingLoss = false;
-        if (m_aggregatedTrainingLossValue && m_aggregatedTrainingLossValue->IsInitialized())
-        {
-            averageTrainingLoss = m_aggregatedTrainingLossValue->AsScalar<float>();
-            aggregateTrainingLoss = true;
-        }
-
-        float averageEvalCriterion = 0;
-        bool aggregateEvalCriterion = false;
-        if (m_aggregatedTrainingEvalCriterionValue && m_aggregatedTrainingEvalCriterionValue->IsInitialized())
-        {
-            averageEvalCriterion = m_aggregatedTrainingEvalCriterionValue->AsScalar<float>();
-            aggregateEvalCriterion = true;
-        }
-
-        NDArrayViewPtr inPlaceAggregateTrainingLoss = std::make_shared<NDArrayView>(averageTrainingLoss, NDShape{ }, DeviceDescriptor::CPUDevice());
-        NDArrayViewPtr inPlaceAggregateEvalCriterion = std::make_shared<NDArrayView>(averageEvalCriterion, NDShape{ }, DeviceDescriptor::CPUDevice());
-        vector<NDArrayViewPtr> inPlaceAggregateVector = { inPlaceAggregateTrainingLoss, inPlaceAggregateEvalCriterion };
-        
-        
-        if (aggregateTrainingLoss || aggregateEvalCriterion)
-        {
-            communicator->AggregateInPlace(inPlaceAggregateVector, communicator->Workers());
-        }
-
-        if (aggregateTrainingLoss)
-        {
-            inPlaceAggregateTrainingLoss->SetValue(inPlaceAggregateTrainingLoss->AsScalar<float>() / communicator->Workers().size());
-            m_aggregatedTrainingLossValue->CopyFrom(Value(inPlaceAggregateTrainingLoss));
-        }
-
-        if (aggregateEvalCriterion)
-        {        
-            inPlaceAggregateEvalCriterion->SetValue(inPlaceAggregateEvalCriterion->AsScalar<float>() / communicator->Workers().size());
-            m_aggregatedTrainingEvalCriterionValue->CopyFrom(Value(inPlaceAggregateEvalCriterion));
-        }
-        */
-    }
-
     void Trainer::SummarizeTrainingProgress()
     {
-        //DistributedCommunicatorPtr communicator = MPICommunicator();
-        //std::cout << "Entering SummarizeTrainingProgress " << communicator->CurrentWorker().m_globalRank << std::endl;
-        //std::cout.flush();
-
-        // Aggregate across workers training loss and eval criteria if BMUF like learner.
-        if (m_distributed && m_parameterLearners->MetricsAggregationIfNeededLamda)
+        // Aggregate across workers training loss and eval criteria. Needed for BMUF like learner which don't aggregate after every minibatch.
+        if (m_distributed && m_parameterLearners->DoMetricsAggregationIfNeededLamda)
         {
-            m_parameterLearners->MetricsAggregationIfNeededLamda(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
-            //this->DoDistributedLossEvalAveraging();
+            m_parameterLearners->DoMetricsAggregationIfNeededLamda(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
         }
 
         for (auto& progressWriter : m_progressWriters)

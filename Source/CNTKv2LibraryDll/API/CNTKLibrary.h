@@ -4922,7 +4922,8 @@ namespace CNTK
             return 1;
         }
 
-        // Whether the loss and eval metrics should be aggregated across workers before summarization or not. Eg BlockMomentumUpdateAndFiltering BMUF needs an aggregation
+        // Whether the loss and eval metrics should be aggregated across workers before summarization or not. 
+        // Eg BlockMomentumUpdateAndFiltering BMUF needs an aggregation
         virtual void DoMetricsAggregationIfNeeded(AccumulatorPtr&, AccumulatorPtr&)
         {
             return;
@@ -5180,7 +5181,6 @@ namespace CNTK
 
         void UpdateTrainingProgress(size_t numSamples, const ValuePtr& loss, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
         void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters);
-        void DoDistributedLossEvalAveraging();
 
         FunctionPtr m_model;
         FunctionPtr m_combinedTrainingFunction;
