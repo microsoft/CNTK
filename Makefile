@@ -174,12 +174,13 @@ ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/include
   LIBS_LIST += m
 ifeq ("$(MKL_THREADING)","sequential")
-  LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
+  MKL_LIB_PATH := $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
   LIBS_LIST += mkl_cntk_s
 else
-  LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
+  MKL_LIB_PATH := $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
   LIBS_LIST += mkl_cntk_p iomp5 pthread
 endif
+  LIBPATH += $(MKL_LIB_PATH)
   COMMON_FLAGS += -DUSE_MKL
 endif
 
@@ -319,6 +320,7 @@ PP_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(PP_SRC))
 PERF_PROFILER_LIB:= $(LIBDIR)/lib$(PERF_PROFILER).so
 ALL_LIBS += $(PERF_PROFILER_LIB)
 PYTHON_LIBS += $(PERF_PROFILER_LIB)
+JAVA_LIBS += $(PERF_PROFILER_LIB)
 SRC += $(PP_SRC)
 
 $(PERF_PROFILER_LIB): $(PP_OBJ)
@@ -493,6 +495,27 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardFileWriter.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardUtils.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/experiments/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/generator/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/logical/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/math/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/nn/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/reduction/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/rnn/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/tensor/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/constants.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/status.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/utils.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/opsignature.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/op.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/shape_inference.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/model.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/ONNXToCNTK.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/ONNX.cpp \
 
 CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \
@@ -1410,19 +1433,45 @@ JDK_BIN_PATH=$(JDK_PATH)/bin
 JDK_INCLUDE_PATH:=$(JDK_PATH)/include
 JDK_INCLUDE_PATH+=$(JDK_INCLUDE_PATH)/linux
 
+JAVA_SO_NAME=$(LIBDIR)/libCntk.Core.JavaBinding-$(CNTK_COMPONENT_VERSION).so
+JAVA_LOAD_DEPS:=$(CNTKMATH_LIB) $(PERF_PROFILER_LIB) $(CNTKLIBRARY_LIB) $(JAVA_SO_NAME)
+JAVA_LOAD_DEPS:=$(JAVA_LOAD_DEPS:$(LIBDIR)/%=%)
+JAVA_DEP_SO_NAMES_GPU:=libcublas.so libcudart.so libcurand.so libcusparse.so
+
 .PHONY: java
 java: $(JAVA_LIBS)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	rm -rf $(GENERATED_JAVA_DIR)
 	mkdir -p $(GENERATED_JAVA_DIR)
-	rm -f $(GENERATED_JAVA_DIR)/*.java $(GENERATED_JAVA_DIR)/*.class
 	$(SWIG_PATH)/swig -c++ -java -package com.microsoft.CNTK $(INCLUDEPATH:%=-I%) -I$(BINDINGS_DIR)/common -outdir $(GENERATED_JAVA_DIR) $(JAVA_SWIG_DIR)/cntk_java.i
+	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(JAVA_SO_NAME)
+	mkdir -p $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
+	echo $(JAVA_SO_NAME:$(LIBDIR)/%=%) > $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_LOAD_MANIFEST
+	for so in libiomp5.so libmkl_cntk_p.so; do \
+	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
+	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
+	done
+	for so in $(JAVA_LOAD_DEPS); do \
+	    cp -p $(LIBDIR)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
+	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
+	done
+ifdef CUDA_PATH
+	for so in $(JAVA_DEP_SO_NAMES_GPU); do \
+	    cp -p $(CUDA_PATH)/lib64/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
+	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
+	done
+	cp -p $(CUDNN_PATH)/cuda/lib64/libcudnn.so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
+	echo 'libcudnn.so' >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST
+	cp -p $(GDK_NVML_LIB_PATH)/libnvidia-ml.so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
+	echo 'libnvidia-ml.so' >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST
+endif
+	cp -p $(JAVA_SWIG_DIR)/CNTKNativeUtils.java $(JAVA_SWIG_DIR)/com/microsoft/CNTK/CNTKNativeUtils.java
 	$(JDK_BIN_PATH)/javac $(GENERATED_JAVA_DIR)/*.java
 	mkdir -p $(LIBDIR)/java
 	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk.jar com
 	cp $(JAVA_SWIG_DIR)/cntk.jar $(LIBDIR)/java
 	javac -cp $(JAVA_SWIG_DIR) $(JAVA_TEST_DIR)/src/Main.java -d $(LIBDIR)/java
-	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(LIBDIR)/libCntk.Core.JavaBinding-$(CNTK_COMPONENT_VERSION).so
 
 ALL += java
 

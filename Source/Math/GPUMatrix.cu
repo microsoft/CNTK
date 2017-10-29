@@ -444,6 +444,8 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
         return _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opTanh:
         return _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAtanh:
+        return _elementWiseAtanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSqrt:
         return _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opExp:
@@ -466,6 +468,8 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
         return _elementWiseCoshOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSinh:
         return _elementWiseSinhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAsinh:
+        return _elementWiseAsinhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSigmoidDerivative:
         return _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     default: LogicError("performElementWiseFunction: unexpected op code %d", (int)kind);
@@ -2364,6 +2368,12 @@ DEF_ELEMWISE_ASSIGN_FUNC(Cosh)
 
 DEF_ELEMWISE_INPLACE_FUNC(Sinh)
 DEF_ELEMWISE_ASSIGN_FUNC(Sinh)
+
+DEF_ELEMWISE_INPLACE_FUNC(Asinh)
+DEF_ELEMWISE_ASSIGN_FUNC(Asinh)
+
+DEF_ELEMWISE_INPLACE_FUNC(Atanh)
+DEF_ELEMWISE_ASSIGN_FUNC(Atanh)
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)

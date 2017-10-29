@@ -28,6 +28,7 @@ namespace CNTK
         {PrimitiveOpType::Negate, L"Negate"},
         {PrimitiveOpType::Sigmoid, L"Sigmoid"},
         {PrimitiveOpType::Tanh, L"Tanh"},
+        {PrimitiveOpType::Atanh, L"Atanh"},
         {PrimitiveOpType::ReLU, L"ReLU"},
         {PrimitiveOpType::Exp, L"Exp"},
         {PrimitiveOpType::Log, L"Log"},
@@ -87,6 +88,7 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Cosh, L"Cosh"},
+        {PrimitiveOpType::Asinh, L"Asinh"},
         {PrimitiveOpType::Sinh, L"Sinh"},
         {PrimitiveOpType::Pass, L"Pass"},
         {PrimitiveOpType::Block, L"Block"},
@@ -281,6 +283,13 @@ namespace CNTK
         static const std::wstring AttributeNamePaddingFoot;
         static const std::wstring AttributeNamePaddingMode;
         static const std::wstring AttributeNamePaddingConstantValue;
+        static const std::wstring AttributeNameAlpha;
+        static const std::wstring AttributeNameBeta;
+        static const std::wstring AttributeNameGamma;
+        static const std::wstring AttributeNameKernelShape;
+        static const std::wstring AttributeNameBias;
+        static const std::wstring AttributeNameDepthRadius;
+        static const std::wstring AttributeNameCustomAttributes;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

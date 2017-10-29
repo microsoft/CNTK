@@ -67,6 +67,10 @@
       <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
+    <PostBuildEvent>
+      <Command>$(SolutionDir)bindings\java\Swig\post-build.cmd $(ProjectDir) $(SolutionDir)\Tests\EndToEndTests\EvalClientTests\ $(OutDir) $(CntkComponentVersion) $(GpuBuild)</Command>
+      <Message>Creating Jar</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
@@ -105,9 +109,9 @@
   <ItemGroup>
     <CustomBuild Include="cntk_java.i">
       <FileType>Document</FileType>
-      <Command>$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd $(ProjectDir) $(SolutionDir)\Tests\EndToEndTests\EvalClientTests\ $(OutDir)</Command>
-      <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h; $(SolutionDir)bindings\java\Swig\cntk.jar</Outputs>
-      <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h;$(SolutionDir)Source\Common\Include\ExceptionWithCallStack.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTKExceptionHandling.i;$(SolutionDir)bindings\common\CNTKManagedCommon.i;std_unordered_map.i;$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd;$(SolutionDir)\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\src\Main.java</AdditionalInputs>
+      <Command>$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd $(ProjectDir)</Command>
+      <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h</Outputs>
+      <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h;$(SolutionDir)Source\Common\Include\ExceptionWithCallStack.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTKExceptionHandling.i;$(SolutionDir)bindings\common\CNTKManagedCommon.i;std_unordered_map.i;$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd;$(SolutionDir)\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\src\Main.java;$(SolutionDir)bindings\java\Swig\post-build.cmd</AdditionalInputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -124,7 +128,9 @@
     <None Include="..\..\common\CNTKExceptionHandling.i" />
     <None Include="..\..\common\CNTKWarnFilters.i" />
     <None Include="..\..\..\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\src\Main.java" />
+    <None Include="CNTKNativeUtils.java" />
     <None Include="generate-java-bindings.cmd" />
+    <None Include="post-build.cmd" />
     <None Include="std_unordered_map.i" />
   </ItemGroup>
   <Target Name="CheckDependencies">
