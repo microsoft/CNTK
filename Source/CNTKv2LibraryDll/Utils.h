@@ -646,6 +646,8 @@ namespace CNTK
             return m_isDistributed;
         }
 
+        std::function<void(AccumulatorPtr&, AccumulatorPtr&)> DoMetricsAggregationIfNeededLamda;
+        
     private:
         void GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients);
         void CheckDistributedLearners();
@@ -717,7 +719,7 @@ namespace CNTK
 
         void Update(const ValuePtr& delta, const DeviceDescriptor& device);
         void Reset();
-
+        bool IsInitialized() { return !m_isUninitialized; }
     private:
         void ResetToZero();
 

@@ -991,7 +991,8 @@ namespace CNTK
 
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),
-        m_isDistributed(false)
+        m_isDistributed(false),
+        DoMetricsAggregationIfNeededLamda(nullptr)
     {
         if (learners.empty())
             InvalidArgument("These must be at least one learner.");
@@ -999,8 +1000,12 @@ namespace CNTK
         std::unordered_set<Parameter> learnerParameters;
         for (const auto& learner : m_learners)
         {
-            if (dynamic_pointer_cast<DistributedLearner>(learner) != nullptr)
+            DistributedLearnerPtr distLearner = dynamic_pointer_cast<DistributedLearner>(learner);
+            if (distLearner)
+            {
                 m_isDistributed = true;
+                DoMetricsAggregationIfNeededLamda = std::bind(&DistributedLearner::DoMetricsAggregationIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
+            }
 
             const auto& currentLearnerParameters = learner->Parameters();
             for (const auto& parameter : currentLearnerParameters)

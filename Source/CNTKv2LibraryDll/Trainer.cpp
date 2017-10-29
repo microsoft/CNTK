@@ -287,6 +287,12 @@ namespace CNTK
 
     void Trainer::SummarizeTrainingProgress()
     {
+        // Aggregate across workers training loss and eval criteria. Needed for BMUF like learner which don't aggregate after every minibatch.
+        if (m_distributed && m_parameterLearners->DoMetricsAggregationIfNeededLamda)
+        {
+            m_parameterLearners->DoMetricsAggregationIfNeededLamda(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
+        }
+
         for (auto& progressWriter : m_progressWriters)
         {
             progressWriter->WriteTrainingSummary(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
