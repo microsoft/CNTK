@@ -165,8 +165,8 @@ public:
     {
     }
     // TODO: would be neat to support a vector of strings for tested paths, or even . separated paths
-    const Parameter& operator[](const wstring& name) { return (*get())[name]; } // TODO: This may not have a test currently.
-    const ModelParameters& Nested(const wstring& name) { return get()->Nested(name); }
+    const Parameter& operator[](const wstring& name) const { return (*get())[name]; } // TODO: This may not have a test currently.
+    const ModelParameters& Nested(const wstring& name) const { return get()->Nested(name); }
     vector<Parameter> Parameters() const
     {
         vector<Parameter> res;
@@ -220,6 +220,12 @@ struct Batch
         });
     }
 
+    static size_t& CurrentMapIndex()
+    {
+        static size_t i = SIZE_MAX;
+        return i;
+    }
+
     // for binary functions
     static BinarySequenceModel Map(BinaryModel f)
     {
@@ -228,8 +234,10 @@ struct Batch
         {
             assert(y.size() == x.size());
             res.resize(x.size());
-            for (size_t i = 0; i < x.size(); i++)
+            size_t& i = CurrentMapIndex();
+            for (i = 0; i < x.size(); i++)
                 res[i] = f(x[i], y[i]);
+            i = SIZE_MAX;
         });
     }
 
@@ -505,6 +513,7 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 static UnaryBroadcastingModel Embedding(size_t embeddingDim, const wstring& name = wstring())
 {
     // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
+    //auto embed = Linear(embeddingDim, ProjectionOptions::stabilize/*ProjectionOptions::batchNormalize | ProjectionOptions::bias*/, name);
     auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, name);
     return UnaryModel({ }, { { L"embed", embed } }, [=](const Variable& x)
     {
@@ -811,7 +820,6 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 }
 
 // create a BatchNormalization layer
-// TODO: the API must take an axis parameter to declare where the axis is.
 static UnaryBroadcastingModel BatchNormalization(const size_t axis, const wstring& name /*= wstring()*/)
 {
 #ifdef DISABLE_NORMALIZATIONS
