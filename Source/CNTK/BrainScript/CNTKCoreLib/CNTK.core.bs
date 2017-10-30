@@ -682,17 +682,12 @@ Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = '
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = _AsNodes (cond : indexSequence : sourceData) /*plus the function args*/ ]
 Sin(z, tag='') = new ComputationNode [ operation = 'Sin' ; inputs = _AsNodes (z) /*plus the function args*/ ]
 Sinh(x, tag='') = new ComputationNode [ operation = 'Sinh' ; inputs = _AsNodes (x) /*plus the function args*/ ]
-Softmax (z, axis=0, tag='') =  # TODO: replace this with more efficient version below once we have ReduceLogSum
+Softmax (z, axis=0, tag='') = 
     if axis == 0 then new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
     else
     [
-        numerator = Softmax (z)  # do a first Softmax to bring it into harmless numeric range
-        denominator = ReduceSum (axis=axis1, numerator) ; axis1 = axis # reduce along axis
-        P = numerator .* Reciprocal (denominator)         # normalize numerator by the sum along the given axis
-
-        # TODO: This is not efficient. Once we have ReduceLogSum, it will be this:
-        #Z = ReduceLogSum (axis=axis0, z) # reduce along axis
-        #P = Exp (z - Z)
+        Z = ReduceLogSum (z, axis=axis) # reduce along axis
+        P = Exp (z - Z)
     ].P
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
 Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _AsNodes (z) /*plus the function args*/ ]
