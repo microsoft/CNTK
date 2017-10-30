@@ -117,10 +117,10 @@ public:
             qval |= expRange;
         return qval;
     }
-    static cudasharedcode float UnquantizeLogarithmically(int qval, float stddev, int nBits)
+    static cudasharedcode float UnquantizeLogarithmically(int qval, float stddevXCorrectionFactor, int nBits)
     {
         int expRange = (1 << (nBits - 1)); // numeric range of exponent without the sign
-        bool isNeg = qval > 7;
+        bool isNeg = qval >= expRange;
         int exp = qval & (expRange - 1);
         if (exp == 0) // quantize the smallest values to 0
             return 0;
@@ -128,7 +128,7 @@ public:
         if (isNeg)
             exp |= 256;
         int xi = exp << 23;
-        return __int_as_float(xi) * stddev * 1.4f; // 1.4f is an empirical correction factor, which I was too lazy to figure out
+        return __int_as_float(xi) * stddevXCorrectionFactor;
     }
 
     // quantize one value
@@ -138,7 +138,7 @@ public:
     cudasharedcode QWordVal Quantize(ElemType u) const
     {
 #if 1
-        if (Nbits == 4)
+        if (Nbits >= 2 && Nbits <= 8) // logarithmic (based on the float32's exponent)
         {
             return (QWordVal)QuantizeLogarithmically((float)u, RecoverStdDev(), (int)Nbits);
         }
@@ -174,9 +174,11 @@ public:
     cudasharedcode ElemType Unquantize(QWordVal u) const
     {
 #if 1
-        if (Nbits == 4)
+        if (Nbits >= 2 && Nbits <= 8) // logarithmic (based on the float32's exponent)
         {
-            return (ElemType)UnquantizeLogarithmically((int)u, RecoverStdDev(), (int)Nbits);
+            float correctionFactor = Nbits == 2 ? 1.22f/*2*/ : 1.4f/*4*/;
+            // empirical correction factor, seems to converge against sqrt(2)
+            return (ElemType)UnquantizeLogarithmically((int)u, RecoverStdDev() * correctionFactor, (int)Nbits);
         }
         else
 #endif
