@@ -474,7 +474,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=5000, blend_time_constant=0,
-                        epsilon=0.00001, use_cudnn_engine=False, name='', running_count=None):
+                        epsilon=0.00001, use_cudnn_engine=False, disable_regularization=False, name='', running_count=None):
     # TODO: running_count should be right after running_inv_std; no need for upwards compat
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
@@ -501,6 +501,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
         use_cudnn_engine(bool, default True):
         name (str, optional): the name of the Function instance in the network
+        disable_regularization(bool, default False): turn off regularization in batch normalization
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -515,7 +516,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     operand = sanitize_input(operand)
     return batch_normalization(operand, scale, bias, running_mean, running_inv_std, running_count, spatial,
                                normalization_time_constant, blend_time_constant,
-                               epsilon, use_cudnn_engine, name)
+                               epsilon, use_cudnn_engine, disable_regularization, name)
 
 @typemap
 def local_response_normalization(operand, depth_radius, bias, alpha, beta, name=''):

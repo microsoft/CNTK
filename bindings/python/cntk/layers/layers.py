@@ -1200,9 +1200,10 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
                        init_scale=1,
                        normalization_time_constant=default_override_or(5000), blend_time_constant=0,
                        epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(False),
+                       disable_regularization=default_override_or(False),
                        name=''):
     '''
-    BatchNormalization(map_rank=None, init_scale=1, normalization_time_constant=5000, blend_time_constant=0, epsilon=0.00001, use_cntk_engine=False, name='')
+    BatchNormalization(map_rank=None, init_scale=1, normalization_time_constant=5000, blend_time_constant=0, epsilon=0.00001, use_cntk_engine=False, disable_regularization=False, name='')
 
     Layer factory function to create a batch-normalization layer.
 
@@ -1229,6 +1230,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
      normalization_time_constant (int, default 5000): time constant for smoothing the batch statistics in order to compute aggregate estimates for inference.
      epsilon (float, default 0.00001): epsilon added to the variance to avoid division by 0
      use_cntk_engine (bool, default ``False``): if ``True`` then use CNTK's own engine instead of NVidia's.
+     disable_regularization (bool, default ``False``): if ``True`` then disable regularization in BatchNormalization
      name (str, optional): the name of the function instance in the network
 
     Returns:
@@ -1243,6 +1245,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     normalization_time_constant = get_default_override(BatchNormalization, normalization_time_constant=normalization_time_constant)
     epsilon                     = get_default_override(BatchNormalization, epsilon=epsilon)
     use_cntk_engine             = get_default_override(BatchNormalization, use_cntk_engine=use_cntk_engine)
+    disable_regularization      = get_default_override(BatchNormalization, disable_regularization=disable_regularization)
 
     # parameters bound to this Function
     norm_shape  = _INFERRED
@@ -1259,7 +1262,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     def batch_normalize(x):
         return batch_normalization(x, scale, bias, run_mean, run_variance, running_count=run_count,
                                    spatial=map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                   use_cudnn_engine=not use_cntk_engine)
+                                   use_cudnn_engine=not use_cntk_engine, disable_regularization=disable_regularization)
 
     return batch_normalize
 
