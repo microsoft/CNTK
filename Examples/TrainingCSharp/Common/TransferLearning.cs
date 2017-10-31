@@ -170,7 +170,7 @@ namespace CNTK.CSTrainingExamples
                     //TODO: sweepEnd should be set properly.
                     trainer.TrainMinibatch(new Dictionary<Variable, Value>() {
                         { imageInput, imageBatch },
-                        { labelInput, labelBatch } }, false, device);
+                        { labelInput, labelBatch } }, device);
                     TestHelper.PrintTrainingProgress(trainer, minibatchCount, 1);
                 }
             }                       
