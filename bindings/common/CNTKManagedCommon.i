@@ -735,6 +735,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, Save);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Clone);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Evaluate);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindByName);
+RENAME_AND_MAKE_PRIVATE(CNTK::Trainer, TrainMinibatch);
 // Customize type mapping for modelBuffer, used by Load
 %typemap(ctype) (char* buffer) "char*"
 %typemap(imtype) (char* buffer) "byte[]"
