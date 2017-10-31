@@ -52,11 +52,22 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Memory">
+      <HintPath>..\..\..\packages\System.Memory.4.5.0-preview1-25816-01\lib\netstandard1.1\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Tensors">
+      <HintPath>..\..\..\packages\System.Numerics.Tensors.0.1.0-e171019-4\lib\netstandard1.1\System.Numerics.Tensors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>..\..\..\packages\System.Runtime.CompilerServices.Unsafe.4.5.0-preview1-25816-01\lib\netstandard1.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helper.cs" />
     <Compile Include="HighLevelAPI\Model.cs" />
     <Compile Include="HighLevelAPI\ModelExample.cs" />
+    <Compile Include="HighLevelAPI\TensorView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShimApiClasses\AxisShim.cs" />
     <Compile Include="ShimApiClasses\CNTKLibShim.cs" />
@@ -75,6 +86,7 @@
     <Compile Include="ShimApiClasses\ValueShim.cs" />
     <Compile Include="ShimApiClasses\VariableShim.cs" />
     <Compile Include="SwigProxyClasses\AdditionalLearningOptions.cs" />
+    <Compile Include="SwigProxyClasses\BackPropState.cs" />
     <Compile Include="SwigProxyClasses\CharVector.cs" />
     <Compile Include="SwigProxyClasses\CNTKDictionary.cs" />
     <Compile Include="SwigProxyClasses\Constant.cs" />
@@ -110,6 +122,7 @@
     <Compile Include="SwigProxyClasses\StreamConfigurationVector.cs" />
     <Compile Include="SwigProxyClasses\StreamInformation.cs" />
     <Compile Include="SwigProxyClasses\StringVector.cs" />
+    <Compile Include="SwigProxyClasses\SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs" />
     <Compile Include="SwigProxyClasses\Trainer.cs" />
     <Compile Include="SwigProxyClasses\TrainingParameterScheduleDouble.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapParameterNDArrayViewPtr.cs" />
@@ -150,6 +163,7 @@
     <Compile Include="SwigProxyClasses\VariableKind.cs" />
     <Compile Include="SwigProxyClasses\VariableVector.cs" />
     <Compile Include="SwigProxyClasses\FunctionPtrVector.cs" />
+    <Compile Include="SwigProxyClasses\VectorValuePtr.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup Condition="$(CpuOnlyBuild)">
@@ -161,6 +175,10 @@
   <ItemGroup>
     <None Include="CNTKLibraryManagedDll-CPUOnly-KeyPair.snk" />
     <None Include="CNTKLibraryManagedDll-GPU-KeyPair.snk" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" Condition="$(HasSwig)" DependsOnTargets="$(BuildDependsOn)" />

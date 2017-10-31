@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace CNTK
 {
@@ -118,6 +119,11 @@ namespace CNTK
                 inputVector.Add(element.Key, new PairNDArrayViewPtrNDArrayViewPtr(element.Value.Item1, element.Value.Item2));
             }
             return inputVector;
+        }
+
+        internal static IntVector AsIntVector(IList<int> input)
+        {
+            return new IntVector(new Collection<int>(input));
         }
 
         internal static VariableVector AsVariableVector(IList<Variable> input)

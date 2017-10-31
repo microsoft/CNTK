@@ -97,6 +97,18 @@
     {
         return CNTK::NDArrayView::RandomNormal<double>(shape, rangeStart, rangeEnd, seed, device);
     }
+
+	/*
+	float* CNTK::NDArrayView::WritableDataBufferFloat()
+	{
+		return self->WritableDataBuffer<float>();
+	}
+
+	const float* CNTK::NDArrayView::DataBufferFloat()
+	{
+		return self->DataBuffer<float>();
+	}
+	*/
 }
 
 %extend CNTK::Constant {

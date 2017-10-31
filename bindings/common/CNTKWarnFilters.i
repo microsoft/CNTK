@@ -22,6 +22,7 @@
 
 // Returning an immutable string by reference.
 %warnfilter(473) CNTK::Function::OpName;
+%warnfilter(470) CNTK::Function::OpName;
 
 // Specialization of non-template function - hash,
 // TODO: it is not clear how to limit this only to hash, but we do not use partial specialization in other places.

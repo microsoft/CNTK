@@ -58,6 +58,10 @@ void UserTimesFunctionExample()
         if (!Internal::AreEqual(*userDefinedTimesInputGradientValue, *builtInTimesInputGradientValue, relativeTolerance, absoluteTolerance))
             std::runtime_error("UserTimesOp's Forward result does not match built-in result");
 
+		Constant plusParam(times->Output().Shape(), DataType::Float, 3, device);
+		auto mixTimesPlus = Plus(times, plusParam);
+		std::unordered_map<Variable, ValuePtr> mixTimesPlusOutputValues = { { mixTimesPlus->Output(), nullptr } };
+		mixTimesPlus->Evaluate({ { input, inputDataValue } }, mixTimesPlusOutputValues, device);
     };
 
     compareWithBuiltInTimes(userDefinedTimes);

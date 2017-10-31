@@ -23,6 +23,8 @@
 %include <arrays_csharp.i>
 #endif
 
+%shared_ptr(CNTK::BackPropState);
+
 %{
     #include "CNTKLibrary.h"
     #pragma warning(disable : 4100) //unreferenced formal parameter
@@ -80,7 +82,6 @@
 #endif
 
 // shared_ptr definitions
-%shared_ptr(CNTK::BackPropState);
 %shared_ptr(CNTK::Function);
 %shared_ptr(CNTK::CompositeFunction);
 %shared_ptr(CNTK::Value);
@@ -149,6 +150,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Learner)
 %template(UnorderedMapStringDictionaryValue) std::unordered_map<std::wstring, CNTK::DictionaryValue>;
 %template(PairSizeTDouble) std::pair<size_t, double>;
 %template(VectorPairSizeTDouble) std::vector<std::pair<size_t, double>>;
+%template(VectorValuePtr) std::vector<std::shared_ptr<CNTK::Value>>;
 %template(PairSizeTSizeT) std::pair<size_t, size_t>;
 %template(PairSizeTInt) std::pair<size_t, int>;
 %template(PairIntInt) std::pair<int, int>;
@@ -192,8 +194,6 @@ IGNORE_STRUCT std::hash<::CNTK::Variable>;
 IGNORE_FUNCTION CNTK::Value::UnpackVariableValue;
 IGNORE_CLASS CNTK::Function::CompositeFunction;
 IGNORE_CLASS CNTK::Function::Trainer;
-IGNORE_FUNCTION CNTK::Function::Backward;
-IGNORE_FUNCTION CNTK::Function::Forward;
 IGNORE_FUNCTION CNTK::Function::Serialize;
 IGNORE_FUNCTION CNTK::Function::Deserialize;
 IGNORE_FUNCTION CNTK::Function::BlockArgumentsMapping;
@@ -203,7 +203,6 @@ IGNORE_FUNCTION CNTK::Function::Gradients;
 IGNORE_FUNCTION CNTK::Function::RegisterNativeUserFunction;
 IGNORE_FUNCTION CNTK::Function::NativeUserFunction;
 IGNORE_FUNCTION CNTK::Function::SetAttribute;
-IGNORE_CLASS CNTK::BackPropState;
 IGNORE_FUNCTION CNTK::operator+;
 IGNORE_FUNCTION CNTK::operator-;
 IGNORE_FUNCTION CNTK::AsBlock;
@@ -402,6 +401,7 @@ MAKE_GETTER(CNTK::NDArrayView, Device);
 MAKE_GETTER(CNTK::NDArrayView, Shape);
 
 #ifdef SWIGJAVA
+IGNORE_CLASS CNTK::BackPropState;
 IGNORE_CLASS CNTK::DictionaryValue;
 IGNORE_CLASS CNTK::Dictionary;
 IGNORE_FUNCTION CNTK::PlaceholderVariable;
@@ -421,6 +421,8 @@ IGNORE_FUNCTION CNTK::HeNormalInitializer;
 IGNORE_FUNCTION CNTK::BilinearInitializer;
 IGNORE_FUNCTION CNTK::RandomInitializerWithRank;
 IGNORE_FUNCTION CNTK::TruncatedNormalInitializer;
+IGNORE_FUNCTION CNTK::Function::Backward;
+IGNORE_FUNCTION CNTK::Function::Forward;
 IGNORE_FUNCTION CNTK::Function::Parameters;
 IGNORE_FUNCTION CNTK::Function::ReplacePlaceholders;
 IGNORE_FUNCTION CNTK::Function::ReplacePlaceholder;
@@ -793,12 +795,46 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, RandomNormalFloat);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, RandomNormalDouble);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, RandomUniformFloat);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, RandomUniformDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::BackPropState, Function);
 // define typemap for dataBuffer
 %apply float INPUT[]  { float *dataBuffer }
 %apply double INPUT[]  { double *dataBuffer }
 
 // ProgressWriters returns unordered_set which is not supportted by swig CCharp
 IGNORE_FUNCTION CNTK::Evaluator::ProgressWriters;
+
+// https://stackoverflow.com/questions/23333446/using-shared-ptr-with-swig-directors-for-java
+
+%typemap(csdirectorin) std::shared_ptr<CNTK::BackPropState> "new $typemap(cstype, CNTK::BackPropState)($1,true)";
+%typemap(directorin,descriptor="L$typemap(cstype, CNTK::BackPropState);") std::shared_ptr<CNTK::BackPropState> %{
+  *($&1_type*)&cs$1 = new $1_type($1);
+%}
+
+%typemap(csdirectorout) std::shared_ptr<CNTK::BackPropState> "$typemap(cstype, CNTK::BackPropState).getCPtr($cscall).Handle";
+
+%typemap(directorout) std::shared_ptr<CNTK::BackPropState> %{
+  $&1_type tmp = NULL;
+  *($&1_type*)&tmp = *($&1_type*)&$input;
+  if (!tmp) {
+    return NULL;
+  }
+  $result = *tmp;
+%}
+
+%typemap(csdirectorout) std::shared_ptr<CNTK::Function> "$typemap(cstype, CNTK::Function).getCPtr($cscall).Handle";
+
+%typemap(directorout) std::shared_ptr<CNTK::Function> %{
+  $&1_type tmp = NULL;
+  *($&1_type*)&tmp = *($&1_type*)&$input;
+  if (!tmp) {
+    return NULL;
+  }
+  $result = *tmp;
+%}
+
+%feature("director") Function;
+
 #endif
 
 %include "CNTKValueExtend.i"
+
