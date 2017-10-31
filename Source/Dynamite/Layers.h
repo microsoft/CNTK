@@ -18,6 +18,10 @@
 
 //#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
+// use these to locally disable batch norm at places
+#define ProjectionOptions_batchNormalize ProjectionOptions::stabilize/*batchNormalize*/
+//#define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
+
 #define let const auto
 //#define Named(n) (L##n)
 #define Named(n) (std::wstring())
@@ -513,8 +517,8 @@ static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, c
 static UnaryBroadcastingModel Embedding(size_t embeddingDim, const wstring& name = wstring())
 {
     // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
-    //auto embed = Linear(embeddingDim, ProjectionOptions::stabilize/*ProjectionOptions::batchNormalize | ProjectionOptions::bias*/, name);
-    auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, name);
+    auto embed = Linear(embeddingDim, ProjectionOptions_batchNormalize, name);
+    //auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, name);
     return UnaryModel({ }, { { L"embed", embed } }, [=](const Variable& x)
     {
         return embed(x);

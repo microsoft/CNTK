@@ -18,6 +18,7 @@
 #include <iostream>
 #include <io.h>
 #include <boost/filesystem.hpp>
+#include <sstream>
 
 #define let const auto
 #define fun const auto
@@ -59,9 +60,12 @@ size_t topHiddenProjectionDim = 1024;
 size_t subMinibatches = 1;
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
+size_t saveEvery = 2000;
+size_t startMbCount = 0;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
+    //startMbCount = 96000; // override to start from somewhere else
     if (systemId == "chs_enu")
     {
         srcVocabSize = 78440;
@@ -81,6 +85,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         learningRate *= 10;
         numEncoderLayers = 1;
         numDecoderResNetProjections = 0;
+        use1BitSgd = true;
     }
     else if (systemId == "rom_enu")
     {
@@ -100,7 +105,9 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
 }
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var) (var)//((mbCount % 100 == 99) ? LOG(var) : 0)
+#define DOLOG(var) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() == 0) ? LOG(var) : 0)
+#define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() == 0) ? PrintSequence((prefix), (var), (vocab)) : 0)
+static void PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile);
 
 fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
@@ -130,6 +137,7 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
             // But BN after this does not help, so probably it should be between those layers, not after.
             h = bns[i - 1](h);
         }
+        DOLOG(h);
         return h;
     });
 }
@@ -159,6 +167,7 @@ fun AttentionModelReference(size_t attentionDim1)
             let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); CountAPICalls(1); // [1 x T]
             let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);                     // [1 x T]
             Function::SetDynamicProfiler(prevProfiler);
+            DOLOG(wSeq);
             return wSeq;
         });
 }
@@ -168,8 +177,8 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
-    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias); // keys projection for attention
-    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions::batchNormalize | ProjectionOptions::bias); // data projection for attention
+    let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions_batchNormalize | ProjectionOptions::bias); // keys projection for attention
+    let encoderDataProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions_batchNormalize | ProjectionOptions::bias); // data projection for attention
     let embedTarget = Barrier(600, Named("embedTargetBarrier")) >> Embedding(embeddingDim, Named("embedTarget"));     // target embeddding
     let initialContext = Constant({ attentionDim }, CurrentDataType(), 0.0, CurrentDevice(), L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >> Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
@@ -278,12 +287,15 @@ fun CreateModelFunction()
     [=](const Variable& sourceSeq, const Variable& historySeq) -> Variable
     {
         // embedding
+        let& W = embedFwd.Nested(L"embed")[L"W"];
+        DOLOG(W);
         let eFwd = embedFwd(sourceSeq);
         let eBwd = eFwd;// embedBwd(sourceSeq);
         // encoder
         let hSeq = encode(eFwd, eBwd);
         // decoder (outputting log probs of words)
         let zSeq = decode(historySeq, hSeq);
+        DOLOG(zSeq);
         return zSeq;
     });
 }
@@ -303,6 +315,9 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
         // apply model function
         // returns the sequence of output log probs over words
         let zSeq = model_fn(sourceSeq, historySeq);
+        DOPRINT("src", sourceSeq, srcVocabFile);
+        DOPRINT("tgt", labelsSeq, tgtVocabFile);
+        DOPRINT("hyp", zSeq, tgtVocabFile);
         // compute loss per word
         let lossSeq = Dynamite::CrossEntropyWithSoftmax(zSeq, labelsSeq);
         return lossSeq;
@@ -324,41 +339,70 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
     });
 }
 
-void Train(string systemId, wstring outputDirectory)
+// join
+template<typename StringCollection>
+static auto Join(const StringCollection& tokens)
 {
-    SetConfigurationVariablesFor(systemId);
-    let communicator = use1BitSgd ? QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/1) : MPICommunicator();
-    let wrapDistributedLearnerFn = [&](const LearnerPtr& baseLearner)
+    StringCollection::value_type res;
+    for (let token : tokens)
     {
-        if (use1BitSgd)
-            return CreateQuantizedDataParallelDistributedLearner(static_pointer_cast<QuantizedDistributedCommunicator>(communicator), baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
-        else
-            return CreateDataParallelDistributedLearner(communicator, baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
-    };
-#if 1 // while we are running with MPI, we always start from start
-    let numGpus = DeviceDescriptor::AllDevices().size() -1;
-    let ourRank = communicator->CurrentWorker().m_globalRank;
-    if (numGpus > 0)
-        SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)(ourRank % numGpus)));
-    else
-        SetCurrentDevice(DeviceDescriptor::CPUDevice());
-#endif
-    // open log file
-    // Log path = "$workingDirectory/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
-    let logPath = outputDirectory + L"/train.log" + (ourRank == 0 ? L"" : (L"." + to_wstring(ourRank)));
-    boost::filesystem::create_directories(boost::filesystem::path(logPath).parent_path());
-    FILE* outStream =
-        /*if*/ (communicator->CurrentWorker().IsMain()) ?
-            _wpopen((L"tee " + logPath).c_str(), L"wt")
-        /*else*/:
-            _wfopen(logPath.c_str(), L"wt");
-    if (!outStream)
-        InvalidArgument("error %d opening log file '%S'", errno, logPath.c_str());
-    fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
-    if (_dup2(_fileno(outStream), _fileno(stderr)))
-        InvalidArgument("error %d redirecting stderr to '%S'", errno, logPath.c_str());
-    fprintf(stderr, "starting training as worker[%d]\n", (int)ourRank), fflush(stderr); // write something to test
+        if (!res.empty())
+            res.push_back(' ');
+        res.append(token);
+    }
+    return res;
+}
 
+// helper to get a dictionary from file. First call will read it in.
+static const vector<string>& GetAndCacheDictionary(const wstring& vocabFile)
+{
+    // get the dictionary. If first time then read it in; otherwise cache in static variable.
+    static map<wstring, vector<string>> dicts;
+    auto iter = dicts.find(vocabFile);
+    if (iter != dicts.end())
+        return iter->second;
+    // not in cache: create and read from file
+    auto& dict = dicts[vocabFile];
+    ifstream f(vocabFile);
+    copy(istream_iterator<string>(f), istream_iterator<string>(), back_inserter(dict));
+    return dict;
+}
+
+// helper to convert a one-hot tensor that represents a word sequence to a readable string
+static string OneHotToWordSequence(const NDArrayViewPtr& seq, const wstring& vocabFile)
+{
+    // convert tensor to index sequence
+    auto outputShape = seq->Shape();
+    outputShape[0] = 1;
+    vector<size_t> indices;
+    let out = MakeSharedObject<NDArrayView>(seq->GetDataType(), /*StorageFormat::Dense,*/ outputShape, seq->Device());
+    NDArrayView::NumericOperation({ seq }, 1, L"Copy", out, 0, L"Argmax")->CopyDataTo(indices);
+    // transform to word sequence
+    let& dict = GetAndCacheDictionary(vocabFile);
+#if 1 // somehow the #else branch crashes in release
+    string res;
+    for (let index : indices)
+    {
+        string token = dict[index];
+        if (!res.empty())
+            res.push_back(' ');
+        res.append(token);
+    }
+    return res;
+#else
+    let words = Transform(indices, [&](size_t wordIndex) -> string { return dict[wordIndex]; });
+    // join the strings
+    return Join(words);
+#endif
+}
+
+static void PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile)
+{
+    fprintf(stderr, "\n%s=%s\n", prefix, OneHotToWordSequence(seq.Value(), vocabFile).c_str()), fflush(stderr);
+}
+
+void Train(const DistributedCommunicatorPtr& communicator, wstring modelPath)
+{
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
@@ -407,7 +451,15 @@ void Train(string systemId, wstring outputDirectory)
                                    MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
                                    learnerOptions);
 #endif
-    let& learner = wrapDistributedLearnerFn(baseLearner);
+    // TODO: move this out, e.g. to CNTKV2Library.h as an overload
+    let CreateDistributedLearner = [](const LearnerPtr& baseLearner, const DistributedCommunicatorPtr& communicator)
+    {
+        if (dynamic_cast<QuantizedDistributedCommunicator*>(communicator.get()))
+            return CreateQuantizedDataParallelDistributedLearner(static_pointer_cast<QuantizedDistributedCommunicator>(communicator), baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
+        else
+            return CreateDataParallelDistributedLearner(communicator, baseLearner, /*distributeAfterSamples =*/ 0, /*useAsyncBufferedParameterUpdate =*/ false);
+    };
+    let& learner = CreateDistributedLearner(baseLearner, communicator);
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters)
         gradients[p] = nullptr;
@@ -459,30 +511,26 @@ void Train(string systemId, wstring outputDirectory)
         //    }
         //}
     } partTimer;
-    //wstring modelPath = L"d:/me/tmp_dynamite_model.cmf";
-    //wstring modelPath = L"d:/me/tmp_dynamite_model_wn.cmf";
-    //wstring modelPath = L"d:/me/tmp_dynamite_model_attseq.cmf";
-    wstring modelPath = outputDirectory + L"/model.dmf"; // DMF=Dynamite model file
-    size_t saveEvery = 2000;
-    size_t startMbCount = 0;// 12000;
     let ModelPath = [&](size_t currentMbCount) // helper to form the model filename
     {
         char currentMbCountBuf[20];
         sprintf(currentMbCountBuf, "%06d", (int)currentMbCount); // append the minibatch index with a fixed width for sorted directory listings
         return modelPath + L"." + wstring(currentMbCountBuf, currentMbCountBuf + strlen(currentMbCountBuf)); // (simplistic string->wstring converter)
     };
-    if (startMbCount > 0)
+    // TODO: move this to a different place, e.g. the helper header
+    //let SaveCheckpoint = [](const wstring& path, const FunctionPtr& compositeFunction,
+    //    size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
+
+    let RestoreFromCheckpoint = [](const wstring& path, const FunctionPtr& compositeFunction,
+                                   size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
     {
         // restarting after crash. Note: not checkpointing the reader yet.
-        let path = ModelPath(startMbCount);
-        fprintf(stderr, "restarting from: %S\n", path.c_str()), fflush(stderr);
         // TODO: The code below is copy-paste from Trainer.cpp, since it is not public. Move this down through the API.
         // TODO: Can we just wrap everything in an actual Trainer instance, and use that?
         //model_fn.RestoreParameters(path);
         std::wstring trainerStateCheckpointFilePath = path + L".ckp";
 
         // Restore the model's parameters
-        auto compositeFunction = model_fn.ParametersCombined();
         compositeFunction->Restore(path);
 
         // restore remaining state
@@ -502,7 +550,7 @@ void Train(string systemId, wstring outputDirectory)
 
         learner->RestoreFromCheckpoint(learnerState);
 
-        if (communicator->Workers().size() > 1 || true)
+        if (numWorkers > 1 || true)
         {
             // this ensures that nobody will start writing to the model/checkpoint files, until
             // everybody is done reading them.
@@ -523,33 +571,31 @@ void Train(string systemId, wstring outputDirectory)
         }
 
         minibatchSource->RestoreFromCheckpoint(externalState[/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource"].Value<Dictionary>());
+    };
+    if (startMbCount > 0)
+    {
+        let path = ModelPath(startMbCount);
+        fprintf(stderr, "restarting from: %S\n", path.c_str()), fflush(stderr);
+        RestoreFromCheckpoint(path, model_fn.ParametersCombined(), communicator->Workers().size(), minibatchSource, learner);
     }
     fflush(stderr);
     // MINIBATCH LOOP
     mbCount = startMbCount;
     for (;;)
     {
-        // checkpoint
-        // BUGBUG: For now, 'saveEvery' must be a multiple of subMinibatches, otherwise it won't save
-        if (mbCount % saveEvery == 0 &&
-            (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
+        // TODO: move this out somewhere, e.g. the helper header
+        let SaveCheckpoint = [](const wstring& path, const FunctionPtr& compositeFunction,
+                                size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
         {
-            // TODO: Move this to a separate function.
-            let path = ModelPath(mbCount);
-            fprintf(stderr, "%ssaving: %S\n", communicator->CurrentWorker().IsMain() ? "" : "not ", path.c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
-            //model_fn.SaveParameters(path);
-
             // reader state
             Dictionary externalState(/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource", minibatchSource->GetCheckpointState());
 
             // learner state
             std::vector<DictionaryValue> learnersState{ learner->CreateCheckpoint() };
 
-            auto compositeFunction = model_fn.ParametersCombined();
-
             Dictionary aggregatedState;
             DistributedCommunicatorPtr checkpointCommunicator;
-            if (communicator->Workers().size() > 1    ||true)
+            if (numWorkers > 1    ||true)
                 checkpointCommunicator = MPICommunicator();
             if (checkpointCommunicator)
             {
@@ -584,15 +630,15 @@ void Train(string systemId, wstring outputDirectory)
                     distributedStatePropertyName, aggregatedState);
 
                 // TODO: rename must check return code. To fix this, just move this down to the API and use the functions in Trainer.cpp.
-                std::wstring tempModelFile = path + L".tmp";
+                std::wstring tempModelPath = path + L".tmp";
                 std::wstring trainerStateCheckpointFilePath = path + L".ckp";
-                std::wstring tempCheckpointFile = trainerStateCheckpointFilePath + L".tmp";
-                compositeFunction->Save(tempModelFile);
-                state.Save(tempCheckpointFile);
+                std::wstring tempCheckpointPath = trainerStateCheckpointFilePath + L".tmp";
+                compositeFunction->Save(tempModelPath);
+                state.Save(tempCheckpointPath);
                 _wunlink(path.c_str());
                 _wunlink(trainerStateCheckpointFilePath.c_str());
-                _wrename(tempModelFile.c_str(), path.c_str());
-                _wrename(tempCheckpointFile.c_str(), trainerStateCheckpointFilePath.c_str());
+                _wrename(tempModelPath.c_str(), path.c_str());
+                _wrename(tempCheckpointPath.c_str(), trainerStateCheckpointFilePath.c_str());
             }
 
             if (checkpointCommunicator)
@@ -601,10 +647,19 @@ void Train(string systemId, wstring outputDirectory)
                 checkpointCommunicator->Barrier();
                 // Note: checkpointCommunicator is destructed at end of this block
 
+        };
+        // checkpoint
+        // BUGBUG: For now, 'saveEvery' must be a multiple of subMinibatches, otherwise it won't save
+        if (mbCount % saveEvery == 0 &&
+            (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
+        {
+            let modelPathN = ModelPath(mbCount);
+            fprintf(stderr, "%ssaving: %S\n", communicator->CurrentWorker().IsMain() ? "" : "not ", modelPathN.c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
+            SaveCheckpoint(modelPathN, model_fn.ParametersCombined(), communicator->Workers().size(), minibatchSource, learner);
             // test model saving
             //for (auto& param : parameters) // destroy parameters as to prove that we reloaded them correctly.
             //    param.Value()->SetValue(0.0);
-            //model_fn.RestoreParameters(path);
+            //model_fn.RestoreParameters(modelPathN);
         }
         timer.Restart();
 
@@ -650,7 +705,7 @@ void Train(string systemId, wstring outputDirectory)
                 maxLabels = max(maxLabels, len);
             }
             //partTimer.Log("GetNextMinibatch", numLabels);
-            fprintf(stderr, "%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
+            fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, learner->LearningRate() / lr0);
 #if 0       // log the sequences
@@ -659,6 +714,10 @@ void Train(string systemId, wstring outputDirectory)
                 subBatchArgs[0][n].Value()->LogToFile(L"Source_" + to_wstring(n), stderr, SIZE_MAX);
                 subBatchArgs[1][n].Value()->LogToFile(L"Target_" + to_wstring(n), stderr, SIZE_MAX);
             }
+#endif
+#if 0       // log the first sequence
+            fprintf(stderr, "src=%s\n", OneHotToWordSequence(subBatchArgs[0][0].Value(), srcVocabFile).c_str());
+            fprintf(stderr, "tgt=%s\n", OneHotToWordSequence(subBatchArgs[1][0].Value(), tgtVocabFile).c_str());
 #endif
             // train minibatch
             let numAPICalls0 = CountAPICalls(0);
@@ -684,21 +743,27 @@ void Train(string systemId, wstring outputDirectory)
             let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
 #if 1       // use 0 to measure graph building only
             partTimer.Restart();
-            mbLoss.Value()->AsScalar<float>();
+            fprintf(stderr, "%5d:  ", (int)mbCount); // prefix for the log
+            mbLoss.Value()->AsScalar<float>(); // trigger computation
             let timeForward = partTimer.Elapsed();
             //fprintf(stderr, "%.7f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
             //exit(1);
             //partTimer.Log("ForwardProp", numLabels);
             // note: we must use numScoredLabels here
-            fprintf(stderr, "{%.2f, %d-%d}\n", mbLoss.Value()->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
+            //fprintf(stderr, "{%.2f, %d-%d}\n", mbLoss.Value()->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
+            fprintf(stderr, "%5d:  ", (int)mbCount); // prefix for the log
+            //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             partTimer.Restart();
             mbLoss.Backward(gradients);
+            //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             let timeBackward = partTimer.Elapsed();
             //partTimer.Log("BackProp", numLabels);
             MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numScoredLabels, mbLoss.Value(), mbLoss.Value() };
             info.trainingLossValue->AsScalar<float>();
+            //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             partTimer.Restart();
             learner->Update(gradients, info);
+            //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             let timePerUpdate = partTimer.Elapsed();
             //partTimer.Log("Update", numLabels);
             let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
@@ -706,11 +771,11 @@ void Train(string systemId, wstring outputDirectory)
             let smoothedLossVal = smoothedLoss.Update(lossPerLabel, info.numberOfSamples);
             let elapsed = timer.ElapsedSeconds(); // [sec]
             partTimer.Restart();
-            mbLoss = Variable();
+            mbLoss = Variable(); // this destructs the entire graph
             let timeDeleteGraph = partTimer.Elapsed();
             if (communicator->CurrentWorker().IsMain())
-                fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
-                                (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
+                fprintf(stderr, "%5d:  loss, PPL smoothed=%5.2f, %8.2f ###; this=%10.7f, %9.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
+                                (int)mbCount, smoothedLossVal, exp(smoothedLossVal), lossPerLabel, exp(lossPerLabel), (int)totalLabels,
                                 info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples,
                                 1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
             // log
@@ -741,27 +806,65 @@ class GetCommandLineArguments
     size_t argc; char** argv;
     string Front() const { if (argc == 0) LogicError("GetCommandLineArguments: out of command-line arguments??"); return *argv; }
     string Pop() { let val = Front(); argc--, argv++; return val; }
-    string PopArg(const string& argTag) // check that next arg is argTag, Pop it, then Pop and return the subsequent arg
+    template<typename T>
+    void PopArg(const char* argTag, T& argVal) // check that next arg is argTag, Pop it, then Pop and return the subsequent arg
     {
-        if (argc < 2 || Pop() != argTag)
-            InvalidArgument("command-line argument '%s' missing or out of order", argTag.c_str());
-        return Pop();
+        if (argc == 1)
+            InvalidArgument("last command-line arg '--%s' is missing a value", argTag);
+        bool optional = argTag[0] == '?';
+        if (optional)
+            argTag++;
+        if (argc > 0 && Pop() == "--"s + argTag)
+        {
+            let argStr = Pop();
+            SetArg(argStr, argVal);
+            fprintf(stderr, "%s = %s\n", argTag, argStr.c_str());
+        }
+        else
+        {
+            if (!optional)
+                InvalidArgument("command-line argument '%s' missing or out of order", argTag);
+            fprintf(stderr, "%s = %S\n", argTag, ToWString(argVal).c_str());
+        }
     }
-    // recursive templates. Each one pops the next argument, where the C++ type selects the conversion
-    template <typename ...ArgTypes>
-    void Get(const string& argTag, wstring& argVal, ArgTypes&& ...remainingArgs)
-    {
-        let val = PopArg(argTag);
-        argVal = wstring(val.begin(), val.end()); // note: this only presently works for ASCII arguments, easy to fix if ever needed
-        Get(std::forward<ArgTypes>(remainingArgs)...); // recurse
-    }
-    template <typename ...ArgTypes>
-    void Get(const string& argTag, string& argVal, ArgTypes&& ...remainingArgs)
-    {
-        argVal = PopArg(argTag);
-        Get(std::forward<ArgTypes>(remainingArgs)...); // recurse
-    }
+    // back conversion for printing --thanks to Billy O'Neal for the SFINAE hacking
+    struct unique_c1xx_workaround_tag_give_this_a_fun_name;
+    template<typename T, typename = void> struct has_towstring : false_type {};
+    template<typename T> struct has_towstring<T, void_t<unique_c1xx_workaround_tag_give_this_a_fun_name, decltype(declval<T>().ToWString())>> : true_type {};
+#if 0
+    template<typename T, typename = enable_if_t< has_towstring<T>::value>> static wstring ToWString(const T& val) { return val.ToWString(); }
+    template<typename T, typename = enable_if_t<!has_towstring<T>::value>> static wstring ToWString(const T& val) { return to_wstring(val); }
+#else
+    template<typename T> static wstring ToWStringImpl(const T& val, true_type) { return val.ToWString(); }
+    template<typename T> static wstring ToWStringImpl(const T& val, false_type) { return to_wstring(val); }
+    template<typename T> static wstring ToWString(const T& val) { return ToWStringImpl(val, has_towstring<T>{}); }
+#endif
+    static wstring ToWString(const wstring& val) { return val; }
+    static wstring ToWString(const string& val) { return wstring(val.begin(), val.end()); } // ASCII only
+    // conversion to target type via overloads
     // if needed, we can add Get() for other types, and with defaults (triples)
+    template<typename T> // template, for types that accept a string; such as... std::stringm but more so special hacks like SystemSentinel
+    static void SetArg(const string& argStr, T& argVal) { argVal = argStr; }
+    static void SetArg(const string& argStr, wstring& argVal) { argVal.assign(argStr.begin(), argStr.end()); } // note: this only presently works for ASCII arguments, easy to fix if ever needed
+    static void SetArg(const string& argStr, int& argVal) { SetArgViaStream(argStr, argVal); }
+    static void SetArg(const string& argStr, size_t& argVal) { SetArgViaStream(argStr, argVal); }
+    static void SetArg(const string& argStr, float& argVal) { SetArgViaStream(argStr, argVal); }
+    static void SetArg(const string& argStr, double& argVal) { SetArgViaStream(argStr, argVal); }
+    template<typename T> // template, for types that accept a string; such as... std::stringm but more so special hacks like SystemSentinel
+    static void SetArgViaStream(const string& argStr, T& argVal)
+    {
+        istringstream iss(argStr);
+        iss >> argVal;
+        if (iss.bad()) InvalidArgument("command-line argument value '%s' cannot be parsed to %s", argStr.c_str(), typeid(argVal).name());
+    }
+private:
+    // recursive template. Each invocation pops the next argument, where the C++ type selects the conversion in PopArg()
+    template <typename T, typename ...ArgTypes>
+    void Get(const char* argTag, T& argVal, ArgTypes&& ...remainingArgs)
+    {
+        PopArg(argTag, argVal);
+        Get(std::forward<ArgTypes>(remainingArgs)...); // recurse
+    }
     void Get() // end of recursion
     {
         if (argc > 0)
@@ -783,21 +886,77 @@ int mt_main(int argc, char *argv[])
     Internal::PrintBuiltInfo();
     try
     {
-        string systemId;
+        wstring command;
+        wstring workingDirectory = L"d:/mt/experiments"; // output dir = "$workingDirectory/$experimentId/"
+        wstring modelPath;
+        struct SystemSentinel : public string
+        {
+            wstring ToWString() const { return wstring(begin(), end()); }
+            void operator=(const string& systemId)
+            {
+                string::operator=(systemId);
+                SetConfigurationVariablesFor(systemId);
+            }
+        } systemId;
         wstring experimentId;
         try
         {
-            GetCommandLineArguments(argc, argv, "--system", systemId, "--id", experimentId);
+            GetCommandLineArguments(argc, argv,
+                "command", command,
+                "system", systemId,
+                "id", experimentId,
+                // optional overrides of global stuff
+                "?workingDirectory", workingDirectory,
+                "?modelPath", modelPath,
+                // these are optional to override the system settings
+                "?from", startMbCount);
         }
         catch (const exception& e)
         {
             fprintf(stderr, "%s\n", e.what()), fflush(stderr);
-            throw invalid_argument("required command line: --system SYSTEMID --id IDSTRING\n SYSTEMID = chs_enu, rom_enu, etc\n IDSTRING is used to form the log and model path for now");
+            throw invalid_argument("required command line: --command train|test --system SYSTEMID --id IDSTRING\n SYSTEMID = chs_enu, rom_enu, etc\n IDSTRING is used to form the log and model path for now");
         }
+
         //let* pExpId = argv[2];
         //wstring experimentId(pExpId, pExpId + strlen(pExpId)); // (cheap conversion to wchar_t)
-        wstring workingDirectory = L"d:/mt/experiments";       // output dir = "$workingDirectory/$experimentId/"
-        Train(systemId, workingDirectory + L"/" + experimentId + L"_" + wstring(systemId.begin(), systemId.end()));
+        auto outputDirectory = workingDirectory + L"/" + experimentId + L"_" + wstring(systemId.begin(), systemId.end());
+        if (modelPath.empty())
+            modelPath = outputDirectory + L"/model.dmf"; // DMF=Dynamite model file
+
+        // set up parallel communicator
+        let communicator = use1BitSgd ? QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/4) : MPICommunicator();
+#if 1 // while we are running with MPI, we always start from start
+        let numGpus = DeviceDescriptor::AllDevices().size() - 1;
+        let ourRank = communicator->CurrentWorker().m_globalRank;
+        if (numGpus > 0)
+            SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)(ourRank % numGpus)));
+        else
+            SetCurrentDevice(DeviceDescriptor::CPUDevice());
+#endif
+
+        // open log file. The path depends on the worker rank.
+        // Log path = "$workingDirectory/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
+        let logPath = outputDirectory + L"/" + command + L".log" + (ourRank == 0 ? L"" : (L"." + to_wstring(ourRank)));
+        boost::filesystem::create_directories(boost::filesystem::path(logPath).parent_path());
+        FILE* outStream =
+            /*if*/ (communicator->CurrentWorker().IsMain()) ?
+            _wpopen((L"tee " + logPath).c_str(), L"wt")
+            /*else*/ :
+            _wfopen(logPath.c_str(), L"wt");
+        if (!outStream)
+            InvalidArgument("error %d opening log file '%S'", errno, logPath.c_str());
+        fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
+        if (_dup2(_fileno(outStream), _fileno(stderr)))
+            InvalidArgument("error %d redirecting stderr to '%S'", errno, logPath.c_str());
+        fprintf(stderr, "starting %S as worker[%d]\n", command.c_str(), (int)ourRank), fflush(stderr); // write something to test
+
+        // perform the command
+        if (command == L"train")
+            Train(communicator, modelPath);
+        //else if (command == "test")
+        //    Test(communicator, modelPath);
+        else
+            InvalidArgument("Unknonw --command %S", command.c_str());
     }
     catch (exception& e)
     {
