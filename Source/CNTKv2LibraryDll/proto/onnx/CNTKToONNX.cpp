@@ -505,6 +505,14 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
         //
         functionNode = AddNode(src, graph, inputs, outputs);
     }
+    else if (src->OpName() == L"Combine")
+    {
+        for (size_t inputIndex = 0; inputIndex < src->Inputs().size(); ++inputIndex)
+        {
+            auto input = src->Inputs()[inputIndex];
+            CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+        }
+    }
     else
         LogicError("Node '%S': Unsupported node.", src->AsString().c_str());
 
@@ -737,6 +745,13 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             autoPadding.pop_back();
             dilations = dilations.SubShape(0, dilations.Rank() - 1);
 
+            //auto pads: append pad_b and pad_r
+            auto len = autoPadding.size();
+            for (int i = 0; i < len; i++)
+            {
+                autoPadding.push_back(autoPadding[i]);
+            }
+
             node->AddAttribute("kernel_shape", ToINTS(kernelShape));
             node->AddAttribute("strides", ToINTS(strides));
             node->AddAttribute("pads", ToINTS(autoPadding));
@@ -754,6 +769,26 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             auto kernelShape = (NDShape)src->Attributes()[L"poolingWindowShape"].Value<NDShape>();
             auto strides = (NDShape)src->Attributes()[L"strides"].Value<NDShape>();
             auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
+
+            auto len = autoPadding.size();
+            if (len == 1)
+            {
+                autoPadding.push_back(autoPadding[0]);
+                autoPadding.push_back(autoPadding[0]);
+                autoPadding.push_back(autoPadding[0]);
+            }
+            else if (len == 2)
+            {
+                for (int i = 0; i < len; i++)
+                {
+                    autoPadding.push_back(autoPadding[i]);
+                }
+            }
+            else
+            {
+                LogicError("Pooling's padding dimension is not expected. ");
+            }
+            
 
             node->AddAttribute("kernel_shape", ToINTS(kernelShape));
             node->AddAttribute("strides", ToINTS(strides));
