@@ -47,6 +47,7 @@ namespace CNTK
         /// <param name="arguments">minibatch data as variable value pairs</param>
         /// <param name="computeDevice">device</param>
         /// <returns></returns>
+        [System.Obsolete("TrainMinibatch() without isSweepEndInarguments will be deprecated soon. Please TrainMinibatch() with isSweepEndInarguments.", false)]
         public bool TrainMinibatch(IDictionary<Variable, Value> arguments, DeviceDescriptor computeDevice)
         {
             UnorderedMapVariableValuePtr mapData = Helper.AsUnorderedMapVariableValue(arguments);
