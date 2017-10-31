@@ -98,22 +98,6 @@ TrainConvNet = {
             }
         })
     }
-
-    cvReader = {
-        verbosity = 0 ; randomize = false
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$DataDir$/test_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Mean"; meanFile = "$MeanDir$/CIFAR-10_mean.xml" } :
-                    { type = "Transpose" }
-                )}
-                labels = { labelDim = 10 }
-            }
-        })
-    }
 }
 
 # Eval action

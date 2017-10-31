@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-
+#
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -70,7 +70,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         lr_per_mb = [1.0]*80 + [0.1]*40 + [0.01]
     elif network_name == 'resnet110':
         z = create_cifar10_model(input_var, 18, num_classes)
-        lr_per_mb = [1.0]*80 + [0.1]*40 + [0.01]
+        lr_per_mb = [0.1]*1 + [1.0]*80 + [0.1]*40 + [0.01]
     else:
         raise RuntimeError("Unknown model name!")
 

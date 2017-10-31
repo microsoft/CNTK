@@ -15,7 +15,7 @@ We use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for tra
 `python TrainResNet_CIFAR10.py -n resnet20`
 `python TrainResNet_CIFAR10.py -n resnet110`
 
-for ResNet20 and ResNet110, respectively. The ResNet20 network achieves an error rate of about `8.33%`, and the ResNet110 network achieves an error rate of about `6.54%`.
+for ResNet20 and ResNet110, respectively. The ResNet20 network achieves an error rate of about `8.23%`, and the ResNet110 network achieves an error rate of about `6.24%`.
 
 ### TrainResNet_CIFAR10_Distributed.py
 

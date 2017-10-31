@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-
+#
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -83,7 +83,7 @@ def create_cifar10_model(input, num_stack_layers, num_classes):
     r3_2 = resnet_basic_stack(r3_1, num_stack_layers-1, c_map[2])
 
     # Global average pooling and output
-    pool = AveragePooling(filter_shape=(8, 8))(r3_2)
+    pool = AveragePooling(filter_shape=(8, 8), name='final_avg_pooling')(r3_2)
     z = Dense(num_classes, init=normal(0.01))(pool)
     return z
 
@@ -104,7 +104,7 @@ def create_imagenet_model_basic(input, num_stack_layers, num_classes):
     r4_2 = resnet_basic_stack(r4_1, num_stack_layers[3], c_map[3])
 
     # Global average pooling and output
-    pool = AveragePooling(filter_shape=(7, 7))(r4_2)
+    pool = AveragePooling(filter_shape=(7, 7), name='final_avg_pooling')(r4_2)
     z = Dense(num_classes, init=normal(0.01))(pool)
     return z
 
@@ -132,6 +132,6 @@ def create_imagenet_model_bottleneck(input, num_stack_layers, num_classes, strid
     r5_2 = resnet_bottleneck_stack(r5_1, num_stack_layers[3], c_map[5], c_map[3])
 
     # Global average pooling and output
-    pool = AveragePooling(filter_shape=(7, 7))(r5_2)
+    pool = AveragePooling(filter_shape=(7, 7), name='final_avg_pooling')(r5_2)
     z = Dense(num_classes, init=normal(0.01))(pool)
     return z
