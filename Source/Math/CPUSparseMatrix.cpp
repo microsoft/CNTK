@@ -29,7 +29,7 @@
 #include <mkl_cblas.h>
 #include <mkl_vsl.h>
 #include <mkl_vsl_functions.h>
-#include <mkl_lapack.h>
+#include <mkl_lapacke.h>
 #include <mkl_service.h>
 #else
 #ifdef _MSC_VER
