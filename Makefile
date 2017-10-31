@@ -11,10 +11,6 @@
 #     defaults to release
 #   MKL_PATH= path to CNTK custom MKL installation
 #     only needed if MATHLIB=mkl
-#   CNTK_CUSTOM_MKL_VERSION=3
-#     version for the CNTK custom MKL installation
-#   MKL_THREADING=parallel|sequential
-#     only needed if MATHLIB=mkl
 #   GDK_INCLUDE_PATH= path to CUDA GDK include path, so $(GDK_INCLUDE_PATH)/nvml.h exists
 #     defaults to /usr/include/nvidia/gdk
 #   GDK_NVML_LIB_PATH= path to CUDA GDK (stub) library path, so $(GDK_NVML_LIB_PATH)/libnvidia-ml.so exists
@@ -171,17 +167,11 @@ else
 endif
 
 ifeq ("$(MATHLIB)","mkl")
-  INCLUDEPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/include
-  LIBS_LIST += m
-ifeq ("$(MKL_THREADING)","sequential")
-  MKL_LIB_PATH := $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
-  LIBS_LIST += mkl_cntk_s
-else
-  MKL_LIB_PATH := $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
-  LIBS_LIST += mkl_cntk_p iomp5 pthread
-endif
-  LIBPATH += $(MKL_LIB_PATH)
+  INCLUDEPATH += $(MKL_PATH)/include
+  LIBS_LIST += m iomp5 pthread mklml_intel
   COMMON_FLAGS += -DUSE_MKL
+  MKL_LIB_PATH := $(MKL_PATH)/lib
+  LIBPATH += $(MKL_LIB_PATH)
 endif
 
 ifeq ($(CUDA_GDR),1)
@@ -1448,7 +1438,7 @@ java: $(JAVA_LIBS)
 	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(JAVA_SO_NAME)
 	mkdir -p $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
 	echo $(JAVA_SO_NAME:$(LIBDIR)/%=%) > $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_LOAD_MANIFEST
-	for so in libiomp5.so libmkl_cntk_p.so; do \
+	for so in libiomp5.so libmklml_intel.so; do \
 	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done

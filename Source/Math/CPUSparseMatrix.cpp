@@ -25,7 +25,12 @@
 
 #ifdef USE_MKL
 // requires MKL 10.0 and above
-#include <mkl.h>
+#include <mkl_blas.h>
+#include <mkl_cblas.h>
+#include <mkl_vsl.h>
+#include <mkl_vsl_functions.h>
+#include <mkl_lapack.h>
+#include <mkl_service.h>
 #else
 #ifdef _MSC_VER
 // Visual Studio doesn't define standard complex types properly
