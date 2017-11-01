@@ -172,7 +172,7 @@ IGNORE_FUNCTION _wcsdup;
 #endif
 
 IGNORE_CLASS CNTK::Variable::CompositeFunction;
-IGNORE_CLASS CNTK::Varaiable::PrimitiveFunction;
+IGNORE_CLASS CNTK::Variable::PrimitiveFunction;
 IGNORE_CLASS CNTK::IDictionarySerializable;
 // To suppress SWIG warning 302: Identifier redefined.
 %ignore CNTK::DictionaryValue::operator=;

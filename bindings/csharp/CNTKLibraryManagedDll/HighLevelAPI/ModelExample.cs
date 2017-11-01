@@ -67,25 +67,25 @@ namespace CNTK.HighLevelAPI
 
         public override void Backward(BackPropState state, UnorderedMapVariableValuePtr rootGradientValues, UnorderedMapVariableValuePtr backPropagatedGradientValuesForInputs)
         {
+            var leftInputVariable = Inputs[0];
+            var rightInputVariable = Inputs[1];
+
+            if (!backPropagatedGradientValuesForInputs.ContainsKey(rightInputVariable))
+                throw new Exception("UserTimesFunction does not support computing gradient wrt right operand");
+
+            var rightInputValue = state.SavedForwardPropValues()[rightInputVariable];
+            var rootGradientValue = rootGradientValues[this.Output];
+
+            TensorView<float> rootGradientDataTV = new TensorView<float>(rootGradientValue.Shape, rootGradientValue.Data, new List<Axis>() { Axis.DefaultBatchAxis() });
+            TensorView<float> rightInputDataTV = new TensorView<float>(rightInputValue.Shape, rightInputValue.Data, new List<Axis>() { Axis.DefaultBatchAxis() });
+
+            backPropagatedGradientValuesForInputs[leftInputVariable] = new Value((rootGradientDataTV * rightInputDataTV.Transpose()).Eval().Value());
         }
 
-        protected override BackPropState Forward(VectorValuePtr inputValues, UnorderedMapVariableValuePtr outputs, DeviceDescriptor computeDevice, SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t outputsToRetainBackwardStateFor)
+        protected override BackPropState Forward(VectorValuePtr inputValues, UnorderedMapVariableValuePtr outputs, DeviceDescriptor computeDevice, 
+            SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t outputsToRetainBackwardStateFor)
         {
-            var leftOperandData = inputValues[0].Data;
-            var rightOperandData = inputValues[1].Data;
-
-            // Allocate outputValue if needed
-            var outputValue = outputs[this.Output];
-            if (outputValue == null)
-            {
-                var numOutRows = leftOperandData.Shape[0];
-                var numOutCols = rightOperandData.Shape[rightOperandData.Shape.Rank - 1];
-                outputValue = new Value(new NDArrayView(DataType.Float, new int[]{ numOutRows , numOutCols }, computeDevice));
-                outputs[this.Output] = outputValue;
-            }
-
-            var outputData = outputValue.Data;
-            MatrixMultiply(leftOperandData, rightOperandData, outputData);
+            CalculateForward(inputValues, outputs);
 
             // Let's save the right input's Value in the BackPropSate to be used in the backward pass for computing gradients
             UnorderedMapVariableValuePtr forwardPropValuesToSave = new UnorderedMapVariableValuePtr();
@@ -95,7 +95,23 @@ namespace CNTK.HighLevelAPI
 
         protected override BackPropState Forward(VectorValuePtr inputValues, UnorderedMapVariableValuePtr outputs, DeviceDescriptor computeDevice)
         {
-            return null;
+            CalculateForward(inputValues, outputs);
+
+            UnorderedMapVariableValuePtr forwardPropValuesToSave = new UnorderedMapVariableValuePtr();
+            return new BackPropState(this, computeDevice, forwardPropValuesToSave);
+        }
+
+        private void CalculateForward(VectorValuePtr inputValues, UnorderedMapVariableValuePtr outputs)
+        {
+            Value leftValue = inputValues[0];
+            TensorView<float> leftOperand = new TensorView<float>(new Variable(leftValue.Shape, VariableKind.Parameter, DataType.Float, leftValue.Data, false, 
+                Helper.AsAxisVector(new List<Axis>() { Axis.DefaultBatchAxis() }), false, "", ""));
+            Value rightValue = inputValues[1];
+            TensorView<float> rightOperand = new TensorView<float>(new Variable(rightValue.Shape, VariableKind.Constant, DataType.Float, rightValue.Data, false,
+                Helper.AsAxisVector(new List<Axis>() { Axis.DefaultBatchAxis() }), false, "", ""));
+
+            TensorView<float> output = leftOperand * rightOperand;
+            outputs[this.Output] = new Value(output.Eval().Value());
         }
 
         protected override void InferOutputs(VariableVector outputs)
@@ -128,71 +144,6 @@ namespace CNTK.HighLevelAPI
         private Function _Clone(VariableVector arg0)
         {
             return null;
-        }
-
-        static Tuple<int, int> GetNumRowsAndCols(NDShape shape, bool transpose = false)
-        {
-            var numRows = shape[0];
-            var numCols = shape[shape.Rank - 1];
-            if (transpose)
-            {
-                var tmp = numRows;
-                numRows = numCols;
-                numCols = tmp;
-            }
-
-            return new Tuple<int, int>(numRows, numCols);
-        }
-
-        static int Offset(int rowIdx, int colIdx, NDShape matrixShape, bool transpose = false)
-        {
-            if (transpose)
-            {
-                var tmp = rowIdx;
-                rowIdx = colIdx;
-                colIdx = tmp;
-            }
-
-            return (colIdx* matrixShape[0]) + rowIdx;
-        }
-
-        static void MatrixMultiply(NDArrayView leftMatrix, NDArrayView rightMatrix, NDArrayView outputMatrix, bool transposeRight = false)
-        {
-            var tuple = GetNumRowsAndCols(leftMatrix.Shape);
-            int leftNumRows = tuple.Item1, leftNumCols = tuple.Item2;
-
-            tuple = GetNumRowsAndCols(rightMatrix.Shape, transposeRight);
-            int rightNumRows = tuple.Item1, rightNumCols = tuple.Item2;
-
-            var numOutRows = leftNumRows;
-            var K = leftNumCols;
-            var numOutCols = rightNumCols;
-
-            if (false == (!leftMatrix.IsSparse && !rightMatrix.IsSparse && !outputMatrix.IsSparse))
-            {
-                throw new Exception();
-            }
-            if (false == (K == rightNumRows))
-            {
-                throw new Exception();
-            }
-
-            if (false == ((outputMatrix.Shape[0] == numOutRows) && (outputMatrix.Shape[1] == numOutCols)))
-            {
-                throw new Exception();
-            }
-
-            outputMatrix.SetValue(0.0f);
-
-            // The operands values are in column major layout
-
-            //var leftBuffer = leftMatrix.DataBufferFloat;
-            //auto rightBuffer = rightMatrix->DataBuffer<float>();
-            //auto outBuffer = outputMatrix->WritableDataBuffer<float>();
-            //        for (size_t j = 0; j<numOutCols; ++j)
-            //            for (size_t k = 0; k<K; ++k)
-            //                for (size_t i = 0; i<numOutRows; ++i)
-            //                    outBuffer[Offset(i, j, outputMatrix->Shape())] += leftBuffer[Offset(i, k, leftMatrix->Shape())] * rightBuffer[Offset(k, j, rightMatrix->Shape(), transposeRight)];
         }
     }
 }

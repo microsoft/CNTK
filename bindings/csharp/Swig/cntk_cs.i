@@ -97,19 +97,21 @@
     {
         return CNTK::NDArrayView::RandomNormal<double>(shape, rangeStart, rangeEnd, seed, device);
     }
-
-	/*
-	float* CNTK::NDArrayView::WritableDataBufferFloat()
-	{
-		return self->WritableDataBuffer<float>();
-	}
-
-	const float* CNTK::NDArrayView::DataBufferFloat()
-	{
-		return self->DataBuffer<float>();
-	}
-	*/
 }
+
+/*
+%extend CNTK::Variable {
+    CNTK::NDArrayViewPtr CNTK::Variable::GetValue()
+    {
+        return self->Value();
+    }
+
+    CNTK::NDArrayViewPtr CNTK::Variable::SetValue(const CNTK::NDArrayViewPtr& value)
+    {
+        self->SetValue(value);
+    }
+}
+*/
 
 %extend CNTK::Constant {
     static CNTK::Constant CNTK::Constant::ScalarFloat(float value, const CNTK::DeviceDescriptor& device = CNTK::DeviceDescriptor::CPUDevice())
@@ -150,6 +152,29 @@
         return CNTK::MinibatchSource::DefaultRandomizationWindowInChunks;
     }
 }
+
+%extend CNTK::Function
+{
+	BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputs, 
+		DeviceDescriptor computeDevice, 
+		const std::vector<CNTK::Variable> &outputsToRetainBackwardStateFor, const std::vector<CNTK::Variable> &inputsToExcludeGradientsFor)
+	{
+		std::unordered_set<CNTK::Variable> unordered_outputsToRetainBackwardStateFor;
+		for (std::vector<CNTK::Variable>::const_iterator it = outputsToRetainBackwardStateFor.begin(); it != outputsToRetainBackwardStateFor.end(); it++)
+		{
+			unordered_outputsToRetainBackwardStateFor.insert(*it);
+		}
+		std::unordered_set<CNTK::Variable> unordered_inputsToExcludeGradientsFor;
+		for (std::vector<CNTK::Variable>::const_iterator it = inputsToExcludeGradientsFor.begin(); it != inputsToExcludeGradientsFor.end(); it++)
+		{
+			unordered_inputsToExcludeGradientsFor.insert(*it);
+		}
+
+		return self->Forward(arguments, outputs, computeDevice, 
+			unordered_outputsToRetainBackwardStateFor, unordered_inputsToExcludeGradientsFor);
+	}
+}
+
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

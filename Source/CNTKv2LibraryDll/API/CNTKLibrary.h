@@ -1883,6 +1883,9 @@ namespace CNTK
                 [](const Axis& axis) { return (axis == Axis::DefaultBatchAxis()); });
         }
 
+
+        NDArrayViewPtr Value2() const { return this->Value(); }
+        
         ///
         /// Returns the name of 'this' variable
         ///

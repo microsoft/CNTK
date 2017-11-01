@@ -16,38 +16,41 @@ namespace CNTK.CNTKLibraryCSTrainingTest
     {
         static void CompareWithBuiltInTimes(Function times, DeviceDescriptor device, int outDim, int inDim)
         {
-            int batchSize = 3;
-            float[] inputData = new float[inDim* batchSize];
+            int batchSize = 1;
+            float[] inputData = new float[inDim * batchSize];
             for (int i = 0; i< inputData.Length; ++i)
                 inputData[i] = 2.3F;
 
-            var input = times.Arguments[0];
-            var inputDataValue = Value.CreateBatch(input.Shape, inputData, device);
-
-            float[] rootGradientData = new float[outDim * batchSize];
-            for (int i = 0; i < rootGradientData.Length; ++i)
-                rootGradientData[i] = 1.0F;
-            
-            var rootGradientValue = Value.CreateBatch(times.Output.Shape, rootGradientData, device);
+            Variable input = times.Arguments[0];
+            Value inputDataValue = Value.CreateBatch(input.Shape, inputData, device);
 
             UnorderedMapVariableValuePtr arguments = new UnorderedMapVariableValuePtr();
             arguments.Add(new KeyValuePair<Variable, Value>(input, inputDataValue));
             UnorderedMapVariableValuePtr outputValues = new UnorderedMapVariableValuePtr();
             outputValues.Add(new KeyValuePair<Variable, Value>(times.Output, null));
 
-            // UnorderedSet outputsToRetainBackwardStateFor = new UnorderedSet();
-            // var backPropState = times.Forward(arguments, outputValues, device, outputsToRetainBackwardStateFor);
-            var backPropState = times.Forward(arguments, outputValues, device);
+            VariableVector outputsToRetainBackwardStateFor = new VariableVector();
+            outputsToRetainBackwardStateFor.Add(times.Output);
+            VariableVector inputsToExcludeGradientsFor = new VariableVector();
+            BackPropState backPropState = times.Forward(arguments, outputValues, device, outputsToRetainBackwardStateFor, inputsToExcludeGradientsFor);
 
-            var parameter = times.Parameters()[0];
+            // back prop
+            Parameter parameter = times.Parameters()[0];
 
+            float[] rootGradientData = new float[outDim * batchSize];
+            for (int i = 0; i < rootGradientData.Length; ++i)
+                rootGradientData[i] = 1.0F;
+            Value rootGradientValue = Value.CreateBatch(times.Output.Shape, rootGradientData, device);
             UnorderedMapVariableValuePtr rootGradientValues = new UnorderedMapVariableValuePtr();
             rootGradientValues.Add(new KeyValuePair<Variable, Value>(times.Output, rootGradientValue));
+
             UnorderedMapVariableValuePtr backPropagatedGradientValuesForInputs = new UnorderedMapVariableValuePtr();
             backPropagatedGradientValuesForInputs.Add(new KeyValuePair<Variable, Value>(parameter, null));
+
             times.Backward(backPropState, rootGradientValues, backPropagatedGradientValuesForInputs);
-            var userDefinedTimesOutputValue = outputValues[times.Output];
-            var userDefinedTimesInputGradientValue = backPropagatedGradientValuesForInputs[parameter];
+
+            Value userDefinedTimesOutputValue = outputValues[times.Output];
+            Value userDefinedTimesInputGradientValue = backPropagatedGradientValuesForInputs[parameter];
 
             Constant plusParam = new Constant(times.Output.Shape, DataType.Float, 3, device);
             var mixTimesPlus = CNTKLib.Plus(times, plusParam);
@@ -61,10 +64,23 @@ namespace CNTK.CNTKLibraryCSTrainingTest
             int outDim = 15;
             int inDim = 10;
             Parameter W = new Parameter(new int[]{ outDim, inDim }, DataType.Float, CNTKLib.GlorotUniformInitializer(), device);
+
+            Variable W2 = Variable.InputVariable(new int[] { outDim, inDim }, DataType.Float, "", new List<Axis> { Axis.DefaultBatchAxis() }, false);
+
             Variable x = Variable.InputVariable(new int[]{ inDim }, DataType.Float, "", new List<Axis>{ Axis.DefaultBatchAxis() }, false);
             VariableVector inputs = new VariableVector();
             inputs.Add(x);
             Function userDefinedTimes = UserTimesFunction.Create(W, x, "userDefinedTimes");
+
+            Function t = W2 * x;
+            Dictionary<Variable, Value> o = new Dictionary<Variable, Value>() { { t.Output, null } };
+            t.Evaluate(new Dictionary<Variable, Value>()
+            {
+                { x, Value.CreateBatch(x.Shape, new float[x.Shape.TotalSize], device) },
+                { W2, Value.CreateBatch(W2.Shape, new float[W2.Shape.TotalSize], device) }
+            },
+                o, device);
+
 
             CompareWithBuiltInTimes(userDefinedTimes, device, outDim, inDim);
         }

@@ -10,12 +10,12 @@ namespace CNTK.HighLevelAPI
 
     public class TensorView<T> : Variable
     {
-        public TensorView(NDShape shape, NDArrayView value, string name = "") :
+        public TensorView(NDShape shape, NDArrayView value, IList<Axis> dynamicAxes, string name = "") :
             base(shape, VariableKind.Constant,
                 DataType.Float,
                 value,
                 false /*needsGradient*/,
-                null /*dynamicAxes*/, 
+                Helper.AsAxisVector(dynamicAxes) /*dynamicAxes*/, 
                 false /*isSparse*/, 
                 name, 
                 "") 
@@ -102,7 +102,21 @@ namespace CNTK.HighLevelAPI
 
         public Constant Eval()
         {
-            throw new NotImplementedException();
+            Function func = this.ToFunction();
+            var inputs = func.Inputs;
+            Dictionary<Variable, Value> inputValues = new Dictionary<Variable, Value>();
+            foreach (Variable input in func.Inputs)
+            {
+                inputValues.Add(input, new Value(input.Value2()));
+            }
+
+            Dictionary<Variable, Value> outputs = new Dictionary<Variable, Value>()
+            {
+                { func.Output, null}
+            };
+
+            func.Evaluate(inputValues, outputs, DeviceDescriptor.CPUDevice);
+            return new Constant(outputs[func.Output].Data);
         }
 
         public static TensorView<T> operator +(TensorView<T> left, TensorView<T> right)
@@ -112,17 +126,17 @@ namespace CNTK.HighLevelAPI
 
         public static TensorView<T> operator -(TensorView<T> left, TensorView<T> right)
         {
-            throw new NotImplementedException();
+            return new TensorView<T>(CNTKLib.Minus(left, right));
         }
 
         public static TensorView<T> operator *(TensorView<T> left, TensorView<T> right)
         {
-            throw new NotImplementedException();
+            return new TensorView<T>(CNTKLib.Times(left, right));
         }
 
         public static TensorView<T> operator /(TensorView<T> left, TensorView<T> right)
         {
-            throw new NotImplementedException();
+            return new TensorView<T>(CNTKLib.ElementDivide(left, right));
         }
 
         // np.exp(b)
