@@ -10,7 +10,7 @@ import numpy as np
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs.ipynb")
-datadir = os.path.join(abs_path, "data", "BerkeleySegmentationDataset")
+datadir = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "data", "BerkeleySegmentationDataset")
 
 # Run this on GPU only
 notebook_deviceIdsToRun = [0]
