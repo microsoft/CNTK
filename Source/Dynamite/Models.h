@@ -311,6 +311,9 @@ struct Batch
     }
 };
 
+#if 1
+typedef UnaryModel UnaryBroadcastingModel;
+#else
 struct UnaryBroadcastingModel : public UnaryModel
 {
     typedef UnaryModel Base;
@@ -329,6 +332,7 @@ struct UnaryBroadcastingModel : public UnaryModel
     //    return Batch::map(*this, x);
     //}
 };
+#endif
 
 // function composition
 // TODO: Do we need other overloads as well? SequenceModel, and going back and forth?

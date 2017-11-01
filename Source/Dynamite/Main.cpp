@@ -28,6 +28,7 @@ using namespace std;
 
 using namespace Dynamite;
 
+#if 0 // these no longer compile, but if needed, can be resurrected with little effort
 // baseline model for CNTK Static
 UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim)
 {
@@ -283,6 +284,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 #endif
     }
 }
+#endif
 
 extern int mt_main(int argc, char *argv[]);
 extern void RunDynamiteTests();
