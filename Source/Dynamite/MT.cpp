@@ -62,6 +62,8 @@ size_t subMinibatches = 1;
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
 size_t saveEvery = 2000;
+double  pruningThreshold = 10.0;
+size_t maxBeam = 5;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -205,7 +207,7 @@ struct DecoderState
 };
 
 template<typename InitFunctionType, typename StepFunctionType, typename OutputFunctionType>
-Variable BeamDecode(const InitFunctionType& initFunction, const StepFunctionType& stepFunction, const OutputFunctionType& outputFunction)
+Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& initFunction, const StepFunctionType& stepFunction, const OutputFunctionType& outputFunction)
 {
     return Variable();
 }
@@ -219,26 +221,18 @@ fun AttentionDecoder(double dropoutInputKeepProb)
                              >> Linear(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
                              >> Activation(Tanh)
                              >> Label(Named("encoderKeysProjection"));
-#if 1
-    //let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions_batchNormalize | ProjectionOptions::bias); // keys projection for attention
     let encoderDataProjection = encBarrier // data projection for attention
                              >> Dense(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
                              >> Activation(Tanh)
                              >> Label(Named("encoderDataProjection"));
-    //let encoderDataProjection = encBarrier >>
-    //                            Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions_batchNormalize | ProjectionOptions::bias); // data projection for attention
     let embedTarget = Barrier(600, Named("embedTargetBarrier"))     // target embeddding
                    >> Embedding(embeddingDim)
                    >> Label(Named("embedTarget"));
-    //let embedTarget = Barrier(600, Named("embedTargetBarrier")) >>
-    //                  Embedding(embeddingDim, Named("embedTarget"));     // target embeddding
     let initialContext = Constant({ attentionDim }, CurrentDataType(), 0.0, CurrentDevice(), L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier"))
                               >> Dense(decoderRecurrentDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
                               >> Activation(Tanh)
                               >> Label(Named("initialStateProjection"));
-    //let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >>
-    //                             Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
     let stepBarrier = Barrier(20, Named("stepBarrier"));
     let stepFunction = GRU(decoderRecurrentDim);
     auto attentionModel = AttentionModelReference(attentionDim);
@@ -247,8 +241,6 @@ fun AttentionDecoder(double dropoutInputKeepProb)
                              >> Dense(decoderProjectionDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
                              >> Activation(ReLU)
                              >> Label(Named("firstHiddenProjection"));
-    //let firstHiddenProjection = Barrier(600, Named("projBarrier")) >>
-    //                            Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
     vector<UnaryModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
         resnets.push_back(ResidualNet(decoderProjectionDim));
@@ -258,60 +250,6 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     //                       >> Label(Named("topHiddenProjection"));
     let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
     let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias);  // output layer without non-linearity (no sampling yet)
-#else
-    //let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions_batchNormalize | ProjectionOptions::bias); // keys projection for attention
-    let encoderDataProjection = encBarrier // data projection for attention
-                             >> Dense(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
-                             >> Activation(Tanh)
-                             >> Label(Named("encoderDataProjection"));
-    let embedTarget = Barrier(600, Named("embedTargetBarrier"))     // target embeddding
-                   >> Embedding(embeddingDim)
-                   >> Label(Named("embedTarget"));
-    let initialContext = Constant({ attentionDim }, CurrentDataType(), 0.0, CurrentDevice(), L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
-    let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier"))
-                              >> Dense(decoderRecurrentDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
-                              >> Activation(Tanh)
-                              >> Label(Named("initialStateProjection"));
-    let stepBarrier = Barrier(20, Named("stepBarrier"));
-    let stepFunction = GRU(decoderRecurrentDim);
-    auto attentionModel = AttentionModelReference(attentionDim);
-    let attBarrier = Barrier(20, Named("attBarrier"));
-    let firstHiddenProjection = Barrier(600, Named("projBarrier"))
-                             >> Dense(decoderProjectionDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
-                             >> Activation(ReLU)
-                             >> Label(Named("firstHiddenProjection"));
-    vector<UnaryModel> resnets;
-    for (size_t n = 0; n < numDecoderResNetProjections; n++)
-        resnets.push_back(ResidualNet(decoderProjectionDim));
-    let topHiddenProjection = Dense(topHiddenProjectionDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
-                           >> Activation(Tanh)
-                           >> Label(Named("topHiddenProjection"));
-    let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias);  // output layer without non-linearity (no sampling yet)
-    // additional nested lambda that is a beam decoder
-    // This is included in the nested models, and can be retrieved from there.
-    //let beamDecoder = UnaryModel(
-    //    [=](const Variable& hEncoderSeq) -> Variable
-    //    {
-    //        return BeamDecode(decoderInitFunction, decoderStepFunction, doToOutput);
-    //    });
-#endif
-
-    // decode from a top layer of an encoder, using history as history
-    map<wstring, ModelParametersPtr> nestedLayers =
-    {
-        { L"encoderKeysProjection",  encoderKeysProjection },
-        { L"encoderDataProjection",  encoderDataProjection },
-        { L"embedTarget",            embedTarget },
-        { L"initialStateProjection", initialStateProjection },
-        { L"stepFunction",           stepFunction },
-        { L"attentionModel",         attentionModel },
-        { L"firstHiddenProjection",  firstHiddenProjection },
-        { L"topHiddenProjection",    topHiddenProjection },
-        { L"outputProjection",       outputProjection },
-        //{ L"beamDecoder",            beamDecoder },
-    };
-    for (let& resnet : resnets)
-        nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
 
     let profiler = Function::CreateDynamicProfiler(1, L"decode");
 
@@ -377,10 +315,29 @@ fun AttentionDecoder(double dropoutInputKeepProb)
             return z;
         }, Named("doToOutput"));
 
+    // decode from a top layer of an encoder, using history as history
+    map<wstring, ModelParametersPtr> nestedLayers =
+    {
+        { L"encoderKeysProjection",  encoderKeysProjection },
+        { L"encoderDataProjection",  encoderDataProjection },
+        { L"embedTarget",            embedTarget },
+        { L"initialStateProjection", initialStateProjection },
+        { L"stepFunction",           stepFunction },
+        { L"attentionModel",         attentionModel },
+        { L"firstHiddenProjection",  firstHiddenProjection },
+        { L"topHiddenProjection",    topHiddenProjection },
+        { L"outputProjection",       outputProjection },
+    };
+    for (let& resnet : resnets)
+        nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
+
     // perform the entire thing
     return /*Dynamite::Model*/BinaryModel({ }, nestedLayers,
         [=](const Variable& historySeq, const Variable& hEncoderSeq) -> Variable
         {
+            // if no history then instead use beam decoder
+            if (historySeq == Variable())
+                return BeamDecode(hEncoderSeq, decoderInitFunction, decoderStepFunction, doToOutput);
             // decoding loop
             DecoderState decoderState = decoderInitFunction(hEncoderSeq);
             vector<DecoderState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
@@ -413,32 +370,12 @@ fun CreateModelFunction()
     let encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
 
-    // additional nested lambda that is a beam decoder
-    // This is included in the nested models, and can be retrieved from there via Nested().
-    let beamDecode = UnaryModel(
-        [=](const Variable& sourceSeq) -> Variable
-        {
-            UnaryModel attentionBeamDecode = static_cast<const UnaryModel&>(decode.NestedPtr(L"beamDecoder"));
-            // embedding
-            let& W = embedFwd.Nested(L"embed")[L"W"];
-            DOLOG(W);
-            let eFwd = embedFwd(sourceSeq);
-            let eBwd = eFwd;// embedBwd(sourceSeq);
-            // encoder
-            let hSeq = encode(eFwd, eBwd);
-            // decoder (outputting log probs of words)
-            let outSeq = attentionBeamDecode(hSeq);
-            DOLOG(outSeq);
-            return outSeq;
-        });
-
     return BinaryModel({},
         {
             { L"embedSourceFwd", embedFwd   },
             //{ L"embedSourceBwd", embedBwd   },
             { L"encode",         encode     },
             { L"decode",         decode     },
-            //{ L"beamDecode",     beamDecode }
         },
         [=](const Variable& sourceSeq, const Variable& historySeq) -> Variable
         {
@@ -979,9 +916,6 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
     model_fn.RestoreParameters(path);
     fprintf(stderr, "done\n"), fflush(stderr);
 
-    // get the beam decoder that hides inside the model function
-    UnaryModel beamDecode = static_cast<const UnaryModel&>(model_fn.NestedPtr(L"beamDecode"));
-
     // data
     let minibatchSource = CreateMinibatchSource(srcEvalFile, tgtEvalFile, /*infinitelyRepeat=*/false);
 
@@ -1015,6 +949,17 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
             numLabels += len;
             maxLabels = max(maxLabels, len);
         }
+#if 1   // beam decoding
+        for (size_t seqId = 0; seqId < numSeq; seqId++)
+        {
+            let& srcSeq = subBatchArgs[0][seqId];
+            let& tgtSeq = subBatchArgs[1][seqId];
+            PrintSequence("src", srcSeq, srcVocabFile);
+            PrintSequence("tgt", tgtSeq, tgtVocabFile);
+            let outSeq = model_fn(srcSeq, Variable());
+            PrintSequence("out", outSeq, tgtVocabFile);
+        }
+#endif
         //partTimer.Log("GetNextMinibatch", numLabels);
         fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d\n", (int)mbCount,
                 (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels);

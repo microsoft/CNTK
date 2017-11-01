@@ -168,9 +168,10 @@ namespace Dynamite {
         // get the big minibatch from CNTK
         // We ask for 'numSubMinibatches' larger size than user target.
         auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, numSubMinibatches * minibatchSize, numWorkers, thisWorker, device);
-        if (minibatchData.empty())
+        // check for sweepEnd
+        if (any_of(minibatchData.begin(), minibatchData.end(), [](const decltype(*minibatchData.begin())& kv) { return kv.second.sweepEnd; }))
             return false;
-        // BUGBUG: This ^^ does not work, it just keeps going. How to do this right?
+        // ... may work now. If still not then...: BUGBUG: This ^^ does not work, it just keeps going. How to do this right?
 
         // convert it to an array of tensors. First into args[0]; later below we will then split it.
         let numStreams = streamNames.size();
