@@ -161,13 +161,15 @@ namespace Dynamite {
     //  - grouping into sequences of similar length helps batching parallelism (fewer low-parallelism tails)
     // We sort by stream length, longest first, first stream having highest priority.
     // Finally, the sub-minibatches get random-shuffled, so that we get a random MB sequence w.r.t. length.
-    // Returns the total number of labels, which is taken from the last stream.
-    static inline void GetSubBatches(vector<vector<vector<Variable>>>& args, const vector<const wchar_t*>& streamNames, size_t numSubMinibatches, size_t shuffleSeed,
-                                     const MinibatchSourcePtr& minibatchSource, size_t minibatchSize, const DistributedCommunicatorPtr& communicator, DataType dataType, const DeviceDescriptor& device)
+    // Returns true unless the end of the data has been reached.
+    static inline bool GetSubBatches(vector<vector<vector<Variable>>>& args, const vector<const wchar_t*>& streamNames, size_t numSubMinibatches, size_t shuffleSeed,
+                                     const MinibatchSourcePtr& minibatchSource, size_t minibatchSize, size_t numWorkers, size_t thisWorker, DataType dataType, const DeviceDescriptor& device)
     {
         // get the big minibatch from CNTK
         // We ask for 'numSubMinibatches' larger size than user target.
-        auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, numSubMinibatches * minibatchSize, communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, device);
+        auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, numSubMinibatches * minibatchSize, numWorkers, thisWorker, device);
+        if (minibatchData.empty())
+            return false;
 
         // convert it to an array of tensors. First into args[0]; later below we will then split it.
         let numStreams = streamNames.size();
@@ -179,7 +181,7 @@ namespace Dynamite {
         Dynamite::FromCNTKMB(subBatch0, valuePtrs, /*isSequence[]=*/vector<bool>(numStreams, true), dataType, device);
 #if 1   // for compat with old loss progressions, don't reorder if no sub-minibatching
         if (numSubMinibatches == 1)
-            return;
+            return true;
 #endif
 
         // gather its statistics
@@ -268,6 +270,8 @@ namespace Dynamite {
         // Note: This must be consistent across multiple workers; they must use the same shuffleSeed.
         srand((unsigned int)shuffleSeed);
         random_shuffle(args.begin(), args.end());
+
+        return true; // true means success, we got data. False means end of data.
     }
 
 }; // namespace

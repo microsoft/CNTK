@@ -78,6 +78,14 @@ static inline FunctionPtr operator/(const Variable& leftOperand, const Variable&
     return ElementDivide(leftOperand, rightOperand);
 }
 
+// VariableTuple<N>
+template<size_t N> struct VariableTupleType;
+template<> struct VariableTupleType<2> { typedef tuple<Variable, Variable> type; };
+template<> struct VariableTupleType<3> { typedef tuple<Variable, Variable, Variable> type; };
+template<> struct VariableTupleType<4> { typedef tuple<Variable, Variable, Variable, Variable> type; };
+template<size_t N>
+using VariableTuple = typename VariableTupleType<N>::type;
+
 // structure to hold model parameters of a Dynamite layer
 // The actual Model instance doubles up as a shared_ptr to this.
 struct ModelParameters
@@ -129,7 +137,7 @@ public:
         for (let& kv : m_parameters) // log parameters defined right here
         {
             let name = prefix + kv.first;
-            fprintf(stderr, "%S : %S\n", name.c_str(), kv.second.AsString().c_str());
+            fprintf(stderr, "  %-30S : %S\n", name.c_str(), kv.second.AsString().c_str());
             // for debugging, implant the full name. This way, the full name will show up in AutoBatch log output.
             const_cast<Parameter&>(kv.second).DebugUpdateName(name);
         }
