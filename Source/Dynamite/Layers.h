@@ -265,6 +265,12 @@ static UnaryModel Linear(size_t outputDim, ProjectionOptions opts, const wstring
     return Dense(outputDim, Identity, opts, name);
 }
 
+// same as Linear() if not given an activation. Need to decide the name.
+static UnaryModel Dense(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring())
+{
+    return Dense(outputDim, Identity, opts, name);
+}
+
 static UnaryModel Embedding(size_t embeddingDim, const wstring& name = wstring())
 {
     // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
