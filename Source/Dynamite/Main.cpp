@@ -29,6 +29,25 @@ using namespace std;
 using namespace Dynamite;
 
 #if 0 // these no longer compile, but if needed, can be resurrected with little effort
+struct UnaryBroadcastingModel : public UnaryModel
+{
+    typedef UnaryModel Base;
+    UnaryBroadcastingModel(const UnaryModel& f) : UnaryModel(f) { }
+    Variable operator() (const Variable& x) const
+    {
+        return Base::operator()(x);
+    }
+    void operator() (vector<Variable>& res, const vector<Variable>& x) const
+    {
+        res = Batch::map(*this, x);
+    }
+    // TODO: get rid if this variant:
+    //vector<Variable> operator() (const vector<Variable>& x) const
+    //{
+    //    return Batch::map(*this, x);
+    //}
+};
+
 // baseline model for CNTK Static
 UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim)
 {

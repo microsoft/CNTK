@@ -48,14 +48,25 @@ using namespace std;
 static UnaryModel Identity = [](const Variable& x) { return x; };
 
 // create a Barrier function
-static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = wstring())
+static UnaryModel Barrier(size_t depthHint, const wstring& name = wstring())
 {
     // TODO: we can save just a little by wrapping this into a static function. We'd save the attribute Dictionary (which can be shared).
     return UnaryModel([=](const Variable& x) -> Variable
-    {
-        CountAPICalls();
-        return BatchSync(x, depthHint, name);
-    });
+        {
+            CountAPICalls();
+            return BatchSync(x, depthHint, name);
+        });
+}
+
+static UnaryModel Label(const wstring& name)
+{
+    // TODO: Untested so far. Not important.
+    return UnaryModel(
+        [=](const Variable& x) -> Variable
+        {
+            CountAPICalls();
+            return Alias(x, name);
+        });
 }
 
 // ---------------------------------------------------------------------------
@@ -65,7 +76,7 @@ static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = ws
 
 // layer normalization without bias term. Normalize each sample to zero mean and length 1, then scale it back up, element-wise.
 // This is meant to be invoked via Dense(), where users can select that a bias term should be used as well.
-static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
+static UnaryModel LengthNormalization(const Axis& axis = Axis(0))
 {
 #ifdef DISABLE_NORMALIZATIONS
     axis;
@@ -118,7 +129,7 @@ static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
 }
 
 // create a BatchNormalization layer
-static UnaryBroadcastingModel BatchNormalization(const size_t axis, const wstring& name = wstring())
+static UnaryModel BatchNormalization(const size_t axis, const wstring& name = wstring())
 {
 #ifdef DISABLE_NORMALIZATIONS
     name; axis;
@@ -172,7 +183,7 @@ enum ProjectionOptions
 };
 static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
 
-static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
+static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
 {
     let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
     let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
@@ -249,13 +260,12 @@ static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activati
     });
 }
 
-//static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring());
-static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring())
+static UnaryModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring())
 {
     return Dense(outputDim, Identity, opts, name);
 }
 
-static UnaryBroadcastingModel Embedding(size_t embeddingDim, const wstring& name = wstring())
+static UnaryModel Embedding(size_t embeddingDim, const wstring& name = wstring())
 {
     // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
     auto embed = Linear(embeddingDim, ProjectionOptions_batchNormalize, name);
@@ -419,32 +429,46 @@ static TernaryModel LSTM(size_t outputDim) // TODO: finish this once we have tup
 
 // ResNet layer
 // Two Dense(ReLU) with skip connection and batch normalization after the matrix product.
-static UnaryBroadcastingModel ResidualNet(size_t outputDim)
+static UnaryModel ResidualNet(size_t outputDim)
 {
     // TODO: why not combine with weightNormalize?
     let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project1"));
     let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project2"));
-    let doResidualNet = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x)
-    {
-        CountAPICalls(3);
-        let h = ReLU(project1(x)    , Named("hRes"));
-        let r = ReLU(project2(h) + x, Named("rRes"));
-        return r;
-    }, Named("doResidualNet"));
+    let doResidualNet = StaticModel(/*isBasicBlock=*/false,
+        [=](const Variable& x)
+        {
+            CountAPICalls(3);
+            let h = ReLU(project1(x)    , Named("hRes"));
+            let r = ReLU(project2(h) + x, Named("rRes"));
+            return r;
+        }, Named("doResidualNet"));
     return UnaryModel({ },
-    {
-        { L"project1", project1 },
-        { L"project2", project2 },
-    },
-    [=](const Variable& x)
-    {
-        return doResidualNet(x);
-    });
+        {
+            { L"project1", project1 },
+            { L"project2", project2 },
+        },
+        [=](const Variable& x)
+        {
+            return doResidualNet(x);
+        });
 }
 
 // ---------------------------------------------------------------------------
 // non-linearities: LogSoftmax, Softmax, Softplus, Activation
 // ---------------------------------------------------------------------------
+
+// simple wrapper, use as Activation(Tanh)
+// Use this to simplify expressions where one would otherwise need a lambda due to the name parameter.
+template<typename ActivationFunctionType>
+static UnaryModel Activation(const ActivationFunctionType& activation, const std::wstring& name = std::wstring())
+{
+    return UnaryModel(
+        [=](const Variable& x) -> Variable
+        {
+            CountAPICalls();
+            return activation(x, name);
+        });
+}
 
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)

@@ -311,32 +311,9 @@ struct Batch
     }
 };
 
-#if 1
-typedef UnaryModel UnaryBroadcastingModel;
-#else
-struct UnaryBroadcastingModel : public UnaryModel
-{
-    typedef UnaryModel Base;
-    UnaryBroadcastingModel(const UnaryModel& f) : UnaryModel(f) { }
-    Variable operator() (const Variable& x) const
-    {
-        return Base::operator()(x);
-    }
-    void operator() (vector<Variable>& res, const vector<Variable>& x) const
-    {
-        res = Batch::map(*this, x);
-    }
-    // TODO: get rid if this variant:
-    //vector<Variable> operator() (const vector<Variable>& x) const
-    //{
-    //    return Batch::map(*this, x);
-    //}
-};
-#endif
-
 // function composition
 // TODO: Do we need other overloads as well? SequenceModel, and going back and forth?
-static inline UnaryBroadcastingModel operator>> (const UnaryBroadcastingModel& before, const UnaryBroadcastingModel& after)
+static inline UnaryModel operator>> (const UnaryModel& before, const UnaryModel& after)
 {
     return UnaryModel({}, { { L"f", before },{ L"g", after } }, [=](const Variable& x) -> Variable
     {
