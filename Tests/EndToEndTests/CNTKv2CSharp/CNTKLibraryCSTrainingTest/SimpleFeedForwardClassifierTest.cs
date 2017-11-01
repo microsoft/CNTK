@@ -31,9 +31,9 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 
         internal static void TrainSimpleFeedForwardClassifier(DeviceDescriptor device)
         {
-            int inputDim = 2;
-            int numOutputClasses = 2;
-            int hiddenLayerDim = 50;
+            int inputDim = 30;
+            int numOutputClasses = 10;
+            int hiddenLayerDim = 5000;
             int numHiddenLayers = 2;
 
             int minibatchSize = 50;
@@ -65,8 +65,9 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                     { { featureStreamInfo, new Tuple<NDArrayView, NDArrayView>(null, null) } };
                 MinibatchSource.ComputeInputPerDimMeansAndInvStdDevs(minibatchSource, inputMeansAndInvStdDevs, device);
 
-                var normalizedinput = CNTKLib.PerDimMeanVarianceNormalize(input,
-                    inputMeansAndInvStdDevs[featureStreamInfo].Item1, inputMeansAndInvStdDevs[featureStreamInfo].Item2);
+                //var normalizedinput = CNTKLib.PerDimMeanVarianceNormalize(input,
+                //    inputMeansAndInvStdDevs[featureStreamInfo].Item1, inputMeansAndInvStdDevs[featureStreamInfo].Item2);
+                var normalizedinput = input;
                 Function fullyConnected = TestHelper.FullyConnectedLinearLayer(normalizedinput, hiddenLayerDim, device, "");
                 classifierOutput = CNTKLib.Sigmoid(fullyConnected, "");
 

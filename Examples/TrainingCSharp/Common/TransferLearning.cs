@@ -183,6 +183,9 @@ namespace CNTK.CSTrainingExamples
             Console.WriteLine(error);
         }
 
+        static float[] batchImageBuf = null;
+        static float[] batchLabelBuf = null;
+
         /// <summary>
         /// With trainin/evaluation data in memory, this method returns minibatch data 
         /// contained in CNTK Value instances.
@@ -224,8 +227,12 @@ namespace CNTK.CSTrainingExamples
             }
 
             int imageSize = imageDims[0] * imageDims[1] * imageDims[2];
-            float[] batchImageBuf = new float[actualBatchSize * imageSize];
-            float[] batchLabelBuf = new float[actualBatchSize * numClasses];
+            if (batchImageBuf == null)
+            {
+                batchImageBuf = new float[actualBatchSize * imageSize];
+                batchLabelBuf = new float[actualBatchSize * numClasses];
+            }
+
             for (int i = 0; i < actualBatchSize; i++)
             {
                 int index = i + batchSize * batchCount;
