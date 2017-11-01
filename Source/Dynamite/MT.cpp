@@ -204,6 +204,12 @@ struct DecoderState
     Variable encodingProjectedDataSeq;
 };
 
+template<typename InitFunctionType, typename StepFunctionType, typename OutputFunctionType>
+Variable BeamDecode(const InitFunctionType& initFunction, const StepFunctionType& stepFunction, const OutputFunctionType& outputFunction)
+{
+    return Variable();
+}
+
 // TODO: Break out initial step and recurrent step layers. Decoder will later pull them out from here.
 fun AttentionDecoder(double dropoutInputKeepProb)
 {
@@ -241,6 +247,13 @@ fun AttentionDecoder(double dropoutInputKeepProb)
                            >> Activation(Tanh)
                            >> Label(Named("topHiddenProjection"));
     let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias);  // output layer without non-linearity (no sampling yet)
+    // additional nested lambda that is a beam decoder
+    // This is included in the nested models, and can be retrieved from there.
+    //let beamDecoder = UnaryModel(
+    //    [=](const Variable& hEncoderSeq) -> Variable
+    //    {
+    //        return BeamDecode(decoderInitFunction, decoderStepFunction, doToOutput);
+    //    });
 
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers =
@@ -254,9 +267,11 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         { L"firstHiddenProjection",  firstHiddenProjection },
         { L"topHiddenProjection",    topHiddenProjection },
         { L"outputProjection",       outputProjection },
+        //{ L"beamDecoder",            beamDecoder },
     };
     for (let& resnet : resnets)
         nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
+
     let profiler = Function::CreateDynamicProfiler(1, L"decode");
 
     let outProjProfiler = Function::CreateDynamicProfiler(1, L"outProj");
@@ -265,6 +280,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let decoderInitFunction =
         [=](const Variable& hEncoderSeq) -> DecoderState
         {
+            CountAPICalls(2);
             Variable state = Slice(hEncoderSeq[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
             state = initialStateProjection(state);      // match the dimensions
             Variable attentionContext = initialContext; // note: this is almost certainly wrong
@@ -325,7 +341,6 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         [=](const Variable& historySeq, const Variable& hEncoderSeq) -> Variable
         {
             // decoding loop
-            CountAPICalls(2);
             DecoderState decoderState = decoderInitFunction(hEncoderSeq);
             vector<DecoderState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
             let historyEmbeddedSeq = embedTarget(historySeq);
@@ -356,12 +371,33 @@ fun CreateModelFunction()
     //let embedBwd = Embedding(embeddingDim, Named("embedBwd"));
     let encode = BidirectionalLSTMEncoder(numEncoderLayers, encoderRecurrentDim, 0.8);
     auto decode = AttentionDecoder(0.8);
+
+    // additional nested lambda that is a beam decoder
+    // This is included in the nested models, and can be retrieved from there via Nested().
+    let beamDecode = UnaryModel(
+        [=](const Variable& sourceSeq) -> Variable
+        {
+            UnaryModel attentionBeamDecode = static_cast<const UnaryModel&>(decode.NestedPtr(L"beamDecoder"));
+            // embedding
+            let& W = embedFwd.Nested(L"embed")[L"W"];
+            DOLOG(W);
+            let eFwd = embedFwd(sourceSeq);
+            let eBwd = eFwd;// embedBwd(sourceSeq);
+            // encoder
+            let hSeq = encode(eFwd, eBwd);
+            // decoder (outputting log probs of words)
+            let outSeq = attentionBeamDecode(hSeq);
+            DOLOG(outSeq);
+            return outSeq;
+        });
+
     return BinaryModel({},
         {
-            { L"embedSourceFwd", embedFwd },
-            //{ L"embedSourceBwd", embedBwd },
-            { L"encode",         encode   },
-            { L"decode",         decode   }
+            { L"embedSourceFwd", embedFwd   },
+            //{ L"embedSourceBwd", embedBwd   },
+            { L"encode",         encode     },
+            { L"decode",         decode     },
+            //{ L"beamDecode",     beamDecode }
         },
         [=](const Variable& sourceSeq, const Variable& historySeq) -> Variable
         {
@@ -901,6 +937,9 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
     fprintf(stderr, "loading model: %S... ", path.c_str()), fflush(stderr);
     model_fn.RestoreParameters(path);
     fprintf(stderr, "done\n"), fflush(stderr);
+
+    // get the beam decoder that hides inside the model function
+    UnaryModel beamDecode = static_cast<const UnaryModel&>(model_fn.NestedPtr(L"beamDecode"));
 
     // data
     let minibatchSource = CreateMinibatchSource(srcEvalFile, tgtEvalFile, /*infinitelyRepeat=*/false);

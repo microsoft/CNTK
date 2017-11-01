@@ -116,6 +116,14 @@ struct ModelParameters
             LogicError("no such captured model: %ls", name.c_str());
         return *iter->second;
     }
+    // TODO: merge the two
+    const ModelParametersPtr& NestedPtr(const wstring& name) const
+    {
+        auto iter = m_nestedParameters.find(name);
+        if (iter == m_nestedParameters.end())
+            LogicError("no such captured model: %ls", name.c_str());
+        return iter->second;
+    }
 public:
     // recursively traverse and collect all Parameters
     void CollectParameters(vector<Parameter>& res, unordered_set<Variable>& visited) const
@@ -175,6 +183,7 @@ public:
     // TODO: would be neat to support a vector of strings for tested paths, or even . separated paths
     const Parameter& operator[](const wstring& name) const { return (*get())[name]; } // TODO: This may not have a test currently.
     const ModelParameters& Nested(const wstring& name) const { return get()->Nested(name); }
+    const ModelParametersPtr& NestedPtr(const wstring& name) const { return get()->NestedPtr(name); }
     vector<Parameter> Parameters() const
     {
         vector<Parameter> res;
