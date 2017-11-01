@@ -209,6 +209,150 @@ static inline TModel<Lambda> Model(const vector<Parameter>& parameters, const ma
     return TModel<Lambda>(parameters, nested, f);
 }
 
+// helper to create a unary static lambda by running a lambda over a Placeholder
+class StaticModel
+{
+    shared_ptr<CNTK::Invocable> m_invocable; // this is the only member, so that we can copy this with shared state
+    static const size_t batchAxis = 1; // TODO: make this a parameter
+public:
+    template<typename Lambda>
+    StaticModel(bool isBasicBlock, const Lambda& f, std::wstring name = std::wstring()) :
+        m_invocable(make_shared<CNTK::Invocable>(isBasicBlock, batchAxis, f, name))
+    { }
+
+    template <typename ...ArgTypes>
+    Variable operator()(ArgTypes&& ...args) const
+    {
+        CountAPICalls();
+        return m_invocable->operator()(std::forward<ArgTypes>(args)...);
+    }
+};
+
+struct Batch
+{
+    // TODO: this is code dup with Sequence; but it is weird that the batches are SequenceModels. Fix this.
+    static UnarySequenceModel Map(UnaryModel f)
+    {
+        return UnarySequenceModel({}, { { L"f", f } },
+        [=](vector<Variable>& res, const vector<Variable>& batch)
+        {
+#if 0
+            return map(f, batch);
+#else
+            res.clear();
+            for (const auto& x : batch)
+                res.push_back(f(x));
+            return res;
+#endif
+        });
+    }
+
+    static size_t& CurrentMapIndex()
+    {
+        static size_t i = SIZE_MAX;
+        return i;
+    }
+
+    // for binary functions
+    static BinarySequenceModel Map(BinaryModel f)
+    {
+        return BinarySequenceModel({}, { { L"f", f } },
+            [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& y)
+        {
+            assert(y.size() == x.size());
+            res.resize(x.size());
+            size_t& i = CurrentMapIndex();
+            for (i = 0; i < x.size(); i++)
+                res[i] = f(x[i], y[i]);
+            i = SIZE_MAX;
+        });
+    }
+
+    // TODO: get rid of this
+    // This function would trigger the complex behavior.
+    static vector<Variable> map(const UnaryModel& f, const vector<Variable>& batch)
+    {
+        vector<Variable> res;
+        res.reserve(batch.size());
+        for (const auto& x : batch)
+            res.push_back(f(x));
+        return res;
+    }
+
+    // batch map
+    static function<vector<vector<Variable>>(const vector<vector<Variable>>&, const vector<vector<Variable>>&)> Map(BinarySequenceModel f)
+    {
+        return [=](const vector<vector<Variable>>& xBatch, const vector<vector<Variable>>& yBatch)
+        {
+            vector<vector<Variable>> res;
+            res.resize(xBatch.size());
+            assert(yBatch.size() == xBatch.size());
+            for (size_t i = 0; i < xBatch.size(); i++)
+                f(res[i], xBatch[i], yBatch[i]);
+            return res;
+        };
+    }
+
+    static Variable sum(const vector<Variable>& batch)
+    {
+        let& shape = batch.front().Shape();
+        let axis = (int)shape.Rank(); // add a new axis
+        CountAPICalls(2);
+        return /*Reshape*/(ReduceSum(Splice(batch, Axis(axis)), /*Axis(axis)*/Axis_DropLastAxis)/*, shape, Named("sum")*/);
+    }
+
+    static Variable sum(const vector<vector<Variable>>& batch)
+    {
+        vector<Variable> allSummands;
+        for (const auto& batchItem : batch)
+            for (const auto& seqItem : batchItem)
+                allSummands.push_back(seqItem);
+        return sum(allSummands);
+    }
+};
+
+struct UnaryBroadcastingModel : public UnaryModel
+{
+    typedef UnaryModel Base;
+    UnaryBroadcastingModel(const UnaryModel& f) : UnaryModel(f) { }
+    Variable operator() (const Variable& x) const
+    {
+        return Base::operator()(x);
+    }
+    void operator() (vector<Variable>& res, const vector<Variable>& x) const
+    {
+        res = Batch::map(*this, x);
+    }
+    // TODO: get rid if this variant:
+    //vector<Variable> operator() (const vector<Variable>& x) const
+    //{
+    //    return Batch::map(*this, x);
+    //}
+};
+
+// function composition
+// TODO: Do we need other overloads as well? SequenceModel, and going back and forth?
+static inline UnaryBroadcastingModel operator>> (const UnaryBroadcastingModel& before, const UnaryBroadcastingModel& after)
+{
+    return UnaryModel({}, { { L"f", before },{ L"g", after } }, [=](const Variable& x) -> Variable
+    {
+        return after(before(x));
+    });
+}
+
+#if 0
+// helper to assign the columns of a tensor to a std::vector of column tensors
+static inline void as_vector(vector<Variable>& res, const Variable& x)
+{
+    // 'x' is an entire sequence; last dimension is length
+    let len = x.size();
+    res.resize(len);
+    CountAPICalls(len); // x[t] is a Slice()
+    for (size_t t = 0; t < len; t++)
+        res[t] = x[t];
+}
+#endif
+
 }; // namespace
 
 #pragma warning(pop)

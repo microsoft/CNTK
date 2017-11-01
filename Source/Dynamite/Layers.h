@@ -40,122 +40,13 @@ namespace Dynamite {
 using namespace CNTK;
 using namespace std;
 
-struct Batch
-{
-    // TODO: this is code dup with Sequence; but it is weird that the batches are SequenceModels. Fix this.
-    static UnarySequenceModel Map(UnaryModel f)
-    {
-        return UnarySequenceModel({}, { { L"f", f } },
-        [=](vector<Variable>& res, const vector<Variable>& batch)
-        {
-#if 0
-            return map(f, batch);
-#else
-            res.clear();
-            for (const auto& x : batch)
-                res.push_back(f(x));
-            return res;
-#endif
-        });
-    }
-
-    static size_t& CurrentMapIndex()
-    {
-        static size_t i = SIZE_MAX;
-        return i;
-    }
-
-    // for binary functions
-    static BinarySequenceModel Map(BinaryModel f)
-    {
-        return BinarySequenceModel({}, { { L"f", f } },
-            [=](vector<Variable>& res, const vector<Variable>& x, const vector<Variable>& y)
-        {
-            assert(y.size() == x.size());
-            res.resize(x.size());
-            size_t& i = CurrentMapIndex();
-            for (i = 0; i < x.size(); i++)
-                res[i] = f(x[i], y[i]);
-            i = SIZE_MAX;
-        });
-    }
-
-    // TODO: get rid of this
-    // This function would trigger the complex behavior.
-    static vector<Variable> map(const UnaryModel& f, const vector<Variable>& batch)
-    {
-        vector<Variable> res;
-        res.reserve(batch.size());
-        for (const auto& x : batch)
-            res.push_back(f(x));
-        return res;
-    }
-
-    // batch map
-    static function<vector<vector<Variable>>(const vector<vector<Variable>>&, const vector<vector<Variable>>&)> Map(BinarySequenceModel f)
-    {
-        return [=](const vector<vector<Variable>>& xBatch, const vector<vector<Variable>>& yBatch)
-        {
-            vector<vector<Variable>> res;
-            res.resize(xBatch.size());
-            assert(yBatch.size() == xBatch.size());
-            for (size_t i = 0; i < xBatch.size(); i++)
-                f(res[i], xBatch[i], yBatch[i]);
-            return res;
-        };
-    }
-
-    static Variable sum(const vector<Variable>& batch)
-    {
-        let& shape = batch.front().Shape();
-        let axis = (int)shape.Rank(); // add a new axis
-        CountAPICalls(2);
-        return /*Reshape*/(ReduceSum(Splice(batch, Axis(axis)), /*Axis(axis)*/Axis_DropLastAxis)/*, shape, Named("sum")*/);
-    }
-
-    static Variable sum(const vector<vector<Variable>>& batch)
-    {
-        vector<Variable> allSummands;
-        for (const auto& batchItem : batch)
-            for (const auto& seqItem : batchItem)
-                allSummands.push_back(seqItem);
-        return sum(allSummands);
-    }
-};
-
-struct UnaryBroadcastingModel : public UnaryModel
-{
-    typedef UnaryModel Base;
-    UnaryBroadcastingModel(const UnaryModel& f) : UnaryModel(f) { }
-    Variable operator() (const Variable& x) const
-    {
-        return Base::operator()(x);
-    }
-    void operator() (vector<Variable>& res, const vector<Variable>& x) const
-    {
-        res = Batch::map(*this, x);
-    }
-    // TODO: get rid if this variant:
-    //vector<Variable> operator() (const vector<Variable>& x) const
-    //{
-    //    return Batch::map(*this, x);
-    //}
-};
-
-// function composition
-// TODO: Do we need other overloads as well? SequenceModel, and going back and forth?
-static inline UnaryBroadcastingModel operator>> (const UnaryBroadcastingModel& before, const UnaryBroadcastingModel& after)
-{
-    return UnaryModel({}, { { L"f", before },{ L"g", after } }, [=](const Variable& x) -> Variable
-    {
-        return after(before(x));
-    });
-}
+// ---------------------------------------------------------------------------
+// identities: Identity, Barrier
+// ---------------------------------------------------------------------------
 
 // identity function object; makes it easy to disable stuff
 static UnaryModel Identity = [](const Variable& x) { return x; };
 
-#if 1
 // create a Barrier function
 static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = wstring())
 {
@@ -166,18 +57,447 @@ static UnaryBroadcastingModel Barrier(size_t depthHint, const wstring& name = ws
         return BatchSync(x, depthHint, name);
     });
 }
-#else
-// create a Barrier function
-static UnaryBroadcastingModel Barrier(const wstring& name = wstring())
+
+// ---------------------------------------------------------------------------
+// normalizers: LengthNormalization, BatchNormalization
+// Note: These are supposed to be predominantly used via the Dense() layer.
+// ---------------------------------------------------------------------------
+
+// layer normalization without bias term. Normalize each sample to zero mean and length 1, then scale it back up, element-wise.
+// This is meant to be invoked via Dense(), where users can select that a bias term should be used as well.
+static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
 {
+#ifdef DISABLE_NORMALIZATIONS
+    axis;
+    return UnaryModel(vector<Parameter>{ }, [=](const Variable& x)
+    {
+        return x;
+    });
+#else
+    auto scale    = Parameter({ },   CurrentDataType(), 1.0,   CurrentDevice(), L"scale");
+    let eps       = Constant::Scalar(CurrentDataType(), 1e-16, CurrentDevice());
+    let minusHalf = Constant::Scalar(CurrentDataType(), -0.5,  CurrentDevice());
+    let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
+
+    // for efficiency, we set this up as a set of static graphs
+    // subtract a sample's mean
+    let doMeanNorm = StaticModel(/*isBasicBlock=*/true,
+        [=](const Variable& x) -> Variable
+        {
+            CountAPICalls(2);
+            let mean = ReduceMean(x, axis);
+            return x - mean;
+        }, Named("doMeanNorm"));
+    // determine the length (L2 norm) of each sample
+    let doGetInverseOfL2Norm = StaticModel(/*isBasicBlock=*/true,
+        [=](const Variable& x0) -> Variable
+        {
+            CountAPICalls(3);
+            let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
+            return invLen;
+        }, Named("doGetInverseOfL2Norm"));
+    // perform the length-normalization operation
+    let doLengthNorm = StaticModel(/*isBasicBlock=*/false,
+        [=](const Variable& x) -> Variable
+        {
+            let prevProfiler = Function::SetDynamicProfiler(profiler);
+            let x0 = doMeanNorm(x);
+            let invLen = doGetInverseOfL2Norm(x0);
+            let res = x0 * (invLen * scale); CountAPICalls(2); // note: (invLen*scale), a scalar product, can be batched across multiple invocations
+            Function::SetDynamicProfiler(prevProfiler);
+            return res;
+        }, Named("lengthNorm"));
+
+    // this is the actual function
+    return UnaryModel(vector<Parameter>{ scale },
+        [=](const Variable& x)
+        {
+            return doLengthNorm(x);
+        });
+#endif
+}
+
+// create a BatchNormalization layer
+static UnaryBroadcastingModel BatchNormalization(const size_t axis, const wstring& name = wstring())
+{
+#ifdef DISABLE_NORMALIZATIONS
+    name; axis;
+    return Identity;
+#else
     static size_t id = 0; // unique id
     auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
-    return UnaryModel([=](const Variable& x) -> Variable
+    auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
+    auto bias  = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"bias");
+    auto runningMean   = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"runningMean");
+    auto runningInvStd = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"runningInvStd");
+    auto runningCount  = Parameter({                            }, CurrentDataType(), 0.0, CurrentDevice(), L"runningCount");
+    axis;
+    //vector<Variable> buffer;
+    // TODO: figure out this Parameter mess for BN
+    return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount },
+        [=](const Variable& x) -> Variable
+        {
+            let batchNorm = [&](const Variable& x) // apply to one sample
+            {
+                CountAPICalls(1);
+                return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
+            };
+            // BUGBUG: This cannot work once we reenable static graphs.
+            //if (x.Shape().Rank() == axis) // single item
+                return batchNorm(x);
+            //else // a batch of items
+            //    return Dynamite::Sequence::map(x, batchNorm, buffer);
+        });
+#endif
+}
+
+// ---------------------------------------------------------------------------
+// projections: Dense, Linear, Embedding
+// ---------------------------------------------------------------------------
+
+enum ProjectionOptions
+{
+    none            = 0x00,
+    bias            = 0x01,
+#ifndef DISABLE_NORMALIZATIONS
+    stabilize       = 0x02,
+    batchNormalize  = 0x04,
+    lengthNormalize = 0x08,
+#else
+    stabilize       = 0,//x02,
+    batchNormalize  = 0,//x04,
+    lengthNormalize = 0,//x08,
+#endif
+    weightNormalize = 0x10
+};
+static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
+
+static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
+{
+    let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
+    let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
+    let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
+    let hasBias       = (opts & (ProjectionOptions::bias           )) != 0;
+#ifdef DISABLE_NORMALIZATIONS
+    let hasScale = false;
+#else
+    let hasScale      = (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
+#endif
+    if (hasBatchNorm && !hasBias)
+        InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
+    if (hasScale && (hasBatchNorm || hasLengthNorm))
+        InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
+    auto W                  = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(),  GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto b                  = Parameter({                   outputDim                             }, CurrentDataType(),  0.0f,                       CurrentDevice(), L"b");
+    auto scale              = Parameter({                                                         }, CurrentDataType(),  1.0,                        CurrentDevice(), L"scale");
+    auto weightNormRescale  = Parameter({                   outputDim                             }, CurrentDataType(),  1.0,                        CurrentDevice(), L"weightNormRescale");
+    let weightNormMinusHalf = Constant::Scalar(                                                      CurrentDataType(), -0.5,                        CurrentDevice());
+    let batchNorm = hasBatchNorm ? BatchNormalization(/*axis=*/1, Named("DenseBN")) : Identity;
+    let lengthNorm = hasLengthNorm ? LengthNormalization() : Identity;
+    vector<Parameter> parameters{ W };
+    if (hasBias && !hasBatchNorm) // batchNorm supplies its own bias
+        parameters.push_back(b);
+    if (hasScale)
+        parameters.push_back(scale);
+    if (hasWeightNorm)
+        parameters.push_back(weightNormRescale);
+    map<wstring, ModelParametersPtr> nested{ { L"activation", activation } };
+    if (hasBatchNorm)
+        nested[L"batchNorm"] = batchNorm;
+    if (hasLengthNorm)
+        nested[L"lengthNorm"] = lengthNorm;
+    let normWeight = StaticModel(/*isBasicBlock=*/true , [=]() -> Variable
     {
-        return BatchSync(x, thisId, name);
+        if (!hasWeightNorm)
+            return W; // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
+        // pretend W had rows of length 1, by dividing by the row length after the fact
+        // Note that this is generated over again, but will be computed only once since it is ready upfront.
+        // BUGBUG: Does not work with sparse input, as that implies a sparse gradient, for which we cannot compute the elementwise ops.
+        CountAPICalls(4);
+        let rowNorm = InnerProduct(W, W, /*Axis(1)*/Axis_DropLastAxis);
+        // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
+        // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
+        let invLen = Pow(rowNorm, weightNormMinusHalf);
+        //if (hasBatchNorm && !hasLengthNorm) // batchNorm does element-wise rescaling, so no need to do it here as well
+        //    return invLen;
+        let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
+        return scale1;
+        //y = scale1 * y;
+    }, Named("dense.normWeight"));
+    let doDense = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
+    {
+        auto y = x;
+        CountAPICalls(1);
+        y = Times(W, y);
+        CountAPICalls(hasScale);
+        if (hasScale) // (note: could speed this up by moving this before or after, wherever the dimension is lower)
+            y = y * scale;
+        if (hasWeightNorm)
+            y = normWeight() * y;
+        if (hasLengthNorm) // note: has no bias
+            y = lengthNorm(y);
+        CountAPICalls(hasBias && !hasBatchNorm);
+        if (hasBatchNorm)
+            y = batchNorm(y); // note: batchNorm has its own bias
+        else if (hasBias)
+            y = y + b;
+        return activation(y);
+    }, name);
+    return UnaryModel(parameters, nested, [=](const Variable& x)
+    {
+        return doDense(x);
     });
 }
+
+//static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring());
+static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring())
+{
+    return Dense(outputDim, Identity, opts, name);
+}
+
+static UnaryBroadcastingModel Embedding(size_t embeddingDim, const wstring& name = wstring())
+{
+    // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
+    auto embed = Linear(embeddingDim, ProjectionOptions_batchNormalize, name);
+    //auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, name);
+    return UnaryModel({ }, { { L"embed", embed } }, [=](const Variable& x)
+    {
+        return embed(x);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// collection of common building blocks: RNNStep, GRU, ResidualNet
+// ---------------------------------------------------------------------------
+
+static BinaryModel RNNStep(size_t outputDim)
+{
+    auto W = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto R = Parameter({ outputDim,        outputDim                             }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    auto b = Parameter({ outputDim        },                                        CurrentDataType(), 0.0,                        CurrentDevice(), L"b");
+    return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
+    {
+        CountAPICalls(5);
+        return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), Named("RNNStep.h"));
+    });
+}
+
+#if 0
+static BinaryModel GRU(size_t outputDim)
+{
+    let activation = [](const Variable& x) { return Tanh(x); };
+    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto R  = Parameter({ outputDim * 2, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    auto R1 = Parameter({ outputDim    , outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R1");
+    auto b  = Parameter({ outputDim * 3 }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
+    let normW = LengthNormalization();
+    let normR = LengthNormalization();
+    let normR1 = LengthNormalization();
+    let stackAxis = Axis(0);
+    let stackedDim = (int)outputDim;
+    let one = Constant::Scalar(CurrentDataType(), 1.0, CurrentDevice()); // for "1 -"...
+    // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
+    return BinaryModel({ W, R, R1, b },
+    {
+        { L"normW",  normW  },
+        { L"normR",  normR  },
+        { L"normR1", normR1 }
+    },
+    [=](const Variable& dh, const Variable& x)
+    {
+        let& dhs = dh;
+        // projected contribution from input(s), hidden, and bias
+        let projx3 = b + normW(Times(W, x));
+        let projh2 = normR(Times(R, dh));
+        let zt_proj = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim) + Slice(projh2, stackAxis, 0 * stackedDim, 1 * stackedDim);
+        let rt_proj = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim) + Slice(projh2, stackAxis, 1 * stackedDim, 2 * stackedDim);
+        let ct_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim);
+
+        let zt = Sigmoid(zt_proj)->Output();        // update gate z(t)
+
+        let rt = Sigmoid(rt_proj);                  // reset gate r(t)
+
+        let rs = dhs * rt;                          // "cell" c
+        let ct = activation(ct_proj + normR1(Times(R1, rs)));
+
+        let ht = (one - zt) * ct + zt * dhs; // hidden state ht / output
+
+        //# for comparison: CUDNN_GRU
+        //# i(t) = sigmoid(W_i x(t) + R_i h(t - 1) + b_Wi + b_Ru)
+        //# r(t) = sigmoid(W_r x(t) + R_r h(t - 1) + b_Wr + b_Rr)   --same up to here
+        //# h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
+        //# h(t) = (1 - i(t).*h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
+
+        return ht;
+    });
+}
+#else
+static BinaryModel GRU(size_t outputDim)
+{
+    // matrices are stacked in order (i, r, h)
+    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
+    //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, CurrentDevice());
+    auto R  = Parameter({ outputDim * 3, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    //auto b  = Parameter({ outputDim * 3            }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
+    let normR = LengthNormalization();
+    let stackAxis = Axis(0);
+    let stackedDim = (int)outputDim;
+    let profiler = Function::CreateDynamicProfiler(1, L"GRU");
+    let irBarrier = Barrier(2, Named("irBarrier"));
+    // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
+    let gru3 = [=](const Variable& dh, const Variable& projdh3, const Variable& projx3) // note: the input has already been projected. That op is batched more widely.
+    {
+        let prevProfiler = Function::SetDynamicProfiler(profiler, false);
+        // projected contribution from input(s), hidden, and bias
+        // BUGBUG: Why can we not project R in here again? It's only one composite instance, there can be no batching.
+        CountAPICalls(8);
+        let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ix_proj")) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ih_proj"));
+        let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rx_proj")) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rh_proj"));
+        let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("cx_proj"));
+        let ch_proj =                                                                              Slice(projdh3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("ch_proj"));
+
+        CountAPICalls(2);
+        let i = Sigmoid(irBarrier(i_proj), Named("i"));  // update gate z(t)  --if 1 then take new input; if 0 then retain state
+        let r = Sigmoid(irBarrier(r_proj), Named("r"));  // reset gate r(t)   --new input + projected old state mixed in
+
+        CountAPICalls(3);
+        let c_proj = cx_proj + r * ch_proj;
+        let c = Tanh(c_proj, Named("c"));                // "cell"
+
+        CountAPICalls(3);
+        let h = dh + i * (c - dh);                       // state
+        //    = i * c  +  (1 - i) * dh;
+
+        //# for comparison: CUDNN_GRU
+        //# i(t) = sigmoid(W_i x(t) + R_i h(t - 1) + b_Wi + b_Ru)
+        //# r(t) = sigmoid(W_r x(t) + R_r h(t - 1) + b_Wr + b_Rr)   --same up to here
+        //# h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
+        //# h(t) = (1 - i(t).*h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
+
+        Function::SetDynamicProfiler(prevProfiler);
+        return h;
+    };
+    let gru3Composite = StaticModel(/*isBasicBlock=*/true,
+        [=](const Variable& dh, const Variable& projdh3, const Variable& projx3)
+        {
+            return gru3(dh, projdh3, projx3);
+        }, L"gru3Composite");
+    let doGRU = StaticModel(/*isBasicBlock=*/false,
+        [=](const Variable& dh, const Variable& x) -> Variable
+        {
+            let projx3 = projectInput(x); // note: this has a bias
+            let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
+            return gru3Composite(dh, projdh3, projx3);
+        }, Named("gru"));
+    return BinaryModel({ R },
+        {
+            { L"projectInput",  projectInput },
+            //{ L"projectState",  projectState },
+            { L"normR",  normR  },
+        },
+        // TODO: can we pass doGRU here directly, instead of creating a new lambda? Needs some form of type cast of StaticModel to this lambda.
+        [=](const Variable& dh, const Variable& x) //mutable
+        {
+            return doGRU(dh, x);
+        });
+}
 #endif
+
+static TernaryModel LSTM(size_t outputDim) // TODO: finish this once we have tuples
+{
+    auto W = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto R = Parameter({ outputDim, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
+    auto b = Parameter({ outputDim }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
+    return TernaryModel({ W, R, b }, [=](const Variable& prevH, const Variable& prevC, const Variable& input)
+    {
+        // TODO: complete this
+        prevC;
+        CountAPICalls(5);
+        return ReLU(Times(W, input) + b + Times(R, prevH));
+    });
+}
+
+// ResNet layer
+// Two Dense(ReLU) with skip connection and batch normalization after the matrix product.
+static UnaryBroadcastingModel ResidualNet(size_t outputDim)
+{
+    // TODO: why not combine with weightNormalize?
+    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project1"));
+    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project2"));
+    let doResidualNet = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x)
+    {
+        CountAPICalls(3);
+        let h = ReLU(project1(x)    , Named("hRes"));
+        let r = ReLU(project2(h) + x, Named("rRes"));
+        return r;
+    }, Named("doResidualNet"));
+    return UnaryModel({ },
+    {
+        { L"project1", project1 },
+        { L"project2", project2 },
+    },
+    [=](const Variable& x)
+    {
+        return doResidualNet(x);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// non-linearities: LogSoftmax, Softmax, Softplus, Activation
+// ---------------------------------------------------------------------------
+
+// built-in Softmax requires temp memory, so we use an explicit expression instead
+static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)
+{
+    //LOG(z);
+    //LOG(ReduceLogSum(z, axis, L"smLogDenom"));
+    CountAPICalls(2);
+    let Z = barrier(ReduceLogSum(z, axis, name));
+    return z - Z;
+}
+
+// built-in Softmax requires temp memory, so we use an explicit expression instead
+static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)
+{
+    //LOG(LogSoftmax(z, axis));
+    CountAPICalls(1);
+    return Exp(LogSoftmax(z, axis, name, barrier), name);
+}
+
+// built-in Softplus is a BlockFunction, so need to replace it here
+static Variable Softplus(const Variable& z, const std::wstring& name)
+{
+    // TODO: This will create a Constant object every single time--better create it once. Or pre-define constant 0 and 1.
+    CountAPICalls(2);
+    return LogAddExp(z, Constant::Scalar(z.GetDataType(), 0.0), name);
+}
+
+// ---------------------------------------------------------------------------
+// loss functions: CrossEntropyWithSoftmax
+// ---------------------------------------------------------------------------
+
+// we need a special definition since the built-in one creates a BlockFunction, which costs too much each time
+// BUGBUG: AllStaticAxes (=> keepDimensions=false) leads to incorrect auto-batching. Some screwup of batching axis.
+//static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis::AllStaticAxes())
+static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis(0))
+{
+    Variable ceLogNumer;
+#if 1
+    CountAPICalls(1);
+    ceLogNumer = InnerProduct(label, z, axis, Named("ceLogNumer"));
+#else
+    if (label.IsSparse() && label.Shape().Rank() == 1)
+        ceLogNumer = Times(label, z, /*outputRank=*/0, Named("ceLogNumer"));
+    else
+        ceLogNumer = ReduceSum(ElementTimes(label, z, Named("ceLabel")), axis, Named("ceLogNumer"));
+#endif
+    CountAPICalls(2);
+    return Minus(ReduceLogSum(z, axis, Named("ceLogDenom")), ceLogNumer, Named("ce"));
+}
+
+// ---------------------------------------------------------------------------
+// higher-order functions: Sequence sub-namespace
+// ---------------------------------------------------------------------------
 
 struct Sequence
 {
@@ -299,6 +619,7 @@ struct Sequence
     }
 #endif
 
+#if 0
     // Softmax over a vector producing a vector
     static void Softmax(vector<Variable>& res, const vector<Variable>& z, const UnaryModel& barrier = Identity)
     {
@@ -329,447 +650,8 @@ struct Sequence
         // TODO: This should be a primitive.
         return res;
     }
+#endif
 };
-
-enum ProjectionOptions
-{
-    none            = 0x00,
-    bias            = 0x01,
-#ifndef DISABLE_NORMALIZATIONS
-    stabilize       = 0x02,
-    batchNormalize  = 0x04,
-    lengthNormalize = 0x08,
-#else
-    stabilize       = 0,//x02,
-    batchNormalize  = 0,//x04,
-    lengthNormalize = 0,//x08,
-#endif
-    weightNormalize = 0x10
-};
-static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
-static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring());
-// TODO: sort these functions vv after Linear()
-static UnaryBroadcastingModel Embedding(size_t embeddingDim, const wstring& name = wstring())
-{
-    // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
-    auto embed = Linear(embeddingDim, ProjectionOptions_batchNormalize, name);
-    //auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, name);
-    return UnaryModel({ }, { { L"embed", embed } }, [=](const Variable& x)
-    {
-        return embed(x);
-    });
-}
-
-// helper to create a unary static lambda by running a lambda over a Placeholder
-class StaticModel
-{
-    shared_ptr<CNTK::Invocable> m_invocable; // this is the only member, so that we can copy this with shared state
-    static const size_t batchAxis = 1; // TODO: make this a parameter
-public:
-    template<typename Lambda>
-    StaticModel(bool isBasicBlock, const Lambda& f, std::wstring name = std::wstring()) :
-        m_invocable(make_shared<CNTK::Invocable>(isBasicBlock, batchAxis, f, name))
-    { }
-
-    template <typename ...ArgTypes>
-    Variable operator()(ArgTypes&& ...args) const
-    {
-        CountAPICalls();
-        return m_invocable->operator()(std::forward<ArgTypes>(args)...);
-    }
-};
-
-// layer normalization without bias term. Normalize each sample to zero mean and length 1, then scale it back up, element-wise.
-// This is meant to be invoked via Dense(), where users can select that a bias term should be used as well.
-static UnaryBroadcastingModel LengthNormalization(const Axis& axis = Axis(0))
-{
-#ifdef DISABLE_NORMALIZATIONS
-    axis;
-    return UnaryModel(vector<Parameter>{ }, [=](const Variable& x)
-    {
-        return x;
-    });
-#else
-    auto scale    = Parameter({ },   CurrentDataType(), 1.0,   CurrentDevice(), L"scale");
-    let eps       = Constant::Scalar(CurrentDataType(), 1e-16, CurrentDevice());
-    let minusHalf = Constant::Scalar(CurrentDataType(), -0.5,  CurrentDevice());
-    let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
-
-    // for efficiency, we set this up as a set of static graphs
-    // subtract a sample's mean
-    let doMeanNorm = StaticModel(/*isBasicBlock=*/true, [=](const Variable& x) -> Variable
-    {
-        CountAPICalls(2);
-        let mean = ReduceMean(x, axis);
-        return x - mean;
-    }, Named("doMeanNorm"));
-    // determine the length (L2 norm) of each sample
-    let doGetInverseOfL2Norm = StaticModel(/*isBasicBlock=*/true, [=](const Variable& x0) -> Variable
-    {
-        CountAPICalls(3);
-        let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
-        return invLen;
-    }, Named("doGetInverseOfL2Norm"));
-    // perform the length-normalization operation
-    let doLengthNorm = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
-    {
-        let prevProfiler = Function::SetDynamicProfiler(profiler);
-        let x0 = doMeanNorm(x);
-        let invLen = doGetInverseOfL2Norm(x0);
-        let res = x0 * (invLen * scale); CountAPICalls(2); // note: (invLen*scale), a scalar product, can be batched across multiple invocations
-        Function::SetDynamicProfiler(prevProfiler);
-        return res;
-    }, Named("lengthNorm"));
-
-    // this is the actual function
-    return UnaryModel(vector<Parameter>{ scale }, [=](const Variable& x)
-    {
-        return doLengthNorm(x);
-    });
-#endif
-}
-
-static BinaryModel RNNStep(size_t outputDim)
-{
-    auto W = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
-    auto R = Parameter({ outputDim,        outputDim                             }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
-    auto b = Parameter({ outputDim        },                                        CurrentDataType(), 0.0,                        CurrentDevice(), L"b");
-    return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
-    {
-        CountAPICalls(5);
-        return /*Sigmoid*/ReLU(Times(W, input) + b + Times(R, prevOutput), Named("RNNStep.h"));
-    });
-}
-
-#if 0
-static BinaryModel GRU(size_t outputDim)
-{
-    let activation = [](const Variable& x) { return Tanh(x); };
-    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
-    auto R  = Parameter({ outputDim * 2, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
-    auto R1 = Parameter({ outputDim    , outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R1");
-    auto b  = Parameter({ outputDim * 3 }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
-    let normW = LengthNormalization();
-    let normR = LengthNormalization();
-    let normR1 = LengthNormalization();
-    let stackAxis = Axis(0);
-    let stackedDim = (int)outputDim;
-    let one = Constant::Scalar(CurrentDataType(), 1.0, CurrentDevice()); // for "1 -"...
-    // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    return BinaryModel({ W, R, R1, b },
-    {
-        { L"normW",  normW  },
-        { L"normR",  normR  },
-        { L"normR1", normR1 }
-    },
-    [=](const Variable& dh, const Variable& x)
-    {
-        let& dhs = dh;
-        // projected contribution from input(s), hidden, and bias
-        let projx3 = b + normW(Times(W, x));
-        let projh2 = normR(Times(R, dh));
-        let zt_proj = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim) + Slice(projh2, stackAxis, 0 * stackedDim, 1 * stackedDim);
-        let rt_proj = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim) + Slice(projh2, stackAxis, 1 * stackedDim, 2 * stackedDim);
-        let ct_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim);
-
-        let zt = Sigmoid(zt_proj)->Output();        // update gate z(t)
-
-        let rt = Sigmoid(rt_proj);                  // reset gate r(t)
-
-        let rs = dhs * rt;                          // "cell" c
-        let ct = activation(ct_proj + normR1(Times(R1, rs)));
-
-        let ht = (one - zt) * ct + zt * dhs; // hidden state ht / output
-
-        //# for comparison: CUDNN_GRU
-        //# i(t) = sigmoid(W_i x(t) + R_i h(t - 1) + b_Wi + b_Ru)
-        //# r(t) = sigmoid(W_r x(t) + R_r h(t - 1) + b_Wr + b_Rr)   --same up to here
-        //# h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
-        //# h(t) = (1 - i(t).*h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
-
-        return ht;
-    });
-}
-#else
-static BinaryModel GRU(size_t outputDim)
-{
-    // matrices are stacked in order (i, r, h)
-    auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
-    //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, CurrentDevice());
-    auto R  = Parameter({ outputDim * 3, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
-    //auto b  = Parameter({ outputDim * 3            }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
-    let normR = LengthNormalization();
-    let stackAxis = Axis(0);
-    let stackedDim = (int)outputDim;
-    let profiler = Function::CreateDynamicProfiler(1, L"GRU");
-    let irBarrier = Barrier(2, Named("irBarrier"));
-    // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    let gru3 = [=](const Variable& dh, const Variable& projdh3, const Variable& projx3) // note: the input has already been projected. That op is batched more widely.
-    {
-        let prevProfiler = Function::SetDynamicProfiler(profiler, false);
-        // projected contribution from input(s), hidden, and bias
-        // BUGBUG: Why can we not project R in here again? It's only one composite instance, there can be no batching.
-        CountAPICalls(8);
-        let i_proj  = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ix_proj")) + Slice(projdh3, stackAxis, 0 * stackedDim, 1 * stackedDim, Named("ih_proj"));
-        let r_proj  = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rx_proj")) + Slice(projdh3, stackAxis, 1 * stackedDim, 2 * stackedDim, Named("rh_proj"));
-        let cx_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("cx_proj"));
-        let ch_proj =                                                                              Slice(projdh3, stackAxis, 2 * stackedDim, 3 * stackedDim, Named("ch_proj"));
-
-        CountAPICalls(2);
-        let i = Sigmoid(irBarrier(i_proj), Named("i"));  // update gate z(t)  --if 1 then take new input; if 0 then retain state
-        let r = Sigmoid(irBarrier(r_proj), Named("r"));  // reset gate r(t)   --new input + projected old state mixed in
-
-        CountAPICalls(3);
-        let c_proj = cx_proj + r * ch_proj;
-        let c = Tanh(c_proj, Named("c"));                // "cell"
-
-        CountAPICalls(3);
-        let h = dh + i * (c - dh);                       // state
-        //    = i * c  +  (1 - i) * dh;
-
-        //# for comparison: CUDNN_GRU
-        //# i(t) = sigmoid(W_i x(t) + R_i h(t - 1) + b_Wi + b_Ru)
-        //# r(t) = sigmoid(W_r x(t) + R_r h(t - 1) + b_Wr + b_Rr)   --same up to here
-        //# h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
-        //# h(t) = (1 - i(t).*h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
-
-        Function::SetDynamicProfiler(prevProfiler);
-        return h;
-    };
-    let gru3Composite = StaticModel(/*isBasicBlock=*/true, [=](const Variable& dh, const Variable& projdh3, const Variable& projx3)
-    {
-        return gru3(dh, projdh3, projx3);
-    }, L"gru3Composite");
-    let doGRU = StaticModel(/*isBasicBlock=*/false, [=](const Variable& dh, const Variable& x) -> Variable
-    {
-        let projx3 = projectInput(x); // note: this has a bias
-        let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
-        return gru3Composite(dh, projdh3, projx3);
-    }, Named("gru"));
-    return BinaryModel({ R },
-    {
-        { L"projectInput",  projectInput },
-        //{ L"projectState",  projectState },
-        { L"normR",  normR  },
-    },
-    // TODO: can we pass doGRU here directly, instead of creating a new lambda? Needs some form of type cast of StaticModel to this lambda.
-    [=](const Variable& dh, const Variable& x) //mutable
-    {
-        return doGRU(dh, x);
-    });
-}
-#endif
-
-static TernaryModel LSTM(size_t outputDim)
-{
-    auto W = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
-    auto R = Parameter({ outputDim, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
-    auto b = Parameter({ outputDim }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
-    return TernaryModel({ W, R, b }, [=](const Variable& prevH, const Variable& prevC, const Variable& input)
-    {
-        // TODO: complete this
-        prevC;
-        CountAPICalls(5);
-        return ReLU(Times(W, input) + b + Times(R, prevH));
-    });
-}
-
-static UnaryBroadcastingModel BatchNormalization(size_t axis, const wstring& name = wstring());
-
-static UnaryBroadcastingModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
-{
-    let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
-    let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
-    let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
-    let hasBias       = (opts & (ProjectionOptions::bias           )) != 0;
-#ifdef DISABLE_NORMALIZATIONS
-    let hasScale = false;
-#else
-    let hasScale      = (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
-#endif
-    if (hasBatchNorm && !hasBias)
-        InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
-    if (hasScale && (hasBatchNorm || hasLengthNorm))
-        InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
-    auto W                  = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(),  GlorotUniformInitializer(), CurrentDevice(), L"W");
-    auto b                  = Parameter({                   outputDim                             }, CurrentDataType(),  0.0f,                       CurrentDevice(), L"b");
-    auto scale              = Parameter({                                                         }, CurrentDataType(),  1.0,                        CurrentDevice(), L"scale");
-    auto weightNormRescale  = Parameter({                   outputDim                             }, CurrentDataType(),  1.0,                        CurrentDevice(), L"weightNormRescale");
-    let weightNormMinusHalf = Constant::Scalar(                                                      CurrentDataType(), -0.5,                        CurrentDevice());
-    let batchNorm = hasBatchNorm ? BatchNormalization(/*axis=*/1, Named("DenseBN")) : Identity;
-    let lengthNorm = hasLengthNorm ? LengthNormalization() : Identity;
-    vector<Parameter> parameters{ W };
-    if (hasBias && !hasBatchNorm) // batchNorm supplies its own bias
-        parameters.push_back(b);
-    if (hasScale)
-        parameters.push_back(scale);
-    if (hasWeightNorm)
-        parameters.push_back(weightNormRescale);
-    map<wstring, ModelParametersPtr> nested{ { L"activation", activation } };
-    if (hasBatchNorm)
-        nested[L"batchNorm"] = batchNorm;
-    if (hasLengthNorm)
-        nested[L"lengthNorm"] = lengthNorm;
-    let normWeight = StaticModel(/*isBasicBlock=*/true , [=]() -> Variable
-    {
-        if (!hasWeightNorm)
-            return W; // TODO: this is a dummy so that we don't reference the weightNormRescale parameter
-        // pretend W had rows of length 1, by dividing by the row length after the fact
-        // Note that this is generated over again, but will be computed only once since it is ready upfront.
-        // BUGBUG: Does not work with sparse input, as that implies a sparse gradient, for which we cannot compute the elementwise ops.
-        CountAPICalls(4);
-        let rowNorm = InnerProduct(W, W, /*Axis(1)*/Axis_DropLastAxis);
-        // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
-        // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
-        let invLen = Pow(rowNorm, weightNormMinusHalf);
-        //if (hasBatchNorm && !hasLengthNorm) // batchNorm does element-wise rescaling, so no need to do it here as well
-        //    return invLen;
-        let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
-        return scale1;
-        //y = scale1 * y;
-    }, Named("dense.normWeight"));
-    let doDense = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x) -> Variable
-    {
-        auto y = x;
-        CountAPICalls(1);
-        y = Times(W, y);
-        CountAPICalls(hasScale);
-        if (hasScale) // (note: could speed this up by moving this before or after, wherever the dimension is lower)
-            y = y * scale;
-        if (hasWeightNorm)
-            y = normWeight() * y;
-        if (hasLengthNorm) // note: has no bias
-            y = lengthNorm(y);
-        CountAPICalls(hasBias && !hasBatchNorm);
-        if (hasBatchNorm)
-            y = batchNorm(y); // note: batchNorm has its own bias
-        else if (hasBias)
-            y = y + b;
-        return activation(y);
-    }, name);
-    return UnaryModel(parameters, nested, [=](const Variable& x)
-    {
-        return doDense(x);
-    });
-}
-
-static UnaryBroadcastingModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name /*= wstring()*/)
-{
-    return Dense(outputDim, Identity, opts, name);
-}
-
-// create a BatchNormalization layer
-static UnaryBroadcastingModel BatchNormalization(const size_t axis, const wstring& name /*= wstring()*/)
-{
-#ifdef DISABLE_NORMALIZATIONS
-    name; axis;
-    return Identity;
-#else
-    static size_t id = 0; // unique id
-    auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
-    auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
-    auto bias  = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"bias");
-    auto runningMean   = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"runningMean");
-    auto runningInvStd = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"runningInvStd");
-    auto runningCount  = Parameter({                            }, CurrentDataType(), 0.0, CurrentDevice(), L"runningCount");
-    axis;
-    //vector<Variable> buffer;
-    // TODO: figure out this Parameter mess for BN
-    return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount }, [=](const Variable& x) -> Variable
-    {
-        let batchNorm = [&](const Variable& x) // apply to one sample
-        {
-            CountAPICalls(1);
-            return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
-        };
-        // BUGBUG: This cannot work once we reenable static graphs.
-        //if (x.Shape().Rank() == axis) // single item
-            return batchNorm(x);
-        //else // a batch of items
-        //    return Dynamite::Sequence::map(x, batchNorm, buffer);
-    });
-#endif
-}
-
-// ResNet layer
-// Two Dense(ReLU) with skip connection and batch normalization after the matrix product.
-static UnaryBroadcastingModel ResidualNet(size_t outputDim)
-{
-    // TODO: why not combine with weightNormalize?
-    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project1"));
-    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project2"));
-    let doResidualNet = StaticModel(/*isBasicBlock=*/false, [=](const Variable& x)
-    {
-        CountAPICalls(3);
-        let h = ReLU(project1(x)    , Named("hRes"));
-        let r = ReLU(project2(h) + x, Named("rRes"));
-        return r;
-    }, Named("doResidualNet"));
-    return UnaryModel({ },
-    {
-        { L"project1", project1 },
-        { L"project2", project2 },
-    },
-    [=](const Variable& x)
-    {
-        return doResidualNet(x);
-    });
-}
-
-// built-in Softmax requires temp memory, so we use an explicit expression instead
-static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)
-{
-    //LOG(z);
-    //LOG(ReduceLogSum(z, axis, L"smLogDenom"));
-    CountAPICalls(2);
-    let Z = barrier(ReduceLogSum(z, axis, name));
-    return z - Z;
-}
-
-// built-in Softmax requires temp memory, so we use an explicit expression instead
-static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)
-{
-    //LOG(LogSoftmax(z, axis));
-    CountAPICalls(1);
-    return Exp(LogSoftmax(z, axis, name, barrier), name);
-}
-
-// built-in Softplus is a BlockFunction, so need to replace it here
-static Variable Softplus(const Variable& z, const std::wstring& name)
-{
-    // TODO: This will create a Constant object every single time--better create it once. Or pre-define constant 0 and 1.
-    CountAPICalls(2);
-    return LogAddExp(z, Constant::Scalar(z.GetDataType(), 0.0), name);
-}
-
-// we need a special definition since the built-in one creates a BlockFunction, which costs too much each time
-// BUGBUG: AllStaticAxes (=> keepDimensions=false) leads to incorrect auto-batching. Some screwup of batching axis.
-//static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis::AllStaticAxes())
-static Variable CrossEntropyWithSoftmax(const Variable& z, const Variable& label, const Axis& axis = Axis(0))
-{
-    Variable ceLogNumer;
-#if 1
-    CountAPICalls(1);
-    ceLogNumer = InnerProduct(label, z, axis, Named("ceLogNumer"));
-#else
-    if (label.IsSparse() && label.Shape().Rank() == 1)
-        ceLogNumer = Times(label, z, /*outputRank=*/0, Named("ceLogNumer"));
-    else
-        ceLogNumer = ReduceSum(ElementTimes(label, z, Named("ceLabel")), axis, Named("ceLogNumer"));
-#endif
-    CountAPICalls(2);
-    return Minus(ReduceLogSum(z, axis, Named("ceLogDenom")), ceLogNumer, Named("ce"));
-}
-
-static inline void as_vector(vector<Variable>& res, const Variable& x)
-{
-    // 'x' is an entire sequence; last dimension is length
-    let len = x.size();
-    res.resize(len);
-    CountAPICalls(len); // x[t] is a Slice()
-    for (size_t t = 0; t < len; t++)
-        res[t] = x[t];
-}
 
 // TODO: the following are helpers for Static CNTK from C++. Move them out, and don't use Dynamite data types.
 

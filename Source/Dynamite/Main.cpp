@@ -53,6 +53,17 @@ BinaryModel CreateCriterionFunction(UnaryModel model)
     };
 }
 
+// helper to assign the columns of a tensor to a std::vector of column tensors
+static inline void as_vector(vector<Variable>& res, const Variable& x)
+{
+    // 'x' is an entire sequence; last dimension is length
+    let len = x.size();
+    res.resize(len);
+    CountAPICalls(len); // x[t] is a Slice()
+    for (size_t t = 0; t < len; t++)
+        res[t] = x[t];
+}
+
 // CNTK Dynamite model
 UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim)
 {
