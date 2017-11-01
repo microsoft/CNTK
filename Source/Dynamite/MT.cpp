@@ -216,9 +216,49 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
     let encoderKeysProjection = encBarrier // keys projection for attention
-                             >> Dense(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
+                             >> Linear(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
                              >> Activation(Tanh)
                              >> Label(Named("encoderKeysProjection"));
+#if 1
+    //let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions_batchNormalize | ProjectionOptions::bias); // keys projection for attention
+    let encoderDataProjection = encBarrier // data projection for attention
+                             >> Dense(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
+                             >> Activation(Tanh)
+                             >> Label(Named("encoderDataProjection"));
+    //let encoderDataProjection = encBarrier >>
+    //                            Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderDataProjection")); }), ProjectionOptions_batchNormalize | ProjectionOptions::bias); // data projection for attention
+    let embedTarget = Barrier(600, Named("embedTargetBarrier"))     // target embeddding
+                   >> Embedding(embeddingDim)
+                   >> Label(Named("embedTarget"));
+    //let embedTarget = Barrier(600, Named("embedTargetBarrier")) >>
+    //                  Embedding(embeddingDim, Named("embedTarget"));     // target embeddding
+    let initialContext = Constant({ attentionDim }, CurrentDataType(), 0.0, CurrentDevice(), L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
+    let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier"))
+                              >> Dense(decoderRecurrentDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
+                              >> Activation(Tanh)
+                              >> Label(Named("initialStateProjection"));
+    //let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier")) >>
+    //                             Dense(decoderRecurrentDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("initialStateProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
+    let stepBarrier = Barrier(20, Named("stepBarrier"));
+    let stepFunction = GRU(decoderRecurrentDim);
+    auto attentionModel = AttentionModelReference(attentionDim);
+    let attBarrier = Barrier(20, Named("attBarrier"));
+    let firstHiddenProjection = Barrier(600, Named("projBarrier"))
+                             >> Dense(decoderProjectionDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
+                             >> Activation(ReLU)
+                             >> Label(Named("firstHiddenProjection"));
+    //let firstHiddenProjection = Barrier(600, Named("projBarrier")) >>
+    //                            Dense(decoderProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return ReLU(x, Named("firstHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
+    vector<UnaryModel> resnets;
+    for (size_t n = 0; n < numDecoderResNetProjections; n++)
+        resnets.push_back(ResidualNet(decoderProjectionDim));
+    // BUGBUG: The following call leads to a different weight layout, and prevents the model from being loaded after this change.
+    //let topHiddenProjection = Dense(topHiddenProjectionDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
+    //                       >> Activation(Tanh)
+    //                       >> Label(Named("topHiddenProjection"));
+    let topHiddenProjection = Dense(topHiddenProjectionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("topHiddenProjection")); }), ProjectionOptions::weightNormalize | ProjectionOptions::bias);
+    let outputProjection = Linear(tgtVocabSize, ProjectionOptions::weightNormalize | ProjectionOptions::bias);  // output layer without non-linearity (no sampling yet)
+#else
     //let encoderKeysProjection = encBarrier >> Dense(attentionDim, UnaryModel([](const Variable& x) { CountAPICalls(); return Tanh(x, Named("encoderKeysProjection")); }), ProjectionOptions_batchNormalize | ProjectionOptions::bias); // keys projection for attention
     let encoderDataProjection = encBarrier // data projection for attention
                              >> Dense(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
@@ -254,6 +294,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     //    {
     //        return BeamDecode(decoderInitFunction, decoderStepFunction, doToOutput);
     //    });
+#endif
 
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers =
