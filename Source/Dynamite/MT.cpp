@@ -197,7 +197,11 @@ auto TransformSelectMember(const CollectionType& fromCollection, CollectionMembe
 // the state we carry forward across decoding steps
 struct DecoderState
 {
+    // actual state
     Variable state, attentionContext;
+    // stuff that gets computed only once
+    Variable encodingProjectedKeysSeq;
+    Variable encodingProjectedDataSeq;
 };
 
 // TODO: Break out initial step and recurrent step layers. Decoder will later pull them out from here.
@@ -256,84 +260,94 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let profiler = Function::CreateDynamicProfiler(1, L"decode");
 
     let outProjProfiler = Function::CreateDynamicProfiler(1, L"outProj");
-    // BUGBUG: Setting this to true fails with an off batch axis.
-    let doToOutput = StaticModel(/*isBasicBlock=*/false, [=](const Variable& state, const Variable& attentionContext)
-    {
-        // first one brings it into the right dimension
-        let prevProfiler = Function::SetDynamicProfiler(outProjProfiler, false);
-        auto state1 = firstHiddenProjection(state);
-        // then a bunch of ResNet layers
-        for (auto& resnet : resnets)
-            state1 = resnet(state1);
-        // one more transform, bringing back the attention context
-        let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0))); CountAPICalls(1);
-        // TODO: dropout layer here
-        dropoutInputKeepProb;
-        // compute output
-        let z = outputProjection(topHidden);
-        Function::SetDynamicProfiler(prevProfiler);
-        return z;
-    }, Named("doToOutput"));
 
     // initialization function
-    let decoderInitFunction = [=](const Variable& hEncoderSeq) -> DecoderState
-    {
-        Variable state = Slice(hEncoderSeq[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
-        state = initialStateProjection(state);      // match the dimensions
-        Variable attentionContext = initialContext; // note: this is almost certainly wrong
-        return{ state, attentionContext };
-    };
+    let decoderInitFunction =
+        [=](const Variable& hEncoderSeq) -> DecoderState
+        {
+            Variable state = Slice(hEncoderSeq[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
+            state = initialStateProjection(state);      // match the dimensions
+            Variable attentionContext = initialContext; // note: this is almost certainly wrong
+            // common subexpression of attention.
+            // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
+            let encodingProjectedKeysSeq = encoderKeysProjection(hEncoderSeq); // this projects the entire sequence
+            let encodingProjectedDataSeq = encoderDataProjection(hEncoderSeq);
+            return{ state, attentionContext, encodingProjectedKeysSeq, encodingProjectedDataSeq };
+        };
 
     // step function
-    // ...
-
-    // perform the entire thing
-    return /*Dynamite::Model*/BinaryModel({ }, nestedLayers,
-    [=](const Variable& historySeq, const Variable& hEncoderSeq) -> Variable
-    {
-        // decoding loop
-        CountAPICalls(2);
-        DecoderState decoderState = decoderInitFunction(hEncoderSeq);
-        vector<DecoderState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
-        // common subexpression of attention.
-        // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
-        let encodingProjectedKeysSeq = encoderKeysProjection(hEncoderSeq); // this projects the entire sequence
-        let encodingProjectedDataSeq = encoderDataProjection(hEncoderSeq);
-        let historyEmbeddedSeq = embedTarget(historySeq);
-        let decoderStepFunction = [&](const DecoderState& decoderState, const Variable& historyProjectedKey) -> DecoderState
+    let decoderStepFunction =
+        [=](const DecoderState& decoderState, const Variable& historyProjectedKey) -> DecoderState
         {
+            // get the state
             auto state = decoderState.state;
             auto attentionContext = decoderState.attentionContext;
+            let& encodingProjectedKeysSeq = decoderState.encodingProjectedKeysSeq;
+            let& encodingProjectedDataSeq = decoderState.encodingProjectedDataSeq;
+
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
+
+            // perform one recurrent step
             let input = stepBarrier(Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"))); CountAPICalls(1);
             state = stepFunction(state, input);
 
-            // compute attention vector
+            // compute attention-context vector
             let attentionWeightSeq = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq);
             attentionContext = attBarrier(InnerProduct(encodingProjectedDataSeq, attentionWeightSeq, Axis_DropLastAxis, Named("attContext"))); CountAPICalls(1); // [.] inner product over a vectors
+
             Function::SetDynamicProfiler(prevProfiler);
-            return{ state, attentionContext };
+            return{ state, attentionContext, encodingProjectedKeysSeq, encodingProjectedDataSeq };
         };
-        for (size_t t = 0; t < historyEmbeddedSeq.size(); t++)
+
+    // non-recurrent further output processing
+    // BUGBUG: Setting this to true fails with an off batch axis.
+    let doToOutput = StaticModel(/*isBasicBlock=*/false,
+        [=](const Variable& state, const Variable& attentionContext)
         {
-            // do recurrent step (in inference, historySeq[t] would become states[t-1])
-            let historyProjectedKey = historyEmbeddedSeq[t]; CountAPICalls(1);
+            // first one brings it into the right dimension
+            let prevProfiler = Function::SetDynamicProfiler(outProjProfiler, false);
+            auto state1 = firstHiddenProjection(state);
+            // then a bunch of ResNet layers
+            for (auto& resnet : resnets)
+                state1 = resnet(state1);
+            // one more transform, bringing back the attention context
+            let topHidden = topHiddenProjection(Splice({ state1, attentionContext }, Axis(0))); CountAPICalls(1);
+            // TODO: dropout layer here
+            dropoutInputKeepProb;
+            // compute output
+            let z = outputProjection(topHidden);
+            Function::SetDynamicProfiler(prevProfiler);
+            return z;
+        }, Named("doToOutput"));
 
-            // do one decoding step
-            decoderState = decoderStepFunction(decoderState, historyProjectedKey);
+    // perform the entire thing
+    return /*Dynamite::Model*/BinaryModel({ }, nestedLayers,
+        [=](const Variable& historySeq, const Variable& hEncoderSeq) -> Variable
+        {
+            // decoding loop
+            CountAPICalls(2);
+            DecoderState decoderState = decoderInitFunction(hEncoderSeq);
+            vector<DecoderState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
+            let historyEmbeddedSeq = embedTarget(historySeq);
+            // TODO: Forward iterator
+            for (size_t t = 0; t < historyEmbeddedSeq.size(); t++)
+            {
+                // do recurrent step (in inference, historySeq[t] would become states[t-1])
+                let historyProjectedKey = historyEmbeddedSeq[t]; CountAPICalls(1);
 
-            // save the results
-            // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that. Or an iterator!
-            decoderStates[t] = decoderState;
-        }
-        //vector<Variable> states           (TransformSelectMember(decoderStates, &DecoderState::state));
-        //vector<Variable> attentionContexts(TransformSelectMember(decoderStates, &DecoderState::attentionContext));
-        let stateSeq            = Splice(TransformSelectMember(decoderStates, &DecoderState::state           ), Axis::EndStaticAxis());
-        let attentionContextSeq = Splice(TransformSelectMember(decoderStates, &DecoderState::attentionContext), Axis::EndStaticAxis());
-        // stack of output transforms
-        let z = doToOutput(stateSeq, attentionContextSeq);
-        return z;
-    });
+                // do one decoding step
+                decoderState = decoderStepFunction(decoderState, historyProjectedKey);
+
+                // save the results
+                // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that. Or an iterator!
+                decoderStates[t] = decoderState;
+            }
+            let stateSeq            = Splice(TransformSelectMember(decoderStates, &DecoderState::state           ), Axis::EndStaticAxis());
+            let attentionContextSeq = Splice(TransformSelectMember(decoderStates, &DecoderState::attentionContext), Axis::EndStaticAxis());
+            // stack of output transforms
+            let z = doToOutput(stateSeq, attentionContextSeq);
+            return z;
+        });
 }
 
 fun CreateModelFunction()
