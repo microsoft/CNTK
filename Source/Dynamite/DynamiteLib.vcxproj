@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="CNTKLibraryHelpers.h" />
     <ClInclude Include="Layers.h" />
+    <ClInclude Include="Models.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

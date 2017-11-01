@@ -170,6 +170,7 @@ namespace Dynamite {
         auto minibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, numSubMinibatches * minibatchSize, numWorkers, thisWorker, device);
         if (minibatchData.empty())
             return false;
+        // BUGBUG: This ^^ does not work, it just keeps going. How to do this right?
 
         // convert it to an array of tensors. First into args[0]; later below we will then split it.
         let numStreams = streamNames.size();

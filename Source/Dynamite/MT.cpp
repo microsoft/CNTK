@@ -8,6 +8,7 @@
 #include "CNTKLibrary.h"
 #include "CNTKLibraryHelpers.h"
 #include "PlainTextDeseralizer.h"
+#include "Models.h"
 #include "Layers.h"
 #include "TimerUtility.h"
 
@@ -193,6 +194,12 @@ auto TransformSelectMember(const CollectionType& fromCollection, CollectionMembe
     return vector<Variable/*ValueType*/>(Transform(fromCollection, [&](const ValueType& item) { return item.*pMember; }));
 }
 
+// the state we carry forward across decoding steps
+struct DecoderState
+{
+    Variable state, attentionContext;
+};
+
 // TODO: Break out initial step and recurrent step layers. Decoder will later pull them out frmo here.
 fun AttentionDecoder(double dropoutInputKeepProb)
 {
@@ -252,35 +259,30 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     }, Named("doToOutput"));
 
     // initialization function
-    // ...
+    let decoderInitFunction = [=](const Variable& hEncoderSeq) -> DecoderState
+    {
+        Variable state = Slice(hEncoderSeq[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
+        state = initialStateProjection(state);      // match the dimensions
+        Variable attentionContext = initialContext; // note: this is almost certainly wrong
+        return{ state, attentionContext };
+    };
 
     // step function
     // ...
 
     // perform the entire thing
     return /*Dynamite::Model*/BinaryModel({ }, nestedLayers,
-    [=](const Variable& history, const Variable& hEncoderSeq) -> Variable
+    [=](const Variable& historySeq, const Variable& hEncoderSeq) -> Variable
     {
         // decoding loop
-        struct DecoderState
-        {
-            Variable state, attentionContext;
-        };
-        let decoderInitFunction = [&](const Variable& hEncoderSeq) -> DecoderState
-        {
-            Variable state = Slice(hEncoderSeq[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
-            state = initialStateProjection(state);      // match the dimensions
-            Variable attentionContext = initialContext; // note: this is almost certainly wrong
-            return{ state, attentionContext };
-        };
         CountAPICalls(2);
         DecoderState decoderState = decoderInitFunction(hEncoderSeq);
-        vector<DecoderState> decoderStates(history.size()); // inner state and attentionContext remembered here
+        vector<DecoderState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
         // common subexpression of attention.
         // We pack the result into a dense matrix; but only after the matrix product, to allow for it to be batched.
         let encodingProjectedKeysSeq = encoderKeysProjection(hEncoderSeq); // this projects the entire sequence
         let encodingProjectedDataSeq = encoderDataProjection(hEncoderSeq);
-        let historyEmbedded = embedTarget(history);
+        let historyEmbeddedSeq = embedTarget(historySeq);
         let decoderStepFunction = [&](const DecoderState& decoderState, const Variable& historyProjectedKey) -> DecoderState
         {
             auto state = decoderState.state;
@@ -295,10 +297,10 @@ fun AttentionDecoder(double dropoutInputKeepProb)
             Function::SetDynamicProfiler(prevProfiler);
             return{ state, attentionContext };
         };
-        for (size_t t = 0; t < history.size(); t++)
+        for (size_t t = 0; t < historyEmbeddedSeq.size(); t++)
         {
-            // do recurrent step (in inference, history[t] would become states[t-1])
-            let historyProjectedKey = historyEmbedded[t]; CountAPICalls(1);
+            // do recurrent step (in inference, historySeq[t] would become states[t-1])
+            let historyProjectedKey = historyEmbeddedSeq[t]; CountAPICalls(1);
 
             // do one decoding step
             decoderState = decoderStepFunction(decoderState, historyProjectedKey);
