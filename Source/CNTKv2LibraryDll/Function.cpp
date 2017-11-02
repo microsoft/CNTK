@@ -2516,6 +2516,17 @@ namespace CNTK
             operands, Dictionary(), name), name);
     }
 
+    FunctionPtr Cast(const Variable& nodeInput, DataType outputType, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { nodeInput };
+        Dictionary additionalAttributes;
+        additionalAttributes.Add(
+                PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(outputType));
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(
+            PrimitiveOpType::Cast,
+            operands, std::move(additionalAttributes), name), name);
+    }
+
     namespace Internal
     {
         FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name)

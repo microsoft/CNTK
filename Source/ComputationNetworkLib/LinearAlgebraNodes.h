@@ -1941,4 +1941,44 @@ protected:
     size_t m_numSamples;
 };
 
+// -----------------------------------------------------------------------
+// CastNode converts data types from InputType to ElemType
+// -----------------------------------------------------------------------
+template <class ElemType>
+class CastNode : public UnaryElementWiseNode<ElemType>
+{
+    typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Cast"; }
+
+public:
+    CastNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto result = ValueFor(fr);
+        auto input = InputRef(0).ValueFor(fr);
+        result.CastAssignValuesOf(input);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        NOT_IMPLEMENTED
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+};
+
+template class CastNode<half>;
+template class CastNode<float>;
+template class CastNode<double>;
+
 }}}

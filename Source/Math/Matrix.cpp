@@ -6195,6 +6195,11 @@ template class Matrix<float>;
 template class Matrix<double>;
 template class Matrix<half>;
 
+// instantiate some Cast methods for CastNode
+template void Matrix<float>::CastAssignValuesOf(const MatrixBase& other);
+template void Matrix<double>::CastAssignValuesOf(const MatrixBase& other);
+template void Matrix<half>::CastAssignValuesOf(const MatrixBase& other);
+
 // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
 // Let's explicitly instantiate the methods we need for that purpose
 template Matrix<char>::Matrix(DEVICEID_TYPE);

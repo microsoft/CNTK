@@ -441,7 +441,7 @@ namespace CNTK
         // Lets add a null entry in the map for this variable, to break infinite recursion when processing recurrent graphs
         variableToNodeMap[variable] = nullptr;
 
-        std::shared_ptr<ComputationNode<ElementType>> computationNodePtr;
+        std::shared_ptr<ComputationNodeBase> computationNodePtr;
         auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name(), useMangledNamesForComputationNodes);
         if (variable.IsParameter() || variable.IsConstant())
         {
@@ -457,7 +457,7 @@ namespace CNTK
             std::shared_ptr<const Matrix<ElementType>> valueMatrix = variable.IsConstant() ? value->GetMatrix<ElementType>() : value->GetWritableMatrix<ElementType>();
 
             if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
-                computationNodePtr->Value() = valueMatrix->AsReference();
+                dynamic_cast<ComputationNode<ElementType>*>(&*computationNodePtr)->Value() = valueMatrix->AsReference();
             else // Constant: if initialized data lives on wrong device, make a copy to the right one (copy is OK since it's constant)
             {
                 // TODO: the following two lines are a workaround for a bug in the Math library
@@ -467,7 +467,7 @@ namespace CNTK
                 Matrix<ElementType> clonedMatrix(network->GetDeviceId());
                 clonedMatrix.SwitchToMatrixType(valueMatrix->GetMatrixType(), valueMatrix->GetFormat(), false);
                 clonedMatrix.AssignValuesOf(*valueMatrix);
-                computationNodePtr->Value() = std::move(clonedMatrix);
+                dynamic_cast<ComputationNode<ElementType>*>(&*computationNodePtr)->Value() = std::move(clonedMatrix);
             }
         }
         else if (variable.IsInput())
@@ -538,7 +538,7 @@ namespace CNTK
             // Can be null in case of loops with f.output == f.input.
             // Such loops cannot be handled, so we leave nullptr as computational node.
             if (outputVariableNode)
-                computationNodePtr = outputVariableNode->template As<ComputationNode<ElementType>>()->shared_from_this();
+                computationNodePtr = outputVariableNode->template As<ComputationNodeBase>()->shared_from_this();
             else
                 computationNodePtr = nullptr;
         }
@@ -1156,6 +1156,23 @@ namespace CNTK
                         CNTK::LogicError("Crop node must have 2 or 4 node inputs.");
                     }
                     break;
+                case PrimitiveOpType::Cast:
+                {
+                    DataType outputType = (DataType)functionConfig[PrimitiveFunction::AttributeNameNewDataType].Value<int>();
+                    switch (outputType)
+                    {
+                    case DataType::Float:
+                        computationNodePtr = New<CastNode<float>>(network->GetDeviceId(), internalNodeName);
+                        break;
+                    case DataType::Double:
+                        computationNodePtr = New<CastNode<double>>(network->GetDeviceId(), internalNodeName);
+                        break;
+                    case DataType::Float16:
+                        computationNodePtr = New<CastNode<half>>(network->GetDeviceId(), internalNodeName);
+                        break;
+                    }
+                    break;
+                }
                 default:
                     CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                     break;

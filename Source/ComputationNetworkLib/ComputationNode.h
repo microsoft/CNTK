@@ -1367,7 +1367,7 @@ public:
         m_inputs.resize(inputs.size());
         for (size_t i = 0; i < m_inputs.size(); i++)
             if (inputs[i])
-                m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
+                m_inputs[i] = inputs[i]; // remove DownCast check here to allow CastNode to pass
             else
                 m_inputs[i] = nullptr; // during network creation, nullptrs are possible
 

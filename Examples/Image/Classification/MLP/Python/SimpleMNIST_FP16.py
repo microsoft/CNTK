@@ -44,19 +44,25 @@ def simple_mnist(tensorboard_logdir=None):
     num_hidden_layers = 1
     hidden_layers_dim = 200
 
+    feature = C.input_variable(input_dim)
+    label = C.input_variable(num_output_classes)
+    
+    cast_feature16 = C.cast(feature, dtype=np.float16)
+    cast_label16 = C.cast(label, dtype=np.float16)
+
     # Input variables denoting the features and label data
     with C.default_options(dtype=np.float16):
-        feature = C.input_variable(input_dim)
-        label = C.input_variable(num_output_classes)
-
+        feature16 = C.input_variable(input_dim)
+        label16 = C.input_variable(num_output_classes)
+    
         # Instantiate the feedforward classification model
-        scaled_input = element_times(constant(0.00390625, dtype=np.float16), feature)
+        scaled_input = element_times(constant(0.00390625, dtype=np.float16), feature16)
 
         z = Sequential([For(range(num_hidden_layers), lambda i: Dense(hidden_layers_dim, activation=relu)),
                         Dense(num_output_classes)])(scaled_input)
 
-        ce = cross_entropy_with_softmax(z, label)
-        pe = classification_error(z, label)
+        ce = cross_entropy_with_softmax(z, label16)
+        pe = classification_error(z, label16)
 
     data_dir = os.path.join(abs_path, "..", "..", "..", "DataSets", "MNIST")
 
@@ -78,7 +84,7 @@ def simple_mnist(tensorboard_logdir=None):
     # Instantiate progress writers.
     #training_progress_output_freq = 100
     progress_writers = [ProgressPrinter(
-        #freq=training_progress_output_freq,
+        freq=num_samples_per_sweep // minibatch_size,
         tag='Training',
         num_epochs=num_sweeps_to_train_with)]
 
@@ -88,21 +94,14 @@ def simple_mnist(tensorboard_logdir=None):
     # Instantiate the trainer object to drive the model training
     lr = learning_rate_schedule(1, UnitType.sample)
     trainer = Trainer(z, (ce, pe), adadelta(z.parameters, lr), progress_writers)
-    
-    fake_feature = np.random.random((784)).astype(np.float16)
-    fake_label   = np.asarray([0,0,1,0,0,0,0,0,0,0], dtype=np.float16)
-    trainer.train_minibatch({feature:fake_feature,label:fake_label})
 
-    '''
-    training_session(
-        trainer=trainer,
-        mb_source = reader_train,
-        mb_size = minibatch_size,
-        model_inputs_to_streams = input_map,
-        max_samples = num_samples_per_sweep * num_sweeps_to_train_with,
-        progress_frequency=num_samples_per_sweep
-    ).train()
-    
+    num_minibatches_to_train = num_samples_per_sweep * num_sweeps_to_train_with // minibatch_size
+    for i in range(0, int(num_minibatches_to_train)):
+        mb = reader_train.next_minibatch(minibatch_size, input_map=input_map)
+        mb16 = {feature16 : cast_feature16.eval(mb[feature], as_numpy=False),
+                label16 : cast_label16.eval(mb[label], as_numpy=False)}
+        eval_error = trainer.train_minibatch(mb16)
+
     # Load test data
     path = os.path.normpath(os.path.join(data_dir, "Test-28x28_cntk_text.txt"))
     check_path(path)
@@ -121,12 +120,14 @@ def simple_mnist(tensorboard_logdir=None):
     test_result = 0.0
     for i in range(0, int(num_minibatches_to_test)):
         mb = reader_test.next_minibatch(test_minibatch_size, input_map=input_map)
-        eval_error = trainer.test_minibatch(mb)
+        mb16 = {feature16 : cast_feature16.eval(mb[feature], as_numpy=False),
+                label16 : cast_label16.eval(mb[label], as_numpy=False)}
+        eval_error = trainer.test_minibatch(mb16)
         test_result = test_result + eval_error
 
     # Average of evaluation errors of all test minibatches
     return test_result / num_minibatches_to_test
-    '''
+
 
 if __name__=='__main__':
     # Specify the target device to be used for computing, if you do not want to
@@ -138,4 +139,5 @@ if __name__=='__main__':
                         help='Directory where TensorBoard logs should be created', required=False, default=None)
     args = vars(parser.parse_args())
 
-    simple_mnist(args['tensorboard_logdir'])
+    error = simple_mnist(args['tensorboard_logdir'])
+    print("Error: %f" % error)
