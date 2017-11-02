@@ -51,6 +51,17 @@ else
   TEST_BINARY=v2librarytests
 fi
 
+# Note: Run the device selection suite first since later tests may interfere with
+# device selection by freezing default device
+$TEST_BIN_DIR/$TEST_BINARY --report_level=detailed --run_test=DeviceSelectionSuite
+ExitCode=$?
+
+# Next is LearnerSerializationBackcompat, which also needs to run in isolation,
+# since it depends on a particular state of the counter that's used to generate UIDs.
+$TEST_BIN_DIR/$TEST_BINARY --report_level=detailed --run_test=SerializationSuite/LearnerSerializationBackcompat
+ExitCode2=$?
+(( ExitCode2 > ExitCode )) && ExitCode=$ExitCode2
+
 $TEST_BIN_DIR/$TEST_BINARY --report_level=detailed --run_test=!DeviceSelectionSuite --run_test=!SerializationSuite/LearnerSerializationBackcompat
 ExitCode2=$?
 
