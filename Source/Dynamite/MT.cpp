@@ -284,11 +284,14 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let stepFunction = GRU(decoderRecurrentDim);
     auto attentionModel = AttentionModelReference(attentionDim);
     let attBarrier = Barrier(20, Named("attBarrier"));
+#if 1
+    let firstHiddenProjection = Barrier(600, Named("projBarrier"));
+#else
     let firstHiddenProjection = Barrier(600, Named("projBarrier"))
                              >> Dense(decoderProjectionDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
-                             >> Activation(Tanh)
-                             //>> Activation(ReLU)
+                             >> Activation(ReLU)
                              >> Label(Named("firstHiddenProjection"));
+#endif
     vector<UnaryModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)
         resnets.push_back(ResidualNet(decoderProjectionDim));
