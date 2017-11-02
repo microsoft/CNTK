@@ -380,7 +380,10 @@ namespace CNTK
 
         // TODO: which learning rate schedule should take precedence here? 
         // The one given at construction time or the one loaded from a checkpoint?
+        // ANSWER: The construction one, so that users can change it and restart. But keep the count from checkpoint.
+#if 0
         m_learningRateSchedule = TrainingParameterSchedule<double>::Deserialize(checkpoint[learningRateScheduleKey].Value<Dictionary>());
+#endif
 
         const auto& parameters = Parameters();
 
