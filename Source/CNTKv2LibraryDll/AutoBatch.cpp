@@ -3301,7 +3301,7 @@ class InternalVariable::AutoBatch
         //        doNaively ? "" : "batch-",
         //        (int)numBatchItems, f0.OpName().c_str(), f0.m_outputs.front().Shape().AsString().c_str(),
         //        (int)m_schedule.numBatchableOpsPending());
-        if (doNaively)
+        if (doNaively && f0.m_op != PrimitiveOpType::BatchNormalization) // BN can't be non-batched
         {
             // for correctness testing of underlying mechanism, compute them without actual batching
             for (auto& f : ops)
@@ -3474,23 +3474,17 @@ class InternalVariable::AutoBatch
         {
             // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
             // This is sort of a hack for now. It is not, however, an efficiency problem since there are relatively few batched BatchNorm nodes in the graph.
-            let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
             let device = GetValueObject(m_batchedInputs[0])->Device();
+            let dataType = m_batchedInputs[0].GetDataType();
             let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RBuildForwardGraphAndSchedule()
             {
-                let p = Parameter(m_arena.NewNDArrayView(shape, m_batchedInputs[0].GetDataType(), StorageFormat::Dense, device));
-                auto& fields = GetInputFields(p);
-                //fields.m_redirection.m_function = nullptr; // it is already null after creation
-                fail_if(fields.m_redirection.m_function != nullptr, "Parameter redirect not initialized??");
-                //fields.m_redirection.m_index = SIZE_MAX;
-                // initialize m_consumers chain of function that produces the values
-                //fields.m_consumers.mangle(-5); // (temporarily, so that we can discover if this is ever used)
-                return p; // TODO: change to return Parameter...
+                return Parameter(m_arena.NewNDArrayView(shape, dataType, StorageFormat::Dense, device));
             };
-            m_batchedInputs.push_back(createParameter(               statShape)  );
-            m_batchedInputs.push_back(createParameter(               statShape)  );
+            let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
+            m_batchedInputs.push_back(createParameter(               statShape  ));
+            m_batchedInputs.push_back(createParameter(               statShape  ));
             m_batchedInputs.push_back(createParameter(m_batchedInputs[0].Shape()));
-            anyBatchedInputs = true; // BUGBUG: If all operands are the same, then BatchNorm does not make sense (variance=0). Should we throw an error?
+            anyBatchedInputs = true; // Note: Even if all operands are the same, we may still have a sequence axis to normalize over
         }
 
         // execute the operation and implant the results
@@ -4038,10 +4032,11 @@ public:
             // implant it into the redirect
             if (&inputFields != &redirectedInputFields)
             {
-                // If input is a redirected slice, then necessarily the underlying object (=inputFields.m_redirection.m_function)
+                // Sanity check: If input is a redirected slice, then necessarily the underlying object (=inputFields.m_redirection.m_function)
                 // must have multiple consumers. Otherwise it would not be part of a batched operation, which is the only way
                 // of creating redirected slices.
-                fail_if(!inputFields.m_redirection.m_sliceRange.empty(), "redirected slice with single consumer shouldn't be a redirect in the first place");
+                // An exception is BatchNorm, which uses the batching mechanism even for e.g. a single-sequence batch.
+                fail_if(!inputFields.m_redirection.m_sliceRange.empty() && inputFields.m_redirection.m_function->m_op != PrimitiveOpType::BatchNormalization, "redirected slice with single consumer shouldn't be a redirect in the first place");
                 auto grad = inputFields.m_gradient;
                 ReplaceWithReshapedViewIfNeeded(grad, redirectedInputFields.m_shape);
                 redirectedInputFields.m_gradient = move(grad); // and the redirected location. If it is the same, then this will do nothing.
