@@ -160,6 +160,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="API\CNTKLibrary.h" />
+    <ClInclude Include="API\CNTKLibraryCAPI.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
     <ClInclude Include="BackCompat.h" />
@@ -168,9 +169,10 @@
     <ClInclude Include="DataParallelDistributedLearner.h" />
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="DistributedLearnerBase.h" />
+    <ClInclude Include="EvaluatorWrapper.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
-    <ClInclude Include="PrimitiveFunctionAttributes.h"/>
+    <ClInclude Include="PrimitiveFunctionAttributes.h" />
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
@@ -209,6 +211,8 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Evaluator.cpp" />
+    <ClCompile Include="EvaluatorCAPI.cpp" />
+    <ClCompile Include="EvaluatorWrapper.cpp" />
     <ClCompile Include="Function.cpp" />
     <ClCompile Include="Learner.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
