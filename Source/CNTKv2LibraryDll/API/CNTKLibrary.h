@@ -233,7 +233,9 @@ namespace CNTK
         ///
         /// Returns the dimensions of 'this' shape as a std::vector<size_t>
         ///
+#ifndef SWIG
         const auto& Dimensions() const { return m_shapeDims; }
+#endif
 
         ///
         /// Returns a boolean indicating if 'this' shape is the special Unknown shape
@@ -254,18 +256,22 @@ namespace CNTK
         ///
         /// Returns a reference to dimension size for the specified axis.
         ///
+#ifndef SWIG
         auto& operator[](size_t axisId)
         {
             return m_shapeDims.at(axisId);
         }
+#endif
 
         ///
         /// Returns the dimension size for the specified axis.
         ///
+#ifndef SWIG
         auto operator[](size_t axisId) const
         {
             return m_shapeDims.at(axisId);
         }
+#endif
 
         ///
         /// Creates and returns a new NDShape instance with the same dimensions as 'this' shape's specified axis range [beginAxisId, endAxisId).
@@ -4094,7 +4100,9 @@ namespace CNTK
 
         // Returns a outputs without ref-counting the owner.
         friend class Variable;
+#ifndef SWIG
         CNTK_API const auto RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
+#endif
 
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
@@ -4713,7 +4721,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation to get the one_hot tensor on specified input along the specified axis
     ///
-    CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = std::wstring());
+    CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation to get a tensor that is gathered from reference tensor by indices.
