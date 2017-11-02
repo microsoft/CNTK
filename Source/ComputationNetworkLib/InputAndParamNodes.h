@@ -165,6 +165,14 @@ public:
         RuntimeError("LearnableParameter should not be asked for input transforms, since it has no inputs.");
     }
 
+    Matrix<float>& ValueFloat()
+    {
+        if (!m_hasFloatValue)
+            RuntimeError("Parameter has no m_floatValue");
+
+        return *m_floatValue;
+    }
+
 private:
     // init parameters for deferred initialization (which happens in Validate())
     std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
@@ -177,6 +185,10 @@ private:
 
     // flags related to gradient update
     float m_regMultiplier; // The multiplier to adjust the L1Reg and L2Reg for Learnable node
+
+    // float precision value
+    static const bool m_hasFloatValue = !(std::is_same<ElemType, float>::value || std::is_same<ElemType, double>::value);
+    shared_ptr<Matrix<float>> m_floatValue;
 };
 
 // -----------------------------------------------------------------------

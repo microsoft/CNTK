@@ -18,6 +18,9 @@
     case DataType::Double:                                                                                    \
         Update<double>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);                 \
         break;                                                                                                \
+    case DataType::Float16:                                                                                   \
+        Update<half>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);                   \
+        break;                                                                                                \
     default:                                                                                                  \
         NOT_IMPLEMENTED;                                                                                      \
     }
@@ -232,9 +235,13 @@ namespace CNTK
         {
             return MakeSharedObject<NDArrayView>(float(0.0), shape, parameter.Value()->Device());
         }
-        else
+        else if (parameter.GetDataType() == DataType::Double)
         {
             return MakeSharedObject<NDArrayView>(0.0, shape, parameter.Value()->Device());
+        }
+        else
+        {
+            return MakeSharedObject<NDArrayView>(float16(0.0), shape, parameter.Value()->Device());
         }
     }
 
@@ -245,9 +252,14 @@ namespace CNTK
             auto matrix = GetMatrix<float>(parameter.Value());
             return{ matrix->GetNumRows(), matrix->GetNumCols() };
         }
-        else
+        else if (parameter.GetDataType() == DataType::Double)
         {
             auto matrix = GetMatrix<double>(parameter.Value());
+            return{ matrix->GetNumRows(), matrix->GetNumCols() };
+        }
+        else
+        {
+            auto matrix = GetMatrix<half>(parameter.Value());
             return{ matrix->GetNumRows(), matrix->GetNumCols() };
         }
     }

@@ -1135,8 +1135,10 @@ namespace CNTK
 
         if (delta->GetDataType() == DataType::Float)
             Data()->GetWritableTensorView<float>()->AddCopyOf(*delta->Data()->GetTensorView<float>());
-        else
+        else if(delta->GetDataType() == DataType::Double)
             Data()->GetWritableTensorView<double>()->AddCopyOf(*delta->Data()->GetTensorView<double>());
+        else
+            Data()->GetWritableTensorView<half>()->AddCopyOf(*delta->Data()->GetTensorView<half>());
 
         if (copied && m_numUpdates != 0)
             RuntimeError("Accumulation values are created when accumulated num updates not zero");
