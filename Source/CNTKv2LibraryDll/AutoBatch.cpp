@@ -761,7 +761,7 @@ class NDArrayViewArena
     static array<size_t                        , numStorageFormats> s_currentArenaUseds;      // allocation cursor. Elements below this are already allocated.
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
     static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass;
-    static const NDShapeDimension defaultDenseArenaSize = 64000000; // we allocate in this chunk size (dense only)
+    static const NDShapeDimension defaultDenseArenaSize = 6400000;//0; // we allocate in this chunk size (dense only)
     static bool IsMatrixType(const MatrixBase& matrix, DataType dataType) // helper for checking the DataType of the MatrixBase object
     {
         switch (dataType)
