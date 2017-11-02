@@ -284,7 +284,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let stepFunction = GRU(decoderRecurrentDim);
     auto attentionModel = AttentionModelReference(attentionDim);
     let attBarrier = Barrier(20, Named("attBarrier"));
-#if 1
+#if 0
     let firstHiddenProjection = Barrier(600, Named("projBarrier"));
 #else
     let firstHiddenProjection = Barrier(600, Named("projBarrier"))
