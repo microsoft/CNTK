@@ -47,8 +47,7 @@ def simple_mnist(tensorboard_logdir=None):
     feature = C.input_variable(input_dim)
     label = C.input_variable(num_output_classes)
     
-    cast_feature16 = C.cast(feature, dtype=np.float16)
-    cast_label16 = C.cast(label, dtype=np.float16)
+    cast = C.combine(C.cast(feature, dtype=np.float16), C.cast(label, dtype=np.float16))
 
     # Input variables denoting the features and label data
     with C.default_options(dtype=np.float16):
@@ -98,8 +97,8 @@ def simple_mnist(tensorboard_logdir=None):
     num_minibatches_to_train = num_samples_per_sweep * num_sweeps_to_train_with // minibatch_size
     for i in range(0, int(num_minibatches_to_train)):
         mb = reader_train.next_minibatch(minibatch_size, input_map=input_map)
-        mb16 = {feature16 : cast_feature16.eval(mb[feature], as_numpy=False),
-                label16 : cast_label16.eval(mb[label], as_numpy=False)}
+        data16 = cast.eval(mb, as_numpy=False)
+        mb16 = {feature16:data16[cast[0]], label16:data16[cast[1]]}
         eval_error = trainer.train_minibatch(mb16)
 
     # Load test data
@@ -120,8 +119,8 @@ def simple_mnist(tensorboard_logdir=None):
     test_result = 0.0
     for i in range(0, int(num_minibatches_to_test)):
         mb = reader_test.next_minibatch(test_minibatch_size, input_map=input_map)
-        mb16 = {feature16 : cast_feature16.eval(mb[feature], as_numpy=False),
-                label16 : cast_label16.eval(mb[label], as_numpy=False)}
+        data16 = cast.eval(mb, as_numpy=False)
+        mb16 = {feature16:data16[cast[0]], label16:data16[cast[1]]}
         eval_error = trainer.test_minibatch(mb16)
         test_result = test_result + eval_error
 

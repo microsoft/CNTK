@@ -1944,7 +1944,7 @@ protected:
 // -----------------------------------------------------------------------
 // CastNode converts data types from InputType to ElemType
 // -----------------------------------------------------------------------
-template <class ElemType>
+template <class ElemType, class InputType>
 class CastNode : public UnaryElementWiseNode<ElemType>
 {
     typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
@@ -1959,7 +1959,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         auto result = ValueFor(fr);
-        auto input = InputRef(0).ValueFor(fr);
+        auto input = static_cast<ComputationNode<InputType>&>(*m_inputs[0].get()).ValueFor(fr);
         result.CastAssignValuesOf(input);
     }
 
@@ -1977,8 +1977,10 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 };
 
-template class CastNode<half>;
-template class CastNode<float>;
-template class CastNode<double>;
-
+template class CastNode<half, float>;
+template class CastNode<half, double>;
+template class CastNode<float, half>;
+template class CastNode<float, double>;
+template class CastNode<double, half>;
+template class CastNode<double, float>;
 }}}

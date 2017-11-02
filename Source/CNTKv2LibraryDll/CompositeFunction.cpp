@@ -1162,13 +1162,13 @@ namespace CNTK
                     switch (outputType)
                     {
                     case DataType::Float:
-                        computationNodePtr = New<CastNode<float>>(network->GetDeviceId(), internalNodeName);
+                        computationNodePtr = New<CastNode<float, ElementType>>(network->GetDeviceId(), internalNodeName);
                         break;
                     case DataType::Double:
-                        computationNodePtr = New<CastNode<double>>(network->GetDeviceId(), internalNodeName);
+                        computationNodePtr = New<CastNode<double, ElementType>>(network->GetDeviceId(), internalNodeName);
                         break;
                     case DataType::Float16:
-                        computationNodePtr = New<CastNode<half>>(network->GetDeviceId(), internalNodeName);
+                        computationNodePtr = New<CastNode<half, ElementType>>(network->GetDeviceId(), internalNodeName);
                         break;
                     }
                     break;
