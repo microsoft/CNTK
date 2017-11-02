@@ -1,21 +1,9 @@
 import cntk as C
-'''
-from cntk.variables import Parameter
-from cntk.ops import times
-from cntk.internal import _as_tuple
-from cntk.layers.blocks import _initializer_for, _INFERRED, identity
-from cntk.layers.blocks import UntestedBranchError  # helpers
-from cntk.default_options import is_default_override
-from cntk.default_options import get_default_override, default_override_or
-
-import os
-import sys
-'''
 from cntk.contrib.netopt.custom_convolution_ops import *
 
 # Register the native binary convolution function that calls halide
 # operations internally.
-ops.register_native_user_function(
+C.ops.register_native_user_function(
                  'NativeBinaryConvolveFunction', 
                  'Cntk.BinaryConvolutionExample-' + C.__version__.rstrip('+'), 
                  'CreateBinaryConvolveFunction')
@@ -42,12 +30,20 @@ def optimize_binary_convolution(model):
     def bin_converter(x):
 
         att = x.block_root.attributes
-                  
+        # Need a square filter.
+        assert(x.inputs[0].shape[-1] == x.inputs[0].shape[-2])
+
+        # These are the attributes needed for the native convolution layer
+        # names are defined in BinaryConvolveOp.h
         attributes = {'stride' : att["strides"][-1],
                       'padding' : att["autoPadding"][-1],
-                      'size' : x.inputs[0].shape[-1]}
+                      'size' : x.inputs[0].shape[-1],                       
+                      'h' : x.inputs[1].shape[1],
+                      'w' : x.inputs[1].shape[2],
+                      'channels' :  x.inputs[1].shape[0],
+                      'filters' : x.inputs[0].shape[0] }                     
             
-        return ops.native_user_function(
+        return C.ops.native_user_function(
                     'NativeBinaryConvolveFunction',
                     list(x.inputs), 
                     attributes, 
@@ -138,7 +134,7 @@ def binary_convolution(filter_shape,
     '''
 
     kernel_shape = (num_filters, channels) + filter_shape
-    W = Parameter(shape=kernel_shape, init=init, name="filter")
+    W = C.Parameter(shape=kernel_shape, init=init, name="filter")
     
     
     def convolution(operand):
