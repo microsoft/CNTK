@@ -33,7 +33,7 @@
 #define DETAILED_STATS
 
 #ifdef LOG_STATS
-static size_t logMemoizeStatsPeriod = 50;
+static size_t logMemoizeStatsPeriod = 500;
 static size_t logMemoizeStatsCounter = logMemoizeStatsPeriod - 1; // counts up to logMemoizeStatsPeriod and wraps. We log if it is 0, starting with the second MB.
 #else
 static size_t logMemoizeStatsPeriod = SIZE_MAX;

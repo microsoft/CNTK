@@ -58,7 +58,7 @@ size_t decoderRecurrentDim = 1024;
 size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
-size_t subMinibatches = 1;
+size_t subMinibatches = 10;
 string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
@@ -95,9 +95,15 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTestFile  = L"f:/local/data/2017_10_05_21h_46m_39s/test.ENU.txt";
         srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
-        subMinibatches = 10;
+        // this config uses a much smaller system configuration than the default system
+        embeddingDim = 256;
+        attentionDim = 256;
         numEncoderLayers = 1;
-        use1BitSgd = true;
+        encoderRecurrentDim = 256;
+        decoderRecurrentDim = 256;
+        numDecoderResNetProjections = 0;
+        decoderProjectionDim = 256;
+        topHiddenProjectionDim = 256;
     }
     else if (systemId == "rom_enu")
     {
@@ -119,8 +125,8 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
 }
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var) (0)//((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() == 0) ? LOG(var) : 0)
-#define DOPRINT(prefix, var, vocab) (0)//((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() == 0) ? PrintSequence((prefix), (var), (vocab)) : 0)
+#define DOLOG(var)                  ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? LOG(var)                                : 0)
+#define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? PrintSequence((prefix), (var), (vocab)) : 0)
 static void PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile);
 
 fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
@@ -164,20 +170,22 @@ fun AttentionModelReference(size_t attentionDim1)
     let normH = LengthNormalization(); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     let zBarrier = Barrier(20, Named("zBarrier"));
-    let doToTanh = StaticModel(/*isBasicBlock=*/false, [=](const Variable& h, const Variable& historyProjectedKey)
-    {
-        let hProjected = projectQuery(h); // [A]. Batched.
-        let tanh = Tanh(normH(hProjected + historyProjectedKey), Named("attTanh")); CountAPICalls(2); // [A]. Batched.
-        return tanh;
-    });
+    // tanh(W1 h + W2 prevWord)
+    let doToTanh = StaticModel(/*isBasicBlock=*/false,
+        [=](const Variable& h, const Variable& historyEmbedded)
+        {
+            let hProjected = projectQuery(h); // [A]. Batched.
+            let tanh = Tanh(normH(hProjected + historyEmbedded), Named("attTanh")); CountAPICalls(2); // [A]. Batched.
+            return tanh;
+        }, Named("doToTanh"));
     return /*Dynamite::Model*/TernaryModel({ }, { { L"normH", normH }, { L"projectQuery", projectQuery } },
         [=](const Variable& h,                       // [A] decoder hidden state
-            const Variable& historyProjectedKey,     // [A] previous output, embedded
+            const Variable& historyEmbedded,         // [A] previous output, embedded
             const Variable& encodingProjectedKeysSeq // [A x T] encoder hidden state seq, projected as key >> tanh
            ) -> Variable
         {
             let prevProfiler = Function::SetDynamicProfiler(profiler, false);
-            let tanh = doToTanh(h, historyProjectedKey); // [A]
+            let tanh = doToTanh(h, historyEmbedded); // [A]
             let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); CountAPICalls(1); // [1 x T]
             let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);                     // [1 x T]
             Function::SetDynamicProfiler(prevProfiler);
@@ -233,10 +241,10 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& initFun
     for (size_t t = 0; t < historyEmbeddedSeq.size(); t++)
     {
         // do recurrent step (in inference, historySeq[t] would become states[t-1])
-        let historyProjectedKey = historyEmbeddedSeq[t]; CountAPICalls(1);
+        let historyEmbedded = historyEmbeddedSeq[t]; CountAPICalls(1);
 
         // do one decoding step
-        decoderState = decoderStepFunction(decoderState, historyProjectedKey);
+        decoderState = decoderStepFunction(decoderState, historyEmbedded);
 
         // save the results
         // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that. Or an iterator!
@@ -311,7 +319,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 
     // step function
     let decoderStepFunction =
-        [=](const DecoderState& decoderState, const Variable& historyProjectedKey) -> DecoderState
+        [=](const DecoderState& decoderState, const Variable& historyEmbedded) -> DecoderState
         {
             // get the state
             auto state = decoderState.state;
@@ -322,11 +330,11 @@ fun AttentionDecoder(double dropoutInputKeepProb)
             let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
 
             // perform one recurrent step
-            let input = stepBarrier(Splice({ historyProjectedKey, attentionContext }, Axis(0), Named("augInput"))); CountAPICalls(1);
+            let input = stepBarrier(Splice({ historyEmbedded, attentionContext }, Axis(0), Named("augInput"))); CountAPICalls(1);
             state = stepFunction(state, input);
 
             // compute attention-context vector
-            let attentionWeightSeq = attentionModel(state, historyProjectedKey, encodingProjectedKeysSeq);
+            let attentionWeightSeq = attentionModel(state, historyEmbedded, encodingProjectedKeysSeq);
             attentionContext = attBarrier(InnerProduct(encodingProjectedDataSeq, attentionWeightSeq, Axis_DropLastAxis, Named("attContext"))); CountAPICalls(1); // [.] inner product over a vectors
 
             Function::SetDynamicProfiler(prevProfiler);
@@ -385,10 +393,10 @@ fun AttentionDecoder(double dropoutInputKeepProb)
             for (size_t t = 0; t < historyEmbeddedSeq.size(); t++)
             {
                 // do recurrent step (in inference, historySeq[t] would become states[t-1])
-                let historyProjectedKey = historyEmbeddedSeq[t]; CountAPICalls(1);
+                let historyEmbedded = historyEmbeddedSeq[t]; CountAPICalls(1);
 
                 // do one decoding step
-                decoderState = decoderStepFunction(decoderState, historyProjectedKey);
+                decoderState = decoderStepFunction(decoderState, historyEmbedded);
 
                 // save the results
                 // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that. Or an iterator!
@@ -418,9 +426,11 @@ fun CreateModelFunction()
         },
         [=](const Variable& sourceSeq, const Variable& historySeq) -> Variable
         {
+            DOLOG(sourceSeq);
+            DOLOG(historySeq);
             // embedding
             //let& W = embedFwd.Nested(L"embed")[L"W"];
-            DOLOG(W);
+            //DOLOG(W);
             let eFwd = embedFwd(sourceSeq);
             let eBwd = eFwd;// embedBwd(sourceSeq);
             // encoder
@@ -697,10 +707,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // get next minibatch
         partTimer.Restart();
         // dynamically adjust the MB size lower at the start
+#if 0
         let fullMbSizeAt = 1000000;
         let lowMbSize = minibatchSize / 16;
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
         let actualMinibatchSize = clamp(lowMbSize + (minibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, minibatchSize);
+#else
+        let actualMinibatchSize = minibatchSize;
+#endif
         Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, actualMinibatchSize,
                                 communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, CurrentDataType(), CurrentDevice());
         let timeGetNextMinibatch = partTimer.Elapsed();
@@ -802,6 +816,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             learner->Update(gradients, info);
             //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             let timePerUpdate = partTimer.Elapsed();
+            // log the parameters
+            if (mbCount % 50 == 1) for (let& p : parameters)
+            {
+                p.Value()->LogToFile(p.Name(), stderr, 10);
+                if (gradients[p]->GetStorageFormat() != StorageFormat::SparseBlockCol)
+                    gradients[p]->LogToFile(L"grad " + p.Name(), stderr, 10);
+            }
             //partTimer.Log("Update", numLabels);
             let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
             totalLabels += info.numberOfSamples;

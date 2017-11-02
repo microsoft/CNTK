@@ -22,15 +22,16 @@
 //#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 // use these to locally disable batch norm at places
+#define ProjectionOptions_batchNormalize ProjectionOptions::lengthNormalize/*batchNormalize*/
 //#define ProjectionOptions_batchNormalize ProjectionOptions::stabilize/*batchNormalize*/
-#define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
+//#define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
 
 #ifndef let
 #define let const auto
 #endif
 
-//#define Named(n) (L##n)
-#define Named(n) (std::wstring())
+#define Named(n) (L##n)
+//#define Named(n) (std::wstring())
 
 #pragma warning(push)
 #pragma warning(disable: 4505) // unreferenced function was removed
@@ -245,7 +246,7 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
         else if (hasBias)
             y = y + b;
         return activation(y);
-    }, name);
+    }, L"doDense." + name);
     return UnaryModel(parameters, nested, [=](const Variable& x)
     {
         return doDense(x);
@@ -430,8 +431,8 @@ static TernaryModel LSTM(size_t outputDim) // TODO: finish this once we have tup
 static UnaryModel ResidualNet(size_t outputDim)
 {
     // TODO: why not combine with weightNormalize?
-    let project1 = Linear(outputDim, ProjectionOptions_batchNormalize, Named("project1"));
-    let project2 = Linear(outputDim, ProjectionOptions_batchNormalize, Named("project2"));
+    let project1 = Linear(outputDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias, Named("project1"));
+    let project2 = Linear(outputDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias, Named("project2"));
     let doResidualNet = StaticModel(/*isBasicBlock=*/false,
         [=](const Variable& x)
         {

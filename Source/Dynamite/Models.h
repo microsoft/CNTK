@@ -377,9 +377,9 @@ struct Batch
         });
     }
 
-    static size_t& CurrentMapIndex()
+    static int& CurrentMapIndex()
     {
-        static size_t i = SIZE_MAX;
+        static int i = -1;
         return i;
     }
 
@@ -391,10 +391,10 @@ struct Batch
         {
             assert(y.size() == x.size());
             res.resize(x.size());
-            size_t& i = CurrentMapIndex();
+            int& i = CurrentMapIndex();
             for (i = 0; i < x.size(); i++)
                 res[i] = f(x[i], y[i]);
-            i = SIZE_MAX;
+            i = -1;
         });
     }
 
