@@ -183,7 +183,7 @@ public:
 #endif
     ComputationNodePtr SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName = L"");
     ComputationNodePtr Sigmoid(const ComputationNodePtr a, const std::wstring nodeName = L"");
-    ComputationNodePtr StochasticBinary(const ComputationNodePtr a, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealRate, const std::wstring nodeName = L"");
+    ComputationNodePtr AnnealTanh(const ComputationNodePtr a, const float annealRate, const std::wstring nodeName = L"");
     ComputationNodePtr Sin(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sinh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");

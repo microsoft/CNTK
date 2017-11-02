@@ -534,8 +534,8 @@ public:
 
 public:
     // stochastic binary node
-    static void StochasticBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope);
-    static void StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope);
+    static void AnnealTanhForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope);
+    static void AnnealTanhBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope);
 
 public:
     // static BLAS functions

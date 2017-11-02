@@ -837,7 +837,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixElementMaxGradient, RandomSeedFixture)
     GPUMatrix<float> inputGradient = GPUMatrix<float>::Zeros(4, 4, c_deviceIdZero);
     GPUMatrix<float> outputGradient = GPUMatrix<float>::Ones(4, 4, c_deviceIdZero);
     
-    float data[4] = { 1,4,3,2 };
+    float data[4] = { 1,2,3,2 };
     GPUMatrix<float> nWords(1, 4, c_deviceIdZero);
     nWords.SetValue(1, 4, c_deviceIdZero, data, matrixFormatRowMajor);
 
@@ -850,7 +850,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixElementMaxGradient, RandomSeedFixture)
     BOOST_CHECK_EQUAL(0, arr[2]);
     BOOST_CHECK_EQUAL(0, arr[3]);
     BOOST_CHECK_EQUAL(0, arr[4]);
-    BOOST_CHECK_EQUAL(1, arr[5]);
+    BOOST_CHECK_EQUAL(0, arr[5]);
     BOOST_CHECK_EQUAL(0, arr[6]);
     BOOST_CHECK_EQUAL(0, arr[7]);
     BOOST_CHECK_EQUAL(0, arr[8]);

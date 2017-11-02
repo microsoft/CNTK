@@ -550,7 +550,7 @@ CNTK2 = [
                                                                                         inputs = _ /*plus the function args*/ ]
 ]
 
-StochasticBinary(_, neuronST=true, RFAdjusted=false, passThrough=true, annealRate=1.0, tag='') = new ComputationNode [ operation = 'StochasticBinary' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+AnnealTanh(_, annealRate=1.0, tag='') = new ComputationNode [ operation = 'AnnealTanh' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
 
 # Parameter{} can do several forms of initialization.
