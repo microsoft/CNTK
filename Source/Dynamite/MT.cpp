@@ -286,7 +286,8 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let attBarrier = Barrier(20, Named("attBarrier"));
     let firstHiddenProjection = Barrier(600, Named("projBarrier"))
                              >> Dense(decoderProjectionDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
-                             >> Activation(ReLU)
+                             >> Activation(Tanh)
+                             //>> Activation(ReLU)
                              >> Label(Named("firstHiddenProjection"));
     vector<UnaryModel> resnets;
     for (size_t n = 0; n < numDecoderResNetProjections; n++)

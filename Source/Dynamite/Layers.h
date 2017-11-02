@@ -179,13 +179,13 @@ static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { r
 static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
 {
     let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
-    let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
+    let hasLengthNorm = false;// (opts & (ProjectionOptions::lengthNormalize)) != 0;
     let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
     let hasBias       = (opts & (ProjectionOptions::bias           )) != 0;
 #ifdef DISABLE_NORMALIZATIONS
     let hasScale = false;
 #else
-    let hasScale      = (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
+    let hasScale      = (opts & (ProjectionOptions::lengthNormalize)) != 0 ||       (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
 #endif
     if (hasBatchNorm && !hasBias)
         InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
