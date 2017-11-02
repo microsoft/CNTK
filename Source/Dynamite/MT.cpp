@@ -1137,7 +1137,11 @@ int mt_main(int argc, char *argv[])
             modelPath = outputDirectory + L"/model.dmf"; // DMF=Dynamite model file
 
         // set up parallel communicator
-        let communicator = use1BitSgd ? QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/4) : MPICommunicator();
+        let communicator =
+            /*if*/use1BitSgd ?
+                QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/1)
+            /*else*/ :
+                MPICommunicator();
 #if 1 // while we are running with MPI, we always start from start
         let numGpus = DeviceDescriptor::AllDevices().size() - 1;
         let ourRank = communicator->CurrentWorker().m_globalRank;
