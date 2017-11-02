@@ -151,6 +151,13 @@ namespace CNTK
             return _Clone(ParameterCloningMethod.Share);
         }
 
+        /// <summary>
+        /// Clones 'this' Function. The parameters of the Function are either cloned, shared or frozen as specified by the parameterCloneMethod argument and
+        /// any variable replacements requested are applied in the cloned Function instance.
+        /// </summary>
+        /// <param name="parameterCloneMethod"></param>
+        /// <param name="replacements">existing variables to be replaced with new variables.</param>
+        /// <returns></returns>
         public Function Clone(ParameterCloningMethod parameterCloneMethod, IDictionary<Variable, Variable> replacements)
         {
             UnorderedMapVariableVariable replacementVector = Helper.AsUnorderedMapVariableVariable(replacements);
