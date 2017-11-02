@@ -787,7 +787,7 @@ namespace CNTK
         ///
         /// Returns a boolean indicating if 'this' view is slice.
         ///
-        bool IsSliceView();
+        CNTK_API bool IsSliceView();
 
         // TODO: The set methods should be offered in template from
         ///
