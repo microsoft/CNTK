@@ -1513,22 +1513,23 @@ namespace CNTK
              op != PrimitiveOpType::FutureValue &&
              op != PrimitiveOpType::ToSequence &&
              op != PrimitiveOpType::ToSequenceLike &&
+             op != PrimitiveOpType::ReconcileDynamicAxis &&
              left_axis.size() > 0 &&
              right_axis.size() > 0 &&
             (left_num_seqs + right_num_seqs) == 1)
         {
             if (left_num_seqs == 1)
             {
-                //auto new_right = CNTK::Sequence::BroadcastAs(right, left);
+                auto new_right = CNTK::Sequence::BroadcastAs(right, left);
                 result.push_back(left);
-                //result.push_back(new_right);
-                result.push_back(right);
+                result.push_back(new_right);
+                //result.push_back(right);
             }
             else
             {
-                //auto new_left = CNTK::Sequence::BroadcastAs(left, right);
-                //result.push_back(new_left);
-                result.push_back(left);
+                auto new_left = CNTK::Sequence::BroadcastAs(left, right);
+                result.push_back(new_left);
+                //result.push_back(left);
                 result.push_back(right);
 
             }
@@ -2434,7 +2435,8 @@ namespace CNTK
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
-            return AsBlock(ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand }, { broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+            return AsComposite(ReconcileDynamicAxes(operand, broadcastAs, name));
+            //return AsBlock(ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand }, { broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
         }
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, bool keepReducedDimensions, const std::wstring& name)
