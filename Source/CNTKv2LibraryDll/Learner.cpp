@@ -341,6 +341,7 @@ namespace CNTK
         checkpoint[typeKey] = s_learnerTypeValue;
         checkpoint[sampleCountKey] = m_sampleCount;
         checkpoint[minibatchCountKey] = m_minibatchCount;
+        checkpoint[sweepCountKey] = m_sweepCount;
         checkpoint[learningRateScheduleKey] = m_learningRateSchedule.Serialize();
         checkpoint[noiseInjectionSeedKey] = m_noiseInjectionSeed;
 
@@ -368,6 +369,17 @@ namespace CNTK
         if (version >= 2) 
         {
             ValidateDictionary<LearnerBase>(checkpoint, { smoothedGradientsKey }, s_learnerTypeValue, CurrentVersion());
+        }
+
+        if (version >= 3)
+        {
+            ValidateDictionary<LearnerBase>(checkpoint, { sweepCountKey }, s_learnerTypeValue, CurrentVersion());
+            m_sweepCount = checkpoint[sweepCountKey].Value<size_t>();
+        }
+        else
+        {
+            //version 2 should have already set m_sweepCount however it was not implemented so  set to 0 for now.
+            m_sweepCount = 0; 
         }
 
         m_sampleCount = checkpoint[sampleCountKey].Value<size_t>();

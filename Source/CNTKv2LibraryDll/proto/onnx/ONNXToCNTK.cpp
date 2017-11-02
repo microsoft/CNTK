@@ -817,6 +817,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         double blendTimeConstant = 0;
         double epsilon = 0.00001;
         bool useCuDNNEngine = true;
+        bool disableRegularization = false;
         FunctionPtr cntkFunction = BatchNormalization(operand,
             scale,
             bias,
@@ -828,6 +829,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             blendTimeConstant,
             epsilon,
             useCuDNNEngine,
+            disableRegularization,
             ToWString(node->Name()));
         return cntkFunction;
     }

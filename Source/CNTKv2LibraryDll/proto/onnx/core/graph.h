@@ -546,7 +546,7 @@ namespace ONNXIR
             const std::unordered_map<std::string, Node::EdgeEnd>& p_outputArgs);
 
         // Clean function definition map.
-        // Remove function definitions not refered by any node.
+        // Remove function definitions not referred by any node.
         void CleanFunctionDefMap(const std::set<std::string>& p_funcDefNames);
 
         // Add source/sink nodes to <*this> graph.

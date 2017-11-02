@@ -211,7 +211,7 @@ def test_learner_init():
 
     #test new API: learning_parameter_schedule
 
-    #explictly specify reference minibatch size and learning rate is in number:
+    #explicitly specify reference minibatch size and learning rate is in number:
     learner = sgd(res.parameters, lr=0.1, minibatch_size = 25)
     assert learner.is_compatible_mode() == False
     assert learner.minibatch_size == 25 #the learner's reference minibatch
@@ -219,7 +219,7 @@ def test_learner_init():
     assert learner._learning_rate_schedule.minibatch_size == 25
     assert learner.learning_rate() == 0.1
 
-    #no explictly specification of reference minibatch size and learning rate is in number:
+    #no explicitly specification of reference minibatch size and learning rate is in number:
     learner = sgd(res.parameters, lr=learning_parameter_schedule(0.1))
     assert learner.is_compatible_mode() == False
     assert learner.minibatch_size == C.learners.IGNORE #the learner's reference minibatch
@@ -242,7 +242,7 @@ def test_learner_init():
     assert learner._learning_rate_schedule.minibatch_size == 20
     assert learner.learning_rate() == 0.1
 
-    #no explictly specification of reference minibatch size and learning rate is in number:
+    #no explicitly specification of reference minibatch size and learning rate is in number:
     learner = sgd(res.parameters, lr=learning_parameter_schedule(0.1))
     assert learner.is_compatible_mode() == False
     assert learner.minibatch_size == C.learners.IGNORE #the learner's reference minibatch
@@ -251,7 +251,7 @@ def test_learner_init():
     assert learner.learning_rate() == 0.1
 
 
-    #no explictly specification of reference minibatch size and learning rate is in number:
+    #no explicitly specification of reference minibatch size and learning rate is in number:
     learner = sgd(res.parameters, lr=learning_parameter_schedule(0.1), minibatch_size=C.learners.IGNORE)
     assert learner.is_compatible_mode() == True
     assert learner.minibatch_size == C.learners.IGNORE #the learner's reference minibatch
@@ -267,7 +267,7 @@ def test_learner_init():
     assert learner._learning_rate_schedule.minibatch_size == 20
     assert learner.learning_rate() == 0.1
 
-    #no explictly specification of reference minibatch size and learning rate is in number:
+    #no explicitly specification of reference minibatch size and learning rate is in number:
     learner = sgd(res.parameters, lr=learning_parameter_schedule(0.1), minibatch_size=C.learners.IGNORE)
     assert learner.is_compatible_mode() == True
     assert learner.minibatch_size == C.learners.IGNORE #the learner's reference minibatch
