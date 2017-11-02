@@ -96,14 +96,14 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
         // this config uses a much smaller system configuration than the default system
-        embeddingDim = 256;
-        attentionDim = 256;
+        embeddingDim = 128;
+        attentionDim = 128;
         numEncoderLayers = 1;
-        encoderRecurrentDim = 256;
-        decoderRecurrentDim = 256;
+        encoderRecurrentDim = 128;
+        decoderRecurrentDim = 128;
         numDecoderResNetProjections = 0;
-        decoderProjectionDim = 256;
-        topHiddenProjectionDim = 256;
+        decoderProjectionDim = 128;
+        topHiddenProjectionDim = 128;
     }
     else if (systemId == "rom_enu")
     {
@@ -706,8 +706,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // get next minibatch
         partTimer.Restart();
-        // dynamically adjust the MB size lower at the start
-#if 0
+#if 1
+        // dynamically adjust the MB size lower at the start to ramp up
         let fullMbSizeAt = 1000000;
         let lowMbSize = minibatchSize / 16;
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
