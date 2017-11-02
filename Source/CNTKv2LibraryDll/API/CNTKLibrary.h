@@ -908,6 +908,12 @@ namespace CNTK
         CNTK_API static NDArrayViewPtr MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank, NDArrayViewPtr out = nullptr, double beta = 0);
 
         ///
+        /// Converts a tensor of indices to one-hot representation
+        /// The output view must be supplied, and can be dense or sparse.
+        ///
+        CNTK_API static NDArrayViewPtr AsOneHot(NDArrayViewPtr arg, size_t axis, NDArrayViewPtr out);
+
+        ///
         /// Batch all inputs into a single tensor, along the last or a newly created axis.
         /// Specifying an axis outside the valid range will insert such an axis; a negative value will shift the axis indices in the result.
         /// When gathering along a new axis, all inputs must have identical dimensions. Gathering along the last axis requires

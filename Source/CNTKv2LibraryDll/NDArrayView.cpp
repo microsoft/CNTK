@@ -766,6 +766,42 @@ namespace CNTK
         return out;
     }
 
+    // debugging helper
+    // Cut this into return statements to look at the result.
+    static inline NDArrayViewPtr LogHelper(const wstring& name, NDArrayViewPtr view)
+    {
+        let clone = view->IsSparse() ? view : view->NumericOperation({ view }, 1.0, opCopy); // make a copy since we can only Log contigous ones for now
+        clone->LogToFile(name);
+        return view;
+    }
+
+    /*static*/ NDArrayViewPtr NDArrayView::AsOneHot(NDArrayViewPtr arg, size_t axis, NDArrayViewPtr out)
+    {
+        // create result object if not given
+        if (!out)
+            InvalidArgument("NDArrayView::AsOneHot: output matrix must presently be supplied"); // can be fixed later if we care
+        if (out->IsSparse() && axis != 0)
+            InvalidArgument("NDArrayView::AsOneHot: sparse OneHot is only supported for axis 0"); // can be fixed later if we care
+
+        // PERF BUGBUG: Don't use vector<> for the shape!
+        // TODO: do this more nicely, e.g. move into TensorView as an op
+        const auto& outDims = out->Shape().Dimensions();
+        std::vector<size_t> outShape(outDims.begin(), outDims.end());
+        switch (arg->m_dataType)
+        {
+        case DataType::Float:
+            out->WritableNativeTensorView<float>().GetSOBViewPtr()->AssignOneHot(*arg->NativeTensorView<float>().GetSOBViewPtr(), outShape, axis, out->IsSparse());
+            break;
+        case DataType::Double:
+            out->WritableNativeTensorView<double>().GetSOBViewPtr()->AssignOneHot(*arg->NativeTensorView<double>().GetSOBViewPtr(), outShape, axis, out->IsSparse());
+            break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(arg->m_dataType));
+            break;
+        }
+        return out;
+    }
+
     template<typename ElementType>
     class TensorViewPtrArrayRef : public TensorView<ElementType>::IArrayRef<TensorView<ElementType> const*>
     {
@@ -912,15 +948,6 @@ namespace CNTK
     bool NDArrayView::IsContiguous() const
     {
         return GetTensorShape().IsDense();
-    }
-
-    // debugging helper
-    // Cut this into return statements to look at the result.
-    static inline NDArrayViewPtr LogHelper(const wstring& name, NDArrayViewPtr view)
-    {
-        let clone = view->NumericOperation({ view }, 1.0, opCopy); // make a copy since we can only Log contigous ones for now
-        clone->LogToFile(name);
-        return view;
     }
 
     NDArrayViewPtr NDArrayView::Slice(const NDShapeDimensionsSpan& startOffset, const NDShapeDimensionsSpan& extent, const NDShapeDimensionsSpan& strides, SliceMode sliceMode, bool readOnly) const

@@ -815,23 +815,29 @@ namespace CNTK
                         case PrimitiveOpType::OneHot:
                         {
                             assert(m_inputs.size() == 1);
-                            auto num_class = m_attributes[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
+                            auto numClasses = m_attributes[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
+                            isSparse = m_attributes[PrimitiveFunction::AttributeNameOneHotOutputSparse].Value<bool>();
 
                             auto inputShape = m_inputs[0].Shape();
-                            auto fakeShape = inputShape.AppendShape({num_class});
+                            auto fakeShape = inputShape.AppendShape({ 1 }); // dummy shape that has one extra dimension, just like the result
                             auto axis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>(), fakeShape);
                             if (!axis.IsStaticAxis())
                                 LogicError("Function '%S': one hot operation currently does not support on dynamic axis", AsString().c_str());
 
-                            size_t len = inputShape.Rank();
+                            size_t inputRank = inputShape.Rank();
                             int axisIndex = axis.StaticAxisIndex();
 
+                            // insert 'numClasses' into 'inputShape' at position 'axisIndex'
                             outputShape = {};
                             if (axisIndex > 0)
+                            {
+                                if (isSparse)
+                                    InvalidArgument("Function '%S': one hot operation with sparse output only supports the first axis", AsString().c_str());
                                 outputShape = outputShape.AppendShape(inputShape.SubShape(0, axisIndex));
-                            outputShape = outputShape.AppendShape({num_class});
-                            if (axisIndex < len)
-                                outputShape = outputShape.AppendShape(inputShape.SubShape(axisIndex, len));
+                            }
+                            outputShape = outputShape.AppendShape({numClasses});
+                            if (axisIndex < inputRank)
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(axisIndex, inputRank));
                             break;
                         }
                         case PrimitiveOpType::Gather:

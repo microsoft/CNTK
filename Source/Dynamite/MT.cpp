@@ -206,9 +206,47 @@ struct DecoderState
     Variable encodingProjectedDataSeq;
 };
 
+// this is the main beam decoder, for a single sentence
 template<typename InitFunctionType, typename StepFunctionType, typename OutputFunctionType>
 Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& initFunction, const StepFunctionType& stepFunction, const OutputFunctionType& outputFunction)
 {
+    let sentStartId = 1;
+    //let sentEndId = 2; // TODO: get those from the actual dictionary
+    let sentStartIdVar = Constant({ }, CurrentDataType(), sentStartId, CurrentDevice(), L"sentStart");
+    Variable sentStart = OneHotOp(sentStartIdVar, tgtVocabSize, /*outputSparse=*/true, Axis(-1));
+    sentStart.Value();
+    list<DecoderState> state = { initFunction(hEncoderSeq) }; // initial state
+    state; sentStart; 
+#if 0
+    // expansion
+    for (;;)
+    {
+    }
+
+
+
+
+
+    let historyEmbeddedSeq = embedTarget(historySeq);
+    // TODO: Forward iterator
+    for (size_t t = 0; t < historyEmbeddedSeq.size(); t++)
+    {
+        // do recurrent step (in inference, historySeq[t] would become states[t-1])
+        let historyProjectedKey = historyEmbeddedSeq[t]; CountAPICalls(1);
+
+        // do one decoding step
+        decoderState = decoderStepFunction(decoderState, historyProjectedKey);
+
+        // save the results
+        // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that. Or an iterator!
+        decoderStates[t] = decoderState;
+    }
+    let stateSeq = Splice(TransformSelectMember(decoderStates, &DecoderState::state), Axis::EndStaticAxis());
+    let attentionContextSeq = Splice(TransformSelectMember(decoderStates, &DecoderState::attentionContext), Axis::EndStaticAxis());
+    // stack of output transforms
+    let z = doToOutput(stateSeq, attentionContextSeq);
+    return z;
+#endif
     return Variable();
 }
 

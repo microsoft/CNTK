@@ -185,7 +185,7 @@ namespace CNTK
 
     enum class OpSpecificConditionKind  :  size_t // the meanings of these are specified below
     {
-        UnaryElementWise, Reducing, NoOp, Reshape, BinaryElementWise, TernaryElementWise, Pooling,
+        UnaryElementWise, Reducing, NoOp, ReshapeOneHot, BinaryElementWise, TernaryElementWise, Pooling,
         Slice, Splice, Transpose,
         MatrixProduct, Convolution,
         Barrier, BatchNormalization, OptimizedRNNStack, RandomDistribution,
@@ -221,7 +221,7 @@ namespace CNTK
         //  - the output shape for the unbatched operations is known (and they are all identical across the batch)
         //  - the batched output shape is equal to the unbatched one plus the batch axis (unless we are stacking)
         //  - hence, reductions will be done as expected by TensorView.
-        // 
+        //
         // The forward and backward code for reductions does not consider the axis properties, but instead relies
         // on the already determined output shape. This way it works after batching (whereas if it were to consult
         // the axis and found AllStaticAxes, it would reduce wrongly).
@@ -238,11 +238,12 @@ namespace CNTK
         // 
         // No-ops are see-through in the code. They are short-circuited for auto-batching and therefore never be batched.
 
-        // Reshape()
-        // ---------
+        // Reshape(), OneHot()
+        // -------------------
         // 
-        { OpSpecificConditionKind::Reshape, {
-            PrimitiveOpType::Reshape
+        { OpSpecificConditionKind::ReshapeOneHot, {
+            PrimitiveOpType::Reshape,
+            PrimitiveOpType::OneHot
         }},
         // 
         // Reshape is not a distinct operation, but short-circuited like a see-through op.
@@ -254,6 +255,9 @@ namespace CNTK
         // TODO: In two cases in auto-batching, new explicit Reshape PrimitiveFunctions are
         //       presently created. That is not necessary, and even inefficient in backprop.
         //       These should be short-circuited as well.
+        //
+        // OneHot is a distinct operation, but it behaves, shape-wise, similar to Reshape
+        // in that it can insert axes.
 
         // Binary/ternary element-wise ops
         // -------------------------------
@@ -548,7 +552,6 @@ namespace CNTK
             PrimitiveOpType::LabelsToGraph,
             PrimitiveOpType::ForwardBackward,
             PrimitiveOpType::CosDistanceWithNegativeSamples,
-            PrimitiveOpType::OneHot,  // find out whether this is valuable, e.g. for Hardmax
             PrimitiveOpType::RandomSample,
             PrimitiveOpType::RandomSampleInclusionFrequency
         }}
@@ -1706,8 +1709,11 @@ class InternalVariable::AutoBatch
                     return{ StackingMode::STACKING_BUT_MAY_BATCH, freeAxis, lastDim };
                 InvalidArgument("DetermineBatchAxis: The rank of an argument to a basic block invocation exceeds the declared free-axis position.");
             }
-            if (op == PrimitiveOpType::Splice || op == PrimitiveOpType::Reshape)
+            if (op == PrimitiveOpType::Splice || op == PrimitiveOpType::Reshape || op == PrimitiveOpType::OneHot)
             {
+                // BUGBUG: Is this correct for Reshape()?
+                //         If Reshape does not touch the last axis, we can STACK, otherwise not, I think.
+                //         Same for OneHot.
                 updateRankDimSparse(GetOutputFields(f));
             }
             // sparse inputs can only be batched/stacked in axis 1
@@ -1735,7 +1741,7 @@ class InternalVariable::AutoBatch
                 // TODO: Once we short-circuit in static graphs, we should not get here at all.
                 if (f.m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec)) // vector of slices
                 {
-                    let& axes = AsVector<Axis>(f.m_attributes[PrimitiveFunction::AttributeNameAxisVec      ].Value<vector<DictionaryValue>>());
+                    let& axes = AsVector<Axis>(f.m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<vector<DictionaryValue>>());
                     for (size_t i = 0; i < axes.size(); i++)
                     {
                         let axisIndex = axes[i].StaticAxisIndex();
@@ -1750,6 +1756,9 @@ class InternalVariable::AutoBatch
                         goto mustBatch; // touched. Can't stack, must batch.
                 }
                 break;
+            case PrimitiveOpType::OneHot: // TODO
+                // BUGBUG: This is not complete. Think this through. For now, only used for scalar constant to vector expansion.
+                return{ StackingMode::BATCHING, maxRank, 1 };
             case PrimitiveOpType::TransposeAxes: // TODO
                 fail_if(true, "DetermineBatchAxis: not yet implemented for TransposeAxes");
                 break;
@@ -3440,7 +3449,7 @@ class InternalVariable::AutoBatch
         let commonInputBatchAxis = batchAxis; // TODO: remove this extra name
         let outputBatchAxis = isTimes ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : batchAxis;
         if (!isTimes &&
-            op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && op != PrimitiveOpType::Block &&
+            op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && op != PrimitiveOpType::OneHot && op != PrimitiveOpType::Block &&
             f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
             LogicError("elementwise op that increases rank??");
         //if (op == PrimitiveOpType::Block && stackingMode == StackingMode::BATCHING)

@@ -228,7 +228,10 @@ namespace CNTK
             }
             break;
         case PrimitiveOpType::OneHot:
-            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            NDArrayView::AsOneHot(args[0],
+                                  (size_t)attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>().StaticAxisIndex(),
+                                  out);
+            break;
             // the following operations are not TensorView, and hence should be routed through V1 ComputationNodes
             // convolution family
         case PrimitiveOpType::Convolution:  // TODO: route these through TensorView
@@ -557,6 +560,8 @@ namespace CNTK
             else
                 op0 = true; // no gradients except for
             break;
+        case PrimitiveOpType::OneHot: // should we just make it zero?
+            LogicError("Variable '%S' Value(): Backpropagation for operation %S is not defined.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
             LogicError("Variable '%S' Value(): Backpropagation for operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
@@ -587,5 +592,4 @@ namespace CNTK
         else if (!handled)
             LogicError("Variable '%S' Value(): Gradient for operation %S misses a handler.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
     }
-
 }
