@@ -59,6 +59,7 @@ size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
 size_t subMinibatches = 1;
+string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
 size_t saveEvery = 2000;
@@ -95,9 +96,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
         subMinibatches = 10;
-        learningRate *= 10;
         numEncoderLayers = 1;
-        numDecoderResNetProjections = 0;
         use1BitSgd = true;
     }
     else if (systemId == "rom_enu")
@@ -120,8 +119,8 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
 }
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() == 0) ? LOG(var) : 0)
-#define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() == 0) ? PrintSequence((prefix), (var), (vocab)) : 0)
+#define DOLOG(var) (0)//((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() == 0) ? LOG(var) : 0)
+#define DOPRINT(prefix, var, vocab) (0)//((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() == 0) ? PrintSequence((prefix), (var), (vocab)) : 0)
 static void PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile);
 
 fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
@@ -420,7 +419,7 @@ fun CreateModelFunction()
         [=](const Variable& sourceSeq, const Variable& historySeq) -> Variable
         {
             // embedding
-            let& W = embedFwd.Nested(L"embed")[L"W"];
+            //let& W = embedFwd.Nested(L"embed")[L"W"];
             DOLOG(W);
             let eFwd = embedFwd(sourceSeq);
             let eBwd = eFwd;// embedBwd(sourceSeq);
@@ -528,7 +527,7 @@ static string OneHotToWordSequence(const NDArrayViewPtr& seq, const wstring& voc
 #endif
 }
 
-static void PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile)
+static inline void PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile)
 {
     fprintf(stderr, "\n%s=%s\n", prefix, OneHotToWordSequence(seq.Value(), vocabFile).c_str()), fflush(stderr);
 }
@@ -582,19 +581,28 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     let minibatchSize = 4096      * communicator->Workers().size() /6; // for debugging: switch to smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 0.2;
-#if 0
-    auto baseLearner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.0005), learnerOptions);
-#else
-    // AdaGrad correction-correction:
-    //  - LR is specified for av gradient
-    //  - numer should be /minibatchSize
-    //  - denom should be /sqrt(minibatchSize)
-    let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
-    let lr0 = learningRate * f;
-    auto baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
-                                   MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
-                                   learnerOptions);
-#endif
+    LearnerPtr baseLearner;
+    double lr0;
+    if (learnerType == "sgd")
+    {
+        let f = 1.0;
+        lr0 = learningRate * f;
+        baseLearner = SGDLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0 / 2, lr0 / 4, lr0 / 8 }, epochSize), learnerOptions);
+    }
+    else if (learnerType == "adam")
+    {
+        // AdaGrad correction-correction:
+        //  - LR is specified for av gradient
+        //  - numer should be /minibatchSize
+        //  - denom should be /sqrt(minibatchSize)
+        let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
+        // ...TODO: Haven't I already added that to the base code??
+        lr0 = learningRate * f;
+        baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
+                                  MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
+                                  learnerOptions);
+    }
+    else InvalidArgument("Invalid --learner %s", learnerType.c_str());
     // TODO: move this out
     let CreateDistributedLearner = [](const LearnerPtr& baseLearner, const DistributedCommunicatorPtr& communicator)
     {
@@ -1102,6 +1110,8 @@ int mt_main(int argc, char *argv[])
         wstring workingDirectory = L"d:/mt/experiments"; // output dir = "$workingDirectory/$experimentId/"
         wstring modelPath;
         size_t fromMbCount = 0;
+        size_t firstGpu = 0;
+        size_t numBits = 4;
         struct SystemSentinel : public string
         {
             wstring ToWString() const { return wstring(begin(), end()); }
@@ -1121,7 +1131,11 @@ int mt_main(int argc, char *argv[])
                 // optional overrides of global stuff
                 "?workingDirectory", workingDirectory,
                 "?modelPath", modelPath,
+                "?firstGpu", firstGpu,
+                "?numBits", numBits,
                 // these are optional to override the system settings
+                "?learner", learnerType,
+                "?learningRate", learningRate,
                 "?fromMb", fromMbCount);
         }
         catch (const exception& e)
@@ -1137,16 +1151,22 @@ int mt_main(int argc, char *argv[])
             modelPath = outputDirectory + L"/model.dmf"; // DMF=Dynamite model file
 
         // set up parallel communicator
+        use1BitSgd = numBits != 0;
+        fprintf(stderr, "Using %d-bit quantization (0=off)\n", (int)numBits);
         let communicator =
             /*if*/use1BitSgd ?
-                QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/1)
+                QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/numBits)
             /*else*/ :
                 MPICommunicator();
 #if 1 // while we are running with MPI, we always start from start
         let numGpus = DeviceDescriptor::AllDevices().size() - 1;
         let ourRank = communicator->CurrentWorker().m_globalRank;
         if (numGpus > 0)
-            SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)(ourRank % numGpus)));
+        {
+            let ourGpu = (ourRank + firstGpu) % numGpus;
+            fprintf(stderr, "Worker %d using GPU %d\n", (int)ourRank, (int)ourGpu);
+            SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)ourGpu));
+        }
         else
             SetCurrentDevice(DeviceDescriptor::CPUDevice());
 #endif

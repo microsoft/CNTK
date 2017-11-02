@@ -22,8 +22,8 @@
 //#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 // use these to locally disable batch norm at places
-#define ProjectionOptions_batchNormalize ProjectionOptions::stabilize/*batchNormalize*/
-//#define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
+//#define ProjectionOptions_batchNormalize ProjectionOptions::stabilize/*batchNormalize*/
+#define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
 
 #ifndef let
 #define let const auto
@@ -148,16 +148,8 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount },
         [=](const Variable& x) -> Variable
         {
-            let batchNorm = [&](const Variable& x) // apply to one sample
-            {
-                CountAPICalls(1);
-                return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
-            };
-            // BUGBUG: This cannot work once we reenable static graphs.
-            //if (x.Shape().Rank() == axis) // single item
-                return batchNorm(x);
-            //else // a batch of items
-            //    return Dynamite::Sequence::map(x, batchNorm, buffer);
+            CountAPICalls(1);
+            return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
         });
 #endif
 }
@@ -438,8 +430,8 @@ static TernaryModel LSTM(size_t outputDim) // TODO: finish this once we have tup
 static UnaryModel ResidualNet(size_t outputDim)
 {
     // TODO: why not combine with weightNormalize?
-    let project1 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project1"));
-    let project2 = Linear(outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, Named("project2"));
+    let project1 = Linear(outputDim, ProjectionOptions_batchNormalize, Named("project1"));
+    let project2 = Linear(outputDim, ProjectionOptions_batchNormalize, Named("project2"));
     let doResidualNet = StaticModel(/*isBasicBlock=*/false,
         [=](const Variable& x)
         {
