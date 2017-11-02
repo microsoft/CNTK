@@ -111,7 +111,7 @@ private:
     // Compute the dimensions of the output variable and return the proper shape and dynamic axes
     OutputsVectorType InferOutputs() override
     {
-        std::vector<Variable> outputs;
+        std::vector<InternalVariable> outputs;
         // Pull out the inputs to the function, left is kernels right is activations
         auto leftOperand = Inputs()[0];
         auto rightOperand = Inputs()[1];

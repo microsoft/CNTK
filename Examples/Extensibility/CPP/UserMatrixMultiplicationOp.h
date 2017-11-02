@@ -124,7 +124,7 @@ private:
 
     OutputsVectorType InferOutputs() override
     {
-        std::vector<Variable> outputs;
+        std::vector<InternalVariable> outputs;
         auto leftOperand = Inputs()[0];
         auto rightOperand = Inputs()[1];
 
