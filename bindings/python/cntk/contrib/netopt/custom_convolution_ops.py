@@ -3,11 +3,11 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
-from cntk import *
+from cntk.ops import *
 from cntk.ops.functions import UserFunction
 import numpy as np
 import cntk as C
+
 
 # custom sign function using the straight through estimator as gradient. This is implemented without a numpy intermediate
 # representation, giving a much faster run time.
@@ -125,8 +125,8 @@ class MultibitKernel(UserFunction):
         approx = C.element_times(multiIn, 0)
         # iterate through the maximum number of bits specified by the bit maps, basically compute each level of binarization
         for i in range(max_bits):
-            # determine which values of the input should be binarized to i bits or more
-            hot_vals = C.greater(bit_map, i)
+            # determine which values of the input should be binarized to i bits or more            
+            hot_vals = (np.greater(bit_map, i)).as_type(int)
             # select only the values which we need to binarize
             valid_vals = C.element_select(hot_vals, carry_over, 0)
             # compute mean on a per kernel basis, reshaping is done to allow for sum reduction along only axis 0 (the kernels)
@@ -275,10 +275,10 @@ class Multibit(UserFunction):
 
 # these are the face of the custom functions, they simply instantiate a custom function by calling user_function
 def CustomSign(input):
-    return user_function(Sign(input))
+    return C.user_function(Sign(input))
 
 def CustomPySign(input):
-    return user_function(pySign(input))
+    return C.user_function(pySign(input))
 
 def CustomMultibit(input, bit_map, mean_bits=None):
     if (mean_bits):
@@ -293,7 +293,7 @@ def CustomMultibit(input, bit_map, mean_bits=None):
         else:
             bit_map = np.asarray(bit_map)
     assert (bit_map.shape == input.shape)
-    return user_function(Multibit(input, bit_map))
+    return C.user_function(Multibit(input, bit_map))
 
 def CustomMultibitKernel(input, bit_map, mean_bits=None):
     if (mean_bits):
@@ -308,4 +308,4 @@ def CustomMultibitKernel(input, bit_map, mean_bits=None):
         else:
             bit_map = np.asarray(bit_map)
     assert (bit_map.shape == input.shape)
-    return user_function(MultibitKernel(input, bit_map))
+    return C.user_function(MultibitKernel(input, bit_map))

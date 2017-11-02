@@ -3,9 +3,6 @@ import pytest
 import cntk as C
 import cntk.contrib.netopt.quantization as qc
 C.cntk_py.set_fixed_random_seed(1)
-C.cntk_py.force_deterministic_algorithms()
-
-C.try_set_default_device(C.cpu())
 
 inC, inH, inW = 1, 28, 28
 num_classes = 10
@@ -68,13 +65,27 @@ def test_binarization():
     assert(len(blocks) == 3) # now only three of them should be converted.
     assert(all(b.op_name != 'first_convo' for b in blocks))
 
-    native_binz = qc.optimize_binary_convolution(binz)
+
+def test_native_convolution():
+
+    z = _create_convolution_model()
+    binz = qc.binarize_convolution(z, _filter)
+    
+    # save and load to transfer the model to CPU device as native binary
+    # convolution does not run on GPU yet.
+    model_path = "binary_model.cmf"
+    binz.save(model_path)
+
+    eval_device = C.cpu()
+    model = C.Function.load(model_path, device=eval_device)
+    
+    # convert to native halide implementation.
+    native_binz = qc.optimize_binary_convolution(model)
 
     functions = C.logging.graph.depth_first_search(
-                native_binz, (lambda x : type(x) == C.Function and x.op_name =='BinaryConvolveOp') , depth = 0)
+                native_binz, (lambda x : type(x) == C.Function and x.op_name =='BinaryConvolveOp') , depth = 0)    
+    assert(len(functions) == 3)
     
-    assert(len(blocks) == 3)
-
     img_data = np.reshape(dat, (1, 1, 28, 28))
-    res = native_binz.eval(img_data)
+    res = native_binz.eval(img_data, device=eval_device)
     assert(len(res) > 0) # evaluation should work with the new model.
