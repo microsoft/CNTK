@@ -696,14 +696,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // get next minibatch
         partTimer.Restart();
-        let minibatchSizeToUse =
-            /*if*/(totalLabels > 400000) ?
-                minibatchSize
-            /*else if*/: (totalLabels > 40000) ?
-                minibatchSize / 4
-            /*else*/:
-                minibatchSize / 16;
-        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, minibatchSizeToUse,
+        // dynamically adjust the MB size lower at the start
+        let fullMbSizeAt = 1000000;
+        let lowMbSize = minibatchSize / 16;
+        let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
+        let actualMinibatchSize = clamp(lowMbSize + (minibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, minibatchSize);
+        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, actualMinibatchSize,
                                 communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, CurrentDataType(), CurrentDevice());
         let timeGetNextMinibatch = partTimer.Elapsed();
         //partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
@@ -744,9 +742,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 maxLabels = max(maxLabels, len);
             }
             //partTimer.Log("GetNextMinibatch", numLabels);
-            fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f\n", (int)mbCount,
+            fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, mbSize=%d\n", (int)mbCount,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
-                    lr0, learner->LearningRate() / lr0);
+                    lr0, learner->LearningRate() / lr0, (int)actualMinibatchSize);
 #if 0       // log the sequences
             for (size_t n = 0; n < numSeq; n++)
             {
@@ -813,7 +811,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             mbLoss = Variable(); // this destructs the entire graph
             let timeDeleteGraph = partTimer.Elapsed();
             if (communicator->CurrentWorker().IsMain())
-                fprintf(stderr, "%5d:  loss, PPL = [smoothed] %5.2f, ### %8.2f ### [this] %10.7f, %9.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
+                fprintf(stderr, "%5d:  loss, PPL = [smoothed] %4.2f, ### %8.2f ### [this] %9.7f, %6.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
                                 (int)mbCount, smoothedLossVal, exp(smoothedLossVal), lossPerLabel, exp(lossPerLabel), (int)totalLabels,
                                 info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples,
                                 1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
