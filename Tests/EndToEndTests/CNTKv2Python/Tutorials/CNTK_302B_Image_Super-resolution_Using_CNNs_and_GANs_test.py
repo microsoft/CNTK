@@ -35,7 +35,6 @@ def test_cntk_302b_superresolution_cnns_gans_noErrors(nb):
     assert os.path.exists(os.path.join(datadir, "train224"))
 
     assert len(os.listdir(os.path.join(datadir, "tests"))) > 0
-    assert len(os.listdir(os.path.join(datadir, "Images"))) >= 200
     assert len(os.listdir(os.path.join(datadir, "train64_LR"))) > 20000
     assert len(os.listdir(os.path.join(datadir, "train64_HR"))) == len(os.listdir(os.path.join(datadir, "train64_LR")))
     assert len(os.listdir(os.path.join(datadir, "train112"))) > 10000
