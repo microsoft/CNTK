@@ -666,63 +666,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // TODO: move this to a different place, e.g. the helper header
     //let SaveCheckpoint = [](const wstring& path, const FunctionPtr& compositeFunction,
     //    size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
-
-    let RestoreFromCheckpoint = [](const wstring& path, const FunctionPtr& compositeFunction,
-                                   size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
-    {
-        // restarting after crash. Note: not checkpointing the reader yet.
-        // TODO: The code below is copy-paste from Trainer.cpp, since it is not public. Move this down through the API.
-        // TODO: Can we just wrap everything in an actual Trainer instance, and use that?
-        //model_fn.RestoreParameters(path);
-        std::wstring trainerStateCheckpointFilePath = path + L".ckp";
-
-        // Restore the model's parameters
-        compositeFunction->Restore(path);
-
-        // restore remaining state
-        Dictionary checkpoint = Dictionary::Load(trainerStateCheckpointFilePath);
-
-        const std::wstring internalWorkerStateKey = L"internal_worker_state"; // these are from Serialization.h
-        const std::wstring externalWorkerStateKey = L"external_worker_state";
-
-        // TODO: reuse from Trainer.cpp:
-        const std::wstring versionPropertyName = L"Version";
-        const std::wstring learnersPropertyName = L"Learners";
-        const std::wstring externalStatePropertyName = L"ExternalState";
-        const std::wstring distributedStatePropertyName = L"DistributedState";
-
-        auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>().front().Value<Dictionary>();
-        auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
-
-        learner->RestoreFromCheckpoint(learnerState);
-
-        if (numWorkers > 1 || true)
-        {
-            // this ensures that nobody will start writing to the model/checkpoint files, until
-            // everybody is done reading them.
-            DistributedCommunicatorPtr checkpointCommunicator = MPICommunicator();
-            checkpointCommunicator->Barrier();
-
-            auto mainWorkerId = std::to_wstring(0);
-            auto localWorkerId = std::to_wstring(checkpointCommunicator->CurrentWorker().m_globalRank);
-
-            Dictionary distributedState = checkpoint[distributedStatePropertyName].Value<Dictionary>();
-
-            if (!checkpointCommunicator->CurrentWorker().IsMain() && distributedState.Contains(localWorkerId))
-            {
-                // the checkpoint contains internal state for this worker.
-                Dictionary localState = distributedState[localWorkerId].Value<Dictionary>();
-                externalState = localState[externalWorkerStateKey].Value<Dictionary>();
-            }
-        }
-
-        minibatchSource->RestoreFromCheckpoint(externalState[/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource"].Value<Dictionary>());
-    };
     if (startMbCount > 0)
     {
         let path = IntermediateModelPath(modelPath, startMbCount);
         fprintf(stderr, "restarting from: %S... ", path.c_str()), fflush(stderr);
-        RestoreFromCheckpoint(path, model_fn.ParametersCombined(), communicator->Workers().size(), minibatchSource, learner);
+        Dynamite::RestoreFromCheckpoint(path, model_fn.ParametersCombined(), communicator->Workers().size(), minibatchSource, learner);
         fprintf(stderr, "done\n"), fflush(stderr);
     }
     fflush(stderr);
@@ -730,71 +678,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     mbCount = startMbCount;
     for (;;)
     {
-        // TODO: move this out somewhere, e.g. the helper header
-        let SaveCheckpoint = [](const wstring& path, const FunctionPtr& compositeFunction,
-                                size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
-        {
-            // reader state
-            Dictionary externalState(/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource", minibatchSource->GetCheckpointState());
-
-            // learner state
-            std::vector<DictionaryValue> learnersState{ learner->CreateCheckpoint() };
-
-            Dictionary aggregatedState;
-            DistributedCommunicatorPtr checkpointCommunicator;
-            if (numWorkers > 1    ||true)
-                checkpointCommunicator = MPICommunicator();
-            if (checkpointCommunicator)
-            {
-                const std::wstring internalWorkerStateKey = L"internal_worker_state"; // these are from Serialization.h
-                const std::wstring externalWorkerStateKey = L"external_worker_state";
-                Dictionary localState(internalWorkerStateKey, Dictionary(), externalWorkerStateKey, externalState);
-
-                // Collect distrbuted external localState.
-                checkpointCommunicator = MPICommunicator();
-                checkpointCommunicator->Barrier();
-
-                std::vector<DictionaryPtr> remoteState;
-                checkpointCommunicator->Gather(localState, remoteState, checkpointCommunicator->Workers());
-
-                for (const auto& w : checkpointCommunicator->Workers())
-                    aggregatedState[std::to_wstring(w.m_globalRank)] = *remoteState[w.m_globalRank];
-            }
-
-            if (!checkpointCommunicator || checkpointCommunicator->CurrentWorker().IsMain())
-            {
-                // TODO: reuse from Trainer.cpp:
-                const std::wstring versionPropertyName = L"Version";
-                const std::wstring learnersPropertyName = L"Learners";
-                const std::wstring externalStatePropertyName = L"ExternalState";
-                const std::wstring distributedStatePropertyName = L"DistributedState";
-                static const size_t trainerCheckpointVersion = 1;
-
-                Dictionary state(
-                    versionPropertyName         , trainerCheckpointVersion,
-                    learnersPropertyName        , learnersState,
-                    externalStatePropertyName   , externalState,
-                    distributedStatePropertyName, aggregatedState);
-
-                // TODO: rename must check return code. To fix this, just move this down to the API and use the functions in Trainer.cpp.
-                std::wstring tempModelPath = path + L".tmp";
-                std::wstring trainerStateCheckpointFilePath = path + L".ckp";
-                std::wstring tempCheckpointPath = trainerStateCheckpointFilePath + L".tmp";
-                compositeFunction->Save(tempModelPath);
-                state.Save(tempCheckpointPath);
-                _wunlink(path.c_str());
-                _wunlink(trainerStateCheckpointFilePath.c_str());
-                _wrename(tempModelPath.c_str(), path.c_str());
-                _wrename(tempCheckpointPath.c_str(), trainerStateCheckpointFilePath.c_str());
-            }
-
-            if (checkpointCommunicator)
-                // all workers need to sync up after saving model to avoid read-after-write hazard
-                // i.e. one worker is in the middle of write while another tries to read
-                checkpointCommunicator->Barrier();
-                // Note: checkpointCommunicator is destructed at end of this block
-
-        };
         // checkpoint
         // BUGBUG: For now, 'saveEvery' must be a multiple of subMinibatches, otherwise it won't save
         if (mbCount % saveEvery == 0 &&
@@ -802,7 +685,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         {
             let modelPathN = IntermediateModelPath(modelPath, mbCount);
             fprintf(stderr, "ssaving: %S... ", modelPathN.c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
-            SaveCheckpoint(modelPathN, model_fn.ParametersCombined(), communicator->Workers().size(), minibatchSource, learner);
+            Dynamite::SaveCheckpoint(modelPathN, model_fn.ParametersCombined(), communicator->Workers().size(), minibatchSource, learner);
             fprintf(stderr, "done%s\n", communicator->CurrentWorker().IsMain() ? "" : " by main worker"), fflush(stderr);
             // test model saving
             //for (auto& param : parameters) // destroy parameters as to prove that we reloaded them correctly.
@@ -813,7 +696,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // get next minibatch
         partTimer.Restart();
-        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, minibatchSize,
+        let minibatchSizeToUse =
+            /*if*/(totalLabels > 400000) ?
+                minibatchSize
+            /*else if*/: (totalLabels > 40000) ?
+                minibatchSize / 4
+            /*else*/:
+                minibatchSize / 16;
+        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, minibatchSizeToUse,
                                 communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, CurrentDataType(), CurrentDevice());
         let timeGetNextMinibatch = partTimer.Elapsed();
         //partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);

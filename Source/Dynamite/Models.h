@@ -218,6 +218,127 @@ static inline TModel<Lambda> Model(const vector<Parameter>& parameters, const ma
     return TModel<Lambda>(parameters, nested, f);
 }
 
+// helper to save and restore
+static inline
+void SaveCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
+                    size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
+{
+    // reader state
+    Dictionary externalState(/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource", minibatchSource->GetCheckpointState());
+
+    // learner state
+    std::vector<DictionaryValue> learnersState{ learner->CreateCheckpoint() };
+
+    Dictionary aggregatedState;
+    DistributedCommunicatorPtr checkpointCommunicator;
+    if (numWorkers > 1    ||true)
+        checkpointCommunicator = MPICommunicator();
+    if (checkpointCommunicator)
+    {
+        const std::wstring internalWorkerStateKey = L"internal_worker_state"; // these are from Serialization.h
+        const std::wstring externalWorkerStateKey = L"external_worker_state";
+        Dictionary localState(internalWorkerStateKey, Dictionary(), externalWorkerStateKey, externalState);
+
+        // Collect distrbuted external localState.
+        checkpointCommunicator = MPICommunicator();
+        checkpointCommunicator->Barrier();
+
+        std::vector<DictionaryPtr> remoteState;
+        checkpointCommunicator->Gather(localState, remoteState, checkpointCommunicator->Workers());
+
+        for (const auto& w : checkpointCommunicator->Workers())
+            aggregatedState[std::to_wstring(w.m_globalRank)] = *remoteState[w.m_globalRank];
+    }
+
+    if (!checkpointCommunicator || checkpointCommunicator->CurrentWorker().IsMain())
+    {
+        // TODO: reuse from Trainer.cpp:
+        const std::wstring versionPropertyName = L"Version";
+        const std::wstring learnersPropertyName = L"Learners";
+        const std::wstring externalStatePropertyName = L"ExternalState";
+        const std::wstring distributedStatePropertyName = L"DistributedState";
+        static const size_t trainerCheckpointVersion = 1;
+
+        Dictionary state(
+            versionPropertyName         , trainerCheckpointVersion,
+            learnersPropertyName        , learnersState,
+            externalStatePropertyName   , externalState,
+            distributedStatePropertyName, aggregatedState);
+
+        // TODO: rename must check return code. To fix this, just move this down to the API and use the functions in Trainer.cpp.
+        std::wstring tempModelPath = path + L".tmp";
+        std::wstring trainerStateCheckpointFilePath = path + L".ckp";
+        std::wstring tempCheckpointPath = trainerStateCheckpointFilePath + L".tmp";
+        compositeFunction->Save(tempModelPath);
+        state.Save(tempCheckpointPath);
+        _wunlink(path.c_str());
+        _wunlink(trainerStateCheckpointFilePath.c_str());
+        _wrename(tempModelPath.c_str(), path.c_str());
+        _wrename(tempCheckpointPath.c_str(), trainerStateCheckpointFilePath.c_str());
+    }
+
+    if (checkpointCommunicator)
+        // all workers need to sync up after saving model to avoid read-after-write hazard
+        // i.e. one worker is in the middle of write while another tries to read
+        checkpointCommunicator->Barrier();
+        // Note: checkpointCommunicator is destructed at end of this block
+
+}
+
+static inline
+void RestoreFromCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
+                          size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
+{
+    // restarting after crash. Note: not checkpointing the reader yet.
+    // TODO: The code below is copy-paste from Trainer.cpp, since it is not public. Move this down through the API.
+    // TODO: Can we just wrap everything in an actual Trainer instance, and use that?
+    //model_fn.RestoreParameters(path);
+    std::wstring trainerStateCheckpointFilePath = path + L".ckp";
+
+    // Restore the model's parameters
+    compositeFunction->Restore(path);
+
+    // restore remaining state
+    Dictionary checkpoint = Dictionary::Load(trainerStateCheckpointFilePath);
+
+    const std::wstring internalWorkerStateKey = L"internal_worker_state"; // these are from Serialization.h
+    const std::wstring externalWorkerStateKey = L"external_worker_state";
+
+    // TODO: reuse from Trainer.cpp:
+    const std::wstring versionPropertyName = L"Version";
+    const std::wstring learnersPropertyName = L"Learners";
+    const std::wstring externalStatePropertyName = L"ExternalState";
+    const std::wstring distributedStatePropertyName = L"DistributedState";
+
+    auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>().front().Value<Dictionary>();
+    auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
+
+    learner->RestoreFromCheckpoint(learnerState);
+
+    if (numWorkers > 1 || true)
+    {
+        // this ensures that nobody will start writing to the model/checkpoint files, until
+        // everybody is done reading them.
+        DistributedCommunicatorPtr checkpointCommunicator = MPICommunicator();
+        checkpointCommunicator->Barrier();
+
+        auto mainWorkerId = std::to_wstring(0);
+        auto localWorkerId = std::to_wstring(checkpointCommunicator->CurrentWorker().m_globalRank);
+
+        Dictionary distributedState = checkpoint[distributedStatePropertyName].Value<Dictionary>();
+
+        if (!checkpointCommunicator->CurrentWorker().IsMain() && distributedState.Contains(localWorkerId))
+        {
+            // the checkpoint contains internal state for this worker.
+            Dictionary localState = distributedState[localWorkerId].Value<Dictionary>();
+            externalState = localState[externalWorkerStateKey].Value<Dictionary>();
+        }
+    }
+
+    minibatchSource->RestoreFromCheckpoint(externalState[/*s_trainingMinibatchSource=*/L"TrainingMinibatchSource"].Value<Dictionary>());
+}
+
+
 // helper to create a unary static lambda by running a lambda over a Placeholder
 class StaticModel
 {
