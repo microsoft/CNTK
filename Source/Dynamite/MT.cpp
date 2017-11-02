@@ -213,10 +213,12 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& initFun
     let sentStartId = 1;
     //let sentEndId = 2; // TODO: get those from the actual dictionary
     let sentStartIdVar = Constant({ }, CurrentDataType(), sentStartId, CurrentDevice(), L"sentStart");
-    Variable sentStart = OneHotOp(sentStartIdVar, tgtVocabSize, /*outputSparse=*/true, Axis(-1));
+    auto axism1 = Axis(-1); // API BUGBUG: must change to const&, next time we change the lib header anyway
+    Variable sentStart = OneHotOp(sentStartIdVar, tgtVocabSize, /*outputSparse=*/true, axism1/*Axis(-1)*/);
     sentStart.Value();
     list<DecoderState> state = { initFunction(hEncoderSeq) }; // initial state
     state; sentStart; 
+    outputFunction; stepFunction;
 #if 0
     // expansion
     for (;;)
@@ -535,8 +537,8 @@ MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& 
 {
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
-            PlainTextStreamConfiguration(L"src", srcVocabSize, { srcTrainFile }, { srcVocabFile, L"<s>", L"</s>", L"<unk>" }),
-            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { tgtTrainFile }, { tgtVocabFile, L"<s>", L"</s>", L"<unk>" })
+            PlainTextStreamConfiguration(L"src", srcVocabSize, { srcFile }, { srcVocabFile, L"<s>", L"</s>", L"<unk>" }),
+            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { tgtFile }, { tgtVocabFile, L"<s>", L"</s>", L"<unk>" })
         }) },
         /*randomize=*/true);
     minibatchSourceConfig.maxSamples = infinitelyRepeat ? MinibatchSource::InfinitelyRepeat : MinibatchSource::FullDataSweep;
@@ -965,7 +967,7 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
     // MINIBATCH LOOP
     auto criterion_fn = CreateCriterionFunction(model_fn); // ...for now
     vector<vector<vector<Variable>>> args; // [subMinibatchIndex, streamIndex, sequenceIndex]
-    for (size_t mbCount = 0; ; mbCount++)
+    for (mbCount = 0; ; mbCount++)
     {
         // get next minibatch
         bool gotData = Dynamite::GetSubBatches(args, { L"src", L"tgt" }, /*subMinibatches=*/1, /*shuffleSeed=*/0, minibatchSource, minibatchSize, /*numWorkers=*/1, /*currentWorker=*/0, CurrentDataType(), CurrentDevice());
@@ -987,7 +989,7 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
             numLabels += len;
             maxLabels = max(maxLabels, len);
         }
-#if 1   // beam decoding
+#if 0   // beam decoding
         for (size_t seqId = 0; seqId < numSeq; seqId++)
         {
             let& srcSeq = subBatchArgs[0][seqId];
