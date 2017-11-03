@@ -632,7 +632,7 @@ def bounded_cache(maxsize):
             def __missing__(self, key):
                 if len(self) >= maxsize:
                     self.clear()
-                self[key] = ret = self.f(*key)
+                self[key] = ret = func(*key)
                 return ret
         return memodict(func)
     return memoize
