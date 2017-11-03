@@ -23,7 +23,8 @@ __C.MODEL.LAST_HIDDEN_NODE_NAME = "drop7"
 __C.MODEL.FEATURE_STRIDE = 16
 __C.MODEL.RPN_NUM_CHANNELS = 512
 __C.MODEL.ROI_DIM = 7
-## for Grocery dataset, it may be better to set LR_FACTOR to 0.1
+## Try changing `LR_FACTOR` parameters, if the training does not converge. 
+## Ex.) For Grocery dataset, they may be better to set them to 0.1
 __C.MODEL.E2E_LR_FACTOR = 1.0
 __C.MODEL.RPN_LR_FACTOR = 1.0
 __C.MODEL.FRCN_LR_FACTOR = 1.0
