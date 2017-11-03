@@ -22,6 +22,7 @@ from cntk.logging.graph import find_by_name, plot
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from _cntk_py import force_deterministic_algorithms
+from cntk import distributed
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, ".."))
@@ -298,6 +299,10 @@ def train_faster_rcnn(cfg):
                                           .format(cfg["MODEL"].BASE_MODEL, "e2e" if cfg["CNTK"].TRAIN_E2E else "4stage", cfg["CNTK"].GRAPH_TYPE)))
 
         print("Stored eval model at %s" % model_path)
+
+    if cfg.DISTRIBUTED_FLG:
+        distributed.Communicator.finalize()
+
     return eval_model
 
 # Trains a Faster R-CNN model end-to-end
@@ -524,11 +529,19 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
     lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
     learner = momentum_sgd(others, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
                            unit_gain=False, use_mean_gradient=True)
+    learner = distributed.data_parallel_distributed_learner(
+        learner = learner,
+        num_quantization_bits = cfg.NUM_QUANTIZATION_BITS,   # non-quantized gradient accumulation
+        distributed_after = cfg.WARM_UP)                     # no warm start as default
 
     bias_lr_per_sample = [v * bias_lr_mult for v in lr_per_sample]
     bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, unit=UnitType.sample)
     bias_learner = momentum_sgd(biases, bias_lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
                            unit_gain=False, use_mean_gradient=True)
+    bias_learner = distributed.data_parallel_distributed_learner(
+        learner = bias_learner,
+        num_quantization_bits = cfg.NUM_QUANTIZATION_BITS,   # non-quantized gradient accumulation
+        distributed_after = cfg.WARM_UP)                     # no warm start as default
     trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
 
     # Get minibatches of images and perform model training
@@ -563,11 +576,17 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
     else:
         input_map[od_minibatch_source.dims_si] = dims_input
 
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=epochs_to_train, gen_heartbeat=True)
+    progress_printer = ProgressPrinter(tag='Training'
+                                    , num_epochs=epochs_to_train
+                                    , gen_heartbeat=True
+                                    , rank=distributed.Communicator.rank())
     for epoch in range(epochs_to_train):       # loop over epochs
         sample_count = 0
         while sample_count < cfg["DATA"].NUM_TRAIN_IMAGES:  # loop over minibatches in the epoch
-            data = od_minibatch_source.next_minibatch(min(cfg.MB_SIZE, cfg["DATA"].NUM_TRAIN_IMAGES-sample_count), input_map=input_map)
+            data = od_minibatch_source.next_minibatch(min(cfg.MB_SIZE * cntk.Communicator.num_workers(), cfg["DATA"].NUM_TRAIN_IMAGES-sample_count), 
+                input_map=input_map, 
+                number_of_workers=cntk.Communicator.num_workers(), 
+                worker_rank=cntk.Communicator.rank())
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
@@ -575,3 +594,4 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
                 print("Processed {} samples".format(sample_count))
 
         progress_printer.epoch_summary(with_metric=True)
+
