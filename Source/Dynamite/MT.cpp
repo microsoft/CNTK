@@ -713,7 +713,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #if 1
         // dynamically adjust the MB size lower at the start to ramp up
         let fullMbSizeAt = 1000000;
-        let lowMbSize = minibatchSize / 16;
+        let lowMbSize = minibatchSize / 8;
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
         let actualMinibatchSize = clamp(lowMbSize + (minibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, minibatchSize);
 #else
@@ -778,6 +778,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             let numAPICalls0 = CountAPICalls(0);
             //criterion_fn(subBatchArgs[0], subBatchArgs[1]); // call it once before, to flush that thing that we otherwise also measure, whatever that is
             partTimer.Restart();
+            // BUGBUG: In extreme cases, we can have 0 sentences. HANDLE THAT! Then we can use more GPUs.
             auto mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
             //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
             //mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
