@@ -172,6 +172,7 @@ enum ProjectionOptions
     batchNormalize  = 0,//x04,
     lengthNormalize = 0,//x08,
 #endif
+    isSparse = 0x20, /// flag that some ops are forbidden
     weightNormalize = 0x10
 };
 static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
@@ -179,6 +180,7 @@ static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { r
 static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
 {
     let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
+    // current hack logic ("noln"): no BN, LN becomes Droppo
     let hasLengthNorm = false;// (opts & (ProjectionOptions::lengthNormalize)) != 0;
     let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
     let hasBias       = (opts & (ProjectionOptions::bias           )) != 0;
@@ -267,7 +269,7 @@ static UnaryModel Dense(size_t outputDim, ProjectionOptions opts, const wstring&
 static UnaryModel Embedding(size_t embeddingDim, const wstring& name = wstring())
 {
     // BUGBUG: We would not want a bias here, right? (but BN always comes with one)
-    auto embed = Linear(embeddingDim, ProjectionOptions_batchNormalize, name);
+    auto embed = Linear(embeddingDim, ProjectionOptions_batchNormalize | ProjectionOptions::isSparse, name);
     //auto embed = Linear(embeddingDim, ProjectionOptions::batchNormalize | ProjectionOptions::bias, name);
     return UnaryModel({ }, { { L"embed", embed } }, [=](const Variable& x)
     {
