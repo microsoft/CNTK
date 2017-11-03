@@ -8,8 +8,32 @@ C.ops.register_native_user_function(
                  'Cntk.BinaryConvolutionExample-' + C.__version__.rstrip('+'), 
                  'CreateBinaryConvolveFunction')
 
+def binarize_convolution(model, train_function, filter_function = None):
+    '''
+    Replace Convolution layers in the model to Halide implementations of
+    binarized convolutions.
 
-def optimize_binary_convolution(model):
+    Args:
+        model          : model that needs convolutions to be optimized.
+        train_function : this is a two step process. 
+                            (1) convert the model to binary convolution
+                            (2) transform to the Halide implementation
+                         between step (1) and (2), we need to train the model
+                         to get the best results. train_function provides this
+                         functionality.
+       filter_function : filter layers in the model to apply the binarization                
+                        
+    Returns:
+        A model with Halid operators.
+    '''
+    assert(train_function) # needs a training function to convert.    
+
+    z = convert_to_binary_convolution(model)
+    train_function(z)
+    return convert_to_native_binary_convolution(z)
+
+
+def convert_to_native_binary_convolution(model):
     '''
     Clones a binary convolution network, sharing the original parameters 
     but substitutes the python 'BinaryConvolution' Function instances 
@@ -52,11 +76,12 @@ def optimize_binary_convolution(model):
     return C.misc.convert(model, bin_conv_filter, bin_converter)
 
 
-def binarize_convolution(model, filter_function = None):
+def convert_to_binary_convolution(model, filter_function = None):
     '''
     Replace convolution functions in the model with binary convolutions.
     The function replaces the convolution function inside the 
     cntk.layers.convolution block without changing the block structure.
+    The output model has python version of the binarized convolutions.
 
     Args:
         model           : model that needs to be binarized.
