@@ -4,9 +4,10 @@ from cntk.contrib.netopt.custom_convolution_ops import *
 # Register the native binary convolution function that calls halide
 # operations internally.
 C.ops.register_native_user_function(
-                 'NativeBinaryConvolveFunction', 
-                 'Cntk.BinaryConvolutionExample-' + C.__version__.rstrip('+'), 
-                 'CreateBinaryConvolveFunction')
+                'NativeBinaryConvolveFunction', 
+                'Cntk.BinaryConvolutionExample-' + C.__version__.rstrip('+'), 
+                'CreateBinaryConvolveFunction')
+
 
 def binarize_convolution(model, train_function, filter_function = None):
     '''
@@ -15,13 +16,12 @@ def binarize_convolution(model, train_function, filter_function = None):
 
     Args:
         model          : model that needs convolutions to be optimized.
-        train_function : this is a two step process. 
-                            (1) convert the model to binary convolution
-                            (2) transform to the Halide implementation
-                         between step (1) and (2), we need to train the model
-                         to get the best results. train_function provides this
-                         functionality.
-       filter_function : filter layers in the model to apply the binarization                
+        train_function : this is a two step process. First, convert the model 
+                         to binary convolution and next, transform it to the 
+                         Halide implementation. Between above steps,
+                         we need to train the model to get the best results. 
+                         train_function provides this functionality.
+        filter_function: filter layers in the model to apply the binarization.
                         
     Returns:
         A model with Halid operators.
