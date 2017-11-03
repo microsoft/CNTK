@@ -62,11 +62,11 @@ class SignWithEstimation(UserFunction):
         _, output_values = self.grad.forward({self.gradArg: val, self.gradRoot: root_gradients},
                                              self.grad.outputs, device=state.device(), as_numpy=False)
         # return the proper output
-        return output_values[self.grad.output]
+        return C.output_values[self.grad.output]
 
     # define a function that returns an output_variable with the shape of this function
     def infer_outputs(self):
-        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
 
 # A different implementation of sign with the straight through estimator for backprop. Has identical outputs but uses numpy instead
@@ -87,7 +87,7 @@ class pySign(UserFunction):
         return grad*root_gradients
 
     def infer_outputs(self):
-        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype,
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype,
                                 self.inputs[0].dynamic_axes)]
 
 # Similar to CustomSign, Multibit binarizes an input using straight through estimator gradients. However, Multibit also supports a 
@@ -181,7 +181,7 @@ class MultibitKernel(UserFunction):
 
     # define a function that returns an output_variable with the shape of this function
     def infer_outputs(self):
-        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
 
 
