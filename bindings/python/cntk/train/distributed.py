@@ -128,7 +128,7 @@ def data_parallel_distributed_learner(learner, distributed_after=0, num_quantiza
         learner: a local learner (i.e. sgd)
         distributed_after (int): number of samples after which distributed training starts
         num_quantization_bits (int): number of bits for quantization (1 to 32)
-        use_async_buffered_parameter_update (bool): use async buffered parameter update
+        use_async_buffered_parameter_update (bool): use async buffered parameter update, currently must be False
     Returns:
         a distributed learner instance
     '''
