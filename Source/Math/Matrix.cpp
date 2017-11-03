@@ -1862,7 +1862,8 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
+template <typename GradType>
+void Matrix<ElemType>::AdaDeltaUpdate(Matrix<GradType>& gradients,
     Matrix<ElemType>& functionValues,
     ElemType learningRate, ElemType rho, ElemType epsilon,
     int* timestamps, int currentTimestamp)
@@ -6195,10 +6196,10 @@ template class Matrix<float>;
 template class Matrix<double>;
 template class Matrix<half>;
 
-// instantiate some Cast methods for CastNode
-template void Matrix<float>::CastAssignValuesOf(const MatrixBase& other);
-template void Matrix<double>::CastAssignValuesOf(const MatrixBase& other);
-template void Matrix<half>::CastAssignValuesOf(const MatrixBase& other);
+// instantiate some learner methods
+template MATH_API void Matrix<float>::AdaDeltaUpdate<float>(Matrix<float>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
+template MATH_API void Matrix<double>::AdaDeltaUpdate<double>(Matrix<double>& gradients, Matrix<double>& functionvalues, double learningRatePerSample, double rho, double epsilon, int* timestamps, int currentTimestamp);
+template MATH_API void Matrix<float>::AdaDeltaUpdate<half>(Matrix<half>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
 
 // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
 // Let's explicitly instantiate the methods we need for that purpose

@@ -113,7 +113,7 @@ namespace CNTK
 
         // Returns an NDArrayView with the required shape, with the same data type as parameter value
         // and allocated on the same device.
-        static NDArrayViewPtr AllocateNDArrayView(const Parameter& parameter, const NDShape& shape);
+        static NDArrayViewPtr AllocateSmoothedGradientFor(const Parameter& parameter, size_t factor);
 
         // Retrieves the shape of the matrix corresponding to the parameter value.
         static NDShape GetMatrixShape(const Parameter& parameter);
@@ -268,7 +268,7 @@ namespace CNTK
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
-        template <typename ElementType>
+        template <typename GradType, typename AccumType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount);
 
         virtual Dictionary CreateCheckpoint() override;
@@ -408,7 +408,7 @@ namespace CNTK
         {
             for (const auto& parameter : parameters)
             {
-                m_smoothedGradientValues.emplace(parameter, AllocateNDArrayView(parameter, {}));
+                m_smoothedGradientValues.emplace(parameter, AllocateSmoothedGradientFor(parameter, 0));
             }
         }
 

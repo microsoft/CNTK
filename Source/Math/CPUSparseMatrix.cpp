@@ -1423,7 +1423,8 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp)
+template <class AccumType>
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<AccumType>& c, CPUMatrix<AccumType>& functionValues, AccumType learningRate, AccumType rho, AccumType epsilon, int* timestamps, int currentTimestamp)
 {
     size_t numColsNeeded = 2 * GetNumCols();
 
@@ -1441,9 +1442,9 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
 
     size_t n = GetNumElements();
     ElemType* grad = Data();
-    ElemType* smoothAda = c.Data();
-    ElemType* smoothX2 = c.Data() + n;
-    ElemType* val = functionValues.Data();
+    AccumType* smoothAda = c.Data();
+    AccumType* smoothX2 = c.Data() + n;
+    AccumType* val = functionValues.Data();
     auto rows = GetNumRows();
 
 #pragma omp parallel for
@@ -1459,10 +1460,10 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
         {
             size_t denseIndex = columnOffset + row;;
             ElemType g = grad[blockOffset + row];
-            ElemType adaSqr = rho * decay * smoothAda[denseIndex] + (1 - rho) * g * g;
+            AccumType adaSqr = rho * decay * smoothAda[denseIndex] + (1 - rho) * g * g;
             smoothAda[denseIndex] = adaSqr;
-            ElemType x2 = decay * smoothX2[denseIndex];
-            ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
+            AccumType x2 = decay * smoothX2[denseIndex];
+            AccumType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
             smoothX2[denseIndex] = rho * x2 + (1 - rho) * deltaX * deltaX;
             val[denseIndex] += learningRate * deltaX;
         }
@@ -1820,6 +1821,11 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 template class CPUSparseMatrix<float>;
 template class CPUSparseMatrix<double>;
 template class CPUSparseMatrix<half>;
+
+// instantiate learner methods
+template void CPUSparseMatrix<float>::AdaDelta(CPUMatrix<float>& c, CPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon, int* timestamps, int currentTimestamp);
+template void CPUSparseMatrix<double>::AdaDelta(CPUMatrix<double>& c, CPUMatrix<double>& functionValues, double learningRate, double rho, double epsilon, int* timestamps, int currentTimestamp);
+template void CPUSparseMatrix<half>::AdaDelta(CPUMatrix<float>& c, CPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon, int* timestamps, int currentTimestamp);
 
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explciitly instantiate the methods we need for that purpose

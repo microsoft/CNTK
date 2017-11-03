@@ -5383,32 +5383,31 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     }
 }
 
-template <class ElemType>
-__global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
+template <class ElemType, class GradType>
+__global__ void _adadelta(CUDA_LONG size, GradType* grad, ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
     ElemType learningRate, ElemType rho, ElemType epsilon)
 {
-    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
     {
-        comp_t g = grad[idx];
-        comp_t adaSqr = (comp_t)rho * (comp_t)smoothAda[idx] + (1.0f - (comp_t)rho) * g * g;
+        ElemType g = (ElemType)grad[idx];
+        ElemType adaSqr = rho * smoothAda[idx] + (1.0f - rho) * g * g;
         smoothAda[idx] = adaSqr;
-        comp_t x2 = smoothX2[idx];
-        comp_t deltaX;
-        deltaX = -sqrt_(x2 + (comp_t)epsilon) * rsqrt_(adaSqr + (comp_t)epsilon) * g;
+        ElemType x2 = smoothX2[idx];
+        ElemType deltaX;
+        deltaX = -sqrt_(x2 + epsilon) * rsqrt_(adaSqr + epsilon) * g;
 
-        smoothX2[idx] = (comp_t)rho * (comp_t)smoothX2[idx] + (1.0f - (comp_t)rho) * deltaX * deltaX;
-        val[idx] = (comp_t)val[idx] + (comp_t)learningRate * deltaX;
+        smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
+        val[idx] = val[idx] + learningRate * deltaX;
     }
 }
 
-template <class ElemType>
+template <class GradType, class AccumType>
 __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
-    const ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow, size_t numRows,
-    ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
-    ElemType learningRate, ElemType rho, ElemType epsilon, 
+    const GradType* grad_bsc, const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow, size_t numRows,
+    AccumType* smoothAda, AccumType* smoothX2, AccumType* val,
+    AccumType learningRate, AccumType rho, AccumType epsilon,
     const int* timestamps, int currentTimestamp)
 {
     auto sparseIndex = blockDim.x * blockIdx.x + threadIdx.x;
@@ -5416,14 +5415,14 @@ __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
         return;
     auto blockid = sparseIndex / numRows;
     auto col = blockId2ColOrRow[blockid];
-    auto decay = pow_(rho, (ElemType)(currentTimestamp - 1 - timestamps[col]));
+    auto decay = pow_(rho, (AccumType)(currentTimestamp - 1 - timestamps[col]));
     auto denseIndex = col * numRows + sparseIndex % numRows;
-    ElemType g = grad_bsc[sparseIndex];
-    ElemType adaSqr = rho * decay * smoothAda[denseIndex] + (1.0f - rho) * g * g;
+    AccumType g = (AccumType)grad_bsc[sparseIndex];
+    AccumType adaSqr = rho * decay * smoothAda[denseIndex] + (1.0f - rho) * g * g;
     smoothAda[denseIndex] = adaSqr;
-    ElemType x2 = decay * smoothX2[denseIndex];
-    ElemType deltaX;
-    if (sizeof(ElemType) == sizeof(double))
+    AccumType x2 = decay * smoothX2[denseIndex];
+    AccumType deltaX;
+    if (sizeof(AccumType) == sizeof(double))
     {
         deltaX = -sqrt_(x2 + epsilon) * rsqrt_(adaSqr + epsilon) * g;
     }
@@ -5437,7 +5436,7 @@ __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
 
 
 template <class ElemType>
-__global__ void _adadeltaFlush(CUDA_LONG N, size_t rows, ElemType* smoothAda, ElemType* smoothX2, 
+__global__ void _adadeltaFlush(CUDA_LONG N, size_t rows, ElemType* smoothAda, ElemType* smoothX2,
     ElemType rho, int* timestamps, int currentTimestamp)
 {
     auto col = blockIdx.x * blockDim.x + threadIdx.x;
