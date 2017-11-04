@@ -65,6 +65,7 @@ bool use1BitSgd = false;
 size_t saveEvery = 2000;
 double  pruningThreshold = 10.0;
 size_t maxBeam = 5;
+double beamWidth = 2.0; // logProb beam width
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -236,9 +237,6 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
     let& dict = GetAndCacheDictionary(tgtVocabFile); // for debugging
     size_t sentStartId = 1;
     size_t sentEndId = 2; // TODO: get those from the actual dictionary
-    //let sentStartIdVar = Constant({ }, CurrentDataType(), sentStartId, CurrentDevice(), L"sentStart");
-    //auto axism1 = Axis(-1); // API BUGBUG: must change to const&, next time we change the lib header anyway
-    //let sentStart = OneHotOp(sentStartIdVar, tgtVocabSize, /*outputSparse=*/true, axism1/*Axis(-1)*/);
     let initialPathLogP = Constant({}, CurrentDataType(), 0, CurrentDevice(), L"initialPathLogP");
     BeamDecoderToken initialToken = { /*backPointer=*/nullptr, decoderInitFunction(hEncoderSeq), sentStartId, initialPathLogP };
     // expansion
@@ -247,8 +245,9 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
     vector<Variable> pathLogPVectors;
     vector<DecoderRecurrentState> newRecurrentStates;
     vector<const BeamDecoderToken*> backPointers;
-    vector<vector<float>> probCopyBuffers;
+    vector<vector<float>> probCopyBuffers(maxBeam);
     vector<pair<size_t, size_t>> sortBuffer;
+    size_t totalTokens = 1;
     for (;;)
     {
         let& tokens = allTokens.back();
@@ -273,7 +272,9 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
             //LOG(token.recurrentState.state);
             //LOG(token.recurrentState.attentionContext);
             // embed it for the next step
-            let wordEmbedded = decoderEmbedOutputFunction(token.wordIndex);
+            let wordIndexVar = Constant({}, CurrentDataType(), (double)token.wordIndex, CurrentDevice(), L"wordIndexVar");
+            let word = OneHotOp(wordIndexVar, tgtVocabSize, /*outputSparse=*/true, Axis(0));
+            let wordEmbedded = decoderEmbedOutputFunction(word);
             //LOG(wordEmbedded);
             // update the recurrent model
             let newRecurrentState = decoderStepFunction(token.recurrentState, wordEmbedded);
@@ -293,13 +294,8 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
         // determine new token set
         // That is, all tokens that in the top N and within the probability beam.
         // we go into CPU land now, since there is no sorting function...
-        if (probCopyBuffers.size() < numTokens)
-            probCopyBuffers.resize(numTokens);
         for (size_t i = 0; i < numTokens; i++)
-        {
-            auto& probCopyBuffer = probCopyBuffers[i];
-            pathLogPVectors[i].Value()->CopyDataTo(probCopyBuffer);
-        }
+            pathLogPVectors[i].Value()->CopyDataTo(probCopyBuffers[i]);
         sortBuffer.clear();
         for (size_t i = 0; i < numTokens; i++)
             for (size_t k = 0; k < tgtVocabSize; k++)
@@ -313,7 +309,6 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
         tie(i,k) = sortBuffer.front();
         let maxPathLogP = probCopyBuffers[i][k];
         // create the new tokens
-        static const float beamWidth = 10.0; // logProb beam width
         newTokens.clear();
         for (let& ik : sortBuffer)
         {
@@ -324,23 +319,25 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
             if (logPathProb < maxPathLogP - beamWidth) // probability-beam pruning
                 break;
             // token should survive
-            let newPathLogP = pathLogPVectors[i][k];
             //LOG(k);
             //LOG(word);
             string hist;
             for (let* bp = backPointers[i]; bp; bp = bp->backPointer)
                 hist = dict[bp->wordIndex] + " " + hist;
-            fprintf(stderr, "word[%d]: %d %s | %s\n", (int)i, (int)k, dict[k].c_str(), hist.c_str());
-            LOG(newPathLogP);
+            fprintf(stderr, "word[%d] %.3f: %d %s | %s\n", (int)i, logPathProb, (int)k, dict[k].c_str(), hist.c_str());
             // new token
+            let newPathLogP = pathLogPVectors[i][k];
+            //LOG(newPathLogP);
             newTokens.emplace_back/*BeamDecoderToken newToken = */(BeamDecoderToken{ backPointers[i], newRecurrentStates[i], k, newPathLogP });
+            totalTokens++;
         }
         // expand the remembered tokens
         allTokens.push_back(newTokens); // makes a copy. and we reuse newTokens[]
     }
 
     // traceback
-    vector<double> resultWords(allTokens.size());
+    let numWords = allTokens.size();
+    vector<double> resultWords(numWords);
     let* pTok = &allTokens.back().front();
     auto iter = resultWords.end();
     while (pTok)
@@ -357,7 +354,11 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
         LogicError("BeamDecode: length screwed up??");
     let hyp = OneHotConstant(resultWords);
     //let hyp = Splice(resultWords, Axis::EndStaticAxis());
-    LOG(hyp);
+    //LOG(hyp);
+    let totalLogP = allTokens.back().front().pathLogP.Value()->AsScalar<double>();
+    let logPPerWord = totalLogP / (numWords - 1);
+    let ppl = exp(-logPPerWord);
+    fprintf(stderr, "logP = %.3f * %d ; PPL=%.2f ; N = %.2f * %d\n", logPPerWord, (int)(numWords - 1), ppl, totalTokens / (double)numWords, (int)numWords), fflush(stderr);
     return hyp;
 }
 
@@ -374,9 +375,8 @@ fun AttentionDecoder(double dropoutInputKeepProb)
                              >> Dense(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
                              >> Activation(Tanh)
                              >> Label(Named("encoderDataProjection"));
-    let embedTargetFunc = Embedding(embeddingDim);
     let embedTarget = Barrier(600, Named("embedTargetBarrier"))     // target embeddding
-                   >> embedTargetFunc
+                   >> Embedding(embeddingDim)
                    >> Label(Named("embedTarget"));
     let initialContext = Constant({ attentionDim }, CurrentDataType(), 0.0, CurrentDevice(), L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier"))
@@ -491,10 +491,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         {
             // if no history then instead use beam decoder
             if (historySeq == Variable())
-            {
-                Variable W = embedTargetFunc.Nested(L"embed")[L"W"];
-                return BeamDecode(hEncoderSeq, decoderInitFunction, [&](size_t word) {return W[word];}, decoderStepFunction, decoderOutputFunction);
-            }
+                return BeamDecode(hEncoderSeq, decoderInitFunction, embedTarget, decoderStepFunction, decoderOutputFunction);
             // decoding loop
             DecoderRecurrentState decoderState = decoderInitFunction(hEncoderSeq);
             vector<DecoderRecurrentState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
