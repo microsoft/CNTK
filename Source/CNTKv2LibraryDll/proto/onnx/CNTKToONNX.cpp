@@ -164,6 +164,7 @@ std::unique_ptr<ONNXIR::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
     ONNXIR::Status status = dstGraph->Resolve();
     if (!status.Ok())
         LogicError("%s", status.ErrorMsg().c_str());
+    model->SetIrVersion(static_cast<ONNXIR::VERSION>(CNTK_ONNX_MODEL_VERSION));
     return model;
 }
 
