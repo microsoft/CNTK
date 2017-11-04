@@ -632,7 +632,7 @@ def bounded_cache(maxsize):
             def __missing__(self, key):
                 if len(self) >= maxsize:
                     self.clear()
-                self[key] = ret = func(*key)
+                self[key] = ret = self.f(*key)
                 return ret
         return memodict(func)
     return memoize
@@ -645,7 +645,7 @@ def bounded_cache(maxsize):
 # Adjust the maxsize below if you have more than maxsize many different
 # shapes of sparse inputs.
 @bounded_cache(maxsize=32)
-def _sparse_to_dense_network_cache(input_shape, is_sequence):
+def _sparse_to_dense_network_cache(input_shape, is_sequence, device):
     if is_sequence:
         temp_input = C.sequence.input_variable(input_shape, is_sparse=True)
     else:
