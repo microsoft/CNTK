@@ -34,7 +34,7 @@ namespace CNTK
             const LearningRateSchedule& learningRateSchedule,
             AdditionalLearningOptions additionalOptions);
 
-        void AllocateSmoothedGradients(const std::vector<Parameter>& parameters, size_t factor);
+        void AllocateSmoothedGradients(const std::vector<Parameter>& parameters, size_t factor, size_t fp16Factor = 1);
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) = 0;
 
@@ -112,7 +112,7 @@ namespace CNTK
 
         // Returns an NDArrayView with the required shape, with the same data type as parameter value
         // and allocated on the same device.
-        static NDArrayViewPtr AllocateSmoothedGradientFor(const Parameter& parameter, size_t factor);
+        static NDArrayViewPtr AllocateSmoothedGradientFor(const Parameter& parameter, size_t factor, size_t fp16Factor = 1);
 
         // Retrieves the shape of the matrix corresponding to the parameter value.
         static NDShape GetMatrixShape(const Parameter& parameter);
@@ -168,7 +168,7 @@ namespace CNTK
                            m_momentumSchedule(momentumSchedule), 
                            m_unitGain(unitGain)
         {
-            AllocateSmoothedGradients(parameters, 1);
+            AllocateSmoothedGradients(parameters, 1, 2);
         }
 
         // returns current per-minibatch momentum value.
@@ -180,8 +180,10 @@ namespace CNTK
     protected:
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
-        template <typename ElementType>
+        template <typename ElemType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+
+        void UpdateHalf(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
 
         // returns current per-minibatch momentum value from the provided schedule.
         double MomentumValueForMB(const MomentumSchedule& schedule, size_t minibatchSize) const;

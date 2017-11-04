@@ -73,6 +73,12 @@ DEVICEID_TYPE GPUSparseMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*
 }
 
 template <class ElemType>
+template <class ElemType2>
+void GPUSparseMatrix<ElemType>::DeepCast(const GPUSparseMatrix<ElemType2>& deepCopy)
+{
+}
+
+template <class ElemType>
 void GPUSparseMatrix<ElemType>::DeepCopy(const GPUSparseMatrix<ElemType>& deepCopy)
 {
 }
@@ -200,6 +206,12 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
 }
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE toId)
+{
+}
+
+template <class ElemType>
+template <class ElemType2>
+void GPUMatrix<ElemType>::CastAssignValuesOf(const GPUMatrix<ElemType2>* other)
 {
 }
 
@@ -2459,6 +2471,52 @@ template MatrixQuantizerGPU<double>::~MatrixQuantizerGPU();
 template void MatrixQuantizerGPU<float>::QuantizeAsync(const Matrix<float>&, const Matrix<float>&, QuantizedMatrix<float>&, Matrix<float>&, bool);
 template void MatrixQuantizerGPU<double>::QuantizeAsync(const Matrix<double>&, const Matrix<double>&, QuantizedMatrix<double>&, Matrix<double>&, bool);
 
+template void GPUMatrix<char>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<char>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<char>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<short>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<short>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<short>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<int>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<int>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<int>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<float>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<float>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<float>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<double>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<double>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<double>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<half>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<half>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<half>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+
+template void GPUMatrix<float>::AdaDelta<float>(GPUMatrix<float>& gradients, GPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);
+template void GPUMatrix<double>::AdaDelta<double>(GPUMatrix<double>& gradients, GPUMatrix<double>& functionValues, double learningRate, double rho, double epsilon);
+template void GPUMatrix<float>::AdaDelta<half>(GPUMatrix<half>& gradients, GPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);
+
+template void GPUSparseMatrix<char>::DeepCast(const GPUSparseMatrix<float>& deepCopyFrom);
+template void GPUSparseMatrix<char>::DeepCast(const GPUSparseMatrix<double>& deepCopyFrom);
+template void GPUSparseMatrix<char>::DeepCast(const GPUSparseMatrix<half>& deepCopyFrom);
+template void GPUSparseMatrix<short>::DeepCast(const GPUSparseMatrix<float>& deepCopyFrom);
+template void GPUSparseMatrix<short>::DeepCast(const GPUSparseMatrix<double>& deepCopyFrom);
+template void GPUSparseMatrix<short>::DeepCast(const GPUSparseMatrix<half>& deepCopyFrom);
+template void GPUSparseMatrix<int>::DeepCast(const GPUSparseMatrix<float>& deepCopyFrom);
+template void GPUSparseMatrix<int>::DeepCast(const GPUSparseMatrix<double>& deepCopyFrom);
+template void GPUSparseMatrix<int>::DeepCast(const GPUSparseMatrix<half>& deepCopyFrom);
+template void GPUSparseMatrix<float>::DeepCast(const GPUSparseMatrix<float>& deepCopyFrom);
+template void GPUSparseMatrix<float>::DeepCast(const GPUSparseMatrix<double>& deepCopyFrom);
+template void GPUSparseMatrix<float>::DeepCast(const GPUSparseMatrix<half>& deepCopyFrom);
+template void GPUSparseMatrix<double>::DeepCast(const GPUSparseMatrix<float>& deepCopyFrom);
+template void GPUSparseMatrix<double>::DeepCast(const GPUSparseMatrix<double>& deepCopyFrom);
+template void GPUSparseMatrix<double>::DeepCast(const GPUSparseMatrix<half>& deepCopyFrom);
+template void GPUSparseMatrix<half>::DeepCast(const GPUSparseMatrix<float>& deepCopyFrom);
+template void GPUSparseMatrix<half>::DeepCast(const GPUSparseMatrix<double>& deepCopyFrom);
+template void GPUSparseMatrix<half>::DeepCast(const GPUSparseMatrix<half>& deepCopyFrom);
+
+template void GPUSparseMatrix<float>::AdaDelta<float>(GPUMatrix<float>&c, GPUMatrix<float>&functionValues, float learningRate, float rho, float epsilon, int* timestamps, int currentTimestamp);
+template void GPUSparseMatrix<double>::AdaDelta<double>(GPUMatrix<double>&c, GPUMatrix<double>&functionValues, double learningRate, double rho, double epsilon, int* timestamps, int currentTimestamp);
+template void GPUSparseMatrix<half>::AdaDelta<float>(GPUMatrix<float>&c, GPUMatrix<float>&functionValues, float learningRate, float rho, float epsilon, int* timestamps, int currentTimestamp);
+
 template <class ElemType>
 cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = {0};
 
@@ -2480,6 +2538,7 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE, Convolv
 
 template class CuDnnConvolutionEngineFactory<float>;
 template class CuDnnConvolutionEngineFactory<double>;
+template class CuDnnConvolutionEngineFactory<half>;
 
 template <class ElemType>
 std::unique_ptr<BatchNormEngine<ElemType>> CuDnnBatchNormEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
@@ -2490,6 +2549,7 @@ std::unique_ptr<BatchNormEngine<ElemType>> CuDnnBatchNormEngineFactory<ElemType>
 
 template class CuDnnBatchNormEngineFactory<float>;
 template class CuDnnBatchNormEngineFactory<double>;
+template class CuDnnBatchNormEngineFactory<half>;
 
 CudaTimer::~CudaTimer()
 {

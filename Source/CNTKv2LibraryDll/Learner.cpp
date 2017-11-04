@@ -220,19 +220,19 @@ namespace CNTK
             InvalidArgument("Learner's parameters list must not contain duplicates.");
     }
 
-    void LearnerBase::AllocateSmoothedGradients(const std::vector<Parameter>& parameters, size_t factor)
+    void LearnerBase::AllocateSmoothedGradients(const std::vector<Parameter>& parameters, size_t factor, size_t fp16Factor)
     {
         for (const auto& parameter : parameters)
         {
-            NDArrayViewPtr view = AllocateSmoothedGradientFor(parameter, factor);
+            NDArrayViewPtr view = AllocateSmoothedGradientFor(parameter, factor, fp16Factor);
             m_smoothedGradientValues.emplace(parameter, view);
         }
     }
 
-    /*static*/ NDArrayViewPtr LearnerBase::AllocateSmoothedGradientFor(const Parameter& parameter, size_t factor)
+    /*static*/ NDArrayViewPtr LearnerBase::AllocateSmoothedGradientFor(const Parameter& parameter, size_t factor, size_t fp16Factor)
     {
         // float16 parameter needs extra buffer for master-copy of weights
-        if (parameter.GetDataType() == DataType::Float16) factor++;
+        if (parameter.GetDataType() == DataType::Float16) factor += fp16Factor;
 
         const auto paramShape = GetMatrixShape(parameter);
         NDShape shape;
@@ -555,7 +555,20 @@ namespace CNTK
     {
         ReportTrainingParameterValue(m_momentumSchedule, L"Momentum");
 
-        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+        switch (gradientValue->GetDataType())
+        {
+        case DataType::Float:
+            Update<float>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);
+            break;
+        case DataType::Double:
+            Update<double>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);
+            break;
+        case DataType::Float16:
+            UpdateHalf(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);
+            break;
+        default:
+            NOT_IMPLEMENTED;
+        }
     }
 
     template <typename ElementType>
@@ -594,6 +607,25 @@ namespace CNTK
         const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
         parameterMatrix->MomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
                                            learningRate, momentum, unitGainFactor);
+    }
+
+    void LearnerMomentumSGD::UpdateHalf(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        const auto& compoundMatrix = GetWritableMatrix<float>(smoothedGradientValue);
+        const auto& gradientMatrix = GetWritableMatrix<half>(gradientValue);
+        auto smoothedGradientMatrix = compoundMatrix->ColumnSlice(0, gradientMatrix->GetNumCols());
+        auto tempGradientMatrix = compoundMatrix->ColumnSlice(gradientMatrix->GetNumCols(), gradientMatrix->GetNumCols());
+        auto parameterMatrix = compoundMatrix->ColumnSlice(2 * gradientMatrix->GetNumCols(), gradientMatrix->GetNumCols());
+
+        tempGradientMatrix.CastAssignValuesOf(*gradientMatrix);
+
+        const auto learningRate = float(LearningRate(trainingSampleCount));
+        const auto momentum = float(MomentumValueForMB(trainingSampleCount));
+        const auto unitGainFactor = UnitGainFactor<float>(trainingSampleCount);
+
+        parameterMatrix.MomentumSGDUpdate(tempGradientMatrix, smoothedGradientMatrix,
+            learningRate, momentum, unitGainFactor);
     }
 
     /*virtual*/ void LearnerNesterov::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 

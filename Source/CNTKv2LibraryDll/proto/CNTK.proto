@@ -23,6 +23,7 @@ message NDArrayView {
 	Unknown = 0;
 	Float = 1;
 	Double = 2;
+        Float16 = 4;
   }
   
   enum StorageFormat {

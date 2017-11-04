@@ -501,7 +501,8 @@ namespace CNTK
         DataType dataType = DataType(dict[dataTypeKey].Value<std::size_t>());
         if (dataType != DataType::Unknown &&
             dataType != DataType::Float &&
-            dataType != DataType::Double)
+            dataType != DataType::Double &&
+            dataType != DataType::Float16)
         {
             LogicError("Unexpected variable datatype '%ls':'%u' (%s).", 
                        dataTypeKey.c_str(), 

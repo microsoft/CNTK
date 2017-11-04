@@ -28,3 +28,16 @@ def test_cast(device_id):
     data = f.eval({i:AA(i_data).astype(np.float32), i2:AA(i2_data).astype(np.float32)})
     assert np.array_equal(data[f[0]], i_data)
     assert np.array_equal(data[f[1]], i2_data)
+
+def test_save_load(device_id, tmpdir):
+    if device_id == -1:
+        pytest.skip('Test only runs on GPU')
+    i = C.input_variable((3), dtype='float16')
+    t = C.times(i, C.parameter((3,5), dtype='float16', init=C.glorot_uniform()))
+    data = AA([[1,2,3]]).astype(np.float16)
+    result = t.eval(data)
+    file = str(tmpdir / '1.dnn')
+    t.save(file)
+    t1 = C.load_model(file)
+    result1 = t1.eval(data)
+    assert np.array_equal(result, result1)

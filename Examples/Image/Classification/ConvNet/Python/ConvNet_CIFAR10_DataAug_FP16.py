@@ -16,7 +16,7 @@ from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, Batc
 from cntk.layers.typing import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk import Trainer, use_default_device
-from cntk.learners import adadelta, UnitType, learning_parameter_schedule
+from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule, learning_parameter_schedule
 from cntk import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import Function
 from cntk.debugging import set_computation_network_trace_level
@@ -112,8 +112,9 @@ def train_model(reader, model, criterion, epoch_size=50000, max_epochs=80):
     minibatch_size = 64
 
     # learning parameters
-    learner = adadelta(model.parameters, 
-                           lr = learning_parameter_schedule(1),
+    learner = momentum_sgd(model.parameters, 
+                           lr       = learning_parameter_schedule([0.0015625]*20+[0.00046875]*20+[0.00015625]*20+[0.000046875]*10+[0.000015625], minibatch_size=1, epoch_size=epoch_size),
+                           momentum = momentum_as_time_constant_schedule([0]*20+[600]*20+[1200], epoch_size=epoch_size),
                            l2_regularization_weight = 0.002)
     
     # trainer object
@@ -138,7 +139,7 @@ def train_model(reader, model, criterion, epoch_size=50000, max_epochs=80):
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-        #model.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
+        model.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
 
     # return evaluation error.
     return loss, metric # return values from last epoch
@@ -154,8 +155,9 @@ def Evaluator(criterion):
     parameters = set(loss.parameters)
     if metric:
         parameters |= set(metric.parameters)
-    dummy_learner = adadelta(tuple(parameters), 
-                             lr = learning_parameter_schedule(1))
+    dummy_learner = momentum_sgd(tuple(parameters), 
+                                 lr = learning_rate_schedule(1, UnitType.minibatch),
+                                 momentum = momentum_as_time_constant_schedule(0))
     return Trainer(None, (loss, metric), dummy_learner)
 
 def evaluate(reader, criterion, device=None, minibatch_size=16, max_samples=None):
