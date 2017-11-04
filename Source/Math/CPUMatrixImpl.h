@@ -929,6 +929,20 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::AssignValues(const double* data, size_t size)
+{
+    // note: currently untested
+    if (size != GetNumRows() * GetNumCols())
+        LogicError("AssignValues: size parameter does not match matrix dimension.");
+    auto* p = Data();
+    if (std::is_same<ElemType, decltype(*data)>())
+        memcpy(p, data, size * sizeof(ElemType));
+    else
+        for (size_t i = 0; i < size; i++)
+            p[i] = (ElemType)data[i];
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
     if (GetNumRows() != GetNumCols())

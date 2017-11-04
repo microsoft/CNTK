@@ -1404,6 +1404,17 @@ void Matrix<ElemType>::SetValue(const Matrix<ElemType>& deepCopyFrom)
 }
 
 template <class ElemType>
+void Matrix<ElemType>::AssignValues(const double* data, const size_t size)
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->AssignValues(data, size),
+        m_GPUMatrix->AssignValues(data, size),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
 {
     if (this == &deepCopyFrom)

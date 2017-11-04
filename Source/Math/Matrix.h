@@ -313,6 +313,7 @@ public:
         assert(vals.size() == numRows * numCols);
         SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor);
     }
+    void AssignValues(const double* data, const size_t size);
     void CastAssignValuesOf(const MatrixBase& other) final; // allows for mixed assignment with conversion
     static ElemType MakeNan(size_t payload);
     void Invalidate()
