@@ -1498,7 +1498,7 @@ void CPUMatrix<ElemType>::AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int
 #pragma omp parallel for
     for (auto col = 0; col < cols; ++col)
     {
-        auto decay = std::pow(rho, ElemType(currentTimestamp - timestamps[col]));
+        ElemType decay = std::pow(rho, ElemType(currentTimestamp - timestamps[col]));
         auto offset = rows * col;
         timestamps[col] = 0;
         for (auto row = 0; row < rows; ++row)
@@ -5364,7 +5364,7 @@ void CPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const CPUMatrix<ElemT
             int sample = (int) (*this)(2 * sample_id, instance_id);
             double score = bias(0, sample);
             for (int dim = 0; dim < b.GetNumRows(); dim++)
-                score += a(dim, instance_id) * b(dim, sample);
+                score += (double)(a(dim, instance_id) * b(dim, sample));
             double sample_prob = -(*this)(2 * sample_id + 1, instance_id);
             if (sample_id == 0)
                 sample_prob = -sample_prob;

@@ -207,6 +207,9 @@ public:
 
     void ChangeDeviceTo(DEVICEID_TYPE to_id);
 
+    template<class ElemType2>
+    void CastAssignValuesOf(const GPUMatrix<ElemType2>* other);
+
 public:
     GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
     GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);

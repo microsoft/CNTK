@@ -433,6 +433,17 @@ void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
 }
 
 template <class ElemType>
+template <class ElemType2>
+void GPUMatrix<ElemType>::CastAssignValuesOf(const GPUMatrix<ElemType2>* other)
+{
+    PrepareDevice();
+    CUDA_LONG N = (CUDA_LONG)GetNumElements();
+    int blocksPerGrid = (int)ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _castValue<ElemType, ElemType2><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(other->Data(), Data(), N);
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const ElemType* src)
 {
     PrepareDevice();
@@ -4867,7 +4878,27 @@ template class DeviceBoundNumber<float>;
 template class DeviceBoundNumber<double>;
 template class DeviceBoundNumber<half>;
 
-// inistantiation of learner methods
+// instantiation of cast methods
+template void GPUMatrix<char>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<char>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<char>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<short>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<short>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<short>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<int>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<int>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<int>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<float>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<float>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<float>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<double>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<double>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<double>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<half>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
+template void GPUMatrix<half>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
+template void GPUMatrix<half>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+
+// instantiation of learner methods
 template void GPUMatrix<float>::AdaDelta<float>(GPUMatrix<float>& gradients, GPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);
 template void GPUMatrix<double>::AdaDelta<double>(GPUMatrix<double>& gradients, GPUMatrix<double>& functionValues, double learningRate, double rho, double epsilon);
 template void GPUMatrix<float>::AdaDelta<half>(GPUMatrix<half>& gradients, GPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);

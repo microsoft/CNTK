@@ -37,6 +37,7 @@ namespace CNTK
     const std::wstring learningRateScheduleKey = L"learnig_rate_schedule";
     const std::wstring smoothedGradientsKey = L"smoothed_gradients";
     const std::wstring noiseInjectionSeedKey = L"noise_injection_seed";
+    const std::wstring masterParameterUpdatedKey = L"master_parameter_updated";
     const std::wstring smoothedCountKey = L"smoothed_count";
     const std::wstring stateKey = L"state";
     const std::wstring rngSeedKey = L"rng_seed";

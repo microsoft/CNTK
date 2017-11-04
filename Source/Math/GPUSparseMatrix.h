@@ -323,6 +323,9 @@ public:
     void CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>& cpuSparseMatrix) const;
     void ChangeDeviceTo(DEVICEID_TYPE toId);
 
+    template<class ElemType2>
+    void DeepCast(const GPUSparseMatrix<ElemType2>& deepCopyFrom);
+
     GPUSparseMatrix<ElemType>& operator=(const GPUSparseMatrix<ElemType>& deepCopy);
     // #ifndef __unix__
     GPUSparseMatrix<ElemType>& operator=(GPUSparseMatrix<ElemType>&& moveFrom);

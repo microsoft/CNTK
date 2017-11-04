@@ -111,7 +111,7 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
         if (currentWeight < 0)
             InvalidArgument("Sampling weights contain negative number %f.", (float)currentWeight);
 
-        runningWeightsSum += currentWeight;
+        runningWeightsSum += (double)currentWeight;
         m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
     }
 }

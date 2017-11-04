@@ -1008,7 +1008,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
                     double absSumLocal = 0;
                     for (size_t j = 0; j < jend; j++) // loop over elements
                     {
-                        absSumLocal += abs(seqData[i * istride + j * jstride]);
+                        absSumLocal += (double)abs(seqData[i * istride + j * jstride]);
                     }
                     absSum += absSumLocal;
                 }

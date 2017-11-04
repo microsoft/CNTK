@@ -53,6 +53,12 @@ public:
 #endif
     }
 
+    __FP16_DECL__ half(double d) : half((float)d) {}
+    __FP16_DECL__ half(char i) : half((float)i) {}
+    __FP16_DECL__ half(short i) : half((float)i) {}
+    __FP16_DECL__ half(int i) : half((float)i) {}
+    __FP16_DECL__ half(size_t u) : half((float)u) {}
+
     __FP16_DECL__ half& operator=(float f) {
 #ifndef __CUDA_ARCH__
         CNTK::float2halfbits(&f, &__x); return *this;
@@ -61,21 +67,15 @@ public:
 #endif
     }
 
-    __FP16_DECL__ half(double d) : half((float)d) {}
-
-    __FP16_DECL__ half& operator=(double d) {
-        *this = ((float)d);
-        return *this;
-    }
-
-    __FP16_DECL__ half(int i) : half((float)i) {}
-
     __FP16_DECL__ half& operator=(int i) {
         *this = ((float)i);
         return *this;
     }
 
-    __FP16_DECL__ half(size_t u) : half((float)u) {}
+    __FP16_DECL__ half& operator=(double d) {
+        *this = ((float)d);
+        return *this;
+    }
 
     __FP16_DECL__ half& operator=(size_t u) {
         *this = ((float)u);
@@ -92,6 +92,14 @@ public:
         return __half2float(*this);
 #endif
     }
+
+    __FP16_DECL__ operator bool() const { return (bool)(float)(*this); }
+    __FP16_DECL__ operator char() const { return (char)(float)(*this); }
+    __FP16_DECL__ operator short() const { return (short)(float)(*this); }
+    __FP16_DECL__ operator int() const { return (int)(float)(*this); }
+    __FP16_DECL__ operator size_t() const { return (size_t)(float)(*this); }
+    __FP16_DECL__ operator long() const { return (long)(float)(*this); }
+    __FP16_DECL__ operator long long() const { return (long long)(float)(*this); }
 
 //    __CUDA_HOSTDEVICE__ operator bool() const { return (__x & 0x7FFF) != 0; }
 };
@@ -299,9 +307,19 @@ inline half exp(half arg)
     return half(exp((float)arg));
 }
 
+inline half abs(half arg)
+{
+    return half(abs((float)arg));
+}
+
 inline half max(const half& lhs, const half& rhs)
 {
     return half(max((float)lhs, (float)rhs));
+}
+
+inline half pow(const half& lhs, const half& rhs)
+{
+    return half(pow((float)lhs, (float)rhs));
 }
 
 }

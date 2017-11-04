@@ -1366,19 +1366,39 @@ template <class ElemType>
 void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ // allows for mixed assignment with conversion
 {
     const Matrix<float> * otherf = dynamic_cast<const Matrix<float>*>(&other);
-    if (otherf)
-        return DoCastAssignValuesOf(*this, *otherf);
     const Matrix<double> * otherd = dynamic_cast<const Matrix<double>*>(&other);
-    if (otherd)
-        return DoCastAssignValuesOf(*this, *otherd);
     const Matrix<half> * otherh = dynamic_cast<const Matrix<half>*>(&other);
-    if (otherh)
-        return DoCastAssignValuesOf(*this, *otherh);
-    LogicError("CastAssignValuesOf: Only accepts float, double and half matrices.");
+    if (!otherf && !otherd && !otherh)
+        LogicError("CastAssignValuesOf: Only accepts float, double and half matrices.");
+
+    DISPATCH_MATRIX_ON_FLAG(
+        this,
+        this,
+        {
+            if (otherf) DoCastAssignValuesOf(*this, *otherf);
+            if (otherd) DoCastAssignValuesOf(*this, *otherd);
+            if (otherh) DoCastAssignValuesOf(*this, *otherh);
+        },
+        {
+            if (otherf) m_GPUMatrix->CastAssignValuesOf<float>(otherf->m_GPUMatrix.get());
+            if (otherd) m_GPUMatrix->CastAssignValuesOf<double>(otherd->m_GPUMatrix.get());
+            if (otherh) m_GPUMatrix->CastAssignValuesOf<half>(otherh->m_GPUMatrix.get());
+        },
+        {
+            if (otherf) DoCastAssignValuesOf(*this, *otherf);
+            if (otherd) DoCastAssignValuesOf(*this, *otherd);
+            if (otherh) DoCastAssignValuesOf(*this, *otherh);
+        },
+        {
+            if (otherf) m_GPUSparseMatrix->DeepCast<float>(*otherf->m_GPUSparseMatrix);
+            if (otherd) m_GPUSparseMatrix->DeepCast<double>(*otherd->m_GPUSparseMatrix);
+            if (otherh) m_GPUSparseMatrix->DeepCast<half>(*otherh->m_GPUSparseMatrix);
+        });
 }
 
 template<>
 void Matrix<int>::SetValue(const size_t, const size_t, int, int*, const size_t, DataTransferer*) { NOT_IMPLEMENTED; }
+
 template <class ElemType>
 void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags, DataTransferer* transferer)
 {
