@@ -8,6 +8,8 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 
+#define CNTK_ONNX_MODEL_VERSION 1
+
 namespace ONNXIR
 {
     class Model;
