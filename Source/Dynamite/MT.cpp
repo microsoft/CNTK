@@ -215,31 +215,40 @@ struct DecoderRecurrentState
 
 struct BeamDecoderToken
 {
-    DecoderRecurrentState recurrentState; // state after calling recurrence
-    Variable wordIndex;                   // resulting output word, as a scalar index value
-    const BeamDecoderToken* backPointer;  // pointer to best previous token
+    const BeamDecoderToken* backPointer;  // where we came from -- pointer to best previous token
+    DecoderRecurrentState recurrentState; // new internal state -- after calling recurrence
+    size_t wordIndex;                     // resulting output word, as a scalar index value
     Variable pathLogP;                    // accumulated partial log probability (scalar)
-    Variable wordEmbedded;                // output word embedded, for use in next step
 };
+
+// helper to create a CSC-sparse NDArrayView in the current device that represents the passed index sequence
+// TODO: Suboptimal. We want a view here, and then construct a Constant from that.
+static Variable OneHotConstant(const vector<double>& ids)
+{
+    let indexView = MakeSharedObject<NDArrayView>(ids.data(), CurrentDataType(), NDShape{ ids.size() }, CurrentDevice(), /*readOnly=*/true);
+    return OneHotOp(Constant(indexView), tgtVocabSize, /*outputSparse=*/true, Axis(0));
+}
 
 // this is the main beam decoder, for a single sentence
 template<typename InitFunctionType, typename EmbedFunctionType, typename StepFunctionType, typename OutputFunctionType>
 Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoderInitFunction, const EmbedFunctionType& decoderEmbedOutputFunction, const StepFunctionType& decoderStepFunction, const OutputFunctionType& decoderOutputFunction)
 {
-    let sentStartId = 1;
-    let sentEndId = 2; // TODO: get those from the actual dictionary
-    let sentStartIdVar = Constant({ }, CurrentDataType(), sentStartId, CurrentDevice(), L"sentStart");
-    auto axism1 = Axis(-1); // API BUGBUG: must change to const&, next time we change the lib header anyway
-    let sentStart = OneHotOp(sentStartIdVar, tgtVocabSize, /*outputSparse=*/true, axism1/*Axis(-1)*/);
-    let sentStartEmbedded = decoderEmbedOutputFunction(sentStart);
+    let& dict = GetAndCacheDictionary(tgtVocabFile); // for debugging
+    size_t sentStartId = 1;
+    size_t sentEndId = 2; // TODO: get those from the actual dictionary
+    //let sentStartIdVar = Constant({ }, CurrentDataType(), sentStartId, CurrentDevice(), L"sentStart");
+    //auto axism1 = Axis(-1); // API BUGBUG: must change to const&, next time we change the lib header anyway
+    //let sentStart = OneHotOp(sentStartIdVar, tgtVocabSize, /*outputSparse=*/true, axism1/*Axis(-1)*/);
     let initialPathLogP = Constant({}, CurrentDataType(), 0, CurrentDevice(), L"initialPathLogP");
-    LOG(sentStart);
-    LOG(sentStartEmbedded);
-    LOG(initialPathLogP);
-    BeamDecoderToken initialToken = { decoderInitFunction(hEncoderSeq), sentStartIdVar, /*backPointer=*/nullptr, initialPathLogP, sentStartEmbedded };
-    //list<BeamDecoderToken> tokens = { initialToken }; // initialize state space with <s> history
+    BeamDecoderToken initialToken = { /*backPointer=*/nullptr, decoderInitFunction(hEncoderSeq), sentStartId, initialPathLogP };
     // expansion
-    list<list<BeamDecoderToken>> allTokens{ { initialToken } }; // search space over time steps
+    list<vector<BeamDecoderToken>> allTokens{ { initialToken } }; // search space over time steps
+    vector<BeamDecoderToken> newTokens; // buffer for new tokens
+    vector<Variable> pathLogPVectors;
+    vector<DecoderRecurrentState> newRecurrentStates;
+    vector<const BeamDecoderToken*> backPointers;
+    vector<vector<float>> probCopyBuffers;
+    vector<pair<size_t, size_t>> sortBuffer;
     for (;;)
     {
         let& tokens = allTokens.back();
@@ -248,46 +257,90 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
         // We are trying to find the highest-scoring *sentence* probability, which is
         // computed via Bayes rule. Hence, any subsequent path expansions cannot have a higher
         // sentence probability, since whatever gets multiplied on later is < 1.
-        if (tokens.front().wordIndex.Value()->AsScalar<float>() == (float)sentEndId)
+        if (tokens.front().wordIndex == sentEndId)
             break;
-        // expand tokens
-        list<BeamDecoderToken> newTokens;
+        // expand all present tokens
+        //  - recurrent step
+        //  - determine path probabilities for all words
+        backPointers      .clear();
+        newRecurrentStates.clear();
+        pathLogPVectors   .clear();
+        fprintf(stderr, "--- step %d from %d tokens ---\n", (int)allTokens.size(), (int)tokens.size());
         for (let& token : tokens)
         {
-            fprintf(stderr, "\n--- step %d ---\n", (int)allTokens.size());
-            LOG(token.recurrentState.state);
-            LOG(token.recurrentState.attentionContext);
-            LOG(token.wordEmbedded);
+            if (token.wordIndex == sentEndId) // if </s> reached then stop. This hypothesis is worse than others that have not ended.
+                continue;
+            //LOG(token.recurrentState.state);
+            //LOG(token.recurrentState.attentionContext);
+            // embed it for the next step
+            let wordEmbedded = decoderEmbedOutputFunction(token.wordIndex);
+            //LOG(wordEmbedded);
             // update the recurrent model
-            let newRecurrentState = decoderStepFunction(token.recurrentState, token.wordEmbedded);
+            let newRecurrentState = decoderStepFunction(token.recurrentState, wordEmbedded);
             // stack of output transforms
             let z = decoderOutputFunction(newRecurrentState.state, newRecurrentState.attentionContext);
             // conditional probability log P(word|state)
-            let logPs = LogSoftmax(z);
+            let logPVector = LogSoftmax(z);
+            //LOG(logPVector);
             // expand it
-            let pathLogPs = logPs + token.pathLogP;
-            // determine the highest-scoring output word
-            // TODO: really remember all of those for each token
-            let wordIndex = Argmax(pathLogPs, Axis_DropLastAxis);
-            // and as one-hot
-            let word = OneHotOp(wordIndex, tgtVocabSize, /*outputSparse=*/true, Axis(0));
-            // determine its conditional probability
-            let newPathLogP = InnerProduct(pathLogPs, word, Axis_DropLastAxis);
-            LOG(pathLogPs);
-            LOG(wordIndex);
-            LOG(word);
+            let pathLogPVector = logPVector + token.pathLogP;
+            backPointers      .push_back(&token           ); // where we came from
+            newRecurrentStates.push_back(newRecurrentState); // the new internal state (which does not depend on the choice)
+            pathLogPVectors   .push_back(pathLogPVector   ); // the path probability vectors
+        }
+        let numTokens = backPointers.size();
+        // now we have gotten all we wanted from the token
+        // determine new token set
+        // That is, all tokens that in the top N and within the probability beam.
+        // we go into CPU land now, since there is no sorting function...
+        if (probCopyBuffers.size() < numTokens)
+            probCopyBuffers.resize(numTokens);
+        for (size_t i = 0; i < numTokens; i++)
+        {
+            auto& probCopyBuffer = probCopyBuffers[i];
+            pathLogPVectors[i].Value()->CopyDataTo(probCopyBuffer);
+        }
+        sortBuffer.clear();
+        for (size_t i = 0; i < numTokens; i++)
+            for (size_t k = 0; k < tgtVocabSize; k++)
+                sortBuffer.push_back({ i, k });
+        sort(sortBuffer.begin(), sortBuffer.end(),
+            [&](const pair<size_t, size_t>& ik1, const pair<size_t, size_t>& ik2)
+            {
+                return probCopyBuffers[ik1.first][ik1.second] > probCopyBuffers[ik2.first][ik2.second];
+            });
+        size_t i, k;
+        tie(i,k) = sortBuffer.front();
+        let maxPathLogP = probCopyBuffers[i][k];
+        // create the new tokens
+        static const float beamWidth = 10.0; // logProb beam width
+        newTokens.clear();
+        for (let& ik : sortBuffer)
+        {
+            if (newTokens.size() == maxBeam) // top-N pruning
+                break;
+            tie(i, k) = ik;
+            let logPathProb = probCopyBuffers[i][k];
+            if (logPathProb < maxPathLogP - beamWidth) // probability-beam pruning
+                break;
+            // token should survive
+            let newPathLogP = pathLogPVectors[i][k];
+            //LOG(k);
+            //LOG(word);
+            string hist;
+            for (let* bp = backPointers[i]; bp; bp = bp->backPointer)
+                hist = dict[bp->wordIndex] + " " + hist;
+            fprintf(stderr, "word[%d]: %d %s | %s\n", (int)i, (int)k, dict[k].c_str(), hist.c_str());
             LOG(newPathLogP);
-            // embed it for the next step
-            let wordEmbedded = decoderEmbedOutputFunction(word);
             // new token
-            newTokens.emplace_back/*BeamDecoderToken newToken = */(BeamDecoderToken{ newRecurrentState, wordIndex, /*backPointer=*/&token, newPathLogP, wordEmbedded });
+            newTokens.emplace_back/*BeamDecoderToken newToken = */(BeamDecoderToken{ backPointers[i], newRecurrentStates[i], k, newPathLogP });
         }
         // expand the remembered tokens
-        allTokens.emplace_back(move(newTokens));
+        allTokens.push_back(newTokens); // makes a copy. and we reuse newTokens[]
     }
 
     // traceback
-    vector<Variable> resultWords(allTokens.size());
+    vector<double> resultWords(allTokens.size());
     let* pTok = &allTokens.back().front();
     auto iter = resultWords.end();
     while (pTok)
@@ -296,15 +349,14 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
             LogicError("BeamDecode: length screwed up??");
         iter--;
         // get word in this token
-        LOG(pTok->wordIndex);
-        *iter = OneHotOp(pTok->wordIndex, tgtVocabSize, /*outputSparse=*/true, Axis(0));
-        LOG(*iter);
+        *iter = (double)pTok->wordIndex;
         // trace back one step
         pTok = pTok->backPointer;
     }
     if (iter != resultWords.begin())
         LogicError("BeamDecode: length screwed up??");
-    let hyp = Splice(resultWords, Axis::EndStaticAxis());
+    let hyp = OneHotConstant(resultWords);
+    //let hyp = Splice(resultWords, Axis::EndStaticAxis());
     LOG(hyp);
     return hyp;
 }
@@ -322,8 +374,9 @@ fun AttentionDecoder(double dropoutInputKeepProb)
                              >> Dense(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
                              >> Activation(Tanh)
                              >> Label(Named("encoderDataProjection"));
+    let embedTargetFunc = Embedding(embeddingDim);
     let embedTarget = Barrier(600, Named("embedTargetBarrier"))     // target embeddding
-                   >> Embedding(embeddingDim)
+                   >> embedTargetFunc
                    >> Label(Named("embedTarget"));
     let initialContext = Constant({ attentionDim }, CurrentDataType(), 0.0, CurrentDevice(), L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier"))
@@ -438,7 +491,10 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         {
             // if no history then instead use beam decoder
             if (historySeq == Variable())
-                return BeamDecode(hEncoderSeq, decoderInitFunction, embedTarget, decoderStepFunction, decoderOutputFunction);
+            {
+                Variable W = embedTargetFunc.Nested(L"embed")[L"W"];
+                return BeamDecode(hEncoderSeq, decoderInitFunction, [&](size_t word) {return W[word];}, decoderStepFunction, decoderOutputFunction);
+            }
             // decoding loop
             DecoderRecurrentState decoderState = decoderInitFunction(hEncoderSeq);
             vector<DecoderRecurrentState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
