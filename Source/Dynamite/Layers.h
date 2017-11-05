@@ -348,6 +348,9 @@ static BinaryModel GRU(size_t outputDim)
     // matrices are stacked in order (i, r, h)
     auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
     //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, CurrentDevice());
+    // using a local matrix here since we cannot infer the input dimension due to the initial state.
+    //  --> TODO: add an optional input dimension to Dense. Then also use weight norm for R.
+    //            Do that after I got a model I can decode.
     auto R  = Parameter({ outputDim * 3, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
     //auto b  = Parameter({ outputDim * 3            }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
     let normR = LengthNormalization();

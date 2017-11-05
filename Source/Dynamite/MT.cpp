@@ -821,7 +821,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             learner->Update(gradients, info);
             //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             let timePerUpdate = partTimer.Elapsed();
-            // log the parameters
+            // log the parameters  --BUGBUG: do this before 1-bit SGD
             if (mbCount % 50 == 1) for (let& p : parameters)
             {
                 p.Value()->LogToFile(p.Name(), stderr, 10);
