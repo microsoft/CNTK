@@ -65,6 +65,7 @@ bool use1BitSgd = false;
 size_t saveEvery = 2000;
 double  pruningThreshold = 10.0;
 size_t maxBeam = 5;
+double beamWidth = 2.0; // logProb beam width
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -204,7 +205,7 @@ auto TransformSelectMember(const CollectionType& fromCollection, CollectionMembe
 }
 
 // the state we carry forward across decoding steps
-struct DecoderState
+struct DecoderRecurrentState
 {
     // actual state
     Variable state, attentionContext;
@@ -213,50 +214,152 @@ struct DecoderState
     Variable encodingProjectedDataSeq;
 };
 
-// this is the main beam decoder, for a single sentence
-template<typename InitFunctionType, typename StepFunctionType, typename OutputFunctionType>
-Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& initFunction, const StepFunctionType& stepFunction, const OutputFunctionType& outputFunction)
+struct BeamDecoderToken
 {
-    let sentStartId = 1;
-    //let sentEndId = 2; // TODO: get those from the actual dictionary
-    let sentStartIdVar = Constant({ }, CurrentDataType(), sentStartId, CurrentDevice(), L"sentStart");
-    auto axism1 = Axis(-1); // API BUGBUG: must change to const&, next time we change the lib header anyway
-    Variable sentStart = OneHotOp(sentStartIdVar, tgtVocabSize, /*outputSparse=*/true, axism1/*Axis(-1)*/);
-    sentStart.Value();
-    list<DecoderState> state = { initFunction(hEncoderSeq) }; // initial state
-    state; sentStart; 
-    outputFunction; stepFunction;
-#if 0
+    const BeamDecoderToken* backPointer;  // where we came from -- pointer to best previous token
+    DecoderRecurrentState recurrentState; // new internal state -- after calling recurrence
+    size_t wordIndex;                     // resulting output word, as a scalar index value
+    Variable pathLogP;                    // accumulated partial log probability (scalar)
+};
+
+// helper to create a CSC-sparse NDArrayView in the current device that represents the passed index sequence
+// TODO: Suboptimal. We want a view here, and then construct a Constant from that.
+static Variable OneHotConstant(const vector<double>& ids)
+{
+    let indexView = MakeSharedObject<NDArrayView>(ids.data(), CurrentDataType(), NDShape{ ids.size() }, CurrentDevice(), /*readOnly=*/true);
+    return OneHotOp(Constant(indexView), tgtVocabSize, /*outputSparse=*/true, Axis(0));
+}
+
+// this is the main beam decoder, for a single sentence
+template<typename InitFunctionType, typename EmbedFunctionType, typename StepFunctionType, typename OutputFunctionType>
+Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoderInitFunction, const EmbedFunctionType& decoderEmbedOutputFunction, const StepFunctionType& decoderStepFunction, const OutputFunctionType& decoderOutputFunction)
+{
+    let& dict = GetAndCacheDictionary(tgtVocabFile); // for debugging
+    size_t sentStartId = 1;
+    size_t sentEndId = 2; // TODO: get those from the actual dictionary
+    let initialPathLogP = Constant({}, CurrentDataType(), 0, CurrentDevice(), L"initialPathLogP");
+    BeamDecoderToken initialToken = { /*backPointer=*/nullptr, decoderInitFunction(hEncoderSeq), sentStartId, initialPathLogP };
     // expansion
+    list<vector<BeamDecoderToken>> allTokens{ { initialToken } }; // search space over time steps
+    vector<BeamDecoderToken> newTokens; // buffer for new tokens
+    vector<Variable> pathLogPVectors;
+    vector<DecoderRecurrentState> newRecurrentStates;
+    vector<const BeamDecoderToken*> backPointers;
+    vector<vector<float>> probCopyBuffers(maxBeam);
+    vector<pair<size_t, size_t>> sortBuffer;
+    size_t totalTokens = 1;
     for (;;)
     {
+        let& tokens = allTokens.back();
+        // end?
+        // It is theoretically correct to stop once the best-scoring hypothesis is </s>.
+        // We are trying to find the highest-scoring *sentence* probability, which is
+        // computed via Bayes rule. Hence, any subsequent path expansions cannot have a higher
+        // sentence probability, since whatever gets multiplied on later is < 1.
+        if (tokens.front().wordIndex == sentEndId)
+            break;
+        // expand all present tokens
+        //  - recurrent step
+        //  - determine path probabilities for all words
+        backPointers      .clear();
+        newRecurrentStates.clear();
+        pathLogPVectors   .clear();
+        fprintf(stderr, "--- step %d from %d tokens ---\n", (int)allTokens.size(), (int)tokens.size());
+        for (let& token : tokens)
+        {
+            if (token.wordIndex == sentEndId) // if </s> reached then stop. This hypothesis is worse than others that have not ended.
+                continue;
+            //LOG(token.recurrentState.state);
+            //LOG(token.recurrentState.attentionContext);
+            // embed it for the next step
+            let wordIndexVar = Constant({}, CurrentDataType(), (double)token.wordIndex, CurrentDevice(), L"wordIndexVar");
+            let word = OneHotOp(wordIndexVar, tgtVocabSize, /*outputSparse=*/true, Axis(0));
+            let wordEmbedded = decoderEmbedOutputFunction(word);
+            //LOG(wordEmbedded);
+            // update the recurrent model
+            let newRecurrentState = decoderStepFunction(token.recurrentState, wordEmbedded);
+            // stack of output transforms
+            let z = decoderOutputFunction(newRecurrentState.state, newRecurrentState.attentionContext);
+            // conditional probability log P(word|state)
+            let logPVector = LogSoftmax(z);
+            //LOG(logPVector);
+            // expand it
+            let pathLogPVector = logPVector + token.pathLogP;
+            backPointers      .push_back(&token           ); // where we came from
+            newRecurrentStates.push_back(newRecurrentState); // the new internal state (which does not depend on the choice)
+            pathLogPVectors   .push_back(pathLogPVector   ); // the path probability vectors
+        }
+        let numTokens = backPointers.size();
+        // now we have gotten all we wanted from the token
+        // determine new token set
+        // That is, all tokens that in the top N and within the probability beam.
+        // we go into CPU land now, since there is no sorting function...
+        for (size_t i = 0; i < numTokens; i++)
+            pathLogPVectors[i].Value()->CopyDataTo(probCopyBuffers[i]);
+        sortBuffer.clear();
+        for (size_t i = 0; i < numTokens; i++)
+            for (size_t k = 0; k < tgtVocabSize; k++)
+                sortBuffer.push_back({ i, k });
+        sort(sortBuffer.begin(), sortBuffer.end(),
+            [&](const pair<size_t, size_t>& ik1, const pair<size_t, size_t>& ik2)
+            {
+                return probCopyBuffers[ik1.first][ik1.second] > probCopyBuffers[ik2.first][ik2.second];
+            });
+        size_t i, k;
+        tie(i,k) = sortBuffer.front();
+        let maxPathLogP = probCopyBuffers[i][k];
+        // create the new tokens
+        newTokens.clear();
+        for (let& ik : sortBuffer)
+        {
+            if (newTokens.size() == maxBeam) // top-N pruning
+                break;
+            tie(i, k) = ik;
+            let logPathProb = probCopyBuffers[i][k];
+            if (logPathProb < maxPathLogP - beamWidth) // probability-beam pruning
+                break;
+            // token should survive
+            //LOG(k);
+            //LOG(word);
+            string hist;
+            for (let* bp = backPointers[i]; bp; bp = bp->backPointer)
+                hist = dict[bp->wordIndex] + " " + hist;
+            fprintf(stderr, "word[%d] %.3f: %d %s | %s\n", (int)i, logPathProb, (int)k, dict[k].c_str(), hist.c_str());
+            // new token
+            let newPathLogP = pathLogPVectors[i][k];
+            //LOG(newPathLogP);
+            newTokens.emplace_back/*BeamDecoderToken newToken = */(BeamDecoderToken{ backPointers[i], newRecurrentStates[i], k, newPathLogP });
+            totalTokens++;
+        }
+        // expand the remembered tokens
+        allTokens.push_back(newTokens); // makes a copy. and we reuse newTokens[]
     }
 
-
-
-
-
-    let historyEmbeddedSeq = embedTarget(historySeq);
-    // TODO: Forward iterator
-    for (size_t t = 0; t < historyEmbeddedSeq.size(); t++)
+    // traceback
+    let numWords = allTokens.size();
+    vector<double> resultWords(numWords);
+    let* pTok = &allTokens.back().front();
+    auto iter = resultWords.end();
+    while (pTok)
     {
-        // do recurrent step (in inference, historySeq[t] would become states[t-1])
-        let historyEmbedded = historyEmbeddedSeq[t]; CountAPICalls(1);
-
-        // do one decoding step
-        decoderState = decoderStepFunction(decoderState, historyEmbedded);
-
-        // save the results
-        // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that. Or an iterator!
-        decoderStates[t] = decoderState;
+        if (iter == resultWords.begin())
+            LogicError("BeamDecode: length screwed up??");
+        iter--;
+        // get word in this token
+        *iter = (double)pTok->wordIndex;
+        // trace back one step
+        pTok = pTok->backPointer;
     }
-    let stateSeq = Splice(TransformSelectMember(decoderStates, &DecoderState::state), Axis::EndStaticAxis());
-    let attentionContextSeq = Splice(TransformSelectMember(decoderStates, &DecoderState::attentionContext), Axis::EndStaticAxis());
-    // stack of output transforms
-    let z = doToOutput(stateSeq, attentionContextSeq);
-    return z;
-#endif
-    return Variable();
+    if (iter != resultWords.begin())
+        LogicError("BeamDecode: length screwed up??");
+    let hyp = OneHotConstant(resultWords);
+    //let hyp = Splice(resultWords, Axis::EndStaticAxis());
+    //LOG(hyp);
+    let totalLogP = allTokens.back().front().pathLogP.Value()->AsScalar<double>();
+    let logPPerWord = totalLogP / (numWords - 1);
+    let ppl = exp(-logPPerWord);
+    fprintf(stderr, "logP = %.3f * %d ; PPL=%.2f ; N = %.2f * %d\n", logPPerWord, (int)(numWords - 1), ppl, totalTokens / (double)numWords, (int)numWords), fflush(stderr);
+    return hyp;
 }
 
 // TODO: Break out initial step and recurrent step layers. Decoder will later pull them out from here.
@@ -308,7 +411,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 
     // initialization function
     let decoderInitFunction =
-        [=](const Variable& hEncoderSeq) -> DecoderState
+        [=](const Variable& hEncoderSeq) -> DecoderRecurrentState
         {
             CountAPICalls(2);
             Variable state = Slice(hEncoderSeq[0], Axis(0), (int)encoderRecurrentDim, 2 * (int)encoderRecurrentDim); // initial state for the recurrence is the final encoder state of the backward recurrence
@@ -323,7 +426,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 
     // step function
     let decoderStepFunction =
-        [=](const DecoderState& decoderState, const Variable& historyEmbedded) -> DecoderState
+        [=](const DecoderRecurrentState& decoderState, const Variable& historyEmbedded) -> DecoderRecurrentState
         {
             // get the state
             auto state = decoderState.state;
@@ -347,7 +450,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
 
     // non-recurrent further output processing
     // BUGBUG: Setting this to true fails with an off batch axis.
-    let doToOutput = StaticModel(/*isBasicBlock=*/false,
+    let decoderOutputFunction = StaticModel(/*isBasicBlock=*/false,
         [=](const Variable& state, const Variable& attentionContext)
         {
             // first one brings it into the right dimension
@@ -364,7 +467,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
             let z = outputProjection(topHidden);
             Function::SetDynamicProfiler(prevProfiler);
             return z;
-        }, Named("doToOutput"));
+        }, Named("decoderOutputFunction"));
 
     // decode from a top layer of an encoder, using history as history
     map<wstring, ModelParametersPtr> nestedLayers =
@@ -388,10 +491,10 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         {
             // if no history then instead use beam decoder
             if (historySeq == Variable())
-                return BeamDecode(hEncoderSeq, decoderInitFunction, decoderStepFunction, doToOutput);
+                return BeamDecode(hEncoderSeq, decoderInitFunction, embedTarget, decoderStepFunction, decoderOutputFunction);
             // decoding loop
-            DecoderState decoderState = decoderInitFunction(hEncoderSeq);
-            vector<DecoderState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
+            DecoderRecurrentState decoderState = decoderInitFunction(hEncoderSeq);
+            vector<DecoderRecurrentState> decoderStates(historySeq.size()); // inner state and attentionContext remembered here
             let historyEmbeddedSeq = embedTarget(historySeq);
             // TODO: Forward iterator
             for (size_t t = 0; t < historyEmbeddedSeq.size(); t++)
@@ -406,10 +509,10 @@ fun AttentionDecoder(double dropoutInputKeepProb)
                 // TODO: This has now become just a recurrence with a tuple state. Let's have a function for that. Or an iterator!
                 decoderStates[t] = decoderState;
             }
-            let stateSeq            = Splice(TransformSelectMember(decoderStates, &DecoderState::state           ), Axis::EndStaticAxis());
-            let attentionContextSeq = Splice(TransformSelectMember(decoderStates, &DecoderState::attentionContext), Axis::EndStaticAxis());
+            let stateSeq            = Splice(TransformSelectMember(decoderStates, &DecoderRecurrentState::state           ), Axis::EndStaticAxis());
+            let attentionContextSeq = Splice(TransformSelectMember(decoderStates, &DecoderRecurrentState::attentionContext), Axis::EndStaticAxis());
             // stack of output transforms
-            let z = doToOutput(stateSeq, attentionContextSeq);
+            let z = decoderOutputFunction(stateSeq, attentionContextSeq);
             return z;
         });
 }
@@ -431,7 +534,8 @@ fun CreateModelFunction()
         [=](const Variable& sourceSeq, const Variable& historySeq) -> Variable
         {
             DOLOG(sourceSeq);
-            DOLOG(historySeq);
+            if (historySeq != Variable())
+                DOLOG(historySeq);
             // embedding
             //let& W = embedFwd.Nested(L"embed")[L"W"];
             //DOLOG(W);
@@ -881,7 +985,7 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
     // data
     let minibatchSource = CreateMinibatchSource(srcEvalFile, tgtEvalFile, /*infinitelyRepeat=*/false);
 
-    let minibatchSize = 700; // this fits
+    let minibatchSize = 1;//700; // this fits
 
     size_t totalLabels = 0; // total scored labels (excluding the <s>)
     double totalLoss = 0;   // corresponding total aggregate loss
@@ -911,7 +1015,7 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
             numLabels += len;
             maxLabels = max(maxLabels, len);
         }
-#if 0   // beam decoding
+#if 1   // beam decoding
         for (size_t seqId = 0; seqId < numSeq; seqId++)
         {
             let& srcSeq = subBatchArgs[0][seqId];
@@ -920,6 +1024,7 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
             PrintSequence("tgt", tgtSeq, tgtVocabFile);
             let outSeq = model_fn(srcSeq, Variable());
             PrintSequence("out", outSeq, tgtVocabFile);
+            PrintSequence("tgt", tgtSeq, tgtVocabFile);
         }
 #endif
         //partTimer.Log("GetNextMinibatch", numLabels);

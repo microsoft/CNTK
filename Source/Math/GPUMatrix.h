@@ -272,6 +272,8 @@ public:
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
 
+    void AssignValues(const double* data, size_t size);
+
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);

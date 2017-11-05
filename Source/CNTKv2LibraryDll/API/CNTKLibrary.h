@@ -772,6 +772,18 @@ namespace CNTK
         }
 
         ///
+        /// Construct a NDArrayView over newly allocated dense storage on the specified device and assign the values
+        /// pointed to by 'valuePtr' to the view. The buffer must match the specified viewShape.
+        /// The specified value is cast to the specified DataType.
+        ///
+        NDArrayView(const double* data, DataType dataType, const NDShape& viewShape, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), bool readOnly = false)
+            : NDArrayView(dataType, viewShape, device)
+        {
+            SetValue(data, m_viewShape.TotalSize());
+            m_isReadOnly = readOnly;
+        }
+
+        ///
         /// Destruct 'this' NDArrayView object
         ///
         CNTK_API ~NDArrayView();
@@ -863,6 +875,13 @@ namespace CNTK
         /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Double.
         ///
         CNTK_API void SetValue(double value);
+
+    private:
+        ///
+        /// Copy the specified buffer to 'this' NDArrayView. Data is type-cast to the actual type.
+        ///
+        CNTK_API void SetValue(const double* data, size_t size);
+    public:
 
         ///
         /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.
@@ -2435,6 +2454,11 @@ namespace CNTK
         /// Length of the last axis.
         ///
         CNTK_API size_t size() const;
+
+        ///
+        /// Test whether a variable is non-empty.
+        ///
+        operator bool() const { return (bool)m_dataFields; }
 
     protected:
         Variable(const InternalVariable& other, const ConstFunctionPtr&  composite, const ConstPrimitiveFunctionPtr& primitive);

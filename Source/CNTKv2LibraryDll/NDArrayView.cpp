@@ -289,11 +289,6 @@ namespace CNTK
         }
     }
 
-    /*static*/ double NDArrayView::Sync(const DeviceDescriptor& device)
-    {
-        return Matrix<float>::SyncDevice(AsCNTKImplDeviceId(device));
-    }
-
     // BUGBUG: This does not honor offsets. Use opConstOne to set it instead.
     void NDArrayView::SetValue(double value)
     {
@@ -306,6 +301,27 @@ namespace CNTK
 
             GetWritableMatrix<double>()->SetValue(value);
         }
+    }
+
+    void NDArrayView::SetValue(const double* data, size_t size)
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            WritableNativeTensorView<float>().GetSOBViewPtr()->AssignValues(data, size);
+            break;
+        case DataType::Double:
+            WritableNativeTensorView<float>().GetSOBViewPtr()->AssignValues(data, size);
+            break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+    }
+
+    /*static*/ double NDArrayView::Sync(const DeviceDescriptor& device)
+    {
+        return Matrix<float>::SyncDevice(AsCNTKImplDeviceId(device));
     }
 
     // determine matrix shape from TensorShape

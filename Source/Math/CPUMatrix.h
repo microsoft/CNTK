@@ -152,6 +152,8 @@ public:
     void SetColumn(const CPUMatrix<ElemType>& valMat, size_t colInd);
     void SetColumn(const ElemType val, size_t j);
 
+    void AssignValues(const double* data, size_t size);
+
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const CPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);

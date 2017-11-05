@@ -172,16 +172,23 @@ namespace CNTK
                     reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
                 else if (reductionOpName == PrimitiveFunction::InternalLogSumReductionOpName)
                     reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opLogSum;
+                else if (reductionOpName == PrimitiveFunction::InternalProdReductionOpName) // note: gradient still missing
+                    reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct;
                 else if (reductionOpName == PrimitiveFunction::InternalMeanReductionOpName)
                 {
                     reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
                     alpha = (double)outputShape.TotalSize(/*check=*/false) / (double)args[0]->Shape().TotalSize(/*check=*/false);
                 }
+                else if (reductionOpName == PrimitiveFunction::InternalMaxReductionOpName) // note: gradient still missing
+                    reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opMax;
+                else if (reductionOpName == PrimitiveFunction::InternalMinReductionOpName) // note: gradient still missing
+                    reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opMin;
+                else if (reductionOpName == PrimitiveFunction::InternalArgmaxReductionOpName) // note: gradient still missing, whatever that is
+                    reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opArgmax;
+                else if (reductionOpName == PrimitiveFunction::InternalArgminReductionOpName) // note: gradient still missing, whatever that is
+                    reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opArgmin;
                 else
-                    //  PrimitiveFunction::InternalMaxReductionOpName
-                    //  PrimitiveFunction::InternalMinReductionOpName
-                    //  PrimitiveFunction::InternalProdReductionOpName
-                    LogicError("Variable '%S' Value(): Reduction op %S not yet implemented.", funcForErrMsg.AsString().c_str(), reductionOpName.c_str());
+                    LogicError("Variable '%S' Value(): Unknown reduction op %S.", funcForErrMsg.AsString().c_str(), reductionOpName.c_str());
             }
             break;
             // non-elementwise ops are done here

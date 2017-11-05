@@ -1709,8 +1709,11 @@ class InternalVariable::AutoBatch
                     return{ StackingMode::STACKING_BUT_MAY_BATCH, freeAxis, lastDim };
                 InvalidArgument("DetermineBatchAxis: The rank of an argument to a basic block invocation exceeds the declared free-axis position.");
             }
-            if (op == PrimitiveOpType::Splice || op == PrimitiveOpType::Reshape || op == PrimitiveOpType::OneHot)
+            if ((op == PrimitiveOpType::Splice && !hasSparse) || op == PrimitiveOpType::Reshape || op == PrimitiveOpType::OneHot)
             {
+                // BUGBUG: Without the !hasSparse condition, this will cause it to fail for an unbatched Splice() of sparse vectors.
+                //         Think this through. Maybe now it no longer works for actual batching/stacking.
+                //         Or maybe this condition is also wrong for dense?
                 // BUGBUG: Is this correct for Reshape()?
                 //         If Reshape does not touch the last axis, we can STACK, otherwise not, I think.
                 //         Same for OneHot.

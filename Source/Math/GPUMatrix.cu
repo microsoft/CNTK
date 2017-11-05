@@ -1578,6 +1578,26 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::AssignValues(const double* data, size_t size)
+{
+    if (size != GetNumRows() * GetNumCols())
+        LogicError("AssignValues: size parameter does not match matrix dimension.");
+    ElemType* to = Data();
+    ElemType* from;
+    vector<ElemType> buffer;
+    if (std::is_same<ElemType, decltype(*data)>())
+        from = (ElemType*)data;
+    else
+    {
+        buffer.resize(size);
+        for (size_t i = 0; i < size; i++)
+            buffer[i] = (ElemType)data[i];
+        from = buffer.data(); // copy from here instead
+    }
+    CUDA_CALL(cudaMemcpy(to, from, size * sizeof(ElemType), cudaMemcpyHostToDevice));
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
     CUDA_LONG N = (CUDA_LONG) GetNumRows();
