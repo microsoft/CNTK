@@ -592,5 +592,23 @@
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	    "dateadded": "10/11/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Pretrained Super-resolution GANs",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_302A_Evaluation_of_Pretrained_Super-resolution_Models.ipynb",
+        "description":  "This tutorial uses pre-trained models for generating high resolution images from lower resolution images.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Training super-resolution GANs",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs.ipynb",
+        "description":  "This tutorial shows how to train networks to generate higher resolution images using CNNs and GANs",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
     }
 ]

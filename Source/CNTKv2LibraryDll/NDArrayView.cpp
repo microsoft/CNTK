@@ -194,6 +194,29 @@ namespace CNTK
         GetWritableMatrix<double>()->SetValue(value);
     }
 
+    bool NDArrayView::IsSliceView()
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:
+        {
+            auto currentMatrix = GetMatrix<float>();
+            return currentMatrix->IsView();
+        }
+        case DataType::Double:
+        {
+            auto currentMatrix = GetMatrix<double>();
+            return currentMatrix->IsView();
+        }
+        case DataType::Float16:
+        {
+            auto currentMatrix = GetMatrix<half>();
+            return currentMatrix->IsView();
+        }
+        }
+        return false;
+    }
+
     void NDArrayView::SetValue(float16 value)
     {
         if (IsSparse())
