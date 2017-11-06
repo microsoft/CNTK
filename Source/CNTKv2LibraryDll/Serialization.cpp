@@ -264,30 +264,17 @@ namespace CNTK
             }
         }
 
-        template <typename T>
+        template <typename SrcT, typename DstT = SrcT>
         static bool ReadData(RenewableCodedStream& input, NDArrayView& dst)
         {
             auto size = dst.Shape().TotalSize();
-            T* buffer = dst.WritableDataBuffer<T>();
+            DstT* buffer = dst.WritableDataBuffer<DstT>();
             for (auto i = 0; i < size; i++)
             {
-                if (!input.Read<T>(buffer + i))
+                SrcT value;
+                if (!input.Read<SrcT>(&value))
                     return false;
-            }
-            return true;
-        }
-
-        template <>
-        static bool ReadData<float16>(RenewableCodedStream& input, NDArrayView& dst)
-        {
-            auto size = dst.Shape().TotalSize();
-            float16* buffer = dst.WritableDataBuffer<float16>();
-            for (auto i = 0; i < size; i++)
-            {
-                float f;
-                if (!input.Read<float>(&f))
-                    return false;
-                buffer[i] = f;
+                buffer[i] = (DstT)value;
             }
             return true;
         }
@@ -389,7 +376,7 @@ namespace CNTK
             }
             else if (dst.GetDataType() == DataType::Float16)
             {
-                if (!ReadData<float16>(wrapper, dst))
+                if (!ReadData<float, float16>(wrapper, dst))
                     return false;
             }
         }

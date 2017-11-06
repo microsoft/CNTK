@@ -776,7 +776,7 @@ namespace CNTK
             m_currentTime[parameter] = currentTimestamp;
         }
 
-        smoothedGradientMatrix->AdaDeltaUpdate<GradType>(*gradientMatrix, parameterMatrix, (AccumType)learningRate, (AccumType)m_rho, (AccumType)m_epsilon, timestamps, currentTimestamp);
+        smoothedGradientMatrix->template AdaDeltaUpdate<GradType>(*gradientMatrix, parameterMatrix, (AccumType)learningRate, (AccumType)m_rho, (AccumType)m_epsilon, timestamps, currentTimestamp);
     }
 
     /*virtual*/ Dictionary LearnerAdaDelta::CreateCheckpoint() /*override*/
