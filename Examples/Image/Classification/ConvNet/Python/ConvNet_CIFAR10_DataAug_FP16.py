@@ -219,5 +219,8 @@ if __name__=='__main__':
     # test
     model = Function.load(path)
     reader = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
-    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
+
+    with default_options(dtype=np.float16):
+        criterion = create_criterion_function(model, normalize=lambda x: x / 256)
+        
     evaluate(reader, criterion)
