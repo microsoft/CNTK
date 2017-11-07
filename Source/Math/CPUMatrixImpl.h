@@ -7043,7 +7043,8 @@ struct TensorArgOpReduction<ElemType, N, -1>
 template <class ElemType, typename OPFN, typename ReductionOp, size_t N, bool vectorizable, int m, int k>
 struct TensorOpIteration
 {
-    static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn, const ReductionOp& reductionOp,
+    // remove inline to avoid compiler out-of-heap error in release build
+    static /*inline*/ void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn, const ReductionOp& reductionOp,
                             const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
                             const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
     {
