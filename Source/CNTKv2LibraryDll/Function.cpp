@@ -1966,6 +1966,14 @@ namespace CNTK
         return AsBlock(std::move(ElementTimes(Minus(operandPlaceholder, meanPlaceholder), invStdDevPlaceholder)), { { operandPlaceholder, operand }, { meanPlaceholder, mean }, { invStdDevPlaceholder, invStdDev } }, L"PerDimMeanVarianceNormalize", name);
     }
 
+    FunctionPtr PerDimMeanVarianceDeNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable(L"operand");
+        auto meanPlaceholder = PlaceholderVariable(L"mean");
+        auto invStdDevPlaceholder = PlaceholderVariable(L"invStdDev");
+        return AsBlock(std::move(Plus(ElementDivide(operandPlaceholder, invStdDevPlaceholder), meanPlaceholder)), { { operandPlaceholder, operand },{ meanPlaceholder, mean },{ invStdDevPlaceholder, invStdDev } }, L"PerDimMeanVarianceDeNormalize", name);
+    }
+
     FunctionPtr Convolution(const Variable& convolutionMap,
         const Variable& operand,
         const NDShape& strides,

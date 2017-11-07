@@ -528,6 +528,16 @@ namespace CNTK
 
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
                 }
+                else if (node->OperationName() == OperationNameOf(PerDimMeanVarDeNormalizationNode))
+                {
+                    auto meanValue = Constant(inputVars[1]).Value();
+                    auto invStdDevValue = Constant(inputVars[2]).Value();
+
+                    std::wstring uid, name;
+                    std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(node->NodeName());
+
+                    return PerDimMeanVarianceDeNormalize(inputVars[0], meanValue, invStdDevValue, name);
+                }
                 else if (node->OperationName() == OperationNameOf(CropNode))
                 {
                     opType = PrimitiveOpType::Crop;
