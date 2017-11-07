@@ -231,7 +231,7 @@ class ArrayMixin(object):
             if callable(device):
                 device = device()
 
-            network = _sparse_to_dense_network_cache(ndav.shape[1:], False,
+            network = _sparse_to_dense_network_cache(ndav.shape, False,
                                                      device.as_string())
             warnings.warn('converting Value object to CSR format might be slow')
 
