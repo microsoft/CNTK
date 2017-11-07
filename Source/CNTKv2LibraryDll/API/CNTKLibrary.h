@@ -442,6 +442,9 @@ namespace CNTK
     ///
     class DeviceDescriptor final
     {
+        template <typename T>
+        friend struct std::hash;
+
         friend bool operator==(const DeviceDescriptor& first, const DeviceDescriptor& second);
 
         friend struct Test::DeviceSelectionTestFixture;
@@ -2320,6 +2323,13 @@ private:
 }
 
 namespace std {
+    template <> struct hash<::CNTK::DeviceDescriptor>
+    {
+        size_t operator()(const ::CNTK::DeviceDescriptor& x) const
+        {
+            return std::hash<std::wstring>()(x.AsString());
+        }
+    };
 
     template <> struct hash<::CNTK::NDShape>
     {
