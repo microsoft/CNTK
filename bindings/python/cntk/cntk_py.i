@@ -2078,7 +2078,7 @@ DATA_TYPE.__eq__ = lambda a,b: (a is not None and b is not None and EQ(a,b)) or 
 %py_hash_for(Axis)
 
 %py_eq_for(DeviceDescriptor, DeviceDescriptor_eq)
-// %py_hash_for(DeviceDescriptor)
+%py_hash_for(DeviceDescriptor)
 
 %pythoncode %{
 StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storage_format==b.m_storage_format and a.m_element_type==b.m_element_type and a.m_sample_layout.dimensions()==b.m_sample_layout.dimensions()
