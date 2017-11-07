@@ -100,7 +100,7 @@ private:
     {
         auto minMaxPair = std::minmax_element(arrayRef.begin(), arrayRef.end());
 
-        return std::max((double)arrayRef[minMaxPair.second - arrayRef.begin()], std::abs((double)arrayRef[minMaxPair.first - arrayRef.begin()]));
+        return (RawType)std::max((double)arrayRef[minMaxPair.second - arrayRef.begin()], std::abs((double)arrayRef[minMaxPair.first - arrayRef.begin()]));
     }
 };
 

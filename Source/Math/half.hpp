@@ -282,46 +282,39 @@ __FP16_DECL__ bool operator<=(const half &lh, const long int &rh) { return (floa
 // half overload of some std function
 namespace std
 {
-inline bool isfinite(half arg)
-{
-    return isfinite((float)arg);
-}
 
-inline bool isinf(half arg)
-{
-    return isinf((float)arg);
-}
+#define STD_HALF_RETBOOL(x) inline bool x(half arg) { return x((float)arg); }
+STD_HALF_RETBOOL(isfinite)
+STD_HALF_RETBOOL(isinf)
+STD_HALF_RETBOOL(isnan)
+STD_HALF_RETBOOL(signbit)
+#undef STD_HALF_RETBOOL
 
-inline bool isnan(half arg)
-{
-    return isnan((float)arg);
-}
+#define STD_HALF_UNIOP(x) inline half x(half arg) { return x((float)arg); }
+STD_HALF_UNIOP(floor)
+STD_HALF_UNIOP(round)
+STD_HALF_UNIOP(exp)
+STD_HALF_UNIOP(sqrt)
+STD_HALF_UNIOP(abs)
+STD_HALF_UNIOP(tanh)
+STD_HALF_UNIOP(atanh)
+STD_HALF_UNIOP(log)
+STD_HALF_UNIOP(log10)
+STD_HALF_UNIOP(cos)
+STD_HALF_UNIOP(sin)
+STD_HALF_UNIOP(acos)
+STD_HALF_UNIOP(asin)
+STD_HALF_UNIOP(cosh)
+STD_HALF_UNIOP(sinh)
+STD_HALF_UNIOP(acosh)
+STD_HALF_UNIOP(asinh)
+#undef STD_HALF_UNIOP
 
-inline half floor(half arg)
-{
-    return half(floor((float)arg));
-}
-
-inline half exp(half arg)
-{
-    return half(exp((float)arg));
-}
-
-inline half abs(half arg)
-{
-    return half(abs((float)arg));
-}
-
-inline half max(const half& lhs, const half& rhs)
-{
-    return half(max((float)lhs, (float)rhs));
-}
-
-inline half pow(const half& lhs, const half& rhs)
-{
-    return half(pow((float)lhs, (float)rhs));
-}
-
+#define STD_HALF_BINOP(x) inline half x(const half& lhs, const half& rhs) { return x((float)lhs, (float)rhs); }
+STD_HALF_BINOP(max)
+STD_HALF_BINOP(min)
+STD_HALF_BINOP(pow)
+#undef STD_HALF_BINOP
 }
 
 #undef __CUDA_HOSTDEVICE__
