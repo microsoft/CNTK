@@ -1560,7 +1560,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitGaussianRand, RandomSeedFixture)
     float avg = 0;
     foreach_coord (i, j, a)
     {
-        avg += a(i, j);
+        avg += (float)a(i, j);
     }
     avg /= (640 * 230);
 

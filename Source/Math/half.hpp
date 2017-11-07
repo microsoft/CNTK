@@ -122,12 +122,14 @@ struct TypeSelector<half>
 /* operators to write to/read from files for half */
 inline Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, half& h)
 {
-    stream >> *(short *)&h;
+    int v;
+    stream >> v;
+    *(short *)&h = (short)v;
     return stream;
 }
 inline Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const half& h)
 {
-    stream << *(short *)&h;
+    stream << (int)*(short *)&h;
     return stream;
 }
 
