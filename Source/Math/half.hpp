@@ -93,7 +93,7 @@ public:
 #endif
     }
 
-#ifndef HALF_IN_BOOST_TEST // cast operators below conflicts with boost test
+#ifndef HALF_IN_BOOST_TEST // cast operators below conflict with boost test
     __FP16_DECL__ operator bool() const { return (bool)(float)(*this); }
     __FP16_DECL__ operator char() const { return (char)(float)(*this); }
     __FP16_DECL__ operator short() const { return (short)(float)(*this); }

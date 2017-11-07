@@ -4,7 +4,6 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
-#define HALF_IN_BOOST_TEST // use this macro to disable cast operator other than float in half.hpp
 #include "../../../Source/Math/Matrix.h"
 #include "../../../Source/Math/CPUMatrix.h"
 #include "../../../Source/Math/Helpers.h"
