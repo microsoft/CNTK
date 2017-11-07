@@ -1380,9 +1380,9 @@ void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ 
             if (otherh) DoCastAssignValuesOf(*this, *otherh);
         },
         {
-            if (otherf) m_GPUMatrix->CastAssignValuesOf<float>(otherf->m_GPUMatrix.get());
-            if (otherd) m_GPUMatrix->CastAssignValuesOf<double>(otherd->m_GPUMatrix.get());
-            if (otherh) m_GPUMatrix->CastAssignValuesOf<half>(otherh->m_GPUMatrix.get());
+            if (otherf) m_GPUMatrix->template CastAssignValuesOf<float>(otherf->m_GPUMatrix.get());
+            if (otherd) m_GPUMatrix->template CastAssignValuesOf<double>(otherd->m_GPUMatrix.get());
+            if (otherh) m_GPUMatrix->template CastAssignValuesOf<half>(otherh->m_GPUMatrix.get());
         },
         {
             if (otherf) DoCastAssignValuesOf(*this, *otherf);
@@ -1390,9 +1390,9 @@ void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ 
             if (otherh) DoCastAssignValuesOf(*this, *otherh);
         },
         {
-            if (otherf) m_GPUSparseMatrix->DeepCast<float>(*otherf->m_GPUSparseMatrix);
-            if (otherd) m_GPUSparseMatrix->DeepCast<double>(*otherd->m_GPUSparseMatrix);
-            if (otherh) m_GPUSparseMatrix->DeepCast<half>(*otherh->m_GPUSparseMatrix);
+            if (otherf) m_GPUSparseMatrix->template DeepCast<float>(*otherf->m_GPUSparseMatrix);
+            if (otherd) m_GPUSparseMatrix->template DeepCast<double>(*otherd->m_GPUSparseMatrix);
+            if (otherh) m_GPUSparseMatrix->template DeepCast<half>(*otherh->m_GPUSparseMatrix);
         });
 }
 

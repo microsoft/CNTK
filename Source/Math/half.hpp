@@ -282,7 +282,6 @@ __FP16_DECL__ bool operator<=(const half &lh, const long int &rh) { return (floa
 // half overload of some std function
 namespace std
 {
-
 #define STD_HALF_RETBOOL(x) inline bool x(half arg) { return x((float)arg); }
 STD_HALF_RETBOOL(isfinite)
 STD_HALF_RETBOOL(isinf)
@@ -312,7 +311,6 @@ STD_HALF_UNIOP(asinh)
 
 #define STD_HALF_BINOP(x) inline half x(const half& lhs, const half& rhs) { return x((float)lhs, (float)rhs); }
 STD_HALF_BINOP(max)
-STD_HALF_BINOP(min)
 STD_HALF_BINOP(pow)
 #undef STD_HALF_BINOP
 }
