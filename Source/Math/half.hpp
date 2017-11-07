@@ -93,6 +93,7 @@ public:
 #endif
     }
 
+#ifndef HALF_IN_BOOST_TEST // cast operators below conflicts with boost test
     __FP16_DECL__ operator bool() const { return (bool)(float)(*this); }
     __FP16_DECL__ operator char() const { return (char)(float)(*this); }
     __FP16_DECL__ operator short() const { return (short)(float)(*this); }
@@ -100,6 +101,7 @@ public:
     __FP16_DECL__ operator size_t() const { return (size_t)(float)(*this); }
     __FP16_DECL__ operator long() const { return (long)(float)(*this); }
     __FP16_DECL__ operator long long() const { return (long long)(float)(*this); }
+#endif
 
 //    __CUDA_HOSTDEVICE__ operator bool() const { return (__x & 0x7FFF) != 0; }
 };
