@@ -55,7 +55,7 @@ template <class ElemType> class CPUSparseMatrix;
 template <class ElemType> class DeviceBoundNumber;
 
 // <ElemType>-agnostic base class
-struct /*interface*/ MATH_API MatrixBase
+struct /*interface*/ MATH_API MatrixBase : public std::enable_shared_from_this<MatrixBase>
 {
     virtual int GetDeviceId() const = 0;
     virtual MatrixType GetMatrixType() const = 0;

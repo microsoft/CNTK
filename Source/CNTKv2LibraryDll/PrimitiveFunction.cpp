@@ -53,8 +53,14 @@ namespace CNTK
                 }
                 else
                 {
+                    // batch normalization on FP16 requires 32-bit scale/bias/mean/variance, so specialize that case
+                    bool batchNormSpecialCase =
+                        (op == PrimitiveOpType::BatchNormalization) &&
+                        (outputDataType == DataType::Float16) &&
+                        (inputDataType == DataType::Float);
+
                     // The DataType of all operands should match except for Constants where we allow coercion
-                    if ((inputDataType != DataType::Unknown) && (inputDataType != outputDataType) && !input.IsConstant())
+                    if ((inputDataType != DataType::Unknown) && (inputDataType != outputDataType) && !input.IsConstant() && !batchNormSpecialCase)
                         InvalidArgument("Primitive op '%S' passed operands '%S' with different DataTypes '%s' and '%s'.",
                                         PrimitiveOpTypeName(op).c_str(), NamedListString(inputs).c_str(), DataTypeName(outputDataType), DataTypeName(inputDataType));
                 }
@@ -70,7 +76,18 @@ namespace CNTK
             for (auto& input : inputs)
             {
                 if ((input.GetDataType() == DataType::Unknown) && (input.IsConstant() || input.IsParameter()))
-                    input.m_dataFields->m_dataType = outputDataType;
+                {
+                    // batch normalization on FP16 requires 32-bit scale/bias/mean/variance, so specialize that case
+                    if ((op == PrimitiveOpType::BatchNormalization) &&
+                        (outputDataType == DataType::Float16))
+                    {
+                        input.m_dataFields->m_dataType = DataType::Float;
+                    }
+                    else
+                    {
+                        input.m_dataFields->m_dataType = outputDataType;
+                    }
+                }
             }
         }
 

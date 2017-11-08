@@ -454,10 +454,10 @@ namespace CNTK
                 computationNodePtr->SetLearningRateMultiplier(0.0);
 
             NDArrayViewPtr value = variable.IsConstant() ? Constant(variable).Value() : Parameter(variable).Value();
-            std::shared_ptr<const Matrix<ElementType>> valueMatrix = variable.IsConstant() ? value->GetMatrix<ElementType>() : value->GetWritableMatrix<ElementType>();
+            std::shared_ptr<const MatrixBase> valueMatrix = variable.IsConstant() ? value->GetMatrixBase() : value->GetWritableMatrixBase();
 
             if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
-                dynamic_cast<ComputationNode<ElementType>*>(&*computationNodePtr)->Value() = valueMatrix->AsReference();
+                dynamic_cast<ComputationNode<ElementType>*>(&*computationNodePtr)->Value().CastAssignValuesOf(*valueMatrix);
             else // Constant: if initialized data lives on wrong device, make a copy to the right one (copy is OK since it's constant)
             {
                 // TODO: the following two lines are a workaround for a bug in the Math library
@@ -466,7 +466,7 @@ namespace CNTK
                 // Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
                 Matrix<ElementType> clonedMatrix(network->GetDeviceId());
                 clonedMatrix.SwitchToMatrixType(valueMatrix->GetMatrixType(), valueMatrix->GetFormat(), false);
-                clonedMatrix.AssignValuesOf(*valueMatrix);
+                clonedMatrix.CastAssignValuesOf(*valueMatrix);
                 dynamic_cast<ComputationNode<ElementType>*>(&*computationNodePtr)->Value() = std::move(clonedMatrix);
             }
         }
