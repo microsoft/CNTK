@@ -165,6 +165,8 @@
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="ConvolveGeometry.h" />
     <ClInclude Include="CPUMatrix.h" />
+    <ClInclude Include="CPUMatrixTensor.h" />
+    <ClInclude Include="CPUMatrixTensorImpl.h" />
     <ClInclude Include="CPURNGHandle.h" />
     <ClInclude Include="DataTransferer.h" />
     <ClInclude Include="MatrixQuantizerImpl.h" />
@@ -199,6 +201,9 @@
     <ClCompile Include="CPUMatrixDouble.cpp" />
     <ClCompile Include="CPUMatrixFloat.cpp" />
     <ClCompile Include="CPUMatrixHalf.cpp" />
+    <ClCompile Include="CPUMatrixTensorDouble.cpp" />
+    <ClCompile Include="CPUMatrixTensorFloat.cpp" />
+    <ClCompile Include="CPUMatrixTensorHalf.cpp" />
     <ClCompile Include="CPURNGHandle.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />

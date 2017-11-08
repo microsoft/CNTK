@@ -377,6 +377,9 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/CPUMatrixFloat.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixDouble.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixHalf.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixTensorFloat.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixTensorDouble.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixTensorHalf.cpp \
 	$(SOURCEDIR)/Math/CPURNGHandle.cpp \
 	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \

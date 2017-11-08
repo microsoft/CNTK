@@ -585,4 +585,28 @@ typedef CPUMatrix<float> CPUSingleMatrix;
 typedef CPUMatrix<double> CPUDoubleMatrix;
 typedef CPUMatrix<half> CPUHalfMatrix;
 
+template<typename ElemType>
+void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 2>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+
+template<typename ElemType>
+void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 3>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides);
+
+template<typename ElemType>
+void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 4>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+template<typename ElemType>
+void CPUMatrixTensorArgOpImpl(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& o, ElementWiseOperator reductionOp,
+    const array<size_t, 2>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+
 }}}
