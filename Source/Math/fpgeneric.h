@@ -146,7 +146,12 @@ inline cublasStatus_t cublasgemmHelper(cublasHandle_t handle, cublasOperation_t 
 }
 inline cublasStatus_t cublasgemmHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const half* alpha, const half* A, int lda, const half* B, int ldb, const half* beta, half* C, int ldc)
 {
-    return cublasHgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    // This does true FP16 computation which is slow for non-Volta GPUs
+    //return cublasHgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+    // This does pseudo FP16 (computation
+    float h_a = *alpha;
+    float h_b = *beta;
+    return cublasGemmEx(handle, transa, transb, m, n, k, &h_a, A, CUDA_R_16F, lda, B, CUDA_R_16F, ldb, &h_b, C, CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT);
 }
 
 // axpy
