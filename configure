@@ -24,12 +24,10 @@ have_nccl=no
 nccl_path=
 nccl_check=include/nccl.h
 
-# CNTK Custom MKL Version
-cntk_custom_mkl_version=`cat $src_root/Dependencies/CNTKCustomMKL/version.txt`
 
 have_mkl=no
 mkl_path=
-mkl_check=$cntk_custom_mkl_version/include/mkl.h
+mkl_check=/include/mkl_version.h
 
 # Experimental OpenBLAS support.
 have_openblas=no
@@ -741,10 +739,6 @@ do
         --with-mkl*)
             have_mkl=yes
             mathlib=mkl
-            mkl_threading=parallel
-            case $key in
-                --with-mkl-sequential*) mkl_threading=sequential ;;
-            esac
             if test x$optarg = x
             then
                 mkl_path=$(find_mkl)
