@@ -673,6 +673,8 @@ IGNORE_FUNCTION CNTK::CreateEvaluator;
 %apply int[]  { int *rowIndices }
 %apply float[]  { float *nonZeroValues }
 %apply double[]  { double *nonZeroValues }
+%apply float[]  { float *dataBuffer }
+%apply double[]  { double *dataBuffer }
 %apply int[]  { int *sequenceLength }
 %apply int[]  { int *numNonZeroValues }
 #else
