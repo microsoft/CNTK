@@ -279,6 +279,38 @@ namespace CNTK
         return GetMatrixImpl<V1ElemType>(GetWritableTensorView<V1ElemType>(), rowColSplitPoint);
     }
 
+    std::shared_ptr<const MatrixBase> NDArrayView::GetMatrixBase(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            return GetMatrixImpl<float>(GetTensorView<float>(), rowColSplitPoint);
+        case DataType::Double:
+            return GetMatrixImpl<double>(GetTensorView<double>(), rowColSplitPoint);
+        case DataType::Float16:
+            return GetMatrixImpl<half>(GetTensorView<half>(), rowColSplitPoint);
+        default:
+            LogicError("Unknown m_dataType %d", m_dataType);
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<MatrixBase> NDArrayView::GetWritableMatrixBase(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/)
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            return GetMatrixImpl<float>(GetWritableTensorView<float>(), rowColSplitPoint);
+        case DataType::Double:
+            return GetMatrixImpl<double>(GetWritableTensorView<double>(), rowColSplitPoint);
+        case DataType::Float16:
+            return GetMatrixImpl<half>(GetWritableTensorView<half>(), rowColSplitPoint);
+        default:
+            LogicError("Unknown m_dataType %d", m_dataType);
+        }
+        return nullptr;
+    }
+
     template <typename V1ElemType>
     const TensorView<V1ElemType>* NDArrayView::GetTensorView() const
     {

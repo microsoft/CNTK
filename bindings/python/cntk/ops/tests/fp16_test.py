@@ -41,3 +41,21 @@ def test_save_load(device_id, tmpdir):
     t1 = C.load_model(file)
     result1 = t1.eval(data)
     assert np.array_equal(result, result1)
+
+def test_batchnorm(device_id):
+    if device_id == -1:
+        pytest.skip('Test only runs on GPU')
+    shape = (3,)
+    i = C.input_variable(shape, dtype='float16')
+    scale = C.parameter(shape, init=1, dtype='float')
+    bias = C.parameters(shape, init=0, dtype='float')
+    run_mean = C.constant(shape, init=0, dtype='float')
+    run_variance = C.constant(shape, init=0, dtype='float')
+    run_count = C.constant((), init=0, dtype='float')
+    
+    bn = C.batch_normalization(i, scale, bias, run_mean, run_variance, running_count=run_count,
+                                   spatial=False, normalization_time_constant=5000, blend_time_constant=0, epsilon=0.00001,
+                                   use_cudnn_engine=True, disable_regularization=True)
+
+    data = AA([[1,2,3]]).astype(np.float16)
+    bn.eval(data)
