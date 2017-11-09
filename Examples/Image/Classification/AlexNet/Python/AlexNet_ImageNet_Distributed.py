@@ -9,7 +9,7 @@ import os
 import math
 import argparse
 import numpy as np
-import cntk
+import cntk as C
 import _cntk_py
 
 from cntk.logging import *
@@ -56,11 +56,11 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
     # deserializer
     return MinibatchSource(
         ImageDeserializer(map_file, StreamDefs(
-            features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-            labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
-        randomize = is_training,
+            features=StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+            labels=StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        randomize=is_training,
         max_samples=total_number_of_samples,
-        multithreaded_deserializer = True)
+        multithreaded_deserializer=True)
 
 # Local Response Normalization layer. See Section 3.3 of the paper:
 # https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
@@ -69,25 +69,25 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
 # where a_{x,y}^i is the activity of a neuron comoputed by applying kernel i at position (x,y)
 # N is the total number of kernals, n is half normalization width.
 def LocalResponseNormalization(k, n, alpha, beta, name=''):
-    x = cntk.placeholder(name='lrn_arg')
-    x2 = cntk.square(x)
+    x = C.placeholder(name='lrn_arg')
+    x2 = C.square(x)
     # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
-    x2s = cntk.reshape(x2, (1, cntk.InferredDimension), 0, 1)
-    W = cntk.constant(alpha/(2*n+1), (1,2*n+1,1,1), name='W')
+    x2s = C.reshape(x2, (1, C.InferredDimension), 0, 1)
+    W = C.constant(alpha/(2*n+1), (1,2*n+1,1,1), name='W')
     # 3D convolution with a filter that has a non 1-size only in the 3rd axis, and does not reduce since the reduction dimension is fake and 1
-    y = cntk.convolution (W, x2s)
+    y = C.convolution (W, x2s)
     # reshape back to remove the fake singleton reduction dimension
-    b = cntk.reshape(y, cntk.InferredDimension, 0, 2)
-    den = cntk.exp(beta * cntk.log(k + b))
-    apply_x = cntk.element_divide(x, den)
+    b = C.reshape(y, C.InferredDimension, 0, 2)
+    den = C.exp(beta * C.log(k + b))
+    apply_x = C.element_divide(x, den)
     return apply_x
 
 # Create the network.
 def create_alexnet():
 
     # Input variables denoting the features and label data
-    feature_var = input((num_channels, image_height, image_width))
-    label_var = input((num_classes))
+    feature_var = C.input_variable((num_channels, image_height, image_width))
+    label_var = C.input_variable((num_classes))
 
     # apply model to input
     # remove mean value 
@@ -140,18 +140,18 @@ def create_alexnet():
     }
 
 # Create trainer
-def create_trainer(network, epoch_size, num_quantization_bits, printer, block_size, warm_up):
+def create_trainer(network, epoch_size, num_quantization_bits, printer, block_size, warm_up, minibatch_size):
     # Set learning parameters
     lr_per_mb         = [0.01]*25 + [0.001]*25 + [0.0001]*25 + [0.00001]*25 + [0.000001]
-    lr_schedule       = cntk.learning_rate_schedule(lr_per_mb, unit=cntk.learners.UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule       = cntk.learners.momentum_schedule(0.9)
+    lr_schedule       = C.learning_parameter_schedule(lr_per_mb, minibatch_size=minibatch_size, epoch_size=epoch_size)
+    mm_schedule       = C.learners.momentum_schedule(0.9, minibatch_size=minibatch_size)
     l2_reg_weight     = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
 
     if block_size != None and num_quantization_bits != 32:
         raise RuntimeError("Block momentum cannot be used with quantization, please remove quantized_bits option.")
 
     # Create learner
-    local_learner = cntk.learners.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
+    local_learner = C.learners.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, minibatch_size=minibatch_size, unit_gain=False, l2_regularization_weight=l2_reg_weight)
     # Since we reuse parameter settings (learning rate, momentum) from Caffe, we set unit_gain to False to ensure consistency
 
     # Create trainer
@@ -160,7 +160,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, printer, block_si
     else:
         parameter_learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
-    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, printer)
+    return C.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, printer)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore):
@@ -178,7 +178,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
-        test_config= TestConfig(source=test_source, mb_size=minibatch_size)
+        test_config= TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
 
 # Train and evaluate the network.
@@ -195,7 +195,7 @@ def alexnet_train_and_eval(train_data, test_data, num_quantization_bits=32, bloc
         num_epochs=max_epochs)
 
     network = create_alexnet()
-    trainer = create_trainer(network, epoch_size, num_quantization_bits, progress_printer, block_size, warm_up)
+    trainer = create_trainer(network, epoch_size, num_quantization_bits, progress_printer, block_size, warm_up, minibatch_size=minibatch_size)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
     train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore)
@@ -227,9 +227,9 @@ if __name__=='__main__':
     if args['device'] is not None:
         # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
         if Communicator.rank() == 0:
-            cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
+            C.device.try_set_default_device(C.device.gpu(args['device']))
         else:
-            cntk.device.try_set_default_device(cntk.device.cpu())
+            C.device.try_set_default_device(C.device.cpu())
 
     data_path = args['datadir']
 
@@ -239,17 +239,16 @@ if __name__=='__main__':
     train_data = os.path.join(data_path, 'train_map.txt')
     test_data = os.path.join(data_path, 'val_map.txt')
 
-    try:
-        alexnet_train_and_eval(train_data, test_data,
-                               max_epochs=args['num_epochs'],
-                               restore=not args['restart'],
-                               log_to_file=args['logdir'],
-                               num_mbs_per_log=200,
-                               num_quantization_bits=args['quantized_bits'],
-                               block_size=args['block_samples'],
-                               warm_up=args['distributed_after'],
-                               minibatch_size=args['minibatch_size'],
-                               epoch_size=args['epoch_size'],
-                               gen_heartbeat=True)
-    finally:
-        cntk.train.distributed.Communicator.finalize()
+    alexnet_train_and_eval(train_data, test_data,
+                           max_epochs=args['num_epochs'],
+                           restore=not args['restart'],
+                           log_to_file=args['logdir'],
+                           num_mbs_per_log=200,
+                           num_quantization_bits=args['quantized_bits'],
+                           block_size=args['block_samples'],
+                           warm_up=args['distributed_after'],
+                           minibatch_size=args['minibatch_size'],
+                           epoch_size=args['epoch_size'],
+                           gen_heartbeat=True)
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()

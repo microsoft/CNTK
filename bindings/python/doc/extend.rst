@@ -14,6 +14,7 @@ Implementing a custom operator in pure Python is simple matter of
  - implementing ``forward()`` and ``backward()``, whose signatures dependent on the number of inputs and outputs
  - specifying the outputs' shape, data type and dynamic axes in
    ``infer_outputs()``
+ - providing a static ``deserialize()`` method to inflate previously saved function
 
 In the simplest case, just only one input and output, ``forward()`` takes an
 argument and returns a tuple of a state and the result. The state can be used to
@@ -29,6 +30,7 @@ fed into backward(). Note that one can pass any Python value (including
 tuple, strings, etc.)::
 
     from cntk.ops.functions import UserFunction
+    from cntk import output_variable
 
     class MySigmoid(UserFunction):
         def __init__(self, arg, name='MySigmoid'):
@@ -46,6 +48,10 @@ tuple, strings, etc.)::
             return [output_variable(self.inputs[0].shape, self.inputs[0].dtype,
                 self.inputs[0].dynamic_axes)]
 
+        @staticmethod
+        def deserialize(inputs, name, state):
+            return = MySigmoid(inputs[0], name)
+
 This can now be used as a normal operator like::
 
     from cntk import user_function
@@ -61,13 +67,17 @@ In case, the operator is initialized with multiple inputs, ``forward()`` 's
     class MyPlus(UserFunction):
         def __init__(self, arg1, arg2, name='f1'):
             super(MyPlus, self).__init__([arg1, arg2], name=name)
+            self.forward_calls = 0
+            self.backward_calls = 0
 
         def forward(self, arguments, device=None, outputs_to_retain=None):
             # No state needs to be passed to backward() so we just
             # pass None
+            self.forward_calls += 1
             return None, arguments[0] + arguments[1]
 
         def backward(self, state, root_gradients):
+            self.backward_calls += 1
             return root_gradients
 
         def infer_outputs(self):
@@ -75,6 +85,17 @@ In case, the operator is initialized with multiple inputs, ``forward()`` 's
             # scenarios, one would want to calculate what the actual output's
             # result would actually look like (considering broadcasting, etc.).
             return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+
+        def serialize(self):
+            return {'forward_calls' : self.forward_calls, 
+                    'backward_calls' : self.backward_calls}
+
+        @staticmethod
+        def deserialize(inputs, name, state):
+            f = MyPlus(inputs[0], inputs[1], name)
+            f.forward_calls = state['forward_calls']
+            f.backward_calls = state['backward_calls']
+            return f
 
 If the UserFunction has more than one input, ``backward()`` is invoked
 with an additional ``variables`` argument, which contains a dictionary of
@@ -100,6 +121,13 @@ which means that there is the additional dictionary ``outputs``, whose values
 have to be set with the proper data.
 In addition, ``root_gradient`` in ``backward()`` is a dictionary of Variable to the
 root_gradient.
+
+``deserialize()`` is invoked by CNTK to reconstruct a previously saved function. It should
+have the same signature as :func:`~cntk.ops.functions.UserFunction.deserialize` method. 
+In case of a stateless function, it simply needs to invoke the constructor and return an 
+instance of the user function. However, if the function is stateful and overrides 
+:func:`~cntk.ops.functions.UserFunction.serialize` method, ``deserialize()`` also needs to 
+properly restore the function state.
 
 Using user functions for debugging
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,7 +215,7 @@ computation can be moved to the constructor::
             self.new_p = {}
             self.grad_input = {}
 
-            self.sample_count_input = cntk.input((), name='count')
+            self.sample_count_input = cntk.input_variable((), name='count')
 
             lr = lr_schedule[0]  # assuming constant learning rate
             eta = lr / self.sample_count_input
@@ -195,7 +223,7 @@ computation can be moved to the constructor::
             # we need one graph per parameter shape
             for param in parameters:
                 p_shape = param.shape
-                self.grad_input[p_shape] = cntk.input(p_shape)
+                self.grad_input[p_shape] = cntk.input_variable(p_shape)
                 self.new_p[p_shape] = param - eta * self.grad_input[p_shape]
 
         def update(self, gradient_values, training_sample_count, sweep_end):
@@ -360,8 +388,8 @@ e.g.::
 
     # instantiating the user minibatch source
     mbs = MyDataSource(input_dim, num_output_classes)
-    feature = sequence.input(shape=(input_dim,))
-    label = input(shape=(num_output_classes,))
+    feature = sequence.input_variable(shape=(input_dim,))
+    label = cntk.input_variable(shape=(num_output_classes,))
 
     # setting up the model
     # ...

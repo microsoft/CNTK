@@ -2,7 +2,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+Axis for CNTK variables on data binding.
+"""
 from . import cntk_py
 from cntk.internal.swig_helper import typemap
 
@@ -31,7 +33,7 @@ class Axis(cntk_py.Axis):
         Returns True if the axis is ordered; i.e. if there is an ordering between the dimensions along the axis.
 
         Returns:
-            `bool`: True if this axis is ordered and False otherwise
+            bool: True if this axis is ordered and False otherwise
         '''
         return super(Axis, self).is_ordered()
 
@@ -44,6 +46,26 @@ class Axis(cntk_py.Axis):
             bool: True if this axis is of type static and False otherwise
         '''
         return super(Axis, self).is_static_axis()
+
+    @property
+    def is_sequence_axis(self):
+        '''
+        Returns True if the axis is a sequence axis and False otherwise
+
+        Returns:
+            bool: True if this axis is a sequence axis and False otherwise
+        '''
+        return super(Axis, self).is_sequence_axis()
+
+    @property
+    def is_batch_axis(self):
+        '''
+        Returns True if the axis is a batch axis and False otherwise
+
+        Returns:
+            bool: True if this axis is a batch axis and False otherwise
+        '''
+        return super(Axis, self).is_batch_axis()
 
     @property
     def name(self):
@@ -63,7 +85,7 @@ class Axis(cntk_py.Axis):
             checked (bool): if True then this function will throw an exception if the axis is not static.
 
         Returns:
-            `int`: the number with which the static axis is defined.
+            int: the number with which the static axis is defined.
         '''
         return super(Axis, self).static_axis_index(checked)
 
@@ -146,22 +168,6 @@ class Axis(cntk_py.Axis):
             :class:`Axis`: new unique dynamic axis
         '''
         return cntk_py.Axis.new_unique_dynamic_axis(name)
-
-    @staticmethod
-    @typemap
-    def end_static_axis():
-        '''
-        DEPRECATED.
-
-        Creates an Axis object representing a new leading static axis.
-
-        Returns:
-            :class:`Axis`: axis object representing a new leading static axis.
-        '''
-        import warnings
-        warnings.warn('This will be removed in future versions. Please use '
-                'Axis.new_leading_axis() instead.', DeprecationWarning)
-        return cntk_py.Axis.end_static_axis()
 
     @staticmethod
     @typemap

@@ -38,8 +38,13 @@ typedef unsigned char byte;
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
 
+// TODO: merge these two types
 #define GPUSPARSE_INDEX_TYPE int // cuSparse only supports int array indexes
 #define CPUSPARSE_INDEX_TYPE int // to be consistent with cuSparse but limited the possible size of the matrix.
+
+// special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
+static const GPUSPARSE_INDEX_TYPE SparseIndex_NotAssigned = -1; // the index is not used, for col2BlockId it means the column has no corresponding block
+static const GPUSPARSE_INDEX_TYPE SparseIndex_Pending = -2; // the index assignment is pending, a transitional state when counting new blocks when sparse += sparse * dense 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -85,9 +90,9 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit,
+    opSigmoid, opTanh, opAtanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opAcos, opAsin, opCosh, opSinh, opAsinh, opExponentialLinearUnit, opStableSigmoid,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
-    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative,
+    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative,
     // binary
     opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum, opPow,
     opMax, opMin, opArgmax, opArgmin,
@@ -96,6 +101,9 @@ enum ElementWiseOperator
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
     opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput,
     opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
+    opElementwiseProductWithAcosDerivative, opElementwiseProductWithAsinDerivative,
+    opElementwiseProductWithCoshDerivative, opElementwiseProductWithSinhDerivative,
+    opElementwiseProductWithAtanhDerivative, opElementwiseProductWithAsinhDerivative,
     opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
     opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
     opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput,
@@ -126,6 +134,7 @@ enum ElementWiseOperator
     Macro(Reciprocal);            \
     Macro(Sigmoid);               \
     Macro(Tanh);                  \
+    Macro(Atanh);                 \
     Macro(Sqr);                   \
     Macro(Sqrt);                  \
     Macro(Exp);                   \
@@ -133,7 +142,13 @@ enum ElementWiseOperator
     Macro(LinearRectifier);       \
     Macro(Cosine);                \
     Macro(Sin);                   \
-    Macro(ExponentialLinearUnit);
+    Macro(Acos);                  \
+    Macro(Asin);                  \
+    Macro(Cosh);                  \
+    Macro(Sinh);                  \
+    Macro(Asinh);                 \
+    Macro(ExponentialLinearUnit); \
+    Macro(StableSigmoid);
 
 #define ForAllBinaryOps(Macro)                                               \
     Macro(CopyIf);                                                           \
@@ -158,10 +173,16 @@ enum ElementWiseOperator
     Macro(MaskNegative);                                                     \
     Macro(ElementwiseProductWithSigmoidDerivativeFromOutput);                \
     Macro(ElementwiseProductWithTanhDerivativeFromOutput);                   \
+    Macro(ElementwiseProductWithAtanhDerivative);                            \
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput);        \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);                    \
     Macro(ElementwiseProductWithCosDerivative);                              \
     Macro(ElementwiseProductWithSinDerivative);                              \
+    Macro(ElementwiseProductWithAcosDerivative);                             \
+    Macro(ElementwiseProductWithAsinDerivative);                             \
+    Macro(ElementwiseProductWithCoshDerivative);                             \
+    Macro(ElementwiseProductWithSinhDerivative);                             \
+    Macro(ElementwiseProductWithAsinhDerivative);                            \
     Macro(ElementwiseProductWithAbsDerivative);                              \
     Macro(ElementwiseProductWithReciprocalDerivative);                       \
     Macro(ElementwiseProductWithSqrtDerivative);                             \
@@ -385,7 +406,7 @@ protected:
 
 protected:
     // **************************
-    // Variables requried by all matrices
+    // Variables required by all matrices
     // **************************
     MatrixFormat m_format;
     mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE

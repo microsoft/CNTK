@@ -538,8 +538,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             else
                 InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
+            bool disableRegularization = node->GetOptionalParameter("disableRegularization", "false");
 
-            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, disableRegularization, imageLayoutKind, name);
 
             if (parameter.size() == 5) 
             {

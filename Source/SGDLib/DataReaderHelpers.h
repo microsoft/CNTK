@@ -116,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
         // Note: Decimation may have reduced this to 0 frames. We still must return 'true'.
-        // BUGBUG: This has a definitional problem once we support multiple feature streams with different lenghts.
+        // BUGBUG: This has a definitional problem once we support multiple feature streams with different lengths.
         // BUGBUG: We should discount gaps.
         actualMBSize = net->DetermineActualMBSizeFromFeatures();
 
@@ -263,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Can this just exist inside SGD.cpp?
     // ===================================================================
 
-    // A sub-minibathc is a part of a minibatch which helps computing large minibatches that cannot load into GPU memory in one forward-backward computation
+    // A sub-minibatch is a part of a minibatch which helps computing large minibatches that cannot load into GPU memory in one forward-backward computation
     // The usage would be :
     //        SubminibatchHelpers sbhelper;
     //        for (;;)

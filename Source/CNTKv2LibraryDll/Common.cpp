@@ -16,6 +16,7 @@
 #include "Globals.h"
 #include "PerformanceProfiler.h"
 #include "MPIWrapper.h"
+#include "EnvironmentUtil.h"
 #include "Basics.h"
 #include "ProgressTracing.h"
 #include "buildinfo.h"
@@ -39,6 +40,10 @@ namespace CNTK
 
     namespace Internal
     {
+
+        template <typename E>
+        using SparseCSCDataTuple = std::tuple<const E*, const SparseIndexType*, const SparseIndexType*, size_t, NDArrayViewPtr>;
+
         static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
         size_t NewUniqueId()
         {
@@ -75,7 +80,7 @@ namespace CNTK
 
         // This is used to generate a default seed value for random parameter initializer and also 
         // for stateful nodes (dropout, and both flavors of random sample). The 'perWorkerLocalValue' flag
-        // indicates if the generated value should be identical accross individual workers in distributed 
+        // indicates if the generated value should be identical across individual workers in distributed 
         // setting or if each worker should get a different seed value.        
         size_t GenerateRandomSeed(bool perWorkerLocalValue /*= false*/)
         {
@@ -90,14 +95,12 @@ namespace CNTK
 
             static size_t numWorkers = 1, rank = 0;
             static bool initialized = false;
-            if (MPIWrapper::GetTotalNumberOfMPINodes() != 0 && !initialized) 
+            if (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1 && !initialized)
             {
                 DistributedCommunicatorPtr communicator = MPICommunicator();
                 numWorkers = communicator->Workers().size();
                 rank = communicator->CurrentWorker().m_globalRank;
-
-                if (numWorkers < 1)
-                    numWorkers = 1;   
+                assert(numWorkers > 1);
             }
 
             initialized = true;
@@ -170,6 +173,7 @@ namespace CNTK
 
         void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
         {
+#ifndef CNTK_UWP
             std::wstring logSuffix = L"";
             auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
             if (mpi)
@@ -182,21 +186,28 @@ namespace CNTK
                 profilerBufferSize,
                 logSuffix,
                 profilerSyncGpu);
+#endif
         }
 
         void EnableProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerEnable(true);
+#endif
         }
 
         void DisableProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerEnable(false);
+#endif
         }
 
         void StopProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerClose();
+#endif
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -301,9 +312,48 @@ namespace CNTK
             {
                 auto firstValue = data1[i];
                 auto secondValue = data2[i];
-                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * firstValue));
+                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
                 if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
+            }
+
+            return true;
+        }
+
+        template <typename ElementType>
+        bool AreEqual(const SparseCSCDataTuple<ElementType>& t1, const SparseCSCDataTuple<ElementType>& t2, double relativeTolerance, double absoluteTolerance)
+        {
+            if (std::get<3>(t1) != std::get<3>(t2))
+                return false;
+            
+            auto nnzCount = std::get<3>(t1);
+            auto values1 = std::get<0>(t1);
+            auto values2 = std::get<0>(t2);
+
+            for (size_t i = 0; i < nnzCount; ++i)
+            {
+                auto firstValue = values1[i];
+                auto secondValue = values2[i];
+                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
+                if (std::abs(firstValue - secondValue) > allowedTolerance)
+                    return false;
+            }
+
+            auto rowIndices1 = std::get<2>(t1);
+            auto rowIndices2 = std::get<2>(t2);
+
+            if (memcmp(rowIndices1, rowIndices2, nnzCount * sizeof(SparseIndexType)) != 0)
+                return false;
+            
+            auto colIndices1 = std::get<1>(t1);
+            auto colIndices2 = std::get<1>(t2);
+
+            for (size_t i = 0; i < nnzCount; ++i)
+            {
+                if (colIndices1[i] != colIndices2[i])
+                    return false;
+                if (colIndices1[i] == nnzCount)
+                    break;
             }
 
             return true;
@@ -326,6 +376,26 @@ namespace CNTK
             LogicError("Invalid device type (%u).", (unsigned int)deviceType);
         }
 
+        template <typename ElementType>
+        SparseCSCDataTuple<ElementType> GetSparseCSCCPUDataPtr(const NDArrayView& view)
+        {
+            auto deviceType = view.Device().Type();
+
+            if (deviceType == DeviceKind::CPU)
+                return std::tuple_cat(view.SparseCSCDataBuffers<ElementType>(), std::make_tuple(nullptr));
+
+            if (deviceType == DeviceKind::GPU)
+            {
+                auto tempCPUDataView = view.DeepClone(view.Device());
+                tempCPUDataView->ChangeDevice(DeviceDescriptor::CPUDevice());
+                auto result = GetSparseCSCCPUDataPtr<ElementType>(*tempCPUDataView);
+                std::get<4>(result) = tempCPUDataView;
+                return result;
+            }
+
+            LogicError("Invalid device type (%u).", (unsigned int)deviceType);
+        }
+
         template <typename ElementType> 
         bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
         {
@@ -335,19 +405,29 @@ namespace CNTK
             }
 
             if (view1.GetDataType() != view2.GetDataType() ||
-                view1.Shape() != view2.Shape())
+                view1.Shape() != view2.Shape() ||
+                view1.IsSparse() != view2.IsSparse())
             {
                 return false;
             }
 
-            CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
-            ElementType* data1;
-            ElementType* data2;
-            std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(view1);
-            std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(view2);
+            if (!view1.IsSparse()) 
+            {
+                CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
+                ElementType* data1;
+                ElementType* data2;
+                std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(view1);
+                std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(view2);
 
-            size_t numElements = view1.Shape().TotalSize();
-            return AreEqual(data1, data2, numElements, relativeTolerance, absoluteTolerance);
+                size_t numElements = view1.Shape().TotalSize();
+                return AreEqual(data1, data2, numElements, relativeTolerance, absoluteTolerance);
+            }
+            else 
+            {
+                auto data1 = GetSparseCSCCPUDataPtr<ElementType>(view1);
+                auto data2 = GetSparseCSCCPUDataPtr<ElementType>(view2);
+                return AreEqual(data1, data2, relativeTolerance, absoluteTolerance);
+            }
         }
 
         bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
@@ -360,6 +440,7 @@ namespace CNTK
 
             LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }
+
 
         std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
         {
@@ -486,6 +567,23 @@ namespace CNTK
             return SyncGuard::IsSyncEnabled();
         }
 
+#ifdef CPUONLY
+        // CPU SBC aggregation not implemented yet, so fall back to conversion of sparse to dense 
+        std::atomic<bool> s_useSparseGradientAggregationInDataParallelSGD(false);
+#else
+        std::atomic<bool> s_useSparseGradientAggregationInDataParallelSGD(true);
+#endif
+
+        void UseSparseGradientAggregationInDataParallelSGD(bool enable)
+        {
+            s_useSparseGradientAggregationInDataParallelSGD = enable;
+        }
+
+        bool ShouldUseSparseGradientAggregationInDataParallelSGD()
+        {
+            return s_useSparseGradientAggregationInDataParallelSGD;
+        }
+
         static std::atomic<bool> s_threadsAreSet(false);
         bool MaxNumCPUThreadsSet()
         {
@@ -528,8 +626,6 @@ namespace CNTK
         return s_traceLevel.load();
     }
 
-    /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
-
     /*static*/ std::mutex DeviceDescriptor::s_mutex;
     /*static*/ bool DeviceDescriptor::s_defaultDeviceFrozen(false);
     /*static*/ std::unique_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(nullptr);
@@ -562,7 +658,7 @@ namespace CNTK
                 fprintf(stderr, "Auto-selecting process wide default device.\n");
             }
 
-            // This will both initialize the list of available devices and log the the device stats
+            // This will both initialize the list of available devices and log the device stats
             // (including the info on which devices are compatible and eligible for selection).
             const auto& allDevices = AllDevices();
             UNUSED(allDevices);
@@ -828,18 +924,6 @@ namespace CNTK
         s_defaultUnitGainValue.store(value);
     }
 
-    static std::atomic<bool> s_defaultUseMeanGradient(false);
-
-    bool DefaultUseMeanGradientValue()
-    {
-        return s_defaultUseMeanGradient;
-    }
-
-    void SetDefaultUseMeanGradientValue(bool value)
-    {
-        s_defaultUseMeanGradient.store(value);
-    }
-
     template <class E>
     __declspec_noreturn void ThrowFormatted(const char* format, ...)
     {
@@ -851,6 +935,14 @@ namespace CNTK
 
     namespace Internal
     {
+        void ExtractCUDAVersion(int version, int& major, int& minor, int& patch_level)
+        {
+            //e.g. #define CUDNN_VERSION    (CUDNN_MAJOR * 1000 + CUDNN_MINOR * 100 + CUDNN_PATCHLEVEL)
+            major = version / 1000;
+            minor = (version - major * 1000) / 100;
+            patch_level = version % 100;
+        }
+
         void PrintBuiltInfo()
         {
             LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
@@ -873,23 +965,23 @@ namespace CNTK
             LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
 #endif
 #ifdef _CUDA_PATH_
-            LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
-#endif
-#ifdef _CUB_PATH_
-            LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
+            int cudaVersion = 0;
+            if (cudaDriverGetVersion(&cudaVersion) == cudaSuccess)
+            {
+                int major = 0, minor = 0, patchLevel = 0;
+                ExtractCUDAVersion(cudaVersion, major, minor, patchLevel);
+                LOGPRINTF(stderr, "\t\tCUDA version: %d.%d.%d\n", major, minor, patchLevel);
+            }
 #endif
 #ifdef _CUDNN_PATH_
-            LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
+            size_t cudnnVersion = GetCUDNNVersion();
+            int cudnnMajor = 0, cudnnMinor = 0, cudnnPatchLevel = 0;
+            ExtractCUDAVersion(cudnnVersion, cudnnMajor, cudnnMinor, cudnnPatchLevel);
+            LOGPRINTF(stderr, "\t\tCUDNN version: %d.%d.%d\n", cudnnMajor, cudnnMinor, cudnnPatchLevel);
 #endif
 #ifdef _GIT_EXIST
             LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
             LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
-#endif
-#ifdef _BUILDER_
-            LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
-#endif
-#ifdef _BUILDPATH_
-            LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
 #ifdef _MPI_NAME_
             LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);

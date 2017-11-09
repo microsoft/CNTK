@@ -85,7 +85,7 @@ public ref class ValueBuffer
 
         //
         // All elements of a sequence, concatenated.
-        // For dense inputs, the number of samples is given by the the length of
+        // For dense inputs, the number of samples is given by the length of
         // this vector / product of tensor dimensions. E.g. for a tensor of dimension
         // [2,2] and 12 elements in the buffer, the number of samples is 3.
         // For sparse inputs, the number of samples is indicated by the ColIndices field.

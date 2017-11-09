@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 import numpy as np
+import cntk as C
 import os
 from PIL import Image
 from cntk.device import try_set_default_device, gpu
@@ -16,7 +17,7 @@ from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
 import cntk.io.transforms as xforms
 from cntk.layers import Dense
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_schedule
-from cntk.ops import input, combine, softmax
+from cntk.ops import combine, softmax
 from cntk.ops.functions import CloneMethod
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -43,7 +44,7 @@ momentum_per_mb = 0.9
 l2_reg_weight = 0.0005
 
 # define base model location and characteristics
-_base_model_file = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
+_base_model_file = os.path.join(base_folder, "..", "..", "..", "PretrainedModels", "ResNet18_ImageNet_CNTK.model")
 _feature_node_name = "features"
 _last_hidden_node_name = "z.x"
 _image_height = 224
@@ -98,8 +99,8 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
 
     # Create the minibatch source and input variables
     minibatch_source = create_mb_source(train_map_file, image_width, image_height, num_channels, num_classes)
-    image_input = input((num_channels, image_height, image_width))
-    label_input = input(num_classes)
+    image_input = C.input_variable((num_channels, image_height, image_width))
+    label_input = C.input_variable(num_classes)
 
     # Define mapping from reader streams to network inputs
     input_map = {

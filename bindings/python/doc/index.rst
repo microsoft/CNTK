@@ -1,4 +1,3 @@
-
 .. some aliases
 .. _CNTK: https://cntk.ai/
 
@@ -15,9 +14,6 @@ to expose such an API to the CNTK system, thus enabling the use of higher-level
 tools such as IDEs to facilitate the definition of computational networks, to execute
 them on sample data in real time. Please give feedback through these :cntkwiki:`channels <Feedback-Channels>`.
 
-We have a new type system in the layers module to make the input type more readable.
-This new type system is subject to change, please give us feedback on github or stackoverflow
-
 .. toctree::
    :maxdepth: 2
 
@@ -26,11 +22,11 @@ This new type system is subject to change, please give us feedback on github or 
    Working with Sequences <sequence>
    Tutorials <tutorials>
    Examples <examples>
+   Manuals <manuals>
    Layers Library Reference  <layerref>
    Python API Reference <cntk>
    Readers, Multi-GPU, Profiling...<readersprofetc>
    Extending CNTK <extend>
-   Known Issues <knownissues>
 
 Indices and tables
 ==================

@@ -14,7 +14,7 @@ PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath:,wheel-base-url:
 function die {
   set +x
   echo -e $1
-  echo Go to https://github.com/Microsoft/CNTK/wiki/Setup-Linux-Binary-Script for help.
+  echo Go to https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Linux-Binary-Script for help.
   exit 1
 }
 
@@ -107,13 +107,13 @@ TARGET_CONFIGURATION="${BASH_REMATCH[1]}"
 
 # Anaconda download / install dependencies
 # [coreutils for sha{1,256}sum]
-PACKAGES="bzip2 wget coreutils"
+PACKAGES="bzip2 wget ca-certificates coreutils"
 
 # CNTK run-time dependencies (OpenMPI)
 if [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*14\.04 ]]; then
   # On Ubuntu 14.04: need to build ourselves, openmpi-bin is too old
   BUILD_OPENMPI=1
-  PACKAGES+=" wget ca-certificates build-essential"
+  PACKAGES+=" build-essential"
 else
   # Else: try with openmpi-bin
   BUILD_OPENMPI=0
@@ -121,7 +121,7 @@ else
 fi
 
 # Additional packages for ImageReader
-PACKAGES+=" libjasper1 libjpeg8 libpng12-0"
+PACKAGES+=" libjasper1 libjpeg8 libpng12-0 libtiff5"
 
 if dpkg -s $PACKAGES 1>/dev/null 2>/dev/null; then
   printf "Packages already installed, skipping.\n"
@@ -230,6 +230,7 @@ set -x
 
 LD_LIBRARY_PATH_SETTING="$CNTK_LIB_PATH:$CNTK_DEP_LIB_PATH"
 if [ "$BUILD_OPENMPI" = "1" ]; then
+  OPEN_MPI_PATH_SETTINGS=":$OPENMPI_PREFIX/bin"
   LD_LIBRARY_PATH_SETTING+=":$OPENMPI_PREFIX/lib"
 fi
 LD_LIBRARY_PATH_SETTING+=":\$LD_LIBRARY_PATH"
@@ -241,7 +242,7 @@ if [ -z "\$BASH_VERSION" ]; then
 elif [ "\$(basename "\$0" 2> /dev/null)" == "$ACTIVATE_SCRIPT_NAME" ]; then
   echo Error: this script is meant to be sourced. Run 'source activate-cntk'
 else
-  export PATH="$CNTK_BIN_PATH:\$PATH"
+  export PATH="$CNTK_BIN_PATH:\$PATH$OPEN_MPI_PATH_SETTINGS"
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH_SETTING"
   source "$PY_ACTIVATE" "$CNTK_PY_ENV_PREFIX"
 

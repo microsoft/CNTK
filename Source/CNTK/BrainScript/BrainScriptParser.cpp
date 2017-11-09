@@ -245,7 +245,7 @@ public:
             return currentLine[cursor.charPos];
     }
 
-    // we chan also return the address of the current character, e.g. for passing it to a C stdlib funcion such as wcstod()
+    // we chan also return the address of the current character, e.g. for passing it to a C stdlib function such as wcstod()
     const wchar_t* GotCharPtr() const
     {
         return currentLine + cursor.charPos;
@@ -976,7 +976,7 @@ public:
         if (GotToken().kind != eof)
             Fail(L"junk at end of source", GetCursor());
     }
-    // top-level parse function parses dictonary members without enclosing [ ... ] and returns it as a dictionary
+    // top-level parse function parses dictionary members without enclosing [ ... ] and returns it as a dictionary
     ExpressionPtr ParseRecordMembersToDict()
     {
         let topMembers = ParseRecordMembers();

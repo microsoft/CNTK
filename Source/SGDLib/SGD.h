@@ -194,7 +194,7 @@ protected:
     // Due to the GPU memory limitations, it is sometime not possible to hold the m_mbSize in RAM.
     // To mitigate this issue, we adopt the sub-minibatch implementation, where
     // each m_mbSize[epoch] is divided by a few sub-minibatch of which size will be no more than m_maxSamplesInRAM
-    // a forward-backward is performed for each sub-minibathch; a model update is performed after each minibatch
+    // a forward-backward is performed for each sub-minibatch; a model update is performed after each minibatch
     size_t m_numSubminiBatches;
     // alternative method to specify how to split minibatches into subminibatches
     // default is 1, which means no subminibatch is used
@@ -480,7 +480,7 @@ protected:
                                       std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
-    // Attemps to compute the error signal for the whole utterance, which will
+    // Attempts to compute the error signal for the whole utterance, which will
     // be fed to the neural network as features. Currently it is a workaround
     // for the two-forward-pass sequence and ctc training, which allows
     // processing more utterances at the same time. Only used in Kaldi2Reader.
@@ -510,7 +510,8 @@ protected:
                          const std::string& prefixMsg = "",
                          const size_t maxNumberOfSamples = SIZE_MAX,
                          const size_t totalMBsSeenBefore = 0,
-                         ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr);
+                         ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr,
+                         const int startEpoch = 0);
 
     void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);

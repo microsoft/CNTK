@@ -12,13 +12,13 @@
 #include "UtteranceDescription.h"
 #include "ssematrix.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class represents a description of an HTK chunk.
 // It is only used internally by the HTK deserializer.
 // Can exist without associated data and provides methods for requiring/releasing chunk data.
 // TODO: We should consider splitting data load from the description in the future versions.
-class HTKChunkDescription
+class HTKChunkInfo
 {
     // All utterances in the chunk.
     std::vector<UtteranceDescription> m_utterances;
@@ -38,14 +38,14 @@ class HTKChunkDescription
 
 public:
 
-    HTKChunkDescription() : m_chunkId(CHUNKID_MAX) { };
+    HTKChunkInfo() : m_chunkId(ChunkIdMax) { };
 
-    HTKChunkDescription(ChunkIdType chunkId) : m_chunkId(chunkId) { };
+    HTKChunkInfo(ChunkIdType chunkId) : m_chunkId(chunkId) { };
 
     // Gets number of utterances in the chunk.
-    size_t GetNumberOfUtterances() const
+    uint32_t GetNumberOfUtterances() const
     {
-        return m_utterances.size();
+        return static_cast<uint32_t>(m_utterances.size());
     }
 
     ChunkIdType GetChunkId() const
@@ -64,6 +64,8 @@ public:
         m_firstFrames.push_back(m_totalFrames);
         m_totalFrames += utterance.GetNumberOfFrames();
         m_utterances.push_back(std::move(utterance));
+        if (m_utterances.size() > std::numeric_limits<uint32_t>::max())
+            RuntimeError("Chunk overflow happened: too many utterances.");
     }
 
     // Gets total number of frames in the chunk.
@@ -117,7 +119,7 @@ public:
 
     // Pages-in the data for this chunk.
     // this function supports retrying since we read from the unreliable network, i.e. do not return in a broken state
-    // We pass in the feature info variables to check that that data being read has expected properties.
+    // We pass in the feature info variables to check that data being read has expected properties.
     void RequireData(const string& featureKind, size_t featureDimension, unsigned int samplePeriod, int verbosity = 0) const
     {
         if (GetNumberOfUtterances() == 0)
@@ -134,7 +136,7 @@ public:
         {
             // feature reader (we reinstantiate it for each block, i.e. we reopen the file actually)
             // if this is the first feature read ever, we explicitly open the first file to get the information such as feature dimension
-            msra::asr::htkfeatreader reader;
+            htkfeatreader reader;
 
             // read all utterances; if they are in the same archive, htkfeatreader will be efficient in not closing the file
             m_frames.resize(featureDimension, m_totalFrames);
@@ -147,7 +149,7 @@ public:
 
             if (verbosity)
             {
-                fprintf(stderr, "HTKChunkDescription::RequireData: read physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+                fprintf(stderr, "HTKChunkInfo::RequireData: read physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
                         m_chunkId,
                         m_utterances.size(),
                         m_totalFrames,
@@ -177,7 +179,7 @@ public:
 
         if (verbosity)
         {
-            fprintf(stderr, "HTKChunkDescription::ReleaseData: release physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
+            fprintf(stderr, "HTKChunkInfo::ReleaseData: release physical chunk %u (%" PRIu64 " utterances, %" PRIu64 " frames, %" PRIu64 " bytes)\n",
                     m_chunkId,
                     m_utterances.size(),
                     m_totalFrames,
@@ -196,4 +198,4 @@ public:
         }
 };
 
-}}}
+}

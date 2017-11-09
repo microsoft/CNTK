@@ -77,7 +77,7 @@ else:
 
 
 if 'CNTK_LIBRARIES' in os.environ:
-  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split()]
+  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split(';' if IS_WINDOWS else None)]
 else:
   rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
                                                         '*' + libname_rt_ext))]
@@ -122,7 +122,7 @@ else:
     ]
     extra_link_args = []
 
-    # Expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside
+    # Expecting the dependent libs (libcntklibrary-2.2.so, etc.) inside
     # site-packages/cntk/libs.
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
     os.environ["CXX"] = "mpic++"
@@ -134,7 +134,7 @@ cntk_module = Extension(
     name="_cntk_py",
 
     sources = [os.path.join("cntk", "cntk_py.i")],
-    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon, "-Werror" ],
+    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon, "-Werror", "-threads" ],
     libraries = link_libs,
     library_dirs = [CNTK_LIB_PATH],
 
@@ -150,12 +150,15 @@ cntk_module = Extension(
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     language="c++",
+    depends = [os.path.join(CNTK_SOURCE_PATH, "Common", "Include", "ExceptionWithCallStack.h")] +
+        [os.path.join(cntkBindingCommon, f) for f in ["CNTKExceptionHandling.i", "CNTKValueExtend.i", "CNTKWarnFilters.i"]] +
+        [os.path.join(cntkV2LibraryInclude, f) for f in ["CNTKLibraryInternals.h", "CNTKLibrary.h"]],
 )
 
 # Do not include examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
-package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt'] }
+package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt', 'contrib/deeprl/tests/data/initial_policy_network.dnn'] }
 
 if IS_WINDOWS:
     # On Windows copy all runtime libs to the base folder of Python
@@ -175,7 +178,7 @@ if IS_PY2:
     cntk_install_requires.append('enum34>=1.1.6')
 
 setup(name="cntk",
-      version="2.0rc2",
+      version="2.2",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

@@ -220,8 +220,6 @@ void TracingGPUMemoryAllocator::Free(int deviceId, AllocatedElemType* bufferPtr,
     }
 }
 
-// Computes the smallest multiple of k greater or equal to n
-static inline size_t asMultipleOf(size_t n, size_t k) { return n + n % k;  }
 
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size_t numElements)
@@ -232,7 +230,7 @@ AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size
     // In case numElements is odd we allocate a buffer with one more element. The reason is 
     // we might call curandGenerateNormal (e.g. for Gaussian noise injection) which would fail
     // if the number of elements it needs to generate is odd.
-    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * asMultipleOf(numElements, 2)));
+    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * AsMultipleOf(numElements, 2)));
 
     return deviceBufferPtr;
 }
@@ -446,6 +444,8 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
         return _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opTanh:
         return _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAtanh:
+        return _elementWiseAtanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSqrt:
         return _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opExp:
@@ -460,6 +460,16 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
         return _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opNegativeSine:
         return _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAcos:
+        return _elementWiseAcosOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAsin:
+        return _elementWiseAsinOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opCosh:
+        return _elementWiseCoshOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opSinh:
+        return _elementWiseSinhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAsinh:
+        return _elementWiseAsinhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSigmoidDerivative:
         return _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     default: LogicError("performElementWiseFunction: unexpected op code %d", (int)kind);
@@ -1126,7 +1136,7 @@ void GPUMatrix<ElemType>::SetValue(const ElemType v)
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) // d_v is pointer to the the value in GPU memory
+void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) // d_v is pointer to the value in GPU memory
 {
     if (IsEmpty())
         LogicError("SetValue: Matrix is empty.");
@@ -1303,27 +1313,108 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
 }
 
 template <class ElemType>
+void RescaleToRange(const GPUMatrix<ElemType>& matrix, const ElemType low, const ElemType high)
+{
+
+    size_t N = matrix.GetNumElements();
+    size_t blocksPerGrid = (size_t)ceil(N / (double)GridDim::maxThreadsPerBlock);
+
+    //Nobody is ever calling SetStream so all work is done one the same stream
+    //Therefore we don't need to sync
+    //SyncGuard syncGuard;
+    _rescaleToRange<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (matrix.Data(), N, low, high);
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
 {
     PrepareDevice();
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
-    cudaEvent_t done = nullptr;
-    CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
+    {  
+        //Nobody is ever calling SetStream so all work is done one the same stream
+        //Therefore we don't need to sync
+        //SyncGuard syncGuard;
+        if (sizeof(ElemType) == sizeof(float))
+            CURAND_CALL(curandGenerateUniform(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
+        else
+            CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
+    }
+    RescaleToRange(*this, low, high);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high)
+{
+    PrepareDevice();
+
+    GPURNGHandle* gpuRNGHandle = dynamic_cast<GPURNGHandle*>(&rngHandle);
+    assert(gpuRNGHandle != nullptr);
+
+    {
+        //Nobody is ever calling SetStream so all work is done one the same stream
+        //Therefore we don't need to sync
+        //SyncGuard syncGuard;
+        if (sizeof(ElemType) == sizeof(float))
+            CURAND_CALL(curandGenerateUniform(gpuRNGHandle->Generator(), reinterpret_cast<float*>(Data()), GetNumElements()));
+        else
+            CURAND_CALL(curandGenerateUniformDouble(gpuRNGHandle->Generator(), reinterpret_cast<double*>(Data()), GetNumElements()));
+    }
+    RescaleToRange(*this, low, high);
+}
+
+template <class ElemType>
+void SetNormalRandomValue(const GPUMatrix<ElemType>& matrix, const curandGenerator_t& generator, const ElemType mean, const ElemType stdev)
+{
+    //Nobody is ever calling SetStream so all work is done one the same stream
+    //Therefore we don't need to sync
+    //SyncGuard syncGuard;
+
+    // curandGenerateNormal can return the error CURAND_STATUS_LENGTH_NOT_MULTIPLE if GetNumElements() is odd.
+    // To avoid this we always allocate a buffer of even size and potentially generate one more random element.
+    auto n = AsMultipleOf(matrix.GetNumElements(), 2);
     if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateUniform(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
+        CURAND_CALL(curandGenerateNormal(generator, reinterpret_cast<float*>(matrix.Data()), n, (float)mean, (float)stdev));
     else
-        CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
-    CUDA_CALL(cudaEventRecord(done));
-    CUDA_CALL(cudaEventSynchronize(done));
-    // CURAND_CALL(curandDestroyGenerator(gen));
-    CUDA_CALL(cudaEventDestroy(done));
+        CURAND_CALL(curandGenerateNormalDouble(generator, reinterpret_cast<double*>(matrix.Data()), n, (double)mean, (double)stdev));
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev)
+{
+    PrepareDevice();
+    GPURNGHandle* gpuRNGHandle = dynamic_cast<GPURNGHandle*>(&rngHandle);
+    assert(gpuRNGHandle != nullptr);
+    SetNormalRandomValue(*this, gpuRNGHandle->Generator(), mean, stdev);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale)
+{
+    PrepareDevice();
+
+    GPURNGHandle* gpuRNGHandle = dynamic_cast<GPURNGHandle*>(&rngHandle);
+    assert(gpuRNGHandle != nullptr);
+
+    {
+        //Nobody is ever calling SetStream so all work is done one the same stream
+        //Therefore we don't need to sync
+        //SyncGuard syncGuard;
+        if (sizeof(ElemType) == sizeof(float))
+            CURAND_CALL(curandGenerateUniform(gpuRNGHandle->Generator(), reinterpret_cast<float*>(Data()), GetNumElements()));
+        else
+            CURAND_CALL(curandGenerateUniformDouble(gpuRNGHandle->Generator(), reinterpret_cast<double*>(Data()), GetNumElements()));
+    }
 
     size_t N = GetNumElements();
-    size_t blocksPerGrid = (size_t) ceil(N / (double) GridDim::maxThreadsPerBlock);
+    size_t blocksPerGrid = (size_t)ceil(N / (double)GridDim::maxThreadsPerBlock);
 
-    SyncGuard syncGuard;
-    _rescaleToRange<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), N, low, high);
+    {   
+        //Nobody is ever calling SetStream so all work is done one the same stream
+        //Therefore we don't need to sync
+        //SyncGuard syncGuard;
+        _gumbelFromUniform<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (Data(), N, loc, scale);
+    }
 }
 
 template <class ElemType>
@@ -1331,17 +1422,36 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
 {
     PrepareDevice();
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
+    SetNormalRandomValue(*this, ((curandGenerator_t*)s_curandGenerator)[0], mean, sigma);
+}
 
-    // TODO: Why not use SyncGuard?
+template <class ElemType>
+void GPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    // We use the method described in https://en.wikipedia.org/wiki/Truncated_normal_distribution
+    // i.e. generate uniform, scale it to the right range, pass it through the inverse cdf, scale by sigma, and add the mean 
+    PrepareDevice();
+    CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
-    // curandGenerateNormal can return the error CURAND_STATUS_LENGTH_NOT_MULTIPLE if GetNumElements() is odd.
-    // To avoid this we always allocate a buffer of even size and potentially generate one more random element.
-    auto n = asMultipleOf(GetNumElements(), 2);
-    if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateNormal(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), n, (float) mean, (float) sigma));
-    else
-        CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), n, (double) mean, (double) sigma));
-    // CURAND_CALL(curandDestroyGenerator(gen));
+    {
+        //Nobody is ever calling SetStream so all work is done one the same stream
+        //Therefore we don't need to sync
+        //SyncGuard syncGuard;
+        if (sizeof(ElemType) == sizeof(float))
+            CURAND_CALL(curandGenerateUniform(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
+        else
+            CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
+    }
+
+    size_t N = GetNumElements();
+    size_t blocksPerGrid = (size_t)ceil(N / (double)GridDim::maxThreadsPerBlock);
+
+    {
+        //Nobody is ever calling SetStream so all work is done one the same stream
+        //Therefore we don't need to sync
+        //SyncGuard syncGuard;
+        _truncated_normal_transform<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (Data(), N, mean, sigma);
+    }
 }
 
 //maskRate: percentage of values masked out (similar to dropout rate)
@@ -1419,7 +1529,7 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
                                     ElemType momentum,
                                     ElemType adaWeight,
                                     ElemType adaMul,
-                                    bool unitGainMomentum)
+                                    ElemType unitGainFactor)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1434,7 +1544,7 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _fsadagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(n, gradients.Data(), Data(), Data()+ n, functionValues.Data(),
-                                                                         learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+                                                                         learnRatePerSample, momentum, adaWeight, adaMul, unitGainFactor);
 }
 
 template <class ElemType>
@@ -1445,7 +1555,8 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     ElemType adaWeight,
     ElemType adaMul,
     ElemType epsilon,
-    bool unitGainMomentum)
+    ElemType unitGainFactor,
+    bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1460,7 +1571,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainFactor, adamax);
 }
 
 template <class ElemType>
@@ -1470,7 +1581,8 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
                                       ElemType RMS_WGT_MAX,
                                       ElemType RMS_WGT_DEC,
                                       ElemType RMS_WGT_MIN,
-                                      const bool needAveMultiplier)
+                                      const bool needAveMultiplier,
+                                      const bool initialized)
 {
     const ElemType floor = 1e-6f;
     static ElemType* upd_gpu = (ElemType*) 0;
@@ -1482,7 +1594,7 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
     if (needAveMultiplier)
         numColsNeeded += gradients.GetNumCols();
 
-    if (IsEmpty() || GetNumCols() < numColsNeeded)
+    if (IsEmpty() || GetNumCols() < numColsNeeded || !initialized)
     {
         RequireSize(gradients.GetNumRows(), numColsNeeded);
         SetValue(0.0);
@@ -1560,6 +1672,18 @@ void GPUMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<Ele
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adadelta<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(), learningRate, rho, epsilon);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp)
+{
+    // Sets all timestamps to 0 and updates the two logical buffers that this object holds
+    // so that their values are the same as if a dense implementation of adadelta had been used.
+    // This basically means that the values of these buffers are set to decay * original value 
+    // where decay is rho ** (currentTimestamp - timestamp for that column)
+    size_t rows = GetNumRows();
+    int blocksPerGrid = (cols + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+    _adadeltaFlush<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (cols, rows, Data(), Data() + cols * rows, rho, timestamps, currentTimestamp);
 }
 
 template <class ElemType>
@@ -2232,6 +2356,24 @@ DEF_ELEMWISE_ASSIGN_FUNC(Cosine)
 
 DEF_ELEMWISE_INPLACE_FUNC(NegativeSine)
 DEF_ELEMWISE_ASSIGN_FUNC(NegativeSine)
+
+DEF_ELEMWISE_INPLACE_FUNC(Acos)
+DEF_ELEMWISE_ASSIGN_FUNC(Acos)
+
+DEF_ELEMWISE_INPLACE_FUNC(Asin)
+DEF_ELEMWISE_ASSIGN_FUNC(Asin)
+
+DEF_ELEMWISE_INPLACE_FUNC(Cosh)
+DEF_ELEMWISE_ASSIGN_FUNC(Cosh)
+
+DEF_ELEMWISE_INPLACE_FUNC(Sinh)
+DEF_ELEMWISE_ASSIGN_FUNC(Sinh)
+
+DEF_ELEMWISE_INPLACE_FUNC(Asinh)
+DEF_ELEMWISE_ASSIGN_FUNC(Asinh)
+
+DEF_ELEMWISE_INPLACE_FUNC(Atanh)
+DEF_ELEMWISE_ASSIGN_FUNC(Atanh)
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
@@ -3228,11 +3370,15 @@ void GPUMatrix<ElemType>::MaxPoolingForward(const GPUMatrix<int>& mpRowCol, cons
 template <class ElemType>
 void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, const GPUMatrix<ElemType>& in,
                                              const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices,
-                                             GPUMatrix<ElemType>& grad) const
+                                             GPUMatrix<ElemType>& grad, bool accumulateGradient) const
 {
     const int BlockSize = 128;
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
+
+    if (!accumulateGradient)
+        grad.SetValue((ElemType)0);
+
     SyncGuard syncGuard;
     kMaxPoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), out.Data(), in.Data(),
                                                             mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
@@ -3240,9 +3386,9 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                            const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
-                                            GPUMatrix<ElemType>& argmax) const
+void GPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                               const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
+                                               GPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     PrepareDevice();
     SyncGuard syncGuard;
@@ -3250,14 +3396,14 @@ void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
     int count = numRois * numImg * channels * pooledHeight * pooledWidth;
     const int blockSize = GridDim::maxThreadsPerBlock;
     auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
-    kROIPoolingForward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
-                                                               pooledWidth, pooledHeight, Data(), roiData.Data(), output.Data(), argmax.Data());
+    kMaxROIPoolingForward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+                                                                  pooledWidth, pooledHeight, Data(), roiData.Data(), output.Data(), argmax.Data(), spatialScale);
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                             const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
-                                             GPUMatrix<ElemType>& argmax) const
+void GPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                                const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
+                                                GPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     PrepareDevice();
     SyncGuard syncGuard;
@@ -3265,8 +3411,8 @@ void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
     int count = numImg * channels * height * width;
     const int blockSize = GridDim::maxThreadsPerBlock;
     auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
-    kROIPoolingBackward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
-                                                                pooledWidth, pooledHeight, Data(), roiData.Data(), grad.Data(), argmax.Data());
+    kMaxROIPoolingBackward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+                                                                   pooledWidth, pooledHeight, Data(), roiData.Data(), grad.Data(), argmax.Data(), spatialScale);
 }
 
 template <class ElemType>
@@ -3292,11 +3438,15 @@ void GPUMatrix<ElemType>::AveragePoolingForward(const GPUMatrix<int>& mpRowCol, 
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad) const
+void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad, bool accumulateGradient) const
 {
     const int BlockSize = 128;
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
+
+    if (!accumulateGradient)
+        grad.SetValue((ElemType)0);
+
     SyncGuard syncGuard;
     kAveragePoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
                                                                 Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
@@ -4411,7 +4561,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
 // phoneBoundary (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
 // totalScore (output): total CTC score
 // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
-// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
 // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
 // uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
 // numParallelSequences (input): channel number in this minibatch

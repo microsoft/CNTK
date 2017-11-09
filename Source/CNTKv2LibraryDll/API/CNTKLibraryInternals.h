@@ -83,6 +83,10 @@ namespace CNTK
 #define __declspec_noreturn __attribute__((noreturn))
 #endif
 
+// Some projects require only some generic data types/interfaces from this file, and do not want to link explicitly to CNTKv2Library.
+// In this case they have to define CNTK_HEADERONLY_DEFINITIONS before including CNTKLibrary.h
+#ifndef CNTK_HEADERONLY_DEFINITIONS
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
@@ -94,6 +98,8 @@ namespace CNTK
     CNTK_API __declspec_noreturn void ThrowFormatted(const char* format, ...);
 
 #pragma warning(pop)
+
+#endif
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
 #ifndef _MSC_VER // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route
@@ -137,12 +143,13 @@ namespace CNTK
 {
     // Forward declarations
     class Utils;
-    class NDShape; 
+    class NDShape;
     class PrimitiveFunction;
     class CompositeFunction;
     class BlockFunction;
     class Function;
     class Variable;
+    class Parameter;
     class Axis;
     class DeviceDescriptor;
     enum class PrimitiveOpType : unsigned int;
@@ -223,6 +230,8 @@ namespace CNTK
 
     struct MinibatchSourceConfig;
 
+#ifndef CNTK_HEADERONLY_DEFINITIONS
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
@@ -235,12 +244,20 @@ namespace CNTK
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
-        CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, bool keepReducedDimensions, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::vector<Axis>& axes, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::vector<Axis>& axes, bool keepReducedDimensions, const std::wstring& name = L"");
         CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, const Variable& shiftWindow, const Variable& numberOfNegativeSamples, const std::wstring& name = L"");
         CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
-                                         bool transpose, const NDShape& outputShape, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
+                                         const NDShape& dilation, bool transpose, const NDShape& outputShape, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
+        CNTK_API FunctionPtr SpatialConvolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing,
+                                                const std::vector<bool>& autoPadding, const NDShape& dilation, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
+        CNTK_API FunctionPtr GroupConvolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing,
+                                              const std::vector<bool>& autoPadding, const NDShape& dilation, size_t groups, size_t maxTempMemSizeInSamples,
+                                              const std::wstring& name = L"");
+                                         
 
         // This is meant for debugging purposes only and is very likely to be deprecated in the future.
         CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
@@ -276,6 +293,9 @@ namespace CNTK
         CNTK_API void EnableSynchronousGPUKernelExecution();
         CNTK_API bool IsSynchronousGPUKernelExecutionEnabled();
 
+        CNTK_API void UseSparseGradientAggregationInDataParallelSGD(bool enable);
+        CNTK_API bool ShouldUseSparseGradientAggregationInDataParallelSGD();
+
         CNTK_API unsigned long GetRandomSeed();
         CNTK_API void SetFixedRandomSeed(unsigned long value);
         CNTK_API bool IsRandomSeedFixed();
@@ -304,6 +324,20 @@ namespace CNTK
 
         // This is an internal API, needed for testing.
         CNTK_API Dictionary ToDictionary(const MinibatchSourceConfig& dict);
+
+#ifndef SWIG
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// This is the Proper declaration understood by a real C++ compiler.
+        LearnerPtr UniversalLearner(const std::vector<::CNTK::Parameter>& parameters, const std::vector<std::pair<::CNTK::Variable, ::CNTK::FunctionPtr> >& updates);
+#else
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// Workaround declaration for SWIG.
+        /// This is for now necessary because it has been elusive to find an equivalent of
+        /// %template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
+        /// which will generate correct code (i.e. code that will accept a list of tuples in the foreign language)
+        /// when the proper declaration is processed by SWIG.
+        LearnerPtr UniversalLearner(const std::vector<CNTK::Parameter>& parameters, const std::vector<std::pair<CNTK::Variable, CNTK::FunctionPtr> >& updates);
+#endif
 
         CNTK_API void PrintBuiltInfo();
         CNTK_API void PrintGpuInfo(const std::vector<Microsoft::MSR::CNTK::GpuData>& gpusData);
@@ -349,6 +383,13 @@ namespace CNTK
             ///
             CNTK_API void WriteValue(const std::wstring& name, float value, uint64_t step);
 
+#ifndef CNTK_UWP // doesn't support UWP due to compatibablity of opencv libs
+            ///
+            /// Record an image for a CNTK NDArrayViewPtr at a particular step.
+            ///
+            CNTK_API void WriteImage(const std::wstring& name, NDArrayViewPtr NDPtr, uint64_t step);
+#endif
+
             ///
             /// Flushes any outstanding records to disk. Returns true on success, false otherwise.
             ///
@@ -376,27 +417,67 @@ namespace CNTK
             std::wstring m_fileName;
         };
 
-        ///
-        /// Defines an interface of a deserializer for user defined functions,
-        /// that needs to be provided to Function::Load to inflate user defined functions in the model.
-        /// Subclasses need to implement the single deserialize method.
-        ///
-        class UDFDeserializer : public std::enable_shared_from_this<UDFDeserializer>
+        // SWIG callback wrapper for the UDF deserialization.
+        class UDFDeserializeCallbackWrapper
         {
         public:
-            ///
-            /// Reconstructs a user defined function given its inputs, name and a dictionary containing its state.
-            ///
-            virtual FunctionPtr Deserialize(const std::vector<Variable>& inputs, const std::wstring& name, const Dictionary& dictionary) const = 0;
-            virtual ~UDFDeserializer() = default;
+            virtual FunctionPtr operator()(const std::vector<Variable>&, const std::wstring&, const Dictionary&) const = 0;
+            virtual ~UDFDeserializeCallbackWrapper() = default;
         };
 
-        typedef std::shared_ptr<UDFDeserializer> UDFDeserializerPtr;
+        typedef std::shared_ptr<UDFDeserializeCallbackWrapper> UDFDeserializeCallbackWrapperPtr;
+
+        CNTK_API void RegisterUDFDeserializeCallbackWrapper(UDFDeserializeCallbackWrapperPtr callbackPtr);
+
+
+        CNTK_API bool IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
+
+        // A stripped-down version of boost::optional.
+        // TODO: replace by std::optional, once it's fully supported by VS.
+        template <class T>
+        class Optional
+        {
+        public:
+
+            Optional() = default;
+
+            Optional& operator= (T value)
+            {
+                m_initialized = true;
+                m_value = value;
+                return *this;
+            }
+
+            void Reset()
+            {
+                m_initialized = false;
+            }
+
+            bool IsInitialized() const
+            {
+                return m_initialized;
+            }
+
+            T Get() const
+            {
+                if (IsInitialized())
+                    return m_value;
+                RuntimeError("Optional value is not initialized.");
+            }
+
+            Optional(const Optional&) = default; Optional& operator=(const Optional&) = default;
+            Optional(Optional&&) = delete; Optional& operator=(Optional&&) = delete;
+        private:
+             T m_value;
+             bool m_initialized { false };
+        };
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.
-    namespace Test 
+    namespace Test
     {
         struct DeviceSelectionTestFixture;
     }
+
+#endif
 }

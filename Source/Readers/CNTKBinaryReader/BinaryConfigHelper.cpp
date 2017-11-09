@@ -21,7 +21,9 @@ using std::map;
 
 #undef max // max is defined in minwindef.h
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+    using namespace Microsoft::MSR::CNTK;
 
     BinaryConfigHelper::BinaryConfigHelper(const ConfigParameters& config)
     {
@@ -51,11 +53,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         string precision = config.Find("precision", "float");
         if (AreEqualIgnoreCase(precision, "double"))
         {
-            m_elementType = ElementType::tdouble;
+            m_elementType = DataType::Double;
         }
         else if (AreEqualIgnoreCase(precision, "float"))
         {
-            m_elementType = ElementType::tfloat;
+            m_elementType = DataType::Float;
         }
         else
         {
@@ -79,4 +81,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_traceLevel = config(L"traceLevel", 1);
     }
 
-}}}
+}

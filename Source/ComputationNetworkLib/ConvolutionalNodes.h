@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 // ConvolutionNodeBase is a base class for ND-convolution(ConvolutionNode) and ND-pooling(PoolingNode).
-// 
+//
 // 2D convolutions (incl. pooling) support two different storage formats:
 //
 // * legacy ("HWC") mode: Channels are tuples of scalars
@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - K = output channels = dimension of activation vector for each pixel (also called N by NVidia, inconsistently)
 //
 // For ND-convolution/pooling only second format ('cudnn') is supported.
-// 
+//
 template <class ElemType>
 class ConvolutionNodeBase : public ComputationNode<ElemType>
 {
@@ -114,7 +114,7 @@ public:
         }
         if (modelVersion >= CNTK_MODEL_VERSION_20)
         {
-            m_outputShape.Load(fstream); 
+            m_outputShape.Load(fstream);
         }
         if (modelVersion >= CNTK_MODEL_VERSION_21)
         {
@@ -195,7 +195,7 @@ private:
         shape = TensorShape(dims);
     }
 protected:
-    // infer reduction dimensions if m_convolution2D is true, for legacy NDL branch 
+    // infer reduction dimensions if m_convolution2D is true, for legacy NDL branch
     void InferConvolution2DReductionDims(const TensorShape& inputShape, size_t numChannels)
     {
         size_t kW = m_kernelShape[0];
@@ -204,7 +204,7 @@ protected:
         size_t sH = m_stride[1];
         m_kernelShape = TensorShape(kW, kH, numChannels);
         m_stride = TensorShape(sW, sH, numChannels);
-        size_t filterRank = 2; 
+        size_t filterRank = 2;
         FixVectorShape(filterRank, inputShape.size(), m_autoPad, false);
         FixTensorShape(filterRank, inputShape.size(), m_lowerPad, 0);
         FixTensorShape(filterRank, inputShape.size(), m_upperPad, 0);
@@ -253,12 +253,12 @@ protected:
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
     PoolKind m_poolKind;
-    bool m_transpose; 
+    bool m_transpose;
     TensorShape m_outputShape;
     bool m_ceilOutDim;
     bool m_poolIncludePad;
     ImageLayoutKind m_imageLayout;
-    
+
     size_t m_maxTempMemSizeInSamples;
     shared_ptr<Matrix<ElemType>> m_tempMatrixForward;
     shared_ptr<Matrix<ElemType>> m_tempMatrixBackward;
@@ -301,15 +301,24 @@ class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2
     static const std::wstring TypeName() { return L"Convolution"; }
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name), m_dilation(TensorShape(1))
     {
     }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-                    : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
-                    m_convolution2D(false)
+                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1))
+        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
+        m_convolution2D(false), m_dilation(dilation)
     {
+        // Make sure not using dilation on CPU
+        if(deviceId < 0)
+        {
+            for(int i = 0; i < dilation.size(); i++)
+            {
+                if(1 != dilation[i])
+                    RuntimeError("Dilated convolution on CPU is not yet implemented.");
+            }
+        }
     }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                     const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
@@ -324,19 +333,24 @@ public:
     ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
         : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
                           configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-                          configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
+                          configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
 
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return m_convEng->ImplementsGradientOverwriteOptimization(); }
+    // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs.
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        bool overwrite = Base::NeedsDynamicValidation() ? false : m_convEng->ImplementsGradientOverwriteOptimization();
+        return overwrite ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None;
+    }
 
 public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_convolution2D;
-        TensorShape(1).Save(fstream); // Write out a dummy tensor, so that model created can be used later after implementing reading this tensor in this model version
+        m_dilation.Save(fstream);
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -374,9 +388,11 @@ public:
             fstream >> m_convolution2D;
             if (modelVersion >= CNTK_MODEL_VERSION_18)
             {
-                TensorShape dummyTensorHolder;
-                dummyTensorHolder.Load(fstream);
-                if(dummyTensorHolder!=TensorShape(1)) LogicError("Loading tensor that is currently not supported.");
+                m_dilation.Load(fstream);
+            }
+            else
+            {
+                m_dilation = TensorShape(1);
             }
         }
     }
@@ -422,16 +438,16 @@ public:
             auto& grad = InputRef(0).GradientAsMatrix();
             auto sliceInput1Value = InputRef(1).ValueFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrixBackward);
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
             else
-                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrixBackward);
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
             auto& input0 = InputRef(0).ValueAsMatrix();
             auto sliceInput1Grad = InputRef(1).GradientFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->ParentOverwritesGradient(), *m_tempMatrixBackward);
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->IsGradientInitializedBy(this), *m_tempMatrixBackward);
             else
             {
                 // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.
@@ -450,7 +466,7 @@ public:
         TensorShape outputShape;
         // If 2D convolution syntax is used then some of the tensor dimensions need to be inferred.
         if (m_convolution2D)
-        // NOTE: when m_convolution2D is true, it's a legacy branch. Code should not enter here any more. 
+        // NOTE: when m_convolution2D is true, it's a legacy branch. Code should not enter here any more.
         {
             // Need to update some tensors with correct input dims.
             auto inDims = ImageDimensions(GetInputSampleLayout(inputIdx), m_imageLayout);
@@ -490,14 +506,15 @@ public:
             if (!m_transpose)
             {
                 outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, false,
+                                                                    this->NeedsDynamicValidation(), isFinalValidationPass);
 
                 if (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0))    // user have explicitly set m_outputShape, we check if it's the same as outputShape
                 {
                     if (m_outputShape != outputShape)
                     {
                         InvalidArgument("%ls %ls the shape of the specified convolution output %ls is different from "
-                            "the result of convoluting the input argument using the provided options %ls. It is recommonded "
+                            "the result of convoluting the input argument using the provided options %ls. It is recommended "
                             "that the output shape is not specified for convolution.", NodeName().c_str(), OperationName().c_str(),
                             static_cast<std::wstring>(m_outputShape).c_str(),
                             static_cast<std::wstring>(outputShape).c_str());
@@ -511,26 +528,29 @@ public:
                     // In case of convolution transpose (deconvolution), node input (inputShape) is really the output of the convolution
                     // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
                     outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
+                                                                      this->NeedsDynamicValidation(), isFinalValidationPass);
                 }
                 else
                 {
                     // in case the user specifies the output shape, we make sure the input shape can be the result of
                     // convolution from the specified output shape
-                    auto inferredShape = ConvolveGeometry::ComputeOutputShape(m_outputShape, m_kernelShape, m_mapCount, m_stride, m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                    auto inferredShape = ConvolveGeometry::ComputeOutputShape(m_outputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                              m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false, 
+                                                                              this->NeedsDynamicValidation(), isFinalValidationPass);
                     if (inputShape != inferredShape)
                         InvalidArgument("%ls %ls the shape of the convolution transpose operand %ls is different from "
                             "the result of convoluting the specified output argument using "
                             "the provided options %ls", NodeName().c_str(), OperationName().c_str(),
                             static_cast<std::wstring>(inputShape).c_str(),
                             static_cast<std::wstring>(inferredShape).c_str());
-                    outputShape = m_outputShape; 
+                    outputShape = m_outputShape;
                 }
             }
 
-            if (m_imageLayout == ImageLayoutKind::CHW) 
+            if (m_imageLayout == ImageLayoutKind::CHW)
                 SetDims(outputShape, HasMBLayout());
-            else    // legacy format 
+            else    // legacy format
                 SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
         }
 
@@ -555,20 +575,21 @@ public:
 
         if (isFinalValidationPass)
         {
-            if (m_convEng == nullptr)
+            bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
+                                          (outputShape != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
+            if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
-                                                                   m_kernelShape, m_mapCount, m_stride, 
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                                                                   m_kernelShape, m_mapCount, m_stride,
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms());
+                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
+                                                                false, recomputeConvGeometry);
             }
 
             if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
             {
-                //LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
-                //           Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
                 LogicError("Convolution weight matrix %ls should have dimension [(filter shape) x (input channels) x (output channels)]",
                            Input(0)->NodeName().c_str());
             }
@@ -636,6 +657,8 @@ private:
         return (inputIndex == 1);
     }
 
+    TensorShape m_dilation;
+
 protected:
     // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
@@ -653,10 +676,10 @@ protected:
 // we can get a label for it. The ROIs have different spatial sizes,
 // so this node does Max Pooling, but with an adaptive pooling window,
 // so that each ROI output has the spatial size expected by the first
-// fully-connected layer. Images are Input(0). ROIs are Input(1). 
+// fully-connected layer. Images are Input(0). ROIs are Input(1).
 //
 // Input0: Images       [W x H x C x N]
-// Input1: ROIs         [4 x roisPerImage x N], 
+// Input1: ROIs         [4 x roisPerImage x N],
 // output: Pooled ROIs  [PW x PH x C x roisPerImage x N]
 // where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
 //
@@ -667,13 +690,15 @@ class ROIPoolingNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"ROIPooling"; }
+
 public:
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& roiOutputShape = TensorShape())
-        : Base(deviceId, name), m_roiOutputShape(roiOutputShape), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, PoolKind poolKind = PoolKind::Max, const TensorShape& roiOutputShape = TensorShape(), double spatialScale = 1.0/16.0)
+        : Base(deviceId, name), m_poolKind(poolKind), m_roiOutputShape(roiOutputShape), m_spatialScale(spatialScale), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
     {
     }
+
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"roiOutputShape"))
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"roiOutputShape"), configp->Get(L"featureScale"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -685,7 +710,7 @@ public:
         RequestMatrixFromPool(m_tempMatrix, matrixPool, matrixSize, true);
     }
 
-    // m_tempMatrix cannot be released after Forward Prop because its content (argmax) is used for back prop. 
+    // m_tempMatrix cannot be released after Forward Prop because its content (argmax) is used for back prop.
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
@@ -694,11 +719,11 @@ public:
     }
 
     // Input0: Images       [W x H x C x N]
-    // Input1: ROIs         [4 x roisPerImage x N], 
+    // Input1: ROIs         [4 x roisPerImage x N],
     // output: Pooled ROIs  [PW x PH x C x roisPerImage x N]
     // where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
     //
-    // Explanation: this node has a target output shape of 
+    // Explanation: this node has a target output shape of
     // [Pooled Width x Pooled Height x Channels], as does any pooling
     // layer. However, we want each /ROI/ to have that output size,
     // not each image. After this node, operations in the network
@@ -707,7 +732,7 @@ public:
     // every ROI, it treats the subset of the image specified by that
     // ROI as a full image and does max pooling over that subset,
     // using whatever window size will correspond to an output of
-    // [Pooled Width x Pooled Height x Channels]. Hence, 
+    // [Pooled Width x Pooled Height x Channels]. Hence,
     // the output tensor is [PW x PH x C x roisPerImage x N]
     // An example validation output looks like this:
     // Validating --> z.roiOut = ROIPooling (z.conv5Out.conv5.y, rois) : [61 x 61 x 256 x *], [4 x 64 x *] -> [6 x 6 x 256 x 64 x *]
@@ -733,20 +758,71 @@ public:
         size_t outH = m_roiOutputShape[1];
 
         m_tempMatrix->Resize(outW * outH * numChannels * roisPerImage, inputSlice.GetNumCols());
-        inputSlice.ROIPoolingForward(roisPerImage, inputSlice.GetNumCols(), 
-            numChannels, inputW, inputH, outW, outH, ROIs, outputSlice, *m_tempMatrix);
+        if (m_poolKind == PoolKind::Max)
+            inputSlice.MaxROIPoolingForward(roisPerImage, inputSlice.GetNumCols(),
+                numChannels, inputW, inputH, outW, outH, ROIs, outputSlice, *m_tempMatrix, m_spatialScale);
+        else
+            LogicError("Average ROI pooling is not supported.");
+    }
+
+    // similar to usual MaxPooling backpropagation. Send gradients
+    // back through to the locations that were used as the "max." Only
+    // difference: needs to sum gradients over all the ROIs that may
+    // have used that location. One image location could be in
+    // multiple ROIs--in that case each ROI may contribute a gradient term.
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        if (inputIndex != 0)
+            return;
+
+        auto inputShape = GetInputSampleLayout(0);
+        Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
+
+        int inputW = inputShape[0];
+        int inputH = inputShape[1];
+        int numChannels = inputShape[2];
+
+        auto inputGrad = Input(0)->GradientFor(fr);
+        auto pooledGrad = GradientFor(fr);
+
+        int roisPerImage = GetInputSampleLayout(1)[1];
+        auto roiData = Input(1)->ValueFor(fr);
+
+        if (m_poolKind == PoolKind::Max)
+            pooledGrad.MaxROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels,
+                inputW, inputH, m_roiOutputShape[0], m_roiOutputShape[1], roiData, inputGrad, *m_tempMatrix, m_spatialScale);
+        else
+            LogicError("Average ROI pooling is not supported.");
     }
 
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
         m_roiOutputShape.Save(fstream);
+        fstream << (int32_t)m_poolKind;
+        fstream << m_spatialScale;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
         m_roiOutputShape.Load(fstream);
+
+        if (modelVersion < CNTK_MODEL_VERSION_26)
+        {
+            // There are 2 problems here:
+            //    1. m_spatialScale value depends on your location in the network, for current R-CNN and its family it is 1/16.
+            //    2. roiData format also has changed from ratio to absolute values and those are given as input.
+            m_poolKind = PoolKind::Max;
+            m_spatialScale = 1.0/16.0;
+        }
+        else
+        {
+            int32_t k;
+            fstream >> k;
+            m_poolKind = (PoolKind)k;
+            fstream >> m_spatialScale;
+        }
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -776,44 +852,26 @@ public:
         SetDims(TensorShape(m_roiOutputShape[0], m_roiOutputShape[1], inShape[2], roiShape[1]), HasMBLayout());
     }
 
-    // similar to usual MaxPooling backpropagation. Send gradients
-    // back through to the locations that were used as the "max." Only
-    // difference: needs to sum gradients over all the ROIs that may
-    // have used that location. One image location could be in
-    // multiple ROIs--in that case each ROI may contribute a gradient term.
-    void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
-    {
-        auto inputShape = GetInputSampleLayout(0);
-        Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
-
-        int inputW = inputShape[0];
-        int inputH = inputShape[1];
-        int numChannels = inputShape[2];
-
-        auto inputGrad = Input(0)->GradientFor(fr);
-        auto pooledGrad = GradientFor(fr);
-
-        int roisPerImage = GetInputSampleLayout(1)[1];
-        auto roiData = Input(1)->ValueFor(fr);
-
-        pooledGrad.ROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels, 
-            inputW, inputH, m_roiOutputShape[0], m_roiOutputShape[1], roiData, inputGrad, *m_tempMatrix);
-    }
-
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ROIPoolingNode<ElemType>>(nodeP);
+            node->m_poolKind = m_poolKind;
             node->m_roiOutputShape = m_roiOutputShape;
+            node->m_spatialScale = m_spatialScale;
         }
     }
 
+    PoolKind PoolingKind() const { return m_poolKind; }
     TensorShape ROIOutputShape() const { return m_roiOutputShape; }
+    double SpatialScale() const { return m_spatialScale; }
 
 protected:
+    PoolKind m_poolKind;
     TensorShape m_roiOutputShape;
+    double m_spatialScale;
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
     Matrix<ElemType> m_argmaxData;
 };
@@ -863,13 +921,18 @@ public:
         Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad, !InputRef(0).IsGradientInitializedBy(this));
     }
 
     bool OutputUsedInComputingInputNodesGradients() const override
     {
         // The PoolingNode requires output values only for max pooling.
         return m_poolKind == PoolKind::Max;
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
     }
 
 public:
@@ -892,17 +955,20 @@ public:
         InferReductionDims(inputShape, TensorShape());
 
         auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_ceilOutDim);
+                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), m_ceilOutDim);
         SetDims(outDims, HasMBLayout());
         if (isFinalValidationPass)
         {
-            if (m_convEng == nullptr)
+            bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
+                (outDims != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
+            if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_ceilOutDim);
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), m_ceilOutDim);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::All, NodeName(), false, m_poolIncludePad);
+                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
+                                                                m_poolIncludePad, recomputeConvGeometry);
             }
         }
     }
@@ -1017,14 +1083,16 @@ public:
         if (inputShape != inferredShape)
             InvalidArgument("%ls %ls the shape of the unpooling operand %ls is different from "
                             "the result of pooling the poolingInput argument using"
-                            "the provided options %ls", NodeName().c_str(), OperationName().c_str(), 
-                            static_cast<std::wstring>(inputShape).c_str(), 
+                            "the provided options %ls", NodeName().c_str(), OperationName().c_str(),
+                            static_cast<std::wstring>(inputShape).c_str(),
                             static_cast<std::wstring>(inferredShape).c_str());
 
         SetDims(outputShape, HasMBLayout());
         if (isFinalValidationPass)
         {
-            if (m_convEng == nullptr)
+            bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
+                (outputShape != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
+            if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(outputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
@@ -1032,7 +1100,7 @@ public:
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
                                                                 ConvolutionEngineKind::Reference,
-                                                                NodeName());
+                                                                NodeName(), false, false, recomputeConvGeometry);
             }
         }
     }
@@ -1090,13 +1158,13 @@ public:
         ConvertToTensorShape();
     }
     PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp, PoolKind poolKind)
-        : PoolingNodeBase(configp->Get(L"deviceId"), 
-            L"<placeholder>", 
-            configp->Get(L"windowWidth"), 
-            configp->Get(L"windowHeight"), 
-            configp->Get(L"horizontalSubsample"), 
+        : PoolingNodeBase(configp->Get(L"deviceId"),
+            L"<placeholder>",
+            configp->Get(L"windowWidth"),
+            configp->Get(L"windowHeight"),
+            configp->Get(L"horizontalSubsample"),
             configp->Get(L"verticalSubsample"),
-            ImageLayoutKindFrom(configp->Get(L"imageLayout")), 
+            ImageLayoutKindFrom(configp->Get(L"imageLayout")),
             poolKind)
     {
         // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
@@ -1160,7 +1228,12 @@ public:
         Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad, !InputRef(0).IsGradientInitializedBy(this));
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -1171,7 +1244,7 @@ public:
         // get input tensor shape and interpret as image dimensions
         auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayoutKind);
 
-        if (isFinalValidationPass && (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight)) 
+        if (isFinalValidationPass && (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight))
             InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
         // determine output tensor shape
@@ -1350,7 +1423,7 @@ public:
         if (isFinalValidationPass && m_convEng == nullptr)
         {
             m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind,
-                                                            0, PoolKind::Average, 
+                                                            0, PoolKind::Average,
                                                             ConvolutionEngineKind::All, NodeName());
         }
     }

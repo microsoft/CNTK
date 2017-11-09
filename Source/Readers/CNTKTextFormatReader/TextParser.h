@@ -8,13 +8,16 @@
 #include "DataDeserializerBase.h"
 #include "Descriptors.h"
 #include "TextConfigHelper.h"
-#include "Indexer.h"
+#include "Index.h"
 #include "CorpusDescriptor.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 template <class ElemType>
 class CNTKTextFormatReaderTestRunner;
+
+class FileWrapper;
+class BufferedFileReader;
 
 // TODO: more details when tracing warnings
 // (e.g., buffer content around the char that triggered the warning)
@@ -28,12 +31,12 @@ public:
     ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Get information about chunks.
-    ChunkDescriptions GetChunkDescriptions() override;
+    std::vector<ChunkInfo> ChunkInfos() override;
 
     // Get information about particular chunk.
-    void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result) override;
+    void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override;
 
-    bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+    bool GetSequenceInfoByKey(const SequenceKey&, SequenceInfo&) override;
 
 private:
     TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool primary = true);
@@ -44,7 +47,7 @@ private:
     struct DenseInputStreamBuffer : DenseSequenceData
     {
         // capacity = expected number of samples * sample size
-        DenseInputStreamBuffer(size_t capacity)
+        DenseInputStreamBuffer(size_t capacity, const NDShape& sampleShape) : m_sampleShape(sampleShape)
         {
             m_buffer.reserve(capacity);
         }
@@ -54,6 +57,12 @@ private:
             return m_buffer.data();
         }
 
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
+        const NDShape& m_sampleShape;
         std::vector<ElemType> m_buffer;
     };
 
@@ -62,7 +71,7 @@ private:
     // of NNZ counts (one for each sample).
     struct SparseInputStreamBuffer : SparseSequenceData
     {
-        SparseInputStreamBuffer()
+        SparseInputStreamBuffer(const NDShape& sampleShape) : m_sampleShape(sampleShape)
         {
             m_totalNnzCount = 0;
         }
@@ -72,7 +81,13 @@ private:
             return m_buffer.data();
         }
 
-        std::vector<IndexType> m_indicesBuffer;
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
+        const NDShape& m_sampleShape;
+        std::vector<SparseIndexType> m_indicesBuffer;
         std::vector<ElemType> m_buffer;
     };
 
@@ -92,34 +107,32 @@ private:
     };
 
     const std::wstring m_filename;
-    FILE* m_file;
+    std::shared_ptr<FileWrapper> m_file;
+    std::shared_ptr<BufferedFileReader> m_fileReader;
 
     // An internal structure to assist with copying from input stream buffers into
     // into sequence data in a proper format.
     struct StreamInfo;
     std::vector<StreamInfo> m_streamInfos;
+    std::vector<StreamDescriptor> m_streamDescriptors;
 
     size_t m_maxAliasLength;
     std::map<std::string, size_t> m_aliasToIdMap;
 
-    std::unique_ptr<Indexer> m_indexer;
-
-    size_t m_fileOffsetStart;
-    size_t m_fileOffsetEnd;
-
-    // TODO: not DRY (same in the Indexer), needs refactoring
-    unique_ptr<char[]> m_buffer;
-    const char* m_bufferStart;
-    const char* m_bufferEnd;
-    const char* m_pos; // buffer index
+    std::shared_ptr<Index> m_index;
 
     unique_ptr<char[]> m_scratch; // local buffer for string parsing
+
+    // Indicates if the sequence length is computed as the maximum 
+    // of number of samples across all streams (inputs).
+    bool m_useMaximumAsSequenceLength;
 
     size_t m_chunkSizeBytes;
     unsigned int m_traceLevel;
     bool m_hadWarnings;
     unsigned int m_numAllowedErrors;
     bool m_skipSequenceIds;
+    bool m_cacheIndex;
     unsigned int m_numRetries; // specifies the number of times an unsuccessful
                                // file operation should be repeated (default value is 5).
 
@@ -134,14 +147,9 @@ private:
     // have been swallowed.
     void PrintWarningNotification();
 
-    void SetFileOffset(int64_t position);
+    int64_t GetFileOffset() const;
 
-    void SkipToNextValue(size_t& bytesToRead);
     void SkipToNextInput(size_t& bytesToRead);
-
-    bool TryRefillBuffer();
-
-    int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }
 
     // Returns a string containing input file information (current offset, file name, etc.),
     // which can be included as a part of the trace/log message.
@@ -158,7 +166,7 @@ private:
     bool TryReadDenseSample(std::vector<ElemType>& values, size_t sampleSize, size_t& bytesToRead);
 
     // Reads sparse sample values and corresponding indices into the provided vectors.
-    bool TryReadSparseSample(std::vector<ElemType>& values, std::vector<IndexType>& indices,
+    bool TryReadSparseSample(std::vector<ElemType>& values, std::vector<SparseIndexType>& indices,
         size_t sampleSize, size_t& bytesToRead);
 
     // Reads one sample (an input identifier followed by a list of values)
@@ -168,7 +176,7 @@ private:
     bool TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead);
 
     // Returns true if there's still data available.
-    bool inline CanRead() { return m_pos != m_bufferEnd || TryRefillBuffer(); }
+    bool inline CanRead();
 
     // Returns true if the trace level is greater or equal to 'Warning'
     bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }
@@ -181,7 +189,7 @@ private:
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
 
     // Fills some metadata members to be conformant to the exposed SequenceData interface.
-    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, const KeyType& sequenceKey);
+    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, const SequenceKey& sequenceKey);
 
     void SetTraceLevel(unsigned int traceLevel);
 
@@ -193,8 +201,10 @@ private:
 
     void SetNumRetries(unsigned int numRetries);
 
+    void SetCacheIndex(bool value);
+
     friend class CNTKTextFormatReaderTestRunner<ElemType>;
 
     DISABLE_COPY_AND_MOVE(TextParser);
 };
-}}}
+}

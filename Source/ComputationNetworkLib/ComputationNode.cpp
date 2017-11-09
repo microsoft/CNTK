@@ -21,6 +21,46 @@ using namespace std;
 // -----------------------------------------------------------------------
 // subroutines for evaluation
 // -----------------------------------------------------------------------
+// lazy resetting of gradient
+// This performs the actual zeroing out.
+template<class ElemType>
+void ComputationNode<ElemType>::LazyZeroGradient(const ComputationNodeBase* gradientInitializedBy)
+{
+    if (!m_needsGradient)
+        LogicError("%ls %ls operation: LazyZeroGradient() called although this node needs no gradient.", NodeName().c_str(), OperationName().c_str());
+
+    if (gradientInitializedBy == nullptr)
+        LogicError("%ls %ls operation: LazyZeroGradient() called without gradientInitializedBy.", NodeName().c_str(), OperationName().c_str());
+
+    if (m_gradientInitializedBy != nullptr)
+        return;
+
+    // gradient optimization to allow parent to overwrite/be reused by non-looping child's gradient instead of accumulating
+    // We cannot enable the gradient overwrite/reuse optimization if this node's parent
+    // has this same node as multiple of its inputs since, in that case the
+    // gradients will flow back from multiple paths of the same parent into the input
+    // nor can we apply gradient optimization for nodes in loop as the gradient needs to be accumulated through time steps
+
+    const auto& inputs = gradientInitializedBy->GetInputs();
+
+    if (Globals::ShouldOptimizeGradientAccumulation() &&
+        !IsPartOfLoop() &&
+        gradientInitializedBy->ImplementsGradientOptimization(this) != ParentGradientOptimization::None &&
+        1 == std::count_if(inputs.begin(), inputs.end(), [this](ComputationNodeBasePtr p) { return &*p == this; }))
+    {
+        // don't need update size as parent already set it to the right size when reusing
+        if (!ParentGradientReused())
+        {
+            UpdateDataSize(Gradient());
+        }
+        m_gradientInitializedBy = gradientInitializedBy;
+    }
+    else
+    {
+        UpdateDataSize(Gradient());
+        ResetGradient(0);
+    }
+}
 
 template<class ElemType>
 void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
@@ -41,7 +81,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     }
 #endif
     if (m_needsGradient)
-        LazyZeroGradient(); // set gradient to 0 if this is the first time
+        LazyZeroGradient(this); // set gradient to 0 if this is the first time
 #endif
 
     if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
@@ -60,7 +100,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 #if DUMPOUTPUT
             fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
-            child->LazyZeroGradient(); // set gradient to 0 if this is the first time
+            child->LazyZeroGradient(this); // set gradient to 0 if this is the first time
 
             // If we propagate from a loop to a node that is outside the loop, we are not efficient.
             // This case is handled by SEQTraversalFlowControlNode::Backprop().
@@ -70,6 +110,9 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
                 LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
                            NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
             }
+
+            // before backprop, verify gradient optimization info
+            Input(i)->VerifyGradientOptimization(this);
 
             // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
             BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
@@ -236,7 +279,6 @@ template<class ElemType>
 
 /*static*/ const std::wstring ComputationNodeBase::DefaultDynamicAxisName = L"*";
 /*static*/ const std::wstring ComputationNodeBase::DefaultNoSequenceAxisName = L"__noSequenceAxis";
-
 
 // -----------------------------------------------------------------------
 // subroutines for Validate() implementations
@@ -418,7 +460,7 @@ void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass, bool k
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
-    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : (Environment().IsV2Library() ? TensorShape() : TensorShape(1)), false);
+    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : (TensorShape::Scalar(Environment().IsV2Library())), false);
 }
 
 // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -446,7 +488,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
             LogicError("%ls: Expected MBLayout in Input 1.", NodeDescription().c_str());
         // Shape of the MBLayouts is checked at runtime.
     }
-    SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), false);
+    SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
 }
 
 // helper function for validation
@@ -645,7 +687,7 @@ template <class ElemType>
         Validate(/*isFinalValidationPass =*/ true);
 
     // update the actual m_value allocation
-    if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
+    if ((!IsLeaf() || Is<RandomDistributionNode<ElemType>>()) && !RequiresPreCompute()) // TODO: guard this through overrides instead
         UpdateFunctionValuesSize();
 
     // give nodes a chance to update their internal state that may also have to match MB size
@@ -721,7 +763,7 @@ template <class ElemType>
                 child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
                 if (child->Gradient().HasNan("EndBackprop"))
                 {
-                    LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
+                    LogicError("%ls %ls operation unexpectedly produced NaN gradients on its input %ls.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str());
                 }
             }
         }

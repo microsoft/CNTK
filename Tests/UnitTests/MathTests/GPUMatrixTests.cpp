@@ -15,7 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
-BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAccrossDevices, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAcrossDevices, RandomSeedFixture)
 {
     bool hasTwoGpus = false;
 #ifndef CPUONLY
@@ -610,7 +610,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixAdam, RandomSeedFixture)
     parameters.SetValue(2, 1, c_deviceIdZero, paramValues, matrixFormatRowMajor);
     expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -619,7 +619,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixAdam, RandomSeedFixture)
     double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
     expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues2, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues2, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -642,7 +642,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixAdamVarEpsilon, RandomSeedFixture)
     parameters.SetValue(2, 1, c_deviceIdZero, paramValues, matrixFormatRowMajor);
     expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -651,7 +651,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixAdamVarEpsilon, RandomSeedFixture)
     double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
     expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues2, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues2, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));

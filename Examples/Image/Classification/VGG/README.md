@@ -26,16 +26,4 @@ We give examples for both Python and BrainScript.
 
 ## Pre-trained Models
 
-### Caffe-Converted
-
-#### VGG16
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/VGG16_ImageNet.model
-|:---------|:---
-|Source Caffe model website | http://www.robots.ox.ac.uk/~vgg/research/very_deep/
-|Single crop top 5 error | 10.11%
-
-#### VGG19
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/VGG19_ImageNet.model
-|:---------|:---
-|Source Caffe model website | http://www.robots.ox.ac.uk/~vgg/research/very_deep/ 
-|Single crop top 5 error | 10.18%
+Pre-trained VGG models can be found [here](../../../../PretrainedModels/Image.md#vgg). 

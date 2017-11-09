@@ -151,8 +151,8 @@ namespace CNTK
 
     void Variable::SetValue(const NDArrayViewPtr& value)
     {
-        if (!IsParameter())
-            LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter variable.", AsString().c_str());
+        if (!(IsParameter() || IsConstant()))
+            LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter or Constant variable.", AsString().c_str());
         else if (GetDataType() != value->GetDataType()) 
             LogicError("Variable '%S' SetValue(): 'source' and 'destination' have different data types.", AsString().c_str());
         else if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
@@ -255,20 +255,38 @@ namespace CNTK
 
         m_initValueFlag.reset(new std::once_flag());
         m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
+
+        if (m_valueInitializer->Contains(RandomSeedAttributeName)) {
+            auto& seed = m_valueInitializer->operator[](RandomSeedAttributeName);
+            if ((unsigned long)seed.Value<size_t>() == SentinelValueForAutoSelectRandomSeed)
+                seed.Value<size_t>() = Internal::GenerateRandomSeed();
+        }
+
         m_valueInitializationDevice.reset(new DeviceDescriptor(device));
     }
 
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, unsigned long seed) 
     {
+        if (scale <= 0) 
+            InvalidArgument("CreateInitializer: scale value for initializer '%S' cannot be 0.", 
+                initializerTypeName.c_str());
+
         Dictionary initConfig;
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
         initConfig[ScaleAttributeName] = scale;
+        // Initializers are sometimes created as default arguments in python.
+        // If the value for an automatically-selected seed is assigned here, 
+        // subsequent calls to SetFixedRandomSeed will be ignored.
         initConfig[RandomSeedAttributeName] = (size_t)seed;        
         return initConfig;
     }
     
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, int outputRank, int filterRank, unsigned long seed)
     {
+        if (scale <= 0)
+            InvalidArgument("CreateInitializer: scale value for initializer '%S' cannot be 0.", 
+                initializerTypeName.c_str());
+
         auto initConfig = CreateInitializer(initializerTypeName, scale, seed);
         initConfig[OutputRankAttributeName] = outputRank;
         initConfig[FilterRankAttributeName] = filterRank;
@@ -354,6 +372,11 @@ namespace CNTK
         return newInitializerWithRanks;
     }
 
+    ParameterInitializer TruncatedNormalInitializer(double scale, unsigned long seed)
+    {
+        return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, seed);
+    }
+
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
         : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<Function>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
@@ -380,12 +403,15 @@ namespace CNTK
         else
         {
             auto randomSeed = (unsigned long)initConfig[RandomSeedAttributeName].Value<size_t>();
-            if (randomSeed == SentinelValueForAutoSelectRandomSeed)
-                randomSeed = Internal::GenerateRandomSeed();
+            // using this in place on an assert, which is ignored in Release mode.
+            if (randomSeed == SentinelValueForAutoSelectRandomSeed) {
+                RuntimeError("Unexpected 'auto-select' placeholder. At this point the seed should have a fixed value.");
+            }
 
             auto scale = initConfig[ScaleAttributeName].Value<double>();
             int outputRank = DefaultParamInitOutputRank, filterRank = DefaultParamInitFilterRank;
-            if (initializerType != Microsoft::MSR::CNTK::UniformInitializerTypeName)
+            if (initializerType != Microsoft::MSR::CNTK::UniformInitializerTypeName && 
+                initializerType != Microsoft::MSR::CNTK::TruncNormalInitializerTypeName)
             {
                 outputRank = initConfig[OutputRankAttributeName].Value<int>();
                 filterRank = initConfig[FilterRankAttributeName].Value<int>();
@@ -499,7 +525,7 @@ namespace CNTK
 
             // TODO: this copying here is redundant, value should be moved from the dictionary to the variable.
             // Also, the correct device should be used upfront when deserializing NDArrayView.
-            Variable var(shape, kind, dataType, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
+            Variable var(shape, kind, dataType, value.DeepClone(device, value.IsReadOnly()), needsGradient, dynamicAxis, isSparse, name, uid);
             if (var.IsParameter())
                 return Parameter(var);
             else
@@ -516,8 +542,10 @@ namespace CNTK
         m_dataFields->SetValueInitialization(initializer, device);
     }
 
-    size_t Parameter::CurrentValueTimeStamp() const
+    size_t Variable::CurrentValueTimeStamp() const
     {
+        if (!IsParameter() && !IsConstant())
+            LogicError("Variable '%S' CurrentValueTimeStamp: Variable must be a Parameter or Constant", AsString().c_str());
         return m_dataFields->m_valueTimeStamp.load(); 
     }
 
@@ -525,6 +553,7 @@ namespace CNTK
     {
         m_dataFields->m_valueTimeStamp++;
     }
+
 
     Constant::Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
         : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, Internal::GenerateUid(VariableKind::Constant))
@@ -541,5 +570,16 @@ namespace CNTK
         auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
         NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, dataType, true);
         return Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), Name());
+    }
+
+    void Constant::RecordValueUpdate()
+    {
+        m_dataFields->m_valueTimeStamp++;
+    }
+
+    void Constant::SetValue(const NDArrayViewPtr& value)
+    {
+        Variable::SetValue(value);
+        RecordValueUpdate();
     }
 }

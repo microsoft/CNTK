@@ -10,7 +10,6 @@
 #include "TensorShape.h"
 #include <string>
 #include "Config.h"
-#include "Reader.h"
 #include "ConvolutionEngine.h"
 #include "ReshapingNodes.h"
 
@@ -96,32 +95,6 @@ namespace CNTK
         return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
     }
 
-    inline DataType AsDataType(Microsoft::MSR::CNTK::ElementType readerDataType)
-    {
-        switch (readerDataType)
-        {
-        case Microsoft::MSR::CNTK::ElementType::tfloat:
-            return DataType::Float;
-        case Microsoft::MSR::CNTK::ElementType::tdouble:
-            return DataType::Double;
-        default:
-            LogicError("Unsupported ElementType from CNTK Reader");
-        }
-    }
-
-    inline StorageFormat AsStorageFormat(Microsoft::MSR::CNTK::StorageType readerStorageType)
-    {
-        switch (readerStorageType)
-        {
-        case Microsoft::MSR::CNTK::StorageType::dense:
-            return StorageFormat::Dense;
-        case Microsoft::MSR::CNTK::StorageType::sparse_csc:
-            return StorageFormat::SparseCSC;
-        default:
-            LogicError("Unsupported StorageType from CNTK Reader");
-        }
-    }
-
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;
@@ -151,7 +124,7 @@ namespace CNTK
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
     {
         // Ensure none of the shape dimensions are unknown
-        if (viewShape.HasFreeOrInferredDimension())
+        if (viewShape.HasUnboundDimension())
             InvalidArgument("Cannot create an NDArrayView using a view shape '%S' that has unknown dimensions for any of its axes.", viewShape.AsString().c_str());
 
         size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;
@@ -536,7 +509,7 @@ namespace CNTK
         if (axis != Axis::AllStaticAxes() && axis != Axis::AllAxes())
         {
             assert(axis.IsStaticAxis());
-            assert(operandShape != NDShape::Unknown);
+            assert(!operandShape.IsUnknown());
             axis = NormalizeStaticAxis(axis, operandShape.Rank());
         }
         return axis;
@@ -597,9 +570,9 @@ namespace CNTK
 
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes);
 
-    inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse)
+    inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse, bool noDynamicAxes)
     {
-        if (isSparse)
+        if (isSparse || noDynamicAxes)
             return std::min<size_t>(varShape.Rank(), 1);
         else
             return varShape.Rank();
@@ -607,7 +580,7 @@ namespace CNTK
 
     inline size_t VariableRowColSplitPoint(const Variable& var)
     {
-        return ShapeRowColSplitPoint(var.Shape(), var.IsSparse());
+        return ShapeRowColSplitPoint(var.Shape(), var.IsSparse(), var.DynamicAxes().empty());
     }
 
     bool IsPackedValue(const ValuePtr& value);
@@ -753,4 +726,13 @@ namespace CNTK
     };
 
     std::wstring DynamicAxesAsString(const std::vector<Axis>& da, bool rowMajor = false);
+
+    template <typename T> //T can be Variable or StreamInfo
+    static bool IsAtSweepEnd(const std::unordered_map<T, MinibatchData>& arguments)
+    {
+        return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const T, MinibatchData>& kv)
+        {
+            return kv.second.sweepEnd;
+        });
+    }
 }

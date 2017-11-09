@@ -9,14 +9,14 @@
     <ClCompile Include="MLFUtils.cpp">
       <Filter>MLF</Filter>
     </ClCompile>
-    <ClCompile Include="MLFIndexer.cpp">
-      <Filter>MLF</Filter>
-    </ClCompile>
     <ClCompile Include="MLFDeserializer.cpp">
       <Filter>MLF</Filter>
     </ClCompile>
     <ClCompile Include="HTKDeserializer.cpp">
       <Filter>HTK</Filter>
+    </ClCompile>
+    <ClCompile Include="MLFIndexBuilder.cpp">
+      <Filter>MLF</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -48,9 +48,6 @@
     <ClInclude Include="MLFUtils.h">
       <Filter>MLF</Filter>
     </ClInclude>
-    <ClInclude Include="MLFIndexer.h">
-      <Filter>MLF</Filter>
-    </ClInclude>
     <ClInclude Include="UtteranceDescription.h">
       <Filter>HTK</Filter>
     </ClInclude>
@@ -62,6 +59,9 @@
     </ClInclude>
     <ClInclude Include="HTKDeserializer.h">
       <Filter>HTK</Filter>
+    </ClInclude>
+    <ClInclude Include="MLFIndexBuilder.h">
+      <Filter>MLF</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

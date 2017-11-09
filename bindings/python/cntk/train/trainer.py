@@ -30,11 +30,13 @@ class Trainer(cntk_py.Trainer):
     Args:
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
        criterion (tuple of :class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`):
-        Function with one or two outputs, representing loss and, if given, evaluation metric (in this order).
-        Alternatively, a tuple(loss Function, evaluation Function) is also accepted.
+        Function with one or two outputs, representing loss and, if given, evaluation metric
+        (in this order). Alternatively, a tuple(loss Function, evaluation Function) is also
+        accepted.
        parameter_learners (list): list of learners from :mod:`cntk.learners`
-       progress_writers (list): optionally, list of progress writers from :mod:`cntk.utils` to automatically track
-        training progress.
+       progress_writers (progress writer or list of them): optionally, list of
+        progress writers from :mod:`cntk.logging` to automatically track training
+        progress.
 
     Todo:
        Allow to skip some parameters that should not be updated.
@@ -46,7 +48,7 @@ class Trainer(cntk_py.Trainer):
             criterion = criterion.outputs           # break up tuple-valued Function into tuple of Functions
         # map Variable to Function
         from cntk import combine
-        criterion = tuple([combine([output], output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
+        criterion = tuple([combine([output], name=output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
         if len(criterion) == 1:
             criterion = criterion + (None,) # tuple of 1 value: pad with None
         elif len(criterion) != 2:
@@ -91,7 +93,7 @@ class Trainer(cntk_py.Trainer):
                     raise ValueError("evaluation function must have the same signature and inputs as the loss function")
         return args
 
-    def train_minibatch(self, arguments, outputs=None, device=None):
+    def train_minibatch(self, arguments, outputs=None, device=None, is_sweep_end=None):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
 
@@ -102,7 +104,7 @@ class Trainer(cntk_py.Trainer):
 
                * `dict`: keys are input variable or names, and values are the input data.
 
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+               * any other type: if node has a unique input, ``arguments`` is mapped to this input.
                  For nodes with more than one input, only `dict` is allowed.
 
              In both cases, every sample in the data will be interpreted
@@ -117,6 +119,10 @@ class Trainer(cntk_py.Trainer):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
+            is_sweep_end (bool): indicate whether this minibatch is at the end of a sweep (of an eopoch), default to None.
+            This is used in combination with `arguments` being fed with numpy arrays data; when the data is from
+             :class:`~cntk.io.MinibatchData`, `is_sweep_end` is provided by :class:`~cntk.io.MinibatchData` so there is
+             no need to specify it manually.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for examples on
@@ -147,6 +153,13 @@ class Trainer(cntk_py.Trainer):
             value = next(iter(arguments.values()))
             contains_minibatch_data = isinstance(value, MinibatchData)
 
+        if contains_minibatch_data and is_sweep_end is not None:
+            raise ValueError("is_sweep_end is ignored by Trainer::train_minibatch when it is fed with MinibatchData!")
+
+        if not contains_minibatch_data and is_sweep_end is None:
+            #for legacy code when is_sweep_end is not specified.
+            is_sweep_end = False
+
         if outputs:
             output_map = {v: None for v in outputs}
 
@@ -154,7 +167,7 @@ class Trainer(cntk_py.Trainer):
                 updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
                     arguments, output_map, device)
             else:
-                updated = super(Trainer, self).train_minibatch(arguments,
+                updated = super(Trainer, self).train_minibatch(arguments, is_sweep_end,
                     output_map, device)
 
             for k, v in output_map.items():
@@ -167,7 +180,7 @@ class Trainer(cntk_py.Trainer):
                 updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
                     arguments, device)
             else:
-                updated = super(Trainer, self).train_minibatch(arguments,
+                updated = super(Trainer, self).train_minibatch(arguments, is_sweep_end,
                     device)
 
         return updated
@@ -184,7 +197,7 @@ class Trainer(cntk_py.Trainer):
                * `dict`: keys are input variable or names, and values are the input data.
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
 
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+               * any other type: if node has a unique input, ``arguments`` is mapped to this input.
                  For nodes with more than one input, only `dict` is allowed.
 
              In both cases, every sample in the data will be interpreted
@@ -230,6 +243,7 @@ class Trainer(cntk_py.Trainer):
 
         Args:
             filename (str): filename to store the checkpoint.
+            external_state (dict): additional external state, default is empty.
         '''
 
         super(Trainer, self).save_checkpoint(filename, _py_dict_to_cntk_dict(external_state))
@@ -243,7 +257,7 @@ class Trainer(cntk_py.Trainer):
             filename (str): filename to restore the checkpoint from
         '''
 
-        super(Trainer, self).restore_from_checkpoint(filename)
+        return super(Trainer, self).restore_from_checkpoint(filename)
 
     @property
     @typemap

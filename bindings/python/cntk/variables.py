@@ -1,3 +1,8 @@
+'''
+CNTK variables, parameters, constants, and records.
+'''
+
+
 import numpy as np
 
 from . import cntk_py
@@ -6,12 +11,16 @@ from .device import DeviceDescriptor, use_default_device
 from .tensor import TensorOpsMixin
 from .default_options import get_default_override, default_override_or
 from .internal import typemap, sanitize_precision, sanitize_value, \
-        sanitize_shape, sanitize_dtype_cntk
+        sanitize_shape, sanitize_dtype_cntk, sanitize_dynamic_axes
 
 class Record(dict):
     '''
     Easy construction of a record (=immutable singleton class) from keyword arguments.
-    e.g. r = Record(x = 13, y = 42) ; x = r.x
+
+    Example:
+        >>> r = Record(x = 13, y = 42)
+        >>> r.x
+            13
 
     Args:
         kwargs: keyword arguments to turn into the record members
@@ -33,7 +42,14 @@ class Record(dict):
     def updated_with(self, **kwargs):
         '''
         Create a new Record from an existing one with members modified or added.
-        e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
+
+        Example:
+            >>> r = Record(x = 13)
+            >>> r.x
+                13
+            >>> r2 = r.updated_with(x = 42)
+            >>> r2.x
+                42
 
         Args:
             kwargs: keyword arguments to turn into the record members
@@ -177,11 +193,11 @@ class VariableMixin(object):
             ...     inp = Tensor[32]()
             ... except TypeError as e:
             ...     print('ERROR: ' + str(e))
-            ERROR: abstract type Tensor[32] cannot be instantiated; use 'input(**Tensor[32])' instead
+            ERROR: abstract type Tensor[32] cannot be instantiated; use 'input_variable(**Tensor[32])' instead
             '''
-            raise TypeError("abstract type " + str(self) + " cannot be instantiated; use 'input(**" + str(self) + ")' instead")
+            raise TypeError("abstract type " + str(self) + " cannot be instantiated; use 'input_variable(**" + str(self) + ")' instead")
 
-        _unknown_shape = (-2,)
+        _unknown_shape = (-2,) # TODO: take this from the catacombs of cntk_py
 
         def __str__(self):
             '''
@@ -228,10 +244,10 @@ class VariableMixin(object):
         @property
         def shape_is_known(self):
             shape = getattr(self, 'shape', None)
-            return not shape or shape != Variable._Type._unknown_shape
+            return shape is not None and shape != Variable._Type._unknown_shape
 
         @staticmethod
-        def _sanitize(type):
+        def _sanitize(the_type):
             '''
             Converts type into Variable._Type if given a float, float32, or float64.
             '''
@@ -239,14 +255,14 @@ class VariableMixin(object):
             import sys
             if sys.version_info >= (3,5):
                 from typing import GenericMeta
-                if isinstance(type, GenericMeta):
+                if isinstance(the_type, GenericMeta):
                     raise TypeError("Python's typing.Sequence is not a valid CNTK type; use cntk.layers.typing.Sequence instead")
-            if type == float:
+            if the_type == float:
                 return Variable._Type(shape=(), is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
-            elif type == np.float32 or  type == np.float64:
-                return Variable._Type(shape=(), dtype=type, is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
+            elif the_type == np.float32 or  the_type == np.float64:
+                return Variable._Type(shape=(), dtype=the_type, is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
             else:
-                return type
+                return the_type
 
     @property
     def _type(self):
@@ -254,7 +270,7 @@ class VariableMixin(object):
         The complete type of the data represented by this Variable as a single object that has data members of the same name.
 
         Example:
-        >>> x = C.input(13, name='my_input')
+        >>> x = C.input_variable(13, name='my_input')
         >>> x
         Input('my_input', [#], [13])
         >>> x._type.shape, x._type.dynamic_axes, x._type.is_sparse, x._type.needs_gradient
@@ -328,7 +344,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
          >>> W = C.Parameter((C.InferredDimension, 42), init=C.glorot_uniform())
          >>> W.shape   # -1 indicates dimension yet to be inferred
              (-1, 42)
-         >>> x = C.input(13)
+         >>> x = C.input_variable(13)
          >>> y = C.times(x, W)  # times operation now knows that the input dimension of W must be 13
          >>> W.shape          # hence, the shape has been updated
              (13, 42)
@@ -458,4 +474,15 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         NumPy array of the value
         '''
         return super(Constant, self).value().to_ndarray()
+
+
+    @value.setter
+    def value(self, val):
+        if isinstance(val, np.ndarray):
+            ndarray = NDArrayView.from_dense(val.astype(self.dtype))
+            super(Constant, self).set_value(ndarray)
+        elif isinstance(val, cntk_py.NDArrayView):
+            super(Constant, self).set_value(val)
+        else:
+            raise TypeError("Unsupported value type: %s", type(val))
 

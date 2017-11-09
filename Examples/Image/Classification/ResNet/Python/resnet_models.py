@@ -56,6 +56,6 @@ def create_cifar10_model(input, num_stack_layers, num_classes):
     r3_2 = resnet_basic_stack(r3_1, num_stack_layers-1, c_map[2])
 
     # Global average pooling and output
-    pool = AveragePooling(filter_shape=(8,8))(r3_2) 
+    pool = AveragePooling(filter_shape=(8,8), name='final_avg_pooling')(r3_2)
     z = Dense(num_classes)(pool)
     return z

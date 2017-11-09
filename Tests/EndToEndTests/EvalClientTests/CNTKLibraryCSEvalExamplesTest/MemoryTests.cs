@@ -7,6 +7,8 @@
 
 using System;
 using CNTK;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace CNTKLibraryCSEvalExamples
 {
@@ -49,7 +51,7 @@ namespace CNTKLibraryCSEvalExamples
                 Console.WriteLine("OutputVar0: " + OutputVar0.AsString() + ", Name: " + OutputVar0.Name + ", Kind: " + Utils.VariableKindName(OutputVar.Kind) + ", Shape: " + OutputVar0.Shape.AsString());
                 Console.WriteLine("InputVar0: " + InputVar0.AsString() + ", Name: " + InputVar0.Name + ", Kind: " + Utils.VariableKindName(OutputVar.Kind) + ", Shape: " + InputVar0.Shape.AsString());
                 Console.WriteLine("ArgumentVar0: " + ArgumentVar0.AsString() + ", Name: " + ArgumentVar0.Name + ", Kind: " + Utils.VariableKindName(OutputVar.Kind) + ", Shape: " + ArgumentVar0.Shape.AsString());
-                Console.WriteLine("OutputVal: " + ", Device: " + OutputVal.Device.AsString() + ", Storage: " + OutputVal.StorgeFormat + ", Shape: " + OutputVal.Shape.AsString() + "Data:");
+                Console.WriteLine("OutputVal: " + ", Device: " + OutputVal.Device.AsString() + ", Storage: " + OutputVal.StorageFormat + ", Shape: " + OutputVal.Shape.AsString() + "Data:");
                 var outputData = OutputVal.GetDenseData<float>(OutputVar);
                 CNTKLibraryManagedExamples.PrintOutput(OutputVar.Shape.TotalSize, outputData);
             }
@@ -59,6 +61,68 @@ namespace CNTKLibraryCSEvalExamples
                 throw ex;
             }
             Console.WriteLine("\nAll saved object references are printed.");
+        }
+
+        public static void ValueCopyToSparseCSCTest<T>(DeviceDescriptor device)
+        {
+            try
+            {
+                // uint numAxes = 2;
+                int dimension = 3;
+                IEnumerable<int> dims = new List<int>() { dimension };
+                var sampleShape = NDShape.CreateNDShape(dims);
+                int seqLen = 1;
+
+                int[] colStarts = { 0, 1 };
+                int[] rowIndices = { 2 };
+                T[] nonZeroValues = { (typeof(T) == typeof(float)) ? (T)(object)(0.5F) : (T)(object)(0.5) };
+
+
+                bool sequenceStartFlag = true;
+                bool readOnly = false;
+                var sparseValue = Value.CreateSequence<T>(sampleShape, seqLen, colStarts, rowIndices, nonZeroValues, sequenceStartFlag, device, readOnly);
+
+                NDArrayView value = null;
+                bool needsGradient = false;
+                var dynamicAxes = new AxisVector(0);
+                bool isSparse = true;
+                var sampleVariable = new Variable(sampleShape, VariableKind.Output,
+                    (typeof(T) == typeof(float)) ? DataType.Float : DataType.Double, value, needsGradient,
+                    dynamicAxes, isSparse, "sampleVariable", "sampleVariableUid");
+
+                int output_seqLen;
+                IList<int> output_colsStarts;
+                IList<int> output_rowIndices;
+                IList<T> output_nonZeroValues;
+                int output_numNonZeroValues;
+                sparseValue.GetSparseData<T>(sampleVariable, out output_seqLen,
+                    out output_colsStarts, out output_rowIndices, out output_nonZeroValues, out output_numNonZeroValues);
+                if (output_seqLen != seqLen)
+                {
+                    throw new ApplicationException("CopyVariableValueTo returns incorrect sequenceLength");
+                }
+                if (!output_colsStarts.SequenceEqual(colStarts))
+                {
+                    throw new ApplicationException("CopyVariableValueTo returns incorrect colStarts");
+                }
+                if (!output_rowIndices.SequenceEqual(rowIndices))
+                {
+                    throw new ApplicationException("CopyVariableValueTo returns incorrect rowIndices");
+                }
+                if (!output_nonZeroValues.SequenceEqual(nonZeroValues))
+                {
+                    throw new ApplicationException("CopyVariableValueTo returns incorrect nonZeroValues");
+                }
+                if (output_numNonZeroValues != nonZeroValues.Count())
+                {
+                    throw new ApplicationException("CopyVariableValueTo returns incorrect numNonZeroValues");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                throw ex;
+            }
         }
     }
 }

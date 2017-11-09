@@ -1,0 +1,40 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+if [ "$OS" == "Windows_NT" ]; then
+    # This test uses a large dataset which is not part of the CNTK repository itself
+    # We use the dataset from an external location specified using an environment variable
+    if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+      echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+      exit 1
+    fi
+
+    TestDataDir=$TEST_RUN_DIR/TestData
+    mkdir $TestDataDir
+
+    # Copy and extract animal data to the test run directory
+    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image
+    echo cp -R $DataSourceDir/Animals $TestDataDir
+    cp -R $DataSourceDir/Animals $TestDataDir || exit $?
+    python extract_animal_data.py $TestDataDir/Animals/Animals.zip $TestDataDir
+
+    # Copy resnet model to the test run directory
+    ModelSource=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/PreTrainedModels/ResNet/v1/ResNet_18.model
+    cp $ModelSource $TestDataDir || exit $?
+
+    pushd $TestDataDir
+
+    $TEST_BIN_DIR/CNTKLibraryCSTrainingTest.exe TransferLearningTest
+else
+  echo Cannot run CNTKLibraryCSTrainingTest on Linux.
+  exit 1
+fi
+
+ExitCode=$?
+
+# Delete the test data
+popd
+rm -rf $TestDataDir
+
+exit $ExitCode

@@ -53,7 +53,7 @@ function Download(
     $method = GetTableDefaultString -table $table -entryName "Method" -defaultValue "WebRequest"
     $userAgent = GetTableDefaultString -table $table -entryName "UserAgent" -defaultValue = "InternetExplorer"
     $destination = $table["Destination"]
-    $expectedHash = GetTableDefaultInt -table $table -entryName "expectedHash" -defaultValue ""
+    $expectedHash = GetTableDefaultString -table $table -entryName "expectedHash" -defaultValue ""
 
     if (test-path $destination -PathType Leaf) {
         Write-Host File [$destination] already exists
@@ -118,7 +118,6 @@ function DownloadAndExtract(
 
     ExtractAllFromZip $outFileName $targetPathRoot
 }
-
 
 function DownloadFileWebRequest (
     [string] $SourceFile,
@@ -258,16 +257,6 @@ function DownloadFileWebClient(
     }
 
     throw "Download $SourceFile Failed!"
-}
-
-function PlatformMatching(
-    [string] $regExprPlatform)
-{
-    $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
-    $isMatching = ($runningOn -match $regExprPlatform) 
-
-    Write-Verbose "Function [PlatformMatching]: $runningOn -match on platform [$regExprPlatform] = [$isMatching]"
-    return $isMatching
 }
 
 function CheckHash(

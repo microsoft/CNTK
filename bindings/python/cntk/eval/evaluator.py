@@ -35,7 +35,7 @@ class Evaluator(cntk_py.Evaluator):
         # transplant into this class instance
         self.__dict__ = evaluator.__dict__
 
-    def test_minibatch(self, arguments, device=None):
+    def test_minibatch(self, arguments, device=None, distributed=False):
         '''
         Test the evaluation function on the specified batch of samples.
 
@@ -46,7 +46,7 @@ class Evaluator(cntk_py.Evaluator):
                * `dict`: keys are input variable or names, and values are the input data.
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
 
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+               * any other type: if node has a unique input, ``arguments`` is mapped to this input.
                  For nodes with more than one input, only `dict` is allowed.
 
              In both cases, every sample in the data will be interpreted
@@ -60,6 +60,8 @@ class Evaluator(cntk_py.Evaluator):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
+            distributed (`bool`, optional): flag indicating if evaluation results should
+             be aggregated across workers.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for examples on
@@ -73,7 +75,7 @@ class Evaluator(cntk_py.Evaluator):
             device = use_default_device()
 
         arguments = sanitize_var_map(tuple(self.evaluation_function.arguments), arguments)
-        return super(Evaluator, self).test_minibatch(arguments, device)
+        return super(Evaluator, self).test_minibatch(arguments, device, distributed)
         
     @property
     @typemap

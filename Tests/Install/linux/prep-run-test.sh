@@ -45,8 +45,10 @@ if [ "\$TEST_DEVICE" = "gpu" ]; then
   cd "$CNTK_DROP/Tutorials"
   for f in *.ipynb; do
     # TODO 203 fails when run without GUI?
-    if [ "\$f" != "CNTK_203_Reinforcement_Learning_Basics.ipynb" ]; then
-      jupyter nbconvert --to notebook --execute --ExecutePreprocessor.kernel_name=python\$(python -c "import sys; print(sys.version_info[0])") --ExecutePreprocessor.timeout=1800 --output \$(basename \$f .ipynb)-out.ipynb \$f
+    # 204: interactive
+    # 104: occasional "ZeroDivisionError: integer division or modulo by zero" before training - data download issue?
+    if [[ \$f != CNTK_203_Reinforcement_Learning_Basics.ipynb && \$f != CNTK_204_Sequence_To_Sequence.ipynb && \$f != CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb ]]; then
+      jupyter nbconvert --to notebook --execute --ExecutePreprocessor.kernel_name=python\$(python -c "import sys; print(sys.version_info[0])") --ExecutePreprocessor.timeout=2700 --output \$(basename \$f .ipynb)-out.ipynb \$f
     fi
   done
 fi
@@ -57,6 +59,10 @@ cntk configFile=lr_bs.cntk deviceId=\$TEST_DEVICE_ID
 
 cd "$CNTK_DROP/Examples/Image/GettingStarted"
 cntk configFile=01_OneHidden.cntk deviceId=\$TEST_DEVICE_ID
+
+# Example with image deserializer
+cd "$CNTK_DROP/Examples/Image/Regression"
+cntk configFile=RegrSimple_CIFAR10.cntk deviceId=\$TEST_DEVICE_ID
 
 RUNTEST
 

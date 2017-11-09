@@ -60,8 +60,41 @@ namespace CNTK
         else
         {
             m_aggregatedLossFunction = m_lossFunction;
-            m_trainingSampleCountVar = m_lossFunction->RootFunction()->Inputs()[0];
-            if (model->Output() != m_trainingSampleCountVar)
+
+            std::function<std::pair<Variable, bool>(const FunctionPtr& root)> FindTrainingSampleCountVar;
+            FindTrainingSampleCountVar = [&FindTrainingSampleCountVar](const FunctionPtr& root) -> std::pair<Variable, bool> {
+                const auto& outputs = root->Outputs();
+                auto firstOutputWithDynamicAxes = std::find_if(outputs.begin(), outputs.end(), [](const Variable& var) { return !var.DynamicAxes().empty(); });
+                if (firstOutputWithDynamicAxes != outputs.end())
+                    return std::make_pair(*firstOutputWithDynamicAxes, true);
+
+                const auto& inputs = root->Inputs();
+                for (const auto& input : inputs)
+                {
+                    if (!input.DynamicAxes().empty())
+                        return std::make_pair(input, true);
+
+                    if (input.IsOutput())
+                    {
+                        auto retVal = FindTrainingSampleCountVar(input.Owner());
+                        if (retVal.second)
+                            return retVal;
+                    }
+                }
+
+                return std::make_pair(Variable(), false);
+            };
+
+            auto findTrainingSampleCountVarRetVal = FindTrainingSampleCountVar(m_lossFunction->RootFunction());
+            if (!findTrainingSampleCountVarRetVal.second)
+                InvalidArgument("Trainer: Failed to find a variable underlying the graph rooted at specified loss function '%S', from which the training sample count can be determined.", m_lossFunction->RootFunction()->AsString().c_str());
+
+            m_trainingSampleCountVar = findTrainingSampleCountVarRetVal.first;
+            if (GetTraceLevel() >= TraceLevel::Info)
+                fprintf(stderr, "Info: Trainer loss Function '%S' output does not have a batch axis; the first Variable '%S' with a batch axis found in the graph underlying the scalar "
+                                "loss Function will be used to determine minibatch training sample count.\n", m_lossFunction->AsString().c_str(), m_trainingSampleCountVar.AsString().c_str());
+
+            if (std::find(combinedFunctionArgs.begin(), combinedFunctionArgs.end(), m_trainingSampleCountVar) == combinedFunctionArgs.end())
                 combinedFunctionArgs.push_back(m_trainingSampleCountVar);
         }
 
@@ -110,14 +143,6 @@ namespace CNTK
         }
     }
 
-    static bool IsAtSweepEnd(const std::unordered_map<Variable, MinibatchData>& arguments)
-    {
-        return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const Variable, MinibatchData>& kv)
-        {
-            return kv.second.sweepEnd;
-        });
-    }
-
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
@@ -126,7 +151,9 @@ namespace CNTK
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
+#ifndef  CNTK_UWP
         auto profMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainMinibatch);
+#endif
 
         bool result = (!m_distributed) ?
             TrainLocalMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice) :
@@ -138,19 +165,21 @@ namespace CNTK
         return result;
     }
 
-    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, bool isSweepEndInArguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
-        return TrainMinibatch(arguments, outputsToFetch, computeDevice);
+        return TrainMinibatch(arguments, isSweepEndInArguments, outputsToFetch, computeDevice);
     }
 
-    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, bool isSweepEndInArguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
+#ifndef  CNTK_UWP
         auto profMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainMinibatch);
+#endif
 
         bool result = (!m_distributed) ?
-            TrainLocalMinibatch(arguments, outputsToFetch, false, computeDevice) :
-            TrainDistributedMinibatch(arguments, outputsToFetch, false, computeDevice);
+            TrainLocalMinibatch(arguments, outputsToFetch, isSweepEndInArguments, computeDevice) :
+            TrainDistributedMinibatch(arguments, outputsToFetch, isSweepEndInArguments, computeDevice);
 
         // TODO: exclude updating progress writers from profiling?
         UpdateTrainingProgress(m_prevMinibatchNumSamples, m_prevMinibatchAggregateTrainingLossValue,
@@ -170,7 +199,9 @@ namespace CNTK
         std::unordered_map<Variable, ValuePtr> parameterGradients;
         ExecuteForwardBackward(arguments, outputsToFetch, computeDevice, parameterGradients);
 
+#ifndef  CNTK_UWP
         auto profWeights = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainWeights);
+#endif
 
         std::unordered_map<Parameter, NDArrayViewPtr> gradients;
         for (const auto& parameter : m_learnerParameters)
@@ -280,7 +311,9 @@ namespace CNTK
 
     void Trainer::ExecuteForwardBackward(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, std::unordered_map<Variable, ValuePtr>& parameterGradients)
     {
+#ifndef  CNTK_UWP
         auto profForwardBackward = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainFB);
+#endif
         std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedLossFunction, nullptr }, { m_trainingSampleCountVar, nullptr } };
         if (m_aggregatedEvaluationFunction)
             outputs.insert({ m_aggregatedEvaluationFunction, nullptr });
@@ -471,6 +504,24 @@ namespace CNTK
     size_t Trainer::TotalNumberOfSamplesSeen() const
     {
         return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
+    }
+
+    size_t Trainer::TotalNumberOfUnitsSeen(DataUnit unit) const
+    {
+        switch (unit)
+        {
+        case DataUnit::Minibatch:
+            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfMinibatchesSeen();
+            break;
+        case DataUnit::Sweep:
+            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSweepsSeen();
+            break;
+        case DataUnit::Sample:
+            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
+        default:
+            //should not be here; whenever a new data unit is defined, there should be a new case in this function.
+            LogicError("Unsupported data unit: %d", unit);
+        }
     }
 
     TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners,

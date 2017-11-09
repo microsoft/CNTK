@@ -13,7 +13,7 @@ try:
 except ImportError:
     raise ImportError("Unable to import sphinx_rtd_theme, please install via "
                       "'pip install sphinx_rtd_theme'")
-
+                      
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.extlinks',
@@ -21,7 +21,15 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
+    'nbsphinx',
+    'IPython.sphinxext.ipython_console_highlighting'
 ]
+
+# Suppress warnings
+suppress_warnings = ['image.nonlocal_uri']
+
+# Define source suffix
+source_suffix = ['.rst', '.ipynb']
 
 master_doc = 'index'
 
@@ -29,6 +37,10 @@ exclude_patterns = [
     '_build',
     'images',
     'test',
+]
+
+autodoc_mock_imports = [
+    'tensorflow',
 ]
 
 needs_sphinx = '1.5'
@@ -64,6 +76,7 @@ linkcheck_anchors_ignore = [
   re_exact_match('22-block-momentum-sgd'),
   re_exact_match('converting-learning-rate-and-momentum-parameters-from-other-toolkits'),
   re_exact_match('for-python'),
+  re_exact_match('base64imagedeserializer-options'),
 ]
 
 source_prefix = 'https://github.com/Microsoft/CNTK/blob/'
@@ -77,7 +90,9 @@ else:
 extlinks = {
     'cntk': (source_prefix + '/%s', ''),
     'cntktut': (source_prefix + '/Tutorials/%s.ipynb', ''),
-    'cntkwiki': ('https://github.com/Microsoft/CNTK/wiki/%s', 'CNTK Wiki - ')
+    # CNTK Wiki has moved to a new site:
+    'cntkwiki': ('https://docs.microsoft.com/en-us/cognitive-toolkit/%s', 'CNTK Doc - '),
+    'cntkman': (source_prefix + '/Manual/%s.ipynb', ''),
 }
 
 # sphinx.ext.napoleon options

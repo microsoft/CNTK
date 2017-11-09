@@ -119,7 +119,7 @@ namespace CNTK
                                                      const std::unordered_map<Variable, Variable>& allPlaceholderReplacements,
                                                      const CNTK::DeviceDescriptor& device);
 
-        static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device, const Internal::UDFDeserializerPtr& deserializer);
+        static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device);
 
         virtual const std::wstring& OpName() const override
         {
@@ -252,6 +252,9 @@ namespace CNTK
         // Copy the internal state from the network into the function graph.
         void UpdateInternalState() const;
 
+        // Copy all new values for 'dirty' attributes from functions into corresponding network nodes.
+        void ApplyAttributeUpdates();
+
         // Generate a dictionary representing the internal (local) state of the function graph.
         Dictionary GetInternalState() const;
 
@@ -338,6 +341,24 @@ namespace CNTK
             m_existingNetworkStorageReferences.clear();
         }
 
+        void PurgeComputationNetwork()
+        {
+            m_currentBackpropRoots.clear();
+            m_inputsExcludedFromGradientComputation.clear();
+            m_variableToNodeMap.clear();
+            m_currentOutputsToEvaluate.clear();
+            m_lastRecordedTimeStamps.clear();
+
+            m_networkMatricesAllocated = false;
+            m_computationNetwork = nullptr;
+        }
+
+        void RecordRefVariableUpdates()
+        {
+            for (auto refVar : m_refVariables)
+                refVar.IsParameter() ? Parameter(refVar).RecordValueUpdate() : Constant(refVar).RecordValueUpdate();
+        }
+
     private:
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
@@ -368,11 +389,13 @@ namespace CNTK
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 
+        std::unordered_set<Variable> m_refVariables;
+
         bool m_networkMatricesAllocated;
 
         std::unordered_set<Variable> m_allNetworkRoots;
 
-        std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
+        std::unordered_map<Variable, size_t> m_lastRecordedTimeStamps;
 
         std::unordered_set<Variable> m_inputsExcludedFromGradientComputation;
 

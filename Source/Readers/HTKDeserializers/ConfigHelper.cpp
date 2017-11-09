@@ -7,10 +7,12 @@
 #include "ConfigHelper.h"
 #include "DataReader.h"
 #include "StringUtil.h"
+#include <boost/algorithm/string.hpp>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using namespace std;
+using namespace Microsoft::MSR::CNTK;
 
 pair<size_t, size_t> ConfigHelper::GetContextWindow()
 {
@@ -107,17 +109,17 @@ void ConfigHelper::GetDataNamesFromConfig(
     }
 }
 
-ElementType ConfigHelper::GetElementType() const
+DataType ConfigHelper::GetDataType() const
 {
     string precision = m_config.Find("precision", "float");
     if (AreEqualIgnoreCase(precision, "float"))
     {
-        return ElementType::tfloat;
+        return DataType::Float;
     }
 
     if (AreEqualIgnoreCase(precision, "double"))
     {
-        return ElementType::tdouble;
+        return DataType::Double;
     }
 
     RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
@@ -163,9 +165,16 @@ vector<wstring> ConfigHelper::GetMlfPaths() const
         }
 
         wstring list = m_config(L"mlfFileList");
-        for (msra::files::textreader r(list); r;)
+        if (list.find(':') == string::npos)
         {
-            result.push_back(r.wgetline());
+            for (msra::files::textreader r(list); r;)
+            {
+                result.push_back(r.wgetline());
+            }
+        }
+        else
+        {
+            result = m_config(L"mlfFileList", ConfigParameters::Array(stringargvector(vector<wstring>{})));
         }
     }
 
@@ -215,6 +224,89 @@ wstring ConfigHelper::GetRandomizer()
     }
 
     return randomizer;
+}
+
+std::string ConfigHelper::GetRootPath()
+{
+    string rootPath = m_config(L"prefixPathInSCP", "");
+
+    // first make slash consistent (sorry for Linux users:this is not necessary for you)
+    replace(rootPath.begin(), rootPath.end(), L'\\', L'/');
+
+    // second, remove trailing slash if there is any
+    regex trailer("/+$");
+    rootPath = regex_replace(rootPath, trailer, string());
+
+    if (!rootPath.empty())
+        rootPath += "/";
+
+    return rootPath;
+}
+
+std::string ConfigHelper::GetScpFilePath()
+{
+    return m_config(L"scpFile");
+}
+
+std::string ConfigHelper::GetScpDir()
+{
+    const static string delim = "/\\";
+    string scriptPath = GetScpFilePath();
+    auto result = scriptPath;
+    auto pos = result.find_last_of(delim);
+    if (pos != string::npos && !result.substr(pos + 1).empty())
+    {
+        result.resize(pos);
+        return result;
+    }
+    else
+        return "";
+}
+
+void ConfigHelper::AdjustUtterancePath(const std::string& rootPath, const string& scpDir, std::string& path)
+{
+    // post processing file list :
+    //  - if users specified PrefixPath, add the prefix to each of path in filelist
+    //  - else do the dotdotdot expansion if necessary
+    if (!rootPath.empty())
+    {
+        auto pos = path.find_first_of(L'=');
+        if (pos != wstring::npos)
+        {
+#ifdef WIN32
+            replace(path.begin() + pos, path.end(), '\\', '/');
+#endif
+            path.insert(pos + 1, rootPath);
+        }
+        else
+        {
+#ifdef WIN32
+            replace(path.begin(), path.end(), L'\\', L'/');
+#endif
+            path = rootPath + path;
+        }
+    }
+    else
+    {
+        /*
+        do "..." expansion if SCP uses relative path names
+        "..." in the SCP means full path is the same as the SCP file
+        for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
+        and contains entry like
+        .../file1.feat
+        .../file2.feat
+        etc.
+        the features will be read from
+        //aaa/bbb/ccc/file1.feat
+        //aaa/bbb/ccc/file2.feat
+        etc.
+        This works well if you store the scp file with the features but
+        do not want different scp files everytime you move or create new features
+        */
+        size_t pos = path.find("...");
+        if (pos != path.npos)
+            path = path.substr(0, pos) + scpDir + path.substr(pos + 3);
+    }
 }
 
 vector<string> ConfigHelper::GetSequencePaths()
@@ -279,21 +371,19 @@ vector<string> ConfigHelper::GetSequencePaths()
     }
     else
     {
-        /*
-                do "..." expansion if SCP uses relative path names
-                "..." in the SCP means full path is the same as the SCP file
-                for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
-                and contains entry like
-                .../file1.feat
-                .../file2.feat
-                etc.
-                the features will be read from
-                //aaa/bbb/ccc/file1.feat
-                //aaa/bbb/ccc/file2.feat
-                etc.
-                This works well if you store the scp file with the features but
-                do not want different scp files everytime you move or create new features
-                */
+        // do "..." expansion if SCP uses relative path names
+        // "..." in the SCP means full path is the same as the SCP file
+        // for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
+        // and contains entry like
+        // .../file1.feat
+        // .../file2.feat
+        // etc.
+        // the features will be read from
+        // //aaa/bbb/ccc/file1.feat
+        // //aaa/bbb/ccc/file2.feat
+        // etc.
+        // This works well if you store the scp file with the features but
+        // do not want different scp files everytime you move or create new features
         string scpDirCached;
         for (auto& entry : filelist)
         {
@@ -341,4 +431,9 @@ void ConfigHelper::ExpandDotDotDot(string& featPath, const string& scpPath, stri
         featPath = featPath.substr(0, pos) + scpDirCached + featPath.substr(pos + 3);
 }
 
-}}}
+bool ConfigHelper::GetCacheIndex() const
+{
+    return m_config(L"cacheIndex", false);
+}
+
+}

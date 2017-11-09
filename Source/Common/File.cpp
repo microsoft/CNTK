@@ -19,7 +19,9 @@
 #ifdef _WIN32
 #define NOMINMAX
 #include "Windows.h"
+#ifndef CNTK_UWP
 #include <VersionHelpers.h>
+#endif
 #include <Shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
 #endif
@@ -30,6 +32,8 @@
 
 #define PCLOSE_ERROR -1
 #define WRITE_BUFFER_SIZE (1024 * 1024)
+
+#include <boost/algorithm/string.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -94,15 +98,16 @@ void File::Init(const wchar_t* filename, int fileOptions)
     // translate the options string into a string for fopen()
     const auto reading = !!(fileOptions & fileOptionsRead);
     const auto writing = !!(fileOptions & fileOptionsWrite);
-    if (!reading && !writing)
-        RuntimeError("File: either fileOptionsRead or fileOptionsWrite must be specified");
+    const auto appending = !!(fileOptions & fileOptionsAppend);
+    if (!reading && !writing && !appending)
+        RuntimeError("File: either fileOptionsRead or fileOptionsWrite or fileOptionsAppend must be specified");
     // convert fileOptions to fopen()'s mode string
     wstring options = reading ? L"r" : L"";
-    if (writing)
+    if (writing || appending)
     {
-        // if we already are reading the file, change to read/write
+        // if we already are reading the file, change to read/write or append
         options.clear();
-        options.append(L"w");
+        options.append(writing ? L"w" : L"a");
         if (!outputPipe && m_filename != L"-")
         {
             options.append(L"+");
@@ -131,6 +136,9 @@ void File::Init(const wchar_t* filename, int fileOptions)
     }
     else if (outputPipe || inputPipe) // pipe syntax
     {
+#ifdef CNTK_UWP
+        RuntimeError("File: pipes are not supported in UWP");
+#else
         if (inputPipe && outputPipe)
             RuntimeError("File: pipes cannot specify fileOptionsRead and fileOptionsWrite at once");
         if (inputPipe != reading)
@@ -140,6 +148,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
         if (!m_file)
             RuntimeError("File: error exexuting pipe command '%S': %s", command.c_str(), strerror(errno));
         m_pcloseNeeded = true;
+#endif
     }
     else
         attempt([=]() // regular file: use a retry loop
@@ -163,6 +172,9 @@ void File::Init(const wchar_t* filename, int fileOptions)
     path = msra::strfun::ReplaceAll<wstring>(path, L"/", L"\\");
 
     HRESULT hr;
+#ifdef CNTK_UWP // UWP-TODO: find a replacement for PathRemoveFileSpec
+    RuntimeError("Not supported for UWP");
+#else
     if (IsWindows8OrGreater()) // PathCchRemoveFileSpec() only available on Windows 8+
     {
         typedef HRESULT(*PathCchRemoveFileSpecProc)(_Inout_updates_(_Inexpressible_(cchPath)) PWSTR, _In_ size_t);
@@ -180,6 +192,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
     }
     else // on Windows 7-, use older PathRemoveFileSpec() instead
         hr = PathRemoveFileSpec(&path[0]) ? S_OK : S_FALSE;
+#endif
 
     if (hr == S_OK) // done
         path.resize(wcslen(&path[0]));
@@ -263,11 +276,15 @@ File::~File(void)
     int rc = 0;
     if (m_pcloseNeeded)
     {
+#ifdef CNTK_UWP
+        assert(false); // cannot happen
+#else
         rc = _pclose(m_file);
         if ((rc == PCLOSE_ERROR) && !std::uncaught_exception())
         {
             RuntimeError("File: failed to close file at %S", m_filename.c_str());
         }
+#endif
     }
     else if (m_file != stdin && m_file != stdout && m_file != stderr)
     {
@@ -969,26 +986,61 @@ template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::str
 #error CNTK_COMPONENT_VERSION must be set
 #endif
 
-extern std::unordered_map<std::wstring, std::wstring> g_deprecatedReaderWriterNameMap;
+// Note: this is a map that transfers the old reader and writer names to
+//       the new naming scheme
+static const std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap =
+{
+    // legacy reader mapping
+    { L"HTKMLFReader",          L"Cntk.Reader.HTKMLF" },
+    { L"LMSequenceReader",      L"Cntk.Reader.LMSequence" },
+    { L"LUSequenceReader",      L"Cntk.Reader.LUSequence" },
+    { L"UCIFastReader",         L"Cntk.Reader.UCIFast" },
+    { L"LibSVMBinaryReader",    L"Cntk.Reader.SVMBinary" },
+    { L"SparsePCReader",        L"Cntk.Reader.SparsePC" },
+    { L"Kaldi2Reader",          L"Cntk.Reader.Kaldi2" },
+    { L"BinaryReader",          L"Cntk.Reader.Binary" },
+
+    // legacy writer mapping
+    { L"HTKMLFWriter",          L"Cntk.Reader.HTKMLF" },
+    { L"BinaryWriter",          L"Cntk.Reader.Binary" },
+    { L"LUSequenceWriter",      L"Cntk.Reader.LUSequence" },
+    { L"LMSequenceWriter",      L"Cntk.Reader.LMSequence" },
+    { L"Kaldi2Writer",          L"Cntk.Reader.Kaldi2" },
+
+    // New type of readers/writers
+    { L"CompositeDataReader",   L"Cntk.Composite" },
+    { L"HTKDeserializers",      L"Cntk.Deserializers.HTK" },
+    { L"CNTKTextFormatReader",  L"Cntk.Deserializers.TextFormat" },
+    { L"CNTKBinaryReader",      L"Cntk.Deserializers.Binary" },
+    { L"ImageReader",           L"Cntk.Deserializers.Image" },
+};
 
 #ifdef _WIN32
-
 FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc, bool isCNTKPlugin)
 {
+#ifdef CNTK_UWP // UWP-TODO
+    RuntimeError("Not supported for UWP");
+#else
+
     m_dllName = plugin;
 
-    if (isCNTKPlugin)
+    // For python modules we do not need to append anything.
+    if(!boost::ends_with(m_dllName, L".pyd"))
     {
-        // map legacy names to new naming scheme
-        auto entry = g_deprecatedReaderWriterNameMap.find(m_dllName);
-        if (entry != g_deprecatedReaderWriterNameMap.end())
-            m_dllName = entry->second;
+        if (isCNTKPlugin)
+        {
+            // map legacy names to new naming scheme
+            auto entry = s_deprecatedReaderWriterNameMap.find(m_dllName);
+            if (entry != s_deprecatedReaderWriterNameMap.end())
+                m_dllName = entry->second;
+            m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
+        }
 
-        m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
+        m_dllName += L".dll";
     }
 
-    m_dllName += L".dll";
     m_hModule = LoadLibrary(m_dllName.c_str());
+
     if (m_hModule == NULL)
         RuntimeError("Plugin not found: '%ls'", m_dllName.c_str());
     // create a variable of each type just to call the proper templated version
@@ -996,6 +1048,7 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
     if (entryPoint == nullptr)
         RuntimeError("Symbol '%s' not found in plugin '%ls'", proc.c_str(), m_dllName.c_str());
     return entryPoint;
+#endif
 }
 
 #else
@@ -1008,17 +1061,20 @@ void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc, b
     string soName = plugin;
     wstring soNameW = msra::strfun::utf16(plugin);
 
-    if (isCNTKPlugin)
+    if (!boost::ends_with(soName, ".so"))
     {
-        // map legacy names to new naming scheme
-        auto entry = g_deprecatedReaderWriterNameMap.find(soNameW);
-        if (entry != g_deprecatedReaderWriterNameMap.end())
-            soName = msra::strfun::utf8(entry->second);
+        if (isCNTKPlugin)
+        {
+            // map legacy names to new naming scheme
+            auto entry = s_deprecatedReaderWriterNameMap.find(soNameW);
+            if (entry != s_deprecatedReaderWriterNameMap.end())
+                soName = msra::strfun::utf8(entry->second);
 
-        soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
+            soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
+        }
+        soName += ".so";
     }
 
-    soName += ".so";
     void* handle = dlopen(soName.c_str(), RTLD_LAZY);
     if (handle == NULL)
         RuntimeError("Plugin not found: '%s' (error: %s)", soName.c_str(), dlerror());

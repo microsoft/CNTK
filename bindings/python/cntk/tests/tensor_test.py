@@ -4,20 +4,18 @@
 # for full license information.
 # ==============================================================================
 
-from ..tensor import *
-from ..ops import constant, parameter
+
 import numpy as np
+import cntk as C
 
 import pytest
 
-def test_overload_exception():
-    c = constant(value=list(range(0, 10)))
-
-    with pytest.raises(ValueError):
-        c[0:3:2]
+def test_slice_stride():
+    c = C.constant(value=list(range(0, 10)))
+    assert np.all(c[0:3:2].eval() == [0, 2])
 
 def test_eval_scalar():
-    c = constant(value=2)
+    c = C.constant(value=2)
     assert (c+3).eval() == 5.0
     assert np.all((c+[3,4]).eval() == [5,6])
 
@@ -33,9 +31,9 @@ def test_numpy_conversion():
     assert np.all(Value(ndav).asarray() == np.ones((2,3)))
 
     # check Constant
-    c = constant(1, shape=(2,3))
+    c = C.constant(1, shape=(2,3))
     assert np.all(c.asarray() == np.ones((2,3)))
     
     #check Parameter
-    p = parameter(shape=(2,3), init=1)
+    p = C.parameter(shape=(2,3), init=1)
     assert np.all(p.asarray() == np.ones((2,3)))

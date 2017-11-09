@@ -8,30 +8,30 @@
 #include "DataDeserializer.h"
 #include "HTKFeaturesIO.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // This class represents a descriptor for a single utterance.
 // It is only used internally by the HTK deserializer.
 class UtteranceDescription
 {
     // Archive filename and frame range in that file.
-    msra::asr::htkfeatreader::parsedpath m_path;
+    htkfeatreader::parsedpath m_path;
 
     // Utterance id.
     size_t m_id;
 
 public:
-    UtteranceDescription(msra::asr::htkfeatreader::parsedpath&& path)
+    UtteranceDescription(htkfeatreader::parsedpath&& path)
         : m_path(std::move(path)), m_id(0)
     {
     }
 
-    const msra::asr::htkfeatreader::parsedpath& GetPath() const
+    const htkfeatreader::parsedpath& GetPath() const
     {
         return m_path;
     }
 
-    size_t GetNumberOfFrames() const
+    uint32_t GetNumberOfFrames() const
     {
         return m_path.numframes();
     }
@@ -40,4 +40,4 @@ public:
     void SetId(size_t id) { m_id = id; }
 };
 
-}}}
+}
