@@ -6,9 +6,9 @@
 import os
 import numpy as np
 import cntk as C
-import pytest
 
 def test_load_save_constant(tmpdir):
+    # import pdb;pdb.set_trace()
     c = C.constant(value=[1,3])
     root_node = c * 5
 
@@ -41,27 +41,15 @@ def test_dense_layer(tmpdir):
     x_ = loaded_node.arguments[0]
     assert np.allclose(loaded_node.eval({x_:img}), root_node.eval({x:img}))
 
-CONVOLUTION_TEST_DATA = [
-    # auto_padding: Value for the auto_adding parameter to convolution. 
-    ([False, True, True]   # Equivalent to "SAME_UPPER".
-     ),
-    ([False, False, False] # Equivalent to "VALID" padding.     
-     ),
-    ([False, False, True]  # Equivalent to "VALID" padding.     
-     )
-]
-# This is a roundtrip test. It saves a CNTK convolution node in ONNX format (with different padding options), 
-# and loads it back to check that the same results are produced.
-@pytest.mark.parametrize("auto_padding", CONVOLUTION_TEST_DATA)
-def test_convolution(tmpdir, auto_padding):
+def test_convolution(tmpdir):
     img_shape = (1, 5, 5)
     img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
 
     x = C.input_variable(img.shape)
-    filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 1, 2, 2))
+    filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
     kernel = C.constant(value = filter)
-    root_node = C.convolution(kernel, x, auto_padding=auto_padding)
-
+    root_node = C.convolution(kernel, x, auto_padding=[False])
+    
     filename = os.path.join(str(tmpdir), R'conv.onnx')
     root_node.save(filename, format=C.ModelFormat.ONNX)
 
