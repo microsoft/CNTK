@@ -87,7 +87,6 @@ def distributed_worker(outdir, gpu, mode, config, num_minibatches):
         C.cntk_py.use_sparse_gradient_aggregation_in_data_parallel_sgd(False)
     
     trainer = SimpleTrainer(mode, config)
-
     for batch in range(num_minibatches):
         set_np_random_seed(C.Communicator.rank(), batch)
         indices = (np.random.random((BATCH_SIZE_PER_WORKER,))*(trainer.input_dim-1)).astype(np.int)
@@ -111,7 +110,6 @@ TRAINING_SETTINGS = [
 
 @pytest.mark.parametrize("mode, config, minibatch_test", TRAINING_SETTINGS)
 def test_distributed_training_accuracy(tmpdir, device_id, mode, config, minibatch_test):
-
     ref_trainer = SimpleTrainer(None, None)
 
     # test if mode is available
@@ -157,7 +155,6 @@ def test_distributed_training_accuracy(tmpdir, device_id, mode, config, minibatc
 
 #mpiexec entrance
 if __name__=='__main__':
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-outputdir', '--outputdir')
     parser.add_argument('-mode', '--mode')
