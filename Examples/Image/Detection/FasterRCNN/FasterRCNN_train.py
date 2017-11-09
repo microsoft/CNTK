@@ -21,8 +21,8 @@ from cntk.logging import log_number_of_parameters, ProgressPrinter
 from cntk.logging.graph import find_by_name, plot
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from _cntk_py import force_deterministic_algorithms
 from cntk import distributed
+from _cntk_py import force_deterministic_algorithms
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, ".."))
@@ -583,7 +583,7 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
     for epoch in range(epochs_to_train):       # loop over epochs
         sample_count = 0
         while sample_count < cfg["DATA"].NUM_TRAIN_IMAGES:  # loop over minibatches in the epoch
-            data = od_minibatch_source.next_minibatch(min(cfg.MB_SIZE * cntk.Communicator.num_workers(), cfg["DATA"].NUM_TRAIN_IMAGES-sample_count), 
+            data = od_minibatch_source.next_minibatch(min(cfg.MB_SIZE, cfg["DATA"].NUM_TRAIN_IMAGES-sample_count), 
                 input_map=input_map, 
                 number_of_workers=cntk.Communicator.num_workers(), 
                 worker_rank=cntk.Communicator.rank())
