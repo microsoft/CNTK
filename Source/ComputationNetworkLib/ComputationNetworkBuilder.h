@@ -47,7 +47,7 @@ public:
     ComputationNodePtr CreateLearnableParameter(const std::wstring& paramName, const size_t rows, const size_t cols);
     shared_ptr<ComputationNode<ElemType>> CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
     {
-        return TypedCreateLearnableParameter<ElemType>(paramName, tensorShape);
+        return this->template TypedCreateLearnableParameter<ElemType>(paramName, tensorShape);
     }
 
     template<class ValueType>

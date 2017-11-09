@@ -413,11 +413,11 @@ namespace CNTK
         switch (variable.GetDataType())
         {
         case DataType::Float:
-            return builder.TypedCreateLearnableParameter<float>(name, AsTensorShape(shape));
+            return builder.template TypedCreateLearnableParameter<float>(name, AsTensorShape(shape));
         case DataType::Double:
-            return builder.TypedCreateLearnableParameter<double>(name, AsTensorShape(shape));
+            return builder.template TypedCreateLearnableParameter<double>(name, AsTensorShape(shape));
         case DataType::Float16:
-            return builder.TypedCreateLearnableParameter<half>(name, AsTensorShape(shape));
+            return builder.template TypedCreateLearnableParameter<half>(name, AsTensorShape(shape));
         default:
             return builder.CreateLearnableParameter(name, AsTensorShape(shape));
         }
