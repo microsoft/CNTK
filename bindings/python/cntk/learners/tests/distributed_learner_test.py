@@ -64,18 +64,19 @@ class SimpleTrainer:
                 learner = C.block_momentum_distributed_learner(local_learner, block_momentum_as_time_constant=config.block_momentum_as_time_constant, block_learning_rate=config.block_learning_rate, block_size=config.block_size, distributed_after=config.distributed_after)
             else:
                 learner = local_learner
-        except RuntimeError:
+        except RuntimeError:            
             learner = None
         return learner
 
-    def train_minibatch(self, input_indices):
+    def train_minibatch(self, input_indices):       
         data = C.Value.one_hot(input_indices, num_classes=self.input_dim)
         self.trainer.train_minibatch(data)
 
 def set_np_random_seed(rank, batch):
     np.random.seed(rank + 10 * batch)
         
-def distributed_worker(outdir, gpu, mode, config):
+
+def distributed_worker(outdir, gpu, mode, config, num_minibatches):
     if gpu:
         # test with only one GPU
         C.try_set_default_device(C.gpu(0))
@@ -84,9 +85,10 @@ def distributed_worker(outdir, gpu, mode, config):
         # note we only need to explicitly do this when running with CPU device on a GPU build
         # For CPU build it's disabled by default
         C.cntk_py.use_sparse_gradient_aggregation_in_data_parallel_sgd(False)
-
+    
     trainer = SimpleTrainer(mode, config)
-    for batch in range(NUM_BATCHES):
+
+    for batch in range(num_minibatches):
         set_np_random_seed(C.Communicator.rank(), batch)
         indices = (np.random.random((BATCH_SIZE_PER_WORKER,))*(trainer.input_dim-1)).astype(np.int)
         trainer.train_minibatch(indices)
@@ -98,15 +100,18 @@ def distributed_worker(outdir, gpu, mode, config):
     trainer.trainer.save_checkpoint(os.path.join(outdir, mode+'_last'))
     np.save(os.path.join(outdir, mode+str(C.Communicator.rank())), trainer.p.value)
 
+
 TRAINING_SETTINGS = [
-    ('data_parallel', None),
-    ('block_momentum', None),
-    ('block_momentum', BlockMomentumConfig(block_momentum_as_time_constant=4000, block_learning_rate=2, block_size=NUM_WORKERS*BATCH_SIZE_PER_WORKER*3, distributed_after=NUM_WORKERS*BATCH_SIZE_PER_WORKER*2)),
-    ('data_parallel', DataParallelConfig(num_quantization_bits=1, distributed_after=NUM_WORKERS*BATCH_SIZE_PER_WORKER*2)),
+    ('data_parallel', None, False),
+    ('data_parallel', DataParallelConfig(num_quantization_bits=1, distributed_after=NUM_WORKERS*BATCH_SIZE_PER_WORKER*2), False),
+    ('block_momentum', None, False),
+    ('block_momentum', BlockMomentumConfig(block_momentum_as_time_constant=4000, block_learning_rate=2, block_size=NUM_WORKERS*BATCH_SIZE_PER_WORKER*3, distributed_after=NUM_WORKERS*BATCH_SIZE_PER_WORKER*2), False),
+    ('block_momentum', BlockMomentumConfig(block_momentum_as_time_constant=4000, block_learning_rate=2, block_size=NUM_WORKERS*BATCH_SIZE_PER_WORKER*3, distributed_after=NUM_WORKERS*BATCH_SIZE_PER_WORKER*2), True),
 ]
 
-@pytest.mark.parametrize("mode, config", TRAINING_SETTINGS)
-def test_distributed_training_accuracy(tmpdir, device_id, mode, config):
+@pytest.mark.parametrize("mode, config, minibatch_test", TRAINING_SETTINGS)
+def test_distributed_training_accuracy(tmpdir, device_id, mode, config, minibatch_test):
+
     ref_trainer = SimpleTrainer(None, None)
 
     # test if mode is available
@@ -124,6 +129,9 @@ def test_distributed_training_accuracy(tmpdir, device_id, mode, config):
     
     if device_id >= 0:
         launch_args += ['--gpu']
+
+    if minibatch_test:
+        launch_args += ['--zerominibatch'] # one worker tries zero minibatches
 
     mpiexec_execute(__file__, ['-n', str(NUM_WORKERS)], launch_args)
 
@@ -149,17 +157,23 @@ def test_distributed_training_accuracy(tmpdir, device_id, mode, config):
 
 #mpiexec entrance
 if __name__=='__main__':
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-outputdir', '--outputdir')
     parser.add_argument('-mode', '--mode')
     parser.add_argument('-gpu', '--gpu', action='store_true')
     parser.add_argument('-config', '--config', required=False, default=None)
+    parser.add_argument('-zerominibatch', '--zerominibatch', required=False, default=False, action='store_true')
     args = vars(parser.parse_args())
     
     config = None
     if args['config'] is not None:
         with open(args['config'], 'rb') as pkl:
             config = pickle.load(pkl)
+    
+    num_minibatches = NUM_BATCHES
+    if args['zerominibatch'] and C.Communicator.rank() == 1:
+        num_minibatches = 0       
 
-    distributed_worker(args['outputdir'], args['gpu'], args['mode'], config)
+    distributed_worker(args['outputdir'], args['gpu'], args['mode'], config, num_minibatches)
     C.Communicator.finalize()
