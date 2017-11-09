@@ -2405,7 +2405,6 @@ protected:                                                                      
     using Base::SetDims;                                                                                                                                 \
     using Base::SetInput;                                                                                                                                \
     using Base::SetLearningRateMultiplier;                                                                                                               \
-    using Base::TypedInput;                                                                                                                              \
     using Base::UpdateFunctionMBSize;                                                                                                                    \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::Validate;                                                                                                                                \

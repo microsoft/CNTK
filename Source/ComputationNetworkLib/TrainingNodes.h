@@ -2566,14 +2566,14 @@ private: // time-constant conversions
     void ResetRunCount()
     {
         if (HasTiedRunCount())
-            TypedInput<StatType>(RUN_COUNT)->Value().SetValue(0);
+            this->TypedInput<StatType>(RUN_COUNT)->Value().SetValue(0);
         m_runCountUntied = 0;
     }
     void AggregateRunCount(size_t countToAdd)
     {
         if (HasTiedRunCount())
         {
-            TypedInput<StatType>(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(StatType)countToAdd, m_one); // this += countToAdd * (1)
+            this->TypedInput<StatType>(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(StatType)countToAdd, m_one); // this += countToAdd * (1)
             if (countToAdd != 0)
                 m_runCountUntied = SIZE_MAX; // we only need this for 0 checks, this value says we only know it's not 0
         }
@@ -2583,7 +2583,7 @@ private: // time-constant conversions
     size_t RunCount() const // const version of above; keep identical
     {
         if (HasTiedRunCount())
-            m_runCountUntied = (size_t)TypedInput<StatType>(RUN_COUNT)->Value().Get00Element(); // if needed then cache it over
+            m_runCountUntied = (size_t)this->TypedInput<StatType>(RUN_COUNT)->Value().Get00Element(); // if needed then cache it over
         return m_runCountUntied;
     }
     bool IsRunCount0() const { return m_runCountUntied == 0 && RunCount() == 0; } // tied count >= untied one, so we can ask the untied one first to avoid GPU sync
@@ -2666,10 +2666,10 @@ public:
         FrameRange fr(Input(DATA)->GetMBLayout());
 
         Matrix<ElemType> sliceInputValue  = Input(DATA)->MaskedValueFor(fr);
-        const Matrix<StatType>& scale     = TypedInput<StatType>(SCALE)->Value();
-        const Matrix<StatType>& bias      = TypedInput<StatType>(BIAS)->Value();
-        Matrix<StatType>& runMean         = TypedInput<StatType>(RUN_MEAN)->Value();
-        Matrix<StatType>& runVariance     = TypedInput<StatType>(RUN_VAR)->Value();
+        const Matrix<StatType>& scale     = this->TypedInput<StatType>(SCALE)->Value();
+        const Matrix<StatType>& bias      = this->TypedInput<StatType>(BIAS)->Value();
+        Matrix<StatType>& runMean         = this->TypedInput<StatType>(RUN_MEAN)->Value();
+        Matrix<StatType>& runVariance     = this->TypedInput<StatType>(RUN_VAR)->Value();
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         assert(scale.GetNumRows() == bias.GetNumRows());
@@ -2720,8 +2720,8 @@ public:
         {
             auto sliceOutputGrad          = MaskedGradientFor(fr);
             auto sliceInputValue          = Input(DATA)->ValueFor(fr);
-            const Matrix<StatType>& scale = TypedInput<StatType>(SCALE)->Value();
-            const Matrix<StatType>& bias  = TypedInput<StatType>(BIAS)->Value();
+            const Matrix<StatType>& scale = this->TypedInput<StatType>(SCALE)->Value();
+            const Matrix<StatType>& bias  = this->TypedInput<StatType>(BIAS)->Value();
 
             // If inputIndex is not DATA and we get here, then it means that DATA receives no gradient.
             // However, the underlying engine does not foresee this case, and thus always needs a place
@@ -2754,19 +2754,19 @@ public:
         {
             assert(m_gradientValid);
 
-            if (TypedInput<StatType>(SCALE)->IsGradientInitializedBy(this))
-                TypedInput<StatType>(SCALE)->Gradient().AssignValuesOf(*m_dScale);
+            if (this->TypedInput<StatType>(SCALE)->IsGradientInitializedBy(this))
+                this->TypedInput<StatType>(SCALE)->Gradient().AssignValuesOf(*m_dScale);
             else
-                TypedInput<StatType>(SCALE)->Gradient() += *m_dScale;
+                this->TypedInput<StatType>(SCALE)->Gradient() += *m_dScale;
         }
         else if (inputIndex == BIAS) // derivative with respect to the bias, precomputed during input derivative computation
         {
             assert(m_gradientValid);
 
-            if (TypedInput<StatType>(BIAS)->IsGradientInitializedBy(this))
-                TypedInput<StatType>(BIAS)->Gradient().AssignValuesOf(*m_dBias);
+            if (this->TypedInput<StatType>(BIAS)->IsGradientInitializedBy(this))
+                this->TypedInput<StatType>(BIAS)->Gradient().AssignValuesOf(*m_dBias);
             else
-                TypedInput<StatType>(BIAS)->Gradient() += *m_dBias;
+                this->TypedInput<StatType>(BIAS)->Gradient() += *m_dBias;
         }
         // No derivatives with respect to running mean and variance.
     }
@@ -2799,7 +2799,7 @@ public:
         // running statistics inputs must be learnable parameters, since we update them directly here
         for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
             //if (!Input(i)->Is<LearnableParameter<ElemType>>()) // somehow this does not compile on gcc (works on VS)
-            if (!dynamic_cast<LearnableParameter<StatType>*>(TypedInput<StatType>(i).get()))
+            if (!dynamic_cast<LearnableParameter<StatType>*>(this->TypedInput<StatType>(i).get()))
                 InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), (int)RUN_MEAN, (int)GetNumInputs());
 
         // infer dimensions of learnable parameters
@@ -2809,7 +2809,7 @@ public:
 #if 1   // Workaround for today's definition: Trigger on [0 x 1] and infer that 0 as the total # elements needed.
         for (size_t i = SCALE; i < RUN_COUNT; i++) // scale, bias, run_mean, and run_variance
         {
-            auto paramLayout = TypedInput<StatType>(i)->GetSampleLayout();
+            auto paramLayout = this->TypedInput<StatType>(i)->GetSampleLayout();
             if (paramLayout.GetRank() == 2 && paramLayout[0] == 0 && paramLayout[1] == 1 && inputLayout.GetNumElements() > 0) // [0 x 1]
             {
                 size_t total = m_spatial ? inputLayout.GetDims().back() : inputLayout.GetNumElements();
@@ -2843,11 +2843,11 @@ public:
             // check inputs
             for (size_t i = SCALE; i < RUN_COUNT; i++) // scale, bias, run_mean, and run_variance
             {
-                auto inputPtr = TypedInput<StatType>(i);
+                auto inputPtr = this->TypedInput<StatType>(i);
                 if (inputPtr->HasMBLayout())
                     InvalidArgument("%ls: Input[%d] has a dynamic axis. BatchNormalization parameters cannot have that.", NodeDescription().c_str(), (int)i);
                 auto paramLayout = inputPtr->GetSampleLayout();
-                if (paramLayout != TypedInput<StatType>(SCALE)->GetSampleLayout())
+                if (paramLayout != this->TypedInput<StatType>(SCALE)->GetSampleLayout())
                     InvalidArgument("%ls: Input[%d] has a layout different from Input[1]. All must be identical.", NodeDescription().c_str(), (int)i);
 #if 0           // BUGBUG: For this to work, parameter shapes must be correct (cf. comment above on inference).
                 if (paramLayout.GetRank() > inputLayout.GetRank())
@@ -2860,7 +2860,7 @@ public:
             if (HasTiedRunCount()) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
             {
                 // This must always be a [1] tensor. No inference allowed.
-                auto inputPtr = TypedInput<StatType>(RUN_COUNT);
+                auto inputPtr = this->TypedInput<StatType>(RUN_COUNT);
                 if (inputPtr->HasMBLayout() || (inputPtr->GetSampleLayout().GetRank() > 1) || (inputPtr->GetSampleLayout().GetNumElements() != 1))
                     InvalidArgument("%ls: Input[RUN_COUNT] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str());
                 RunCount(); // cache the shared value into the local cache, for 0 checks
@@ -2973,8 +2973,8 @@ public:
     // Turn off the L1 and L2 regularization
     void DisableRegInBatchNormalization()
     {
-        let scaleNode = dynamic_pointer_cast<LearnableParameter<StatType>>(TypedInput<StatType>(SCALE));
-        let biasNode  = dynamic_pointer_cast<LearnableParameter<StatType>>(TypedInput<StatType>(BIAS));
+        let scaleNode = dynamic_pointer_cast<LearnableParameter<StatType>>(this->TypedInput<StatType>(SCALE));
+        let biasNode  = dynamic_pointer_cast<LearnableParameter<StatType>>(this->TypedInput<StatType>(BIAS));
         scaleNode->SetRegMultiplier(0.f);
         biasNode->SetRegMultiplier(0.f);
     }
