@@ -306,22 +306,20 @@
 %typemap(javacode) CNTK::Value %{
 
     // create Value object from dense input as batch data.
-    public static Value createBatch(NDShape sampleShape, float[] batch, DeviceDescriptor device, boolean readOnly) {
-        FloatVector inputVector = Helper.AsFloatVector(batch);
-        return _CreateBatchFloat(sampleShape, inputVector, device, readOnly);
+    public static Value createBatch(NDShape sampleShape, float[] batch, int dataStart, int dataSize, DeviceDescriptor device, boolean readOnly) {
+        return _CreateBatchFloat(sampleShape, batch, dataStart, dataSize, device, readOnly);
     }
 
     public static Value createBatch(NDShape sampleShape, float[] batch, DeviceDescriptor device) {
-        return Value.createBatch(sampleShape, batch, device, false);
+        return Value.createBatch(sampleShape, batch, 0, batch.length, device, false);
     }
 
-    public static Value createBatch(NDShape sampleShape, double[] batch, DeviceDescriptor device, boolean readOnly) {
-        DoubleVector inputVector = Helper.AsDoubleVector(batch);
-        return _CreateBatchDouble(sampleShape, inputVector, device, readOnly);
+    public static Value createBatch(NDShape sampleShape, double[] batch, int dataStart, int dataSize, DeviceDescriptor device, boolean readOnly) {
+        return _CreateBatchDouble(sampleShape, batch, dataStart, dataSize, device, readOnly);
     }
 
     public static Value createBatch(NDShape sampleShape, double[] batch, DeviceDescriptor device) {
-        return createBatch(sampleShape, batch, device, false);
+        return Value.createBatch(sampleShape, batch, 0, batch.length, device, false);
     }
 
     // create Value object from dense input as sequence data.
@@ -344,8 +342,7 @@
                                        boolean sequenceStartFlag,
                                        DeviceDescriptor device,
                                        boolean readOnly) {
-        FloatVector inputVector = Helper.AsFloatVector(sequence);
-        return _CreateSequenceFloat(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+        return _CreateSequenceFloat(sampleShape, sequence, sequence.length, sequenceStartFlag, device, readOnly);
     }
 
     public static Value createSequence(NDShape sampleShape,
@@ -374,8 +371,7 @@
                                        boolean sequenceStartFlag,
                                        DeviceDescriptor device,
                                        boolean readOnly) {
-        DoubleVector inputVector = Helper.AsDoubleVector(sequence);
-        return _CreateSequenceDouble(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+        return _CreateSequenceDouble(sampleShape, sequence, sequence.length, sequenceStartFlag, device, readOnly);
     }
 
     public static Value createSequence(NDShape sampleShape,
