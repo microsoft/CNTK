@@ -290,7 +290,7 @@ namespace CNTK
         case DataType::Float16:
             return GetMatrixImpl<half>(GetTensorView<half>(), rowColSplitPoint);
         default:
-            LogicError("Unknown m_dataType %d", m_dataType);
+            LogicError("Unknown m_dataType %d", (int)m_dataType);
         }
         return nullptr;
     }
@@ -306,7 +306,7 @@ namespace CNTK
         case DataType::Float16:
             return GetMatrixImpl<half>(GetWritableTensorView<half>(), rowColSplitPoint);
         default:
-            LogicError("Unknown m_dataType %d", m_dataType);
+            LogicError("Unknown m_dataType %d", (int)m_dataType);
         }
         return nullptr;
     }
