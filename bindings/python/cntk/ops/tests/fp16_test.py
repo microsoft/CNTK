@@ -48,14 +48,14 @@ def test_batchnorm(device_id):
     shape = (3,)
     i = C.input_variable(shape, dtype='float16')
     scale = C.parameter(shape, init=1, dtype='float')
-    bias = C.parameters(shape, init=0, dtype='float')
-    run_mean = C.constant(shape, init=0, dtype='float')
-    run_variance = C.constant(shape, init=0, dtype='float')
-    run_count = C.constant((), init=0, dtype='float')
+    bias = C.parameter(shape, init=2, dtype='float')
+    run_mean = C.constant(3, shape=shape, dtype='float')
+    run_variance = C.constant(4, shape=shape, dtype='float')
+    run_count = C.constant(0, shape=(), dtype='float')
     
     bn = C.batch_normalization(i, scale, bias, run_mean, run_variance, running_count=run_count,
                                    spatial=False, normalization_time_constant=5000, blend_time_constant=0, epsilon=0.00001,
                                    use_cudnn_engine=True, disable_regularization=True)
 
     data = AA([[1,2,3]]).astype(np.float16)
-    bn.eval(data)
+    bn.grad(data, wrt=[scale,bias])

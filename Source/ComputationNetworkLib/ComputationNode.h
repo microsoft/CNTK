@@ -1422,6 +1422,19 @@ protected:
         return DownCast(m_inputs[inputIndex]);
     }
 
+    template<typename InputType>
+    inline shared_ptr<ComputationNode<InputType>> TypedInput(const size_t inputIndex) const
+    {
+        if (inputIndex >= m_inputs.size())
+            LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int)inputIndex, NodeName().c_str(), OperationName().c_str());
+
+        shared_ptr<ComputationNode<InputType>> node = dynamic_pointer_cast<ComputationNode<InputType>>(m_inputs[inputIndex]);
+        if (!node)
+            InvalidArgument("an TypedInput of mismatching precision was passed");
+
+        return node;
+    }
+
     // Fast downcast without runtime type check of dynamic_pointer_cast.
     // Meant to be used in Forward and BackPropTo, assuming that Validate() has already used Input() which validated the correct types.
     inline ComputationNode<ElemType>& InputRef(const size_t inputIndex) const
@@ -1921,24 +1934,36 @@ protected:
     // if the matrix's size will scale with minibatch size, set mbScale = true 
     // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
     // this is currently a workaround for workspace memory for convolutions
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
+    template<typename ValueType>
+    void TypedRequestMatrixFromPool(shared_ptr<Matrix<ValueType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
     {
         if (matrixPtr == nullptr)
         {
             if (aliasing)
-                matrixPool.RequestAliasedAllocate<ElemType>(m_deviceId, this, &matrixPtr, matrixSize, mbScale);
+                matrixPool.RequestAliasedAllocate<ValueType>(m_deviceId, this, &matrixPtr, matrixSize, mbScale);
             else
-                matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
+                matrixPool.RequestAllocate<ValueType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
         }
     }
 
-    void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
+    template<typename ValueType>
+    void TypedReleaseMatrixToPool(shared_ptr<Matrix<ValueType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
     {
         assert(matrixPtr != nullptr);
         if (aliasing)
-            matrixPool.RequestAliasedRelease<ElemType>(this);
+            matrixPool.RequestAliasedRelease<ValueType>(this);
         else
-            matrixPool.RequestRelease<ElemType>(&matrixPtr);
+            matrixPool.RequestRelease<ValueType>(&matrixPtr);
+    }
+
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize = 0, bool mbScale = false, bool isWorkSpace = false, bool aliasing = false)
+    {
+        TypedRequestMatrixFromPool<ElemType>(matrixPtr, matrixPool, matrixSize, mbScale, isWorkSpace, aliasing);
+    }
+
+    void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing = false)
+    {
+        TypedReleaseMatrixToPool<ElemType>(matrixPtr, matrixPool, aliasing);
     }
 
 public:

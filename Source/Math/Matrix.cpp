@@ -4909,9 +4909,10 @@ void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
-                                                 Matrix<ElemType>& runMean, Matrix<ElemType>& runVariance, Matrix<ElemType>& out, double epsilon,
-                                                 Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const
+template <class StatType>
+void Matrix<ElemType>::BatchNormalizationForward(const Matrix<StatType>& scale, const Matrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                                 Matrix<StatType>& runMean, Matrix<StatType>& runVariance, Matrix<ElemType>& out, double epsilon,
+                                                 Matrix<StatType>& saveMean, Matrix<StatType>& saveInvStdDev) const
 {
     DecideAndMoveToRightDevice(*this, out);
 
@@ -4929,9 +4930,10 @@ void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, 
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, double blendFactor,
-                                                  const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
-                                                  Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const
+template <class StatType>
+void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<StatType>& scale, double blendFactor,
+                                                  const Matrix<StatType>& saveMean, const Matrix<StatType>& saveInvStdDev,
+                                                  Matrix<StatType>& scaleGrad, Matrix<StatType>& biasGrad) const
 {
     DecideAndMoveToRightDevice(*this, grad);
 
@@ -6222,10 +6224,18 @@ template class Matrix<float>;
 template class Matrix<double>;
 template class Matrix<half>;
 
-// instantiate some learner methods
-template MATH_API void Matrix<float>::AdaDeltaUpdate<float>(Matrix<float>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
-template MATH_API void Matrix<double>::AdaDeltaUpdate<double>(Matrix<double>& gradients, Matrix<double>& functionvalues, double learningRatePerSample, double rho, double epsilon, int* timestamps, int currentTimestamp);
-template MATH_API void Matrix<float>::AdaDeltaUpdate<half>(Matrix<half>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
+// instantiate some templated methods
+template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<float>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
+template MATH_API void Matrix<double>::AdaDeltaUpdate(Matrix<double>& gradients, Matrix<double>& functionvalues, double learningRatePerSample, double rho, double epsilon, int* timestamps, int currentTimestamp);
+template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<half>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
+
+template MATH_API void Matrix<float>::BatchNormalizationForward(const Matrix<float>& scale, const Matrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<float>& runMean, Matrix<float>& runVariance, Matrix<float>& out, double epsilon, Matrix<float>& saveMean, Matrix<float>& saveInvStdDev) const;
+template MATH_API void Matrix<double>::BatchNormalizationForward(const Matrix<double>& scale, const Matrix<double>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<double>& runMean, Matrix<double>& runVariance, Matrix<double>& out, double epsilon, Matrix<double>& saveMean, Matrix<double>& saveInvStdDev) const;
+template MATH_API void Matrix<half>::BatchNormalizationForward(const Matrix<float>& scale, const Matrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<float>& runMean, Matrix<float>& runVariance, Matrix<half>& out, double epsilon, Matrix<float>& saveMean, Matrix<float>& saveInvStdDev) const;
+
+template MATH_API void Matrix<float>::BatchNormalizationBackward(const Matrix<float>& in, Matrix<float>& grad, const Matrix<float>& scale, double blendFactor, const Matrix<float>& saveMean, const Matrix<float>& saveInvStdDev, Matrix<float>& scaleGrad, Matrix<float>& biasGrad) const;
+template MATH_API void Matrix<double>::BatchNormalizationBackward(const Matrix<double>& in, Matrix<double>& grad, const Matrix<double>& scale, double blendFactor, const Matrix<double>& saveMean, const Matrix<double>& saveInvStdDev, Matrix<double>& scaleGrad, Matrix<double>& biasGrad) const;
+template MATH_API void Matrix<half>::BatchNormalizationBackward(const Matrix<half>& in, Matrix<half>& grad, const Matrix<float>& scale, double blendFactor, const Matrix<float>& saveMean, const Matrix<float>& saveInvStdDev, Matrix<float>& scaleGrad, Matrix<float>& biasGrad) const;
 
 // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
 // Let's explicitly instantiate the methods we need for that purpose

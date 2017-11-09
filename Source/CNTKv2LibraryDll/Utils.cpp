@@ -1159,8 +1159,10 @@ namespace CNTK
 
         if (GetDataType() == DataType::Float)
             Data()->SetValue(0.0f);
-        else
+        else if (GetDataType() == DataType::Double)
             Data()->SetValue(0.0);
+        else
+            Data()->SetValue((float16)0.0);
     }
 
     std::wstring DynamicAxesAsString(const std::vector<Axis>& axes, bool rowMajor)

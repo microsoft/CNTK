@@ -570,11 +570,14 @@ public:
     void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output, const bool poolIncludePad) const;
     void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const;
 
-    void BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
-                                   Matrix<ElemType>& runMean, Matrix<ElemType>& runVariance, Matrix<ElemType>& out, double epsilon,
-                                   Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const;
-    void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, double blendFactor, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
-                                    Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const;
+    template<class StatType>
+    void BatchNormalizationForward(const Matrix<StatType>& scale, const Matrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                   Matrix<StatType>& runMean, Matrix<StatType>& runVariance, Matrix<ElemType>& out, double epsilon,
+                                   Matrix<StatType>& saveMean, Matrix<StatType>& saveInvStdDev) const;
+
+    template<class StatType>
+    void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<StatType>& scale, double blendFactor, const Matrix<StatType>& saveMean, const Matrix<StatType>& saveInvStdDev,
+                                    Matrix<StatType>& scaleGrad, Matrix<StatType>& biasGrad) const;
 
     void RNNForward(const Matrix<ElemType>& inputX, const Matrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
     void RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);

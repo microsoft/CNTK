@@ -4999,9 +4999,10 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
-                                                    CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance, CPUMatrix<ElemType>& out, double epsilon,
-                                                    CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
+template <class StatType>
+void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<StatType>& scale, const CPUMatrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                                    CPUMatrix<StatType>& runMean, CPUMatrix<StatType>& runVariance, CPUMatrix<ElemType>& out, double epsilon,
+                                                    CPUMatrix<StatType>& saveMean, CPUMatrix<StatType>& saveInvStdDev) const
 {
     if (GetNumRows() % scale.GetNumRows() != 0)
         LogicError("The number of rows of this matrx must be multiple of the number of rows of the scale matrix.");
@@ -5023,7 +5024,7 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
             {
                 size_t imap = irow / spatialSize;
                 ElemType stdDev = sqrt(runVariance(imap, 0) + epsilon);
-                out(irow, icol) = scale(imap, 0) * ((*this)(irow, icol) - runMean(imap, 0)) / stdDev + bias(imap, 0);
+                out(irow, icol) = (ElemType)(scale(imap, 0) * ((*this)(irow, icol) - runMean(imap, 0)) / stdDev + bias(imap, 0));
             }
         }
     }
@@ -5035,16 +5036,17 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
             for (long irow = 0; irow < out.GetNumRows(); irow++)
             {
                 ElemType stdDev = sqrt(runVariance(irow, 0) + epsilon);
-                out(irow, icol) = scale(irow, 0) * ((*this)(irow, icol) - runMean(irow, 0)) / stdDev + bias(irow, 0);
+                out(irow, icol) = (ElemType)(scale(irow, 0) * ((*this)(irow, icol) - runMean(irow, 0)) / stdDev + bias(irow, 0));
             }
         }
     }
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, double blendFactor,
-                                                     const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
-                                                     CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const
+template <class StatType>
+void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<StatType>& scale, double blendFactor,
+                                                     const CPUMatrix<StatType>& saveMean, const CPUMatrix<StatType>& saveInvStdDev,
+                                                     CPUMatrix<StatType>& scaleGrad, CPUMatrix<StatType>& biasGrad) const
 {
     UNUSED(in); UNUSED(grad); UNUSED(scale); UNUSED(blendFactor), UNUSED(saveMean); UNUSED(saveInvStdDev); UNUSED(scaleGrad); UNUSED(biasGrad);
     RuntimeError("Batch normalization training on CPU is not yet implemented.");

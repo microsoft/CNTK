@@ -407,6 +407,36 @@ namespace CNTK
         }
     }
 
+    template <typename ElementType>
+    /*static*/ Microsoft::MSR::CNTK::ComputationNodeBasePtr CompositeFunction::CreateLearnableParameterFromVariable(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, const NDShape& shape, const std::wstring& name)
+    {
+        switch (variable.GetDataType())
+        {
+        case DataType::Float:
+            return builder.TypedCreateLearnableParameter<float>(name, AsTensorShape(shape));
+        case DataType::Double:
+            return builder.TypedCreateLearnableParameter<double>(name, AsTensorShape(shape));
+        case DataType::Float16:
+            return builder.TypedCreateLearnableParameter<half>(name, AsTensorShape(shape));
+        default:
+            return builder.CreateLearnableParameter(name, AsTensorShape(shape));
+        }
+    }
+
+    /*static*/ void CompositeFunction::CastAssignNodeValue(ComputationNodeBasePtr node, DataType dataType, std::shared_ptr<const MatrixBase> matrix)
+    {
+        switch (dataType)
+        {
+        case DataType::Float:
+            return (dynamic_cast<ComputationNode<float>*>(&*node))->Value().CastAssignValuesOf(*matrix);
+        case DataType::Double:
+            return (dynamic_cast<ComputationNode<double>*>(&*node))->Value().CastAssignValuesOf(*matrix);
+        case DataType::Float16:
+            return (dynamic_cast<ComputationNode<half>*>(&*node))->Value().CastAssignValuesOf(*matrix);
+        default:
+            LogicError("Unsupported data type");
+        }
+    }
 
     // Recursively create a sub-network of ComputationNode instances corresponding to the graph of Functions
     // underlying the specified 'variable' and return the ComputationNode instance that corresponds to the
@@ -448,7 +478,7 @@ namespace CNTK
             if (variable.Shape().HasInferredDimension())
                 InvalidArgument("Parameter or Constant '%S' with unresolved shape %S found when compiling the Function graph.", variable.AsString().c_str(), variable.Shape().AsString().c_str());
 
-            computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
+            computationNodePtr = CreateLearnableParameterFromVariable(variable, builder, variable.Shape(), internalNodeName);
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient() || (inputsToExcludeGradientsFor.find(variable) != inputsToExcludeGradientsFor.end()))
                 computationNodePtr->SetLearningRateMultiplier(0.0);
@@ -457,16 +487,17 @@ namespace CNTK
             std::shared_ptr<const MatrixBase> valueMatrix = variable.IsConstant() ? value->GetMatrixBase() : value->GetWritableMatrixBase();
 
             if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
-                dynamic_cast<ComputationNode<ElementType>*>(&*computationNodePtr)->Value().CastAssignValuesOf(*valueMatrix);
+                CastAssignNodeValue(computationNodePtr, variable.GetDataType(), valueMatrix);
             else // Constant: if initialized data lives on wrong device, make a copy to the right one (copy is OK since it's constant)
             {
                 // TODO: the following two lines are a workaround for a bug in the Math library
                 // (AssignValuesOf throws when source and destination matrices reside on different GPU devices).
                 // Once this bug is fixed, change to
                 // Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
-                Matrix<ElementType> clonedMatrix(network->GetDeviceId());
+                Matrix<ElementType> clonedMatrix(valueMatrix->GetDeviceId());
                 clonedMatrix.SwitchToMatrixType(valueMatrix->GetMatrixType(), valueMatrix->GetFormat(), false);
                 clonedMatrix.CastAssignValuesOf(*valueMatrix);
+                clonedMatrix.TransferToDeviceIfNotThere(network->GetDeviceId(), true);
                 dynamic_cast<ComputationNode<ElementType>*>(&*computationNodePtr)->Value() = std::move(clonedMatrix);
             }
         }
@@ -515,7 +546,7 @@ namespace CNTK
             }
             else
             {
-                computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(fullyDefinedArgumentVar.Shape()));
+                computationNodePtr = CreateLearnableParameterFromVariable(variable, builder, fullyDefinedArgumentVar.Shape(), internalNodeName);
                 network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
                 if (!variable.NeedsGradient() || (inputsToExcludeGradientsFor.find(variable) != inputsToExcludeGradientsFor.end()))
                     computationNodePtr->SetLearningRateMultiplier(0.0);
@@ -592,7 +623,7 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ ComputationNodeBasePtr CompositeFunction::CreateComputationNode(const Variable& variable,
                                                                                Function* function,
-                                                                               const std::vector<std::shared_ptr<ComputationNode<ElementType>>>& inputNodes,
+                                                                               const std::vector<std::shared_ptr<ComputationNodeBase>>& inputNodes,
                                                                                Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                                std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
                                                                                bool useMangledNamesForComputationNodes)
@@ -1255,15 +1286,16 @@ namespace CNTK
         }
 
         // Create the nodes corresponding to the inputs
-        std::vector<std::shared_ptr<ComputationNode<ElementType>>> inputNodes;
+        std::vector<std::shared_ptr<ComputationNodeBase>> inputNodes;
         for (auto& inputVar : functionInputs)
         {
             // If the inputVar is a constant and not the right DataType let's coerce it to the right type
-            if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (inputVar.GetDataType() != nonConstInputDataType))
+            // except for FP16 that mismatch is needed (e.g. BatchNorm stats in FP16 need to be FP32)
+            if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (nonConstInputDataType != DataType::Float16) && (inputVar.GetDataType() != nonConstInputDataType))
                 inputVar = Constant(inputVar).CloneAs(nonConstInputDataType);
 
             auto baseNodePtr = GetNode(inputVar, network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
-            inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr);
+            inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr : nullptr);
         }
 
         BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(function);
@@ -1279,7 +1311,7 @@ namespace CNTK
             return GetNode(variable.BlockFunctionVariableMapping(), network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
         }
         else
-            computationNodePtr = CreateComputationNode(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+            computationNodePtr = CreateComputationNode<ElementType>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
 
         PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
         if (!primitiveFunction || (primitiveFunction->OpType() != PrimitiveOpType::Combine))

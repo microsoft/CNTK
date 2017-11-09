@@ -3407,9 +3407,10 @@ void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol,
 
 // returns savedMean/savedInvStdDev which are the actual values used to perform the normalization, except for blendFactor 1, in which case they are unused and set to empty
 template <class ElemType>
-void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
-                                                    GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runVariance, GPUMatrix<ElemType>& out, double epsilon,
-                                                    GPUMatrix<ElemType>& savedMean, GPUMatrix<ElemType>& savedInvStdDev) const
+template <class StatType>
+void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<StatType>& scale, const GPUMatrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                                    GPUMatrix<StatType>& runMean, GPUMatrix<StatType>& runVariance, GPUMatrix<ElemType>& out, double epsilon,
+                                                    GPUMatrix<StatType>& savedMean, GPUMatrix<StatType>& savedInvStdDev) const
 {
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
@@ -3442,21 +3443,21 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
         savedInvStdDev.RequireSize(runMean);
         if (spatial)
         {
-            Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
+            Call2<ComputeSpatialBatchMeanAndInvStdDev, ElemType, StatType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
                                                                 expAvgFactor, blendFactor,
                                                                 runMean.Data(), runVariance.Data(), epsilon,
                                                                 savedMean.Data(), savedInvStdDev.Data(), GetStream());
         }
         else
         {
-            Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, Data(),
+            Call2<ComputeBatchMeanAndInvStdDev, ElemType, StatType>(vectorSize, vectorSize, batchSize, Data(),
                                                          expAvgFactor, blendFactor,
                                                          runMean.Data(), runVariance.Data(), epsilon,
                                                          savedMean.Data(), savedInvStdDev.Data(), GetStream());
         }
     }
 
-    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
+    Call2<NormalizeBatchTraining, ElemType, StatType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
                                            normalizeRunningStats, epsilon,
                                            Data(), out.Data(),
                                            scale.Data(), bias.Data(),
@@ -3468,9 +3469,10 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
 // savedMean/savedInvStdDev are the interpolated mean/inverse standard deviation as used in ForwardProp().
 // For blendFactor=1, they are not used and can be uninitialized or empty.
 template <class ElemType>
-void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, double blendFactor,
-                                                     const GPUMatrix<ElemType>& savedMean, const GPUMatrix<ElemType>& savedInvStdDev,
-                                                     GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const
+template <class StatType>
+void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<StatType>& scale, double blendFactor,
+                                                     const GPUMatrix<StatType>& savedMean, const GPUMatrix<StatType>& savedInvStdDev,
+                                                     GPUMatrix<StatType>& scaleGrad, GPUMatrix<StatType>& biasGrad) const
 {
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
@@ -3485,12 +3487,12 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
     SyncGuard syncGuard;
     if (spatial)
     {
-        Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
+        Call2<ComputeSpatialScaleAndBiasGradients, ElemType, StatType>(spatialSize, vectorSize, spatialSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
                                                             savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
     else
     {
-        Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
+        Call2<ComputeScaleAndBiasGradients, ElemType, StatType>(vectorSize, vectorSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
                                                      savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
 
@@ -3499,12 +3501,12 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
 #pragma warning(push)
 #pragma warning(disable : 4244) // warning C4244: conversion from 'double' to 'float', possible loss of data
 #endif
-    ElemType mbStatsWeight = (ElemType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
+    StatType mbStatsWeight = (StatType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-    Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
+    Call2<BackpropagateBatchNormGradients, ElemType, StatType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
                                                     in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), savedMean.Data(), savedInvStdDev.Data(), GetStream());
 }
 
@@ -4898,10 +4900,18 @@ template void GPUMatrix<half>::CastAssignValuesOf<float>(const GPUMatrix<float>*
 template void GPUMatrix<half>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
 template void GPUMatrix<half>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
 
-// instantiation of learner methods
+// instantiation of templated methods
 template void GPUMatrix<float>::AdaDelta<float>(GPUMatrix<float>& gradients, GPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);
 template void GPUMatrix<double>::AdaDelta<double>(GPUMatrix<double>& gradients, GPUMatrix<double>& functionValues, double learningRate, double rho, double epsilon);
 template void GPUMatrix<float>::AdaDelta<half>(GPUMatrix<half>& gradients, GPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);
+
+template void GPUMatrix<float>::BatchNormalizationForward(const GPUMatrix<float>& scale, const GPUMatrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, GPUMatrix<float>& runMean, GPUMatrix<float>& runVariance, GPUMatrix<float>& out, double epsilon, GPUMatrix<float>& saveMean, GPUMatrix<float>& saveInvStdDev) const;
+template void GPUMatrix<double>::BatchNormalizationForward(const GPUMatrix<double>& scale, const GPUMatrix<double>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, GPUMatrix<double>& runMean, GPUMatrix<double>& runVariance, GPUMatrix<double>& out, double epsilon, GPUMatrix<double>& saveMean, GPUMatrix<double>& saveInvStdDev) const;
+template void GPUMatrix<half>::BatchNormalizationForward(const GPUMatrix<float>& scale, const GPUMatrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, GPUMatrix<float>& runMean, GPUMatrix<float>& runVariance, GPUMatrix<half>& out, double epsilon, GPUMatrix<float>& saveMean, GPUMatrix<float>& saveInvStdDev) const;
+
+template void GPUMatrix<float>::BatchNormalizationBackward(const GPUMatrix<float>& in, GPUMatrix<float>& grad, const GPUMatrix<float>& scale, double blendFactor, const GPUMatrix<float>& saveMean, const GPUMatrix<float>& saveInvStdDev, GPUMatrix<float>& scaleGrad, GPUMatrix<float>& biasGrad) const;
+template void GPUMatrix<double>::BatchNormalizationBackward(const GPUMatrix<double>& in, GPUMatrix<double>& grad, const GPUMatrix<double>& scale, double blendFactor, const GPUMatrix<double>& saveMean, const GPUMatrix<double>& saveInvStdDev, GPUMatrix<double>& scaleGrad, GPUMatrix<double>& biasGrad) const;
+template void GPUMatrix<half>::BatchNormalizationBackward(const GPUMatrix<half>& in, GPUMatrix<half>& grad, const GPUMatrix<float>& scale, double blendFactor, const GPUMatrix<float>& saveMean, const GPUMatrix<float>& saveInvStdDev, GPUMatrix<float>& scaleGrad, GPUMatrix<float>& biasGrad) const;
 
 template <class ElemType>
 cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = {0};

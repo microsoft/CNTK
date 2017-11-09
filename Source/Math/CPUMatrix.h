@@ -420,10 +420,13 @@ public:
     void AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
                                 CPUMatrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const;
 
-    void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance,
-                                   CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const;
-    void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, double blendFactor, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
-                                    CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const;
+    template<class StatType>
+    void BatchNormalizationForward(const CPUMatrix<StatType>& scale, const CPUMatrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<StatType>& runMean, CPUMatrix<StatType>& runVariance,
+                                   CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<StatType>& saveMean, CPUMatrix<StatType>& saveInvStdDev) const;
+
+    template<class StatType>
+    void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<StatType>& scale, double blendFactor, const CPUMatrix<StatType>& saveMean, const CPUMatrix<StatType>& saveInvStdDev,
+                                    CPUMatrix<StatType>& scaleGrad, CPUMatrix<StatType>& biasGrad) const;
 
 public:
     // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>

@@ -286,7 +286,7 @@ namespace CNTK
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr CreateComputationNode(const Variable& variable,
                                                                                   Function* function,
-                                                                                  const std::vector<std::shared_ptr<Microsoft::MSR::CNTK::ComputationNode<ElementType>>>& inputNodes,
+                                                                                  const std::vector<std::shared_ptr<Microsoft::MSR::CNTK::ComputationNodeBase>>& inputNodes,
                                                                                   Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                                   std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
                                                                                   bool useMangledNamesForComputationNodes);
@@ -358,6 +358,11 @@ namespace CNTK
             for (auto refVar : m_refVariables)
                 refVar.IsParameter() ? Parameter(refVar).RecordValueUpdate() : Constant(refVar).RecordValueUpdate();
         }
+
+        template <typename ElementType>
+        static Microsoft::MSR::CNTK::ComputationNodeBasePtr CreateLearnableParameterFromVariable(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, const NDShape& shape, const std::wstring& name);
+
+        static void CastAssignNodeValue(Microsoft::MSR::CNTK::ComputationNodeBasePtr node, DataType dataType, std::shared_ptr<const Microsoft::MSR::CNTK::MatrixBase> matrix);
 
     private:
 

@@ -76,8 +76,17 @@ void CPUMatrix<half>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, con
 // explicit instantiations, due to CPUMatrix being too big and causing VS2015 cl crash.
 template class MATH_API CPUMatrix<half>;
 
-// instantiate learner methods
+// instantiate templated methods
 template void CPUMatrix<float>::AdaDelta(CPUMatrix<float>& gradients, CPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);
 template void CPUMatrix<double>::AdaDelta(CPUMatrix<double>& gradients, CPUMatrix<double>& functionValues, double learningRate, double rho, double epsilon);
 template void CPUMatrix<float>::AdaDelta(CPUMatrix<half>& gradients, CPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);
+
+template void CPUMatrix<float>::BatchNormalizationForward(const CPUMatrix<float>& scale, const CPUMatrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<float>& runMean, CPUMatrix<float>& runVariance, CPUMatrix<float>& out, double epsilon, CPUMatrix<float>& saveMean, CPUMatrix<float>& saveInvStdDev) const;
+template void CPUMatrix<double>::BatchNormalizationForward(const CPUMatrix<double>& scale, const CPUMatrix<double>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<double>& runMean, CPUMatrix<double>& runVariance, CPUMatrix<double>& out, double epsilon, CPUMatrix<double>& saveMean, CPUMatrix<double>& saveInvStdDev) const;
+template void CPUMatrix<half>::BatchNormalizationForward(const CPUMatrix<float>& scale, const CPUMatrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<float>& runMean, CPUMatrix<float>& runVariance, CPUMatrix<half>& out, double epsilon, CPUMatrix<float>& saveMean, CPUMatrix<float>& saveInvStdDev) const;
+
+template void CPUMatrix<float>::BatchNormalizationBackward(const CPUMatrix<float>& in, CPUMatrix<float>& grad, const CPUMatrix<float>& scale, double blendFactor, const CPUMatrix<float>& saveMean, const CPUMatrix<float>& saveInvStdDev, CPUMatrix<float>& scaleGrad, CPUMatrix<float>& biasGrad) const;
+template void CPUMatrix<double>::BatchNormalizationBackward(const CPUMatrix<double>& in, CPUMatrix<double>& grad, const CPUMatrix<double>& scale, double blendFactor, const CPUMatrix<double>& saveMean, const CPUMatrix<double>& saveInvStdDev, CPUMatrix<double>& scaleGrad, CPUMatrix<double>& biasGrad) const;
+template void CPUMatrix<half>::BatchNormalizationBackward(const CPUMatrix<half>& in, CPUMatrix<half>& grad, const CPUMatrix<float>& scale, double blendFactor, const CPUMatrix<float>& saveMean, const CPUMatrix<float>& saveInvStdDev, CPUMatrix<float>& scaleGrad, CPUMatrix<float>& biasGrad) const;
+
 }}}

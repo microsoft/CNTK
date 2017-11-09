@@ -58,24 +58,28 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
 
     set_computation_network_trace_level(0)
 
+    input_var = C.input_variable((num_channels, image_height, image_width), name='features')
+    label_var = C.input_variable((num_classes))
+    cast = C.combine(C.cast(input_var, dtype=np.float16), C.cast(label_var, dtype=np.float16))
+
     # Input variables denoting the features and label data
     with C.default_options(dtype='float16'):
-        input_var = C.input_variable((num_channels, image_height, image_width), name='features')
-        label_var = C.input_variable((num_classes))
+        input16 = C.input_variable((num_channels, image_height, image_width), name='features')
+        label16 = C.input_variable((num_classes))
 
         # create model, and configure learning parameters
         if network_name == 'resnet20':
-            z = create_cifar10_model(input_var, 3, num_classes)
+            z = create_cifar10_model(input16, 3, num_classes)
             lr_per_mb = [1.0]*80+[0.1]*40+[0.01]
         elif network_name == 'resnet110':
-            z = create_cifar10_model(input_var, 18, num_classes)
+            z = create_cifar10_model(input16, 18, num_classes)
             lr_per_mb = [0.1]*1+[1.0]*80+[0.1]*40+[0.01]
         else:
             raise RuntimeError("Unknown model name!")
 
         # loss and metric
-        ce = cross_entropy_with_softmax(z, label_var)
-        pe = classification_error(z, label_var)
+        ce = cross_entropy_with_softmax(z, label16)
+        pe = classification_error(z, label16)
 
     # shared training parameters
     minibatch_size = 128
@@ -107,12 +111,6 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
 
     log_number_of_parameters(z) ; print()
 
-    data = np.random.random((3,32,32)).astype(np.float16)
-    z.grad(data, wrt=z.parameters)
-    import pdb; pdb.set_trace()
-
-    # break here before we get reader on FP16
-    
     # perform model training
     if profiler_dir:
         start_profiler(profiler_dir, True)
@@ -121,7 +119,8 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map) # fetch minibatch.
-            trainer.train_minibatch(data)                                   # update model with it
+            data16 = cast.eval(data, as_numpy=False)
+            trainer.train_minibatch({input16:data16[cast[0]], label16:data16[cast[1]]}) # update model with it
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
 
         trainer.summarize_training_progress()
@@ -151,6 +150,8 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         current_minibatch = min(minibatch_size, test_epoch_size - sample_count)
         # Fetch next test min batch.
         data = reader_test.next_minibatch(current_minibatch, input_map=input_map)
+        data16 = cast.eval(data, as_numpy=False)
+        trainer.train_minibatch({input16:data16[cast[0]], label16:data16[cast[1]]}) # update model with it
         # minibatch data to be trained with
         metric_numer += trainer.test_minibatch(data) * current_minibatch
         metric_denom += current_minibatch
