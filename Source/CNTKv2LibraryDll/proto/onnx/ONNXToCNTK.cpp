@@ -76,14 +76,23 @@ private:
     static float GetNamedAttributeAsFloat(const Node *node, const string &attributeName);
     static float GetNamedAttributeAsFloat(const Node *node, const string &attributeName, float defaultValue);
 
+    static string GetNamedAttributeAsString(const Node *node, const string &attributeName);
+    static string GetNamedAttributeAsString(const Node *node, const string &attributeName, const string& defaultValue);
+
+    static std::vector<int64_t> GetNamedAttributeAsInt64Vec(const Node *node, const string &attributeName);
+    static std::vector<int64_t> GetNamedAttributeAsInt64Vec(const Node *node, const string &attributeName, const std::vector<int64_t>& defaultValue);
+
     static std::vector<bool> GetAutoPaddingWithSymmetryConversion(const Node *node, int strideRank,
         const string &onnxAutoPaddingAttributeName, const std::vector<bool> &defaultValue);
     static void AdjustAutoPaddingAndStrideForCNTKSpecialCases(const Variable &operand, 
         std::vector<bool> &autoPadding, NDShape &strides);
+    static void AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t>& pads);
     static NDShape ReverseShape(const NDShape &shape);
 
     static std::pair<Variable, Variable> BroadcastElementWiseInput(const Node *node, 
         const Variable &input0, const Variable &input1);
+
+    static FunctionPtr CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs);
 };
 
 }
@@ -556,6 +565,45 @@ float ONNXToCNTKHelper::GetNamedAttributeAsFloat(const Node *node, const string 
     return floatValue;
 }
 
+string ONNXToCNTKHelper::GetNamedAttributeAsString(const Node *node, const string &attributeName)
+{
+    NodeAttributes::const_iterator itValue = FindAttributeIterator(node, attributeName, false);
+    const AttributeProto &attributeProto = itValue->second;
+    return attributeProto.s();
+}
+
+string ONNXToCNTKHelper::GetNamedAttributeAsString(const Node *node, const string &attributeName,const string& defaultValue)
+{
+    NodeAttributes::const_iterator itValue = FindAttributeIterator(node, attributeName, false);
+    if (itValue == node->GetAttributes().end())
+    {
+        return defaultValue;
+    }
+    const AttributeProto &attributeProto = itValue->second;
+    return attributeProto.s();
+}
+
+std::vector<int64_t> ONNXToCNTKHelper::GetNamedAttributeAsInt64Vec(const Node *node, const string &attributeName)
+{
+    NodeAttributes::const_iterator itValue = FindAttributeIterator(node, attributeName, false);
+    const AttributeProto &attributeProto = itValue->second;
+    std::vector<int64_t> intVector(attributeProto.ints().begin(), attributeProto.ints().end());
+    return intVector;
+}
+
+std::vector<int64_t> ONNXToCNTKHelper::GetNamedAttributeAsInt64Vec(const Node *node, const string &attributeName,
+    const std::vector<int64_t>& defaultValue)
+{
+    NodeAttributes::const_iterator itValue = FindAttributeIterator(node, attributeName, false);
+    if (itValue == node->GetAttributes().end())
+    {
+        return defaultValue;
+    }
+    const AttributeProto &attributeProto = itValue->second;
+    std::vector<int64_t> intVector(attributeProto.ints().begin(), attributeProto.ints().end());
+    return intVector;
+}
+
 namespace CNTK
 {
     static void PrintGraph(FunctionPtr function, int spaces, bool useName = false)
@@ -656,6 +704,15 @@ void ONNXToCNTKHelper::AdjustAutoPaddingAndStrideForCNTKSpecialCases(const Varia
     }
 }
 
+void ONNXToCNTKHelper::AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t>& pads)
+{
+    // If there are added dimensions because of depth/channels or batch axis, then insert zeros
+    // in the 'pads' vector explicitly for those dimensions to indicate that no padding is
+    // needed for those dimensions. 
+    int rankDiff = operand.Shape().Rank() - (pads.size() / 2); 
+    pads.insert(pads.end(), rankDiff * 2, 0);
+}
+
 FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector<Variable> &inputs)
 {
     string onnxOpName = node->OpType();
@@ -729,33 +786,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Conv")
     {
-        NDShape strides = GetNamedAttributeAsShape(node, "strides", false);
-        NDShape dilation = GetNamedAttributeAsShape(node, "dilations", false, { 1 });
-        std::vector<bool> autoPadding = GetAutoPaddingWithSymmetryConversion(node, strides.Rank(), "pads", { false });
-
-        size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
-
-        // TODO: avoid hardcoded values
-        std::vector<bool> sharing({ true });
-        size_t reductionRank = 1;
-        size_t maxTempMemSizeInSamples = 0;
-        
-        Variable convolutionMap = inputs[1];
-        Variable operand = inputs[0];
-        AdjustAutoPaddingAndStrideForCNTKSpecialCases(operand, autoPadding, strides);
-
-        FunctionPtr cntkFunction = Convolution(
-            convolutionMap,
-            operand,
-            strides,
-            sharing,
-            autoPadding,
-            dilation,
-            reductionRank,
-            groups,
-            maxTempMemSizeInSamples,
-            ToWString(node->Name()));
-        return cntkFunction;
+        return CreateCNTKConvNode(node, inputs);
     }
     else if (onnxOpName == "ConvTranspose")
     {
@@ -1168,7 +1199,6 @@ FunctionPtr ONNXToCNTKHelper::FromONNXNode(const Node *node, ONNXToCNTKMap &cons
     return cntkFunction;
 }
 
-
 FunctionPtr ONNXToCNTKHelper::CreateCNTKNode(const Node *node, const std::vector<Variable> &inputs,
     const DeviceDescriptor& computeDevice)
 {
@@ -1190,6 +1220,68 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKNode(const Node *node, const std::vector
     {
         return CreateFunction(node, inputs);
     }
+}
+
+FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::vector<Variable>& inputs)
+{
+    NDShape strides = GetNamedAttributeAsShape(node, "strides", false);
+    NDShape dilation = GetNamedAttributeAsShape(node, "dilations", false, { 1 });
+    // TODO: avoid hardcoded values
+    std::vector<bool> sharing({ true });
+    size_t reductionRank = 1;
+    size_t maxTempMemSizeInSamples = 0;
+    size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
+    std::string auto_pad = GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER");
+
+    std::vector<bool> cntkConvAutoPadding;
+    Variable convolutionMap = inputs[1];
+    Variable operand = inputs[0];
+    Variable convOperand = operand; // Important initial condition.
+
+    if (auto_pad == "VALID")
+    {
+        std::vector<int64_t> pads = GetNamedAttributeAsInt64Vec(node, "pads");
+        bool paddingNeeded = std::any_of(pads.begin(), pads.end(), [](int64_t i) { return i > 0; });
+        if (paddingNeeded)
+        {
+            // Create appropriate pad node.
+            AdjustONNXPadsVecForCNTKPadOp(operand, pads);
+            std::vector<size_t> head, foot;
+            for (size_t i = 0; i < pads.size(); i += 2)
+            {
+                head.push_back(pads[i]);
+                foot.push_back(pads[i + 1]);
+            }
+            FunctionPtr cntkPadFunction = Pad(operand,
+                CNTK::PaddingMode::CONSTANTPAD,
+                head,
+                foot,
+                0,
+                ToWString(node->Name() + std::string("_pad")));
+            convOperand = (Variable)cntkPadFunction;
+        }
+        cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(),strides.Rank(), false);
+    }
+    else if (auto_pad == "SAME_UPPER")
+    {
+        cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), true);
+    }
+    else
+    {
+        NOT_IMPLEMENTED; // TODO: SAME_LOWER needs to be implemented.
+    }
+    AdjustAutoPaddingAndStrideForCNTKSpecialCases(operand, cntkConvAutoPadding, strides);
+    return Convolution(
+        convolutionMap,
+        convOperand,
+        strides,
+        sharing,
+        cntkConvAutoPadding,
+        dilation,
+        reductionRank,
+        groups,
+        maxTempMemSizeInSamples,
+        ToWString(node->Name()));
 }
 
 FunctionPtr ONNXToCNTK::CreateGraph(ONNXIR::Graph* src, const DeviceDescriptor& computeDevice)
