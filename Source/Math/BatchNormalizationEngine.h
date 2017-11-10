@@ -18,8 +18,9 @@ enum class BatchNormEngineKind
     None  = 0,
     Cntk  = 1,
     CuDnn = 1 << 1,
+    MKL2017 = 1 << 2,
 
-    All  = Cntk  | CuDnn
+    All  = Cntk  | CuDnn | MKL2017
 };
 
 #pragma warning(push)
