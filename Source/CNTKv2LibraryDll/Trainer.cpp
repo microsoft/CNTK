@@ -291,13 +291,13 @@ namespace CNTK
         if (m_parameterLearners->DoAggregateMetricsIfNeededLambda)
         {
             NDArrayViewPtr localLossValue = nullptr;
-            if (m_aggregatedTrainingLossValue->IsInitialized())
+            if (m_aggregatedTrainingLossValue && m_aggregatedTrainingLossValue->IsInitialized())
             {
                 localLossValue = m_aggregatedTrainingLossValue->Data();
             }
 
             NDArrayViewPtr localEvalCriterion = nullptr;
-            if (m_aggregatedTrainingEvalCriterionValue->IsInitialized())
+            if (m_aggregatedTrainingEvalCriterionValue && m_aggregatedTrainingEvalCriterionValue->IsInitialized())
             {
                 localEvalCriterion = m_aggregatedTrainingEvalCriterionValue->Data();
             }
