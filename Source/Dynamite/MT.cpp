@@ -372,7 +372,8 @@ fun AttentionDecoder(double dropoutInputKeepProb)
                              >> Activation(Tanh)
                              >> Label(Named("encoderKeysProjection"));
     let encoderDataProjection = encBarrier // data projection for attention
-                             >> Dense(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
+        // stabilizer causes fluctuations
+                             >> Dense(attentionDim, /*ProjectionOptions_batchNormalize |*/ ProjectionOptions::bias)
                              >> Activation(Tanh)
                              >> Label(Named("encoderDataProjection"));
     let embedTarget = Barrier(600, Named("embedTargetBarrier"))     // target embeddding
@@ -817,7 +818,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #if 1
         // dynamically adjust the MB size lower at the start to ramp up
         let fullMbSizeAt = 1000000;
-        let lowMbSize = minibatchSize / 8;
+        let lowMbSize = minibatchSize / 16;
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
         let actualMinibatchSize = clamp(lowMbSize + (minibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, minibatchSize);
 #else

@@ -77,6 +77,32 @@ static UnaryModel Label(const wstring& name)
 
 // layer normalization without bias term. Normalize each sample to zero mean and length 1, then scale it back up, element-wise.
 // This is meant to be invoked via Dense(), where users can select that a bias term should be used as well.
+static UnaryModel Stabilizer(double steepness = 1)
+{
+    auto param          = Parameter({}, CurrentDataType(), 1.0,         CurrentDevice(), L"stabilizer.param");
+    auto zero           = Constant ({}, CurrentDataType(), 0.0,         CurrentDevice(), L"zero");
+    auto steepFactor    = Constant ({}, CurrentDataType(), steepness,   CurrentDevice(), L"steepFactor");
+    auto invSteepFactor = Constant ({}, CurrentDataType(), 1/steepness, CurrentDevice(), L"invSteepFactor");
+    // stabilize constant. Computed once per minibatch.
+    let softplusOfParam = StaticModel(/*isBasicBlock=*/true,
+        [=]() -> Variable
+    {
+        CountAPICalls(3);
+        return LogAddExp(param * steepFactor, zero) * invSteepFactor;
+    }, Named("softplusOfParam"));
+    //steepness;
+
+    // this is the actual function
+    return UnaryModel(vector<Parameter>{ param },
+        [=](const Variable& x)
+    {
+        //return param * x;
+        return softplusOfParam() * x;
+    });
+}
+
+// layer normalization without bias term. Normalize each sample to zero mean and length 1, then scale it back up, element-wise.
+// This is meant to be invoked via Dense(), where users can select that a bias term should be used as well.
 static UnaryModel LengthNormalization(const Axis& axis = Axis(0))
 {
 #ifdef DISABLE_NORMALIZATIONS
@@ -196,6 +222,7 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
     auto W                  = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(),  GlorotUniformInitializer(), CurrentDevice(), L"W");
     auto b                  = Parameter({                   outputDim                             }, CurrentDataType(),  0.0f,                       CurrentDevice(), L"b");
     auto scale              = Parameter({                                                         }, CurrentDataType(),  1.0,                        CurrentDevice(), L"scale");
+    //let stabilizer = Stabilizer(4);
     auto weightNormRescale  = Parameter({                   outputDim                             }, CurrentDataType(),  1.0,                        CurrentDevice(), L"weightNormRescale");
     let weightNormMinusHalf = Constant::Scalar(                                                      CurrentDataType(), -0.5,                        CurrentDevice());
     let batchNorm = hasBatchNorm ? BatchNormalization(/*axis=*/1, Named("DenseBN")) : Identity;
@@ -208,6 +235,8 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
     if (hasWeightNorm)
         parameters.push_back(weightNormRescale);
     map<wstring, ModelParametersPtr> nested{ { L"activation", activation } };
+    //if (hasScale)
+    //    nested[L"stabilizer"] = stabilizer;
     if (hasBatchNorm)
         nested[L"batchNorm"] = batchNorm;
     if (hasLengthNorm)
@@ -237,6 +266,7 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
         y = Times(W, y);
         CountAPICalls(hasScale);
         if (hasScale) // (note: could speed this up by moving this before or after, wherever the dimension is lower)
+            //y = stabilizer(y);// y * scale;
             y = y * scale;
         if (hasWeightNorm)
             y = normWeight() * y;
