@@ -17,6 +17,7 @@ from cntk.logging.graph import find_by_name, plot
 import PARAMETERS
 import numpy as np
 import os, sys
+from cntk import distributed
 
 ###############################################################
 ###############################################################
@@ -44,6 +45,9 @@ num_test_images = p.cntk_num_test_images
 mb_size = p.cntk_mb_size
 max_epochs = p.cntk_max_epochs
 momentum_time_constant = p.cntk_momentum_time_constant
+distributed_flg = p.distributed_flg
+num_quantization_bits = p.num_quantization_bits
+warm_up = p.warm_up
 
 # model specific variables (only AlexNet for now)
 base_model = "AlexNet"
@@ -153,9 +157,14 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
     lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
-    # Instantiate the trainer object
+    # Instantiate the trainer object as default
     learner = momentum_sgd(frcn_output.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    # Preparation for distributed learning, which is compatible for normal learner
+    learner = distributed.data_parallel_distributed_learner(
+        learner = learner,
+        num_quantization_bits = num_quantization_bits,   # non-quantized gradient accumulation
+        distributed_after = warm_up)                     # no warm start as default            
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs, rank=distributed.Communicator.rank())
     trainer = Trainer(frcn_output, (ce, pe), learner, progress_printer)
 
     # Get minibatches of images and perform model training
@@ -164,13 +173,19 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
-            data = minibatch_source.next_minibatch(min(mb_size, epoch_size-sample_count), input_map=input_map)
+            data = minibatch_source.next_minibatch(min(mb_size * C.Communicator.num_workers(), epoch_size-sample_count), 
+                input_map=input_map, 
+                num_data_partitions=C.Communicator.num_workers(), 
+                partition_index=C.Communicator.rank())     
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
 
         trainer.summarize_training_progress()
         if debug_output:
             frcn_output.save(os.path.join(abs_path, "Output", "frcn_py_%s.model" % (epoch+1)))
+
+    if distributed_flg:
+        distributed.Communicator.finalize()
 
     return frcn_output
 

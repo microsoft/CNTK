@@ -142,9 +142,11 @@ public:
 
 public:
     ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad), 
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad),
+        m_isConvGeometryComputed(geometry->ComputeConvGeometryExplicit()), // IMP NOTE: m_isConvGeometryComputed MUST be initialized before m_mpRowCol here in this list.
         m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
+        assert(m_isConvGeometryComputed);
     }
 
 protected:
@@ -244,7 +246,10 @@ protected:
 
 protected:
     using IntMatPtr = std::unique_ptr<Matrix<int>>;
-
+    // IMP NOTE: Make sure that in the declaration below m_isConvGeometryComputed is declared
+    // before m_mpRowCol. This ordering is required to ensure the right order of initialization
+    // in the initializer list in the ctor (above) of this class.
+    bool m_isConvGeometryComputed;  
     Matrix<int> m_mpRowCol;
     // Convolution-specific maps.
     IntMatPtr m_mpRowIwht;
