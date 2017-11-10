@@ -1004,7 +1004,12 @@ namespace CNTK
             if (distLearner)
             {
                 m_isDistributed = true;
-                DoAggregateMetricsIfNeededLambda = std::bind(&DistributedLearner::DoAggregateMetricsIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
+
+                // When only 1 distributed learner is present, enable the lambda. This is used to correctly report loss and eval in BMUF learner case.
+                if (m_learners.size() == 1)
+                {
+                    DoAggregateMetricsIfNeededLambda = std::bind(&DistributedLearner::DoAggregateMetricsIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
+                }
             }
 
             const auto& currentLearnerParameters = learner->Parameters();
@@ -1022,12 +1027,6 @@ namespace CNTK
 
     void Learners::CheckDistributedLearners()
     {
-        // Allow only 1 distributed learner at a time.
-        if (m_learners.size() > 1)
-        {
-            InvalidArgument("Cannot use multiple distributed learners in a single Trainer.");
-        }
-
         for (const auto& learner : m_learners)
         {
             if (dynamic_pointer_cast<DistributedLearner>(learner) == nullptr)
