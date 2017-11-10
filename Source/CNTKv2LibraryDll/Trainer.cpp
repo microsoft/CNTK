@@ -288,9 +288,21 @@ namespace CNTK
     void Trainer::SummarizeTrainingProgress()
     {
         // Aggregate across workers training loss and eval criteria. Needed for BMUF like learner which don't aggregate after every minibatch.
-        if (m_parameterLearners->DoMetricsAggregationIfNeededLamda)
+        if (m_parameterLearners->DoAggregateMetricsIfNeededLambda)
         {
-            m_parameterLearners->DoMetricsAggregationIfNeededLamda(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
+            NDArrayViewPtr localLossValue = nullptr;
+            if (m_aggregatedTrainingLossValue->IsInitialized())
+            {
+                localLossValue = m_aggregatedTrainingLossValue->Data();
+            }
+
+            NDArrayViewPtr localEvalCriterion = nullptr;
+            if (m_aggregatedTrainingEvalCriterionValue->IsInitialized())
+            {
+                localEvalCriterion = m_aggregatedTrainingEvalCriterionValue->Data();
+            }
+
+            m_parameterLearners->DoAggregateMetricsIfNeededLambda(localLossValue, localEvalCriterion);
         }
 
         for (auto& progressWriter : m_progressWriters)

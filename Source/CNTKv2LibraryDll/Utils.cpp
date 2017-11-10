@@ -992,7 +992,7 @@ namespace CNTK
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),
         m_isDistributed(false),
-        DoMetricsAggregationIfNeededLamda(nullptr)
+        DoAggregateMetricsIfNeededLambda(nullptr)
     {
         if (learners.empty())
             InvalidArgument("These must be at least one learner.");
@@ -1004,7 +1004,7 @@ namespace CNTK
             if (distLearner)
             {
                 m_isDistributed = true;
-                DoMetricsAggregationIfNeededLamda = std::bind(&DistributedLearner::DoMetricsAggregationIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
+                DoAggregateMetricsIfNeededLambda = std::bind(&DistributedLearner::DoAggregateMetricsIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
             }
 
             const auto& currentLearnerParameters = learner->Parameters();
@@ -1022,6 +1022,12 @@ namespace CNTK
 
     void Learners::CheckDistributedLearners()
     {
+        // Allow only 1 distributed learner at a time.
+        if (m_learners.size() > 1)
+        {
+            InvalidArgument("Cannot use multiple distributed learners in a single Trainer.");
+        }
+
         for (const auto& learner : m_learners)
         {
             if (dynamic_pointer_cast<DistributedLearner>(learner) == nullptr)
@@ -1122,7 +1128,7 @@ namespace CNTK
             InvalidArgument("Attempting to accumulate a null Value.");
 
         bool copied = false;
-        if (m_isUninitialized ||
+        if (!m_isInitialized ||
             GetDataType() != delta->GetDataType() ||
             Shape() != delta->Shape() ||
             Device() != device ||
@@ -1132,7 +1138,7 @@ namespace CNTK
             m_data = MakeSharedObject<NDArrayView>(delta->GetDataType(), delta->Shape(), device);
             m_mask = delta->Mask();
             ResetToZero();
-            m_isUninitialized = false;
+            m_isInitialized = true;
         }
 
         if (delta->GetDataType() == DataType::Float)
@@ -1154,7 +1160,7 @@ namespace CNTK
 
     void Accumulator::ResetToZero()
     {
-        if (m_isUninitialized)
+        if (!m_isInitialized)
             return;
 
         if (GetDataType() == DataType::Float)

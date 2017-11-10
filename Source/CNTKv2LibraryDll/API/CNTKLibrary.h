@@ -5028,11 +5028,13 @@ namespace CNTK
             return 1;
         }
 
-        // Whether the loss and eval metrics should be aggregated across workers before summarization or not. 
-        // Eg BlockMomentumUpdateAndFiltering BMUF needs an aggregation
-        virtual void DoMetricsAggregationIfNeeded(AccumulatorPtr&, AccumulatorPtr&)
+        //
+        // Method to do loss and eval metrics aggregation across workers before summarization. 
+        // Eg BlockMomentumUpdateAndFiltering BMUF needs an aggregation of metrics. 
+        // Arguments are local training loss value and local eval criterion value.
+        //
+        virtual void DoAggregateMetricsIfNeeded(NDArrayViewPtr&, NDArrayViewPtr&)
         {
-            return;
         }
 
     protected:
