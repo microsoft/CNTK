@@ -113,11 +113,11 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install CNTK custom MKL
-RUN CNTK_CUSTOM_MKL_VERSION=3 && \
-    mkdir /usr/local/CNTKCustomMKL && \
-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-$CNTK_CUSTOM_MKL_VERSION.tgz | \
-    tar -xzf - -C /usr/local/CNTKCustomMKL
+# Install MKLML
+RUN MKLML_VERSION=v0.11/mklml_lnx_2018.0.1.20171007 && \
+    mkdir /usr/local/mklml && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/$MKLML_VERSION.tgz | \
+    tar -xzf - -C /usr/local/mklml
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa

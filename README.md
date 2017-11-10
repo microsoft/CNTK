@@ -2,6 +2,21 @@
 
 ## Latest news
 
+***2017-11-10.*** Switch from CNTKCustomMKL to Intel MKLML. MKLML is released with [Intel MKL-DNN](https://github.com/01org/mkl-dnn/releases) as a trimmed version of Intel MKL for MKL-DNN. To set it up:
+
+On Linux:
+
+    sudo mkdir /usr/local/mklml
+    sudo wget https://github.com/01org/mkl-dnn/releases/download/v0.11/mklml_lnx_2018.0.1.20171007.tgz
+    sudo tar -xzf mklml_lnx_2018.0.1.20171007.tgz -C /usr/local/mklml
+
+On Windows:
+
+    Create a directory on your machine to hold MKLML, e.g. mkdir c:\local\mklml
+    Download the file [mklml_win_2018.0.1.20171007.zip](https://github.com/01org/mkl-dnn/releases/download/v0.11/mklml_win_2018.0.1.20171007.zip).
+    Unzip it into your MKLML path, creating a versioned sub directory within.
+    Set the environment variable `MKLML_PATH` to the versioned sub directory, e.g. setx MKLML_PATH c:\local\mklml\mklml_win_2018.0.1.20171007
+
 ***2017-10-10.*** Preview: CNTK ONNX Format Support
 Update CNTK to support load and save ONNX format from https://github.com/onnx/onnx, please try it and provide feedback. We only support ONNX OPs. This is a preview, and we expect a breaking change in the future.
 
