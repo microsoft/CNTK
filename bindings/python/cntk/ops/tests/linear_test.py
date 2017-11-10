@@ -368,3 +368,12 @@ def test_sequence_auto_broadcast():
     result = f.eval({x:np.asarray([[1, 2, 3],[4, 5, 6]], dtype=np.float32),
                      y:np.asarray([[1, 2, 3]], dtype=np.float32)})
     assert np.array_equal(result[0], np.asarray([[1., 4., 9.],[4., 10., 18.]], dtype=np.float32))
+
+def test_auto_broadcast_reconcile_issue():
+    x = C.sequence.input((3,), name='x')
+    y = C.input((3,), name='y')
+    y2 = C.reconcile_dynamic_axes(y, x)
+    inputs = y2.owner.inputs
+    # check does the reconcile_dynamic_axes call trigger the auto broadcast
+    assert len(inputs) == 2
+    assert inputs[0].name == 'y' and inputs[1].name == 'x'
