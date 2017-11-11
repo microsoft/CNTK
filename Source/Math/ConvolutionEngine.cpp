@@ -1156,6 +1156,39 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
 }
 
+// only GPU supports fp16 convolution
+template <>
+std::unique_ptr<ConvolutionEngine<half>> ConvolutionEngine<half>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
+    ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
+    ConvolutionEngineKind enabledEngines, std::wstring logPrefix,
+    bool forceDeterministicAlgorithms, bool poolIncludePad,
+    bool inputHasFreeDimension)
+{
+    if (!logPrefix.empty())
+        logPrefix += L": ";
+
+    auto isEnabled = [=](ConvolutionEngineKind eng) { return ((int)enabledEngines & (int)eng) != 0; };
+    // Note: in some cases do not throw exception even if parameters do not match as Create
+    // can be called from places like MEL with default parameters and never be used.
+    // The check will be done later in engine's EnsureCompatible call if the egnine is actually used.
+    auto engStr = (std::string)(*geometry);
+
+    // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
+    if (isEnabled(ConvolutionEngineKind::CuDnn) &&
+        CuDnnConvolutionEngineFactory<half>::IsSupported(deviceId, geometry, poolKind))
+    {
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
+
+        return CuDnnConvolutionEngineFactory<half>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
+            forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
+    }
+
+    RuntimeError("FP16 convolution is only supported via cuDNN.");
+
+    return nullptr;
+}
+
 template class ConvolutionEngine<float>;
 template class ConvolutionEngine<double>;
 template class ConvolutionEngine<half>;

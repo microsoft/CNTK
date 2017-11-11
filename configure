@@ -24,7 +24,7 @@ nccl_path=
 nccl_check=include/nccl.h
 
 # MKLML Version
-cntk_custom_mkl_version=3
+mklml_version=mklml_lnx_2018.0.1.20171007
 
 have_mkl=no
 mkl_path=
@@ -61,11 +61,11 @@ buildtype=
 default_buildtype=release
 
 have_gdk_include=no
-gdk_include_path=$cuda_path/include
+gdk_include_path=
 gdk_include_check=nvml.h
 
 have_gdk_nvml_lib=no
-gdk_nvml_lib_path=$cuda_path/lib64
+gdk_nvml_lib_path=
 gdk_nvml_lib_check=libnvidia-ml.so
 
 have_cub=no
@@ -73,8 +73,8 @@ cub_path=
 cub_check=cub/cub.cuh
 
 have_cudnn=no
-cudnn_path=/usr/include/x86_64-linux-gnu
-cudnn_check=cudnn.h
+cudnn_path=
+cudnn_check=cuda/include/cudnn.h
 
 have_opencv=no
 opencv_path=
@@ -125,7 +125,7 @@ default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk"
 default_gdk_nvml_libs="src/gdk/nvml/lib"
 default_cubs="cub-1.7.4"
-default_cudnns="cudnn-7.0.3"
+default_cudnns="cudnn-7.0"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"
