@@ -9,6 +9,7 @@
 
 configure=$0
 build_top=$PWD
+src_root=`dirname $0`
 
 cuda_path=
 cuda_check=include/cuda.h
@@ -24,7 +25,7 @@ nccl_path=
 nccl_check=include/nccl.h
 
 # CNTK Custom MKL Version
-cntk_custom_mkl_version=3
+cntk_custom_mkl_version=`cat $src_root/Dependencies/CNTKCustomMKL/version.txt`
 
 have_mkl=no
 mkl_path=

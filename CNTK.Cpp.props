@@ -65,7 +65,7 @@
 
   <PropertyGroup Condition="!$(IsUWP)">
     <MathLibrary>MKL</MathLibrary>
-    <CNTKCustomMKLVersion>3</CNTKCustomMKLVersion>
+    <CNTKCustomMKLVersion>4</CNTKCustomMKLVersion>
     <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
     <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
     <MathDefine>USE_MKL</MathDefine>
