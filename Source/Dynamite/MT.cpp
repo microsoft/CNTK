@@ -106,6 +106,19 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         decoderProjectionDim = 128;
         topHiddenProjectionDim = 128;
     }
+    else if (systemId == "chs_enu_wmt17")
+    {
+        srcVocabSize = 68266;
+        tgtVocabSize = 55144;
+        srcTrainFile = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/train.src";
+        tgtTrainFile = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/train.tgt";
+        srcDevFile   = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/valid.src";
+        tgtDevFile   = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/valid.tgt";
+        srcTestFile  = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/test.src";
+        tgtTestFile  = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/test.tgt";
+        srcVocabFile = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/vocab.src";
+        tgtVocabFile = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/vocab.tgt";
+    }
     else if (systemId == "rom_enu")
     {
         srcVocabSize = 27579 + 3;
@@ -151,12 +164,14 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
         auto h = layers[0](xFwd, xBwd);
         for (size_t i = 1; i < numLayers; i++)
         {
+            // before each additional layer, so batch norm
+            h = bns[i - 1](h);
             // do another layer
             h = layers[i](h, h);
-            // after each additional layer, so batch norm
-            // BUGBUG: Why not the first? Seems like a bug.
-            // But BN after this does not help, so probably it should be between those layers, not after.
-            h = bns[i - 1](h);
+            //// after each additional layer, so batch norm
+            //// BUGBUG: Why not the first? Seems like a bug.
+            //// But BN after this does not help, so probably it should be between those layers, not after.
+            ////h = bns[i - 1](h);
         }
         DOLOG(h);
         return h;
@@ -696,8 +711,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     for (let& p : parameters)
         numParameters += p.Shape().TotalSize();
     fprintf(stderr, "Total number of learnable parameters is %u in %d parameter tensors.\n", (unsigned int)numParameters, (int)parameters.size()), fflush(stderr);
-    let epochSize = 10000000; // 10M is a bit more than half an epoch of ROM-ENG (~16M words)
-    let minibatchSize = 4096      * communicator->Workers().size() /6; // for debugging: switch to smaller MB when running without MPI
+    let epochSize = 8192 * 10000; // Frantic epoch
+    let minibatchSize = 4096;//    *communicator->Workers().size() / 6; // for debugging: switch to smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 0.2;
     LearnerPtr baseLearner;
@@ -818,7 +833,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #if 1
         // dynamically adjust the MB size lower at the start to ramp up
         let fullMbSizeAt = 1000000;
-        let lowMbSize = minibatchSize / 16;
+        let lowMbSize = minibatchSize / (communicator->Workers().size() > 6 ? 8 : 16);
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
         let actualMinibatchSize = clamp(lowMbSize + (minibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, minibatchSize);
 #else

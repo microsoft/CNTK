@@ -22,9 +22,9 @@
 //#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 // use these to locally disable batch norm at places
-#define ProjectionOptions_batchNormalize ProjectionOptions::lengthNormalize/*batchNormalize*/
+//#define ProjectionOptions_batchNormalize ProjectionOptions::lengthNormalize/*batchNormalize*/
 //#define ProjectionOptions_batchNormalize ProjectionOptions::stabilize/*batchNormalize*/
-//#define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
+#define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
 
 #ifndef let
 #define let const auto
@@ -207,12 +207,14 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
 {
     let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
     // current hack logic ("noln"): no BN, LN becomes Droppo
+    //let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
     let hasLengthNorm = false;// (opts & (ProjectionOptions::lengthNormalize)) != 0;
     let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
     let hasBias       = (opts & (ProjectionOptions::bias           )) != 0;
 #ifdef DISABLE_NORMALIZATIONS
     let hasScale = false;
 #else
+    //let hasScale      = (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
     let hasScale      = (opts & (ProjectionOptions::lengthNormalize)) != 0 ||       (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
 #endif
     if (hasBatchNorm && !hasBias)
