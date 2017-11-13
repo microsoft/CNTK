@@ -14,7 +14,9 @@ from cntk import cross_entropy_with_softmax, classification_error, reduce_mean
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
-from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learners import *
+from Proximal import *
+
 from cntk.debugging import set_computation_network_trace_level
 from cntk.logging import *
 from cntk.debugging import *
@@ -87,6 +89,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
     # progress writers
+
     progress_writers = [ProgressPrinter(tag='Training', log_to_file=log_dir, num_epochs=max_epochs, gen_heartbeat=gen_heartbeat)]
     tensorboard_writer = None
     if tensorboard_logdir is not None:
@@ -94,8 +97,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         progress_writers.append(tensorboard_writer)
 
     # trainer object
-    learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
-                           l2_regularization_weight = l2_reg_weight)
+    learner = Proximal_gd(z.parameters, lr_schedule, l2_regularization_weight = l2_reg_weight)
     trainer = Trainer(z, (ce, pe), learner, progress_writers)
 
     # define mapping from reader streams to network inputs
