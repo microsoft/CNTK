@@ -163,12 +163,13 @@ namespace CNTK
                            const LearningRateSchedule& learningRateSchedule,
                            const MomentumSchedule& momentumSchedule,
                            bool unitGain,
-                           AdditionalLearningOptions additionalOptions)
+                           AdditionalLearningOptions additionalOptions,
+                           size_t smoothGradientFactor)
                            : LearnerBase(parameters, learningRateSchedule, additionalOptions),
                            m_momentumSchedule(momentumSchedule), 
                            m_unitGain(unitGain)
         {
-            AllocateSmoothedGradients(parameters, 1, 2);
+            AllocateSmoothedGradients(parameters, smoothGradientFactor, 2);
         }
 
         // returns current per-minibatch momentum value.
@@ -221,7 +222,7 @@ namespace CNTK
                         const MomentumSchedule& momentumSchedule,
                         bool unitGain,
                         AdditionalLearningOptions additionalOptions)
-                        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions)
+                        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions, 1)
         {}
 
     protected:

@@ -731,6 +731,7 @@ namespace CNTK
     {
         const auto& gradientMatrix = GetWritableMatrix<GradType>(gradientValue);
         const auto& smoothedGradientMatrix = GetWritableMatrix<AccumType>(smoothedGradientValue);
+        // parameter is accumulated to fp32 for fp16 gradient in the master copy (allocated in last part in smoothedGradient)
         auto parameterMatrix = (std::is_same<GradType, half>::value) ?
             smoothedGradientMatrix->ColumnSlice(smoothedGradientMatrix->GetNumCols() - gradientMatrix->GetNumCols(), gradientMatrix->GetNumCols()) :
             GetWritableMatrix<AccumType>(parameter.Value())->ColumnSlice(0, gradientMatrix->GetNumCols());
@@ -835,11 +836,10 @@ namespace CNTK
                                        const MomentumSchedule& varianceMomentumSchedule,
                                        AdditionalLearningOptions additionalOptions)
                                        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, 
-                                                            unitGain, additionalOptions),
+                                                            unitGain, additionalOptions, 2),
                                        m_varianceMomentumSchedule(varianceMomentumSchedule),
                                        m_smoothedCount(0.0)
     {
-        AllocateSmoothedGradients(parameters, 2);
     }
 
     /*virtual*/ Dictionary LearnerFSAdaGrad::CreateCheckpoint() /*override*/
@@ -905,7 +905,7 @@ namespace CNTK
         bool adamax,
         AdditionalLearningOptions additionalOptions)
         : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule,
-            unitGain, additionalOptions),
+            unitGain, additionalOptions, 2),
           m_varianceMomentumSchedule(varianceMomentumSchedule), m_epsilon(epsilon),
           m_adamax(adamax)
     {
@@ -1074,7 +1074,7 @@ namespace CNTK
                                   bool unitGain,
                                   AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerMomentumSGD>(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions);
+        return MakeSharedObject<LearnerMomentumSGD>(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions, 1);
     }
 
     LearnerPtr NesterovLearner(const vector<Parameter>& parameters,
