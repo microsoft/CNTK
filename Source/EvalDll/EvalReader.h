@@ -127,6 +127,7 @@ public:
 
         // for latency control, overlap read
         size_t chunkSize = m_mbSize - m_rightSplice;
+        if (m_mbSize <= m_rightSplice) chunkSize = m_mbSize;
 
         // check to see if we are out of records in this current dataset
         if (m_currentRecord >= m_recordCount)
