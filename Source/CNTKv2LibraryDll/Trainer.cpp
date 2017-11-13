@@ -342,8 +342,10 @@ namespace CNTK
 
         if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Float)
             m_rootGradientValue->Data()->SetValue(1.0f);
-        else
+        else if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Double)
             m_rootGradientValue->Data()->SetValue(1.0);
+        else
+            m_rootGradientValue->Data()->SetValue(half(1.0));
 
         for (const auto& parameter : m_learnerParameters)
             parameterGradients[parameter] = nullptr;
@@ -520,7 +522,7 @@ namespace CNTK
             return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
         default:
             //should not be here; whenever a new data unit is defined, there should be a new case in this function.
-            LogicError("Unsupported data unit: %d", unit);
+            LogicError("Unsupported data unit: %d", (int)unit);
         }
     }
 

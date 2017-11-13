@@ -67,13 +67,13 @@ public:
         }
         else
         {
-            m_quantizeFactor = this->rangeMax / shiftedMax;
-            m_inverseQuantizerFactor = 1 / m_quantizeFactor;
+            m_quantizeFactor = (RawType)this->rangeMax / shiftedMax;
+            m_inverseQuantizerFactor = (RawType)1 / m_quantizeFactor;
         }
 
         for (size_t i = 0; i < input.size(); i++)
         {
-            output[i] = (QuantizedType)round(input[i] * m_quantizeFactor);
+            output[i] = (QuantizedType)round((double)(input[i] * m_quantizeFactor));
         }
     }
 
@@ -100,7 +100,7 @@ private:
     {
         auto minMaxPair = std::minmax_element(arrayRef.begin(), arrayRef.end());
 
-        return std::max(arrayRef[minMaxPair.second - arrayRef.begin()], std::abs(arrayRef[minMaxPair.first - arrayRef.begin()]));
+        return (RawType)std::max((double)arrayRef[minMaxPair.second - arrayRef.begin()], std::abs((double)arrayRef[minMaxPair.first - arrayRef.begin()]));
     }
 };
 

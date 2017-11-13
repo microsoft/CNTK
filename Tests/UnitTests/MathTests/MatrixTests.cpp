@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
@@ -759,11 +760,11 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     {
         BOOST_CHECK_EQUAL(c(i, j), 1 - a(i, j));
     }
-    // 
+    //
     a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
-    
+
     // AssignSumOf
     c.AssignSumOf(a, b);
     foreach_coord (i, j, c)
@@ -773,7 +774,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
-    
+
 
     // Check for self-assignment (c = c + b)
     auto tolerance = 5e-5;
@@ -785,8 +786,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
-    
-    // Check for self-assignment (c = b + c) 
+
+    // Check for self-assignment (c = b + c)
     c.AssignSumOf(b, c);
     foreach_coord (i, j, c)
     {
@@ -807,7 +808,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
-    // Check for self-assignment (c = c + c .* a) 
+    // Check for self-assignment (c = c + c .* a)
     c.AssignSumOf(a, b);
     c.AddElementProductOf(c, a);
     foreach_coord(i, j, c)
@@ -1209,7 +1210,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixScale, RandomSeedFixture)
         // BUGBUG: this test currently fails on GPU.
         if (deviceId != CPUDEVICE)
             continue;
-        
+
         // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
         // BOOST_CHECK(a1.IsEqualTo(a2));
         BOOST_CHECK(a1.IsEqualTo(a2, c_epsilonFloatE5));
@@ -1230,7 +1231,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSGDUpdate, RandomSeedFixture)
         auto g1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
         auto g2 = g1.DeepClone();
         BOOST_ASSERT(g1.IsEqualTo(g2));
-        
+
         auto sg1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
         auto sg2 = sg1.DeepClone();
         BOOST_ASSERT(sg1.IsEqualTo(sg2));
@@ -1251,7 +1252,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSGDUpdate, RandomSeedFixture)
 
             if (deviceId != CPUDEVICE)
                 continue;
-            
+
             // GPU version of SGDUpdate scales gradient by the learning rate, this check will fail.
             // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
             BOOST_CHECK(g1.IsEqualTo(g2, c_epsilonFloatE5));
@@ -1275,7 +1276,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixMomentumSGDUpdate_WithAndWithout_UnitGain, RandomS
         auto g1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
         auto g2 = g1.DeepClone();
         BOOST_ASSERT(g1.IsEqualTo(g2));
-        
+
         auto sg1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
         auto sg2 = sg1.DeepClone();
         BOOST_ASSERT(sg1.IsEqualTo(sg2));
@@ -1323,7 +1324,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixNesterovAcceleratedMomentumSGDUpdate_WithAndWithou
         auto g1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
         auto g2 = g1.DeepClone();
         BOOST_ASSERT(g1.IsEqualTo(g2));
-        
+
         auto sg1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
         auto sg2 = sg1.DeepClone();
         BOOST_ASSERT(sg1.IsEqualTo(sg2));
@@ -1372,7 +1373,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSee
         auto g1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
         auto g2 = g1.DeepClone();
         BOOST_ASSERT(g1.IsEqualTo(g2));
-        
+
         auto sg1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
         auto sg2 = sg1.DeepClone();
         BOOST_ASSERT(sg1.IsEqualTo(sg2));
@@ -1411,5 +1412,1415 @@ BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSee
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(Half_MatrixUnitTests)
+
+BOOST_FIXTURE_TEST_CASE(MatrixConstructors, RandomSeedFixture)
+{
+    HalfMatrix a0(0);
+    HalfMatrix a1(0);
+    HalfMatrix a2(CPUDEVICE);
+    HalfMatrix a3(13, 12, 0);
+
+    BOOST_CHECK_EQUAL(0, a0.GetNumRows());
+    BOOST_CHECK_EQUAL(0, a0.GetNumCols());
+    BOOST_CHECK_EQUAL(0, a1.GetNumRows());
+    BOOST_CHECK_EQUAL(0, a1.GetNumCols());
+    BOOST_CHECK_EQUAL(13, a3.GetNumRows());
+    BOOST_CHECK_EQUAL(12, a3.GetNumCols());
+
+    BOOST_CHECK_EQUAL(a0.GetDeviceId(), c_deviceIdZero);
+    BOOST_CHECK_EQUAL(a1.GetDeviceId(), c_deviceIdZero);
+    BOOST_CHECK_EQUAL(a2.GetDeviceId(), CPUDEVICE);
+    BOOST_CHECK_EQUAL(a3.GetDeviceId(), c_deviceIdZero);
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixMoveTest1, RandomSeedFixture)
+{
+    // no moves required
+    HalfMatrix a(c_deviceIdZero);
+    HalfMatrix b(c_deviceIdZero);
+    b.Resize(50, 100);
+
+    BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
+    BOOST_CHECK_EQUAL(b.GetNumCols(), 100);
+    BOOST_CHECK_EQUAL(a.GetDeviceId(), c_deviceIdZero);
+    BOOST_CHECK_EQUAL(b.GetDeviceId(), c_deviceIdZero);
+
+    std::swap(a, b);
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 50);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 100);
+    BOOST_CHECK_EQUAL(a.GetDeviceId(), c_deviceIdZero);
+    BOOST_CHECK_EQUAL(b.GetDeviceId(), c_deviceIdZero);
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixMoveTest2, RandomSeedFixture)
+{
+    // potentially a move is required
+    HalfMatrix a(c_deviceIdZero);
+    HalfMatrix b(c_deviceIdZero);
+    b.Resize(50, 100);
+    BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
+    BOOST_CHECK_EQUAL(b.GetNumCols(), 100);
+    BOOST_CHECK_EQUAL(a.GetDeviceId(), 0);
+    BOOST_CHECK_EQUAL(b.GetDeviceId(), 0);
+
+    b(12, 13) = 14; // this will move whole matrix B from GPU to CPU
+    BOOST_CHECK_EQUAL(b.GetDeviceId(), -1);
+
+    std::swap(a, b); // this will not only swap A and B but will put them to their preferred device (GPU if present)
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 50);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 100);
+    BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
+    BOOST_CHECK_EQUAL(b.GetNumCols(), 0);
+    BOOST_CHECK_EQUAL(a.GetDeviceId(), -1);
+    BOOST_CHECK_EQUAL(b.GetDeviceId(), 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixDeepCopy, RandomSeedFixture)
+{
+    // This is deep copy, not move
+    HalfMatrix a(c_deviceIdZero);
+    HalfMatrix b(c_deviceIdZero);
+
+    b.Resize(50, 100);
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
+    BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
+    BOOST_CHECK_EQUAL(b.GetNumCols(), 100);
+
+    b.SetValue(a);
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
+    BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
+    BOOST_CHECK_EQUAL(b.GetNumCols(), 0);
+
+    b.Resize(50, 100);
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
+    BOOST_CHECK_EQUAL(b.GetNumRows(), 50);
+    BOOST_CHECK_EQUAL(b.GetNumCols(), 100);
+
+    b(2, 3) = 9;
+    BOOST_CHECK_EQUAL(b(2, 3), 9);
+
+    b.SetValue(a);
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 0);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 0);
+    BOOST_CHECK_EQUAL(b.GetNumRows(), 0);
+    BOOST_CHECK_EQUAL(b.GetNumCols(), 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixInitZero, RandomSeedFixture)
+{
+    HalfMatrix a = HalfMatrix::Zeros(12, 32, c_deviceIdZero);
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 12);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 32);
+    foreach_coord (i, j, a)
+    {
+        BOOST_CHECK_EQUAL(a(i, j), 0.0);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixInitEye, RandomSeedFixture)
+{
+    HalfMatrix a = HalfMatrix::Eye(56, c_deviceIdZero);
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 56);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 56);
+
+    foreach_coord (i, j, a)
+    {
+        if (i != j)
+        {
+            BOOST_CHECK_EQUAL(a(i, j), 0.0);
+        }
+        else
+        {
+            BOOST_CHECK_EQUAL(a(i, j), 1.0);
+        }
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixInitOnes, RandomSeedFixture)
+{
+    HalfMatrix a = HalfMatrix::Ones(12, 56, c_deviceIdZero);
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 12);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 56);
+    foreach_coord (i, j, a)
+    {
+        BOOST_CHECK_EQUAL(a(i, j), 1.0);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixInitGaussianRand, RandomSeedFixture)
+{
+    HalfMatrix a = HalfMatrix::RandomGaussian(640, 230, c_deviceIdZero, 0.0f, 2.0f, IncrementCounter());
+    BOOST_CHECK_EQUAL(a.GetNumRows(), 640);
+    BOOST_CHECK_EQUAL(a.GetNumCols(), 230);
+    float avg = 0;
+    foreach_coord (i, j, a)
+    {
+        avg += (float)a(i, j);
+    }
+    avg /= (640 * 230);
+
+    float std = 0;
+    foreach_coord (i, j, a)
+    {
+        std += ((a(i, j) - avg) * (a(i, j) - avg));
+    }
+    std = sqrt(std / (640 * 230));
+
+    BOOST_CHECK_LE(fabs(avg), c_epsilonFloatE1);
+    BOOST_CHECK_LE(fabs(std - 2), c_epsilonFloatE1);
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniform, RandomSeedFixture)
+{
+    const half low = -26.3f;
+    const half high = 30.2f;
+    HalfMatrix a = HalfMatrix::RandomUniform(435, 100, c_deviceIdZero, low, high, IncrementCounter());
+    bool has_small = false;
+    bool has_big = false;
+    foreach_coord (i, j, a)
+    {
+        BOOST_CHECK_GE(a(i, j), low);
+        BOOST_CHECK_LE(a(i, j), high);
+        if (a(i, j) < -3)
+        {
+            has_small = true;
+        }
+        if (a(i, j) > 3)
+        {
+            has_big = true;
+        }
+    }
+    BOOST_CHECK(has_small);
+    BOOST_CHECK(has_big);
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniformSeed, RandomSeedFixture)
+{
+    const half low = -0.01f;
+    const half high = 0.01f;
+    HalfMatrix a = HalfMatrix::RandomUniform(429, 1024, c_deviceIdZero, low, high, IncrementCounter());
+    foreach_coord (i, j, a)
+    {
+        BOOST_CHECK_GE(a(i, j), low);
+        BOOST_CHECK_LE(a(i, j), high);
+    }
+
+    // HalfMatrix b = HalfMatrix::RandomUniform(429, 1024, (float)-0.01, (float) 0.01, IncrementCounter());
+    // BOOST_CHECK(a.IsEqualTo(b));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
+{
+    // void SetValue(const ElemType v);
+    HalfMatrix a(32, 12, c_deviceIdZero);
+    BOOST_CHECK_EQUAL(32, a.GetNumRows());
+    BOOST_CHECK_EQUAL(12, a.GetNumCols());
+    BOOST_CHECK_EQUAL(12 * 32, a.GetNumElements());
+    const half v = -32.3451f;
+    a.SetValue(v);
+    foreach_coord (i, j, a)
+    {
+        BOOST_CHECK_EQUAL(v, a(i, j));
+    }
+
+    // void SetValue(const Matrix<ElemType>& deepCopyFrom);
+    HalfMatrix b(c_deviceIdZero);
+    b.SetValue(a);
+    foreach_coord (i, j, b)
+    {
+        BOOST_CHECK_EQUAL(v, b(i, j));
+    }
+
+    // void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const bool srcIsColMajor);
+    std::array<half, 7> arrVector = {123.0f, 0.23f, -22.0f, 63.0f, 43.42f, 324.3f, 99912.0f};
+
+    half *arr = arrVector.data();
+    b.SetValue(2, 3, b.GetDeviceId(), arr, matrixFlagNormal);
+
+    HalfMatrix b1(c_deviceIdZero);
+    b1.SetValue(2, 3, b.GetDeviceId(), arr);
+    foreach_coord (i, j, b1)
+    {
+        BOOST_CHECK_EQUAL(arr[IDX2C(i, j, 2)], b(i, j));
+        BOOST_CHECK_EQUAL(arr[IDX2C(i, j, 2)], b1(i, j));
+    }
+
+    HalfMatrix bbbb = HalfMatrix::Zeros(6, 8, c_deviceIdZero);
+    bbbb.SetColumn(arr, 3);
+    for (int i = 0; i < 6; ++i)
+    {
+        BOOST_CHECK_EQUAL(arr[i], bbbb(i, 3));
+    }
+
+    // void SetDiagonalValue(const ElemType v);
+    HalfMatrix c(4, 4, c_deviceIdZero);
+    const half val = -0.00332f;
+    c.SetDiagonalValue(val);
+    foreach_coord (i, j, c)
+    {
+        if (i == j)
+            BOOST_CHECK_EQUAL(val, c(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c(i, j));
+    }
+
+    // void SetDiagonalValue(const Matrix<ElemType>& vector);
+    HalfMatrix d(4, 1, c_deviceIdZero);
+    const half val1 = 43.324f;
+    d.SetValue(val1);
+    c.SetDiagonalValue(d);
+    foreach_coord (i, j, c)
+    {
+        if (i == j)
+            BOOST_CHECK_EQUAL(val1, c(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c(i, j));
+    }
+
+    HalfMatrix c1(5, 5, c_deviceIdZero);
+    HalfMatrix d1(1, 5, c_deviceIdZero);
+    half val2 = 0.53f;
+    d1 = d1.Transpose();
+    d1.SetValue(val2);
+    c1.SetDiagonalValue(d1);
+    foreach_coord (i, j, c1)
+    {
+        if (i == j)
+            BOOST_CHECK_EQUAL(val2, c1(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c1(i, j));
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixTransposeTest, RandomSeedFixture)
+{
+    HalfMatrix a = HalfMatrix::RandomGaussian(64, 23, c_deviceIdZero, 0, 2, IncrementCounter());
+    BOOST_CHECK_EQUAL(64, a.GetNumRows());
+    BOOST_CHECK_EQUAL(23, a.GetNumCols());
+
+    HalfMatrix b = a.Transpose();
+
+    BOOST_CHECK_EQUAL(23, b.GetNumRows());
+    BOOST_CHECK_EQUAL(64, b.GetNumCols());
+
+    foreach_coord (i, j, a)
+    {
+        BOOST_CHECK_EQUAL(a(i, j), b(j, i));
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixMultiAndDiv, RandomSeedFixture)
+{
+    HalfMatrix m0(2, 3, c_deviceIdZero);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(0, 2) = 3;
+    m0(1, 0) = 4;
+    m0(1, 1) = 5;
+    m0(1, 2) = 6;
+
+    HalfMatrix m00(2, 3, c_deviceIdZero);
+    m00(0, 0) = 10;
+    m00(0, 1) = 20;
+    m00(0, 2) = 30;
+    m00(1, 0) = 40;
+    m00(1, 1) = 50;
+    m00(1, 2) = 60;
+
+    HalfMatrix m1(2, 3, c_deviceIdZero);
+    m1.Reshape(3, 2);
+    m1(0, 0) = 11;
+    m1(0, 1) = 15;
+    m1(1, 0) = 14;
+    m1(1, 1) = 13;
+    m1(2, 0) = 12;
+    m1(2, 1) = 16;
+
+    HalfMatrix m2(2, 2, c_deviceIdZero);
+    m2(0, 0) = 75;
+    m2(0, 1) = 89;
+    m2(1, 0) = 186;
+    m2(1, 1) = 221;
+
+    HalfMatrix m3 = m0 * m1;
+    BOOST_CHECK(m3.IsEqualTo(m2));
+
+    m3 = m0 * 10;
+    BOOST_CHECK(m3.IsEqualTo(m00));
+
+    m3 = m3 / 10;
+    BOOST_CHECK(m3.IsEqualTo(m0));
+
+    m3 *= 10;
+    BOOST_CHECK(m3.IsEqualTo(m00));
+
+    m3 /= 10;
+    BOOST_CHECK(m3.IsEqualTo(m0));
+
+    HalfMatrix::MultiplyAndWeightedAdd(1, m0, false, m1, false, 0, m3);
+    BOOST_CHECK(m3.IsEqualTo(m2));
+
+    m1.Reshape(2, 3);
+    HalfMatrix::MultiplyAndWeightedAdd(1, m0, false, m1, true, 0, m3);
+    m2(0, 0) = 74;
+    m2(0, 1) = 92;
+    m2(1, 0) = 182;
+    m2(1, 1) = 227;
+    BOOST_CHECK(m3.IsEqualTo(m2));
+
+    HalfMatrix::MultiplyAndWeightedAdd(10, m0, false, m1, true, 2, m3);
+    m2(0, 0) = 888;
+    m2(0, 1) = 1104;
+    m2(1, 0) = 2184;
+    m2(1, 1) = 2724;
+    BOOST_CHECK(m3.IsEqualTo(m2));
+
+    HalfMatrix::MultiplyAndWeightedAdd(1, m0, true, m1, false, 0, m3);
+    m2.Resize(3, 3);
+    m2(0, 0) = 67;
+    m2(0, 1) = 72;
+    m2(0, 2) = 77;
+    m2(1, 0) = 92;
+    m2(1, 1) = 99;
+    m2(1, 2) = 106;
+    m2(2, 0) = 117;
+    m2(2, 1) = 126;
+    m2(2, 2) = 135;
+    BOOST_CHECK(m3.IsEqualTo(m2));
+
+    // Multiplications of arbitrary matrix with 1x1 matrix
+
+    HalfMatrix a(2, 3, c_deviceIdZero);
+    a(0, 0) = 1;
+    a(0, 1) = 2;
+    a(0, 2) = 3;
+    a(1, 0) = 4;
+    a(1, 1) = 5;
+    a(1, 2) = 6;
+
+    HalfMatrix b = HalfMatrix::Eye(1, c_deviceIdZero);
+
+    HalfMatrix c = a * b;
+    BOOST_CHECK(c.IsEqualTo(a));
+    c = b * a;
+    BOOST_CHECK(c.IsEqualTo(a));
+    b(0, 0) = 0.5;
+    b.InplaceAbs();
+    c = a * b;
+
+    HalfMatrix d(2, 3, c_deviceIdZero);
+    d(0, 0) = 0.5;
+    d(0, 1) = 1;
+    d(0, 2) = 1.5;
+    d(1, 0) = 2;
+    d(1, 1) = 2.5;
+    d(1, 2) = 3;
+    BOOST_CHECK(c.IsEqualTo(d));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixTranspose, RandomSeedFixture)
+{
+    HalfMatrix m0(2, 3, c_deviceIdZero);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(0, 2) = 3;
+    m0(1, 0) = 4;
+    m0(1, 1) = 5;
+    m0(1, 2) = 6;
+
+    HalfMatrix m1(3, 2, c_deviceIdZero);
+    m1(0, 0) = 1;
+    m1(0, 1) = 4;
+    m1(1, 0) = 2;
+    m1(1, 1) = 5;
+    m1(2, 0) = 3;
+    m1(2, 1) = 6;
+
+    HalfMatrix m2 = m0.Transpose();
+    BOOST_CHECK(m2.IsEqualTo(m1, c_epsilonFloatE4));
+
+    m2.AssignTransposeOf(m1);
+    BOOST_CHECK(m2.IsEqualTo(m0, c_epsilonFloatE4));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixAddAndSub, RandomSeedFixture)
+{
+    HalfMatrix m0(2, 3, c_deviceIdZero);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(0, 2) = 3;
+    m0(1, 0) = 4;
+    m0(1, 1) = 5;
+    m0(1, 2) = 6;
+    m0.TransferFromDeviceToDevice(-1,0); // transfer to GPU for half test since CPU not working yet
+
+    HalfMatrix m1(2, 3, c_deviceIdZero);
+    m1(0, 0) = 11;
+    m1(0, 1) = 12;
+    m1(0, 2) = 13;
+    m1(1, 0) = 14;
+    m1(1, 1) = 15;
+    m1(1, 2) = 16;
+    m1.TransferFromDeviceToDevice(-1,0);
+
+    HalfMatrix m2(2, 3, c_deviceIdZero);
+    m2(0, 0) = 12;
+    m2(0, 1) = 14;
+    m2(0, 2) = 16;
+    m2(1, 0) = 18;
+    m2(1, 1) = 20;
+    m2(1, 2) = 22;
+    m2.TransferFromDeviceToDevice(-1,0);
+
+    HalfMatrix m3 = m2 - m0;
+
+    BOOST_CHECK_EQUAL(m3.GetDeviceId(), c_deviceIdZero);
+    BOOST_CHECK(m3.IsEqualTo(m1, 1e-5));
+
+    m3 += m0;
+    BOOST_CHECK(m3.IsEqualTo(m2));
+
+    m3 = m0 + 10;
+    BOOST_CHECK(m3.IsEqualTo(m1));
+
+    m3 -= 10;
+    BOOST_CHECK(m3.IsEqualTo(m0));
+
+    m3 = m1 + m0;
+    BOOST_CHECK(m3.IsEqualTo(m2, 1e-5));
+    HalfMatrix m4 = HalfMatrix::Eye(3, c_deviceIdZero);
+
+    m3 -= m0;
+    BOOST_CHECK(m3.IsEqualTo(m1));
+
+    m3 = m1 - 10;
+    BOOST_CHECK(m3.IsEqualTo(m0));
+
+    HalfMatrix m33(m3.DeepClone());
+    m3 += 10;
+    BOOST_CHECK(m3.IsEqualTo(m1));
+
+    HalfMatrix m55 = HalfMatrix::Eye(1, c_deviceIdZero);
+    m55(0, 0) = 10;
+    m55.InplaceAbs();
+    m33 += m55;
+    BOOST_CHECK(m33.IsEqualTo(m1));
+    m33 -= 10;
+    m33 = m33 + 10;
+    BOOST_CHECK(m33.IsEqualTo(m1));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixElementOps, RandomSeedFixture)
+{
+    HalfMatrix m0(2, 3, c_deviceIdZero);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(0, 2) = 3;
+    m0(1, 0) = 4;
+    m0(1, 1) = 5;
+    m0(1, 2) = 6;
+    m0.TransferFromDeviceToDevice(-1,0); // transfer to GPU for half test since CPU not working yet
+
+    HalfMatrix m00(2, 3, c_deviceIdZero);
+    m00(0, 0) = 1.0f;
+    m00(0, 1) = static_cast<float>(1 / 2.0);
+    m00(0, 2) = static_cast<float>(1 / 3.0);
+    m00(1, 0) = static_cast<float>(1 / 4.0);
+    m00(1, 1) = static_cast<float>(1 / 5.0);
+    m00(1, 2) = static_cast<float>(1 / 6.0);
+    m00.TransferFromDeviceToDevice(-1,0);
+
+    HalfMatrix m1(2, 3, c_deviceIdZero);
+    m1(0, 0) = 1;
+    m1(0, 1) = 1;
+    m1(0, 2) = 1;
+    m1(1, 0) = 1;
+    m1(1, 1) = 1;
+    m1(1, 2) = 1;
+    m1.TransferFromDeviceToDevice(-1,0);
+
+    HalfMatrix m3(c_deviceIdZero);
+    m3.AssignElementProductOf(m0, m00);
+    BOOST_CHECK(m3.IsEqualTo(m1, c_epsilonFloatE4));
+
+    HalfMatrix m4 = HalfMatrix::Zeros(2, 3, c_deviceIdZero);
+    m4.SetValue(m4.AddElementProductOf(m0, m00));
+    BOOST_CHECK(m4.IsEqualTo(m1, c_epsilonFloatE4));
+
+    m3 = m0 ^ 4;
+    HalfMatrix m2(2, 3, c_deviceIdZero);
+    m2(0, 0) = 1;
+    m2(0, 1) = 16;
+    m2(0, 2) = 81;
+    m2(1, 0) = 256;
+    m2(1, 1) = 625;
+    m2(1, 2) = 1296;
+    m2.TransferFromDeviceToDevice(-1,0);
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE3));
+
+    m3.SetValue(m0);
+    m3 ^= 4;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE3));
+
+    m3.SetValue(m0);
+    m3.ElementMultiplyWith(m00);
+    BOOST_CHECK(m3.IsEqualTo(m1, c_epsilonFloatE3));
+
+    m3.SetValue(m0);
+    m3.ElementInverse();
+    BOOST_CHECK(m3.IsEqualTo(m00, c_epsilonFloatE3));
+
+    m2(0, 0) = 0.7311f;
+    m2(0, 1) = 0.8808f;
+    m2(0, 2) = 0.9526f;
+    m2(1, 0) = 0.9820f;
+    m2(1, 1) = 0.9933f;
+    m2(1, 2) = 0.9975f;
+    m2.TransferFromDeviceToDevice(-1,0); // Move m2 to GPU again
+    m3.AssignElementDivisionOf(m2, m0);
+    m2.ElementMultiplyWith(m00);
+    BOOST_CHECK(m3.IsEqualTo(m2, 1e-3f));
+
+    m3.SetValue(m0);
+    m3.InplaceSigmoid();
+    m2(0, 0) = 0.7311f;
+    m2(0, 1) = 0.8808f;
+    m2(0, 2) = 0.9526f;
+    m2(1, 0) = 0.9820f;
+    m2(1, 1) = 0.9933f;
+    m2(1, 2) = 0.9975f;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceTanh();
+    m2(0, 0) = 0.7616f;
+    m2(0, 1) = 0.9640f;
+    m2(0, 2) = 0.9951f;
+    m2(1, 0) = 0.9993f;
+    m2(1, 1) = 0.9999f;
+    m2(1, 2) = 1.0000f;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceLogSoftmax(true);
+    m3.InplaceExp();
+    m2(0, 0) = 0.0474f;
+    m2(0, 1) = 0.0474f;
+    m2(0, 2) = 0.0474f;
+    m2(1, 0) = 0.9526f;
+    m2(1, 1) = 0.9526f;
+    m2(1, 2) = 0.9526f;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceLogSoftmax(false);
+    m3.InplaceExp();
+    m2(0, 0) = 0.0900f;
+    m2(0, 1) = 0.2447f;
+    m2(0, 2) = 0.6652f;
+    m2(1, 0) = 0.0900f;
+    m2(1, 1) = 0.2447f;
+    m2(1, 2) = 0.6652f;
+    BOOST_CHECK(m3.IsEqualTo(m2, 1e-3f));
+
+    m3.SetValue(m0);
+    m3.InplaceHardmax(true);
+    m2(0, 0) = 0.0f;
+    m2(0, 1) = 0.0f;
+    m2(0, 2) = 0.0f;
+    m2(1, 0) = 1.0f;
+    m2(1, 1) = 1.0f;
+    m2(1, 2) = 1.0f;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceSqrt();
+    m2(0, 0) = 1.0f;
+    m2(0, 1) = 1.4142f;
+    m2(0, 2) = 1.7321f;
+    m2(1, 0) = 2.0f;
+    m2(1, 1) = 2.2361f;
+    m2(1, 2) = 2.4495f;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceExp();
+    m2(0, 0) = 2.7183f;
+    m2(0, 1) = 7.3891f;
+    m2(0, 2) = 20.0855f;
+    m2(1, 0) = 54.5982f;
+    m2(1, 1) = 148.4132f;
+    m2(1, 2) = 403.4288f;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceExp();
+    m2(0, 0) = 2.7183f;
+    m2(0, 1) = 7.3891f;
+    m2(0, 2) = 20.0855f;
+    m2(1, 0) = 54.5982f;
+    m2(1, 1) = 148.4132f;
+    m2(1, 2) = 403.4288f;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.InplaceLog();
+    BOOST_CHECK(m3.IsEqualTo(m0, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceTruncateBottom(2);
+    m2(0, 0) = 2;
+    m2(0, 1) = 2;
+    m2(0, 2) = 3;
+    m2(1, 0) = 4;
+    m2(1, 1) = 5;
+    m2(1, 2) = 6;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE3));
+
+    m3.SetValue(m0);
+    m3.InplaceTruncateTop(4);
+    m2(0, 0) = 1;
+    m2(0, 1) = 2;
+    m2(0, 2) = 3;
+    m2(1, 0) = 4;
+    m2(1, 1) = 4;
+    m2(1, 2) = 4;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE3));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixColumnElementMultiply, RandomSeedFixture)
+{
+    // CPU path doesn't work
+/*
+    CPUMatrix<half> mcpu = CPUMatrix<half>::RandomUniform(429, 1024, -3.4f, 1, IncrementCounter());
+    CPUMatrix<half> acpu = CPUMatrix<half>::Ones(429, 1);
+    CPUMatrix<half> mcpuCopy(mcpu);
+
+    mcpu.ColumnElementMultiplyWith(acpu);
+    BOOST_CHECK(mcpuCopy.IsEqualTo(mcpu, c_epsilonFloatE4));
+*/
+    Matrix<half> m = Matrix<half>::RandomUniform(429, 1024, c_deviceIdZero, -3.4f, 1, IncrementCounter());
+    Matrix<half> a = Matrix<half>::Ones(429, 1, c_deviceIdZero);
+    Matrix<half> mCopy(m.DeepClone());
+
+    m.ColumnElementMultiplyWith(a);
+    BOOST_CHECK(mCopy.IsEqualTo(m, c_epsilonFloatE4));
+/*
+    CPUMatrix<half> mc1 = CPUMatrix<half>::RandomUniform(429, 1024, -3.4f, 1, IncrementCounter());
+    CPUMatrix<half> mc2 = CPUMatrix<half>::RandomUniform(429, 1, 0, 3, IncrementCounter());
+    mc1.ColumnElementMultiplyWith(mc2);
+
+    Matrix<half> m1(mc1.GetNumRows(), mc1.GetNumCols(), mc1.Buffer(), matrixFlagNormal);
+    Matrix<half> m2(mc2.GetNumRows(), mc2.GetNumCols(), mc2.Buffer(), matrixFlagNormal);
+    m1.ColumnElementMultiplyWith(m2);
+
+    foreach_coord (i, j, m2)
+    {
+        BOOST_CHECK_LT(fabs(m2(i, j) - mc2(i, j)), c_epsilonFloatE5);
+    }
+*/
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
+{
+    // AssignDifferenceOf
+    Matrix<half> a = Matrix<half>::RandomUniform(429, 1024, c_deviceIdZero, 5, 32, IncrementCounter());
+    Matrix<half> b = Matrix<half>::RandomUniform(429, 1024, c_deviceIdZero, 5, 32, IncrementCounter());
+    Matrix<half> c(c_deviceIdZero);
+
+    c.AssignDifferenceOf(a, b);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_EQUAL(c(i, j), a(i, j) - b(i, j));
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    half x = 234.2f;
+    c.AssignDifferenceOf(a, x);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_EQUAL(c(i, j), a(i, j) - x);
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    c.AssignDifferenceOf(x, a);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_EQUAL(c(i, j), x - a(i, j));
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    c.AssignDifferenceOf(1, a);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_EQUAL(c(i, j), 1 - a(i, j));
+    }
+    //
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    // AssignSumOf
+    c.AssignSumOf(a, b);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_EQUAL(c(i, j), a(i, j) + b(i, j));
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+
+    // Check for self-assignment (c = c + b)
+    auto tolerance = 5e-5;
+    c.AssignSumOf(c, b);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_CLOSE(c(i, j), a(i, j) + 2 * b(i, j), tolerance);
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    // Check for self-assignment (c = b + c)
+    c.AssignSumOf(b, c);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_CLOSE(c(i, j), a(i, j) + 3 * b(i, j), tolerance);
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    // Check for self-assignment (c = c + a .* c)
+    c.AssignSumOf(a, b);
+    c.AddElementProductOf(a, c);
+    foreach_coord(i, j, c)
+    {
+        BOOST_CHECK_CLOSE(c(i, j), (1 + a(i, j)) * (a(i, j) + b(i, j)), tolerance);
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    // Check for self-assignment (c = c + c .* a)
+    c.AssignSumOf(a, b);
+    c.AddElementProductOf(c, a);
+    foreach_coord(i, j, c)
+    {
+        BOOST_CHECK_CLOSE(c(i, j), (1 + a(i, j)) * (a(i, j) + b(i, j)), tolerance);
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    // Check for self-assignment (c = c + c .* c)
+    c.AssignSumOf(a, b);
+    c.AddElementProductOf(c, c);
+    foreach_coord(i, j, c)
+    {
+        BOOST_CHECK_CLOSE(c(i, j), (1 + a(i, j) + b(i, j)) * (a(i, j) + b(i, j)), tolerance);
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+    // AssignElementProductOf
+    c.AssignElementProductOf(a, b);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_EQUAL(c(i, j), a(i, j) * b(i, j));
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
+
+    // AddElementProductOf
+    Matrix<half> c_copy(c.DeepClone());
+    c.AddElementProductOf(a, b);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_EQUAL(c(i, j), c_copy(i, j) + a(i, j) * b(i, j));
+    }
+/*
+    // AssignSigmoidOf
+    CPUMatrix<half> ac = CPUMatrix<half>::RandomUniform(429, 1024, 5, 32, IncrementCounter());
+    CPUMatrix<half> bc = CPUMatrix<half>::RandomUniform(429, 1024, -5, 12, IncrementCounter());
+    Matrix<half> d(ac.GetNumRows(), ac.GetNumCols(), ac.Buffer(), matrixFlagNormal);
+    Matrix<half> e(bc.GetNumRows(), bc.GetNumCols(), bc.Buffer(), matrixFlagNormal);
+    ac.AssignSigmoidOf(bc);
+    d.AssignSigmoidOf(e);
+    foreach_coord (i, j, ac)
+    {
+        BOOST_CHECK_LT(fabs(ac(i, j) - d(i, j)), c_epsilonFloatE5);
+    }
+*/
+    // AssignSignOf
+    Matrix<half> m1 = Matrix<half>::RandomUniform(42, 12, c_deviceIdZero, -5, 12, IncrementCounter());
+    Matrix<half> m2(4, 5, c_deviceIdZero);
+    m2.AssignSignOf(m1);
+    foreach_coord (i, j, m1)
+    {
+        half v = m1(i, j);
+        half expected = SIGNUMZ(v);
+        half actual = m2(i, j);
+        BOOST_CHECK_EQUAL(expected, actual);
+    }
+
+    Matrix<half> m3 = Matrix<half>::RandomUniform(42, 12, c_deviceIdZero, -5, 2, IncrementCounter());
+    Matrix<half> m4(m3.DeepClone());
+    m3.AddSignOf(m1);
+    foreach_coord (i, j, m3)
+    {
+        half v = m1(i, j);
+        BOOST_CHECK_EQUAL(half(m4(i, j) + SIGNUMZ(v)), m3(i, j));
+    }
+
+    // AssignTruncateBottom and Top
+    Matrix<half> m5(2, 2, c_deviceIdZero);
+    m5(0, 0) = 1;
+    m5(0, 1) = 2;
+    m5(1, 0) = 3;
+    m5(1, 1) = 4;
+    m5.TransferFromDeviceToDevice(-1,0);
+
+    Matrix<half> m6(c_deviceIdZero);
+    m6.AssignTruncateBottomOf(m5, 3);
+    BOOST_CHECK_EQUAL(3, m6(0, 0));
+    BOOST_CHECK_EQUAL(3, m6(0, 1));
+    BOOST_CHECK_EQUAL(3, m6(1, 0));
+    BOOST_CHECK_EQUAL(4, m6(1, 1));
+
+    Matrix<half> m7(c_deviceIdZero);
+    m7.AssignTruncateTopOf(m5, 3);
+    BOOST_CHECK_EQUAL(1, m7(0, 0));
+    BOOST_CHECK_EQUAL(2, m7(0, 1));
+    BOOST_CHECK_EQUAL(3, m7(1, 0));
+    BOOST_CHECK_EQUAL(3, m7(1, 1));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixSumOfElements, RandomSeedFixture)
+{
+    Matrix<half> m = Matrix<half>::Ones(429, 1, 0);
+    half sum = m.SumOfElements();
+    BOOST_CHECK_EQUAL(429, sum);
+/*
+    CPUMatrix<half> mcpu = CPUMatrix<half>::Ones(429, 1024);
+    half sumCPU = mcpu.SumOfElements();
+    BOOST_CHECK_EQUAL(429 * 1024, sumCPU);
+*/
+    Matrix<half> m1 = Matrix<half>::Ones(1, 332, c_deviceIdZero);
+    m1 *= -1;
+    half sum1 = m1.SumOfElements();
+    BOOST_CHECK_EQUAL(-332, sum1);
+
+    Matrix<half> m2 = Matrix<half>::Ones(3, 2, c_deviceIdZero);
+    m2 *= -1;
+    half sum2 = m2.SumOfElements();
+    BOOST_CHECK_EQUAL(-1 * 3 * 2, sum2);
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixColumnSlice, RandomSeedFixture)
+{
+    std::array<half, 6> arr = {1, 2, 3, 4, 5, 6};
+    auto *fArray = arr.data();
+
+    Matrix<half> m0(2, 3, fArray, matrixFlagNormal);
+
+    Matrix<half> m1(2, 2, fArray, matrixFlagNormal);
+
+    Matrix<half> m2 = m0.ColumnSlice(0, 2);
+    BOOST_CHECK(m2.IsEqualTo(m1, c_epsilonFloatE4));
+
+    Matrix<half> m3(2, 2, fArray + 2, matrixFlagNormal);
+
+    m2 = m0.ColumnSlice(1, 2);
+    BOOST_CHECK(m2.IsEqualTo(m3, c_epsilonFloatE4));
+
+    size_t k = 100, n = 20, m = 50;
+
+    Matrix<half> ag(k, n, c_deviceIdZero);
+    ag.SetUniformRandomValue(-1, 1, IncrementCounter());
+
+    Matrix<half> bg(n, m, c_deviceIdZero);
+    bg.SetUniformRandomValue(-1, 1, IncrementCounter());
+
+    Matrix<half> cg(k, m, c_deviceIdZero);
+    cg.SetUniformRandomValue(-1, 1, IncrementCounter());
+
+    Matrix<half> dg(k, m, c_deviceIdZero);
+    dg.AssignValuesOf(cg);
+
+    Matrix<half>::MultiplyAndAdd(ag, false, bg, false, dg);
+
+    for (int i = 0; i < m; i++)
+    {
+        Matrix<half> colBg = bg.ColumnSlice(i, 1);
+        Matrix<half> colCg = cg.ColumnSlice(i, 1);
+        Matrix<half>::MultiplyAndAdd(ag, false, colBg, false, colCg);
+    }
+    BOOST_CHECK(cg.IsEqualTo(dg, c_epsilonFloatE4));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixKhatriRaoProduct, RandomSeedFixture)
+{
+    std::array<half, 24> arr =
+        {0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0};
+
+    auto *fArray = arr.data();
+    fArray[0] = 0.8147f;
+    fArray[3] = 0.9134f;
+    fArray[6] = 0.2785f;
+    fArray[9] = 0.9649f;
+    fArray[1] = 0.9058f;
+    fArray[4] = 0.6324f;
+    fArray[7] = 0.5469f;
+    fArray[10] = 0.1576f;
+    fArray[2] = 0.1270f;
+    fArray[5] = 0.0975f;
+    fArray[8] = 0.9575f;
+    fArray[11] = 0.9706f;
+    Matrix<half> a(3, 4, fArray, c_deviceIdZero);
+
+    fArray[0] = 0.9572f;
+    fArray[2] = 0.8003f;
+    fArray[4] = 0.4218f;
+    fArray[6] = 0.7922f;
+    fArray[1] = 0.4854f;
+    fArray[3] = 0.1419f;
+    fArray[5] = 0.9157f;
+    fArray[7] = 0.9595f;
+    Matrix<half> b(2, 4, fArray, c_deviceIdZero);
+
+    fArray[0] = 0.7798f;
+    fArray[6] = 0.7310f;
+    fArray[12] = 0.1175f;
+    fArray[18] = 0.7644f;
+    fArray[1] = 0.8670f;
+    fArray[7] = 0.5061f;
+    fArray[13] = 0.2307f;
+    fArray[19] = 0.1249f;
+    fArray[2] = 0.1215f;
+    fArray[8] = 0.0781f;
+    fArray[14] = 0.4038f;
+    fArray[20] = 0.7689f;
+    fArray[3] = 0.3954f;
+    fArray[9] = 0.1296f;
+    fArray[15] = 0.2550f;
+    fArray[21] = 0.9258f;
+    fArray[4] = 0.4396f;
+    fArray[10] = 0.0897f;
+    fArray[16] = 0.5008f;
+    fArray[22] = 0.1512f;
+    fArray[5] = 0.0616f;
+    fArray[11] = 0.0138f;
+    fArray[17] = 0.8768f;
+    fArray[23] = 0.9313f;
+    Matrix<half> d(6, 4, fArray, c_deviceIdZero);
+
+    Matrix<half> c(c_deviceIdZero);
+    c.AssignKhatriRaoProductOf(a, b);
+    BOOST_CHECK(c.IsEqualTo(d, 1e-3f));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixAddColumnReshapeProductOf, RandomSeedFixture)
+{
+    std::array<half, 12> arr =
+        {0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0};
+
+    auto *fArray = arr.data();
+    fArray[0] = 0.6557f;
+    fArray[6] = 0.7431f;
+    fArray[1] = 0.0357f;
+    fArray[7] = 0.3922f;
+    fArray[2] = 0.8491f;
+    fArray[8] = 0.6555f;
+    fArray[3] = 0.9340f;
+    fArray[9] = 0.1712f;
+    fArray[4] = 0.6787f;
+    fArray[10] = 0.7060f;
+    fArray[5] = 0.7577f;
+    fArray[11] = 0.0318f;
+    Matrix<half> a(6, 2, fArray, c_deviceIdZero);
+
+    fArray[0] = 0.2769f;
+    fArray[3] = 0.8235f;
+    fArray[1] = 0.0462f;
+    fArray[4] = 0.6948f;
+    fArray[2] = 0.0971f;
+    fArray[5] = 0.3171f;
+    Matrix<half> b(3, 2, fArray, c_deviceIdZero);
+
+    fArray[0] = 0.2867f;
+    fArray[2] = 1.2913f;
+    fArray[1] = 0.1266f;
+    fArray[3] = 0.4520f;
+    Matrix<half> d0(2, 2, fArray, c_deviceIdZero);
+
+    fArray[0] = 0.2657f;
+    fArray[2] = 1.0923f;
+    fArray[1] = 0.3636f;
+    fArray[3] = 0.6416f;
+    Matrix<half> d1(2, 2, fArray, c_deviceIdZero);
+
+    Matrix<half> c(2, 2, c_deviceIdZero);
+    c.SetValue(0.0f);
+    c.AddColumnReshapeProductOf(a, b, false);
+    BOOST_CHECK(c.IsEqualTo(d0, c_epsilonFloatE4));
+
+    c.SetValue(0.0f);
+    c.AddColumnReshapeProductOf(a, b, true);
+    BOOST_CHECK(c.IsEqualTo(d1, c_epsilonFloatE4));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixCopy, RandomSeedFixture)
+{
+    const size_t crow = 3;
+    const size_t ccol = 2;
+    // Matrices are stored as column-major so below is 3x2 matrix.
+    half src[] = {
+        1.0f, 3.0f, 4.0f,
+        6.0f, 2.0f, 5.0f};
+
+    Matrix<half> srcM(crow, ccol, src, matrixFlagNormal, c_deviceIdZero);
+    // Test full copy.
+    CPUMatrix<half> actualM(crow, ccol);
+    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.Data(), actualM.GetNumRows());
+
+    std::vector<half> expected = {
+        1.0f, 3.0f, 4.0f,
+        6.0f, 2.0f, 5.0f};
+    BOOST_CHECK(actualM.IsEqualTo(CPUMatrix<half>(actualM.GetNumRows(), actualM.GetNumCols(), expected.data(), matrixFlagNormal)));
+
+    // Test tile copy.
+    actualM.Resize(crow - 1, ccol - 1);
+    actualM.SetValue(half(std::numeric_limits<float>::quiet_NaN()));
+    srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.Data(), actualM.GetNumRows());
+
+    expected = {1.0f, 3.0f};
+    BOOST_CHECK(actualM.IsEqualTo(CPUMatrix<half>(actualM.GetNumRows(), actualM.GetNumCols(), expected.data(), matrixFlagNormal)));
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixHasElement, RandomSeedFixture)
+{
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
+    {
+        const size_t size = 3;
+        half src[size] = {0.0f, 1.0f, 2.0f};
+        HalfMatrix m1(1, size, src, deviceId, matrixFlagNormal);
+        BOOST_CHECK(HalfMatrix::HasElement(m1, 1.0f));
+        BOOST_CHECK(!HalfMatrix::HasElement(m1, -1.0f));
+
+        auto qnan = std::numeric_limits<float>::quiet_NaN();
+        BOOST_CHECK(!HalfMatrix::HasElement(m1, qnan));
+        auto posInf = std::numeric_limits<float>::infinity();
+        BOOST_CHECK(!HalfMatrix::HasElement(m1, posInf));
+
+        m1(0, 1) = qnan;
+        BOOST_CHECK(HalfMatrix::HasElement(m1, qnan));
+
+        m1(0, 1) = posInf;
+        BOOST_CHECK(HalfMatrix::HasElement(m1, posInf));
+    }
+}
+/*
+// Disable this due to cub doesn't support half on this yet
+BOOST_FIXTURE_TEST_CASE(MatrixVectorMax, RandomSeedFixture)
+{
+    // Matrices are stored as column-major so below is 3x2 matrix.
+    half src[] = {
+        1.0f, 3.0f, 4.0f,
+        6.0f, 2.0f, 5.0f};
+
+    half expectedIdx[] = {
+        2.0f, 1.0f,
+        0.0f, 2.0f};
+
+    half expectedVal[] = {
+        4.0f, 3.0f,
+        6.0f, 5.0f};
+
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
+    {
+        Matrix<half> expIdx(2, 2, expectedIdx, deviceId, matrixFlagNormal);
+        Matrix<half> expVal(2, 2, expectedVal, deviceId, matrixFlagNormal);
+
+        Matrix<half> actual(3, 2, src, deviceId, matrixFlagNormal);
+        Matrix<half> actualIdx(deviceId);
+        Matrix<half> actualVal(deviceId);
+
+        auto topK = 2;
+        actual.VectorMax(actualIdx, actualVal, true, topK);
+        BOOST_CHECK(actualIdx.IsEqualTo(expIdx));
+        BOOST_CHECK(actualVal.IsEqualTo(expVal));
+    }
+}
+*/
+BOOST_FIXTURE_TEST_CASE(MatrixAssignNumOfDiff, RandomSeedFixture)
+{
+    half labels[] = {1.0f, 2.0f, 3.0f};
+
+    // Matrices are stored as column-major so below is 2x3 matrix.
+    half topKResults[] = {
+        1.0f, 3.0f,
+        4.0f, 6.0f,
+        2.0f, 3.0f};
+
+    // CPU not supported yet
+    for (auto deviceId : {/*CPUDEVICE, */c_deviceIdZero})
+    {
+        Matrix<half> lbl(1, 3, labels, deviceId, matrixFlagNormal);
+        Matrix<half> topKRes(2, 3, topKResults, deviceId, matrixFlagNormal);
+
+        Matrix<half> actual(deviceId);
+        actual.AssignNumOfDiff(lbl, topKRes, true);
+
+        half expectedDiff = 1.0;
+        BOOST_CHECK_EQUAL(expectedDiff, actual.Get00Element());
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixScale, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float alpha = 0.7713f;
+    for (auto deviceId : {/*CPUDEVICE, */c_deviceIdZero})
+    {
+        auto a1 = HalfMatrix::RandomUniform(7, 11, deviceId, low, high, IncrementCounter());
+        auto a2 = a1.DeepClone();
+        BOOST_ASSERT(a1.IsEqualTo(a2));
+
+        auto b1 = HalfMatrix::RandomUniform(7, 11, deviceId, low, high, IncrementCounter());
+        auto b2 = b1.DeepClone();
+        BOOST_ASSERT(b1.IsEqualTo(b2));
+
+        Matrix<half>::ScaleAndAdd(alpha, b1, a1);
+
+        Matrix<half>::Scale(alpha, b2);
+        a2 += b2;
+
+        // BUGBUG: this test currently fails on GPU.
+        // This not works on GPU
+        //if (deviceId != CPUDEVICE)
+        //    continue;
+
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        // BOOST_CHECK(a1.IsEqualTo(a2));
+        BOOST_CHECK(a1.IsEqualTo(a2, 1e-3f));
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixSGDUpdate, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float lr = 0.77f;
+    for (auto deviceId : {/*CPUDEVICE, */c_deviceIdZero})
+    {
+        auto p1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto p2 = p1.DeepClone();
+        BOOST_ASSERT(p1.IsEqualTo(p2));
+
+        auto g1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto g2 = g1.DeepClone();
+        BOOST_ASSERT(g1.IsEqualTo(g2));
+
+        auto sg1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto sg2 = sg1.DeepClone();
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (; lr > 0.01; lr = lr / 2)
+        {
+            if (deviceId != CPUDEVICE)
+            {
+                // g1 is modified inside the GPU version of SGDUpdate, restore the original value here.
+                g1.SetValue(g2);
+            }
+
+            p1.SGDUpdate(g1, lr);
+            p2.MomentumSGDUpdate(g2, sg2, lr, 0.0, 1.0);
+
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
+
+            if (deviceId != CPUDEVICE)
+                continue;
+
+            // GPU version of SGDUpdate scales gradient by the learning rate, this check will fail.
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(g1.IsEqualTo(g2, c_epsilonFloatE5));
+        }
+
+        lr = std::pow(lr, lr);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixMomentumSGDUpdate_WithAndWithout_UnitGain, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float lr = 0.77f;
+    for (auto deviceId : {/*CPUDEVICE, */c_deviceIdZero})
+    {
+        auto p1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto p2 = p1.DeepClone();
+        BOOST_ASSERT(p1.IsEqualTo(p2));
+
+        auto g1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto g2 = g1.DeepClone();
+        BOOST_ASSERT(g1.IsEqualTo(g2));
+
+        auto sg1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto sg2 = sg1.DeepClone();
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (; lr > 0.01; lr = lr / 2)
+        {
+            p1.MomentumSGDUpdate(g1, sg1, lr, 0.0, 1.0);
+            p2.MomentumSGDUpdate(g2, sg2, lr, 0.0, 1.0);
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
+        }
+
+        for (lr = 1.0; lr > 0.03; lr = lr / 2)
+        {
+            p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, 0.5);
+            p2.MomentumSGDUpdate(g2, sg2, lr/2, 0.5, 1.0);
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
+        }
+
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        BOOST_CHECK(g1.IsEqualTo(g2, c_epsilonFloatE5));
+        BOOST_CHECK(sg1.IsEqualTo(sg2, c_epsilonFloatE5));
+
+        p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, 0.5);
+        p2.MomentumSGDUpdate(g2, sg2, lr, 0.5, 1.0);
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        BOOST_CHECK(!p1.IsEqualTo(p2, c_epsilonFloatE5));
+
+        lr = std::pow(lr, lr);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixNesterovAcceleratedMomentumSGDUpdate_WithAndWithout_UnitGain, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float lr = 0.77f;
+    for (auto deviceId : {/*CPUDEVICE, */c_deviceIdZero})
+    {
+        auto p1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto p2 = p1.DeepClone();
+        BOOST_ASSERT(p1.IsEqualTo(p2));
+
+        auto g1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto g2 = g1.DeepClone();
+        BOOST_ASSERT(g1.IsEqualTo(g2));
+
+        auto sg1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto sg2 = sg1.DeepClone();
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (; lr > 0.01; lr = lr / 2)
+        {
+            p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.0, 1.0);
+            p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.0, 1.0);
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
+        }
+
+        for (lr = 1.0; lr > 0.03; lr = lr / 2)
+        {
+            p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, 0.5);
+            p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr/2, 0.5, 1.0);
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
+        }
+
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        BOOST_CHECK(g1.IsEqualTo(g2));
+        BOOST_CHECK(sg1.IsEqualTo(sg2));
+
+        p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, 0.5);
+        p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.5, 1.0);
+
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        BOOST_CHECK(!p1.IsEqualTo(p2, c_epsilonFloatE5));
+
+        lr = std::pow(lr, lr);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float lr = 0.77f;
+    for (auto deviceId : {/*CPUDEVICE, */c_deviceIdZero})
+    {
+        auto p1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto p2 = p1.DeepClone();
+        BOOST_ASSERT(p1.IsEqualTo(p2));
+
+        auto g1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto g2 = g1.DeepClone();
+        BOOST_ASSERT(g1.IsEqualTo(g2));
+
+        auto sg1 = HalfMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto sg2 = sg1.DeepClone();
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (; lr > 0.01; lr = lr / 2)
+        {
+            double smoothedCount = 10 / lr;
+            double targetAdagradAvDenom = 1.0;
+            double varMomentum = 1.0 - lr;
+            double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = targetAdagradAvDenom * sqrt(smoothedCount);
+
+            sg1.FSAdagradUpdate(g1, p1, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.0, varMomentum, 1.0);
+            sg2.FSAdagradUpdate(g2, p2, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.0, varMomentum, 1.0 /*false*/);
+            // BUGBUG: at the moment this fails even with identical arguments.
+            // BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
+        }
+
+        sg2.SetValue(sg1);
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (lr = 1.0; lr > 0.03; lr = lr / 2)
+        {
+            double smoothedCount = 10 / lr;
+            double targetAdagradAvDenom = 1.0;
+            double varMomentum = 1.0 - lr;
+            double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = targetAdagradAvDenom * sqrt(smoothedCount);
+
+            sg1.FSAdagradUpdate(g1, p1, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.5, varMomentum, 0.5);
+            sg2.FSAdagradUpdate(g2, p2, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr /*lr/2*/, 0.5, varMomentum, 0.5 /*false*/);
+            // BUGBUG: at the moment this fails even with identical arguments.
+            // BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
+        }
+
+        lr = std::pow(lr, lr);
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 }
 } } }

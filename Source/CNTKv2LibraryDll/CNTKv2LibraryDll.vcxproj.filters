@@ -169,6 +169,9 @@
     <ClInclude Include="proto\onnx\core\utils.h">
       <Filter>proto\onnx\core</Filter>
     </ClInclude>
+    <ClInclude Include="API\HalfConverter.hpp">
+      <Filter>API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

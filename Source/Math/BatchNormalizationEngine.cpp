@@ -9,9 +9,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
-void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
-                                        Mat& out, double epsilon, Mat& savedMean, Mat& savedInvStdDev)
+template <class InoutType, class StatType>
+void BatchNormEngine<InoutType, StatType>::Forward(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
+                                        InoutMat& out, double epsilon, StatMat& savedMean, StatMat& savedInvStdDev)
 {
     assert(in.GetNumRows() == m_inOutT.GetNumElements());
     assert(out.GetNumRows() == m_inOutT.GetNumElements());
@@ -62,9 +62,9 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
     }
 }
 
-template <class ElemType>
-void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor,
-                                         const Mat& savedMean, const Mat& savedInvStdDev, Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad)
+template <class InoutType, class StatType>
+void BatchNormEngine<InoutType, StatType>::Backward(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor,
+                                         const StatMat& savedMean, const StatMat& savedInvStdDev, StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad)
 {
     assert(!savedMean.IsEmpty());
     assert(!savedInvStdDev.IsEmpty());
@@ -72,12 +72,13 @@ void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat&
     BackwardCore(in, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad);
 }
 
-template <class ElemType>
-class CntkBatchNormEngine : public BatchNormEngine<ElemType>
+template <class InoutType, class StatType>
+class CntkBatchNormEngine : public BatchNormEngine<InoutType, StatType>
 {
 public:
-    using Base = BatchNormEngine<ElemType>;
-    using typename Base::Mat;
+    using Base = BatchNormEngine<InoutType, StatType>;
+    using typename Base::InoutMat;
+    using typename Base::StatMat;
 
 public:
     CntkBatchNormEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
@@ -98,32 +99,33 @@ protected:
             InvalidArgument("CNTK batch normalization supports only cudnn(CHW) layout.");
     }
 
-    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
-                     Mat& out, double epsilon, Mat& savedMean, Mat& savedInvStdDev) override
+    void ForwardCore(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
+                     InoutMat& out, double epsilon, StatMat& savedMean, StatMat& savedInvStdDev) override
     {
         in.BatchNormalizationForward(scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance, out, epsilon, savedMean, savedInvStdDev);
     }
 
-    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
-                      Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) override
+    void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
+                      StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) override
     {
         if (!accumulateDataGrad)
-            grad.SetValue((ElemType)0);
+            grad.SetValue((InoutType)0);
 
         srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad);
     }
 };
 
-template class CntkBatchNormEngine<float>;
-template class CntkBatchNormEngine<double>;
+template class CntkBatchNormEngine<float, float>;
+template class CntkBatchNormEngine<double, double>;
+template class CntkBatchNormEngine<half, float>;
 
 template <typename T> bool HasFlag(T src, T testFlag)
 {
     return ((int)src & (int)testFlag) != 0;
 }
 
-template <class ElemType>
-std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
+template <class InoutType, class StatType>
+std::unique_ptr<BatchNormEngine<InoutType, StatType>> BatchNormEngine<InoutType, StatType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                                                                              bool spatial, ImageLayoutKind imageLayout,
                                                                              BatchNormEngineKind enabledEngines)
 {
@@ -133,7 +135,7 @@ std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEV
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "Using CNTK batch normalization engine.\n");
 
-        return std::make_unique<CntkBatchNormEngine<ElemType>>(deviceId, inOutT, spatial, imageLayout);
+        return std::make_unique<CntkBatchNormEngine<InoutType, StatType>>(deviceId, inOutT, spatial, imageLayout);
     }
 
     if (HasFlag(enabledEngines, BatchNormEngineKind::CuDnn))
@@ -141,13 +143,14 @@ std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEV
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "Using cuDNN batch normalization engine.\n");
 
-        return CuDnnBatchNormEngineFactory<ElemType>::Create(deviceId, inOutT, spatial, imageLayout);
+        return CuDnnBatchNormEngineFactory<InoutType, StatType>::Create(deviceId, inOutT, spatial, imageLayout);
     }
 
     RuntimeError("Could not find appropriate batch normalization engine.");
 }
 
-template class BatchNormEngine<float>;
-template class BatchNormEngine<double>;
+template class BatchNormEngine<float, float>;
+template class BatchNormEngine<double, double>;
+template class BatchNormEngine<half, float>;
 
 }}}

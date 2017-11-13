@@ -112,6 +112,7 @@ namespace CNTK
         {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
         {PrimitiveOpType::Pad, L"Pad"},
         {PrimitiveOpType::Crop, L"Crop"},
+        {PrimitiveOpType::Cast, L"Cast" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

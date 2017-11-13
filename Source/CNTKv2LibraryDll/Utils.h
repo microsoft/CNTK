@@ -735,4 +735,11 @@ namespace CNTK
             return kv.second.sweepEnd;
         });
     }
+
+    // half is V1 ElemType, so specialize here instead of in CNTKLibrary.h
+    template<>
+    inline DataType AsDataType<half>()
+    {
+        return DataType::Float16;
+    }
 }

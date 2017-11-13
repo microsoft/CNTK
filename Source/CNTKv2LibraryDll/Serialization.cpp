@@ -231,13 +231,17 @@ namespace CNTK
             return DictionaryValue::Type(type);
         }
 
-        template <typename T>
-        static void CopyData(const NDArrayView& src, RepeatedField<T>* dst)
+        template <typename SrcT, typename DstT=SrcT>
+        static void CopyData(const NDArrayView& src, RepeatedField<DstT>* dst)
         {
             auto size = src.Shape().TotalSize();
-            dst->Resize((int)size, T());
-            const T* buffer = src.DataBuffer<T>();
-            memcpy(dst->mutable_data(), buffer, (int)size * sizeof(T));
+            dst->Resize((int)size, DstT());
+            const SrcT* buffer = src.DataBuffer<SrcT>();
+            if (std::is_same<SrcT, DstT>::value)
+                memcpy(dst->mutable_data(), buffer, (int)size * sizeof(DstT));
+            else
+                for (size_t i = 0; i < size; i++)
+                    dst->mutable_data()[i] = (DstT)buffer[i];
         }
 
         template <typename T>
@@ -250,32 +254,44 @@ namespace CNTK
             {
                 auto value = buffer[i];
                 if (tSize <= sizeof(uint32))
-                    output.WriteLittleEndian32(Encode<T, uint32>(value));
-                else 
+                {
+                    output.WriteLittleEndian32(Encode<T, uint32>((float)value));
+                }
+                else
+                {
                     output.WriteLittleEndian64(Encode<T, uint64>(value));
+                }
             }
         }
 
-        template <typename T>
+        template <typename SrcT, typename DstT = SrcT>
         static bool ReadData(RenewableCodedStream& input, NDArrayView& dst)
         {
             auto size = dst.Shape().TotalSize();
-            T* buffer = dst.WritableDataBuffer<T>();
+            DstT* buffer = dst.WritableDataBuffer<DstT>();
             for (auto i = 0; i < size; i++)
             {
-                if (!input.Read<T>(buffer+i))
+                SrcT value;
+                if (!input.Read<SrcT>(&value))
                     return false;
+                buffer[i] = (DstT)value;
             }
             return true;
         }
 
-        template <typename T>
-        static void CopyData(const RepeatedField<T>& src, NDArrayView* dst)
+        template <typename SrcT, typename DstT = SrcT>
+        static void CopyData(const RepeatedField<SrcT>& src, NDArrayView* dst)
         {
             auto size = src.size();
             assert(size == dst->Shape().TotalSize());;
-            T* buffer = dst->WritableDataBuffer<T>();
-            memcpy(buffer, src.data(), size * sizeof(T));
+            DstT* buffer = dst->WritableDataBuffer<DstT>();
+            if (std::is_same<SrcT, DstT>::value)
+                memcpy(buffer, src.data(), size * sizeof(SrcT));
+            else
+            {
+                for (size_t i = 0; i < size; i++)
+                    buffer[i] = (DstT)src.data()[i];
+            }
         }
 
         
@@ -312,6 +328,10 @@ namespace CNTK
             {
                 CopyData<double>(src, dst->mutable_double_values()->mutable_value());
             }
+            else if (src.GetDataType() == DataType::Float16)
+            {
+                CopyData<float16, float>(src, dst->mutable_float_values()->mutable_value());
+            }
         }
     }
 
@@ -327,6 +347,10 @@ namespace CNTK
             else if (src.GetDataType() == DataType::Double)
             {
                 WriteData<double>(src, output);
+            }
+            else if (src.GetDataType() == DataType::Float16)
+            {
+                WriteData<float16>(src, output);
             }
         }
     }
@@ -349,6 +373,11 @@ namespace CNTK
             {
                 if (!ReadData<double>(wrapper, dst))
                     return false;                
+            }
+            else if (dst.GetDataType() == DataType::Float16)
+            {
+                if (!ReadData<float, float16>(wrapper, dst))
+                    return false;
             }
         }
         return true;
@@ -443,6 +472,13 @@ namespace CNTK
         {
             if (src.double_values().value().size() == shape->TotalSize())
                 CopyData<double>(src.double_values().value(), dst);
+            else
+                m_arrayViews.push_back({ dst, nullptr });
+        }
+        else if(dataType == DataType::Float16)
+        {
+            if (src.float_values().value().size() == shape->TotalSize())
+                CopyData<float, float16>(src.float_values().value(), dst);
             else
                 m_arrayViews.push_back({ dst, nullptr });
         }

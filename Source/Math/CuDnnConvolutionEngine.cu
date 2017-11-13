@@ -11,6 +11,10 @@
 #include <typeinfo>
 #include <typeindex>
 #include "CuDnnCommon.h"
+#include "half.hpp"
+
+// We want tensor core be enabled in order to get(v7)/find tensor core results. But if algo without tensorcore is faster, the only way to force faster algo is to turn it off. Since re-tuning can happen quite often in CNTK, it gets bad if we don't do it carefully. It also require move to get_v7 and we can't test until we can run fp16.
+// For now, let's keep it simple and enable tensor core all the time for fp16.
 
 template <>
 const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
@@ -25,11 +29,6 @@ const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
 #define FILTER_FORMAT CUDNN_TENSOR_NCHW
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-static bool IsGpu(DEVICEID_TYPE deviceId)
-{
-    return deviceId >= 0;
-}
 
 class CuDnnKernel
 {
@@ -54,6 +53,9 @@ public:
         // Set map count(aka K) dimension.
         dims[0] = (int)mapCount;
         dims[1] = (int)filt[filt_size - 1];
+        int numElems = 1;
+        for(int i=0; i<(int)dim_size;i++) numElems *= dims[i];
+        m_isOdd = (numElems%2==1);
         CUDNN_CALL(cudnnSetFilterNdDescriptor(m_kernel, dataType, FILTER_FORMAT, (int)dim_size, dims.data()));
     }
 
@@ -71,10 +73,16 @@ public:
         return m_kernel;
     }
 
+    bool isOdd()
+    {
+        return m_isOdd;
+    }
+
     DISABLE_COPY_AND_MOVE(CuDnnKernel);
 
 private:
     cudnnFilterDescriptor_t m_kernel;
+    bool m_isOdd;
 };
 
 class CuDnnConv
@@ -102,7 +110,10 @@ public:
         }
         CUDNN_CALL(cudnnSetConvolutionNdDescriptor(m_conv, (int)dim_size, pad.data(),
                                                    stride.data(), dilation.data(),
-                                                   CUDNN_CROSS_CORRELATION, dataType));
+                                                   CUDNN_CROSS_CORRELATION, dataType == CUDNN_DATA_HALF ? CUDNN_DATA_FLOAT : dataType));
+        // allow tensor core for fp16 by default
+        if(dataType == CUDNN_DATA_HALF)
+            CUDNN_CALL(cudnnSetConvolutionMathType(m_conv, CUDNN_TENSOR_OP_MATH));
     }
 
     ~CuDnnConv()
@@ -286,7 +297,7 @@ protected:
             calgo = 1;              // set count of algorithms
             return result;
         };
-        // find workspace size needed to auto-tune all algorithms, as well as the size needed for deterministic algorithm 
+        // find workspace size needed to auto-tune all algorithms, as well as the size needed for deterministic algorithm
         auto workspaceSizeFinder = [&, this]() -> cudnnStatus_t
         {
             size_t tmpSize;
@@ -396,6 +407,15 @@ protected:
         {
             if(!noMem)
                 return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT, workspace.BufferSize(), &algo);
+            // special case for half/odd filter
+            if(m_kernelT->isOdd() && m_dataType == CUDNN_DATA_HALF)
+            {
+                size_t tmpSize = 0;
+                algo = (cudnnConvolutionBwdFilterAlgo_t) 1;
+                auto err = cudnnGetConvolutionBackwardFilterWorkspaceSize(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, algo, &tmpSize);
+                workspace.Resize((tmpSize + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+                return err;
+            }
             return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE, 0, &algo);
         };
         // find deterministic algorithm
@@ -512,7 +532,7 @@ private:
                 assert(calgo == 1);                                 // only one deterministic algorithm will be returned
                 algo.RecordAlgoBatchSizeWorkspaceSize(true, (*algoPerf).algo, batchSize, (*algoPerf).memory);
                 algo.autotuningState = AutotuningState::Running;    // no further need for tuning since this is deterministic, directly enter running state
-            }            
+            }
             else
             {
                 // This branch handles two cases: a) When first MB comes through, and b) When input has free dimensions.
@@ -687,7 +707,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemT
                                                                                              bool forceDeterministicAlgorithms, bool poolIncludePad,
                                                                                              bool inputHasFreeDimension)
 {
-    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, 
+    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
                                                               forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
 }
 
@@ -741,5 +761,6 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
 
 template class CuDnnConvolutionEngineFactory<float>;
 template class CuDnnConvolutionEngineFactory<double>;
+template class CuDnnConvolutionEngineFactory<half>;
 
 } } }

@@ -873,6 +873,7 @@ protected:
 
 template class OneHotNode<float>;
 template class OneHotNode<double>;
+template class OneHotNode<half>;
 
 #ifdef COMING_SOON
 

@@ -27,3 +27,4 @@
 
 #include "constants.h"
 #include "fixtures.h"
+#define HALF_IN_BOOST_TEST

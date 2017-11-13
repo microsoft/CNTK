@@ -41,6 +41,8 @@
 
 // Forward declarations
 namespace Microsoft { namespace MSR { namespace CNTK {
+    struct MatrixBase;
+
     template <typename ElemType>
     class Matrix;
 

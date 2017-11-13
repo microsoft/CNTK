@@ -49,8 +49,8 @@ def sanitize_precision(precision):
     Converts precision to NumPy precision
 
     Args:
-        precision (str or `np.float32` or `np.float64`): precision, if string
-         it can be one of 'float' 'float32, 'double', or 'float64'
+        precision (str or `np.float16` or `np.float32` or `np.float64`): precision, if string
+         it can be one of 'float' 'float32, 'double', 'float64' or 'float16'
 
     Returns:
         NumPy precision
@@ -59,6 +59,8 @@ def sanitize_precision(precision):
         return np.float32
     elif precision in [cntk_py.DataType_Double, 'double', 'float64', np.float64]:
         return np.float64
+    elif precision in [cntk_py.DataType_Float16, 'float16', np.float16]:
+        return np.float16
     elif precision in [cntk_py.DataType_Unknown]:
         return None
     else:
@@ -77,8 +79,8 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     Convert to :class:`~cntk.variables.Variable` so that it can be passed
     as Variable to the CNTK operators.
 
-      * If ``arg`` is a NumPy array and its type is neither `np.float32` nor
-        `np.float64`, it sets it to `np.float32`.
+      * If ``arg`` is a NumPy array and its type is not among (`np.float32`,
+        `np.float64`, `np.float16`), it sets it to `np.float32`.
       * If ``arg`` is an op, it is assumed that it has only one output, which
         will be returned.
 
@@ -334,8 +336,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
          Data should be either NumPy arrays or a
          :class:`~cntk.io.MinibatchData` instance.
-        precision (str or `np.float32` or `np.float64`): if string it can be
-         one of 'float' 'float32, 'double', 'float64', or None
+        precision (str or `np.float32` or `np.float64` or `np.float16`): if string it can be
+         one of 'float' 'float32, 'double', 'float64', 'float16', or None
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
         extract_values_from_minibatch_data (`bool`, defaults to `True`):
@@ -440,6 +442,8 @@ def data_type_to_dtype(data_type):
         return np.float32
     elif data_type == cntk_py.DataType_Double:
         return np.float64
+    elif data_type == cntk_py.DataType_Float16:
+        return np.float16
     elif data_type == cntk_py.DataType_Unknown:
         return object
     else:
@@ -457,12 +461,15 @@ def sanitize_dtype_numpy(dtype):
             is_str and dtype in ('double', 'float64'):
         # The Python type 'float' is a np.float64
         return np.float64
+    elif is_type and dtype in (float, np.float16) or \
+            is_str and dtype in ('float16'):
+        return np.float16
     else:
         raise ValueError('data type "%s" is not supported' % dtype)
 
 
 def sanitize_dtype_cntk(dtype):
-    if isinstance(dtype, int) and dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double, cntk_py.DataType_Unknown):
+    if isinstance(dtype, int) and dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double, cntk_py.DataType_Float16, cntk_py.DataType_Unknown):
         return dtype
     if dtype is None:
         return cntk_py.DataType_Unknown
@@ -472,6 +479,8 @@ def sanitize_dtype_cntk(dtype):
         return cntk_py.DataType_Float
     elif dtype == np.float64:
         return cntk_py.DataType_Double
+    elif dtype == np.float16:
+        return cntk_py.DataType_Float16
     elif dtype == object:
         return cntk_py.DataType_Unknown
     else:

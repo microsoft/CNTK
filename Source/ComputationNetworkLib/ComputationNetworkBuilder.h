@@ -45,7 +45,14 @@ public:
     // TODO: separate into nodes that have inputs and those that duplicate functions with input adding except just not adding inputs. Clear?
 
     ComputationNodePtr CreateLearnableParameter(const std::wstring& paramName, const size_t rows, const size_t cols);
-    ComputationNodePtr CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape); // V2
+    shared_ptr<ComputationNode<ElemType>> CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
+    {
+        return this->template TypedCreateLearnableParameter<ElemType>(paramName, tensorShape);
+    }
+
+    template<class ValueType>
+    shared_ptr<ComputationNode<ValueType>> TypedCreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape); // V2
+
     // sparse matrix size is optionally specified
     // ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
     ComputationNodePtr CreateInputNode(const std::wstring& inputName, const size_t rows, const wstring& dynamicAxisName = L"");
