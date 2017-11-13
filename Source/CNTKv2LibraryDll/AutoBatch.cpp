@@ -39,7 +39,10 @@ static size_t logMemoizeStatsCounter = logMemoizeStatsPeriod - 1; // counts up t
 static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
 #endif
-static bool ShouldLogMemoizeStats() { return logMemoizeStatsCounter < 4; }
+static bool ShouldLogMemoizeStats()     { return logMemoizeStatsCounter < 4; }
+static bool ShouldLogMemoizeStatsCUDA() { logMemoizeStatsCounter & 1; }
+//static bool ShouldLogMemoizeStatsCUDA() { return true;  }
+//static bool ShouldLogMemoizeStatsCUDA() { return false; }
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -634,7 +637,7 @@ CudaStats* BeginCudaStats(PrimitiveOpType op, const wchar_t* opLabel, size_t cat
     cudaStatsPtr->category = category;
     cudaStatsPtr->numInvocations++;
     cudaStatsPtr->totalElements += totalElements;
-    if (logMemoizeStatsCounter & 1)
+    if (ShouldLogMemoizeStatsCUDA())
         NDArrayView::Sync(device); // reset CUDA timer
     cudaStatsPtr->timerLaunch.Start();
     return cudaStatsPtr;
@@ -645,7 +648,7 @@ void EndCudaStats(CudaStats* cudaStatsPtr, const DeviceDescriptor& device = Devi
     if (cudaStatsPtr)
     {
         cudaStatsPtr->timerLaunch.Stop();
-        if (logMemoizeStatsCounter & 1)
+        if (ShouldLogMemoizeStatsCUDA())
             cudaStatsPtr->cudaElapsed += NDArrayView::Sync(device);
     }
 }
@@ -3138,7 +3141,12 @@ class InternalVariable::AutoBatch
                     else
                     {
                         if (fromSliceAxis + 1 != batchAxis)
+#if 0                       // happens when disabling Barrier??
+                            // BUGBUG: Will crash later. Fix this.
+                            outputShape.insert(outputShape.begin() + fromSliceAxis, batchAxis - (fromSliceAxis + 1), 1);
+#else
                             LogicError("batch axis not adjacent to stacking axis??"); // TODO: Can this legally happen? If yes, then we can just insert ones.
+#endif
                         fail_if(outputShape.back() / batchDim * batchDim != outputShape.back(), "stacking axis cannot be converted to batching axis??");
                         outputShape.back() /= batchDim;
                         outputShape.push_back(batchDim);
@@ -4597,11 +4605,15 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
 //        - none at all if not batchable
 //     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the free axis
 
+// (this #define overrides the constant in CNTKV2Library.h, which is expensive to modify)
+#define FORCE_IMMEDIATE m_forceImmediate
+//#define FORCE_IMMEDIATE (m_forceImmediate || true)
+
 /*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
-    m_arity(arity), m_isBasicBlock(isBasicBlock)
+    m_arity(arity), m_isBasicBlock(isBasicBlock)//             &&false)
 {
     // for debugging, we can disable static invocation altogether
-    if (m_forceImmediate)
+    if (FORCE_IMMEDIATE)
     {
         m_operands.resize(m_arity);
         m_lambdaRememberedForDebugging = lambda; // just remember the lambda, and done
@@ -4746,7 +4758,7 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
 Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
 {
     auto& operands = m_operands; // TODO: pass as &, for clarity
-    if (m_forceImmediate)
+    if (FORCE_IMMEDIATE)
     {
         return m_lambdaRememberedForDebugging(m_operands);
     }
