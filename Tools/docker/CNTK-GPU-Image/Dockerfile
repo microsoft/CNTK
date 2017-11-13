@@ -95,8 +95,8 @@ RUN PROTOBUF_VERSION=3.1.0 \
     rm -rf $PROTOBUF_STRING
 
 # Install CNTK custom MKL
-RUN CNTK_CUSTOM_MKL_VERSION=3 && \
-    mkdir /usr/local/CNTKCustomMKL && \
+ARG CNTK_CUSTOM_MKL_VERSION=3
+RUN mkdir /usr/local/CNTKCustomMKL && \
     wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-$CNTK_CUSTOM_MKL_VERSION.tgz | \
     tar -xzf - -C /usr/local/CNTKCustomMKL
 
@@ -182,7 +182,7 @@ RUN git clone --depth=1 -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
     cd ../../.. && \
     mkdir -p build-mkl/gpu/release && \
     cd build-mkl/gpu/release && \
-    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
+    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL/CNTKCustomMKL-Linux-$CNTK_CUSTOM_MKL_VERSION && \
     make -j"$(nproc)" all
 
 RUN cd Examples/Image/DataSets/CIFAR-10 && \
