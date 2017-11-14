@@ -712,7 +712,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         numParameters += p.Shape().TotalSize();
     fprintf(stderr, "Total number of learnable parameters is %u in %d parameter tensors.\n", (unsigned int)numParameters, (int)parameters.size()), fflush(stderr);
     let epochSize = 8192 * 10000; // Frantic epoch
-    let minibatchSize = 4096;//    *communicator->Workers().size() / 6; // for debugging: switch to smaller MB when running without MPI
+    let isDebugging = communicator->Workers().size() == 1;
+    let minibatchSize = 4096 / (isDebugging ? 6 : 1); // for debugging: smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 0.2;
     LearnerPtr baseLearner;
@@ -833,7 +834,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #if 1
         // dynamically adjust the MB size lower at the start to ramp up
         let fullMbSizeAt = 1000000;
-        let lowMbSize = minibatchSize / (communicator->Workers().size() > 6 ? 8 : 16);
+        let lowMbSize = isDebugging ? minibatchSize : minibatchSize / (communicator->Workers().size() > 6 ? 8 : 16);
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
         let actualMinibatchSize = clamp(lowMbSize + (minibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, minibatchSize);
 #else
@@ -846,6 +847,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // SUB-MINIBATCH LOOP
         // We get 10 x the minibatch, sort it by source length, and then process it in consecutive chunks of 1/10, which form the actual minibatch for training
+        let numAPICalls00 = CountAPICalls(0);
         for (let& subBatchArgs : args)
         {
             timer.Restart();
@@ -938,16 +940,22 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             info.trainingLossValue->AsScalar<float>();
             //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             partTimer.Restart();
-            learner->Update(gradients, info);
-            //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
-            let timePerUpdate = partTimer.Elapsed();
-            // log the parameters  --BUGBUG: do this before 1-bit SGD
+#if 1       // log the gradients
             if (mbCount % 50 == 1) for (let& p : parameters)
             {
-                p.Value()->LogToFile(p.Name(), stderr, 10);
                 if (gradients[p]->GetStorageFormat() != StorageFormat::SparseBlockCol)
                     gradients[p]->LogToFile(L"grad " + p.Name(), stderr, 10);
             }
+#endif
+            learner->Update(gradients, info);
+            //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
+            let timePerUpdate = partTimer.Elapsed();
+#if 1       // log the parameters
+            if (mbCount % 50 == 1) for (let& p : parameters)
+            {
+                p.Value()->LogToFile(p.Name(), stderr, 10);
+            }
+#endif
             //partTimer.Log("Update", numLabels);
             let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
             totalLabels += info.numberOfSamples;
@@ -979,6 +987,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //if (mbCount == 10)
             //    exit(0);
             mbCount++;
+        }
+        if (mbCount == 20)
+        {
+            let numAPICalls = CountAPICalls(0) - numAPICalls00;
+            fprintf(stderr, "#API calls in last minibatch = %.1f * %d\n", numAPICalls / (float)subMinibatches, (int)subMinibatches), fflush(stderr);
+            //_exit(0);
         }
     }
 }

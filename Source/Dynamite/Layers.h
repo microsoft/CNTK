@@ -54,8 +54,13 @@ static UnaryModel Barrier(size_t depthHint, const wstring& name = wstring())
     // TODO: we can save just a little by wrapping this into a static function. We'd save the attribute Dictionary (which can be shared).
     return UnaryModel([=](const Variable& x) -> Variable
         {
+#if 1
             CountAPICalls();
             return BatchSync(x, depthHint, name);
+#else       // no barrier (for evaluation)
+            depthHint; name;
+            return x;
+#endif
         });
 }
 
