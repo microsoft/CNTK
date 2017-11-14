@@ -3469,6 +3469,16 @@ namespace CNTK
         }
 
         ///
+        ///  Recursively traverses the Function graph underlying 'this' Function invoking the provided functor for all visited nodes in the graph.
+        ///  A wrapper for PreorderTraverseFunctions.
+        ///
+        template <typename FunctionType>
+        void PreorderTraverse(const FunctionType& functor, bool traverseInsideBlockFunction = false)
+        {
+            PreorderTraverseFunctions(RootFunction(), functor, traverseInsideBlockFunction);
+        }
+
+        ///
         /// Find a function with the given name in the Function graph underlying 'this' Function.
         /// If more than one function with the same name, an exception is thrown.
         /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given name.
@@ -3636,16 +3646,21 @@ namespace CNTK
             visitedFunctions.insert(rootFunction);
             functor(rootFunction);
 
-            if (traverseInsideBlockFunction && rootFunction->IsBlock())
-                PreorderTraverseFunctions(rootFunction->BlockRoot(), visitedFunctions, functor, traverseInsideBlockFunction);
-
-            std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
-            for (const auto& rootInput : rootFunctionInputs)
+            if (rootFunction->IsComposite())
+                PreorderTraverseFunctions(rootFunction->RootFunction(), visitedFunctions, functor, traverseInsideBlockFunction);
+            else
             {
-                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                if (traverseInsideBlockFunction && rootFunction->IsBlock())
+                    PreorderTraverseFunctions(rootFunction->BlockRoot(), visitedFunctions, functor, traverseInsideBlockFunction);
+
+                std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
+                for (const auto& rootInput : rootFunctionInputs)
                 {
-                    const auto& function = rootInput.Owner();
-                    PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
+                    if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                    {
+                        const auto& function = rootInput.Owner();
+                        PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
+                    }
                 }
             }
         }
