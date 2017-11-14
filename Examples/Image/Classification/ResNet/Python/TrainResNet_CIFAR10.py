@@ -13,7 +13,7 @@ import numpy as np
 from cntk import cross_entropy_with_softmax, classification_error, reduce_mean
 from cntk import Trainer, cntk_py
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learners import momentum_sgd, learning_parameter_schedule_per_sample, momentum_schedule
 from cntk.debugging import *
 from cntk.logging import *
 from resnet_models import *
@@ -80,13 +80,12 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
 
     # shared training parameters
     minibatch_size = 128
-    momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
 
     # Set learning parameters
     lr_per_sample = [lr/minibatch_size for lr in lr_per_mb]
-    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
-    mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
+    lr_schedule = learning_parameter_schedule_per_sample(lr_per_sample, epoch_size=epoch_size)
+    mm_schedule = momentum_schedule(0.9, minibatch_size)
 
     # progress writers
     progress_writers = [ProgressPrinter(tag='Training', log_to_file=log_dir, num_epochs=max_epochs, gen_heartbeat=gen_heartbeat)]

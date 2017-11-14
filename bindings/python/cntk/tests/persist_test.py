@@ -192,7 +192,7 @@ def test_restore_constants(tmpdir):
 
     x = C.input_variable(10)
     f = C.layers.BatchNormalization()(x)
-    trainer = C.Trainer(f, C.reduce_sum(f), C.sgd(f.parameters, C.learning_rate_schedule(0.1, 'sample')))
+    trainer = C.Trainer(f, C.reduce_sum(f), C.sgd(f.parameters, C.learning_parameter_schedule_per_sample(0.1)))
 
     model_filename = str(tmpdir / 'function.out')
     checkpoint_filename = str(tmpdir / 'checkpoint.out')

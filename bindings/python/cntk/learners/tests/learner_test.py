@@ -52,13 +52,13 @@ MOMENTUM_SCHEDULE_PARAMS = [
 
 LEARNER_LAMBDAS = [
     lambda params: C.adadelta(params),
-    lambda params: C.adagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch)),
-    lambda params: C.adam(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)),
-    lambda params: C.fsadagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)),
-    lambda params: C.nesterov(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)),
-    lambda params: C.rmsprop(params, lr=learning_rate_schedule(1, UnitType.minibatch), gamma=0.1, inc=3.0, dec=0.1, max=np.inf, min=1e-8),
-    lambda params: C.sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch)),
-    lambda params: C.momentum_sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9))]
+    lambda params: C.adagrad(params, lr=learning_parameter_schedule(1)),
+    lambda params: C.adam(params, lr=learning_parameter_schedule(1), momentum=C.momentum_schedule(0.9)),
+    lambda params: C.fsadagrad(params, lr=learning_parameter_schedule(1), momentum=C.momentum_schedule(0.9)),
+    lambda params: C.nesterov(params, lr=learning_parameter_schedule(1), momentum=C.momentum_schedule(0.9)),
+    lambda params: C.rmsprop(params, lr=learning_parameter_schedule(1), gamma=0.1, inc=3.0, dec=0.1, max=np.inf, min=1e-8),
+    lambda params: C.sgd(params, lr=learning_parameter_schedule(1)),
+    lambda params: C.momentum_sgd(params, lr=learning_parameter_schedule(1), momentum=C.momentum_schedule(0.9))]
 
 @pytest.mark.parametrize("params, expectation, minibatch_size", LR_SCHEDULE_PARAMS_LEGACY)
 def test_learning_rate_schedule(params, expectation, minibatch_size):
@@ -466,7 +466,7 @@ def test_noise_injection_with_checkpointing():
     w2 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
     w3 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
 
-    lr=learning_rate_schedule(0.5, UnitType.sample)
+    lr=C.learning_parameter_schedule_per_sample(0.5)
     m=C.momentum_schedule(0.99)
 
     learner1 = C.momentum_sgd([w1], lr, m, gaussian_noise_injection_std_dev=0.5)
@@ -515,8 +515,8 @@ def test_learner_logging():
     lr_values = [0.3, 0.2, 0.1, 0]
     m_values = [0.6, 0.7, 0.8]
     learner = C.momentum_sgd(z.parameters,
-                  learning_rate_schedule(lr_values, UnitType.sample, 1),
-                  C.momentum_schedule(m_values, 1))
+                  C.learning_parameter_schedule_per_sample(lr_values, epoch_size=1),
+                  C.momentum_schedule(m_values, epoch_size=1))
     trainer = Trainer(z, (ce, errs), [learner], writer)
 
     for i in range(10):
@@ -572,7 +572,7 @@ def test_sweep_based_schedule(tmpdir, device_id):
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
-    lr_per_sample = learning_rate_schedule([0.3, 0.2, 0.1, 0.0], UnitType.sample)
+    lr_per_sample = C.learning_parameter_schedule_per_sample([0.3, 0.2, 0.1, 0.0])
     learner = sgd(z.parameters, lr_per_sample)
     trainer = Trainer(z, (ce, errs), [learner])
 
@@ -617,7 +617,7 @@ def generate_random_data(sample_size, feature_dim, num_classes):
 
 
 def test_learner_empy_parameters_list():
-    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
+    lr_per_sample = C.learning_parameter_schedule_per_sample(0.1)
     with pytest.raises(ValueError):
         learner = C.sgd([], lr_per_sample)
 
@@ -673,14 +673,14 @@ def test_sgd_with_noise():
     # in some layers. This tests that cuRand library will not
     # complain about generating an odd number of random values
     np.random.seed(98052)
-    learner = lambda params: sgd(params, lr=learning_rate_schedule(0.125, UnitType.minibatch), gaussian_noise_injection_std_dev=0.01)
+    learner = lambda params: sgd(params, lr=C.learning_parameter_schedule(0.125), gaussian_noise_injection_std_dev=0.01)
     ffnet(learner)
     # We just verify that we did not crash
     assert(True)
 
 def test_universal():
     np.random.seed(98052)
-    builtin_sgd = lambda params: sgd(params, lr=learning_rate_schedule(0.125, UnitType.minibatch))
+    builtin_sgd = lambda params: sgd(params, lr=C.learning_parameter_schedule(0.125))
     builtin_last_avg_error, builtin_avg_error, _ = ffnet(builtin_sgd)
     np.random.seed(98052)
     my_sgd = lambda ps, gs: C.combine([C.assign(p, p - 0.125/25 * g) for p, g in zip(ps, gs)])
@@ -735,10 +735,10 @@ def test_restore_from_checkpoint(tmpdir, learner):
 # this should be replaced with LEARNER_LAMBDAS
 SPARSE_AND_DENSE_LEARNER_LAMBDAS = [
     (lambda params: C.adadelta(params), False),
-    (lambda params: C.adam(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)), True),
-    (lambda params: C.fsadagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)), True),
-    (lambda params: C.rmsprop(params, lr=learning_rate_schedule(1, UnitType.minibatch), gamma=0.1, inc=3.0, dec=0.1, max=np.inf, min=1e-8), True),
-    (lambda params: C.sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch)), False)]
+    (lambda params: C.adam(params, lr=learning_parameter_schedule(1), momentum=C.momentum_schedule(0.9)), True),
+    (lambda params: C.fsadagrad(params, lr=learning_parameter_schedule(1), momentum=C.momentum_schedule(0.9)), True),
+    (lambda params: C.rmsprop(params, lr=learning_parameter_schedule(1), gamma=0.1, inc=3.0, dec=0.1, max=np.inf, min=1e-8), True),
+    (lambda params: C.sgd(params, lr=learning_parameter_schedule(1)), False)]
 
 @pytest.mark.parametrize("learner, gpu_only", SPARSE_AND_DENSE_LEARNER_LAMBDAS)
 @pytest.mark.parametrize("checkpoint", [True, False])

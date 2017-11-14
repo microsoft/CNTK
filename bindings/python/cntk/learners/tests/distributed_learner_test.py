@@ -51,7 +51,7 @@ class SimpleTrainer:
         self.trainer = C.Trainer(self.z, (self.z, None), learner, []) if learner else None
 
     def create_distributed_learner(self, mode, config):
-        local_learner = C.sgd(self.z.parameters, C.learning_rate_schedule(0.01, unit=C.learners.UnitType.sample))
+        local_learner = C.sgd(self.z.parameters, C.learning_parameter_schedule_per_sample(0.01))
         try:
             if mode == 'data_parallel':
                 if config is None:

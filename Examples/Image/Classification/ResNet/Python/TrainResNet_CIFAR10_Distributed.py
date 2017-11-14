@@ -10,9 +10,10 @@ import argparse
 import cntk as C
 import numpy as np
 
+import cntk as C
 from cntk import input, cross_entropy_with_softmax, classification_error, Trainer, cntk_py
 from cntk import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
-from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learners import momentum_sgd, learning_parameter_schedule, momentum_schedule
 from cntk.device import try_set_default_device, gpu
 from cntk.train.training_session import *
 from cntk.debugging import *
@@ -71,15 +72,13 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
     else:
         return RuntimeError("Unknown model name!")
 
-    momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
 
     # Set learning parameters
     minibatch_size = 128
     lr_per_sample = [lr/minibatch_size for lr in lr_per_mb]
-    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
-    mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
-
+    lr_schedule = learning_parameter_schedule(lr_per_mb, minibatch_size = minibatch_size, epoch_size=epoch_size)
+    mm_schedule = momentum_schedule(0.9, minibatch_size = minibatch_size)
     # learner object
     if block_size != None and num_quantization_bits != 32:
         raise RuntimeError("Block momentum cannot be used with quantization, please remove quantized_bits option.")

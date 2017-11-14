@@ -79,7 +79,7 @@ def test_clone_freeze():
     c_copies = [q.value for q in c_clone.constants]
 
     # update z
-    trainer = C.Trainer(z, C.squared_error(z, label),  C.sgd(z.parameters, C.learning_rate_schedule(1.0, C.UnitType.minibatch)))
+    trainer = C.Trainer(z, C.squared_error(z, label),  C.sgd(z.parameters, C.learning_parameter_schedule(1.0)))
     x = np.random.randn(16,3).astype('f')
     y = np.random.randn(16,5).astype('f')
     trainer.train_minibatch({features: x, label: y})

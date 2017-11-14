@@ -54,7 +54,7 @@ class Parameters():
         self.cntk_num_test_images = -1           # set per data set below
         self.cntk_mb_size = -1                   # set per data set below
         self.cntk_max_epochs = -1                # set per data set below
-        self.cntk_momentum_time_constant = -1    # set per data set below
+        self.cntk_momentum_per_sample = -1    # set per data set below
 
         # for Distributed learner
         self.distributed_flg = False     # In case of distributed learning, set 'True'
@@ -83,7 +83,7 @@ class GroceryParameters(Parameters):
         self.cntk_num_test_images = 5
         self.cntk_mb_size = 5
         self.cntk_max_epochs = 20
-        self.cntk_momentum_time_constant = 10
+        self.cntk_momentum_per_sample = 0.8187307530779818
 
         # postprocessing
         self.nmsThreshold = 0.01
@@ -117,7 +117,7 @@ class PascalParameters(Parameters):
         self.cntk_num_test_images = 4952
         self.cntk_mb_size = 2
         self.cntk_max_epochs = 17
-        self.cntk_momentum_time_constant = 20
+        self.cntk_momentum_per_sample = 0.951229424500714
 
         self.pascalDataDir = os.path.join(self.rootDir, "..", "..", "DataSets", "Pascal")
         self.imgDir = self.pascalDataDir

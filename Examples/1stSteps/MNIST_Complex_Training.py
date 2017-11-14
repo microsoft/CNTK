@@ -81,14 +81,14 @@ def criterion(data, label_one_hot):
 
 # Learner object. The learner implements the update algorithm, in this case momentum SGD.
 # Because this script supports data-parallel training, the learning rate is specified
-# "per sample" (UnitType.sample), the value is already pre-divided by the minibatch size.
+# "per sample", the value is already pre-divided by the minibatch size.
 # This allows data-parallel training to slice the data into subsets and also to increase
 # the minibatch size where possible, while maintaining the same contribution per sample gradient.
 epoch_size = len(X_train)
 lr_per_sample    = 0.001
-lr_schedule      = C.learning_rate_schedule(lr_per_sample, C.learners.UnitType.sample)
-mm_time_constant = [0]*5 + [1024] # 5 epochs without momentum, then switch it on
-mm_schedule      = C.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
+lr_schedule      = C.learning_parameter_schedule_per_sample(lr_per_sample)
+mm_per_sample    = [0]*5 + [0.9990239141819757] # 5 epochs without momentum, then switch it on
+mm_schedule      = C.learners.momentum_schedule_per_sample(mm_per_sample, epoch_size=epoch_size)
 
 # Instantiate the trainer object to drive the model training.
 learner = C.learners.momentum_sgd(model.parameters, lr_schedule, mm_schedule)
@@ -114,7 +114,7 @@ prev_metric = 1 # metric from previous call to the callback. At very beginning, 
 def adjust_lr_callback(index, average_error, cv_num_samples, cv_num_minibatches):
     global prev_metric
     if (prev_metric - average_error) / prev_metric < 0.05: # relative gain must reduce metric by at least 5% rel
-        learner.reset_learning_rate(C.learning_rate_schedule(learner.learning_rate() / 2, C.learners.UnitType.sample))
+        learner.reset_learning_rate(C.learning_parameter_per_sample(learner.learning_rate() / 2))
         if learner.learning_rate() < lr_per_sample / (2**7-0.1): # we are done after the 6-th LR cut
             print("Learning rate {} too small. Training complete.".format(learner.learning_rate()))
             return False # means we are done
@@ -137,7 +137,7 @@ learner = C.train.distributed.data_parallel_distributed_learner(learner)
 # For distributed training, we must maximize the minibatch size, as to minimize
 # communication cost and GPU underutilization. Hence, we use a "schedule"
 # that increases the minibatch size after a few epochs. By specifying the learning rate
-# as UnitType.sample, the contribution per sample maintains the same scale without
+# as per sample, the contribution per sample maintains the same scale without
 # having to fix up the learning rate.
 # For this MNIST model, larger minibatch sizes make it faster, because the
 # model is too small to utilize a full GPU. Hence data-parallel training cannot
