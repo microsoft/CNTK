@@ -270,7 +270,7 @@ def training_parameter_schedule(schedule, unit=UnitType.minibatch, epoch_size=No
         training parameter schedule
 
     See also:
-        :func:`learning_rate_schedule`
+        :func:`learning_parameter_schedule`
     '''
 
     if unit == UnitType.sample:
@@ -353,6 +353,34 @@ def learning_parameter_schedule(schedule, minibatch_size=None, epoch_size=None):
     raise ValueError(
         'schedule must be either a float or a list, not %s' % type(schedule))
 
+
+@typemap
+def learning_parameter_schedule_per_sample(schedule, epoch_size=None):
+    '''
+    Create a learning parameter schedule as if the parameter is applied to minibatches of size 1. CNTK
+    will scale the parameters accordingly with respect to the actual minibatch size.
+
+    Args:
+        schedule (float or list): if float, is the parameter schedule to be used
+         for all samples. In case of list [p_1, p_2, .., p_n], the i-th parameter p_i in the list is used as the
+         value from the (``epoch_size`` * (i-1) + 1)-th sample to the (``epoch_size`` * i)-th sample. If list contains
+         pair, i.e. [(num_epoch_1, p_1), (num_epoch_n, p_2), .., (num_epoch_n, p_n)], the i-th parameter is used as a
+         value from the (``epoch_size`` * (num_epoch_0 + ... + num_epoch_2 + ... + num_epoch_(i-1) + 1)-th sample to the
+         (``epoch_size`` * num_epoch_i)-th sample (taking num_epoch_0 = 0 as a special initialization).
+        epoch_size (optional, int): number of samples as a scheduling unit.
+         Parameters in the schedule change their values every ``epoch_size``
+         samples. If no ``epoch_size`` is provided, this parameter is substituted
+         by the size of the full data sweep, in which case the scheduling unit is
+         the entire data sweep (as indicated by the MinibatchSource) and parameters
+         change their values on the sweep-by-sweep basis specified by the
+         ``schedule``.
+
+    Returns:
+        learning parameter schedule as if it is applied to minibatches of size 1.
+    '''
+    return learning_parameter_schedule(schedule, minibatch_size=1, epoch_size=epoch_size)
+
+
 @typemap
 def learning_rate_schedule(lr, unit, epoch_size=None):
     '''
@@ -384,20 +412,20 @@ def learning_rate_schedule(lr, unit, epoch_size=None):
 @typemap
 def momentum_schedule(momentum, epoch_size=None, minibatch_size = None):
     '''
-    Create a per-minibatch momentum schedule (using the same semantics as
-    :func:`training_parameter_schedule` with the `unit=UnitType.minibatch`).
+    Create a momentum schedule (using the same semantics as
+    :func:`learning_parameter_schedule`) which applies the momentum 
+    decay every N samples where N is specified by the argument `minibatch_size`.
 
     Args:
         momentum (float or list): see parameter ``schedule`` in
          :func:`training_parameter_schedule`.
         epoch_size (int): see parameter ``epoch_size`` in
          :func:`training_parameter_schedule`.
-        minibatch_size (int): an integer to specify the reference minibatch size that schedule are designed for; 
-          CNTK will scale the schedule internally so as to simulate the behavior of the schedule as much as possible
-          to match the designed effect. 
-
-    If you want to provide momentum values in a minibatch-size
-    agnostic way, use :func:`momentum_as_time_constant_schedule`.
+        minibatch_size (int): an integer to specify the reference minibatch size; 
+          CNTK will scale the momentum internally so as to simulate the momentum decay of the specified minibatch 
+          size while the actual minibatch sizes of the fed data can vary. In this way, momentum values can be provided 
+          in a minibatch-size agnostic way (equal decay per sample). If minibatch_size is `None` (default), the momentum
+          is applied to the whole minibatch regardless of the actual minibatch sizes (not in a minibatch-size agnostic way).
 
     Examples:
         >>> # Use a fixed momentum of 0.99 for all samples
@@ -420,6 +448,23 @@ def momentum_schedule(momentum, epoch_size=None, minibatch_size = None):
         momentum schedule
     '''
     return learning_parameter_schedule(momentum, minibatch_size, epoch_size)
+
+
+@typemap
+def momentum_schedule_per_sample(momentum, epoch_size=None):
+    '''
+    Create a per-sample momentum schedule (using the same semantics as
+    :func:`momentum_schedule` but specializing in per sample momentum schedule).
+
+    Args:
+        momentum (float or list): see parameter ``schedule`` in
+         :func:`training_parameter_schedule`.
+        epoch_size (int): see parameter ``epoch_size`` in
+         :func:`momentum_schedule`.
+    Returns:
+        momentum schedule
+    '''
+    return momentum_schedule(momentum, minibatch_size=1, epoch_size=epoch_size)
 
 
 @typemap
@@ -447,16 +492,13 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None):
          :func:`training_parameter_schedule`.
         epoch_size (int): see parameter ``epoch_size`` in
          :func:`training_parameter_schedule`.
-        minibatch_size (int): an integer to specify the reference minibatch size that schedule are designed for; 
-          CNTK will scale the schedule internally so as to simulate the behavior of the schedule as much as possible
-          to match the designed effect. 
 
     CNTK specifies momentum in a minibatch-size agnostic way as the time
     constant (in samples) of a unit-gain 1st-order IIR filter. The value
     specifies the number of samples after which a gradient has an effect of
     1/e=37%.
 
-    If you want to specify the momentum per sample (or per minibatch),
+    If you want to specify the momentum per N samples (or per minibatch),
     use :func:`momentum_schedule`.
 
     Examples:
@@ -758,7 +800,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     return opt
 
 @typemap
-def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95, epsilon=1e-8,
+def adadelta(parameters, lr=learning_parameter_schedule_per_sample(1), rho=0.95, epsilon=1e-8,
              l1_regularization_weight=0.0, l2_regularization_weight=0.0,
              gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
              gradient_clipping_with_truncation=True, use_mean_gradient=None,
@@ -896,12 +938,12 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
 
 @typemap
 def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
-              variance_momentum=momentum_as_time_constant_schedule(720000),
+              variance_momentum=momentum_schedule_per_sample(0.9999986111120757),
               l1_regularization_weight=0.0, l2_regularization_weight=0.0,
               gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
               gradient_clipping_with_truncation=True, use_mean_gradient=None,
               minibatch_size=None, epoch_size=None):
-    '''fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_schedule_per_sample(0.9999986111120757), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an FSAdaGrad learner instance to learn the parameters.
 
     Args:
@@ -913,8 +955,8 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
-        variance_momentum (float, list, output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults
-         to ``momentum_as_time_constant_schedule(720000)``.
+        variance_momentum (float, list, output of :func:`momentum_schedule`): variance momentum schedule. Defaults
+         to ``momentum_schedule_per_sample(0.9999986111120757)``.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
@@ -970,12 +1012,12 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 
 @typemap
 def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
-         variance_momentum=momentum_as_time_constant_schedule(720000),
+         variance_momentum=momentum_schedule_per_sample(0.9999986111120757),
          l1_regularization_weight=0.0, l2_regularization_weight=0.0,
          gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
          gradient_clipping_with_truncation=True, use_mean_gradient=None, epsilon=1e-8, adamax=False,
          minibatch_size=None, epoch_size=None):
-    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8, adamax=False)
+    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_schedule_per_sample(0.9999986111120757), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8, adamax=False)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
 
@@ -988,8 +1030,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
-        variance_momentum (float, list, output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. 
-         Note that this is the beta2 parameter in the Adam paper [1]. Defaults to ``momentum_as_time_constant_schedule(720000)``. 
+        variance_momentum (float, list, output of :func:`momentum_schedule`): variance momentum schedule. 
+         Note that this is the beta2 parameter in the Adam paper [1]. Defaults to ``momentum_schedule_per_sample(0.9999986111120757)``. 
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,

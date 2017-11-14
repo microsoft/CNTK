@@ -8,6 +8,7 @@ import numpy as np
 import os
 import shutil
 import sys
+import cntk
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import try_set_default_device
@@ -17,7 +18,7 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python"))
 from prepare_test_data import prepare_CIFAR10_data
-from TrainResNet_CIFAR10 import train_and_evaluate, create_reader
+from TrainResNet_CIFAR10 import train_and_evaluate, create_image_mb_source
 
 #TOLERANCE_ABSOLUTE = 2E-1
 
@@ -36,8 +37,8 @@ def test_cifar_resnet_error(device_id):
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
-    reader_train = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True)
-    reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
+    reader_train = create_image_mb_source(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True, total_number_of_samples=1 * 50000)
+    reader_test  = create_image_mb_source(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
 
     # Create a path to TensorBoard log directory and make sure it does not exist.
     abs_path = os.path.dirname(os.path.abspath(__file__))
