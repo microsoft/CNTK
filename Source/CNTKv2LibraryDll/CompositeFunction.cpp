@@ -487,7 +487,23 @@ namespace CNTK
             std::shared_ptr<const MatrixBase> valueMatrix = variable.IsConstant() ? value->GetMatrixBase() : value->GetWritableMatrixBase();
 
             if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
-                CastAssignNodeValue(computationNodePtr, variable.GetDataType(), valueMatrix);
+            {
+                // shallow copy from parameter value to computation node value to link them together
+                switch (variable.GetDataType())
+                {
+                case DataType::Float:
+                    std::dynamic_pointer_cast<ComputationNode<float>>(computationNodePtr)->Value() = std::dynamic_pointer_cast<const Matrix<float>>(valueMatrix)->AsReference();
+                    break;
+                case DataType::Double:
+                    std::dynamic_pointer_cast<ComputationNode<double>>(computationNodePtr)->Value() = std::dynamic_pointer_cast<const Matrix<double>>(valueMatrix)->AsReference();
+                    break;
+                case DataType::Float16:
+                    std::dynamic_pointer_cast<ComputationNode<half>>(computationNodePtr)->Value() = std::dynamic_pointer_cast<const Matrix<half>>(valueMatrix)->AsReference();
+                    break;
+                default:
+                    LogicError("Unsupported data type");
+                }
+            }
             else // Constant: if initialized data lives on wrong device, make a copy to the right one (copy is OK since it's constant)
             {
                 // TODO: the following two lines are a workaround for a bug in the Math library

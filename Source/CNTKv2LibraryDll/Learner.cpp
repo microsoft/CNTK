@@ -10,7 +10,7 @@
 #include "Serialization.h"
 
 #define DISPATCH_TO_TYPED_UPDATE_FUNCTION                                                                     \
-    switch (gradientValue->GetDataType())                                                             \
+    switch (gradientValue->GetDataType())                                                                     \
     {                                                                                                         \
     case DataType::Float:                                                                                     \
         Update<float>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);                  \
