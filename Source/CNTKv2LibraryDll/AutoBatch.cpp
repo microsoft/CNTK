@@ -40,7 +40,7 @@ static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
 #endif
 static bool ShouldLogMemoizeStats()     { return logMemoizeStatsCounter < 4; }
-static bool ShouldLogMemoizeStatsCUDA() { logMemoizeStatsCounter & 1; }
+static bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter & 1; }
 //static bool ShouldLogMemoizeStatsCUDA() { return true;  }
 //static bool ShouldLogMemoizeStatsCUDA() { return false; }
 
