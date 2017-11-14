@@ -10,7 +10,9 @@
 #ifdef USE_ZIP
 #include <File.h>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 extern std::string GetZipError(int err);
 
@@ -259,6 +261,6 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
     m_workspace.push(std::move(contents));
     return outImg;
 }
-}}}
+}
 
 #endif

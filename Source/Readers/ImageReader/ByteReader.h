@@ -157,7 +157,7 @@ private:
     std::string m_zipPath;
     ZipPtr m_zipFile;
     std::unordered_map<size_t, std::pair<zip_uint64_t, zip_uint64_t>> m_seqIdToIndex;
-    conc_stack<std::vector<unsigned char>> m_workspace;
+    Microsoft::MSR::CNTK::conc_stack<std::vector<unsigned char>> m_workspace;
 };
 #endif
 

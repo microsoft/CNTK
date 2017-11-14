@@ -13,7 +13,9 @@
 #ifdef USE_FACE_FILE
 #include <File.h>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, const string& faceFile, const string &landmarkFile, int pointsCount = LANDMARK_POINTS_NUMBER)
 {
@@ -259,6 +261,6 @@ cv::Mat FaceFileByteReader::Read(size_t seqId, const std::string& seqPath, bool 
     return outImg;
 }
 
-}}}
+}
 
 #endif
