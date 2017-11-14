@@ -115,7 +115,7 @@ void TestTimesAndPlus(size_t inputDim,
 
     if (testSaveAndReLoad)
     {
-        SaveAndReloadModel<ElementType>(timesAndPlusFunc, { &inputVar, &timesParam, &plusParam }, device);
+        SaveAndReloadModel<ElementType>(timesAndPlusFunc, std::vector<Variable*>({ &inputVar, (Variable*)&timesParam, (Variable*)&plusParam }), device);
 
         // Make sure that the names of the input variables were properly restored
         BOOST_TEST(!((inputVar.Name() != inputVarName) || (timesParam.Name() != timesParamName) || (plusParam.Name() != plusParamName)), "One or more input variable names were not properly restored after save and load");

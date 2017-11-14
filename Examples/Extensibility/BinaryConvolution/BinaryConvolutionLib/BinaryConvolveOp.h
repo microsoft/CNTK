@@ -26,7 +26,7 @@ public:
 
     // declares our function as a subset of the Function class and maps the dictionary values in
     BinaryConvolveFunction(const Variable& leftOperand, const Variable& rightOperand, const Dictionary& attributes, const std::wstring& name)
-        : Function({ leftOperand, rightOperand }, Dictionary(attributes), name), Attr(Dictionary(attributes))
+        : Function(std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(attributes), name), Attr(Dictionary(attributes))
     {} 
 
 private:

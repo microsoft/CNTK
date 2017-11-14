@@ -21,7 +21,7 @@ public:
     }
 
     UserTimesFunction(const Variable& leftOperand, const Variable& rightOperand, const Dictionary& attributes, const std::wstring& name)
-        : Function({ leftOperand, rightOperand }, Dictionary(attributes), name)
+        : Function(std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(attributes), name)
     {}
 
 private:

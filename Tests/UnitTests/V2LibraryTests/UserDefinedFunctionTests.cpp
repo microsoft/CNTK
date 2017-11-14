@@ -113,7 +113,7 @@ public:
 private:
     OutputsVectorType InferOutputs() override
     {
-        std::vector<Variable> outputs;
+        std::vector<InternalVariable> outputs;
         auto leftOperand = Inputs()[0];
         auto rightOperand = Inputs()[1];
         auto tempFunc = m_isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
@@ -126,7 +126,7 @@ private:
 
 public: // public for MakeSharedObject() only. TODO: Remove once we know how to do that right.
     UserDefinedTimesOrPlusFunction(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name)
-        : Function({ leftOperand, rightOperand }, Dictionary(), name), m_isTimes(isTimes)
+        : Function(std::vector<Variable>({ leftOperand, rightOperand }), Dictionary(), name), m_isTimes(isTimes)
     {
         auto createTimesOperandVar = [this](const Variable& operand, const std::wstring& operandName) {
             Variable var;

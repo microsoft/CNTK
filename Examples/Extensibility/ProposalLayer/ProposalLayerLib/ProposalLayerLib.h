@@ -229,7 +229,7 @@ private:
 
     OutputsVectorType InferOutputs() override
     {
-        std::vector<Variable> outputs;
+        std::vector<InternalVariable> outputs;
         auto firstOperand = Function::Inputs()[0];
         auto proposalShape = NDShape({ 4, NDShape::FreeDimension });
         auto dtype = firstOperand.GetDataType();

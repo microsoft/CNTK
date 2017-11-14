@@ -152,7 +152,7 @@ void TestSimpleRecurrence(size_t inputDim,
         Variable reducedOutputVar = reducedOutput;
 
         auto rootFunc = Combine({ reducedOutput, plusOutput });
-        SaveAndReloadModel<ElementType>(rootFunc, { &inputVar, &timesParam, &plusParam, &plusOutputVar, &reducedOutputVar }, device);
+        SaveAndReloadModel<ElementType>(rootFunc, std::vector<Variable*>({ &inputVar, (Variable*)&timesParam, (Variable*)&plusParam, &plusOutputVar, &reducedOutputVar }), device);
 
         plusOutput = plusOutputVar;
         reducedOutput = reducedOutputVar;

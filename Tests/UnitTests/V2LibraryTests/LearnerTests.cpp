@@ -134,7 +134,7 @@ void TestUniversalLearner(size_t numParameters, size_t numMinibatches, const Dev
     ElementType lr = (ElementType) 0.06125;
     ParameterUpdateFunctor mysgd = [lr](Parameter p, Variable g) -> FunctionPtr 
     { 
-        return Assign(p, Minus(p , ElementTimes(Constant::Scalar(lr), g))); 
+        return Assign((Variable&)p, Minus(p , ElementTimes(Constant::Scalar(lr), g))); 
     };
     auto learner = UniversalLearner(parameters, mysgd);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
