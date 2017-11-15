@@ -2111,7 +2111,7 @@ namespace CNTK
     // Forward declarations
     inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes(), bool needsGradient = false, bool isSparse = false);
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name = std::wstring());
+    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, bool isVolatile, const std::wstring& name = std::wstring());
 
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
@@ -2261,6 +2261,13 @@ namespace CNTK
         CNTK_API bool NeedsGradient() const;
 
         ///
+        /// Returns a boolean value indicating if this Variable is flagged for inference only (leaf),
+        /// or has been inferred as such (non-leaf).
+        /// This Variable and any Variable depending on it will have NeedsGradient() return false.
+        ///
+        CNTK_API bool IsVolatile() const;
+
+        ///
         /// Returns a string representation for this variable.
         ///
         CNTK_API std::wstring AsString() const;
@@ -2290,7 +2297,7 @@ namespace CNTK
     public:
 #endif
         CNTK_API InternalVariable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
-            : InternalVariable(shape, varType, dataType, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name, uid)
+            : InternalVariable(shape, varType, dataType, value, needsGradient, dynamicAxes, /*isSparse =*/ false, /*isVolatile=*/false, name, uid)
         {}
 
     protected:
@@ -2303,17 +2310,18 @@ namespace CNTK
 #ifdef SWIGPYTHON
     public:
 #endif
+        // TODO: get rid of all these overloads
         CNTK_API InternalVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
-            : InternalVariable(shape, VariableKind::Input, dataType, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
+            : InternalVariable(shape, VariableKind::Input, dataType, nullptr, needsGradient, dynamicAxes, isSparse, /*isVolatile=*/false, name, uid)
         {}
 
         // TODO: This should be a private but if not made public, the python bindings build complains about an unresolved external
         // Probably due the above ctor being a public method in SWIG codegen
     public:
-        CNTK_API InternalVariable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
+        CNTK_API InternalVariable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, bool isVolatile, const std::wstring& name, const std::wstring& uid);
 
         // simplified version for Dynamite
-        CNTK_API InternalVariable(NDShape&& shape, VariableKind varType, ::CNTK::DataType dataType, bool needsGradient, bool isSparse);
+        CNTK_API InternalVariable(NDShape&& shape, VariableKind varType, ::CNTK::DataType dataType, bool needsGradient, bool isSparse, bool isVolatile);
 
     private:
         PrimitiveFunctionPtr OutputOwner() const; // for Outputs only; can never return null
@@ -2370,7 +2378,7 @@ namespace CNTK
     private:
         friend inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*=Axis::UnknownDynamicAxes()*/, bool needsGradient /*= false*/, bool isSparse /*= false*/);
         friend inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes()*/);
-        friend inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/);
+        friend inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, bool isVolatile, const std::wstring& name /*= L""*/);
 #endif
 
     public:
@@ -2646,6 +2654,7 @@ namespace CNTK
         return InputVariable(shape, isSparse, dataType, L"", dynamicAxes);
     }
 
+#if 0 // OutputVariables are internal, so always call the full constructor
     ///
     /// Create an 'Output' variable
     ///
@@ -2661,13 +2670,15 @@ namespace CNTK
     {
         return InternalVariable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, /*isSparse =*/ false, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
     }
+#endif
 
     ///
     /// Create an 'Output' variable
     ///
-    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, const std::wstring& name /*= L""*/)
+    // TODO: we should reorder the arguments, to separate type from gradient flags
+    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, bool isVolatile, const std::wstring& name /*= L""*/)
     {
-        return InternalVariable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, isSparse, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
+        return InternalVariable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, isSparse, isVolatile, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
     }
 
     static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
@@ -2796,7 +2807,14 @@ namespace CNTK
         /// Construct a Constant whose initial contents are a copy of the specified value
         ///
         Constant(const NDArrayViewPtr& value, const std::wstring& name = std::wstring())
-            : Constant(value, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
+            : Constant(value, /*isVolatile=*/false, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
+        {}
+
+        ///
+        /// Construct a Constant whose initial contents are a copy of the specified value
+        ///
+        Constant(const NDArrayViewPtr& value, bool isVolatile, const std::wstring& name = std::wstring())
+            : Constant(value, isVolatile, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
         {}
 
         // TODO: Constructor to move a specified NDArrayView value
@@ -2866,8 +2884,8 @@ namespace CNTK
         CNTK_API void RecordValueUpdate();
 
     private:
-        Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
-            : InternalVariable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, false, {}, value->GetStorageFormat() != StorageFormat::Dense, name, uid)
+        Constant(const NDArrayViewPtr& value, bool isVolatile, const std::wstring& name, const std::wstring& uid)
+            : InternalVariable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, /*needsGradient=*/false, {}, value->GetStorageFormat() != StorageFormat::Dense, isVolatile, name, uid)
         {}
 
         ///

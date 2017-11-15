@@ -585,6 +585,51 @@ namespace CNTK
     //     - Splice() for each of the N inputs
     // 'free' ops are always batched together and get executed first
 
+    // thoughts on memory management:
+    // Goal: do not keep NDArrayViews around that are not needed.
+    // For example, in inference we can free NDArrayViews once their last consumer has consumed them.
+    // 3 kinds of NDArrayViews:
+    //  - values that user code may request
+    //     -
+    //     - condition: user code holds an explicit reference to a Variable,
+    //       which means that its value can be requested any time, and should therefore
+    //       be kept once computed
+    //  - values needed for back propagation
+    //     - We know during forward prop which Variables are never needed in backprop
+    //     - For those that may be used in backprop, we cannot know whether the user will
+    //       actually ask for those gradients. But it is a reasonable assumption that
+    //       all gradients will be requested. We rather should use explicit StopGradient()
+    //       calls as an optimization hint
+    //  - local temporary values not needed for gradients
+    //     - Variables not needed for gradient computation, based on the specific function (e.g. + does not need the output values)
+    //     - inference/"volatile" (will never receive a gradient)
+    //     - StopGradient()
+    //
+    // For each, maintain its own arena; that is, 3 arenas
+    //  - user-requested ones are few, but may live long, and therefore should not block deallocation of an arena
+    //  - local temps can be freed more frequently
+    //    Can they be maintained in a stack?
+    //
+    // Algorithm:
+    //  - each time a Variable is consumed, and is known to not be needed by backprop, clear the Variable object
+    //    The Variable and/or its associated NDArrayView data will remain alive if
+    //     - any code holds a shared_ptr to the NDArrayView  --alive via ref count of NDArrayView instance, mostly that would be user code
+    //     - any code holds a view (slice/reshape/alias) to the tensor data  --alive via ref count of the arena instance
+    //     - other consumers that have the same Variable as an input --alive via internally-held ref count to the the Variable instance
+    //     - explicit reference to the Variable in user code  --alive via externally-held ref count to the Variable instance
+    // - at end of ComputeKnowableValue(),
+    //   reset all Variables' shared_ptrs that fulfill one of the following conditions:
+    //    - m_needsGradient flag is not set, or         // note: m_volatile is subsumed here already
+    //    - not required for any gradient (considering also which gradients may never be requested)
+    //      E.g. if gradient to inputs[0] needs output, but inputs[0].needsGradient == false, then it does not need output.
+    //  - propagation rules for m_volatile and m_needsGradient:
+    //     - m_volatile and m_needsGradient are *user-set* on Constants and Parameters (which can be frozen),
+    //       and *inferred* through non-leaves as follows:
+    //        - m_volatile      = any(input.m_volatile      for input in inputs)    // this Variable will never receive a gradient
+    //        - m_needsGradient = any(input.m_needsGradient for input in inputs)    // this Variable needs to receive a gradient
+    //                            and !m_volatile
+    //                            and m_op != StopGradient
+
 // ===========================================================================
 // helper classes
 // ===========================================================================
@@ -2369,9 +2414,11 @@ class InternalVariable::AutoBatch
         auto fPtr = MakeSharedObject<PrimitiveFunction>(op, move(inputs), move(attributes)/*, move(name)*/);
         // unfortunately output initialization must be separated out since it requires s shared_ptr to f
         let& fInputs = fPtr->m_inputs;
-        fPtr->InitOutput(OutputVariable(NDShape(shape)/*it's a &&*/, fInputs.front().GetDataType(),
-                                        any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), // PERF BUGBUG: caller knows this already; should pass it in
-                                        all_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsSparse();      }))); // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
+        let isVolatile    = any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsVolatile();    }); // PERF BUGBUG: caller knows this already; should pass it in
+        let needsGradient = !isVolatile &&
+                            any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }); // PERF BUGBUG: caller knows this already; should pass it in
+        let isSparse      = all_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsSparse();      }); // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
+        fPtr->InitOutput(OutputVariable(NDShape(shape)/*it's a &&*/, fInputs.front().GetDataType(), needsGradient, isSparse, isVolatile));
         //if (fPtr->m_uniqueIdForDebugging == 194962)
         //    Break;
         //if (!fPtr->m_outputs.front().NeedsGradient())
@@ -2489,9 +2536,9 @@ class InternalVariable::AutoBatch
     }
 
     // simplified version avoiding moving unnecessary parameters around (esp. strings)
-    static InternalVariable OutputVariable(NDShape&& shape, ::CNTK::DataType dataType, bool needsGradient, bool isSparse)
+    static InternalVariable OutputVariable(NDShape&& shape, ::CNTK::DataType dataType, bool needsGradient, bool isSparse, bool isVolatile)
     {
-        return InternalVariable(move(shape), VariableKind::Output, dataType, needsGradient, isSparse);
+        return InternalVariable(move(shape), VariableKind::Output, dataType, needsGradient, isSparse, isVolatile);
     }
 
     // clone a PrimitiveFunction
@@ -2531,7 +2578,9 @@ class InternalVariable::AutoBatch
         // initialize the output
         //let dataType = fCloned->m_inputs.front().GetDataType();
         fail_if(output.GetDataType() == DataType::Unknown, "ClonePrimitiveFunction: output has no determined data type yet??");
+        // BUGBUG: Must propagate isVolatile
         if (mustReplaceFreeDimension)
+            // BUGBUG: We should instantiate an InternalVariable, not Variable, here.
             fCloned->InitOutput(Variable(NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)), VariableKind::Output, output.GetDataType(), output.NeedsGradient(), output.IsSparse()));
         else
             fCloned->InitOutput(Variable(NDShape(output.Shape()), VariableKind::Output, output.GetDataType(), output.NeedsGradient(), output.IsSparse()));
@@ -4941,11 +4990,12 @@ Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, boo
         }
         outputShape = ReplaceFreeDim(compositeOutput.Shape().Dimensions(), inputsFreeDim);
     }
+    let isVolatile = any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.IsVolatile(); });
     InternalVariable blockOutput =
         /*if*/ (!shapeIsKnown) ? // if we are being called while building a static graph
-            OutputVariable(NDShape::Unknown(), DataType::Unknown, vector<Axis>(), Name())
+            OutputVariable(NDShape::Unknown(), /*remaining args are dummy:*/ DataType::Unknown, vector<Axis>(), /*needsGradient=*/true, /*isSparse=*/false, isVolatile, Name())
         /*else*/:
-            OutputVariable(outputShape.empty() ? compositeOutput.Shape() : NDShape(outputShape), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient(), compositeOutput.IsSparse(), Name());
+            OutputVariable(outputShape.empty() ? compositeOutput.Shape() : NDShape(outputShape), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient() && !isVolatile, compositeOutput.IsSparse(), isVolatile, Name());
     fail_if(blockOutput.Shape().HasFreeDimension(), "Invoke: still has FreeDimension??");
     InitOutput(move(blockOutput));
     // behave as if this was returning a Composite: implant a ref count. This will be taken over by the next consumer.

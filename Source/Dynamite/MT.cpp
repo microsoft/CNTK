@@ -841,7 +841,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let actualMinibatchSize = minibatchSize;
 #endif
         Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, actualMinibatchSize,
-                                communicator->Workers().size(), communicator->CurrentWorker().m_globalRank, CurrentDataType(), CurrentDevice());
+                                communicator->Workers().size(), communicator->CurrentWorker().m_globalRank,
+                                /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
         let timeGetNextMinibatch = partTimer.Elapsed();
         //partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
 
@@ -1026,7 +1027,9 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
     for (mbCount = 0; ; mbCount++)
     {
         // get next minibatch
-        bool gotData = Dynamite::GetSubBatches(args, { L"src", L"tgt" }, /*subMinibatches=*/1, /*shuffleSeed=*/0, minibatchSource, minibatchSize, /*numWorkers=*/1, /*currentWorker=*/0, CurrentDataType(), CurrentDevice());
+        bool gotData = Dynamite::GetSubBatches(args, { L"src", L"tgt" }, /*subMinibatches=*/1, /*shuffleSeed=*/0, minibatchSource, minibatchSize,
+                                               /*numWorkers=*/1, /*currentWorker=*/0,
+                                               /*inferenceOnly=*/true, CurrentDataType(), CurrentDevice());
         if (!gotData)
             break;
         auto& subBatchArgs = args.front(); // there is only one

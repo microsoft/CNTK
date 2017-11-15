@@ -78,7 +78,7 @@ namespace Dynamite {
 
     // returns vector[numArgs] OF vector[numBatchItems] OF Constant[seqLen,sampleShape]
     // or no seqLen if isSequence is false for the respective stream
-    static inline void FromCNTKMB(vector<vector<Variable>>& res, const vector<ValuePtr>& inputs, const vector<bool>& isSequence, DataType dataType, const DeviceDescriptor& device) // variables needed for axis info only
+    static inline void FromCNTKMB(vector<vector<Variable>>& res, const vector<ValuePtr>& inputs, const vector<bool>& isSequence, bool inferenceOnly, DataType dataType, const DeviceDescriptor& device) // variables needed for axis info only
     {
         let numArgs = inputs.size();
         res.resize(numArgs);
@@ -147,7 +147,7 @@ namespace Dynamite {
                     data = NDArrayView::MatrixProduct(false, eye, false, data, false, 1.0, 1);
                 }
 #endif
-                auto c = Constant(data);
+                auto c = Constant(data, /*isVolatile=*/inferenceOnly);
                 if (c.GetDataType() != dataType)
                     c = c.CloneAs(dataType); // note: This is expensive and involves a GPU sync; so only do this for debugging (gradient check)
                 arg[s] = c;
@@ -163,7 +163,8 @@ namespace Dynamite {
     // Finally, the sub-minibatches get random-shuffled, so that we get a random MB sequence w.r.t. length.
     // Returns true unless the end of the data has been reached.
     static inline bool GetSubBatches(vector<vector<vector<Variable>>>& args, const vector<const wchar_t*>& streamNames, size_t numSubMinibatches, size_t shuffleSeed,
-                                     const MinibatchSourcePtr& minibatchSource, size_t minibatchSize, size_t numWorkers, size_t thisWorker, DataType dataType, const DeviceDescriptor& device)
+                                     const MinibatchSourcePtr& minibatchSource, size_t minibatchSize, size_t numWorkers, size_t thisWorker,
+                                     bool inferenceOnly, DataType dataType, const DeviceDescriptor& device)
     {
         // get the big minibatch from CNTK
         // We ask for 'numSubMinibatches' larger size than user target.
@@ -180,7 +181,7 @@ namespace Dynamite {
         vector<ValuePtr> valuePtrs;
         for (let& streamName : streamNames)
             valuePtrs.push_back(minibatchData[minibatchSource->StreamInfo(streamName)].data);
-        Dynamite::FromCNTKMB(subBatch0, valuePtrs, /*isSequence[]=*/vector<bool>(numStreams, true), dataType, device);
+        Dynamite::FromCNTKMB(subBatch0, valuePtrs, /*isSequence[]=*/vector<bool>(numStreams, true), inferenceOnly, dataType, device);
 #if 1   // for compat with old loss progressions, don't reorder if no sub-minibatching
         if (numSubMinibatches == 1)
             return true;

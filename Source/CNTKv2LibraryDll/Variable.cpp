@@ -13,12 +13,12 @@
 namespace CNTK
 {
     Variable::Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
-        InternalVariable(shape, varType, dataType, value, needsGradient, dynamicAxes, isSparse, name, uid)
+        InternalVariable(shape, varType, dataType, value, needsGradient, dynamicAxes, isSparse, /*isVolatile=*/false, name, uid)
     {
         m_shapeDims = &m_dataFields->m_shape.Dimensions();
     }
     Variable::Variable(NDShape&& shape, VariableKind varType, ::CNTK::DataType dataType, bool needsGradient, bool isSparse) :
-        InternalVariable(std::move(shape), varType, dataType, needsGradient, isSparse)
+        InternalVariable(std::move(shape), varType, dataType, needsGradient, isSparse, /*isVolatile=*/false)
     {
         m_shapeDims = &m_dataFields->m_shape.Dimensions();
     }
@@ -101,6 +101,11 @@ namespace CNTK
     bool InternalVariable::NeedsGradient() const
     {
         return m_dataFields->m_needsGradient; 
+    }
+
+    bool InternalVariable::IsVolatile() const
+    {
+        return m_dataFields->m_isVolatile;
     }
 
     InternalVariable InternalVariable::Clone() const
@@ -440,6 +445,7 @@ namespace CNTK
             m_needsGradient,
             HasMore() ? m_more->m_dynamicAxes : c_noDynamicAxes,
             m_isSparse,
+            m_isVolatile,
             m_name.get(),
             std::wstring()/*Internal::GenerateUid(m_varKind)*/);
 
@@ -584,12 +590,12 @@ namespace CNTK
 
     template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<VariableFields>> strong_shared_ptr<VariableFields>::Storage::s_storage;
 
-    InternalVariable::InternalVariable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
-        m_dataFields(MakeSharedObject1<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
+    InternalVariable::InternalVariable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, bool isVolatile, const std::wstring& name, const std::wstring& uid) :
+        m_dataFields(MakeSharedObject1<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, isVolatile, name, uid))
     {}
 
-    InternalVariable::InternalVariable(NDShape&& shape, VariableKind varType, CNTK::DataType dataType, bool needsGradient, bool isSparse) :
-        m_dataFields(MakeSharedObject1<VariableFields>(std::move(shape), varType, dataType, needsGradient, isSparse))
+    InternalVariable::InternalVariable(NDShape&& shape, VariableKind varType, CNTK::DataType dataType, bool needsGradient, bool isSparse, bool isVolatile) :
+        m_dataFields(MakeSharedObject1<VariableFields>(std::move(shape), varType, dataType, needsGradient, isSparse, isVolatile))
     {}
 
     // the others are default. They must be defined nevertheless, because of the incomplete type w.r.t. strong_shared_ptr in external uses
@@ -752,14 +758,14 @@ namespace CNTK
 
             // TODO: this copying here is redundant, value should be moved from the dictionary to the variable.
             // Also, the correct device should be used upfront when deserializing NDArrayView.
-            InternalVariable var(shape, kind, dataType, value.DeepClone(device, value.IsReadOnly()), needsGradient, dynamicAxis, isSparse, name, uid);
+            InternalVariable var(shape, kind, dataType, value.DeepClone(device, value.IsReadOnly()), needsGradient, dynamicAxis, isSparse, /*isVolatile=*/false, name, uid);
             if (var.IsParameter())
                 return Parameter(var);
             else
                 return Constant(var);
         }
 
-        return InternalVariable(shape, kind, dataType, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
+        return InternalVariable(shape, kind, dataType, nullptr, needsGradient, dynamicAxis, isSparse, /*isVolatile=*/false, name, uid);
     }
 
     Parameter::Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)

@@ -98,7 +98,7 @@ namespace CNTK
                 std::wstring varUid, varName;
                 std::tie(varUid, varName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), kind);
 
-                return isConstant ? (Variable)Constant(value, varName, varUid) : Parameter(value, varName, varUid);
+                return isConstant ? (Variable)Constant(value, /*isVolatile=*/false, varName, varUid) : Parameter(value, varName, varUid);
             }
 
             template<class ElementType>
@@ -375,7 +375,7 @@ namespace CNTK
 #endif
 
                         // Lets replace the convolutionMapVar with a new properly reshaped Parameter/Constant
-                        convolutionMapVar = convolutionMapVar.IsConstant() ? Variable(Constant(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid())) : Variable(Parameter(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid()));
+                        convolutionMapVar = convolutionMapVar.IsConstant() ? Variable(Constant(newConvolutionMapValue, /*isVolatile=*/false, convolutionMapVar.Name(), convolutionMapVar.Uid())) : Variable(Parameter(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid()));
                     }
 
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(convolutionNode->Strides());

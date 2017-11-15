@@ -442,6 +442,7 @@ namespace CNTK
         bool updated = false;
         if (!alwaysUpdate)
         {
+            // note: we do not propagate m_isVolatile here since this code is for static networks only
             if (!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape()))
             {
                 updated = true;

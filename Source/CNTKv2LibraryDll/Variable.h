@@ -19,8 +19,11 @@ namespace CNTK
         // variable type
         NDShape m_shape; // TODO: use fixed vector up to 6 or so (vector is 24 bytes)
         ::CNTK::DataType m_dataType;
-        bool m_needsGradient;
         bool m_isSparse;
+
+        // gradient options  --set for Constant and Parameter; inferred for Outputs
+        bool m_needsGradient;      // needs to receive a gradient
+        bool m_isVolatile = false; // infected by Constant with this flag set--will then kill all m_needsGradient that depend on this input
 
         // main object type
         // Located down here so that it combines neatly to 8 bytes with the surrounding members.
@@ -76,9 +79,9 @@ namespace CNTK
         MoreVariableFields& More() { return LazyGetMore(); }
         const MoreVariableFields& More() const { return LazyGetMore(); }
 
-        VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<PrimitiveFunction>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<PrimitiveFunction>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, bool isVolatile, const std::wstring& name, const std::wstring& uid)
             : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value),
-              m_needsGradient(needsGradient)/*, m_dynamicAxes(dynamicAxes)*/, m_isSparse(isSparse), m_name(name)/*, m_uid(uid), m_valueTimeStamp(0)*/
+              m_needsGradient(needsGradient)/*, m_dynamicAxes(dynamicAxes)*/, m_isSparse(isSparse), m_isVolatile(isVolatile), m_name(name)/*, m_uid(uid), m_valueTimeStamp(0)*/
         {
             if (value && (type != value->GetDataType()))
                 InvalidArgument("The DataType of the Parameter/Constant Variable '%S' does not match the DataType of the associated Value", AsString().c_str());
@@ -113,13 +116,20 @@ namespace CNTK
                 if (m_shape.HasFreeDimension())
                     InvalidArgument("Parameter/Constant '%S' has invalid shape '%S'; it is illegal for a Parameter/Constant to have a FreeDimension.", AsString().c_str(), m_shape.AsString().c_str());
             }
+
+            // TODO: remove this check once this works
+            if (m_isVolatile && m_needsGradient)
+                LogicError("Variable: isVolatile and needsGradient are mutually exclusive");
         }
 
         // simple version used during cloning
-        VariableFields(NDShape&& shape, VariableKind varType, ::CNTK::DataType type, bool needsGradient, bool isSparse)
+        VariableFields(NDShape&& shape, VariableKind varType, ::CNTK::DataType type, bool needsGradient, bool isSparse, bool isVolatile)
             : m_shape(std::move(shape)), m_varKind(varType), m_dataType(type),
-              m_needsGradient(needsGradient), m_isSparse(isSparse)/*, m_valueTimeStamp(0)*/
+              m_needsGradient(needsGradient), m_isSparse(isSparse), m_isVolatile(isVolatile)/*, m_valueTimeStamp(0)*/
         {
+            // TODO: remove this check once this works
+            if (m_isVolatile && m_needsGradient)
+                LogicError("Variable: isVolatile and needsGradient are mutually exclusive");
         }
 
         std::wstring AsString() const;

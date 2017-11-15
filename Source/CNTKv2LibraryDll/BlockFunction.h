@@ -243,7 +243,8 @@ namespace CNTK
             const auto& compositeOutputs = m_composite->RawOutputs();
             for (const auto& compositeOutput : compositeOutputs)
             {
-                auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), compositeOutput.NeedsGradient(), Name());
+                // BUGBUG: Why do we not pass the IsSparse field here?
+                auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), compositeOutput.NeedsGradient(), /*isSparse=*/false, /*isVolatile=*/false, Name());
                 output.m_dataFields->More().m_blockFunctionVariableMapping = Variable(compositeOutput, true);
 
                 outputs.push_back(output);

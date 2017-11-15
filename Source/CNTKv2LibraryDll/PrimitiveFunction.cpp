@@ -329,7 +329,8 @@ namespace CNTK
             if (!suppressMaskOutput)
             {
                 outputs.emplace_back(InferOutput());
-                outputs.emplace_back(OutputVariable({ NDShape::FreeDimension }, outputs.back().GetDataType(), outputs.back().DynamicAxes(), /*needsGradient =*/ false, /*isSparse =*/ false, Name().empty() ? Name() : Name() + L"_UnpackSequenceMask"));
+                // BUGBUG: isVolatile is not correct here
+                outputs.emplace_back(OutputVariable({ NDShape::FreeDimension }, outputs.back().GetDataType(), outputs.back().DynamicAxes(), /*needsGradient =*/ false, /*isSparse =*/ false, /*isVolatile=*/false, Name().empty() ? Name() : Name() + L"_UnpackSequenceMask"));
             }
             else
                 outputs.emplace_back(InferOutput());
@@ -346,12 +347,15 @@ namespace CNTK
     InternalVariable PrimitiveFunction::InferOutput()
     {
         if (m_op == PrimitiveOpType::NoOp)
-            return OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), m_inputs[0].IsSparse(), Name());
+            return OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), m_inputs[0].IsSparse(), m_inputs[0].IsVolatile(), Name());
         else
         {
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
-            bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
+            bool isVolatile = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.IsVolatile(); });
+            bool needsGradient = !isVolatile &&
+                                 m_op != PrimitiveOpType::StopGradient &&
+                                 std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
             // BUGBUG: This vv is a stop gap and needs to be done right (that is, use operation-specific propagation rules).
             bool isSparse = std::all_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.IsSparse(); });
 
@@ -463,7 +467,7 @@ namespace CNTK
                         case PrimitiveOpType::Sinh:
                         case PrimitiveOpType::Pass:
                         case PrimitiveOpType::LabelsToGraph:
-                        case PrimitiveOpType::StopGradient: // BUGBUG: StopGradient should also set m_needsGradient
+                        case PrimitiveOpType::StopGradient:
                         case PrimitiveOpType::ELU:
                         case PrimitiveOpType::StableSigmoid:
                             assert(m_inputs.size() == 1);
@@ -1209,7 +1213,7 @@ namespace CNTK
                 }
             }
 
-            return OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, isSparse, Name());// .empty() ? L"" : Name());
+            return OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, isSparse, isVolatile, Name());// .empty() ? L"" : Name());
         }
     }
 

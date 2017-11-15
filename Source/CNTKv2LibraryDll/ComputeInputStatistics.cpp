@@ -62,7 +62,7 @@ namespace CNTK
             allInputNodes.push_back(inputNode);
             streamToInputNodeMap[currentStreamInfo] = inputNode;
             streamToDummyInputVariableMap[currentStreamInfo] = inputVariable;
-            streamToDummyOutputVariableMap[currentStreamInfo] = Variable(OutputVariable(inputVariableShape, DataType::Float, {}, /*needsGradient =*/ false, currentStreamInfo.m_name), true);
+            streamToDummyOutputVariableMap[currentStreamInfo] = Variable(OutputVariable(inputVariableShape, DataType::Float, {}, /*needsGradient =*/ false, /*isSparse=*/false, /*isVolatile=*/false, currentStreamInfo.m_name), true);
             streamToMeanNodeMap[currentStreamInfo] = builder.Mean(inputNode);
             streamToInvStdDevNodeMap[currentStreamInfo] = builder.InvStdDev(inputNode);
         }
