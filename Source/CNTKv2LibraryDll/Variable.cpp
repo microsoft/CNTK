@@ -46,6 +46,20 @@ namespace CNTK
         //return output.CompositePreservingCopy(move(composite));
     }
 
+    // clear out a Variable when it is no longer needed, as to release associated resources
+    // This is purely an optimization for use by Dynamite only.
+    void Variable::Reset()
+    {
+        m_outputComposite.reset();
+        m_acyclicOutputPrimitiveReference.reset();
+        m_shapeDims = nullptr;
+        InternalVariable::Reset();
+    }
+    void InternalVariable::Reset()
+    {
+        m_dataFields.reset();
+    }
+
     Variable::Variable(const InternalVariable& other, const ConstFunctionPtr& composite, const ConstPrimitiveFunctionPtr& primitive) :
         InternalVariable(other), m_outputComposite(composite), m_acyclicOutputPrimitiveReference(primitive)
     {

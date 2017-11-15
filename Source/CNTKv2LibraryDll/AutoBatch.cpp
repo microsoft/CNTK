@@ -590,7 +590,6 @@ namespace CNTK
     // For example, in inference we can free NDArrayViews once their last consumer has consumed them.
     // 3 kinds of NDArrayViews:
     //  - values that user code may request
-    //     -
     //     - condition: user code holds an explicit reference to a Variable,
     //       which means that its value can be requested any time, and should therefore
     //       be kept once computed
@@ -617,7 +616,7 @@ namespace CNTK
     //     - any code holds a view (slice/reshape/alias) to the tensor data  --alive via ref count of the arena instance
     //     - other consumers that have the same Variable as an input --alive via internally-held ref count to the the Variable instance
     //     - explicit reference to the Variable in user code  --alive via externally-held ref count to the Variable instance
-    // - at end of ComputeKnowableValue(),
+    // - at end of MemoizeKnowableValueInArena(),
     //   reset all Variables' shared_ptrs that fulfill one of the following conditions:
     //    - m_needsGradient flag is not set, or         // note: m_volatile is subsumed here already
     //    - not required for any gradient (considering also which gradients may never be requested)
@@ -2449,6 +2448,7 @@ class InternalVariable::AutoBatch
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     // The result is stored in f.m_outputs.front()'s m_value.
+    // Note: This breaks the immutability principle, in that it frees inputs that are known to be no longer needed.
     const void MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
     {
         // fetch the NDArrayViewPtrs for all inputs
@@ -2492,6 +2492,16 @@ class InternalVariable::AutoBatch
                         m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device())));
         }
         GetOutputFields(f).m_value = move(res);
+        // we can free the inputs if they are no longer needed
+        // TODO: For now this only helps for inference. For training, we need a more elaborate check.
+#if 0
+        // BUGBUG: (1) still has an ElementTimes with isVolatile; (2) crashes in CUDA
+        for (auto& input : f.m_inputs)
+        {
+            if (!input.NeedsGradient())
+                input.Reset();
+        }
+#endif
         // stats
         if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work
             m_stats.numDoneFreeOps++;
@@ -2579,11 +2589,11 @@ class InternalVariable::AutoBatch
         //let dataType = fCloned->m_inputs.front().GetDataType();
         fail_if(output.GetDataType() == DataType::Unknown, "ClonePrimitiveFunction: output has no determined data type yet??");
         // BUGBUG: Must propagate isVolatile
+        let isVolatile = any_of(fCloned->m_inputs.begin(), fCloned->m_inputs.end(), [](const Variable& input) { return input.IsVolatile(); });
         if (mustReplaceFreeDimension)
-            // BUGBUG: We should instantiate an InternalVariable, not Variable, here.
-            fCloned->InitOutput(Variable(NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)), VariableKind::Output, output.GetDataType(), output.NeedsGradient(), output.IsSparse()));
+            fCloned->InitOutput(InternalVariable(NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)), VariableKind::Output, output.GetDataType(), output.NeedsGradient() && !isVolatile, output.IsSparse(), isVolatile));
         else
-            fCloned->InitOutput(Variable(NDShape(output.Shape()), VariableKind::Output, output.GetDataType(), output.NeedsGradient(), output.IsSparse()));
+            fCloned->InitOutput(InternalVariable(NDShape(output.Shape()), VariableKind::Output, output.GetDataType(), output.NeedsGradient() && !isVolatile, output.IsSparse(), isVolatile));
         // Note: Somehow, OutputVariable() above does not get inlined, even with __forceinline.
         // add additional initializations for auto-batch only
         FinishConstructingPrimitiveFunction(*fCloned, clonee.m_profiler, /*logPrefix=*/nullptr);

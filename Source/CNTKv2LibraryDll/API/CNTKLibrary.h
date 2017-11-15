@@ -2306,6 +2306,8 @@ namespace CNTK
 
         CNTK_API InternalVariable Clone() const;
 
+        void Reset();
+
     private:
 #ifdef SWIGPYTHON
     public:
@@ -2488,6 +2490,8 @@ namespace CNTK
             return Variable((const InternalVariable&)*this, ConstFunctionPtr(), m_acyclicOutputPrimitiveReference);
         }
         static Variable CompositePreservingCopy(const InternalVariable& other, ConstFunctionPtr&& composite);
+
+        void Reset();
 
     private:
 #if defined(SWIGCSHARP) || defined(SWIGJAVA)
