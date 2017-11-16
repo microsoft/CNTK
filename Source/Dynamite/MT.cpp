@@ -63,7 +63,6 @@ string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
 size_t saveEvery = 2000;
-double  pruningThreshold = 10.0;
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 
@@ -1207,6 +1206,9 @@ int mt_main(int argc, char *argv[])
                 // these are optional to override the system settings
                 "?learner", learnerType,
                 "?learningRate", learningRate,
+                // decoding parameters
+                "?maxBeam", maxBeam,
+                "?beamWidth", beamWidth,
                 "?fromMb", fromMbCount);
         }
         catch (const exception& e)
@@ -1274,7 +1276,7 @@ int mt_main(int argc, char *argv[])
         // output file (for evaluation commands)
         let outPath = outputDirectory + L"/" + command +
             L"_fromMb_" + to_wstring(fromMbCount) +
-            L"_pruningThreshold_" + to_wstring(pruningThreshold) +
+            L"_beamWidth_" + to_wstring(beamWidth) +
             L"_maxBeam_" + to_wstring(maxBeam) +
             L".hyp";
 
