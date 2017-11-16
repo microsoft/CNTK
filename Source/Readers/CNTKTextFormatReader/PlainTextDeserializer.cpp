@@ -276,7 +276,7 @@ public:
         size_t totalDataSize = 0;
         for (let& lineRefs : definingTextLineRefs)
             totalDataSize += lineRefs.back().beginOffset;
-        let numTargetChunks = totalDataSize / chunkSizeBytes; // (tend towards less chunks)
+        let numTargetChunks = max(totalDataSize / chunkSizeBytes, (size_t)1); // (tend towards less chunks)
         let roundedChunkSize = (totalDataSize + numTargetChunks - 1) / numTargetChunks;
         ChunkRef chunkRef;
         for (chunkRef.m_endFileIndex = 0; chunkRef.m_endFileIndex < definingTextLineRefs.size(); chunkRef.m_endFileIndex++)
