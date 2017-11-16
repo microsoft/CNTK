@@ -227,8 +227,27 @@ namespace CNTK
                 let N = (double)x->Shape().TotalSize(/*check=*/false) / (double)bias->Shape().TotalSize(/*check=*/false);
                 assert(N == (double)x->Shape().TotalSize(/*check=*/false) / (double)sigma->Shape().TotalSize(/*check=*/false)); // for now
                 let& mu = redBuf;
-                NDArrayView::NumericOperation({ x     }, 1.0/N, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,            mu);
-                NDArrayView::NumericOperation({ x, mu }, 1.0/N, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma); // sigma^2
+                let& sigma2 = sigma; // we use sigma's location to first compute sigma^2
+                let isInferring = runSum->IsReadOnly(); // inference is indicated at this level by locking up the running accumulators
+                double blendFactor = isInferring ? 1 : 0; // mix-in factor for running stats
+                // TODO: base this on blendTimeConstant ^^. Code below already supports it.
+                if (blendFactor != 0) // we got a contribution from the running stats
+                {
+                    //runCount ->LogToFile(L"runCount");
+                    //runSum   ->LogToFile(L"runSum");
+                    //runSqrSum->LogToFile(L"runSqrSum");
+                    NDArrayView::NumericOperation({ runSum,    runCount },  1, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, mu);
+                    NDArrayView::NumericOperation({ runSqrSum, runCount },  1, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, sigma2);
+                    // var = 1/count sqrSum - mu^2   --this subtracts mu^2
+                    NDArrayView::NumericOperation({ mu                  }, -1, Microsoft::MSR::CNTK::ElementWiseOperator::opSqr, sigma2, /*beta=*/1);
+                    //mu   ->LogToFile(L"mu");
+                    //sigma2->LogToFile(L"sigma2");
+                }
+                if (blendFactor != 1) // we got a contribution from actual data (training only)
+                {
+                    NDArrayView::NumericOperation({ x     }, (1.0 - blendFactor)/N, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,            mu   , blendFactor);
+                    NDArrayView::NumericOperation({ x, mu }, (1.0 - blendFactor)/N, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2, blendFactor); // sigma^2
+                }
                 // statistics update:
                 //  - running accumulator with numer and denom
                 //  - new minibatch has N samples
@@ -251,21 +270,23 @@ namespace CNTK
                 //  - newCount  = oldCount  * exp(-N/T) + N
                 //  - newSum    = oldSum    * exp(-N/T) + N * mbMu
                 //  - newSqrSum = oldSqrSum * exp(-N/T) + N * (mbVar + mbMu^2)
-                let isInferring = runSum->IsReadOnly(); // inference is indicated at this level by locking up the running accumulators
                 if (!isInferring)
                 {
+                    if (blendFactor != 0)
+                        LogicError("BatchNormalization: blendTimeConstant != 0 not supported yet"); // BUGBUG: This is hosed for blendFactor != 1, since we re-add our own history.
                     let normalizationTimeConstant = attributes[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
+                    // momentum-like formula: xsmooted = xold * exp(-1/T) + xnew * (1 - exp(-1/T))
                     let decay = exp(-N / normalizationTimeConstant);
                     let complement = 1 - exp(-1 / normalizationTimeConstant);
-                    NDArrayView::NumericOperation({               }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, runCount,  decay);
-                    NDArrayView::NumericOperation({ mu            }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSum,    decay);
-                    NDArrayView::NumericOperation({ mu, mu, sigma }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
+                    NDArrayView::NumericOperation({                }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, runCount,  decay);
+                    NDArrayView::NumericOperation({ mu             }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSum,    decay);
+                    NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
                     //runCount ->LogToFile(L"runCount");
                     //runSum   ->LogToFile(L"runSum");
                     //runSqrSum->LogToFile(L"runSqrSum");
                 }
-                // sigma (in-place, from sigma^2)
-                NDArrayView::NumericOperation({ sigma }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
+                // sigma (remember that this is in-place, &sigma2==&sigma)
+                NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
                 double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                 if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
                     NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
