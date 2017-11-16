@@ -167,6 +167,7 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     name; axis;
     return Identity;
 #else
+    static const double normalizationTimeConstantTraining = 64000; // TODO: make this a parameter
     static size_t id = 0; // unique id
     auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
     auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
@@ -180,8 +181,18 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     return UnaryModel({ scale, bias, runningMean, runningInvStd, runningCount },
         [=](const Variable& x) -> Variable
         {
+            // we discover training vs. testing from the volatile flag
+            let isInference = x.IsVolatile();
+            let normalizationTimeConstant = isInference ? numeric_limits<double>::infinity() : normalizationTimeConstantTraining;
+            let blendTimeConstant         = isInference ? numeric_limits<double>::infinity() : 0.0;
+            //if (isInference)
+            //    fprintf(stderr, "inferring\n"), fflush(stderr);
+            //else
+            //    fprintf(stderr, "training\n"), fflush(stderr);
             CountAPICalls(1);
-            return CNTK::BatchNormalization(x, thisId, scale, bias, runningMean, runningInvStd, runningCount, /*spatial=*/false, 0, 0, 0.0001, name);
+            return CNTK::BatchNormalization(x, thisId, scale, bias,
+                                            runningMean, runningInvStd, runningCount, /*spatial=*/false,
+                                            normalizationTimeConstant, blendTimeConstant, /*epsilon=*/0.0001, name);
         });
 #endif
 }
