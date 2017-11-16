@@ -140,8 +140,8 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
 #define DOLOG(var)                  ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? LOG(var)                                : 0)
-#define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? PrintSequence((prefix), (var), (vocab)) : 0)
-static void PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile);
+#define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? PrintSequence((prefix), (var), (vocab)) : string())
+static string PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile);
 
 fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
@@ -661,20 +661,22 @@ static string OneHotToWordSequence(const NDArrayViewPtr& seq, const wstring& voc
 #endif
 }
 
-static inline void PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile)
+static string PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile)
 {
-    fprintf(stderr, "\n%s=%s\n", prefix, OneHotToWordSequence(seq.Value(), vocabFile).c_str()), fflush(stderr);
+    let wordSequence = OneHotToWordSequence(seq.Value(), vocabFile);
+    fprintf(stderr, "\n%s=%s\n", prefix, wordSequence.c_str()), fflush(stderr);
+    return wordSequence;
 }
 
-MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& tgtFile, bool infinitelyRepeat)
+MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& tgtFile, bool isTraining)
 {
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
             PlainTextStreamConfiguration(L"src", srcVocabSize, { srcFile }, { srcVocabFile, L"<s>", L"</s>", L"<unk>" }),
             PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { tgtFile }, { tgtVocabFile, L"<s>", L"</s>", L"<unk>" })
         }) },
-        /*randomize=*/true);
-    minibatchSourceConfig.maxSamples = infinitelyRepeat ? MinibatchSource::InfinitelyRepeat : MinibatchSource::FullDataSweep;
+        /*randomize=*/isTraining);
+    minibatchSourceConfig.maxSamples = isTraining ? MinibatchSource::InfinitelyRepeat : MinibatchSource::FullDataSweep;
     minibatchSourceConfig.isMultithreaded = false;
     minibatchSourceConfig.enableMinibatchPrefetch = false; // TODO: reenable the multi-threading and see if (1) it works and (2) makes things faster
     // BUGBUG: ^^ I see two possibly related bugs
@@ -699,7 +701,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // data
-    let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*infinitelyRepeat=*/true);
+    let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/true);
 
     // run something through to get the parameter matrices shaped --ugh!
     model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
@@ -998,7 +1000,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     }
 }
 
-static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstring& srcEvalFile, const wstring& tgtEvalFile)
+static void Evaluate(const wstring& modelPath, size_t modelMbCount,
+                     const wstring& srcEvalFile, const wstring& tgtEvalFile,
+                     const wstring& outputHypFile)
 {
     // dynamic model and criterion function
     // This must recreate the same model as in training, so that we can restore its model parameters.
@@ -1009,12 +1013,18 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
     model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
 #endif
     let path = IntermediateModelPath(modelPath, modelMbCount);
-    fprintf(stderr, "loading model: %S... ", path.c_str()), fflush(stderr);
+    fprintf(stderr, "Evaluate: loading model: %S... ", path.c_str()), fflush(stderr);
     model_fn.RestoreParameters(path);
     fprintf(stderr, "done\n"), fflush(stderr);
 
     // data
-    let minibatchSource = CreateMinibatchSource(srcEvalFile, tgtEvalFile, /*infinitelyRepeat=*/false);
+    let minibatchSource = CreateMinibatchSource(srcEvalFile, tgtEvalFile, /*isTraining=*/false);
+
+    // output file
+    fprintf(stderr, "Evaluate: writing output to %S$$\n", outputHypFile.c_str()), fflush(stderr);
+    unique_ptr<FILE, void(*)(FILE*)> fOut(_wfopen((outputHypFile + L"$$").c_str(), L"w"), [](FILE* f) { fclose(f); });
+    if (!fOut)
+        InvalidArgument("Evaluate: Failed to create output file %S", outputHypFile.c_str());
 
     let minibatchSize = 1;//700; // this fits
 
@@ -1048,18 +1058,21 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
             numLabels += len;
             maxLabels = max(maxLabels, len);
         }
-#if 1   // beam decoding
+        // beam decoding
         for (size_t seqId = 0; seqId < numSeq; seqId++)
         {
             let& srcSeq = subBatchArgs[0][seqId];
             let& tgtSeq = subBatchArgs[1][seqId];
-            PrintSequence("src", srcSeq, srcVocabFile);
-            PrintSequence("tgt", tgtSeq, tgtVocabFile);
             let outSeq = model_fn(srcSeq, Variable());
-            PrintSequence("out", outSeq, tgtVocabFile);
-            PrintSequence("tgt", tgtSeq, tgtVocabFile);
+            let src = PrintSequence("src", srcSeq, srcVocabFile);
+            let tgt = PrintSequence("tgt", tgtSeq, tgtVocabFile);
+            let out = PrintSequence("out", outSeq, tgtVocabFile);
+            fflush(stderr);
+            fprintf(fOut.get(), "%s\n", out.c_str());
+            fflush(fOut.get());
+            if (ferror(fOut.get()))
+                RuntimeError("Evaluate: Failed to write to output file: %s", strerror(errno));
         }
-#endif
         //partTimer.Log("GetNextMinibatch", numLabels);
         fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d\n", (int)mbCount,
                 (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels);
@@ -1075,6 +1088,12 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount, const wstrin
     }
     fprintf(stderr, "\n%5d:  loss, PPL = [total] %5.2f, ### %8.2f ###, seenLabels=%d\n",
         (int)mbCount, totalLoss / totalLabels, exp(totalLoss / totalLabels), (int)totalLabels);
+    // finalize output file
+    fOut.reset(); // close the file
+    _wunlink(outputHypFile.c_str());
+    if (_wrename((outputHypFile + L"$$").c_str(), outputHypFile.c_str()) != 0)
+        RuntimeError("Evaluate: Failed to rename output file to final name: %s", strerror(errno));
+    fprintf(stderr, "Evaluate: Output created at %S\n", outputHypFile.c_str()), fflush(stderr);
 }
 
 // minimalist command-line eargument parser, requires all arguments in order
@@ -1252,13 +1271,20 @@ int mt_main(int argc, char *argv[])
             fprintf(stderr, " %s", p);
         fprintf(stderr, "\nstarting %S as worker[%d]\n", command.c_str(), (int)ourRank), fflush(stderr); // write something to test
 
+        // output file (for evaluation commands)
+        let outPath = outputDirectory + L"/" + command +
+            L"_fromMb_" + to_wstring(fromMbCount) +
+            L"_pruningThreshold_" + to_wstring(pruningThreshold) +
+            L"_maxBeam_" + to_wstring(maxBeam) +
+            L".hyp";
+
         // perform the command
         if (command == L"train")
             Train(communicator, modelPath, fromMbCount);
         else if (command == L"validate")
-            Evaluate(modelPath, fromMbCount, srcDevFile, tgtDevFile);
+            Evaluate(modelPath, fromMbCount, srcDevFile, tgtDevFile, outPath);
         else if (command == L"test")
-            Evaluate(modelPath, fromMbCount, srcTestFile, tgtTestFile);
+            Evaluate(modelPath, fromMbCount, srcTestFile, tgtTestFile, outPath);
         else
             InvalidArgument("Unknonw --command %S", command.c_str());
     }
