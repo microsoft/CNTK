@@ -44,34 +44,46 @@ This page contains pre-trained image models either converted from other toolkits
 ### CNTK Pre-trained
 
 #### ResNet18 for ImageNet 1K
-|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet18_ImageNet_CNTK.model
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet18_ImageNet_CNTK.model (Last updated: Nov. 16, 2017)
 |:-------|:---
 |Training script | [ResNet18_ImageNet1K.cntk](../Examples/Image/Classification/ResNet/BrainScript/ResNet18_ImageNet1K.cntk)
-|Single crop top 1 / top 5 error | 29.186% / 10.284%
+|Single crop top 1 / top 5 error | 28.752% / 9.700%
 
 #### ResNet34 for ImageNet 1K
-|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet34_ImageNet_CNTK.model
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet34_ImageNet_CNTK.model (Last updated: Nov. 16, 2017)
 |:---------|:---
 |Training script | [ResNet34_ImageNet1K.cntk](../Examples/Image/Classification/ResNet/BrainScript/ResNet34_ImageNet1K.cntk)
-|Single crop top 1 / top 5 error | 27.240% / 8.962%
+|Single crop top 1 / top 5 error | 26.114% / 8.386%
 
 #### ResNet50 for ImageNet 1K
-|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet50_ImageNet_CNTK.model
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet50_ImageNet_CNTK.model (Last updated: Nov. 16, 2017)
 |:---------|:---
 |Training script | [ResNet50_ImageNet1K.cntk](../Examples/Image/Classification/ResNet/BrainScript/ResNet50_ImageNet1K.cntk)
-|Single crop top 1 / top 5 error | 23.862% / 7.180%
+|Single crop top 1 / top 5 error | 23.358% / 6.740%
+
+#### ResNet101 for ImageNet 1K
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet101_ImageNet_CNTK.model (Last updated: Nov. 16, 2017)
+|:---------|:---
+|Training script | [ResNet101_ImageNet1K.cntk](../Examples/Image/Classification/ResNet/BrainScript/ResNet101_ImageNet1K.cntk)
+|Single crop top 1 / top 5 error | 21.822% / 6.042%
+
+#### ResNet152 for ImageNet 1K
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet152_ImageNet_CNTK.model (Last updated: Nov. 16, 2017)
+|:---------|:---
+|Training script | [ResNet152_ImageNet1K.cntk](../Examples/Image/Classification/ResNet/BrainScript/ResNet152_ImageNet1K.cntk)
+|Single crop top 1 / top 5 error | 21.300% / 5.760%
 
 #### ResNet20 for CIFAR-10
-|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_CNTK.model
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_CNTK.model (Last updated: Nov. 16, 2017)
 |:-------|:---
 |Training script | [TrainResNet_CIFAR10.py --network resnet20](../Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py)
-|Single crop top 1 error | 8.17%
+|Single crop top 1 error | 8.23%
 
 #### ResNet110 for CIFAR-10
-|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet110_CIFAR10_CNTK.model
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet110_CIFAR10_CNTK.model (Last updated: Nov. 16, 2017)
 |:-------|:---
 |Training script | [TrainResNet_CIFAR10.py --network resnet110](../Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py)
-|Single crop top 1 error | 6.08%
+|Single crop top 1 error | 6.24%
 
 ### Caffe-Converted
 
