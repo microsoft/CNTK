@@ -236,6 +236,11 @@ namespace CNTK
                 //  - we store 0th, 1st, and 2nd-order accumlators
                 //    NOTE: This is not what is documented. But we consider this internal, so it's OK.
                 //  - and convert them when needed
+                //  - accumulators are actually stored pre-multiplied by (1 - exp(-1 / normalizationTimeConstant)),
+                //    as this keeps the count accumulator around 1 (it converges to a tiny bit above 1
+                //    since we add multiple samples at once; if it was 1 sample at a time, it would be 1).
+                //    This way, runningMean is *nearly* the correct mean, and runningVar would be the variance if the mean was 0.
+                //    This makes debugging those values more meaningful, but is otherwise not criticial for anything.
                 // using:
                 //  - 1/count sum_j(x_j-mu)^2 = 1/count sum_j x_j^2 - 1/count sum_j mu^2 = 1/count sum_j x_j^2 - mu^2
                 //  - var = 1/count sqrSum - mu^2
@@ -246,23 +251,19 @@ namespace CNTK
                 //  - newCount  = oldCount  * exp(-N/T) + N
                 //  - newSum    = oldSum    * exp(-N/T) + N * mbMu
                 //  - newSqrSum = oldSqrSum * exp(-N/T) + N * (mbVar + mbMu^2)
-                let normalizationTimeConstant = attributes[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
-                let blendTimeConstant         = attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
-                bool isInferring;
-                if (isinf(blendTimeConstant) && isinf(normalizationTimeConstant)) // if inferring (only using stats), then we must not update any further
-                    isInferring = true;
-                else if (blendTimeConstant == 0 && !isinf(normalizationTimeConstant)) // only support unblended if updating
-                    isInferring = false;
-                else
-                    InvalidArgument("BatchNormalization: blendTimeConstant must be 0 or infinity (inference), and normalizationTimeConstant must be infinity for inference");
-                let decay = exp(-N / normalizationTimeConstant);
-                let complement = 1 - exp(-1 / normalizationTimeConstant);
-                NDArrayView::NumericOperation({               }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, runCount,  decay);
-                NDArrayView::NumericOperation({ mu            }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSum,    decay);
-                NDArrayView::NumericOperation({ mu, mu, sigma }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
-                //runCount ->LogToFile(L"runCount");
-                //runSum   ->LogToFile(L"runSum");
-                //runSqrSum->LogToFile(L"runSqrSum");
+                let isInferring = runSum->IsReadOnly(); // inference is indicated at this level by locking up the running accumulators
+                if (!isInferring)
+                {
+                    let normalizationTimeConstant = attributes[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
+                    let decay = exp(-N / normalizationTimeConstant);
+                    let complement = 1 - exp(-1 / normalizationTimeConstant);
+                    NDArrayView::NumericOperation({               }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, runCount,  decay);
+                    NDArrayView::NumericOperation({ mu            }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSum,    decay);
+                    NDArrayView::NumericOperation({ mu, mu, sigma }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
+                    //runCount ->LogToFile(L"runCount");
+                    //runSum   ->LogToFile(L"runSum");
+                    //runSqrSum->LogToFile(L"runSqrSum");
+                }
                 // sigma (in-place, from sigma^2)
                 NDArrayView::NumericOperation({ sigma }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
                 double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();

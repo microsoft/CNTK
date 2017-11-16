@@ -2456,6 +2456,16 @@ class InternalVariable::AutoBatch
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
             inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
+        // special case: we need to detect and pass on inference mode to BatchNorm
+        if (f.m_op == PrimitiveOpType::BatchNormalization &&
+            inputs[0].IsVolatile() &&      // if input arg is volatile then this is inference mode
+            !inputValues[3]->IsReadOnly()) // which we indicate by locking up the runningCount parameter
+        {
+            // BUGBUG: This API is very brittle, and can lead to hard-to-notice bugs.
+            //         Possible remedies: (1) make parameters readOnly; (2) a global inference-mode flag
+            //         PyTorch's BN API has the same challenge.
+            inputValues[3] = inputValues[3]->Alias(/*readOnly=*/true);
+        }
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
