@@ -2828,14 +2828,22 @@ namespace CNTK
         ///
         template<typename ElemType>
         Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring())
-            : Constant(shape, AsDataType<ElemType>(), ConstantInitializer(initValue), device, name)
+            : Constant(shape, AsDataType<ElemType>(), /*isVolatile=*/false, ConstantInitializer(initValue), device, name)
         {}
 
         ///
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
         Constant(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring())
-            : Constant(shape, dataType, ConstantInitializer(initValue), device, name)
+            : Constant(shape, dataType, /*isVolatile=*/false, ConstantInitializer(initValue), device, name)
+        {}
+
+        ///
+        /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
+        /// This overload has the isVolatile flag.
+        ///
+        Constant(const NDShape& shape, DataType dataType, bool isVolatile, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring())
+            : Constant(shape, dataType, isVolatile, ConstantInitializer(initValue), device, name)
         {}
 
         ///
@@ -2895,7 +2903,7 @@ namespace CNTK
         ///
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
-        CNTK_API Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring());
+        CNTK_API Constant(const NDShape& shape, DataType dataType, bool isVolatile, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring());
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature.

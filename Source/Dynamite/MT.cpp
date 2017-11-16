@@ -286,8 +286,8 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
                 continue;
             //LOG(token.recurrentState.state);
             //LOG(token.recurrentState.attentionContext);
-            // embed it for the next step
-            let wordIndexVar = Constant({}, CurrentDataType(), (double)token.wordIndex, CurrentDevice(), L"wordIndexVar");
+            // embed it for the next step  --note the isVolatile flag, to make sure BatchNorm runs in eval mode
+            let wordIndexVar = Constant({}, CurrentDataType(), /*isVolatile=*/true, (double)token.wordIndex, CurrentDevice(), L"wordIndexVar");
             let word = OneHotOp(wordIndexVar, tgtVocabSize, /*outputSparse=*/true, Axis(0));
             let wordEmbedded = decoderEmbedOutputFunction(word);
             //LOG(wordEmbedded);

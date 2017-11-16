@@ -816,8 +816,8 @@ namespace CNTK
     }
 #endif
 
-    Constant::Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
-        : InternalVariable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
+    Constant::Constant(const NDShape& shape, DataType dataType, bool isVolatile, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
+        : InternalVariable(shape, VariableKind::Constant, dataType, nullptr, /*needsGradient=*/false, {}, /*isSparse =*/ false, isVolatile, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
     {
         m_dataFields->SetValueInitialization(initializer, device);
     }
