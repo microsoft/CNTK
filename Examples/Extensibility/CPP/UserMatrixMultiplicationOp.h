@@ -137,7 +137,7 @@ private:
         if (!leftOperand.DynamicAxes().empty())
             std::runtime_error("Left operand must not have dynamic axes (i.e. should not be minibatch data, but be a Parameter of fixed size)");
 
-        outputs.push_back(OutputVariable(NDShape({ leftOperand.Shape()[0] }), leftOperand.GetDataType(), rightOperand.DynamicAxes()));
+        outputs.push_back(OutputVariable(NDShape({ leftOperand.Shape()[0] }), leftOperand.GetDataType(), rightOperand.DynamicAxes(), /*needsGradient=*/true, /*isSparse=*/false, /*isVolatile=*/false));
         return OutputsVectorType(outputs);
     }
 };

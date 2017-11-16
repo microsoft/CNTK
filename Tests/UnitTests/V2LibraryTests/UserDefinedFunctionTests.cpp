@@ -120,7 +120,7 @@ private:
         auto tempFuncOutputs = tempFunc->Outputs();
 
         for (auto tempFuncOutput : tempFuncOutputs)
-            outputs.push_back(OutputVariable(tempFuncOutput.Shape(), tempFuncOutput.GetDataType(), tempFuncOutput.DynamicAxes()));
+            outputs.push_back(OutputVariable(tempFuncOutput.Shape(), tempFuncOutput.GetDataType(), tempFuncOutput.DynamicAxes(), /*needsGradient=*/true, /*isSparse=*/false, /*isVolatile=*/false));
         return OutputsVectorType(outputs);
     }
 

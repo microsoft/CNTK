@@ -486,11 +486,11 @@ class FixedSizePoolStorage
                     *flagPtr = true; // and mark as allocated
                     //used[nextItemIndex] = true; // and mark as allocated
                     nextItemIndex++;
-                    return std::make_pair(p, flagPtr);
+                    return{ p, flagPtr };
                 }
                 nextItemIndex++;
             }
-            return std::make_pair(nullptr, nullptr); // this block is full
+            return std::pair<T*, char*>{ (T*)nullptr, (char*)nullptr }; // this block is full
         }
         __forceinline static void Deallocate(char* flagPtr)
         {

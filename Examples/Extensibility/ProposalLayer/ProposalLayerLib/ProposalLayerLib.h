@@ -234,7 +234,7 @@ private:
         auto proposalShape = NDShape({ 4, NDShape::FreeDimension });
         auto dtype = firstOperand.GetDataType();
         auto dynamicAxes = firstOperand.DynamicAxes();
-        outputs.push_back(OutputVariable(proposalShape, dtype, dynamicAxes , false, L"rpn_rois_raw"));
+        outputs.push_back(OutputVariable(proposalShape, dtype, dynamicAxes, /*needsGradient=*/false, /*isSparse=*/false, /*isVolatile=*/false, L"rpn_rois_raw"));
         return OutputsVectorType(outputs);
     }
 

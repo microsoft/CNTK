@@ -135,7 +135,7 @@ private:
         auto numOutCols = !pad ? (w - size)/stride + 1 : (w - 1)/stride + 1;
         auto numOutRows = !pad ? (h - size)/stride + 1 : (h - 1)/stride + 1;
         // return the appropriate output shape 
-        outputs.push_back(OutputVariable(NDShape({ (size_t)numOutRows, (size_t)numOutCols, (size_t)num_filters }), leftOperand.GetDataType(), rightOperand.DynamicAxes()));
+        outputs.push_back(OutputVariable(NDShape({ (size_t)numOutRows, (size_t)numOutCols, (size_t)num_filters }), leftOperand.GetDataType(), rightOperand.DynamicAxes(), /*needsGradient=*/true, /*isSparse=*/false, /*isVolatile=*/false));
         return OutputsVectorType(outputs);
     }
 

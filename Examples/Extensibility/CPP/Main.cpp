@@ -84,6 +84,11 @@ void UserTimesFunctionExample()
 }
 #pragma warning(pop)
 
+namespace CNTK
+{
+    template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<OptionalString::SharableString const>> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;
+}
+
 void main()
 {
     UserTimesFunctionExample();
