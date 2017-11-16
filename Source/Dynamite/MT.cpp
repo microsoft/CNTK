@@ -1225,7 +1225,17 @@ int mt_main(int argc, char *argv[])
 
         // open log file. The path depends on the worker rank.
         // Log path = "$workingDirectory/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
-        let logPath = outputDirectory + L"/" + command + L".log" + (ourRank == 0 ? L"" : (L"." + to_wstring(ourRank)));
+        wstring logPath;
+        for (size_t retry = 0; ; retry++)
+        {
+            logPath = outputDirectory + L"/" + command +
+                      (retry == 0 ? L"" : (L"." + to_wstring(retry))) +
+                      L".log" +
+                      (ourRank == 0 ? L"" : (L"." + to_wstring(ourRank)));
+            if (!boost::filesystem::exists(logPath))
+                break;
+            fprintf(stderr, "%S already exists, bumping up the retry count\n", logPath.c_str());
+        }
         boost::filesystem::create_directories(boost::filesystem::path(logPath).parent_path());
         FILE* outStream =
             /*if*/ (communicator->CurrentWorker().IsMain()) ?
@@ -1237,7 +1247,10 @@ int mt_main(int argc, char *argv[])
         fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
         if (_dup2(_fileno(outStream), _fileno(stderr)))
             InvalidArgument("error %d redirecting stderr to '%S'", errno, logPath.c_str());
-        fprintf(stderr, "starting %S as worker[%d]\n", command.c_str(), (int)ourRank), fflush(stderr); // write something to test
+        fprintf(stderr, "command line:");
+        for (let* p : Span<char**>(argv, argv + argc))
+            fprintf(stderr, " %s", p);
+        fprintf(stderr, "\nstarting %S as worker[%d]\n", command.c_str(), (int)ourRank), fflush(stderr); // write something to test
 
         // perform the command
         if (command == L"train")
