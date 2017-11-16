@@ -6,6 +6,7 @@
 #include "CNTKToONNX.h"
 #include "proto/onnx/core/model.h"
 #include "proto/onnx/core/graph.h"
+#include "proto/onnx/core/status.h"
 
 #include "Utils.h"
 #include "Operators.h"
@@ -166,9 +167,9 @@ std::unique_ptr<ONNXIR::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
     std::unique_ptr<ONNXIR::Model> model(new ONNXIR::Model("CNTKGraph", true));
     auto dstGraph = model->MainGraph();
     CNTKToONNXHelper::Copy(src, dstGraph);
-    ONNXIR::Status status = dstGraph->Resolve();
+    ONNXIR::Common::Status status = dstGraph->Resolve();
     if (!status.Ok())
-        LogicError("%s", status.ErrorMsg().c_str());
+        LogicError("%s", status.ErrorMessage().c_str());
     model->SetIrVersion(static_cast<ONNXIR::VERSION>(CNTK_ONNX_MODEL_VERSION));
     return model;
 }
@@ -242,7 +243,7 @@ int CNTKToONNXHelper::ToIndex(const Axis& axis)
     if (axis.IsBatchAxis())
         return 0;
  
-    return axis.StaticAxisIndex() + 1;
+    return axis.StaticAxisIndex();
 }
 
 ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const NDShape& shape, bool hasBatchAxis)
@@ -670,7 +671,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             node->AddAttribute(attributesMap[L"reductionKeepDimensions"], keepReducedDimensions);
             node->AddAttribute("axes", ToINTS(reductionAxes));
         }
-        else if (src->OpName() == L"Transpose")
+        else if (src->OpName() == L"TransposeAxes")
         {
             std::vector<Axis> perm = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
             node->AddAttribute(attributesMap[L"axisVec"], ToINTS(perm));
@@ -705,8 +706,8 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             }
 
             node->AddAttribute(attributesMap[L"axes"], ToINTS(sliceAxes));
-            node->AddAttribute(attributesMap[L"starts"], ToINTS(beginIndex));
-            node->AddAttribute(attributesMap[L"ends"], ToINTS(endIndex));
+            node->AddAttribute(attributesMap[L"beginIndexVec"], ToINTS(beginIndex));
+            node->AddAttribute(attributesMap[L"endIndexVec"], ToINTS(endIndex));
         }
         else if (src->OpName() == L"Softmax")
         {

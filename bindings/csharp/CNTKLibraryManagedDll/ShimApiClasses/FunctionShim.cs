@@ -262,9 +262,9 @@ namespace CNTK
         /// <param name="filepath"></param>
         /// <param name="computeDevice"></param>
         /// <returns></returns>
-        public static Function Load(string filepath, DeviceDescriptor computeDevice)
+        public static Function Load(string filepath, DeviceDescriptor computeDevice, ModelFormat format = ModelFormat.CNTKv2)
         {
-            return _Load(filepath, computeDevice);
+            return _Load(filepath, computeDevice, format);
         }
 
         /// <summary>

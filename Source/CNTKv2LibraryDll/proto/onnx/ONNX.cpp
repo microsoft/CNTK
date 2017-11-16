@@ -10,6 +10,7 @@
 #include "Utils.h"
 
 #include <iostream>
+#include <memory>
 
 #include "ONNXToCNTK.h"
 
@@ -54,22 +55,16 @@ void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath)
 
 FunctionPtr ONNXFormat::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice)
 {
-    ONNXIR::ModelProto modelProto;
+    std::shared_ptr<ONNXIR::Model> model;
 
 #ifdef _WIN32
-    bool loadStatus = ONNXIR::Model::Load(filepath, &modelProto);
+    Status loadStatus = ONNXIR::Model::Load(filepath, &model);
 #else
-    bool loadStatus = ONNXIR::Model::Load(ToString(filepath), &modelProto);
+    Status loadStatus = ONNXIR::Model::Load(ToString(filepath), &model);
 #endif
-    loadStatus;
-    //if (!loadStatus)
-    //    LogicError("Failed to load the model.");
+    if (!loadStatus.Ok())
+        LogicError("Failed to load the model.");
 
-    ONNXIR::Model model(modelProto);
-    auto status = model.MainGraph()->Resolve();
-    if (!status.Ok())
-        LogicError("%s", status.ErrorMsg().c_str());
-
-    FunctionPtr cntkFunction = ONNXToCNTK::CreateGraph(model.MainGraph(), computeDevice);
+    FunctionPtr cntkFunction = ONNXToCNTK::CreateGraph(model->MainGraph(), computeDevice);
     return cntkFunction;
 }

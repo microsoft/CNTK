@@ -76,14 +76,20 @@
     <ClCompile Include="proto\onnx\core\utils.cpp">
       <Filter>proto\onnx\core</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\defs\experiments\defs.cpp">
-      <Filter>proto\onnx\defs\experiments</Filter>
-    </ClCompile>
     <ClCompile Include="proto\onnx\defs\generator\defs.cpp">
       <Filter>proto\onnx\defs\generator</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\defs\logical\defs.cpp">
-      <Filter>proto\onnx\defs\logical</Filter>
+    <ClCompile Include="proto\onnx\defs\tensor\defs.cpp">
+      <Filter>proto\onnx\defs\tensor</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\tensorutils.cpp">
+      <Filter>proto\onnx\core</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\traditionalml\defs.cpp">
+      <Filter>proto\onnx\defs\traditionalml</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\defs\activation\defs.cpp">
+      <Filter>proto\onnx\defs\activation</Filter>
     </ClCompile>
     <ClCompile Include="proto\onnx\defs\math\defs.cpp">
       <Filter>proto\onnx\defs\math</Filter>
@@ -97,8 +103,8 @@
     <ClCompile Include="proto\onnx\defs\rnn\defs.cpp">
       <Filter>proto\onnx\defs\rnn</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\defs\tensor\defs.cpp">
-      <Filter>proto\onnx\defs\tensor</Filter>
+    <ClCompile Include="proto\onnx\defs\logical\defs.cpp">
+      <Filter>proto\onnx\defs\logical</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -169,6 +175,12 @@
     <ClInclude Include="proto\onnx\core\utils.h">
       <Filter>proto\onnx\core</Filter>
     </ClInclude>
+    <ClInclude Include="proto\onnx\core\record.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\core\tensorutils.h">
+      <Filter>proto\onnx\core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
@@ -192,9 +204,6 @@
     <Filter Include="proto\onnx\defs">
       <UniqueIdentifier>{cb1e39c1-bd5e-4d7f-8c83-39de28e70307}</UniqueIdentifier>
     </Filter>
-    <Filter Include="proto\onnx\defs\experiments">
-      <UniqueIdentifier>{6168d648-8e32-4ad7-b16d-78d6a2e7a461}</UniqueIdentifier>
-    </Filter>
     <Filter Include="proto\onnx\defs\generator">
       <UniqueIdentifier>{e52f27a1-b8c4-4d67-874f-51aa43b04815}</UniqueIdentifier>
     </Filter>
@@ -215,6 +224,12 @@
     </Filter>
     <Filter Include="proto\onnx\defs\tensor">
       <UniqueIdentifier>{deb73515-13a1-4926-b5fc-e8c6e97f7784}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\activation">
+      <UniqueIdentifier>{2b7c76e2-1171-4fdc-9c7e-3012124dae52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\defs\traditionalml">
+      <UniqueIdentifier>{93c3d21c-112b-43df-b399-5e87b60020b1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

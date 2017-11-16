@@ -170,7 +170,7 @@
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
-    <ClInclude Include="PrimitiveFunctionAttributes.h"/>
+    <ClInclude Include="PrimitiveFunctionAttributes.h" />
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
@@ -179,8 +179,10 @@
     <ClInclude Include="proto\onnx\core\model.h" />
     <ClInclude Include="proto\onnx\core\op.h" />
     <ClInclude Include="proto\onnx\core\opsignature.h" />
+    <ClInclude Include="proto\onnx\core\record.h" />
     <ClInclude Include="proto\onnx\core\shape_inference.h" />
     <ClInclude Include="proto\onnx\core\status.h" />
+    <ClInclude Include="proto\onnx\core\tensorutils.h" />
     <ClInclude Include="proto\onnx\core\utils.h" />
     <ClInclude Include="proto\onnx\ONNX.h" />
     <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
@@ -224,8 +226,9 @@
     <ClCompile Include="proto\onnx\core\opsignature.cpp" />
     <ClCompile Include="proto\onnx\core\shape_inference.cpp" />
     <ClCompile Include="proto\onnx\core\status.cpp" />
+    <ClCompile Include="proto\onnx\core\tensorutils.cpp" />
     <ClCompile Include="proto\onnx\core\utils.cpp" />
-    <ClCompile Include="proto\onnx\defs\experiments\defs.cpp" />
+    <ClCompile Include="proto\onnx\defs\activation\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\generator\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\logical\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\math\defs.cpp" />
@@ -233,6 +236,7 @@
     <ClCompile Include="proto\onnx\defs\reduction\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\rnn\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\tensor\defs.cpp" />
+    <ClCompile Include="proto\onnx\defs\traditionalml\defs.cpp" />
     <ClCompile Include="proto\onnx\ONNX.cpp" />
     <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
     <ClCompile Include="proto\onnx\Operators.cpp" />

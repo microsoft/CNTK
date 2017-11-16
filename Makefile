@@ -486,7 +486,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardFileWriter.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardUtils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/experiments/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/activation/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/generator/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/logical/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/math/defs.cpp \
@@ -494,6 +494,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/reduction/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/rnn/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/tensor/defs.cpp \
+    $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/traditionalml/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/constants.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/status.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/utils.cpp \
