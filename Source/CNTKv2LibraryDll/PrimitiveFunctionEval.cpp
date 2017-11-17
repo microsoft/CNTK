@@ -240,13 +240,15 @@ namespace CNTK
                     NDArrayView::NumericOperation({ runSqrSum, runCount },  1, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, sigma2);
                     // var = 1/count sqrSum - mu^2   --this subtracts mu^2
                     NDArrayView::NumericOperation({ mu                  }, -1, Microsoft::MSR::CNTK::ElementWiseOperator::opSqr, sigma2, /*beta=*/1);
-                    //mu   ->LogToFile(L"mu");
+                    //mu    ->LogToFile(L"mu");
                     //sigma2->LogToFile(L"sigma2");
                 }
                 if (blendFactor != 1) // we got a contribution from actual data (training only)
                 {
-                    NDArrayView::NumericOperation({ x     }, (1.0 - blendFactor)/N, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,            mu   , blendFactor);
+                    NDArrayView::NumericOperation({ x     }, (1.0 - blendFactor)/N, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,            mu    , blendFactor);
                     NDArrayView::NumericOperation({ x, mu }, (1.0 - blendFactor)/N, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2, blendFactor); // sigma^2
+                    //mu    ->LogToFile(L"mu");
+                    //sigma2->LogToFile(L"sigma2");
                 }
                 // statistics update:
                 //  - running accumulator with numer and denom
@@ -578,6 +580,7 @@ namespace CNTK
             {
                 let& outGradVal = const_cast<NDArrayView*>(outputGradientValue)->shared_from_this(); // dL/dyi
                 let& scale  = const_cast<NDArrayView*>(inputValues[1])->shared_from_this();
+                //let& runSum = const_cast<NDArrayView*>(inputValues[3])->shared_from_this(); // for readOnly check
                 let& sigma  = const_cast<NDArrayView*>(inputValues[7])->shared_from_this(); // sigma
                 let& redBuf = const_cast<NDArrayView*>(inputValues[6])->shared_from_this(); // reduced-size buffer, allocated for mean
                 let& xHat   = const_cast<NDArrayView*>(inputValues[8])->shared_from_this(); // (xi-mu)/sigma
@@ -597,19 +600,25 @@ namespace CNTK
                 //     (scale / sigma) * -1/N * (xHat * scaleGradient)
                 //     (scale / sigma) * -1/N * biasGradient;
                 // TODO: redundant with gradients[1] and [2]--how to cache this?
+                // In case of fixed stats, we only have the first term.
+                //   ^^ BUGBUG: We need to check the volatile flag correctly, to make this test work.
                 // add first term to gradient
                 NDArrayView::NumericOperation({ outGradVal, scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, beta);
-                // add second term, which is
-                // -(xHat * scaleGradient/N + biasGradient/N)
-                // * (scale / sigma)
-                let oneOverN = (double)redBuf->Shape().TotalSize(/*check=*/false) / (double)inputValues[0]->Shape().TotalSize(/*check=*/false);
-                // note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
-                let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
-                NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-oneOverN, opAxBxCoverD, gradient, /*beta=*/1.0);
-                // add third term, which is
-                // (scale / sigma) * -1/N * biasGradient
-                let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1, opCopy, redBuf);
-                NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -oneOverN, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
+                //let isInferring = runSum->IsReadOnly() || true; // inference is indicated at this level by locking up the running accumulators
+                //if (!isInferring)
+                {
+                    // add second term, which is
+                    // -(xHat * scaleGradient/N)
+                    // * (scale / sigma)
+                    let oneOverN = (double)redBuf->Shape().TotalSize(/*check=*/false) / (double)inputValues[0]->Shape().TotalSize(/*check=*/false);
+                    // note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
+                    let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
+                    NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-oneOverN, opAxBxCoverD, gradient, /*beta=*/1.0);
+                    // add third term, which is
+                    // (scale / sigma) * -1/N * biasGradient
+                    let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1, opCopy, redBuf);
+                    NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -oneOverN, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
+                }
                 handled = true;
             }
             else if (i == 1) // scale is a reduction over outputGradientValue * (x-mu)/sigma
