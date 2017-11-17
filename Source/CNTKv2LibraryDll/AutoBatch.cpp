@@ -1633,9 +1633,9 @@ class InternalVariable::AutoBatch
                     {
                         auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fPtr);
                         let batchAxisAndDim = DetermineBatchAxisAndDim(f);
-                        f.m_autoBatchState.m_stacking  = get<0>(batchAxisAndDim);
-                        f.m_autoBatchState.m_batchAxis = get<1>(batchAxisAndDim);
-                        f.m_autoBatchState.m_batchDim  = get<2>(batchAxisAndDim);
+                        f.m_autoBatchState.m_stacking  = batchAxisAndDim.stacking;
+                        f.m_autoBatchState.m_batchAxis = batchAxisAndDim.batchAxis;
+                        f.m_autoBatchState.m_batchDim  = batchAxisAndDim.batchDim;
                     });
                     // match new composite against all in the list by deep structure comparison
                     for (size_t i = 0; i < allComposites.size(); i++)
@@ -1673,7 +1673,8 @@ class InternalVariable::AutoBatch
         // The decision is purely based on the operation and input ranks. Input shapes (other than their rank) must not be considered.
         // BUGBUG: For Splice into a new axis, we must account for that new axis.
         // Note that this is also called for composites, where the last dimension may be FreeDimension. Should still work.
-        static tuple<StackingMode, size_t/*axis*/, size_t/*dim*/> DetermineBatchAxisAndDim(const PrimitiveFunction& f)
+        struct DetermineBatchAxisAndDimResult { StackingMode stacking; size_t batchAxis; size_t batchDim; };
+        static DetermineBatchAxisAndDimResult DetermineBatchAxisAndDim(const PrimitiveFunction& f)
 #if 0   // temporarily disable STACKING
         {
             auto res = DetermineBatchAxisAndDim1(f);
@@ -1685,11 +1686,11 @@ class InternalVariable::AutoBatch
             }
             return res;
         }
-        static tuple<StackingMode, size_t/*axis*/, size_t/*dim*/> DetermineBatchAxisAndDim1(const PrimitiveFunction& f)
+        static DetermineBatchAxisAndDimResult DetermineBatchAxisAndDim1(const PrimitiveFunction& f)
 #endif
         {
             // helper to read out a dimension
-            let getLastDim = [](const Variable& input, size_t axis, StackingMode modeIfStacking) -> tuple<StackingMode, size_t/*axis*/, size_t/*dim*/>
+            let getLastDim = [](const Variable& input, size_t axis, StackingMode modeIfStacking) -> DetermineBatchAxisAndDimResult
             {
                 let& inputShape = input.Shape().Dimensions();
                 let inputRank = inputShape.size();
@@ -1879,9 +1880,9 @@ class InternalVariable::AutoBatch
             {
                 // determine stacking vs. batching, and corresponding m_batchAxis
                 let batchAxisAndDim = DetermineBatchAxisAndDim(f);
-                f.m_autoBatchState.m_stacking  = get<0>(batchAxisAndDim);
-                f.m_autoBatchState.m_batchAxis = get<1>(batchAxisAndDim);
-                f.m_autoBatchState.m_batchDim  = get<2>(batchAxisAndDim);
+                f.m_autoBatchState.m_stacking  = batchAxisAndDim.stacking;
+                f.m_autoBatchState.m_batchAxis = batchAxisAndDim.batchAxis;
+                f.m_autoBatchState.m_batchDim  = batchAxisAndDim.batchDim;
                 fail_if(f.m_autoBatchState.m_batchDim == NDShape::FreeDimension, "FreeDimension made it into batchDim??");
                 fail_if(f.m_autoBatchState.m_stacking == StackingMode::BATCHING && f.m_autoBatchState.m_batchDim != 1, "batching but batchDim != 1??");
                 // this naive implementation just scans linearly
