@@ -531,13 +531,11 @@ PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
 JAVA_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
-OPENCV_LIBS:=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs
-
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH))  -o $@ $^ $(LIBS) $(OPENCV_LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -ldl -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH))  -o $@ $^ $(LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -ldl -fopenmp
 
 
 ########################################
@@ -600,7 +598,7 @@ $(PROPOSAL_LAYER_LIB): $(PROPOSAL_LAYER_LIBRARY_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(LIBPATH) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY) $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(LIBPATH) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY)
 
 
 ########################################
@@ -665,7 +663,7 @@ $(EVAL_CLIENT): $(EVAL_CLIENT_OBJ) | $(EVAL_LIB) $(READER_LIBS)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO) $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO)
 
 EVAL_EXTENDED_CLIENT:=$(BINDIR)/cppevalextendedclient
 
@@ -681,7 +679,7 @@ $(EVAL_EXTENDED_CLIENT): $(EVAL_EXTENDED_CLIENT_OBJ) | $(EVAL_LIB) $(READER_LIBS
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_EXTENDED_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO) $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO)
 
 ########################################
 # Eval V2 Sample client
@@ -1010,6 +1008,32 @@ endif
 endif
 
 ########################################
+# ImageWriter plugin
+########################################
+
+ifdef OPENCV_PATH
+IMAGEWRITER_LIBS_LIST := opencv_core opencv_imgproc opencv_imgcodecs
+IMAGEWRITER_LIBS:= $(addprefix -l,$(IMAGEWRITER_LIBS_LIST))
+
+IMAGEWRITER_SRC =\
+  $(SOURCEDIR)/ImageWriterDll/ImageWriter.cpp \
+
+IMAGEWRITER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEWRITER_SRC))
+
+IMAGEWRITER:=$(LIBDIR)/Cntk.ImageWriter-$(CNTK_COMPONENT_VERSION).so
+ALL_LIBS += $(IMAGEWRITER)
+PYTHON_LIBS += $(IMAGEWRITER)
+SRC+=$(IMAGEWRITER_SRC)
+
+INCLUDEPATH += $(OPENCV_PATH)/include
+LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
+
+$(IMAGEWRITER): $(IMAGEWRITER_OBJ)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(IMAGEWRITER_LIBS)
+endif
+
+########################################
 # 1bit SGD setup
 ########################################
 
@@ -1131,7 +1155,7 @@ $(CNTK): $(CNTK_OBJ) | $(READER_LIBS) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) $(L_READER_LIBS) $(lMULTIVERSO) -ldl -fopenmp $(PROTOBUF_PATH)/lib/libprotobuf.a $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) $(L_READER_LIBS) $(lMULTIVERSO) -ldl -fopenmp $(PROTOBUF_PATH)/lib/libprotobuf.a
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs
@@ -1204,7 +1228,7 @@ $(UNITTEST_EVAL) : $(UNITTEST_EVAL_OBJ) | $(EVAL_LIB) $(READER_LIBS)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO) $(OPENCV_LIBS) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO)
 
 #TODO: create project specific makefile or rules to avoid adding project specific path to the global path
 INCLUDEPATH += $(SOURCEDIR)/Readers/CNTKTextFormatReader
@@ -1271,7 +1295,7 @@ $(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(READER_LIBS) $(CNTKTEXTFORMATRE
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) $(lMULTIVERSO) $(L_READER_LIBS) -ldl -fopenmp  $(PROTOBUF_PATH)/lib/libprotobuf.a $(OPENCV_LIBS)  
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) $(lMULTIVERSO) $(L_READER_LIBS) -ldl -fopenmp  $(PROTOBUF_PATH)/lib/libprotobuf.a  
 
 UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BatchNormalizationEngineTests.cpp \
