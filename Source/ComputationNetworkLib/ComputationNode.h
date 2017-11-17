@@ -2315,6 +2315,7 @@ struct IPreComputeNode
     \
 protected:                                                                                                                                               \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;                                                                                    \
+    typedef typename Base::MatrixPtr MatrixPtr;                                                                                                          \
     using Base::BackpropTo;                                                                                                                              \
     using Base::ConstOnes;                                                                                                                               \
     using Base::CopyTo;                                                                                                                                  \
@@ -2372,7 +2373,7 @@ protected:                                                                      
     using Base::NodeDescription;                                                                                                                         \
     using Base::OutputUsedInComputingInputNodesGradients;                                                                                                \
     using Base::PrintNodeValuesToFile;                                                                                                                   \
-    using Base::FormatOperationPrototype;                                                                                                               \
+    using Base::FormatOperationPrototype;                                                                                                                \
     using Base::ReleaseMatricesAfterBackprop;                                                                                                            \
     using Base::ReleaseMatricesAfterForwardProp;                                                                                                         \
     using Base::ReleaseMatrixToPool;                                                                                                                     \
