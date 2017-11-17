@@ -2111,7 +2111,7 @@ namespace CNTK
     // Forward declarations
     inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes(), bool needsGradient = false, bool isSparse = false);
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-    inline InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, bool isVolatile, const std::wstring& name = std::wstring());
+    inline class InternalVariable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, bool isVolatile, const std::wstring& name = std::wstring());
 
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
@@ -2477,7 +2477,7 @@ namespace CNTK
         //Variable CompositePreservingCopy(const ConstFunctionPtr& composite) const;
         //Variable CompositePreservingCopy(ConstFunctionPtr&& composite) const;
         //Variable NonCompositePreservingCopy() const;
-        Variable Variable::CompositePreservingCopy(const ConstFunctionPtr& composite) const
+        Variable CompositePreservingCopy(const ConstFunctionPtr& composite) const
         {
             return Variable((const InternalVariable&)*this, composite, m_acyclicOutputPrimitiveReference);
         }

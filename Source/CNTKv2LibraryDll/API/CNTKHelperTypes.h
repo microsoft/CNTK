@@ -278,7 +278,6 @@ template<typename T, size_t N>
 class FixedVectorWithBuffer : public Span<T*>
 {
     typedef Span<T*> Base;
-    using Base::begin; using Base::end;
     union U
     {
         T fixedBuffer[N]; // stored inside a union so that we get away without automatic construction yet correct alignment
@@ -302,6 +301,7 @@ class FixedVectorWithBuffer : public Span<T*>
             free(b);   // Span::beginIter holds the result of malloc()
     }
 public:
+    using Base::begin; using Base::end;
     typedef Span<T*> SpanT;
     typedef T value_type;
     // short-circuit constructors that construct from up to 2 arguments which are taken ownership of
