@@ -625,7 +625,7 @@ namespace CNTK
                             {
                                 size_t rank = m_inputs[0].Shape().Rank();
                                 if (rank == 0)
-                                    InvalidArgument("Function '%S': Index operation cannot be applied top scalars.");
+                                    InvalidArgument("Function '%S': Index operation cannot be applied to scalars.", AsString().c_str());
                                 axis.push_back(Axis(rank - 1));
                                 int index = m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
                                 beginIndex.push_back(index);

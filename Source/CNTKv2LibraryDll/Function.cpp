@@ -1649,7 +1649,7 @@ namespace CNTK
             if (weightsShape.Rank() != 2)
                 InvalidArgument("NCELoss: weights must have two axes");
             if (weightsShape[1] != numClasses)
-                InvalidArgument("NCELoss: the second axis of weights is of length %zd but it is expected to be the same length as the noiseWeights %zd", weightsShape[1], numClasses);
+                InvalidArgument("NCELoss: the second axis of weights is of length %u but it is expected to be the same length as the noiseWeights %d", weightsShape[1], numClasses);
         }
 
         if (!biases.IsPlaceholder())
@@ -1658,9 +1658,9 @@ namespace CNTK
             if (biasesShape.Rank() != 2)
                 InvalidArgument("NCELoss: biases must have two axes");
             if (biasesShape[0] != 1)
-                InvalidArgument("NCELoss: the first axis of biases is of length %zd but it is expected to be of length 1", biasesShape[0]);
+                InvalidArgument("NCELoss: the first axis of biases is of length %d but it is expected to be of length 1", biasesShape[0]);
             if (biasesShape[1] != numClasses)
-                InvalidArgument("NCELoss: the first axis of biases is of length %zd but it is expected to be the same length as the noiseWeights %zd", biasesShape[1], numClasses);
+                InvalidArgument("NCELoss: the first axis of biases is of length %d but it is expected to be the same length as the noiseWeights %d", biasesShape[1], numClasses);
         }
 
         if (!inputs.IsPlaceholder())
@@ -1683,7 +1683,7 @@ namespace CNTK
                     auto unused = Times(allZero, weights);
                 }
                 else if (weightsShape[0] != inputsShape[0])
-                    InvalidArgument("NCELoss: the second axis of weights is of length %zd but it is expected to be the same length as the inputs %zd", weightsShape[0], inputsShape[0]);
+                    InvalidArgument("NCELoss: the second axis of weights is of length %d but it is expected to be the same length as the inputs %d", weightsShape[0], inputsShape[0]);
             }
         }
 
@@ -1693,7 +1693,7 @@ namespace CNTK
             if (labelsShape.Rank() != 1)
                 InvalidArgument("NCELoss: labels must be a vector");
             if (labelsShape[0] != numClasses)
-                InvalidArgument("NCELoss: the shape of the label (%zd) does not agree with the shape of noiseWeights (%zd)", labelsShape[0], numClasses);
+                InvalidArgument("NCELoss: the shape of the label (%d) does not agree with the shape of noiseWeights (%d)", labelsShape[0], numClasses);
             if (!labels.IsSparse())
                 Warning("NCELoss: label is not sparse; gradients will be dense and operations will be slow");
         }
@@ -1705,7 +1705,7 @@ namespace CNTK
         auto unormalizedNoisePriorEntropy = ReduceSum(ElementTimes(unnormalizedNoisePrior, logUnnormalizedNoisePrior), Axis::AllStaticAxes());
         auto inclusionProbability = RandomSampleInclusionFrequency(noiseDistribution, numSamples, allowDuplicates, seed);
         auto importanceWeights = ElementDivide(noiseDistribution, inclusionProbability);
-        auto reshapedLogNoisePrior = Reshape(logUnnormalizedNoisePrior, NDShape{ { 1, NDShape::InferredDimension } });
+        auto reshapedLogNoisePrior = Reshape(logUnnormalizedNoisePrior, NDShape{ { 1u, NDShape::InferredDimension } });
         auto combinedFunction = Combine({ unormalizedNoisePriorEntropy, reshapedLogNoisePrior, importanceWeights, noiseDistribution });
         auto outputs = combinedFunction->Outputs();
         auto outputMap = std::unordered_map<Variable, ValuePtr>{ { outputs[0], nullptr}, { outputs[1], nullptr }, { outputs[2], nullptr }, { outputs[3], nullptr } };

@@ -17,6 +17,12 @@
 #include <utility> // std::forward
 #include <atomic>
 
+#ifndef _MSC_VER
+#ifndef __forceinline
+#define __forceinline inline
+#endif
+#endif
+
 namespace CNTK
 {
 
@@ -677,8 +683,10 @@ class enable_strong_shared_ptr
     unsigned int DecRef() const noexcept { return --referenceCount; }
     size_t UseCount() const noexcept { return referenceCount; }
 public:
+#ifndef _MSC_VER // needed for gcc, but fails with MSVC --how to do this right?
     enable_strong_shared_ptr() noexcept : referenceCount() { } // (needed because atomic<>() is noexcept)
     enable_strong_shared_ptr(const enable_strong_shared_ptr& other) noexcept : referenceCount(other.referenceCount) { } // (needed because atomic<>() is noexcept)
+#endif
 };
 template<class T>
 class strong_shared_ptr final

@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "PrimitiveOpType.h"
+#include <limits.h>
 
 namespace std
 {

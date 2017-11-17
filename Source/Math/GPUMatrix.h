@@ -79,16 +79,16 @@ private:
     // a quick hack to measure GPU cost more accurately
     cudaEvent_t m_start;
     cudaEvent_t m_stop;
+#endif
     static double s_elapsed;
     static size_t s_elapsedArmed;
-#endif
 
 public:
     static MATH_API void EnableSync();
     static MATH_API bool IsSyncEnabled();
 
-    __declspec(noinline) MATH_API SyncGuard(bool forceSync = false);
-    __declspec(noinline) MATH_API ~SyncGuard();
+    MATH_API SyncGuard(bool forceSync = false);
+    MATH_API ~SyncGuard();
 
     static MATH_API double Elapsed() { double r = s_elapsed / 1000.0; s_elapsed = 0; s_elapsedArmed = 1000; return r; }
 };

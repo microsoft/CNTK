@@ -94,7 +94,9 @@ typedef void *HANDLE;
 #define CONST const
 
 //macro conversion
+#ifndef __forceinline
 #define __forceinline inline
+#endif
 //string and io conversion
 #define strtok_s strtok_r
 #define sprintf_s snprintf

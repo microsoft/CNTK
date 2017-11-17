@@ -52,7 +52,7 @@ using namespace std;
 #pragma warning (disable: 4456) // until I fixed the shadowing
 
 #define let const auto
-#define fail_if(cond, err) (!!(cond) ? (LogicError(__FUNCTION__ ": " err),0) : 0)
+#define fail_if(cond, err) (!!(cond) ? (LogicError("%s: %s", __func__, err),0) : 0)
 #define Break fprintf(stderr, "") // use this inside a conditional to be able to set a breakpoint in Release code
 
 namespace CNTK
@@ -643,6 +643,7 @@ class PCTimer // roll our own; high_resolution_timer is reportedly not high-reso
     LARGE_INTEGER freq, start;
     double total;
 public:
+#ifdef _WIN32
     PCTimer() { if (!QueryPerformanceFrequency(&freq)) RuntimeError("PCTimer: QueryPerformanceFrequency failure"); } // count ticks per second
     void Start() { QueryPerformanceCounter(&start); }
     double Stop() // each read gives time elapsed since start, in seconds
@@ -653,6 +654,15 @@ public:
         total += elapsed;
         return elapsed;
     }
+#else
+    // TODO: implement this for gcc/unix if needed
+    PCTimer() { } // count ticks per second
+    void Start() { }
+    double Stop() // each read gives time elapsed since start, in seconds
+    {
+        return 0;
+    }
+#endif
     double Total() const { return total; }
 };
 struct CudaStats
@@ -1770,9 +1780,9 @@ class InternalVariable::AutoBatch
             if (hasSparse && (maxRank < 1 || maxRank > 2))
                 InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
             // decide stacking vs. batching
+            let stackingAxis = maxRank - 1; // (gcc requires me to do this before the 'goto')
             if (maxRank == 0) // can only stack if inputs are not scalars
                 goto mustBatch;
-            let stackingAxis = maxRank - 1;
             switch (op) // does the unbatched op touch the (potential) stacking axis?
             {
             case PrimitiveOpType::ElementTimes:
@@ -2950,36 +2960,35 @@ class InternalVariable::AutoBatch
 
     // determine the physical source and slice index of an input
     // If !originatingFunction then sliceRange.empty().
-    static const struct { const PrimitiveFunction* originatingFunction; SliceRange sliceRange; } LazyPhysicalSlice(const VariableFields& fields)
+    struct LazyPhysicalSliceReturnType { const PrimitiveFunction* originatingFunction; SliceRange sliceRange; };
+    static const LazyPhysicalSliceReturnType LazyPhysicalSlice(const VariableFields& fields)
     {
         auto function   = fields.m_redirection.m_function;
         auto sliceRange = SliceRange();
         // case 1: Placeholder or Constant
-        if (!function)
-            goto done;
-        // case 2: one-level redirect
-        sliceRange = fields.m_redirection.m_sliceRange;
-        let& redirectedFields = GetOutputFields(*function);
-        auto redirectedFunction = redirectedFields.m_redirection.m_function;
-        if (redirectedFunction == function) // self: end of chain
-            goto done;
-        // case 3: multi-step redirections (these occur in composite inlining)
-        // TODO: patch up the data structure upon first discovery
-        for (;;)
+        if (function)
         {
-            function = redirectedFunction;
-            let& redirectedSliceRange = redirectedFields.m_redirection.m_sliceRange;
-            if (sliceRange.empty())
-                sliceRange = redirectedSliceRange;
-            else
-                fail_if(!redirectedSliceRange.empty(), "LazyPhysicalSlice: hit a see-through slice??"); // multiple slicing not possible
-            // TODO: ^^ multiple non-dropping slices could be composable here
+            // case 2: one-level redirect
+            sliceRange = fields.m_redirection.m_sliceRange;
             let& redirectedFields = GetOutputFields(*function);
-            redirectedFunction = redirectedFields.m_redirection.m_function;
-            if (redirectedFunction == function) // self: end of chain
-                break;
+            auto redirectedFunction = redirectedFields.m_redirection.m_function;
+            while (redirectedFunction != function) // not self: not end of chain
+            {
+                // case 3: multi-step redirections (these occur in composite inlining)
+                // TODO: patch up the data structure upon first discovery
+                function = redirectedFunction;
+                let& redirectedSliceRange = redirectedFields.m_redirection.m_sliceRange;
+                if (sliceRange.empty())
+                    sliceRange = redirectedSliceRange;
+                else
+                    fail_if(!redirectedSliceRange.empty(), "LazyPhysicalSlice: hit a see-through slice??"); // multiple slicing not possible
+                // TODO: ^^ multiple non-dropping slices could be composable here
+                let& redirectedFields = GetOutputFields(*function);
+                redirectedFunction = redirectedFields.m_redirection.m_function;
+                //if (redirectedFunction == function) // self: end of chain
+                //    break;
+            }
         }
-    done:
         fail_if(!function && !sliceRange.empty(), "LazyPhysicalSlice: sliceRange not empty if no redirect??");
         return{ function, sliceRange };
     }
@@ -4357,8 +4366,9 @@ public:
     // This uses Variable::m_visitedTag for traversing the consumer tree upwards.
     // It uses PrimitiveFunction::m_visitedTag for bulk gradient of currently the
     // Splice op, which produces all inputs' gradients in a single go and must therefore only run once.
+    
     // Normally, fields.m_gradient is NULL. The one exception is if the user supplies a buffer for a requested gradient.
-    __declspec(noinline) void RAggregateGradientFromAllConsumers(VariableFields& fields)
+    void RAggregateGradientFromAllConsumers(VariableFields& fields)
     {
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
