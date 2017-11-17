@@ -52,7 +52,7 @@ ENV PATH /usr/local/mpi/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
 
 RUN LIBZIP_VERSION=1.1.2 && \
-    wget -q -O - http://nih.at/libzip/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
+    wget -q -O - https://libzip.org/download/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
     cd libzip-${LIBZIP_VERSION} && \
     ./configure && \
     make -j"$(nproc)" install && \
