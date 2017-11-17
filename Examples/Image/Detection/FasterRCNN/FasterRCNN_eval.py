@@ -16,7 +16,7 @@ from utils.od_mb_source import ObjectDetectionMinibatchSource
 class FasterRCNN_Evaluator:
     def __init__(self, eval_model, cfg):
         # load model once in constructor and push images through the model in 'process_image()'
-        self._img_shape = (cfg.NUM_CHANNELS, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH)
+        self._img_shape = (cfg.NUM_CHANNELS, cntk.FreeDimension, cntk.FreeDimension)
         image_input = input_variable(shape=self._img_shape,
                                      dynamic_axes=[Axis.default_batch_axis()],
                                      name=cfg["MODEL"].FEATURE_NODE_NAME)
@@ -31,7 +31,7 @@ class FasterRCNN_Evaluator:
         return regressed_rois, out_cls_pred
 
     def process_image_detailed(self, img_path):
-        _, cntk_img_input, dims = load_resize_and_pad(img_path, self._img_shape[2], self._img_shape[1])
+        _, cntk_img_input, dims = load_resize_and_pad(img_path)
 
         cntk_dims_input = np.array(dims, dtype=np.float32)
         cntk_dims_input.shape = (1,) + cntk_dims_input.shape
@@ -48,7 +48,7 @@ class FasterRCNN_Evaluator:
 def compute_test_set_aps(eval_model, cfg):
     num_test_images = cfg["DATA"].NUM_TEST_IMAGES
     classes = cfg["DATA"].CLASSES
-    image_input = input_variable(shape=(cfg.NUM_CHANNELS, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH),
+    image_input = input_variable(shape=(cfg.NUM_CHANNELS, cntk.FreeDimension, cntk.FreeDimension),
                                  dynamic_axes=[Axis.default_batch_axis()],
                                  name=cfg["MODEL"].FEATURE_NODE_NAME)
     roi_input = input_variable((cfg.INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
@@ -66,7 +66,8 @@ def compute_test_set_aps(eval_model, cfg):
         randomize=False, use_flipping=False,
         max_images=cfg["DATA"].NUM_TEST_IMAGES,
         num_classes=cfg["DATA"].NUM_CLASSES,
-        proposal_provider=None)
+        proposal_provider=None,
+        mean_img=cfg["MODEL"].IMG_PAD_COLOR)
 
     # define mapping from reader streams to network inputs
     input_map = {

@@ -7,8 +7,14 @@
 import os
 import os.path as osp
 import numpy as np
+try:
+    import easydict
+except:
+    import pip
+    pip.main(['install', '--user', 'easydict'])
+    import easydict
+
 from easydict import EasyDict as edict
-# `pip install easydict` if you don't have it
 
 __C = edict()
 cfg = __C
@@ -27,6 +33,8 @@ __C.CNTK.TRAIN_E2E = True
 __C.CNTK.FORCE_DETERMINISTIC = False
 # set to 'True' to run only a single epoch
 __C.CNTK.FAST_MODE = False
+# set to 'False' for debugging 
+__C.CNTK.USE_DROPOUT = True
 # Debug parameters
 __C.CNTK.DEBUG_OUTPUT = False
 __C.CNTK.GRAPH_TYPE = "png" # "png" or "pdf"
@@ -38,10 +46,11 @@ __C.CNTK.L2_REG_WEIGHT = 0.0005
 __C.CNTK.MOMENTUM_PER_MB = 0.9
 # The learning rate multiplier for all bias weights
 __C.CNTK.BIAS_LR_MULT = 2.0
+__C.CNTK.MB_SIZE = 1
 
 # E2E learning parameters
-__C.CNTK.E2E_MAX_EPOCHS = 20
-__C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
+__C.CNTK.E2E_MAX_EPOCHS = 18
+__C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 6 + [0.00001]
 
 # 4-stage learning parameters (alternating training scheme)
 __C.CNTK.RPN_EPOCHS = 16
@@ -143,7 +152,7 @@ __C.TEST.RPN_MIN_SIZE = 16
 __C.RND_SEED = 3
 
 # Use GPU implementation of non-maximum suppression
-__C.USE_GPU_NMS = False
+__C.USE_GPU_NMS = True
 
 # Default GPU device id
 __C.GPU_ID = 0

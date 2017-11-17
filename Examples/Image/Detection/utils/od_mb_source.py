@@ -13,7 +13,8 @@ class ObjectDetectionMinibatchSource(UserMinibatchSource):
     def __init__(self, img_map_file, roi_map_file, num_classes,
                  max_annotations_per_image, pad_width, pad_height, pad_value,
                  randomize, use_flipping, proposal_provider, proposal_iou_threshold=0.5,
-                 provide_targets=False, normalize_means=None, normalize_stds=None, max_images=None):
+                 provide_targets=False, normalize_means=None, normalize_stds=None,
+                 max_images=None, mean_img=None):
 
         self.image_si = StreamInformation("image", 0, 'dense', np.float32, (3, pad_height, pad_width,))
         self.roi_si = StreamInformation("annotation", 1, 'dense', np.float32, (max_annotations_per_image, 5,))
@@ -31,7 +32,7 @@ class ObjectDetectionMinibatchSource(UserMinibatchSource):
         self.od_reader = ObjectDetectionReader(img_map_file, roi_map_file, num_classes,
                                                max_annotations_per_image, pad_width, pad_height, pad_value,
                                                randomize, use_flipping, proposal_provider, proposal_iou_threshold,
-                                               provide_targets, normalize_means, normalize_stds, max_images)
+                                               provide_targets, normalize_means, normalize_stds, max_images, mean_img)
 
         super(ObjectDetectionMinibatchSource, self).__init__()
 

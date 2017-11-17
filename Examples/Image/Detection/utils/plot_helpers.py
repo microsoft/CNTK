@@ -16,7 +16,12 @@ import cntk
 from cntk import input_variable, Axis
 from utils.nms_wrapper import apply_nms_to_single_image_results
 from utils.rpn.bbox_transform import regress_rois
-import cv2 # pip install opencv-python
+try:
+    import cv2
+except:
+    import pip
+    pip.main(['install', '--user', 'opencv-python'])
+    import cv2
 
 available_font = "arial.ttf"
 try:
@@ -24,65 +29,75 @@ try:
 except:
     available_font = "FreeMono.ttf"
 
+# side length used for non-fixed image size
+shorter_size_px = 600
+
 ####################################
 # Visualize results
 ####################################
-def load_resize_and_pad(image_path, width, height, pad_value=114):
+def load_resize_and_pad(image_path):
     if "@" in image_path:
         print("WARNING: zipped image archives are not supported for visualizing results.")
         exit(0)
 
     img = cv2.imread(image_path)
-    return resize_and_pad(img, width, height, pad_value)
+    return resize_and_pad(img)
 
-def resize_and_pad(img, width, height, pad_value=114):
+def resize_and_pad(img):
     img_width = len(img[0])
     img_height = len(img)
-    scale_w = img_width > img_height
-    target_w = width
-    target_h = height
 
-    if scale_w:
-        target_h = int(np.round(img_height * float(width) / float(img_width)))
+    if img_width < img_height:
+        target_w = shorter_size_px
+        scale_factor = float(target_w) / float(img_width)
+        target_h = int(np.round(img_height * scale_factor))
     else:
-        target_w = int(np.round(img_width * float(height) / float(img_height)))
+        target_h = shorter_size_px
+        scale_factor = float(target_h) / float(img_height)
+        target_w = int(np.round(img_width * scale_factor))
 
     resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
 
-    top = int(max(0, np.round((height - target_h) / 2)))
-    left = int(max(0, np.round((width - target_w) / 2)))
-    bottom = height - top - target_h
-    right = width - left - target_w
-    resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right,
-                                          cv2.BORDER_CONSTANT, value=[pad_value, pad_value, pad_value])
-
     # transpose(2,0,1) converts the image to the HWC format which CNTK accepts
-    model_arg_rep = np.ascontiguousarray(np.array(resized_with_pad, dtype=np.float32).transpose(2, 0, 1))
+    model_arg_rep = np.ascontiguousarray(np.array(resized, dtype=np.float32).transpose(2, 0, 1))
 
-    dims = (width, height, target_w, target_h, img_width, img_height)
-    return resized_with_pad, model_arg_rep, dims
+    dims = (target_w, target_h, target_w, target_h, img_width, img_height)
+    return resized, model_arg_rep, dims
 
 def visualize_detections(img_path, roi_coords, roi_labels, roi_scores,
-                         pad_width, pad_height, classes,
+                         target_width, target_height, classes,
                          draw_negative_rois = False, decision_threshold = 0.0):
     # read and resize image
     imgWidth, imgHeight = imWidthHeight(img_path)
-    scale = 800.0 / max(imgWidth, imgHeight)
-    imgHeight = int(imgHeight * scale)
-    imgWidth = int(imgWidth * scale)
-    if imgWidth > imgHeight:
-        h_border = 0
-        v_border = int((imgWidth - imgHeight)/2)
+    imgRatio = imgWidth / imgHeight
+    targetRatio = target_width / target_height
+    h_border = 0
+    v_border = 0
+
+    if np.abs(imgRatio - targetRatio) < 0.01:
+        imgWidth = target_width
+        imgHeight = target_height
     else:
-        h_border = int((imgHeight - imgWidth)/2)
-        v_border = 0
+        if imgRatio > targetRatio:
+            # fit the width, pad in height
+            scale = target_width / (1.0 * imgWidth)
+            imgWidth = target_width
+            imgHeight = int(imgHeight * scale)
+            v_border = int((target_height - imgHeight) / 2)
+        else:
+            # fit the height, pad in width
+            scale = target_height / (1.0 * imgHeight)
+            imgHeight = target_height
+            imgWidth = int(imgWidth * scale)
+            h_border = int((target_width - imgWidth) / 2)
+
+    assert h_border >= 0 and v_border >= 0
 
     PAD_COLOR = [103, 116, 123] # [114, 114, 114]
     cv_img = cv2.imread(img_path)
     rgb_img = cv2.cvtColor(cv_img,cv2.COLOR_BGR2RGB)
     resized = cv2.resize(rgb_img, (imgWidth, imgHeight), interpolation=cv2.INTER_NEAREST)
     result_img = cv2.copyMakeBorder(resized,v_border,v_border,h_border,h_border,cv2.BORDER_CONSTANT,value=PAD_COLOR)
-    rect_scale = 800 / pad_width
 
     assert(len(roi_labels) == len(roi_coords))
     if roi_scores is not None:
@@ -107,11 +122,11 @@ def visualize_detections(img_path, roi_coords, roi_labels, roi_scores,
             else:
                 color = getColorsPalette()[label]
 
-            rect = [(rect_scale * i) for i in roi_coords[roiIndex]]
-            rect[0] = int(max(0, min(pad_width, rect[0])))
-            rect[1] = int(max(0, min(pad_height, rect[1])))
-            rect[2] = int(max(0, min(pad_width, rect[2])))
-            rect[3] = int(max(0, min(pad_height, rect[3])))
+            rect = roi_coords[roiIndex]
+            rect[0] = int(max(0, min(target_width, rect[0])))
+            rect[1] = int(max(0, min(target_height, rect[1])))
+            rect[2] = int(max(0, min(target_width, rect[2])))
+            rect[3] = int(max(0, min(target_height, rect[3])))
 
             # draw in higher iterations only the detections
             if iter == 0 and draw_negative_rois:
@@ -150,7 +165,7 @@ def plot_test_set_results(evaluator, num_images_to_plot, results_base_path, cfg)
         if cfg.DRAW_UNREGRESSED_ROIS:
             # plot results without final regression
             imgDebug = visualize_detections(img_path, out_rpn_rois, labels, scores,
-                                            img_shape[2], img_shape[1],
+                                            dims[0], dims[1],
                                             classes=cfg["DATA"].CLASSES,
                                             draw_negative_rois=cfg.DRAW_NEGATIVE_ROIS,
                                             decision_threshold=cfg.RESULTS_BGR_PLOT_THRESHOLD)
@@ -169,7 +184,7 @@ def plot_test_set_results(evaluator, num_images_to_plot, results_base_path, cfg)
         filtered_scores = scores[nmsKeepIndices]
 
         img = visualize_detections(img_path, filtered_bboxes, filtered_labels, filtered_scores,
-                                   img_shape[2], img_shape[1],
+                                   dims[0], dims[1],
                                    classes=cfg["DATA"].CLASSES,
                                    draw_negative_rois=cfg.DRAW_NEGATIVE_ROIS,
                                    decision_threshold=cfg.RESULTS_BGR_PLOT_THRESHOLD)

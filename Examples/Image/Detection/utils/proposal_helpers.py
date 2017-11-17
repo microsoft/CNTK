@@ -9,7 +9,12 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, ".."))
 
 import numpy as np
-import cv2
+try:
+    import cv2
+except:
+    import pip
+    pip.main(['install', '--user', 'opencv-python'])
+    import cv2
 from utils.rpn.bbox_transform import bbox_transform
 from utils.cython_modules.cython_bbox import bbox_overlaps
 
@@ -25,22 +30,19 @@ def load_selective_search_lib():
     global ss_lib_loaded
     ss_lib_loaded = True
 
-def compute_image_stats(img_width, img_height, pad_width, pad_height):
-    do_scale_w = img_width > img_height
-    target_w = pad_width
-    target_h = pad_height
-
-    if do_scale_w:
-        scale_factor = float(pad_width) / float(img_width)
+def compute_image_stats(img_width, img_height, pad_width, pad_height, shorter_size_px):
+    top = 0
+    left = 0
+    if img_width < img_height:
+        target_w = shorter_size_px
+        scale_factor = float(target_w) / float(img_width)
         target_h = int(np.round(img_height * scale_factor))
     else:
-        scale_factor = float(pad_height) / float(img_height)
+        target_h = shorter_size_px
+        scale_factor = float(target_h) / float(img_height)
         target_w = int(np.round(img_width * scale_factor))
-
-    top = int(max(0, np.round((pad_height - target_h) / 2)))
-    left = int(max(0, np.round((pad_width - target_w) / 2)))
-    bottom = pad_height - top - target_h
-    right = pad_width - left - target_w
+    bottom = target_h -1
+    right = target_w - 1
     return [target_w, target_h, img_width, img_height, top, bottom, left, right, scale_factor]
 
 def filterRois(rects, img_w, img_h, roi_min_area, roi_max_area, roi_min_side, roi_max_side, roi_max_aspect_ratio):

@@ -7,7 +7,12 @@
 import os
 from cntk import output_variable
 from cntk.ops.functions import UserFunction
-import yaml
+try:
+    import yaml
+except:
+    import pip
+    pip.main(['install', '--user', 'pyyaml'])
+    import yaml
 import numpy as np
 import numpy.random as npr
 from utils.rpn.generate_anchors import generate_anchors

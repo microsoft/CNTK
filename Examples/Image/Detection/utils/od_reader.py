@@ -5,7 +5,12 @@
 # ==============================================================================
 
 import zipfile
-import cv2 # pip install opencv-python
+try:
+    import cv2
+except:
+    import pip
+    pip.main(['install', '--user', 'opencv-python'])
+    import cv2
 import numpy as np
 import os
 from utils.proposal_helpers import ProposalProvider, compute_targets, compute_image_stats
@@ -20,19 +25,20 @@ class ObjectDetectionReader:
                  max_annotations_per_image, pad_width, pad_height, pad_value,
                  randomize, use_flipping,
                  proposal_provider, proposal_iou_threshold,
-                 provide_targets, normalize_means, normalize_stds, max_images=None):
+                 provide_targets, normalize_means, normalize_stds, max_images=None,
+                 mean_img=None):
         self._num_classes = num_classes
         self._pad_width = pad_width
         self._pad_height = pad_height
         self._pad_value = pad_value
         self._randomize = randomize
         self._use_flipping = use_flipping
-        self._flip_image = True # will be set to False in the first call to _reset_reading_order
         self._proposal_provider = proposal_provider
         self._proposal_iou_threshold = proposal_iou_threshold
         self._provide_targets = provide_targets
         self._normalize_means = normalize_means
         self._normalize_stds = normalize_stds
+        self._mean_img = mean_img
 
         self._proposal_dict = {}
         self._proposal_targets = {}
@@ -41,6 +47,9 @@ class ObjectDetectionReader:
 
         self._num_images = self._parse_map_files(img_map_file, roi_map_file, max_annotations_per_image, max_images)
         self._img_stats = [None for _ in range(self._num_images)]
+
+        # side length used for non-fixed image size
+        self._shorter_size_px = 600
 
         self._reading_order = None
         self._reading_index = -1
@@ -55,14 +64,18 @@ class ObjectDetectionReader:
         '''
 
         index = self._get_next_image_index()
-        roi_data = self._get_gt_annotations(index)
+        flip_image = False
+        if self._use_flipping: 
+            flip_image = np.random.choice([True, False])
         if DEBUG:
-            img_data, img_dims, resized_with_pad = self._load_resize_and_pad_image(index)
-            self._debug_plot(resized_with_pad, roi_data)
+            img_data, img_dims, resized_with_pad = self._load_resize_and_pad_image(index, flip_image)
         else:
-            img_data, img_dims = self._load_resize_and_pad_image(index)
+            img_data, img_dims = self._load_resize_and_pad_image(index, flip_image)
+        roi_data = self._get_gt_annotations(index, img_dims, flip_image)
+        if DEBUG:
+            self._debug_plot(resized_with_pad, roi_data)
 
-        proposals, label_targets, bbox_targets, bbox_inside_weights = self._get_proposals_and_targets(index)
+        proposals, label_targets, bbox_targets, bbox_inside_weights = self._get_proposals_and_targets(index, img_dims, flip_image)
 
         return img_data, roi_data, img_dims, proposals, label_targets, bbox_targets, bbox_inside_weights
 
@@ -132,9 +145,6 @@ class ObjectDetectionReader:
         self._reading_order = np.arange(self._num_images)
         if self._randomize:
             np.random.shuffle(self._reading_order)
-        # if flipping should be used then we alternate between epochs from flipped to non-flipped
-        self._flip_image = not self._flip_image if self._use_flipping else False
-
         self._reading_index = 0
 
     def _read_image(self, image_path):
@@ -157,7 +167,7 @@ class ObjectDetectionReader:
 
         # prepare image statistics for scaling and padding images later
         # [target_w, target_h, img_width, img_height, top, bottom, left, right, scale_factor]
-        img_stats = compute_image_stats(img_width, img_height, self._pad_width, self._pad_height)
+        img_stats = compute_image_stats(img_width, img_height, self._pad_width, self._pad_height, self._shorter_size_px)
         self._img_stats[index] = img_stats
         scale_factor = img_stats[-1]
         top = img_stats[4]
@@ -168,13 +178,6 @@ class ObjectDetectionReader:
         xyxy = annotations[:, :4]
         xyxy *= scale_factor
         xyxy += (left, top, left, top)
-
-        # not needed since xyxy is just a reference: annotations[:, :4] = xyxy
-        # TODO: do we need to round/floor/ceil xyxy coords?
-        annotations[:, 0] = np.round(annotations[:, 0])
-        annotations[:, 1] = np.round(annotations[:, 1])
-        annotations[:, 2] = np.round(annotations[:, 2])
-        annotations[:, 3] = np.round(annotations[:, 3])
 
         # prepare proposals
         if self._proposal_provider is not None:
@@ -207,48 +210,48 @@ class ObjectDetectionReader:
         self._reading_index += 1
         return next_image_index
 
-    def _load_resize_and_pad_image(self, index):
+    def _load_resize_and_pad_image(self, index, flip_image):
         image_path = self._img_file_paths[index]
 
         img = self._read_image(image_path)
+        img = img.astype(np.float32, copy=False)
+        if self._mean_img is not None:
+            img -= self._mean_img
         if self._img_stats[index] is None:
             self._prepare_annotations_proposals_and_stats(index, img)
 
         target_w, target_h, img_width, img_height, top, bottom, left, right, scale = self._img_stats[index]
 
         resized = cv2.resize(img, (target_w, target_h), 0, 0, interpolation=cv2.INTER_NEAREST)
-        resized_with_pad = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT,
-                                              value=self._pad_value)
-        if self._flip_image:
-            resized_with_pad = cv2.flip(resized_with_pad, 1)
+        if flip_image:
+            resized = cv2.flip(resized, 1)
 
         # transpose(2,0,1) converts the image to the HWC format which CNTK expects
-        model_arg_rep = np.ascontiguousarray(np.array(resized_with_pad, dtype=np.float32).transpose(2, 0, 1))
+        model_arg_rep = np.ascontiguousarray(np.array(resized, dtype=np.float32).transpose(2, 0, 1))
 
-        # dims = pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height
-        dims = (self._pad_width, self._pad_height, target_w, target_h, img_width, img_height)
+        dims = (target_w, target_h, target_w, target_h, img_width, img_height)
         if DEBUG:
-            return model_arg_rep, dims, resized_with_pad
+            return model_arg_rep, dims, resized
         return model_arg_rep, dims
 
-    def _get_gt_annotations(self, index):
+    def _get_gt_annotations(self, index, img_dims, flip_image):
         annotations = self._gt_annotations[index]
-        if self._flip_image:
+        if flip_image:
             flipped_annotations = np.array(annotations)
-            flipped_annotations[:,0] = self._pad_width - annotations[:,2] - 1
-            flipped_annotations[:,2] = self._pad_width - annotations[:,0] - 1
+            flipped_annotations[:,0] = img_dims[0] - annotations[:,2] - 1
+            flipped_annotations[:,2] = img_dims[0] - annotations[:,0] - 1
             return flipped_annotations
         return annotations
 
-    def _get_proposals_and_targets(self, index):
+    def _get_proposals_and_targets(self, index, img_dims, flip_image):
         if self._proposal_provider is None:
             return None, None, None, None
 
         proposals = self._proposal_dict[index]
-        if self._flip_image:
+        if flip_image:
             flipped_proposals = np.array(proposals, dtype=np.float32)
-            flipped_proposals[:,0] = self._pad_width - proposals[:,2] - 1
-            flipped_proposals[:,2] = self._pad_width - proposals[:,0] - 1
+            flipped_proposals[:,0] = img_dims[0] - proposals[:,2] - 1
+            flipped_proposals[:,2] = img_dims[0] - proposals[:,0] - 1
             proposals = flipped_proposals
 
         if self._provide_targets:
@@ -269,7 +272,7 @@ class ObjectDetectionReader:
 
             # TODO: double check this flipping of regression targets
             # apply flipping to x-position regression target
-            if self._flip_image:
+            if flip_image:
                 # TODO: check ::4
                 flipped_bbox_targets = np.array(bbox_targets, np.float32)
                 flipped_bbox_targets[:,0::4] = -bbox_targets[:,0::4]

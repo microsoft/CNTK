@@ -49,13 +49,11 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg, add_loss_functions=True)
     rpn_bbox_pred = Convolution((1, 1), 36, activation=None, name="rpn_bbox_pred",
                                 init = normal(scale=0.01), init_bias=0.0)(rpn_conv_3x3)  # 4(coords) * 9(anchors)
 
-    # apply softmax to get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
+    # get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
     num_predictions = int(rpn_cls_score.shape[0] / 2)
-    rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions, rpn_cls_score.shape[1], rpn_cls_score.shape[2]), name="rpn_cls_score_rshp")
-    p_rpn_cls_score_rshp = cntk.placeholder()
-    rpn_cls_sm = softmax(p_rpn_cls_score_rshp, axis=0)
-    rpn_cls_prob = cntk.as_block(rpn_cls_sm, [(p_rpn_cls_score_rshp, rpn_cls_score_rshp)], 'Softmax', 'rpn_cls_prob')
-    rpn_cls_prob_reshape = reshape(rpn_cls_prob, rpn_cls_score.shape, name="rpn_cls_prob_reshape")
+    rpn_cls_score_rshp = reshape(rpn_cls_score, (2, num_predictions), 0, 1, name="rpn_cls_score_rshp")
+    rpn_cls_prob = softmax(rpn_cls_score_rshp, axis=0)
+    rpn_cls_prob_reshape = reshape(rpn_cls_prob, (2*num_predictions), 0, 2, name="rpn_cls_prob_reshape")
 
     # proposal layer
     rpn_rois = create_proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg)
@@ -119,6 +117,7 @@ def create_proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg, use
     layer_config = {}
     layer_config["feat_stride"] = cfg["MODEL"].FEATURE_STRIDE
     layer_config["scales"] = cfg["DATA"].PROPOSAL_LAYER_SCALES
+    layer_config["use_gpu_nms"] = cfg.USE_GPU_NMS
 
     layer_config["train_pre_nms_topN"] = cfg["TRAIN"].RPN_PRE_NMS_TOP_N
     layer_config["train_post_nms_topN"] = cfg["TRAIN"].RPN_POST_NMS_TOP_N

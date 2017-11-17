@@ -8,15 +8,20 @@ from __future__ import print_function
 import numpy as np
 import os, sys
 import argparse
-import easydict # pip install easydict
+try:
+    import easydict
+except:
+    import pip
+    pip.main(['install', '--user', 'easydict'])
+    import easydict
 import cntk
-from cntk import Trainer, load_model, Axis, input_variable, parameter, times, combine, \
+from cntk import Trainer, UnitType, load_model, Axis, input_variable, parameter, times, combine, \
     softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum
 from cntk.core import Value
 from cntk.io import MinibatchData
 from cntk.initializer import normal
 from cntk.layers import placeholder, Constant, Sequential
-from cntk.learners import momentum_sgd, learning_parameter_schedule_per_sample, momentum_schedule
+from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_schedule
 from cntk.logging import log_number_of_parameters, ProgressPrinter
 from cntk.logging.graph import find_by_name, plot
 from cntk.losses import cross_entropy_with_softmax
@@ -107,7 +112,7 @@ def parse_arguments(cfg):
     parser.add_argument('-m', '--minibatch_size', help='Minibatch size', type=int,
                         required=False, default=cfg["CNTK"].MB_SIZE)
     parser.add_argument('-e', '--epoch_size', help='Epoch size', type=int,
-                        required=False, default=cfg["CNTK"].NUM_TRAIN_IMAGES)
+                        required=False, default=cfg["DATA"].NUM_TRAIN_IMAGES)
     parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation',
                         type=int,
                         required=False, default='32')
@@ -176,10 +181,18 @@ def create_faster_rcnn_model(features, scaled_gt_boxes, dims_input, cfg):
     # Load the pre-trained classification net and clone layers
     base_model = load_model(cfg['BASE_MODEL_PATH'])
     conv_layers = clone_conv_layers(base_model, cfg)
-    fc_layers = clone_model(base_model, [cfg["MODEL"].POOL_NODE_NAME], [cfg["MODEL"].LAST_HIDDEN_NODE_NAME], clone_method=CloneMethod.clone)
 
-    # Normalization and conv layers
-    feat_norm = features - Constant([[[v]] for v in cfg["MODEL"].IMG_PAD_COLOR])
+    if cfg["CNTK"].USE_DROPOUT:
+        fc_layers = clone_model(base_model, [cfg["MODEL"].POOL_NODE_NAME], [cfg["MODEL"].LAST_HIDDEN_NODE_NAME], clone_method=CloneMethod.clone)
+    else:
+        h1_end = "h1.y" if cfg["MODEL"].BASE_MODEL == "AlexNet" else "relu6"
+        h2_start = "h1_d" if cfg["MODEL"].BASE_MODEL == "AlexNet" else "drop6"
+        h2_end = "h2.y" if cfg["MODEL"].BASE_MODEL == "AlexNet" else "relu7"
+        fc_layer1 = clone_model(base_model, [cfg["MODEL"].POOL_NODE_NAME], [h1_end], clone_method=CloneMethod.clone)
+        fc_layer2 = clone_model(base_model, [h2_start], [h2_end], clone_method=CloneMethod.clone)
+        fc_layers = Sequential([fc_layer1, fc_layer2])
+
+    feat_norm = features
     conv_out = conv_layers(feat_norm)
 
     # RPN and prediction targets
@@ -255,8 +268,9 @@ def compute_rpn_proposals(rpn_model, image_input, roi_input, dims_input, cfg):
         pad_height=cfg.IMAGE_HEIGHT,
         pad_value=cfg["MODEL"].IMG_PAD_COLOR,
         max_images=num_images,
-        randomize=False, use_flipping=False,
-        proposal_provider=None)
+        randomize=False, use_flipping=cfg["TRAIN"].USE_FLIPPED,
+        proposal_provider=None,
+        mean_img=cfg["MODEL"].IMG_PAD_COLOR)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -303,7 +317,7 @@ def train_faster_rcnn(cfg):
 # Trains a Faster R-CNN model end-to-end
 def train_faster_rcnn_e2e(cfg):
     # Input variables denoting features and labeled ground truth rois (as 5-tuples per roi)
-    image_input = input_variable(shape=(cfg.NUM_CHANNELS, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH),
+    image_input = input_variable(shape=(cfg.NUM_CHANNELS, cntk.FreeDimension, cntk.FreeDimension),
                                  dynamic_axes=[Axis.default_batch_axis()],
                                  name=cfg["MODEL"].FEATURE_NODE_NAME)
     roi_input = input_variable((cfg.INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
@@ -378,7 +392,7 @@ def train_faster_rcnn_alternating(cfg):
     image_input = input_variable(shape=(cfg.NUM_CHANNELS, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH),
                                  dynamic_axes=[Axis.default_batch_axis()],
                                  name=feature_node_name)
-    feat_norm = image_input - Constant([[[v]] for v in cfg["MODEL"].IMG_PAD_COLOR])
+    feat_norm = image_input
     roi_input = input_variable((cfg.INPUT_ROIS_PER_IMAGE, 5), dynamic_axes=[Axis.default_batch_axis()])
     scaled_gt_boxes = alias(roi_input, name='roi_input')
     dims_input = input_variable((6), dynamic_axes=[Axis.default_batch_axis()])
@@ -521,12 +535,12 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         print("bias_lr_mult: {}".format(bias_lr_mult))
 
     # Instantiate the learners and the trainer object
-    lr_schedule = learning_parameter_schedule_per_sample(lr_per_sample)
+    lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
     learner = momentum_sgd(others, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
                            unit_gain=False, use_mean_gradient=True)
 
     bias_lr_per_sample = [v * bias_lr_mult for v in lr_per_sample]
-    bias_lr_schedule = learning_parameter_schedule_per_sample(bias_lr_per_sample)
+    bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, unit=UnitType.sample)
     bias_learner = momentum_sgd(biases, bias_lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight,
                            unit_gain=False, use_mean_gradient=True)
     trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
@@ -551,7 +565,8 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
         randomize=True,
         use_flipping=cfg["TRAIN"].USE_FLIPPED,
         max_images=cfg["DATA"].NUM_TRAIN_IMAGES,
-        proposal_provider=proposal_provider)
+        proposal_provider=proposal_provider,
+        mean_img=cfg["MODEL"].IMG_PAD_COLOR)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -563,7 +578,7 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
     else:
         input_map[od_minibatch_source.dims_si] = dims_input
 
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=epochs_to_train, gen_heartbeat=True)
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=epochs_to_train)
     for epoch in range(epochs_to_train):       # loop over epochs
         sample_count = 0
         while sample_count < cfg["DATA"].NUM_TRAIN_IMAGES:  # loop over minibatches in the epoch

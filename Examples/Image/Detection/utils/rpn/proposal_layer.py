@@ -7,7 +7,12 @@
 from cntk import output_variable, FreeDimension
 from cntk.ops.functions import UserFunction
 import numpy as np
-import yaml
+try:
+    import yaml
+except:
+    import pip
+    pip.main(['install', '--user', 'pyyaml'])
+    import yaml
 from utils.rpn.generate_anchors import generate_anchors
 from utils.rpn.bbox_transform import bbox_transform_inv, clip_boxes
 from utils.nms_wrapper import nms
@@ -24,6 +29,7 @@ class ProposalLayer(UserFunction):
         super(ProposalLayer, self).__init__([arg1, arg2, arg3], attributes=layer_config, name=name)
 
         self._layer_config = layer_config
+        self.use_gpu_nms = False if 'use_gpu_nms' not in layer_config else layer_config['use_gpu_nms']
         self._feat_stride = 16 if 'feat_stride' not in layer_config else layer_config['feat_stride']
         anchor_scales = [8, 16, 32] if 'scales' not in layer_config else layer_config['scales']
 
@@ -155,7 +161,7 @@ class ProposalLayer(UserFunction):
         # 6. apply nms (e.g. threshold = 0.7)
         # 7. take after_nms_topN (e.g. 300)
         # 8. return the top proposals (-> RoIs top)
-        keep = nms(np.hstack((proposals, scores)), nms_thresh)
+        keep = nms(np.hstack((proposals, scores)), nms_thresh, use_gpu_nms=self.use_gpu_nms)
         if post_nms_topN > 0:
             keep = keep[:post_nms_topN]
         proposals = proposals[keep, :]

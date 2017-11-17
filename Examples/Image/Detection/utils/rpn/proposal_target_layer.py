@@ -6,7 +6,12 @@
 
 from cntk import output_variable, FreeDimension
 from cntk.ops.functions import UserFunction
-import yaml
+try:
+    import yaml
+except:
+    import pip
+    pip.main(['install', '--user', 'pyyaml'])
+    import yaml
 import numpy as np
 import numpy.random as npr
 from utils.rpn.bbox_transform import bbox_transform

@@ -80,11 +80,8 @@ def clip_boxes(boxes, im_info):
     '''
 
     im_info.shape = (6)
-    padded_wh = im_info[0:2]
-    scaled_wh = im_info[2:4]
-    xy_offset = (padded_wh - scaled_wh) / 2
-    xy_min = xy_offset
-    xy_max = xy_offset + scaled_wh
+    xy_max = im_info[2:4]
+    xy_min = [0, 0]
 
     # x_min <= x1 <= x_max
     boxes[:, 0::4] = np.maximum(np.minimum(boxes[:, 0::4], xy_max[0] - 1), xy_min[0])
