@@ -48,6 +48,7 @@ public:
 template <typename ElemType>
 class CNTKEval : public CNTKEvalBase<ElemType>, public IEvaluateModel<ElemType>
 {
+    typedef typename CNTKEvalBase<ElemType>::MatrixPtr MatrixPtr;
     EvalReader<ElemType>* m_reader;
     EvalWriter<ElemType>* m_writer;
     std::map<std::wstring, size_t> m_dimensions;
@@ -90,6 +91,7 @@ public:
 template <typename ElemType>
 class CNTKEvalExtended : public CNTKEvalBase<ElemType>, public IEvaluateModelExtended<ElemType>
 {
+    typedef typename CNTKEvalBase<ElemType>::MatrixPtr MatrixPtr;
 public:
     CNTKEvalExtended() : CNTKEvalBase<ElemType>(), 
         m_started(false){}

@@ -17,6 +17,12 @@
 #include <utility> // std::forward
 #include <atomic>
 
+#ifndef _MSC_VER
+#ifndef __forceinline
+#define __forceinline inline
+#endif
+#endif
+
 namespace CNTK
 {
 
@@ -117,6 +123,7 @@ class TransformingSpan
     // transforming iterator
     class Iterator : public std::iterator<CollectionIteratorCategory, TValue>
     {
+        typedef std::iterator<CollectionIteratorCategory, TValue> Base;
         const Lambda& lambda;
         CollectionIterator argIter;
     public:
@@ -128,9 +135,9 @@ class TransformingSpan
         bool operator==(const Iterator& other) const { return argIter == other.argIter; }
         bool operator!=(const Iterator& other) const { return argIter != other.argIter; }
         // BUGBUG: The following won't work for forward iterators, such as NonOwningFunctionList
-        Iterator operator+(difference_type offset) const { return Iterator(argIter + offset, lambda); }
-        Iterator operator-(difference_type offset) const { return Iterator(argIter - offset, lambda); }
-        difference_type operator-(const Iterator& other) const { return argIter - other.argIter; }
+        Iterator operator+(typename Base::difference_type offset) const { return Iterator(argIter + offset, lambda); }
+        Iterator operator-(typename Base::difference_type offset) const { return Iterator(argIter - offset, lambda); }
+        typename Base::difference_type operator-(const Iterator& other) const { return argIter - other.argIter; }
     };
 public:
     typedef TLambda value_type;
@@ -190,6 +197,7 @@ public:
     // iterator
     class const_iterator : public std::iterator<std::random_access_iterator_tag, TValue>
     {
+        typedef std::iterator<std::random_access_iterator_tag, TValue> Base;
         T value/*, stepValue*/;
     public:
         const_iterator(const T& value/*, const T& stepValue*/) : value(value)/*,stepValue(stepValue)*/ { }
@@ -199,9 +207,9 @@ public:
         auto operator->() const { return &operator*(); } // (who knows whether this is defined for the type)
         bool operator==(const const_iterator& other) const { return value == other.value; }
         bool operator!=(const const_iterator& other) const { return value != other.value; }
-        const_iterator operator+(difference_type offset) const { return const_iterator(value + offset * stepValue, stepValue); }
-        const_iterator operator-(difference_type offset) const { return const_iterator(value - offset * stepValue, stepValue); }
-        difference_type operator-(const const_iterator& other) const { return ((difference_type)value - (difference_type)other.value) / stepValue; }
+        const_iterator operator+(typename Base::difference_type offset) const { return const_iterator(value + offset * stepValue, stepValue); }
+        const_iterator operator-(typename Base::difference_type offset) const { return const_iterator(value - offset * stepValue, stepValue); }
+        typename Base::difference_type operator-(const const_iterator& other) const { return ((typename Base::difference_type)value - (typename Base::difference_type)other.value) / stepValue; }
     };
     typedef const_iterator iterator; // in case it gets instantiated non-const. Still cannot modify it of course.
     const_iterator cbegin() const { return const_iterator(beginValue); }
@@ -228,6 +236,7 @@ static inline std::vector<T> MakeTwoElementVector(const T& a, const T& b)
 {
     class TwoElementSpanIterator : public std::iterator<std::random_access_iterator_tag, T>
     {
+        typedef std::iterator<std::random_access_iterator_tag, T> Base;
         const T* x[2];
     public:
         TwoElementSpanIterator() { } // sentinel
@@ -235,7 +244,7 @@ static inline std::vector<T> MakeTwoElementVector(const T& a, const T& b)
         void operator++() { x[0] = x[1]; x[1] = nullptr; }
         const T& operator*() const { return *x[0]; }
         bool operator!=(const TwoElementSpanIterator&) const { return x[0] != nullptr; }
-        /*constexpr*/ difference_type operator-(const TwoElementSpanIterator&) const { return 2; }
+        /*constexpr*/ typename Base::difference_type operator-(const TwoElementSpanIterator&) const { return 2; }
         // constexpr has problems with CUDA
     };
     return std::vector<T>(TwoElementSpanIterator(a, b), TwoElementSpanIterator());
@@ -245,6 +254,7 @@ static inline std::vector<T> MakeOneElementVector(const T& a)
 {
     class OneElementSpanIterator : public std::iterator<std::random_access_iterator_tag, T>
     {
+        typedef std::iterator<std::random_access_iterator_tag, T> Base;
         const T* x;
     public:
         OneElementSpanIterator() { } // sentinel
@@ -252,7 +262,7 @@ static inline std::vector<T> MakeOneElementVector(const T& a)
         void operator++() { x = nullptr; }
         const T& operator*() const { return *x; }
         bool operator!=(const OneElementSpanIterator&) const { return x != nullptr; }
-        /*constexpr*/ difference_type operator-(const OneElementSpanIterator&) const { return 1; }
+        /*constexpr*/ typename Base::difference_type operator-(const OneElementSpanIterator&) const { return 1; }
     };
     return std::vector<T>(OneElementSpanIterator(a), OneElementSpanIterator());
 }
@@ -273,6 +283,7 @@ template<typename Container> static inline auto MakeSet        (const Container&
 template<typename T, size_t N>
 class FixedVectorWithBuffer : public Span<T*>
 {
+    typedef Span<T*> Base;
     union U
     {
         T fixedBuffer[N]; // stored inside a union so that we get away without automatic construction yet correct alignment
@@ -296,17 +307,18 @@ class FixedVectorWithBuffer : public Span<T*>
             free(b);   // Span::beginIter holds the result of malloc()
     }
 public:
-    typedef Span<T*> Span;
+    using Base::begin; using Base::end;
+    typedef Span<T*> SpanT;
     typedef T value_type;
     // short-circuit constructors that construct from up to 2 arguments which are taken ownership of
-    FixedVectorWithBuffer()                       : Span(nullptr, nullptr) {} // (pointer value does not matter as long as it is the same; this is a tiny bit faster than passing the actual u.fixedBuffer)
+    FixedVectorWithBuffer()                       : SpanT(nullptr, nullptr) {} // (pointer value does not matter as long as it is the same; this is a tiny bit faster than passing the actual u.fixedBuffer)
     // construct by moving elements in
     // BUGBUG: These && interfaces should check their length to be 1 and 2, respectively. Can we use template magic to only match these if the correct values are passed as constants?
 
     // call the fixed-size ones with nullptr as the first arg (not so nice)
-    FixedVectorWithBuffer(std::nullptr_t, T&& a)        : Span(u.fixedBuffer, 1) { new (&u.fixedBuffer[0]) T(std::move(a)); }
-    FixedVectorWithBuffer(std::nullptr_t, T&& a, T&& b) : Span(u.fixedBuffer, 2) { new (&u.fixedBuffer[0]) T(std::move(a)); new (&u.fixedBuffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1. Use template magic.
-    //FixedVectorWithBuffer(size_t len, T&& a)        : Span(Allocate(len), len)
+    FixedVectorWithBuffer(std::nullptr_t, T&& a)        : SpanT(u.fixedBuffer, 1) { new (&u.fixedBuffer[0]) T(std::move(a)); }
+    FixedVectorWithBuffer(std::nullptr_t, T&& a, T&& b) : SpanT(u.fixedBuffer, 2) { new (&u.fixedBuffer[0]) T(std::move(a)); new (&u.fixedBuffer[1]) T(std::move(b)); } // BUGBUG: This version should only be defined if N > 1. Use template magic.
+    //FixedVectorWithBuffer(size_t len, T&& a)        : SpanT(Allocate(len), len)
     //{
     //    auto* b = begin();
     //    new (b) T(std::move(a));
@@ -314,7 +326,7 @@ public:
     //    for (auto* p = b + 1; p != e; p++) // if more than one element then duplicate
     //        new (p) T(*b);
     //}
-    FixedVectorWithBuffer(size_t len, const T& a)   : Span(Allocate(len), len)
+    FixedVectorWithBuffer(size_t len, const T& a)   : SpanT(Allocate(len), len)
     {
         auto* b = begin();
         const auto* e = end();
@@ -331,11 +343,11 @@ public:
             }
         }
     }
-    FixedVectorWithBuffer(std::nullptr_t, const T& a) : Span(u.fixedBuffer, 1)
+    FixedVectorWithBuffer(std::nullptr_t, const T& a) : SpanT(u.fixedBuffer, 1)
     {
         new (&u.fixedBuffer[0]) T(a);
     }
-    FixedVectorWithBuffer(std::nullptr_t, const T& a, const T& b) : Span(u.fixedBuffer, 2)
+    FixedVectorWithBuffer(std::nullptr_t, const T& a, const T& b) : SpanT(u.fixedBuffer, 2)
     {
         new (&u.fixedBuffer[0]) T(a);
         try { new (&u.fixedBuffer[1]) T(b); } // if second one fails, we must clean up the first one
@@ -347,14 +359,14 @@ public:
     // This is meant for the use case where we want to avoid reallocation of the vector, while its members
     // are small movable objects that get created upon each use.
     // This is an unusual interpretation of && (since it only half-destructs the input), but it should be valid.
-#define WHERE_IS_TEMPORARY(Type) , typename = std::enable_if<!std::is_lvalue_reference<Type&&>::value>::type
-#define WHERE_IS_ITERATOR(Type)  , typename = std::enable_if<!std::is_same<typename std::iterator_traits<Type>::value_type, void>::value>::type
-#define WHERE_IS_ITERABLE(Type)  , typename = std::enable_if<!std::is_same<typename Type::const_iterator, void>::value>::type
-#define WHERE_IS_BASE_OF(B,D)    , typename = std::enable_if< std::is_convertible<typename D*,typename B*>::value>::type
-#define WHERE_IS_NOT_BASE_OF(B,D), typename = std::enable_if<!std::is_convertible<typename D*,typename B*>::value>::type
+#define WHERE_IS_TEMPORARY(Type) , typename = typename std::enable_if<!std::is_lvalue_reference<Type&&>::value>::type
+#define WHERE_IS_ITERATOR(Type)  , typename = typename std::enable_if<!std::is_same<typename std::iterator_traits<Type>::value_type, void>::value>::type
+#define WHERE_IS_ITERABLE(Type)  , typename = typename std::enable_if<!std::is_same<typename Type::const_iterator, void>::value>::type
+#define WHERE_IS_BASE_OF(B,D)    , typename = typename std::enable_if< std::is_convertible<typename D*,typename B*>::value>::type
+#define WHERE_IS_NOT_BASE_OF(B,D), typename = typename std::enable_if<!std::is_convertible<typename D*,typename B*>::value>::type
     // BUGBUG: This is still not correct. It also test whether the iterator is temporary. Otherwise we must not move stuff out.
     template<typename Collection WHERE_IS_TEMPORARY(Collection)> // move construction from rvalue [thanks to Billy O'Neal for the tip]
-    explicit FixedVectorWithBuffer(Collection&& other) : Span(Allocate(other.size()), other.size())
+    explicit FixedVectorWithBuffer(Collection&& other) : SpanT(Allocate(other.size()), other.size())
     {
         auto* b = begin();
         const auto* e = end();
@@ -372,7 +384,7 @@ public:
     // construct from iterator pair. All variable-length copy construction/assignment (that is, except for C(2,a,b)) goes through this.
     template<typename CollectionIterator WHERE_IS_ITERATOR(CollectionIterator)>
     FixedVectorWithBuffer(const CollectionIterator& beginIter, const CollectionIterator& endIter) :
-        Span(Allocate(endIter - beginIter), endIter - beginIter)
+        SpanT(Allocate(endIter - beginIter), endIter - beginIter)
     {
         auto* b = begin();
         const auto* e = end();
@@ -392,7 +404,7 @@ public:
         }
     }
 
-    FixedVectorWithBuffer(FixedVectorWithBuffer&& other) : Span(other.size() > N ? other.begin() : u.fixedBuffer, other.size())
+    FixedVectorWithBuffer(FixedVectorWithBuffer&& other) : SpanT(other.size() > N ? other.begin() : u.fixedBuffer, other.size())
     {
         // if dynamic, we are done; if static, we must move the elements themselves
         auto* b = begin();
@@ -408,13 +420,13 @@ public:
                 otherIter++;
             }
         }
-        ((Span&)other).~Span();                     // other is now empty, all elements properly destructed (this call does nothing actually)
-        new ((Span*)&other) Span(nullptr, nullptr); // and construct other to empty
+        ((SpanT&)other).~SpanT();                     // other is now empty, all elements properly destructed (this call does nothing actually)
+        new ((SpanT*)&other) SpanT(nullptr, nullptr); // and construct other to empty
     }
 
     FixedVectorWithBuffer(const FixedVectorWithBuffer& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
 
-    //FixedVectorWithBuffer(const Span& other) : FixedVectorWithBuffer(other.begin(), other.end()) { } // TODO: Is this needed, or captured by template above?
+    //FixedVectorWithBuffer(const SpanT& other) : FixedVectorWithBuffer(other.begin(), other.end()) { } // TODO: Is this needed, or captured by template above?
 
     explicit FixedVectorWithBuffer(const std::initializer_list<T>& other) : FixedVectorWithBuffer(other.begin(), other.end()) { }
 
@@ -429,7 +441,7 @@ public:
         new (this) FixedVectorWithBuffer(std::move(other));
         return *this;
     }
-    FixedVectorWithBuffer& operator=(const Span& other)
+    FixedVectorWithBuffer& operator=(const SpanT& other)
     {
         // Note: We could optimize mallocs if both sizes are the same (then just copy over the elements)
         // However, this class should not be used this way, so for now we won't.
@@ -437,7 +449,7 @@ public:
         new (this) FixedVectorWithBuffer(other);
         return *this;
     }
-    FixedVectorWithBuffer& operator=(const FixedVectorWithBuffer& other) { return operator=((const Span&)other); }
+    FixedVectorWithBuffer& operator=(const FixedVectorWithBuffer& other) { return operator=((const SpanT&)other); }
 
     ~FixedVectorWithBuffer()
     {
@@ -465,7 +477,7 @@ template<typename T> struct FixedSizePoolItem : public T { char* flagPtr; };
 template<size_t itemByteSize>
 class FixedSizePoolStorage
 {
-    static void Assert(bool cond) { if (!cond) LogicError("FixedSizePool: An assertion failed."); }
+    static void Assert(bool cond) { if (!cond) throw std::logic_error("FixedSizePool: An assertion failed."); }
     struct Block
     {
         Block* next = nullptr; // next in linked list
@@ -516,7 +528,7 @@ class FixedSizePoolStorage
         currentBlock = firstBlock;
         nextItemIndex = 0;
     }
-    __declspec(noinline) void EnterNewBlock()
+    void EnterNewBlock()
     {
         //if ((decltype(FixedSizePoolItem<T>::blockIndex))(currentBlockIndex + 1) != currentBlockIndex + 1)
         //    LogicError("FixedSizePoolAllocator: Too many blocks.");
@@ -569,7 +581,7 @@ public:
             {
                 totalItemsAllocated++; // account for it
                 totalAllocations++;    // stats
-                auto* pItem = reinterpret_cast<FixedSizePoolItem<typename T>*>(const_cast<std::remove_const_t<T>*>(p));
+                auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<std::remove_const_t<T>*>(p));
                 //pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
                 pItem->flagPtr = res.second; // remember flag location for trivial deallocation
                 //Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
@@ -612,9 +624,9 @@ public: // required boilerplate --is there no base to derive from to provide thi
     //inline const_pointer address(const_reference r) { return &r; } // causes a dup error
     inline explicit FixedSizePoolAllocatorT() {}
     inline ~FixedSizePoolAllocatorT() {}
-    inline explicit FixedSizePoolAllocatorT(FixedSizePoolAllocatorT const&) {}
+    inline FixedSizePoolAllocatorT(FixedSizePoolAllocatorT const&) {}
     template<typename U>
-    inline explicit FixedSizePoolAllocatorT(FixedSizePoolAllocatorT<U> const&) {}
+    inline FixedSizePoolAllocatorT(FixedSizePoolAllocatorT<U> const&) {}
     inline size_type max_size() const { return std::numeric_limits<size_type>::max() / sizeof(T); }
     inline void construct(pointer p, const T& t) { new(p) T(t); }
     inline void destroy(pointer p) { p->~T(); }
@@ -627,7 +639,7 @@ public:
     __forceinline pointer allocate(size_type cnt = 1, typename std::allocator<void>::const_pointer = 0)
     {
         if (cnt != 1)
-            InvalidArgument("FixedSizePoolAllocatorT: This allocator only supports allocation of single items.");
+            throw std::invalid_argument("FixedSizePoolAllocatorT: This allocator only supports allocation of single items.");
         //auto& storage = FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)>::get();
         auto& storage = GetStorage();
         return reinterpret_cast<pointer>(storage.template Allocate<T>());
@@ -665,14 +677,16 @@ template<class T>
 class enable_strong_shared_ptr
 {
     mutable std::atomic_uint referenceCount = 0;
-    template<class T>
+    template<class T1>
     friend class strong_shared_ptr;
     void AddRef() const noexcept { referenceCount++; }
     unsigned int DecRef() const noexcept { return --referenceCount; }
     size_t UseCount() const noexcept { return referenceCount; }
 public:
-    //T* get() const { return static_cast<T*>(*this); } // TODO: no, must return strong_shared_ptr<T>
-    //strong_shared_ptr<T> shared_from_this() const { get(); }
+#ifndef _MSC_VER // needed for gcc, but fails with MSVC --how to do this right?
+    enable_strong_shared_ptr() noexcept : referenceCount() { } // (needed because atomic<>() is noexcept)
+    enable_strong_shared_ptr(const enable_strong_shared_ptr& other) noexcept : referenceCount(other.referenceCount) { } // (needed because atomic<>() is noexcept)
+#endif
 };
 template<class T>
 class strong_shared_ptr final
@@ -686,7 +700,7 @@ class strong_shared_ptr final
     }
     struct Storage
     {
-        static FixedSizePoolStorage<sizeof FixedSizePoolItem<T>> s_storage;
+        static FixedSizePoolStorage<sizeof (FixedSizePoolItem<T>)> s_storage;
     };
     __forceinline void Release() noexcept
     {

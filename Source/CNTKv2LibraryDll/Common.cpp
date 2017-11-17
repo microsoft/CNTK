@@ -10,8 +10,8 @@
 #include <mutex>
 #include <memory>
 #include <algorithm>
-#include <CPUMatrix.h> // For CPUMatrix::SetNumThreads
 #include <thread>
+#include "CPUMatrix.h" // For CPUMatrix::SetNumThreads
 #include "GPUMatrix.h"
 #include "Globals.h"
 #include "PerformanceProfiler.h"

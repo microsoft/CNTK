@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <fstream>
+#include <limits.h>
 
 namespace CNTK
 {
@@ -66,7 +67,7 @@ namespace CNTK
             std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
 
             // static computation
-            std::atomic<size_t> m_valueTimeStamp = 0;
+            std::atomic<size_t> m_valueTimeStamp = { 0 };
         };
         mutable std::unique_ptr<MoreVariableFields> m_more;
         bool HasMore() const { return m_more.get() != nullptr; }
