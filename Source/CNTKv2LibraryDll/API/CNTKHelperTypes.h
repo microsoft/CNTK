@@ -624,9 +624,9 @@ public: // required boilerplate --is there no base to derive from to provide thi
     //inline const_pointer address(const_reference r) { return &r; } // causes a dup error
     inline explicit FixedSizePoolAllocatorT() {}
     inline ~FixedSizePoolAllocatorT() {}
-    inline explicit FixedSizePoolAllocatorT(FixedSizePoolAllocatorT const&) {}
+    inline FixedSizePoolAllocatorT(FixedSizePoolAllocatorT const&) {}
     template<typename U>
-    inline explicit FixedSizePoolAllocatorT(FixedSizePoolAllocatorT<U> const&) {}
+    inline FixedSizePoolAllocatorT(FixedSizePoolAllocatorT<U> const&) {}
     inline size_type max_size() const { return std::numeric_limits<size_type>::max() / sizeof(T); }
     inline void construct(pointer p, const T& t) { new(p) T(t); }
     inline void destroy(pointer p) { p->~T(); }
