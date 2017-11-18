@@ -89,12 +89,14 @@ private:
         const string &onnxAutoPaddingAttributeName, const std::vector<bool> &defaultValue);
     static void AdjustAutoPaddingAndStrideForCNTKSpecialCases(const Variable &operand, 
         std::vector<bool> &autoPadding, NDShape &strides);
-    static void AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t>& pads);
+    static std::pair<std::vector<size_t>, std::vector<size_t> > AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t>& pads);
     static NDShape ReverseShape(const NDShape &shape);
 
     static std::pair<Variable, Variable> BroadcastElementWiseInput(const Node *node, 
         const Variable &input0, const Variable &input1);
 
+    static Variable GetNodeOperandWithPaddingResolved(std::vector<bool>& cntkConvAutoPadding, 
+        NDShape& strides, const Node *node, const std::vector<Variable>& inputs, const double padValue = 0.0);
     static FunctionPtr CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs);
 
     static ConvAutoPadType ConvertStrToConvAutoPadType(const string& str);
@@ -754,15 +756,23 @@ void ONNXToCNTKHelper::AdjustAutoPaddingAndStrideForCNTKSpecialCases(const Varia
     }
 }
 
-void ONNXToCNTKHelper::AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t>& pads)
+std::pair<std::vector<size_t>, std::vector<size_t> > ONNXToCNTKHelper::AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t>& pads)
 {
     // If there are added dimensions because of depth/channels or batch axis, then insert zeros
     // in the 'pads' vector explicitly for those dimensions to indicate that no padding is
     // needed for those dimensions. 
     int nPadDims = pads.size() / 2;
     int rankDiff = operand.Shape().Rank() - nPadDims;
+    pads.insert(pads.begin(), rankDiff, 0);
     pads.insert(pads.begin() + nPadDims, rankDiff, 0);
-    pads.insert(pads.end(), rankDiff, 0);
+
+    // Split this into head (lower padding) and foot (upper padding), and reverse them because 
+    // CNTK dimensions are in reverse order than ONNX. 
+    auto numOperandDims = pads.size() / 2;
+    std::vector<size_t> head(pads.rbegin() + numOperandDims, pads.rend()); // The first half (lower) reversed.
+    std::vector<size_t> foot(pads.rbegin(), pads.rbegin() + numOperandDims); // The second half (upper) reversed.
+
+    return std::make_pair(head, foot);
 }
 
 FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector<Variable> &inputs)
@@ -813,15 +823,20 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         NDShape poolingWindowShape = GetNamedAttributeAsShape(node, "kernel_shape", false);
         NDShape strides = GetNamedAttributeAsShape(node, "strides", false);
-        std::vector<bool> autoPadding = GetAutoPaddingWithSymmetryConversion(node, strides.Rank(), "pads", { false });
+        // std::vector<bool> autoPadding = GetAutoPaddingWithSymmetryConversion(node, strides.Rank(), "pads", { false });
 
-        AdjustAutoPaddingAndStrideForCNTKSpecialCases(inputs[0], autoPadding, strides);
+        // AdjustAutoPaddingAndStrideForCNTKSpecialCases(inputs[0], autoPadding, strides);
 
         bool ceilOutDim = false;
         bool includePad = false;
-        FunctionPtr cntkFunction = Pooling(inputs[0],
+
+        std::vector<bool> cntkPoolingAutoPadding;
+        auto padValue = (onnxOpName == "AveragePool") ? 0.0 : static_cast<double>(std::numeric_limits<int>::min());
+        auto poolingOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkPoolingAutoPadding, strides, node, inputs, padValue);
+
+        FunctionPtr cntkFunction = Pooling(poolingOperand,
             onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
-            poolingWindowShape, strides, autoPadding, ceilOutDim, includePad, ToWString(node->Name()));
+            poolingWindowShape, strides, cntkPoolingAutoPadding, ceilOutDim, includePad, ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "GlobalAveragePool" || onnxOpName == "GlobalMaxPool")
@@ -1301,23 +1316,13 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKNode(const Node *node, const std::vector
     }
 }
 
-FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::vector<Variable>& inputs)
+Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool>& cntkConvAutoPadding, 
+    NDShape& strides, const Node *node, const std::vector<Variable>& inputs, const double padValue)
 {
-    NDShape strides = GetNamedAttributeAsShape(node, "strides", false);
-    NDShape dilation = GetNamedAttributeAsShape(node, "dilations", false, { 1 });
-    // TODO: avoid hardcoded values
-    std::vector<bool> sharing({ true });
-    size_t reductionRank = 1;
-    size_t maxTempMemSizeInSamples = 0;
-    size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
     bool hasAutoPad = HasNamedAttribute(node, "auto_pad");
     bool hasPads = HasNamedAttribute(node, "pads");
-
-    std::vector<bool> cntkConvAutoPadding;
-    Variable convolutionMap = inputs[1];
     Variable operand = inputs[0];
     Variable convOperand = operand; // Important initial condition.
-
     if (hasAutoPad && hasPads)
     {
         LogicError("Ambiguous conv node specification. Both %s and %s attributes are specified. Only one of the two should be specified.",
@@ -1332,7 +1337,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
             NOT_IMPLEMENTED; // TODO: SAME_LOWER needs to be implemented.
             break;
         case ConvAutoPadType::SAME_UPPER:
-            cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), true); 
+            cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), true);
             break;
         case ConvAutoPadType::VALID:
             cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), false);
@@ -1347,19 +1352,13 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
         if (paddingNeeded)
         {
             // Create appropriate pad node.
-            AdjustONNXPadsVecForCNTKPadOp(operand, pads);
-            std::vector<size_t> head, foot;
-            auto numOperandDims = pads.size() / 2;
-            for (size_t i = 0; i < numOperandDims; ++i)
-            {
-                head.push_back(pads[i]);
-                foot.push_back(pads[numOperandDims + i]);
-            }
+            auto padsPair = AdjustONNXPadsVecForCNTKPadOp(operand, pads);
+            
             FunctionPtr cntkPadFunction = Pad(operand,
                 CNTK::PaddingMode::CONSTANTPAD,
-                head,
-                foot,
-                0,
+                padsPair.first,
+                padsPair.second,
+                padValue,
                 ToWString(node->Name() + std::string("_pad")));
             convOperand = (Variable)cntkPadFunction;
         }
@@ -1367,6 +1366,23 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
     }
 
     AdjustAutoPaddingAndStrideForCNTKSpecialCases(operand, cntkConvAutoPadding, strides);
+    return convOperand;
+}
+
+FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::vector<Variable>& inputs)
+{
+    NDShape strides = GetNamedAttributeAsShape(node, "strides", false);
+    NDShape dilation = GetNamedAttributeAsShape(node, "dilations", false, { 1 });
+    // TODO: avoid hardcoded values
+    std::vector<bool> sharing({ true });
+    size_t reductionRank = 1;
+    size_t maxTempMemSizeInSamples = 0;
+    size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
+    Variable convolutionMap = inputs[1];
+    std::vector<bool> cntkConvAutoPadding;
+
+    auto convOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkConvAutoPadding, strides, node, inputs);
+
     return Convolution(
         convolutionMap,
         convOperand,
