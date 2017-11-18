@@ -472,7 +472,7 @@ public:
 
 // a pool for allocating objects of one specific size
 // BUGBUG: Does not work if T is marked 'final'. How does shared_ptr do it?
-template<typename T> struct FixedSizePoolItem : public T { char* flagPtr; };
+template<typename T> struct FixedSizePoolItem { T data; char* flagPtr; };
 // class to store objects of size itemByteSize in lists of char arrays
 template<size_t itemByteSize>
 class FixedSizePoolStorage
