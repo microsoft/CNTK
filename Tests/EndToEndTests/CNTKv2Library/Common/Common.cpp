@@ -87,4 +87,4 @@ MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numO
     return config;
 }
 
-template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<OptionalString::SharableString const>> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;
+template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<OptionalString::SharableString const>)> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;

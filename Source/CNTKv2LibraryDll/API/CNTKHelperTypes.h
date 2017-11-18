@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <vector>
 #include <list>
 #include <forward_list>

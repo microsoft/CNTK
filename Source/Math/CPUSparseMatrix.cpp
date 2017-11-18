@@ -680,7 +680,7 @@ void CPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     }
     if (numCols != GetNumCols())
         InvalidArgument("GatherBatch: Total number of input columns (%d) must be equal to number of output columns (%d).",
-            numCols, GetNumCols());
+            (int)numCols, (int)GetNumCols());
     // allocate
     RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
     m_sliceViewOffset = 0;

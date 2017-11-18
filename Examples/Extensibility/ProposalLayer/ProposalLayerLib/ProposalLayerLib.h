@@ -231,7 +231,7 @@ private:
     {
         std::vector<InternalVariable> outputs;
         auto firstOperand = Function::Inputs()[0];
-        auto proposalShape = NDShape({ 4, NDShape::FreeDimension });
+        auto proposalShape = NDShape({ 4u, NDShape::FreeDimension });
         auto dtype = firstOperand.GetDataType();
         auto dynamicAxes = firstOperand.DynamicAxes();
         outputs.push_back(OutputVariable(proposalShape, dtype, dynamicAxes, /*needsGradient=*/false, /*isSparse=*/false, /*isVolatile=*/false, L"rpn_rois_raw"));

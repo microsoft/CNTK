@@ -17,4 +17,4 @@ Function* CreateBinaryConvolveFunction(const Variable* operands, size_t /*numOpe
     return new BinaryConvolveFunction(operands[0], operands[1], *attributes, name);
 }
 
-template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<OptionalString::SharableString const>> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;
+template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<OptionalString::SharableString const>)> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;

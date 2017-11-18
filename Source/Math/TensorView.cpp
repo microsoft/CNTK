@@ -56,7 +56,7 @@ TensorView<ElemType>::TensorView(const MatrixPtr& sob, const TensorShape& shape)
 // -------------------------------------------------------------------
 
 // look up an op code by name
-#define AssignNameToOpTable(oper) insert(make_pair(L#oper, ElementWiseOperator::op##oper));
+#define AssignNameToOpTable(oper) insert(make_pair(L ## #oper, ElementWiseOperator::op##oper));
 static struct NameToOpTable : public map<wstring, ElementWiseOperator> { NameToOpTable() { ForAllElementWiseOps(AssignNameToOpTable); } } s_nameToOp;
 template <class ElemType>
 /*static*/ ElementWiseOperator TensorView<ElemType>::OpFromName(const wstring& opName)
@@ -769,9 +769,9 @@ typename TensorView<ElemType>::MatrixPtr TensorView<ElemType>::GetSOBViewPtr() c
 // 'index' is along 'axis'; subRank is recursion depth (rank of current object).
 // SubRank and axis are the same except for matrix level (subRank=2); then the axes are transposed if columnMajor.
 template <class ElemType, class DimsVecType/*vector or SmallVector*/, class StridesVecType/*vector or SmallVector*/>
-static __declspec(noinline) size_t TensorDataAsString(string& res,
-                                                      const ElemType* data, const DimsVecType& dims, const StridesVecType& strides,
-                                                      size_t subRank, size_t axis, size_t index, size_t maxItems = 6, bool columnMajor = true)
+static size_t TensorDataAsString(string& res,
+                                 const ElemType* data, const DimsVecType& dims, const StridesVecType& strides,
+                                 size_t subRank, size_t axis, size_t index, size_t maxItems = 6, bool columnMajor = true)
 {
     let rank = dims.size();
     // print preceding separator
