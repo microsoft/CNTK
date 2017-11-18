@@ -172,7 +172,7 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
             //// But BN after this does not help, so probably it should be between those layers, not after.
             ////h = bns[i - 1](h);
         }
-        DOLOG(h);
+        //DOLOG(h);
         return h;
     });
 }
@@ -204,7 +204,7 @@ fun AttentionModelReference(size_t attentionDim1)
             let uSeq = InnerProduct(tanh, encodingProjectedKeysSeq, Axis(0), Named("u")); CountAPICalls(1); // [1 x T]
             let wSeq = Dynamite::Softmax(uSeq, Axis(1), Named("attSoftmax"), zBarrier);                     // [1 x T]
             Function::SetDynamicProfiler(prevProfiler);
-            DOLOG(wSeq);
+            //DOLOG(wSeq);
             return wSeq;
         });
 }
@@ -548,19 +548,17 @@ fun CreateModelFunction()
         },
         [=](const Variable& sourceSeq, const Variable& historySeq) -> Variable
         {
-            DOLOG(sourceSeq);
-            if (historySeq != Variable())
-                DOLOG(historySeq);
+            //DOLOG(sourceSeq);
+            //if (historySeq != Variable())
+            //    DOLOG(historySeq);
             // embedding
-            //let& W = embedFwd.Nested(L"embed")[L"W"];
-            //DOLOG(W);
             let eFwd = embedFwd(sourceSeq);
             let eBwd = eFwd;// embedBwd(sourceSeq);
             // encoder
             let hSeq = encode(eFwd, eBwd);
             // decoder (outputting log probs of words)
             let zSeq = decode(historySeq, hSeq);
-            DOLOG(zSeq);
+            //DOLOG(zSeq);
             return zSeq;
         });
 }
@@ -579,9 +577,9 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
         // apply model function
         // returns the sequence of output log probs over words
         let zSeq = model_fn(sourceSeq, historySeq);
-        DOPRINT("src", sourceSeq, srcVocabFile);
-        DOPRINT("tgt", labelsSeq, tgtVocabFile);
-        DOPRINT("hyp", zSeq, tgtVocabFile);
+        //DOPRINT("src", sourceSeq, srcVocabFile);
+        //DOPRINT("tgt", labelsSeq, tgtVocabFile);
+        //DOPRINT("hyp", zSeq, tgtVocabFile);
         // compute loss per word
         let lossSeq = Dynamite::CrossEntropyWithSoftmax(zSeq, labelsSeq);
         return lossSeq;
@@ -596,7 +594,8 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
         let prevProfiler = Function::SetDynamicProfiler(profiler, false); // use true to display this section of batched graph
         vector<Variable> lossSequences;
         batchModel(lossSequences, features, labels);             // batch-compute the criterion
-        let collatedLosses = Splice(move(lossSequences), Axis(-1), Named("seqLosses")); CountAPICalls(1);    // concatenate all seq lossSequences
+        let collatedLosses = Splice(move(lossSequences), Axis(-1), Named("collatedLosses")); CountAPICalls(1);    // concatenate all seq lossSequences
+        DOLOG(collatedLosses);
         let mbLoss = ReduceSum(collatedLosses, Axis_DropLastAxis, Named("batchLoss")); CountAPICalls(1); // aggregate over entire minibatch
         Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;

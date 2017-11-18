@@ -225,6 +225,7 @@ namespace CNTK
                 let& xHat   = args[8]; // (x-mu)/sigma
                 // mu and sigma^2
                 let N = (double)x->Shape().TotalSize(/*check=*/false) / (double)bias->Shape().TotalSize(/*check=*/false);
+                //fprintf(stderr, "BATCHNORM over %d, id=%d\n", (int)N, (int)attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()), fflush(stderr);
                 assert(N == (double)x->Shape().TotalSize(/*check=*/false) / (double)sigma->Shape().TotalSize(/*check=*/false)); // for now
                 let& mu = redBuf;
                 let& sigma2 = sigma; // we use sigma's location to first compute sigma^2
