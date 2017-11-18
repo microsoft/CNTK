@@ -905,13 +905,6 @@ void GPUMatrix<ElemType>::Clear()
 
 #pragma region Basic Operators
 template <class ElemType>
-GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
-{
-    GPUMatrix<ElemType> slice(0);
-    return slice;
-}
-
-template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
     return *this;

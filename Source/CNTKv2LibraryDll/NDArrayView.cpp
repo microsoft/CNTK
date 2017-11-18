@@ -819,7 +819,7 @@ namespace CNTK
     }
 
     template<typename ElementType>
-    class TensorViewPtrArrayRef : public TensorView<ElementType>::IArrayRef<TensorView<ElementType> const*>
+    class TensorViewPtrArrayRef : public TensorView<ElementType>::template IArrayRef<TensorView<ElementType> const*>
     {
         const vector<NDArrayViewPtr>& m_inputs;
     public:
@@ -834,7 +834,7 @@ namespace CNTK
     };
 
     template<typename ElementType> // TODO: unify these two
-    class WritableTensorViewPtrArrayRef : public TensorView<ElementType>::IArrayRef<TensorView<ElementType>*>
+    class WritableTensorViewPtrArrayRef : public TensorView<ElementType>::template IArrayRef<TensorView<ElementType>*>
     {
         vector<NDArrayViewPtr>& m_inputs;
     public:

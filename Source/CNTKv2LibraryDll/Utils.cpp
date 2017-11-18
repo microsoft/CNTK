@@ -167,7 +167,7 @@ namespace CNTK
             m_dictionaryData = MakeSharedObject1<SharableDict>();
         return *m_dictionaryData;
     }
-    template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<Dictionary::SharableDict>> strong_shared_ptr<Dictionary::SharableDict>::Storage::s_storage;
+    template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<Dictionary::SharableDict>)> strong_shared_ptr<Dictionary::SharableDict>::Storage::s_storage;
 
     Dictionary::~Dictionary()
     {
@@ -854,7 +854,7 @@ namespace CNTK
             // The data needs to be rearranged since CNTK requires sequences to be interleaved across timesteps
             // Now generate the gather indices
             auto numColsPerSample = varShape.SubShape(VariableRowColSplitPoint(var)).TotalSize();
-            Matrix<ElementType>::MatrixPtr matrixData = outputMatrixStorage;
+            typename Matrix<ElementType>::MatrixPtr matrixData = outputMatrixStorage;
             auto matrixDataNumRows = varShape.TotalSize() / numColsPerSample;
             auto matrixDataNumCols = layout->GetNumCols() * numColsPerSample;
             auto matrixType = value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE;

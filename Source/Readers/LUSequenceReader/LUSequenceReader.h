@@ -201,6 +201,7 @@ public:
 template <class ElemType>
 class BatchLUSequenceReader : public LUSequenceReader<ElemType>
 {
+    typedef typename LUSequenceReader<ElemType>::MatrixPtr MatrixPtr;
 public:
     using LabelType = wstring;
     using LabelIdType = long;

@@ -731,7 +731,7 @@ namespace CNTK
             : NDArrayView(viewShape, sourceContainer.data(), sourceContainer.size(), DeviceDescriptor::CPUDevice())
         {
             if (sourceContainer.size() != viewShape.TotalSize())
-                InvalidArgument("The size (%zu) of the STL container does not match the size (%zu) of the specified viewShape '%S'.",
+                InvalidArgument("The size (%zu) of the STL container does not match the size (%u) of the specified viewShape '%S'.",
                                 sourceContainer.size(), viewShape.TotalSize(), viewShape.AsString().c_str());
         }
 

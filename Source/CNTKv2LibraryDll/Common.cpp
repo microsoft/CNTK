@@ -7,10 +7,6 @@
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "BestGpu.h"
-#include <mutex>
-#include <memory>
-#include <algorithm>
-#include <thread>
 #include "CPUMatrix.h" // For CPUMatrix::SetNumThreads
 #include "GPUMatrix.h"
 #include "Globals.h"
@@ -21,6 +17,10 @@
 #include "ProgressTracing.h"
 #include "buildinfo.h"
 #include "Constants.h"
+#include <mutex>
+#include <memory>
+#include <algorithm>
+#include <thread>
 
 extern bool g_shareNodeValueMatrices;
 using namespace Microsoft::MSR::CNTK;
@@ -976,6 +976,7 @@ namespace CNTK
             LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
 #endif
 #ifdef _CUDA_PATH_
+#ifdef _WIN32 // BUGBUG: This does not build under gcc... why? (unknown identifiers cudaDriverGetVersion() and cudaSuccess)
             int cudaVersion = 0;
             if (cudaDriverGetVersion(&cudaVersion) == cudaSuccess)
             {
@@ -983,6 +984,7 @@ namespace CNTK
                 ExtractCUDAVersion(cudaVersion, major, minor, patchLevel);
                 LOGPRINTF(stderr, "\t\tCUDA version: %d.%d.%d\n", major, minor, patchLevel);
             }
+#endif
 #endif
 #ifdef _CUDNN_PATH_
             size_t cudnnVersion = GetCUDNNVersion();

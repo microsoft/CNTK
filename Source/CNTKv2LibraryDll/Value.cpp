@@ -98,7 +98,7 @@ namespace CNTK
                 {
                     nonZeroValues.push_back(1);
                     if (oneHotIdx >= dimension)
-                        InvalidArgument("Value::Create: one-hot index value (%zu) exceeds vocabulary size (%zu).", oneHotSequences[i][j], dimension);
+                        InvalidArgument("Value::Create: one-hot index value (%zu) exceeds vocabulary size (%u).", oneHotSequences[i][j], dimension);
                     rowIndices.push_back((SparseIndexType)(oneHotSequences[i][j]));
                 }
             }
@@ -318,7 +318,7 @@ namespace CNTK
     {
         auto shapeSize = sampleShape.TotalSize();
         if (batchData.size() % shapeSize != 0)
-            InvalidArgument("The number of elements (%zu) in the vector containing batch data must be a multiple of the size (%zu) of the sample shape '%S'.",
+            InvalidArgument("The number of elements (%zu) in the vector containing batch data must be a multiple of the size (%u) of the sample shape '%S'.",
                             batchData.size(), shapeSize, sampleShape.AsString().c_str());
 
         auto numOfSequences = batchData.size() / shapeSize;
@@ -338,7 +338,7 @@ namespace CNTK
     {
         auto shapeSize = sampleShape.TotalSize();
         if (sequenceData.size() % shapeSize != 0)
-            InvalidArgument("The number of elements (%zu) in the sequence data must be a multiple of the size (%zu) of the sample shape '%S'", 
+            InvalidArgument("The number of elements (%zu) in the sequence data must be a multiple of the size (%u) of the sample shape '%S'", 
                             sequenceData.size(), shapeSize, sampleShape.AsString().c_str());
 
         auto sequenceLength = sequenceData.size() / shapeSize;
@@ -503,7 +503,7 @@ namespace CNTK
     void Value::CopyVariableValueToVector(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences)
     {
         if (outputVariable.Shape()[0] != outputVariable.Shape().TotalSize())
-            InvalidArgument("For sparse data, the outputVariable's leading axis dimensionality (%zu) must equal the total size (%zu) of the Variable '%S'.",
+            InvalidArgument("For sparse data, the outputVariable's leading axis dimensionality (%u) must equal the total size (%u) of the Variable '%S'.",
                             outputVariable.Shape()[0], outputVariable.Shape().TotalSize(), outputVariable.AsString().c_str());
 
         CopyVariableValueToImpl<ElementType, size_t>(outputVariable, sequences);
