@@ -425,7 +425,7 @@ public:
 };
 
 template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<C>>                                    strong_shared_ptr<C                                   >::Storage::s_storage;
-template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<OptionalString::SharableString const>> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;
+template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<OptionalString::SharableString const>)> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;
 
 int main(int argc, char *argv[])
 {
