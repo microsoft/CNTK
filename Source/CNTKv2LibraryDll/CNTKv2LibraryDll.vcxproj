@@ -67,16 +67,14 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>.\API;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll;$(OpenCvInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\API;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_1BitSGD)'=='true' and '!$(IsUWP)'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true' and '!$(IsUWP)'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath);$(ProtobufLibPath)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="!$(IsUWP)">$(OpenCvLibPath);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(ReaderLibs);Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.ComputationNetwork$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.SequenceTrainingLib$(OutputSuffix)-$(CntkComponentVersion).lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies Condition="!$(IsUWP)">$(OpenCvLib);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>prebuild.bat "$(Configuration)" "$(CNTK_MKL_SEQUENTIAL)" "$(CNTK_ENABLE_1BitSGD)" "$(CudaPath)" "$(CUDNN_PATH)" "$(CUB_PATH)" "$(CNTK_ENABLE_ASGD)"</Command>
@@ -96,7 +94,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll;</DelayLoadDLLs>
-      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.ImageWriter-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -114,7 +112,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll;</DelayLoadDLLs>
-      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.ImageWriter-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -125,7 +123,7 @@
     </ClCompile>
     <Link>
       <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; msmpi.dll;</DelayLoadDLLs>
-      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.ImageWriter-$(CntkComponentVersion).dll</DelayLoadDLLs>
       <OptimizeReferences Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -170,7 +168,7 @@
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
-    <ClInclude Include="PrimitiveFunctionAttributes.h"/>
+    <ClInclude Include="PrimitiveFunctionAttributes.h" />
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
@@ -179,8 +177,10 @@
     <ClInclude Include="proto\onnx\core\model.h" />
     <ClInclude Include="proto\onnx\core\op.h" />
     <ClInclude Include="proto\onnx\core\opsignature.h" />
+    <ClInclude Include="proto\onnx\core\record.h" />
     <ClInclude Include="proto\onnx\core\shape_inference.h" />
     <ClInclude Include="proto\onnx\core\status.h" />
+    <ClInclude Include="proto\onnx\core\tensorutils.h" />
     <ClInclude Include="proto\onnx\core\utils.h" />
     <ClInclude Include="proto\onnx\ONNX.h" />
     <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
@@ -224,8 +224,9 @@
     <ClCompile Include="proto\onnx\core\opsignature.cpp" />
     <ClCompile Include="proto\onnx\core\shape_inference.cpp" />
     <ClCompile Include="proto\onnx\core\status.cpp" />
+    <ClCompile Include="proto\onnx\core\tensorutils.cpp" />
     <ClCompile Include="proto\onnx\core\utils.cpp" />
-    <ClCompile Include="proto\onnx\defs\experiments\defs.cpp" />
+    <ClCompile Include="proto\onnx\defs\activation\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\generator\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\logical\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\math\defs.cpp" />
@@ -233,6 +234,7 @@
     <ClCompile Include="proto\onnx\defs\reduction\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\rnn\defs.cpp" />
     <ClCompile Include="proto\onnx\defs\tensor\defs.cpp" />
+    <ClCompile Include="proto\onnx\defs\traditionalml\defs.cpp" />
     <ClCompile Include="proto\onnx\ONNX.cpp" />
     <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
     <ClCompile Include="proto\onnx\Operators.cpp" />

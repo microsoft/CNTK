@@ -256,12 +256,12 @@ namespace ONNX
             { L"beginIndexVec", "starts" },
             { L"endIndexVec", "ends" },
         } } },
-        { L"Transpose", { {
-            { L"Transpose", "Transpose" },
+        { L"TransposeAxes", { {
+            { L"TransposeAxes", "Transpose" },
             { L"axisVec", "perm" },
         } } },
-        { L"GatherOp", { {
-            { L"GatherOp", "Gather" },
+        { L"Gather", { {
+            { L"Gather", "Gather" },
         } } },
         // { L"", "Squeeze" },
     };

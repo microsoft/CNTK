@@ -17,7 +17,7 @@ package ONNXIR;
 
 // Note [Namespaces]
 // ~~~~~~~~~~~~~~~~~
-// LotusIR gives explicit names to graphs, intermediate values and
+// ONNXIR gives explicit names to graphs, intermediate values and
 // serialized tensors.  To make it easier to generate names, we organize
 // these into separate namespaces (so, e.g., a graph can have the same
 // name as a serialized tensor.)  The namespaces are as follows:
@@ -33,13 +33,17 @@ package ONNXIR;
 //   the computation of a graph.
 // - Shape: These names represent parameters for unknown shape dimensions.
 //
-// We specify the namespace of a name in LotusIR as comments in the form
+// We specify the namespace of a name in ONNXIR as comments in the form
 // of "namespace {Node,Graph,OperatorOrFunction,Attribute,Value,Shape}". Framework is
 // responsible for supporting the namespaces.
 
 // To be compatible with both proto2 and proto3, we will use a version number
 // that is not defined by the default value but an explicit enum number.
 enum Version {
+  // proto3 requires the first enum value to be zero.
+  // We add this just to appease the compiler.
+  _START_VERSION = 0;
+
   // The version field is always serialized and we will use it to store the
   // version that the  graph is generated from. This helps us set up version
   // control. We should use version as
@@ -53,8 +57,36 @@ enum Version {
 // An AttributeProto MUST contain the name field, and *only one* of the
 // following content fields, effectively enforcing a C/C++ union equivalent.
 message AttributeProto {
+
+  // Note: this enum is structurally identical to the OpSchema::AttrType
+  // enum defined in schema.h.  If you rev one, you likely need to rev the other.
+  enum AttributeType {
+    UNDEFINED = 0;
+    FLOAT = 1;
+    INT = 2;
+    STRING = 3;
+    TENSOR = 4;
+    GRAPH = 5;
+
+    FLOATS = 6;
+    INTS = 7;
+    STRINGS = 8;
+    TENSORS = 9;
+    GRAPHS = 10;
+  }
+
   // The name field MUST be present for this version of the IR.
   optional string name = 1;           // namespace Attribute
+
+  // The type field MUST be present for this version of the IR.
+  // For 0.0.1 versions of the IR, this field was not defined, and
+  // implementations needed to use has_field hueristics to determine
+  // which value field was in use.  For IR_VERSION 0.0.2 or later, this
+  // field MUST be set and match the f|i|s|t|... field in use.  This
+  // change was made to accomodate proto3 implementations.
+  optional AttributeType type = 20;   // discriminator that indicates which field below is in use
+
+  // Exactly ONE of the following fields must be present for this version of the IR
   optional float f = 2;               // float
   optional int64 i = 3;               // int
   optional bytes s = 4;               // UTF-8 string
@@ -66,13 +98,6 @@ message AttributeProto {
   repeated bytes strings = 9;         // list of UTF-8 strings
   repeated TensorProto tensors = 10;  // list of tensors
   repeated GraphProto graphs = 11;    // list of graph
-
-  optional TypeProto type = 51;
-  repeated TypeProto types = 52;
-  //ISSUE:13807134,dbox: Do we ever see shape showing up as an attribute value?
-  //            If so, won't it always be accompanied by a TypeProto?
-  optional TypeProto.TensorShapeProto shape = 53;
-  repeated TypeProto.TensorShapeProto shapes = 54;
 }
 
 // Defines information on value, including the name, the type, and
@@ -95,7 +120,7 @@ message ValueInfoProto {
 // Cond(p, true_input, false_input) takes three inputs, where p is a
 // boolean scalar tensor, true_input is the list of inputs to the true
 // branch of cond, and false_input is the list of inputs to the false
-// branch of cond. The true and false branches are defined as 
+// branch of cond. The true and false branches are defined as
 // functions that takes true_input and false_input as inputs respectively.
 // The two functions must have the same number of outputs, and each
 // corresponding output must have the same types, and have compatible
@@ -128,23 +153,10 @@ message NodeProto {
   repeated AttributeProto attribute = 5;
 
   // An optional human-readable documentation for this node in the graph.
-  // This text MAY contain Markdown markup that conforms to http://commonmark.org/. 
+  // This text MAY contain Markdown markup that conforms to http://commonmark.org/.
   optional string doc_string = 6;
 
-  // The number of inputs for each argument of the operator/function.
-  // A formal parameter of the op may take a variable number of inputs
-  // that is only known when this node is constructed.
-  //BUG:13806939,dbox: I'm assuming that this field is like input_arg_info in that
-  //          a zero element/missing array implies that one needs to crawl
-  //          the graph to figure out the input counts, yes? Confirm and I'll
-  //          make clear.  Otherwise, we need to require it to be present
-  //          and accurate.
-  repeated int32 input_arg_count = 50;
-
-  // Specify a list of named nodes that must be executed before this node.
-  // Framework may use this to give users the ability to impose additional
-  // execution orders for the operations.
-  repeated string control_input = 51;
+  reserved 100 to 200; // for future extensions.
 }
 
 // ModelProto is a top-level file/container format for bundling a ML model.
@@ -182,15 +194,6 @@ message ModelProto {
 
   // The parameterized graph that is evaluated to execute the model.
   optional GraphProto graph = 7;
-
-  // NOTE: ids between 8 and 49 are reserved for more ONNX fields.
-  
-  // The optional name of the author who created the graph.
-  optional string model_author = 50;
-
-  // Optional licensing information concerning use or origination of the graph.
-  // This text MAY contain Markdown markup that conforms to http://commonmark.org/. 
-  optional string model_license = 51;
 };
 
 // GraphProto defines a parameterized series of nodes to form a directed acyclic graph.
@@ -233,24 +236,6 @@ message GraphProto {
   // optional string producer_tag = 8;
   // optional string domain = 9;
 
-  // The function definitions of the graph. They can only only be used
-  // (i.e., called) in this graph.
-  // Each FunctionDefProto in function MUST have a unique name. 
-  repeated FunctionDefProto function = 50;
-
-  // The externally defined operators declared by this graph. 
-  repeated OperatorDeclProto operator = 51;
-
-  // TODO: When the map type is added, provide for the "model_information"
-  // field which holds name/value pairs of strings with additional devops
-  // metadata, such as an identifier for which training set this instance
-  // of a graph was trained with.
-
-  // Imported libraries are referenced as a collection of strings in the form of absolute
-  // URIs or relative paths. Where such relative paths are rooted is defined by tools and
-  // runtime implementations.
-  repeated string imported_libraries = 52;  
-  
   reserved 100 to 200; // for future extensions.
 }
 
@@ -374,6 +359,87 @@ message SparseTensorProto {
   optional TensorProto values = 3;
 }
 
+// A ValueProto represents a value that may be serialized into a model.
+message ValueProto {
+
+  message KeyValuePairProto {
+    oneof key {
+      string s = 1;
+      int32 i32 = 2;
+      int64 i64 = 3;
+      uint64 ui64 = 4;
+    };
+    optional ValueProto value = 100;
+  }
+
+  message NameValuePairProto {
+    optional string key = 1;
+    optional ValueProto value = 100;
+  }
+
+  // Defines a record in its serialized format.
+  // A record is a sequence of one or more
+  // typed uniquely named values, which may be of different types.
+  message RecordProto {
+    repeated NameValuePairProto fields = 1;
+  }
+
+  // Defines a union value  in its serialized format.
+  // The name is the discriminator from the union type.
+  message UnionProto {
+    optional NameValuePairProto choice = 1;
+  }
+
+  // Defines a map in its serialized format.
+  // A record is a sequence of zero or more
+  // key/value pairs all of which have unique
+  // keys
+  message MapProto {
+    repeated KeyValuePairProto key_value_pairs = 1;
+  }
+
+  // Alternate space-efficient encoding of map that MAY be used
+  // for maps whose value type is a scalar.
+  message ScalarMapProto {
+    // keys.DataType must be an integral type or string
+    repeated TensorProto keys = 1;
+
+    // No restriction on data type, keys.length must equal values.length
+    repeated TensorProto values = 2;
+  }
+
+  // Defines a sequence in its serialized format.
+  // A sequence is a list of zero or more
+  // tensors, maps, records, or subsequences.
+  message SequenceProto {
+    repeated ValueProto elems = 1;
+  }
+
+  oneof value {
+    // A dense tensor (or scalar).
+    TensorProto dense_tensor = 1;
+
+    // A sparse tensor.
+    SparseTensorProto sparse_tensor = 2;
+
+    // A tuple.
+    RecordProto record = 3;
+
+    // A sequence.
+    SequenceProto seq = 4;
+
+    // A union.
+    UnionProto union = 5;
+
+    // A map.
+    MapProto map = 6;
+
+    // A map.
+    ScalarMapProto scalar_map = 7;
+  }
+
+  reserved 100 to 200; // for future extensions.
+}
 // Define the types.
 message TypeProto {
   // Defines a tensor shape. A dimension can be either an integer value
@@ -384,8 +450,8 @@ message TypeProto {
       oneof value {
         int64 dim_value = 1;
         string dim_param = 2;   // namespace Shape
-      }
-    }
+      };
+    };
     repeated Dimension dim = 1;
   }
 
@@ -403,27 +469,40 @@ message TypeProto {
     optional TensorShapeProto shape = 2;
   }
 
-  message HandleTypeProto {
-  }
+  // message T { ... }
+  message RecordTypeProto {
+    // The type and optional shape of each field
+    // is described by a ValueInfoProto. The field
+    // names must be unique.
+    // This field MUST be present for this version of the IR.
+    repeated ValueInfoProto field = 1;
+  };
 
-  message TupleTypeProto {
-    repeated TypeProto elem_type = 1;
-  }
-
-  message SeqTypeProto {
+  // repeated T
+  message SequenceTypeProto {
+    // The type and optional shape of each element of the sequence.
     // This field MUST be present for this version of the IR.
     optional TypeProto elem_type = 1;
-  }
+  };
 
+  // map<K,V>
   message MapTypeProto {
     // This field MUST be present for this version of the IR.
     // This field MUST refer to an integral type ([U]INT{8|16|32|64}) or STRING
     optional TensorProto.DataType key_type = 1;
     // This field MUST be present for this version of the IR.
-    // This field MUST NOT refer to UNDEFINED
-    optional TensorProto.DataType value_type = 2;
-  }
-      
+    optional TypeProto value_type = 2;
+  };
+
+  // oneof { ... }
+  message UnionTypeProto {
+    // The type and optional shape of each alternative
+    // is described by a ValueInfoProto. The alternative
+    // names must be unique.
+    // This field MUST be present for this version of the IR.
+    repeated ValueInfoProto choice = 1;
+  };
+
   oneof value {
     // The type of a tensor.
     TensorTypeProto tensor_type = 1;
@@ -431,75 +510,22 @@ message TypeProto {
     // The type of a sparse tensor.
     SparseTensorTypeProto sparse_tensor_type = 2;
 
-    // The type of an opaque handle. A handle is used to represent a
-    // reference to a resource managed by the framework runtime.
-    HandleTypeProto handle_type = 3;
+    // NOTE:  DNN-only implementations of ONNX MAY elect to not support non-tensor values
+    //        as input and output to graphs and nodes. These types are needed to naturally
+    //        support classical ML operators.  DNN operators SHOULD restrict their input
+    //        and output types to tensors.
 
-    // The type of a tuple.
-    TupleTypeProto tuple_type = 4;
+    // The type of a record.
+    RecordTypeProto record_type = 3;
 
     // The type of a sequence.
-    SeqTypeProto seq_type = 5;
+    SequenceTypeProto sequence_type = 4;
 
     // The type of a map.
-    MapTypeProto map_type = 6;
-  }
-}
+    MapTypeProto map_type = 5;
 
-message ValueProto {
-  // Defines a handle in its serialized format.
-  message HandleProto {
-    // This field MUST be present this version of the IR.  
-    optional int64 uid = 1;
-
-    // More information to be added. We need to specify the device
-    // that the resource managed by the handle is on.
-  }
-
-  // Defines a tuple in its serialized format.
-  message TupleProto {
-    repeated ValueProto elems = 1;
-  }
-
-  // Defines a sequence in its serialized format.
-  message SequenceProto {
-    repeated ValueProto elems = 1;
-  }
-
-  // Defines a map in its serialized format.
-  // Maps are serialized as two single-dimensional tensors 
-  // for storage efficiency. The dimensions of each tensor MUST be identical
-  // and the key at position N corresponds to the value at position N.
-  // Keys SHOULD be unique. When a given key appears multiple times,
-  // the value that corresponds last occurance of the key is the value.
-  // This is consistent with protobuf3 encoding rules for map.
-  message MapProto {
-    // This field MUST be present for this version of the IR.
-    // The data type of the tensor MUST refer to an integral type ([U]INT{8|16|32|64}) or STRING
-    optional TensorProto keys = 1;
-
-    // This field MUST be present for this version of the IR.
-    optional TensorProto values = 2;
-  }
-
-  oneof value {
-    // A dense tensor.
-    TensorProto dense_tensor = 1;
-
-    // A sparse tensor.
-    SparseTensorProto sparse_tensor = 2;  
-
-    // A handle.
-    HandleProto handle = 3;
-
-    // A tuple.
-    TupleProto tuple = 4;
-
-    // A sequence.
-    SequenceProto seq = 5;
-
-    // A map.
-    MapProto map = 6;
+    // The type of a union.
+    UnionTypeProto union_type = 6;
   }
 }
 
@@ -527,15 +553,21 @@ message FunctionDefProto {
 
   // The named attributes of the function.
   repeated AttributeProto attr = 5;
+
+  // An optional human-readable documentation for this node in the graph.
+  // This text MAY contain Markdown markup that conforms to http://commonmark.org/.
+  optional string doc_string = 6;
+
+  reserved 100 to 200; // for future extensions.
 }
 
 message SignatureDeclProto {
-  // The formal input parameters to the operation or function 
+  // The formal input parameters to the operation or function
   repeated ParameterDeclProto input_params = 1;
-  // The formal output parameters to the operation or function 
+  // The formal output parameters to the operation or function
   repeated ParameterDeclProto output_params = 2;
-  // The declaration of expected attributes to the operation or function 
-  repeated ParameterDeclProto input_attributes = 3; 
+  // The declaration of expected attributes to the operation or function
+  repeated ParameterDeclProto input_attributes = 3;
   // An optional human-readable documentation for this signature.
   optional string doc_string = 4;
 }
@@ -545,23 +577,25 @@ message OperatorDeclProto {
   optional string name = 1;
 
   // This field MUST contain at least one SignatureDeclProto.
-  // This field MAY contain multiple SignatureDeclProtos, one 
+  // This field MAY contain multiple SignatureDeclProtos, one
   // per type signature supported by this operator.
   repeated SignatureDeclProto signature = 2;
 
   // An optional human-readable documentation for this operator.
   optional string doc_string = 3;
+
+  reserved 100 to 200; // for future extensions.
 }
 
 // A library is a top-level format that contains the declaration
-// of operators and the definition of functions. 
+// of operators and the definition of functions.
 message LibraryProto {
   // The version of the IR this graph targets. See Version enum below.
-  // This field MUST be present this version of the IR.  
+  // This field MUST be present this version of the IR.
   optional int64 ir_version = 1;
 
   // The optional version of the framework runtime that generates this graph.
-  // This producer_version has the same format as ir_version. 
+  // This producer_version has the same format as ir_version.
   optional int64 producer_version = 2;
 
   // The optional name of the framework used to generate this graph in the form
@@ -570,7 +604,7 @@ message LibraryProto {
   optional string producer_tag = 3;
 
   // An optional version identifier used to track evolution of this library.
-  // This model_version has the same format as ir_version. 
+  // This model_version has the same format as ir_version.
   optional int64 model_version = 4;
 
   // The optional name of the author who created the library.
@@ -593,21 +627,23 @@ message LibraryProto {
   // An optional human-readable documentation for this graph.
   optional string doc_string = 9;
 
-  // The operators declared by this library. 
+  // The operators declared by this library.
   repeated OperatorDeclProto operator = 10;
 
-  // The function definitions of the library. 
+  // The function definitions of the library.
   repeated FunctionDefProto function = 11;
 
   // A given name may appear at most once in either operator or function (but not both).
   // When refering to an operator or function from outside of this library, the op_type
   // field must equal:
-  //      LibraryProto.domain + "." + LibraryProto.name + "." OperatorDeclProto.name  
+  //      LibraryProto.domain + "." + LibraryProto.name + "." OperatorDeclProto.name
   // or
-  //      LibraryProto.domain + "." + LibraryProto.name + "." FunctionDefProto.name  
+  //      LibraryProto.domain + "." + LibraryProto.name + "." FunctionDefProto.name
 
   // Imported libraries are referenced as a collection of strings in the form of absolute
   // URIs or relative paths. Where such relative paths are rooted is defined by tools and
   // runtime implementations.
-  repeated string imported_libraries = 12;  
+  repeated string imported_libraries = 12;
+
+  reserved 100 to 200; // for future extensions.
 }

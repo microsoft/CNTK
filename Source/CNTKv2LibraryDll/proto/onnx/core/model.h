@@ -29,9 +29,7 @@ namespace ONNXIR
             const std::string& p_producerVersion,
             const std::string& p_domain,
             VERSION p_modelVersion,
-            const std::string& p_modelDocString,
-            const std::string& p_modelAuthor,
-            const std::string& p_modelLicense);
+            const std::string& p_modelDocString);
 
         Model(const ModelProto& p_modelProto);
 
@@ -71,42 +69,27 @@ namespace ONNXIR
         // Set models' doc string.
         void SetDocString(const std::string& p_docString);
 
-        // Get model's author.
-        // Return null pointer if not specified.
-        const std::string& ModelAuthor() const;
-        // Set models' author.
-        void SetModelAuthor(const std::string& p_modelAuthor);
-
-        // Get model's license.
-        // Return null pointer if not specified.
-        const std::string& ModelLicense() const;
-        // Set models' license.
-        void SetModelLicense(const std::string& p_modelLicense);
-
         // Get model's main graph.
         // The return pointer is owned by <*this> model.
         Graph* MainGraph();
+        const Graph* MainGraph() const;
+
 
         // Get model's serlization proto data.
         const ModelProto& ToProto();
 
 #ifdef _WIN32
-        // wstring versions for Windows only.
-        static bool Save(const ModelProto& p_modelProto, const std::wstring& p_filePath);
-        static bool Save(Model& p_model, const std::wstring& p_filePath);
-        // Load a ModelProto from a file.
-        static bool Load(const std::wstring& p_filePath, /*out*/ ModelProto* p_modelProto);
-        static std::shared_ptr<Model> Load(const std::wstring& p_filePath);
+        static Status Save(Model& p_model, const std::wstring& p_filePath);
+
+        static Status Load(const std::wstring& p_filePath, /*out*/ std::shared_ptr<Model>* p_model);
 #endif
-        // Save a ModelProto to a file.
-        static bool Save(const ModelProto& p_modelProto, const std::string& p_filePath);
-        static bool Save(Model& p_model, const std::string& p_filePath);
-        static bool Save(const ModelProto& p_modelProto, int p_fd);
-        // Load a ModelProto from a file.
-        static bool Load(const std::string& p_filePath, /*out*/ ModelProto* p_modelProto);
-        static std::shared_ptr<Model> Load(const std::string& p_filePath);
-        static bool Load(int p_fd, /*out*/ ModelProto* p_modelProto);
-        static std::shared_ptr<Model> Load(int p_fd);
+        static Status Save(Model& p_model, const std::string& p_filePath);
+
+        static Status Save(Model& p_model, int p_fd);
+
+        static Status Load(const std::string& p_filePath, /*out*/ std::shared_ptr<Model>* p_model);
+
+        static Status Load(int p_fd, /*out*/ std::shared_ptr<Model>* p_model);
 
     private:
 

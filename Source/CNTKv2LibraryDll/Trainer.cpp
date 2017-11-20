@@ -137,6 +137,9 @@ namespace CNTK
 
         m_distributed = m_parameterLearners->IsDistributed();
 
+        if (m_distributed)
+            Evaluator::SetCommunicator(dynamic_cast<DistributedLearner*>(m_parameterLearners->ParameterLearners()[0].get())->GetCommunicator());
+
         for (auto& learner : m_parameterLearners->ParameterLearners())
         {
             learner->AddProgressWriters(progressWriters);

@@ -1,6 +1,3 @@
-#pragma warning(push)
-#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456)
-
 #ifndef CORE_GRAPH_GRAPH_H
 #define CORE_GRAPH_GRAPH_H
 
@@ -9,9 +6,16 @@
 #include <unordered_set>
 
 #include "constants.h"
+
+#pragma warning(push)
+#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996)
 #include "proto/onnx/protobuf/graph.pb.h"
+#pragma warning(pop)
+
 #include "status.h"
 #include "utils.h"
+
+using namespace ONNXIR::Common;
 
 namespace ONNXIR
 {
@@ -70,6 +74,11 @@ namespace ONNXIR
         // Get node arg info proto.
         const NodeArgInfo& ToProto() const;
 
+        // Indicates whether <*this> node arg exists or not.
+        // Optional inputs are allowed in ONNX. Empty arg name represents 
+        // a non-existing input argument.
+        bool Exist() const;
+
     private:
 
         friend class Node;
@@ -83,6 +92,9 @@ namespace ONNXIR
 
         // Node arg name, type and shape.
         NodeArgInfo m_nodeArgInfo;
+
+        // Flag indicates whether <*this> node arg exists or not.
+        bool m_exist;
     };
 
     // Function representation.
@@ -239,6 +251,9 @@ namespace ONNXIR
         ADD_ATTR_INTERFACES(TypeProto)
         ADD_ATTR_INTERFACES(TypeProto::TensorShapeProto)
 
+        // ValueProto doesn't have a vector interface
+        bool AddAttribute(const std::string& p_attrName, const ValueProto& p_value);
+
         // Clear specified node attribute.
         bool ClearAttribute(const std::string& p_attrName);
 
@@ -392,7 +407,7 @@ namespace ONNXIR
         //    a. Node name and node output's names should be unique.
         //    b. Attribute match between node and op definition.
         //    c. Input/Output match between node and op definition.
-        //    d. Graph is acyclic.
+        //    d. Graph is acyclic and sort nodes in topological order.
         // 2. Check & Setup inner nodes' dependency.
         // 3. Cleanup function definition lists.
         // Returns resolving status.
@@ -408,6 +423,11 @@ namespace ONNXIR
         bool GetInitialTensor(const std::string& p_tensorName,
             TensorProto& p_value) const;
         const InitialTensorSet& GetAllInitialTensors() const;
+
+        // Get graph inputs/outputs.
+        const std::vector<const NodeArg*>& GetInputs() const;
+        const std::vector<const NodeArg*>& GetOutputs() const;
+        const std::vector<const NodeArg*>& GetValueInfo() const;
 
         // Add or Remove a function definition.
         bool AddFunctionDef(const FunctionDefProto& p_function);
@@ -522,17 +542,6 @@ namespace ONNXIR
         Status CheckIsAcyclic(
             /*out*/std::vector<NODEINDEX>& p_nodesInToplogicalOrder);
 
-        // Depth-first graph access.
-        // <p_ancestors> specifies all ancestor nodes of <p_current> node.
-        // <p_current> specifies current node being accessed.
-        // <p_visitedNodes> specifies nodes already visited.
-        // <p_nodesInToplogicalOrder> returns nodes' indexes in toplogical
-        // order if the graph is acyclic.
-        Status DepthFirstAccess(std::unordered_set<NODEINDEX> p_ancestors,
-            NODEINDEX p_current,
-            /*in | out*/std::unordered_set<NODEINDEX>& p_visitedNodes,
-            /*out*/std::vector<NODEINDEX>& p_nodesInToplogicalOrder);
-
         // Given nodes in toplogical order, infer and set type information
         // across <*this> graph if needed, and verify type/attribute
         // information match between node and op.
@@ -546,14 +555,17 @@ namespace ONNXIR
             const std::unordered_map<std::string, Node::EdgeEnd>& p_outputArgs);
 
         // Clean function definition map.
-        // Remove function definitions not referred by any node.
+        // Remove function definitions not refered by any node.
         void CleanFunctionDefMap(const std::set<std::string>& p_funcDefNames);
 
         // Add source/sink nodes to <*this> graph.
         void AddSourceSinkNodes();
 
-        // Set graph inputs/outputs when serializing to proto.
+        // Set graph inputs/outputs when resolving a graph..
         void SetGraphInputsOutputs();
+
+        // Sync graph inputs/outputs when serializing to proto.
+        void SyncGraphInputsOutputs();
 
         // Graph nodes.
         // Element in <m_nodes> may be nullptr due to graph optimization.
@@ -594,11 +606,18 @@ namespace ONNXIR
 
         int m_graphType = 0;
 
-        // the topologic order of node index
+        // The topologic order of node index.
         std::vector<NODEINDEX> m_nodesInTopologicalOrder;
+
+        // Graph inputs.
+        std::vector<const NodeArg*> m_graphInputs;
+
+        // Graph outputs.
+        std::vector<const NodeArg*> m_graphOutputs;
+
+        // Graph value_info.
+        std::vector<const NodeArg*> m_valueInfo;
     };
 }
 
 #endif  // CORE_GRAPH_GRAPH_H
-
-#pragma warning(pop)

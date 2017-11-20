@@ -9,11 +9,7 @@
 # that provides
 #   BUILDTYPE= One of release or debug
 #     defaults to release
-#   MKL_PATH= path to CNTK custom MKL installation
-#     only needed if MATHLIB=mkl
-#   CNTK_CUSTOM_MKL_VERSION=3
-#     version for the CNTK custom MKL installation
-#   MKL_THREADING=parallel|sequential
+#   MKL_PATH= path to MKLML installation
 #     only needed if MATHLIB=mkl
 #   GDK_INCLUDE_PATH= path to CUDA GDK include path, so $(GDK_INCLUDE_PATH)/nvml.h exists
 #     defaults to /usr/include/nvidia/gdk
@@ -171,15 +167,9 @@ else
 endif
 
 ifeq ("$(MATHLIB)","mkl")
-  INCLUDEPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/include
-  LIBS_LIST += m
-ifeq ("$(MKL_THREADING)","sequential")
-  MKL_LIB_PATH := $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
-  LIBS_LIST += mkl_cntk_s
-else
-  MKL_LIB_PATH := $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
-  LIBS_LIST += mkl_cntk_p iomp5 pthread
-endif
+  INCLUDEPATH += $(MKL_PATH)/include
+  LIBS_LIST += m iomp5 pthread mklml_intel
+  MKL_LIB_PATH := $(MKL_PATH)/lib
   LIBPATH += $(MKL_LIB_PATH)
   COMMON_FLAGS += -DUSE_MKL
 endif
@@ -496,7 +486,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardFileWriter.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardUtils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/experiments/defs.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/activation/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/generator/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/logical/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/math/defs.cpp \
@@ -504,6 +494,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/reduction/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/rnn/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/tensor/defs.cpp \
+    $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/defs/traditionalml/defs.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/constants.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/status.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/utils.cpp \
@@ -540,13 +531,11 @@ PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
 JAVA_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
-OPENCV_LIBS:=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs
-
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH))  -o $@ $^ $(LIBS) $(OPENCV_LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -ldl -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH))  -o $@ $^ $(LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -ldl -fopenmp
 
 
 ########################################
@@ -609,7 +598,7 @@ $(PROPOSAL_LAYER_LIB): $(PROPOSAL_LAYER_LIBRARY_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(LIBPATH) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY) $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(LIBPATH) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY)
 
 
 ########################################
@@ -674,7 +663,7 @@ $(EVAL_CLIENT): $(EVAL_CLIENT_OBJ) | $(EVAL_LIB) $(READER_LIBS)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO) $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO)
 
 EVAL_EXTENDED_CLIENT:=$(BINDIR)/cppevalextendedclient
 
@@ -690,7 +679,7 @@ $(EVAL_EXTENDED_CLIENT): $(EVAL_EXTENDED_CLIENT_OBJ) | $(EVAL_LIB) $(READER_LIBS
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_EXTENDED_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO) $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO)
 
 ########################################
 # Eval V2 Sample client
@@ -1019,6 +1008,32 @@ endif
 endif
 
 ########################################
+# ImageWriter plugin
+########################################
+
+ifdef OPENCV_PATH
+IMAGEWRITER_LIBS_LIST := opencv_core opencv_imgproc opencv_imgcodecs
+IMAGEWRITER_LIBS:= $(addprefix -l,$(IMAGEWRITER_LIBS_LIST))
+
+IMAGEWRITER_SRC =\
+  $(SOURCEDIR)/ImageWriterDll/ImageWriter.cpp \
+
+IMAGEWRITER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEWRITER_SRC))
+
+IMAGEWRITER:=$(LIBDIR)/Cntk.ImageWriter-$(CNTK_COMPONENT_VERSION).so
+ALL_LIBS += $(IMAGEWRITER)
+PYTHON_LIBS += $(IMAGEWRITER)
+SRC+=$(IMAGEWRITER_SRC)
+
+INCLUDEPATH += $(OPENCV_PATH)/include
+LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
+
+$(IMAGEWRITER): $(IMAGEWRITER_OBJ)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(IMAGEWRITER_LIBS)
+endif
+
+########################################
 # 1bit SGD setup
 ########################################
 
@@ -1140,7 +1155,7 @@ $(CNTK): $(CNTK_OBJ) | $(READER_LIBS) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) $(L_READER_LIBS) $(lMULTIVERSO) -ldl -fopenmp $(PROTOBUF_PATH)/lib/libprotobuf.a $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) $(L_READER_LIBS) $(lMULTIVERSO) -ldl -fopenmp $(PROTOBUF_PATH)/lib/libprotobuf.a
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs
@@ -1213,7 +1228,7 @@ $(UNITTEST_EVAL) : $(UNITTEST_EVAL_OBJ) | $(EVAL_LIB) $(READER_LIBS)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO) $(OPENCV_LIBS) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) $(L_READER_LIBS) $(lMULTIVERSO)
 
 #TODO: create project specific makefile or rules to avoid adding project specific path to the global path
 INCLUDEPATH += $(SOURCEDIR)/Readers/CNTKTextFormatReader
@@ -1280,7 +1295,7 @@ $(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(READER_LIBS) $(CNTKTEXTFORMATRE
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) $(lMULTIVERSO) $(L_READER_LIBS) -ldl -fopenmp  $(PROTOBUF_PATH)/lib/libprotobuf.a $(OPENCV_LIBS)  
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) $(lMULTIVERSO) $(L_READER_LIBS) -ldl -fopenmp  $(PROTOBUF_PATH)/lib/libprotobuf.a  
 
 UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BatchNormalizationEngineTests.cpp \
@@ -1448,7 +1463,7 @@ java: $(JAVA_LIBS)
 	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(JAVA_SO_NAME)
 	mkdir -p $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
 	echo $(JAVA_SO_NAME:$(LIBDIR)/%=%) > $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_LOAD_MANIFEST
-	for so in libiomp5.so libmkl_cntk_p.so; do \
+	for so in libiomp5.so libmklml_intel.so; do \
 	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done

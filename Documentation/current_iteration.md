@@ -1,5 +1,8 @@
 # CNTK v2.3 Release Notes
 
+### Highlights of this Release
+- OpenCV is not required to install CNTK but to use Tensorboard Image feature.
+
 ### Python-binding for CNTK
 Support for Python 3.4 will be removed from CNTK releases later than v2.3.
 

@@ -590,6 +590,21 @@ public:
         return res.str();
     }
 
+    bool IsAsymmetricPadding() const
+    {
+        for (size_t i = 0; i < KernelShape().size(); i++)
+        {
+            auto lowerPad = GetLowerPad(i);
+            auto upperPad = GetUpperPad(i);
+            auto stride = GetStride(i);
+            if ((lowerPad != upperPad) && (stride < InputShape()[i]))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     DISABLE_COPY_AND_MOVE(ConvolveGeometry);
 
 private:
