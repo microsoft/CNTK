@@ -3,7 +3,7 @@ Wide & Deep Model jointly trained wide linear models and deep neural networks—
 ## Data Format
 we support data format [libffm](https://github.com/guestwalk/libffm)
 
-##How to Use
+## How To Use
 ```
 python main.py
 ``` 
