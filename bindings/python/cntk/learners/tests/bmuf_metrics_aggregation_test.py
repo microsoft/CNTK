@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(__file__))
 from distributed_learner_test import mpiexec_execute
 import argparse
 import re
+import platform
 
 cntk.cntk_py.set_fixed_random_seed(1)
 #cntk.logging.set_trace_level(cntk.logging.TraceLevel.Info)
@@ -136,10 +137,12 @@ def mpi_worker(working_dir, mb_source, gpu):
             bmuf.trainer.summarize_training_progress()       
 
 MB_SOURCES = ["numpy", "ctf_utterance", "ctf_frame", "ctf_bptt"]
-#MB_SOURCES = ["numpy"]            
+#MB_SOURCES = ["numpy"]    
 @pytest.mark.parametrize("mb_source", MB_SOURCES)
 def test_bmuf_correct_metrics_averaging(tmpdir, device_id, mb_source):
-    """"use minibatch source also"""
+    if platform.system() == 'Linux':
+        pytest.skip('test only runs on Windows due to mpiexec -l option')
+        
     launch_args = []
     if device_id >= 0:
         launch_args += ['--gpu']
