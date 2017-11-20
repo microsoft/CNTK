@@ -4685,21 +4685,20 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
 //        - none at all if not batchable
 //     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the free axis
 
-// (this #define overrides the constant in CNTKV2Library.h, which is expensive to modify)
-#define FORCE_IMMEDIATE m_forceImmediate
-//#define FORCE_IMMEDIATE (m_forceImmediate || true)
+bool forceImmediate = false; // for debugging: don't create a composite; instead, remember the lambda and execute that directly
 
 /*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
-    m_arity(arity), m_isBasicBlock(isBasicBlock)//             &&false)
+    m_arity(arity), m_isBasicBlock(isBasicBlock)
 {
-    // for debugging, we can disable static invocation altogether
-    if (FORCE_IMMEDIATE)
+#if 1 // for debugging, we can disable static invocation altogether
+    if (forceImmediate)
     {
         m_operands.resize(m_arity);
         m_lambdaRememberedForDebugging = lambda; // just remember the lambda, and done
         m_nameRememberedForDebugging = name;
         return;
     }
+#endif
 
     // -- create the composite
     // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
@@ -4838,7 +4837,7 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
 Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
 {
     auto& operands = m_operands; // TODO: pass as &, for clarity
-    if (FORCE_IMMEDIATE)
+    if (forceImmediate)
     {
         return m_lambdaRememberedForDebugging(m_operands);
     }

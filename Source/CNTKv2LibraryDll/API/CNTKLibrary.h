@@ -5016,7 +5016,6 @@ namespace CNTK
         mutable bool m_stillNeedsToInferShapes;
 
         // for debugging: allow to directly call the lambda, without any Composite involved
-        static const bool m_forceImmediate = false; // for debugging: if true then don't create a composite; but remember the lambda and execute that directly
         std::function<Variable(const std::vector<Variable>&)> m_lambdaRememberedForDebugging;
         std::wstring m_nameRememberedForDebugging;
 
