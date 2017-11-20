@@ -1006,6 +1006,7 @@ namespace CNTK
                 m_isDistributed = true;
 
                 // When only 1 distributed learner is present, enable the lambda. This is used to correctly report loss and eval in BMUF learner case.
+                // Todo : Reconsider this design of working with only 1 distributed learner.
                 if (m_learners.size() == 1)
                 {
                     DoAggregateMetricsIfNeededLambda = std::bind(&DistributedLearner::DoAggregateMetricsIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
