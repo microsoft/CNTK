@@ -1,0 +1,5 @@
+epoch: 0, train logloss: 0.3875, eval logloss: 0.3919
+epoch: 1, train logloss: 0.3691, eval logloss: 0.3880
+epoch: 2, train logloss: 0.3473, eval logloss: 0.3876
+epoch: 3, train logloss: 0.3255, eval logloss: 0.3874
+epoch: 4, train logloss: 0.3058, eval logloss: 0.3872
