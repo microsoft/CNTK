@@ -1,4 +1,4 @@
-
+﻿
 # CNTK v2.3 Release Notes
 
 ## Highlights of this Release
@@ -85,7 +85,7 @@ If no data unit is specified, the default data unit is in samples.
 - CNTK 2.2 requires you to install OpenCV to use CNTK but it is optional for CNTK 2.3
 - You need to install OpenCV only if you are planning to use ImageReader or TensorBoard’s Image feature.
 ### Upgraded ImageIO to 2.2.0
-- Anaconda doesn’t support Python 3.4. CNTK will also remove Python 3.4 support in future releases.
+- [Details](https://github.com/Microsoft/CNTK/pull/2385)
 ### MKL
 - Switched from CNTKCustomMKL to Intel MKLML. MKLML is released with [Intel MKL-DNN](https://github.com/01org/mkl-dnn/releases) as a trimmed version of Intel MKL for MKL-DNN. To set it up:
 
@@ -100,5 +100,5 @@ If no data unit is specified, the default data unit is in samples.
     Unzip it into your MKLML path, creating a versioned sub directory within.
     Set the environment variable `MKLML_PATH` to the versioned sub directory, e.g. setx MKLML_PATH c:\local\mklml\mklml_win_2018.0.1.20171007
 
-## Deprecated
+## Warning
 ### Support for Python 3.4 will be removed from CNTK releases later than v2.3.
