@@ -85,6 +85,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     }
 
     m_precision = config("precision", "float");
+    //m_precision = config("precision", "double");
 
     // Creating deserializers.
     bool composable = CreateDeserializers(config);
