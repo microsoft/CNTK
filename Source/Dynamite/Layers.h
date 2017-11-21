@@ -167,7 +167,7 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     name; axis;
     return Identity;
 #else
-    static const double normalizationTimeConstant = 64000; // TODO: make this a parameter
+    static const double normalizationTimeConstant = 4096000; // 1000 minibatches; TODO: make this a parameter
     static size_t id = 0; // unique id
     auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
     auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
