@@ -1,3 +1,4 @@
+
 # CNTK v2.3 Release Notes
 
 ## Highlights of this Release
@@ -6,6 +7,7 @@
 - Improved C# API.
 - OpenCV is not required to install CNTK, it is only required for Tensorboard Image feature and image reader.
 - Various performance improvement.
+- Add Network Optimization API.
 
 ## API
 ### C#
