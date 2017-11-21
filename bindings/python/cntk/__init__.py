@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.3+'
+__version__ = '2.3'
 
 import numpy as np
 
