@@ -52,7 +52,7 @@ If no data unit is specified, the default data unit is in samples.
 - The goal of cntk.contrib.netopt module is to provide users of CNTK easy-to-use interfaces to speed up or compress their networks using such optimizations, and writers of optimizations a framework within which to export them to CNTK users. 
 - The initial release of netopt supports factoring of Dense CNTK layers and the 1-bit binarization of Convolutional layers.
 #### Netopt API
-- Details on how to use the netopt module is available in [Manual_How_to_use_network_optimizations.ipynb](https://github.com/Microsoft/CNTK/tree/release/2.2/Manual/Manual_How_to_use_network_optimizations.ipynb)
+- Details on how to use the netopt module is available in [Manual_How_to_use_network_optimizations.ipynb](https://github.com/Microsoft/CNTK/tree/release/2.3/Manual/Manual_How_to_use_network_optimizations.ipynb)
 
 ## Operators
 ### Group convolution
