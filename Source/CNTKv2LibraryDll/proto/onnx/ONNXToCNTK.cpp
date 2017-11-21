@@ -115,12 +115,12 @@ std::vector<Axis> ONNXToCNTKHelper::AttributeProtoToAxes(const AttributeProto &a
     {
         for (std::vector<int64_t>::const_iterator it = ints.begin(); it != ints.end(); it++)
         {
-            axes.push_back(Axis((int)(*it)));
+            axes.push_back(Axis((int)(*it) - 1));
         }
     }
     else
     {
-        axes.push_back(Axis((int)(attributeProto.i())));
+        axes.push_back(Axis((int)(attributeProto.i()) - 1));
     }
     return axes;
 }
