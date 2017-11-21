@@ -3,8 +3,10 @@
 
 ## Highlights of this Release
 - Better ONNX support.
+- Switching to NCCL2 for better perfomacne in distributed training.
 - Improved C# API.
 - OpenCV is not required to install CNTK, it is only required forTensorboard Image feature and image reader.
+- Various performance improvement.
 
 ## API
 ### C# API
