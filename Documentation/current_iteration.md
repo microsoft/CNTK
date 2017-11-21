@@ -8,6 +8,7 @@
 - OpenCV is not required to install CNTK, it is only required for Tensorboard Image feature and image reader.
 - Various performance improvement.
 - Add Network Optimization API.
+- Faster Adadelta for sparse.
 
 ## API
 ### C#
@@ -48,6 +49,8 @@
 - Move CPU Convolution to use MKL-ML, which leads to ~4x speedup in AlexNet training.
 ### Moving to NCCL2
 - NCCL2 would be enabled by default in official CNTK releases for Linux GPU build, which reduced aggregation cost in distributed training. For Python users, there’s no impact as NCCL binary is included in the Linux Python wheels. For BrainScript users on Linux, they need to install [NCCL library]( https://github.com/NVIDIA/nccl) as part of CNTK environment setup, similar to CUDA and CUDNN. CPU builds and Windows builds are not affected since NCCL is available for Linux only.
+### Adadelta
+- Faster adadelta updates when gradients are sparse. The running time for the update is now proportional to the number of _non-zero_ elements in the gradient. We observed a speedup of 5x on a single GPU for a feed forward model with a high dimensional sparse input (about 2 million features). Memory requirements increased modestly, requiring 4 additional bytes per sparse input feature (about 8 MB for the aforementioned network). 
 
 ## ONNX
 - Improved ONNX support in CNTK.
