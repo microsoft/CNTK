@@ -8,7 +8,7 @@
 - Various performance improvement.
 
 ## API
-### C# API
+### C#
 - Improved C# API with performance gains in training and evaluation. 
 - During training and evaluation, data batch can be created from single managed buffer with offset. This eases the burden to prepare data in C# code. 
 - Internally, data marshalling is done more efficiently than Release 2.2. Use of chatty FloatVector has been avoided during training and evaluation.
@@ -22,6 +22,12 @@
     func.custom_attributes = {'test':'abc', 'dict':{'a':1, 'b':2}, 'list':[1,2,3]} 
     func.custom_attributes['test2'] = 'def'
 ```
+### Netopt Module – Network Optimizations for faster Inferences
+- In recent years, the DNN Research community has proposed many techniques to make inference faster and more compact. Proposed techniques include factoring matrix-vector-product and convolution operations, binarization/quantization, sparsification and the use of frequency-domain representations. 
+- The goal of cntk.contrib.netopt module is to provide users of CNTK easy-to-use interfaces to speed up or compress their networks using such optimizations, and writers of optimizations a framework within which to export them to CNTK users. 
+- The initial release of netopt supports factoring of Dense CNTK layers and the 1-bit binarization of Convolutional layers.
+#### Netopt API
+- Details on how to use the netopt module is available in Manual_How_to_use_network_optimizations.ipynb located in cntk/manual folder.
 
 ## Operators
 ### Group convolution
