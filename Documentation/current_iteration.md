@@ -25,6 +25,28 @@
     func.custom_attributes = {'test':'abc', 'dict':{'a':1, 'b':2}, 'list':[1,2,3]} 
     func.custom_attributes['test2'] = 'def'
 ```
+### Enabled data unit in frequency specification (Python)
+Now we can specify data unit in sample, minibatch and sweep in training session progress frequency, CrossValidationConfig, and Checkpoint Config. For example,
+```python
+   C.training_session(
+    trainer=t, 
+    mb_source=mbs,
+    mb_size=C.minibatch_size_schedule(4),
+    model_inputs_to_streams=input_map, 
+    max_samples=60,
+    progress_frequency=(5, C.train.DataUnit.minibatch),
+          checkpoint_config = C.CheckpointConfig(frequency=(1, C.train.DataUnit.sweep), preserve_all=True,
+                                         filename=str(tmpdir / "checkpoint_save_all")),
+    cv_config = C.CrossValidationConfig(mbs1, frequency=(100, C.train.DataUnit.sample), minibatch_size=32),
+    ).train(device)
+```
+For details, see:
+- [training_session]( https://cntk.ai/pythondocs/cntk.train.training_session.html?highlight=training%20session#module-cntk.train.training_session)
+- [CrossValidationConfig] (https://cntk.ai/pythondocs/cntk.train.training_session.html?highlight=crossvalidationconfig#cntk.train.training_session.CrossValidationConfig)
+- [CheckPointConfig] (https://cntk.ai/pythondocs/cntk.train.training_session.html?highlight=checkpointconfig#cntk.train.training_session.CheckpointConfig) 
+
+If no data unit is specified, the default data unit is in samples. 
+
 ### Netopt Module – Network Optimizations for faster Inferences
 - In recent years, the DNN Research community has proposed many techniques to make inference faster and more compact. Proposed techniques include factoring matrix-vector-product and convolution operations, binarization/quantization, sparsification and the use of frequency-domain representations. 
 - The goal of cntk.contrib.netopt module is to provide users of CNTK easy-to-use interfaces to speed up or compress their networks using such optimizations, and writers of optimizations a framework within which to export them to CNTK users. 
