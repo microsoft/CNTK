@@ -385,7 +385,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         fprintf(stderr, ") -> %S\n", resVal->AsString().c_str());
         // compare reference result with Dynamite result
         let avSqrErr = AvSqrErr(resVal, refVal, dataType, device);
-        if (avSqrErr > 1e-5)
+        if (isnan(avSqrErr) | avSqrErr > 1e-5)
         {
             fprintf(stderr, ">>>>>>>>>> FWD FAILED: avSqrErr = %.10f\n", avSqrErr);
             resVal->LogToFile(L"result (Dynamite)");
@@ -468,7 +468,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
                 // check result
                 let absErr = fabs(perturbationBasedDelta - gradientBasedDelta);
                 let relErr = (perturbationBasedDelta == gradientBasedDelta) ? 0 : fabs(((perturbationBasedDelta - gradientBasedDelta) / perturbationBasedDelta));
-                if (relErr > 1e-3 && absErr > 1e-10)
+                if (isnan(relErr) || (relErr > 1e-3 && absErr > 1e-10))
                 {
                     fprintf(stderr, ">>>>>>>>>> BWD[%d] FAILED: err=%.10f%% (numeric=%.20f, symbolic=%.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
                     numFailed++;
