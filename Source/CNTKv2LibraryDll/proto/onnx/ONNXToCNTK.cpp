@@ -115,12 +115,12 @@ std::vector<Axis> ONNXToCNTKHelper::AttributeProtoToAxes(const AttributeProto &a
     {
         for (std::vector<int64_t>::const_iterator it = ints.begin(); it != ints.end(); it++)
         {
-            axes.push_back(Axis((int)(*it)));
+            axes.push_back(Axis((int)(*it) - 1));
         }
     }
     else
     {
-        axes.push_back(Axis((int)(attributeProto.i())));
+        axes.push_back(Axis((int)(attributeProto.i()) - 1));
     }
     return axes;
 }
@@ -930,6 +930,33 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             disableRegularization,
             ToWString(node->Name()));
         return cntkFunction;
+    }
+    else if (onnxOpName == "Gemm")
+    {
+        float alpha = GetNamedAttributeAsFloat(node, "alpha", 1.0f);
+        float beta = GetNamedAttributeAsFloat(node, "beta", 1.0f);
+        float transA = GetNamedAttributeAsInt64(node, "transA", 0);
+        float transB = GetNamedAttributeAsInt64(node, "transB", 0);
+        float broadcast = GetNamedAttributeAsInt64(node, "broadcast", 0);
+        // All the three inputs are expected to be rank=2 matrices. Only C, i.e. inputs[2] 
+        // can be a scalar or vector, and if the 'broadcast' attribute is non-zero then
+        // we will use CNTK's automatic braodcast capability to broadcast C. But if rank < 2
+        // and 'broadcast' attribute is zero, then we error out because 'broadcast' attribute
+        // value is considered imperative. 
+        Variable input0 = inputs[0];
+        Variable input1 = inputs[1];
+        Variable input2 = inputs[2];
+        auto cDims = input2.Shape().Dimensions();
+        bool hasSingletonDim = std::any_of(cDims.begin(), cDims.end(), [](size_t i) {return i == 1; });
+        if(broadcast == 0 && hasSingletonDim) // Bad ONNX node - such model/node shouldn't be serializable in ONNX at all.
+            LogicError("The rank of input C in GEMM operator (A*B + C) is not 2. Either specify a value with rank=2, or set the broadcast attribute to 1.");
+
+        FunctionPtr A = ElementTimes(input0, Constant(NDShape({ 1, 1 }), DataType::Float, static_cast<double>(alpha)));
+        FunctionPtr B = (transB != 0) ? Transpose(input1) : (FunctionPtr)input1;
+        FunctionPtr C = ElementTimes(input2, Constant(NDShape({ 1, 1 }), DataType::Float, static_cast<double>(beta)));
+        FunctionPtr D = (transA != 0) ? Times(B, Transpose(A)) : Times(B, A);
+        // If needed, Plus op will broadcast C automatically. 
+        return Plus(C, D);
     }
     else if (onnxOpName == "Dropout")
     {

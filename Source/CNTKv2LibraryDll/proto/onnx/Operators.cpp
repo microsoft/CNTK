@@ -90,27 +90,27 @@ namespace ONNX
         } } },
 
         // From Generator
-        { L"UniformRandom", { {
+        { L"RandomDistribution", { {
             { L"UniformRandom", "RandomUniform" },
             // { L"", "low" },
             // { L"", "high" },
             { L"rngSeed", "seed" },
             { L"newShape", "shape" },
         } } },
-        { L"NormalRandom", { {
+        { L"RandomDistribution", { {
             { L"NormalRandom", "RandomNormal" },
             // { L"", "mean" },
             // { L"", "scale" },
             { L"rngSeed", "seed" },
             { L"newShape", "shape" },
         } } },
-        { L"UniformRandomLike", { {
+        { L"RandomDistribution", { {
             { L"UniformRandomLike", "RandomUniformLike" },
             // { L"", "low" },
             // { L"", "high" },
             { L"rngSeed", "seed" },
         } } },
-        { L"NormalRandomLike", { {
+        { L"RandomDistribution", { {
             { L"NormalRandomLike", "RandomNormalLike" },
             // { L"", "mean" },
             // { L"", "scale" },
@@ -253,6 +253,7 @@ namespace ONNX
         // { L"", "Split" },
         { L"Slice", { {
             { L"Slice", "Slice" },
+            { L"axes", "axes" },
             { L"beginIndexVec", "starts" },
             { L"endIndexVec", "ends" },
         } } },
