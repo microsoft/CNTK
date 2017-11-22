@@ -1274,7 +1274,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
 
     Layer normalization applies this formula to every input element (element-wise):
     ``y = (x - mean(x)) / (stddev(x) + epsilon) * scale + bias``
-    where ``scale`` and ``bias`` are learned scalar parameters.
+    where ``scale`` and ``bias`` are learned parameters of the same dimention as the input/output.
 
     Example:
      >>> f = LayerNormalization(initial_scale=2, initial_bias=1)
