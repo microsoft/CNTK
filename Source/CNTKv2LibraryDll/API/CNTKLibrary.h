@@ -5048,6 +5048,15 @@ namespace CNTK
             return 1;
         }
 
+        //
+        // Method to do loss and eval metrics aggregation across workers before summarization. 
+        // Eg BlockMomentumUpdateAndFiltering BMUF needs an aggregation of metrics. 
+        // Arguments are local training loss value and local eval criterion value.
+        //
+        virtual void DoAggregateMetricsIfNeeded(NDArrayViewPtr&, NDArrayViewPtr&)
+        {
+        }
+
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),
