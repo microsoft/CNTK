@@ -97,15 +97,15 @@ public:
     bool operator!=(const Span& other) const { return !operator==(other); }
 };
 // MakeSpan(collection[, beginIndex[, endIndex]])
+template<typename CollectionType> // Note: NVCC 8 does not support auto; change this back once on CUDA 9
+Span<typename CollectionType::iterator>/*auto*/ MakeSpan(CollectionType& collection, size_t beginIndex = 0) { return Span<typename CollectionType::iterator>(collection.begin() + beginIndex, collection.end()); }
 template<typename CollectionType>
-auto MakeSpan(CollectionType& collection, size_t beginIndex = 0) { return Span<typename CollectionType::iterator>(collection.begin() + beginIndex, collection.end()); }
-template<typename CollectionType>
-auto MakeSpan(const CollectionType& collection, size_t beginIndex = 0) { return Span<typename CollectionType::const_iterator>(collection.cbegin() + beginIndex, collection.cend()); }
+Span<typename CollectionType::const_iterator>/*auto*/ MakeSpan(const CollectionType& collection, size_t beginIndex = 0) { return Span<typename CollectionType::const_iterator>(collection.cbegin() + beginIndex, collection.cend()); }
 // TODO: Decide what end=0 means.
 template<typename CollectionType, typename EndIndexType>
-auto MakeSpan(CollectionType& collection, size_t beginIndex, EndIndexType endIndex) { return Span<typename CollectionType::iterator>(collection.begin() + beginIndex, (endIndex >= 0 ? collection.begin() : collection.end()) + endIndex); }
+Span<typename CollectionType::iterator>/*auto*/ MakeSpan(CollectionType& collection, size_t beginIndex, EndIndexType endIndex) { return Span<typename CollectionType::iterator>(collection.begin() + beginIndex, (endIndex >= 0 ? collection.begin() : collection.end()) + endIndex); }
 template<typename CollectionType, typename EndIndexType>
-auto MakeSpan(const CollectionType& collection, size_t beginIndex, EndIndexType endIndex) { return Span<typename CollectionType::const_iterator>(collection.cbegin() + beginIndex, (endIndex >= 0 ? collection.begin() : collection.end()) + endIndex); }
+Span<typename CollectionType::const_iterator>/*auto*/ MakeSpan(const CollectionType& collection, size_t beginIndex, EndIndexType endIndex) { return Span<typename CollectionType::const_iterator>(collection.cbegin() + beginIndex, (endIndex >= 0 ? collection.begin() : collection.end()) + endIndex); }
 
 ///
 /// A collection wrapper class that performs a map ("transform") operation given a lambda.
@@ -132,7 +132,7 @@ class TransformingSpan
         Iterator operator++() { auto cur = *this; argIter++; return cur; }
         Iterator operator++(int) { argIter++; return *this; }
         TLambda operator*() const { return lambda(std::move(*argIter)); }
-        auto operator->() const { return &operator*(); }
+        TLambda*/*auto*/ operator->() const { return &operator*(); }
         bool operator==(const Iterator& other) const { return argIter == other.argIter; }
         bool operator!=(const Iterator& other) const { return argIter != other.argIter; }
         // BUGBUG: The following won't work for forward iterators, such as NonOwningFunctionList
@@ -164,14 +164,14 @@ public:
 // main entry point
 // E.g. call as Transform(collection, lambda1, lambda2, ...).as_vector();
 template<typename CollectionType, typename Lambda>
-static inline const auto Transform(const CollectionType& collection, const Lambda& lambda) { return TransformingSpan<CollectionType const, Lambda>(collection, lambda); }
+static inline const TransformingSpan<CollectionType const, Lambda>/*auto*/ Transform(const CollectionType& collection, const Lambda& lambda) { return TransformingSpan<CollectionType const, Lambda>(collection, lambda); }
 template<typename CollectionType, typename Lambda, typename ...MoreLambdas>
-static inline const auto Transform(const CollectionType& collection, const Lambda& lambda, MoreLambdas&& ...moreLambdas) { return Transform(TransformingSpan<CollectionType const, Lambda>(collection, lambda), std::forward<MoreLambdas>(moreLambdas)...); }
+static inline const TransformingSpan<CollectionType const, Lambda>/*auto*/ Transform(const CollectionType& collection, const Lambda& lambda, MoreLambdas&& ...moreLambdas) { return Transform(TransformingSpan<CollectionType const, Lambda>(collection, lambda), std::forward<MoreLambdas>(moreLambdas)...); }
 
 template<typename CollectionType, typename Lambda>
-static inline auto Transform(CollectionType& collection, const Lambda& lambda) { return TransformingSpan<CollectionType, Lambda>(collection, lambda); }
+static inline TransformingSpan<CollectionType, Lambda>/*auto*/ Transform(CollectionType& collection, const Lambda& lambda) { return TransformingSpan<CollectionType, Lambda>(collection, lambda); }
 template<typename CollectionType, typename Lambda, typename ...MoreLambdas>
-static inline auto Transform(CollectionType& collection, const Lambda& lambda, MoreLambdas&& ...moreLambdas) { return Transform(TransformingSpan<CollectionType, Lambda>(collection, lambda), std::forward<MoreLambdas>(moreLambdas)...); }
+static inline TransformingSpan<CollectionType, Lambda>/*auto*/ Transform(CollectionType& collection, const Lambda& lambda, MoreLambdas&& ...moreLambdas) { return Transform(TransformingSpan<CollectionType, Lambda>(collection, lambda), std::forward<MoreLambdas>(moreLambdas)...); }
 
 ///
 /// Implement a range like Python's range.
@@ -205,7 +205,7 @@ public:
         const_iterator operator++() { auto cur = *this; value += stepValue; return cur; }
         const_iterator operator++(int) { value += stepValue; return *this; }
         T operator*() const { return value; }
-        auto operator->() const { return &operator*(); } // (who knows whether this is defined for the type)
+        T*/*auto*/ operator->() const { return &operator*(); } // (who knows whether this is defined for the type)
         bool operator==(const const_iterator& other) const { return value == other.value; }
         bool operator!=(const const_iterator& other) const { return value != other.value; }
         const_iterator operator+(typename Base::difference_type offset) const { return const_iterator(value + offset * stepValue, stepValue); }
@@ -271,11 +271,11 @@ static inline std::vector<T> MakeOneElementVector(const T& a)
 ///
 /// Helpers to construct the standard STL from the above.
 ///
-template<typename Container> static inline auto MakeVector     (const Container& container) { return std::vector      <typename Container::value_type>(container.cbegin(), container.cend()); }
-template<typename Container> static inline auto MakeList       (const Container& container) { return std::list        <typename Container::value_type>(container.cbegin(), container.cend()); }
-template<typename Container> static inline auto MakeForwardList(const Container& container) { return std::forward_list<typename Container::value_type>(container.cbegin(), container.cend()); }
-template<typename Container> static inline auto MakeDeque      (const Container& container) { return std::deque       <typename Container::value_type>(container.cbegin(), container.cend()); }
-template<typename Container> static inline auto MakeSet        (const Container& container) { return std::set         <typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline std::vector      <typename Container::value_type>/*auto*/ MakeVector     (const Container& container) { return std::vector      <typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline std::list        <typename Container::value_type>/*auto*/ MakeList       (const Container& container) { return std::list        <typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline std::forward_list<typename Container::value_type>/*auto*/ MakeForwardList(const Container& container) { return std::forward_list<typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline std::deque       <typename Container::value_type>/*auto*/ MakeDeque      (const Container& container) { return std::deque       <typename Container::value_type>(container.cbegin(), container.cend()); }
+template<typename Container> static inline std::set         <typename Container::value_type>/*auto*/ MakeSet        (const Container& container) { return std::set         <typename Container::value_type>(container.cbegin(), container.cend()); }
 
 ///
 /// Class that stores a vector with "small-vector optimization," that is, if it has N or less elements,
@@ -582,7 +582,7 @@ public:
             {
                 totalItemsAllocated++; // account for it
                 totalAllocations++;    // stats
-                auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<std::remove_const_t<T>*>(p));
+                auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<typename std::remove_const<T>::type*>(p));
                 //pItem->blockIndex = (decltype(pItem->blockIndex))currentBlockIndex; // remember which block it came from
                 pItem->flagPtr = res.second; // remember flag location for trivial deallocation
                 //Assert(pItem->blockIndex == currentBlockIndex); // (overflow)
@@ -599,7 +599,7 @@ public:
     __forceinline void Deallocate(T* p)
     {
         //fprintf(stderr, "deallocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
-        const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<std::remove_const_t<T>*>(p));
+        const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<typename std::remove_const<T>::type*>(p));
         auto* flagPtr = pItem->flagPtr;
         Block::Deallocate(flagPtr);
         totalItemsAllocated--;
@@ -635,7 +635,7 @@ public: // required boilerplate --is there no base to derive from to provide thi
     inline bool operator!=(FixedSizePoolAllocatorT const& a) { return !operator==(a); }
 private:
     // say FixedSizePool::get() to get access to a globally shared instance for all pools of the same itemByteSize
-    static auto& GetStorage() { static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)> s_storage; return s_storage; }
+    static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)>/*auto*/& GetStorage() { static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)> s_storage; return s_storage; }
 public:
     __forceinline pointer allocate(size_type cnt = 1, typename std::allocator<void>::const_pointer = 0)
     {
@@ -677,17 +677,17 @@ typedef FixedSizePoolAllocatorT<char> FixedSizePoolAllocator; // turns out, the 
 template<class T>
 class enable_strong_shared_ptr
 {
-    mutable std::atomic_uint referenceCount = 0;
+    mutable std::atomic_uint referenceCount{ 0 };
     template<class T1>
     friend class strong_shared_ptr;
     void AddRef() const noexcept { referenceCount++; }
     unsigned int DecRef() const noexcept { return --referenceCount; }
     size_t UseCount() const noexcept { return referenceCount; }
 public:
-#ifndef _MSC_VER // needed for gcc, but fails with MSVC --how to do this right?
-    enable_strong_shared_ptr() noexcept : referenceCount() { } // (needed because atomic<>() is noexcept)
-    enable_strong_shared_ptr(const enable_strong_shared_ptr& other) noexcept : referenceCount(other.referenceCount) { } // (needed because atomic<>() is noexcept)
-#endif
+//#ifndef _MSC_VER // needed for gcc, but fails with MSVC --how to do this right?
+//    enable_strong_shared_ptr() noexcept : referenceCount() { } // (needed because atomic<>() is noexcept)
+//    enable_strong_shared_ptr(const enable_strong_shared_ptr& other) noexcept : referenceCount(other.referenceCount) { } // (needed because atomic<>() is noexcept)
+//#endif
 };
 template<class T>
 class strong_shared_ptr final
@@ -726,7 +726,7 @@ public:
     strong_shared_ptr& operator=(const strong_shared_ptr& other) noexcept { ReleaseAndReplace(AddRef(other.m_ptr));                return *this; }
     strong_shared_ptr& operator=(strong_shared_ptr&& other)      noexcept { ReleaseAndReplace(other.m_ptr); other.m_ptr = nullptr; return *this; }
     void reset() noexcept { ReleaseAndReplace(nullptr); }
-    typename std::add_lvalue_reference_t<T> operator*() const noexcept { return *m_ptr; }
+    typename std::add_lvalue_reference<T>::type operator*() const noexcept { return *m_ptr; }
     T* operator->()    const noexcept { return m_ptr; }
     T* get()           const noexcept { return m_ptr; }
     bool unique()      const noexcept { return m_ptr && m_ptr->UseCount() == 1; }
@@ -742,7 +742,8 @@ public:
         T* p = Storage::s_storage.template Allocate<T>();
         try
         {
-            return strong_shared_ptr(new (const_cast<std::remove_const_t<T>*>(p)) T(std::forward<CtorArgTypes>(ctorArgs)...));
+            // note: NVCC of CUDA 8 does not support remove_const_t; once NVCC does, change this and others back to _t version
+            return strong_shared_ptr(new (const_cast<typename std::remove_const<T>::type*>(p)) T(std::forward<CtorArgTypes>(ctorArgs)...));
         }
         catch (...)
         {
