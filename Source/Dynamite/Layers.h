@@ -168,6 +168,7 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     return Identity;
 #else
     static const double normalizationTimeConstant = 4096000; // 1000 minibatches; TODO: make this a parameter
+    static const double blendTimeConstant         = 100000;
     static size_t id = 0; // unique id
     auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
     auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
@@ -186,7 +187,7 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
             CountAPICalls(1);
             return CNTK::BatchNormalization(x, thisId, scale, bias,
                                             runningMean, runningInvStd, runningCount, /*spatial=*/false,
-                                            normalizationTimeConstant, /*blendTimeConstant=*/0, /*epsilon=*/0.0001, name);
+                                            normalizationTimeConstant, blendTimeConstant, /*epsilon=*/0.0001, name);
         });
 #endif
 }

@@ -386,7 +386,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         fprintf(stderr, ") -> %S\n", resVal->AsString().c_str());
         // compare reference result with Dynamite result
         let avSqrErr = AvSqrErr(resVal, refVal, dataType, device);
-        if (isnan(avSqrErr) | avSqrErr > 1e-5)
+        if (isnan(avSqrErr) || avSqrErr > 1e-5)
         {
             fprintf(stderr, ">>>>>>>>>> FWD FAILED: avSqrErr = %.10f\n", avSqrErr);
             resVal->LogToFile(L"result (Dynamite)");

@@ -254,8 +254,8 @@ namespace CNTK
                     NDArrayView::NumericOperation({ x, mu }, 1/ N   , Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2); // sigma^2
                     //NDArrayView::NumericOperation({ x, mu }, 1/(N-1), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2); // sigma^2
                     // TODO: ^^ figure out the bias problem
-                    mu    ->LogToFile(L"mu");
-                    sigma2->LogToFile(L"sigma2");
+                    //mu    ->LogToFile(L"mu");
+                    //sigma2->LogToFile(L"sigma2");
                 }
                 // --- step 2. update running stats
                 if (!isInferring)
@@ -292,9 +292,9 @@ namespace CNTK
                     if (!runSqrSum->IsReadOnly())
                         NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
                     // now the running stats have been updated with the new MB stats
-                    runCount ->LogToFile(L"runCount");
-                    runSum   ->LogToFile(L"runSum");
-                    runSqrSum->LogToFile(L"runSqrSum");
+                    //runCount ->LogToFile(L"runCount");
+                    //runSum   ->LogToFile(L"runSum");
+                    //runSqrSum->LogToFile(L"runSqrSum");
                 }
                 if (runningStatsWeight != 0) // we got a contribution from the running stats
                 {
@@ -306,8 +306,8 @@ namespace CNTK
                     NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
                     NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
                     // ^^ var = 1/count sqrSum - mu^2 = 1/count sqrSum - (sum/count)^2   --this subtracts mu^2
-                    mu    ->LogToFile(L"mu'");
-                    sigma2->LogToFile(L"sigma2'");
+                    //mu    ->LogToFile(L"mu'");
+                    //sigma2->LogToFile(L"sigma2'");
                 }
                 // now perform actual BatchNormalization based on the estimates of mu and sigma^2
                 // sigma (remember that this is in-place, &sigma2==&sigma)
@@ -625,23 +625,22 @@ namespace CNTK
                 // TODO: redundant with gradients[1] and [2]--how to cache this?
                 // In case of fixed stats, we only have the first term.
                 //   ^^ BUGBUG: We need to check the volatile flag correctly, to make this test work.
-                // add first term to gradient
+                // add first term to gradient. This is the main path.
                 NDArrayView::NumericOperation({ outGradVal, scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, beta);
-                //let isInferring = runSum->IsReadOnly() || true; // inference is indicated at this level by locking up the running accumulators
-                //if (!isInferring)
-                {
-                    // add second term, which is
-                    // -(xHat * scaleGradient/N)
-                    // * (scale / sigma)
-                    let oneOverN = (double)redBuf->Shape().TotalSize(/*check=*/false) / (double)inputValues[0]->Shape().TotalSize(/*check=*/false);
-                    // note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
-                    let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
-                    NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-oneOverN, opAxBxCoverD, gradient, /*beta=*/1.0);
-                    // add third term, which is
-                    // (scale / sigma) * -1/N * biasGradient
-                    let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1, opCopy, redBuf);
-                    NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -oneOverN, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
-                }
+                // add second term, that is, the path through the std dev estimator, which is
+                // -(xHat * scaleGradient/N) * (scale / sigma)
+                // scaled down by the weight that we actually use it, in case of blending
+                let N = (double)inputValues[0]->Shape().TotalSize(/*check=*/false) / (double)redBuf->Shape().TotalSize(/*check=*/false);
+                let blendTimeConstant = attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>(); // consider running stats to have this many samples
+                double runningStatsWeight = blendTimeConstant / (N + blendTimeConstant); // mix-in factor for running stats
+                let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats
+                // note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
+                let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
+                NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-rawMBStatsWeight / N, opAxBxCoverD, gradient, /*beta=*/1.0);
+                // add third term, that is, the path through std dev and mean estimator, which is
+                // (scale / sigma) * -1/N * biasGradient
+                let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1, opCopy, redBuf);
+                NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -rawMBStatsWeight / N, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
                 handled = true;
             }
             else if (i == 1) // scale is a reduction over outputGradientValue * (x-mu)/sigma

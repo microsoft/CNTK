@@ -596,6 +596,7 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
         batchModel(lossSequences, features, labels);             // batch-compute the criterion
         let collatedLosses = Splice(move(lossSequences), Axis(-1), Named("collatedLosses")); CountAPICalls(1);    // concatenate all seq lossSequences
         DOLOG(collatedLosses);
+        //GetValueAsTensor(collatedLosses)->LogToFile(L"collatedLosses", stderr, 10000);
         let mbLoss = ReduceSum(collatedLosses, Axis_DropLastAxis, Named("batchLoss")); CountAPICalls(1); // aggregate over entire minibatch
         Function::SetDynamicProfiler(prevProfiler);
         return mbLoss;
@@ -692,6 +693,27 @@ static wstring IntermediateModelPath(const wstring& modelPath, size_t currentMbC
     return modelPath + L"." + wstring(currentMbCountBuf, currentMbCountBuf + strlen(currentMbCountBuf)); // (simplistic string->wstring converter)
 };
 
+class SmoothedVar
+{
+    double smoothedNumer = 0; double smoothedDenom = 0;
+    const double smoothingTimeConstant = 409600; // smooth over 100 minibatches
+public:
+    double Update(double avgVal, size_t count)
+    {
+        // this smoothing will approximate 1.0 for the denominator
+        // (actually a little higher since we add 'count' items instead of 1)
+        let decay      =     exp(-(double)count / smoothingTimeConstant);
+        let complement = 1 - exp(-1             / smoothingTimeConstant);
+        smoothedDenom = decay * smoothedDenom + complement * count;
+        smoothedNumer = decay * smoothedNumer + complement * count * avgVal;
+        return Value();
+    }
+    double Value() const
+    {
+        return smoothedNumer / smoothedDenom;
+    }
+} smoothedLoss;
+
 static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, size_t startMbCount)
 {
     // dynamic model and criterion function
@@ -753,23 +775,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
     vector<vector<vector<Variable>>> args; // [subMinibatchIndex, streamIndex, sequenceIndex]
     size_t totalLabels = 0;
-    class SmoothedVar
-    {
-        double smoothedNumer = 0; double smoothedDenom = 0;
-        const double smoothedDecay = 0.99;
-    public:
-        double Update(double avgVal, size_t count)
-        {
-            // TODO: implement the correct smoothing
-            smoothedNumer = smoothedDecay * smoothedNumer + (1 - smoothedDecay) * avgVal * count;
-            smoothedDenom = smoothedDecay * smoothedDenom + (1 - smoothedDecay) * count;
-            return Value();
-        }
-        double Value() const
-        {
-            return smoothedNumer / smoothedDenom;
-        }
-    } smoothedLoss;
     Microsoft::MSR::CNTK::Timer timer;
     class // helper for timing GPU-side operations
     {
@@ -840,7 +845,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #else
         let actualMinibatchSize = minibatchSize;
 #endif
-        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, actualMinibatchSize,
+        //Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, actualMinibatchSize    /2  + 15,
+        //                        communicator->Workers().size(), communicator->CurrentWorker().m_globalRank,
+        //                        /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
+        Dynamite::GetSubBatches(args, { L"src", L"tgt" }, subMinibatches, /*shuffleSeed=*/mbCount, minibatchSource, actualMinibatchSize ,//   /2  + 15,
                                 communicator->Workers().size(), communicator->CurrentWorker().m_globalRank,
                                 /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
         let timeGetNextMinibatch = partTimer.Elapsed();
@@ -849,6 +857,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // SUB-MINIBATCH LOOP
         // We get 10 x the minibatch, sort it by source length, and then process it in consecutive chunks of 1/10, which form the actual minibatch for training
         let numAPICalls00 = CountAPICalls(0);
+#if 0       // for debugging: reduce #sequences to 3, and reduce their lengths
+        args[0][0].resize(5);
+        args[0][1].resize(5);
+        for (size_t nnn = 0; nnn < args[0][0].size(); nnn++)
+            fprintf(stderr, "len[%d] = %d\n", (int)nnn, (int)args[0][0][nnn].size());
+#endif
         for (let& subBatchArgs : args)
         {
             timer.Restart();
@@ -1215,7 +1229,7 @@ int mt_main(int argc, char *argv[])
             fprintf(stderr, "%s\n", e.what()), fflush(stderr);
             throw invalid_argument("required command line: --command train|test --system SYSTEMID --id IDSTRING\n SYSTEMID = chs_enu, rom_enu, etc\n IDSTRING is used to form the log and model path for now");
         }
-
+        //SetCurrentDataType(DataType::Double);
         //let* pExpId = argv[2];
         //wstring experimentId(pExpId, pExpId + strlen(pExpId)); // (cheap conversion to wchar_t)
         auto outputDirectory = workingDirectory + L"/" + experimentId + L"_" + wstring(systemId.begin(), systemId.end());
@@ -1293,7 +1307,9 @@ int mt_main(int argc, char *argv[])
     {
         fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
         fflush(stderr);
-        return EXIT_FAILURE;
+        std::terminate(); // work around the crash when unloading DLLs with CUDA
+        // BUGBUG: Does not do what I thought it would do.
+        //return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }
