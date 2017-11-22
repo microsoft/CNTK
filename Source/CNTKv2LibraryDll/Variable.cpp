@@ -316,7 +316,7 @@ namespace CNTK
         if (!m_dataFields->m_value)
         {
 #if 0
-            OutputOwner()->MemoizeKnowableValue();
+            OutputOwner()->Forward();
 #else
             OutputOwner()->BatchedForward();
 #endif
@@ -828,8 +828,17 @@ namespace CNTK
             InvalidArgument("Constant::Clone: Cannot clone Constant '%S' with DataType '%s' to DataType '%s'.", AsString().c_str(), DataTypeName(GetDataType()), DataTypeName(dataType));
 
         auto originalConstantValue = Value();
-        auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
-        NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, dataType, true);
+        NDArrayViewPtr newConstantValue;
+        if (dataType == originalConstantValue->GetDataType())
+        {
+            newConstantValue = originalConstantValue;
+            LogicError("This code is untested. Verfy it works, then delete this error message.");
+        }
+        else // if DataType is different then convert it on the CPU, and reassign it back
+        {
+            auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
+            newConstantValue = CloneAsDataType(constantValueCPU, dataType, true);
+        }
         return Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), Name());
     }
 

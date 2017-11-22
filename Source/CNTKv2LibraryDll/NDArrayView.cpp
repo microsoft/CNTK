@@ -511,6 +511,18 @@ namespace CNTK
 
         // TODO: like DeepClone, for dense data, this can call TensorView, which will amount to a cudaMemcpy() while bypassing GetMatrix() complexity
         //       Maybe we need a shared copy function. Maybe DeepClone can call CopyFrom()?
+#if 0   // #if 1 to allow loading 'float' model as 'double'
+        if (m_dataType == DataType::Double && source.m_dataType == DataType::Float)
+        {
+            auto sourceMatrix = source.GetMatrix<float>();
+            auto destMatrix = GetWritableMatrix<double>();
+            std::vector<float> fBuffer;
+            source.CopyDataTo(fBuffer);
+            std::vector<double> dBuffer(fBuffer.begin(), fBuffer.end());
+            SetValue(dBuffer.data(), dBuffer.size());
+        }
+        else
+#endif
         switch (m_dataType)
         {
         case DataType::Float:

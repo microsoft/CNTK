@@ -418,9 +418,11 @@ namespace CNTK
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
 
+#if 0       // #if 1 to allow loading 'float' checkpoint into 'double' model
             if (smoothedGradientValue->GetDataType() != checkpointedValue.GetDataType())
                 LogicError("DataType of the smoothed gradient value restored from checkpoint for the parameter '%S' (uid = %ls) does not match the expected value.",
                             parameter.AsString().c_str(), uid.c_str());
+#endif
 
             if (smoothedGradientValue->Shape() != checkpointedValue.Shape())
                 LogicError("Shape '%S' of the smoothed gradient value restored from checkpoint for the parameter '%S' (uid = %ls) does not match the expected value.",

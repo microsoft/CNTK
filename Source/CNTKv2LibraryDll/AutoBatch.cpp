@@ -616,7 +616,7 @@ namespace CNTK
     //     - any code holds a view (slice/reshape/alias) to the tensor data  --alive via ref count of the arena instance
     //     - other consumers that have the same Variable as an input --alive via internally-held ref count to the the Variable instance
     //     - explicit reference to the Variable in user code  --alive via externally-held ref count to the Variable instance
-    // - at end of MemoizeKnowableValueInArena(),
+    // - at end of MemoizeInArena(),
     //   reset all Variables' shared_ptrs that fulfill one of the following conditions:
     //    - m_needsGradient flag is not set, or         // note: m_volatile is subsumed here already
     //    - not required for any gradient (considering also which gradients may never be requested)
@@ -2361,7 +2361,7 @@ class InternalVariable::AutoBatch
     }
 
     // create a PrimitiveFunction, execute it right away, and prep result as an input
-    // This first executes RawPrimitiveFunction() and MemoizeKnowableValueInArena(),
+    // This first executes RawPrimitiveFunction() and MemoizeInArena(),
     // and then returns the result in the form of a Variable suitable as an input to the next PimitiveFunction
     // by setting its m_acyclicOutputPrimitiveReference field.
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
@@ -2412,7 +2412,7 @@ class InternalVariable::AutoBatch
     }
 
     // create a PrimitiveFunction and execute it right away
-    // This executes RawPrimitiveFunction() and MemoizeKnowableValueInArena().
+    // This executes RawPrimitiveFunction() and MemoizeInArena().
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
     PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes/*, const wstring& name*/,
@@ -2437,7 +2437,7 @@ class InternalVariable::AutoBatch
         cudaStatsguard.Stop();
 
         // execute it
-        MemoizeKnowableValueInArena(*fPtr, isFree, logSpliceAsGather);
+        MemoizeInArena(*fPtr, isFree, logSpliceAsGather);
         return fPtr;
     }
 
@@ -2460,23 +2460,13 @@ class InternalVariable::AutoBatch
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     // The result is stored in f.m_outputs.front()'s m_value.
     // Note: This breaks the immutability principle, in that it frees inputs that are known to be no longer needed.
-    const void MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
+    const void MemoizeInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
             inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
-        // special case: we need to detect and pass on inference mode to BatchNorm
-        if (f.m_op == PrimitiveOpType::BatchNormalization &&
-            inputs[0].IsVolatile() &&      // if input arg is volatile then this is inference mode
-            !inputValues[3]->IsReadOnly()) // which we indicate by locking up the runningCount parameter
-        {
-            // BUGBUG: This API is very brittle, and can lead to hard-to-notice bugs.
-            //         Possible remedies: (1) make parameters readOnly; (2) a global inference-mode flag
-            //         PyTorch's BN API has the same challenge.
-            inputValues[3] = inputValues[3]->Alias(/*readOnly=*/true);
-        }
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
@@ -2502,7 +2492,7 @@ class InternalVariable::AutoBatch
         //if (f.m_op == PrimitiveOpType::Slice && !any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); }))
         //    Break;
         // execute it
-        auto res = PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f);
+        auto res = PrimitiveFunction::Forward(f.m_op, f.Attributes(), output.IsVolatile(), inputValues, outputShape, move(outValue), f);
         EndCudaStats(cudaStatsPtr, inputValues.front()->Device());
         // special case: a Slice op is non-contiguous. We must copy.
         if (f.m_op == PrimitiveOpType::Slice && !res->IsContiguous())
@@ -3281,7 +3271,7 @@ class InternalVariable::AutoBatch
             vector<NDShapeDimension> outputShape; // determine output shape   --TODO: use a vector<NDShapeDimension> in this class
             outputShape.reserve(batchAxis + 1);
             outputShape = vector<NDShapeDimension>(input0Shape.Dimensions());
-            //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeKnowableValueInArena()
+            //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeInArena()
             outputShape.resize(batchAxis, 1); // pad to batchAxis
             outputShape.push_back(batchDim);  // and add the batch axis
             //fail_if(outputShape[batchAxis] != batchDim, "CreateBatchedInputFor() post=condition not fulfilled??"); // (no need to check; post-condition is obviously fulfilled by construction)
@@ -3407,7 +3397,7 @@ class InternalVariable::AutoBatch
                 }
                 else
                 {
-                    MemoizeKnowableValueInArena(f, isFree);
+                    MemoizeInArena(f, isFree);
                     // and notify consumers (which may schedule them)
                     NotifyOpsConsumersInputsAvailable(f);
                 }
@@ -4603,7 +4593,7 @@ void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayVie
 // non-batched version of BatchedForward()
 // This is actually not used except as a fallback for debugging.
 // TODO: move to -Eval.cpp
-void PrimitiveFunction::MemoizeKnowableValue() const
+void PrimitiveFunction::Forward() const
 {
     if (m_outputs.size() != 1)
         LogicError("Variable '%S' Value(): Only Variables with one output can compute their Value for now.", AsString().c_str());
@@ -4617,7 +4607,7 @@ void PrimitiveFunction::MemoizeKnowableValue() const
     for (size_t i = 0; i < args.size(); i++)
         args[i] = m_inputs[i].Value();
     NDArrayViewPtr out;
-    output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, m_attributes, output.Shape(), move(out), *this));
+    output.m_dataFields->m_value = move(Forward(m_op, m_attributes, output.IsVolatile(), args, output.Shape(), move(out), *this));
 }
 
 // ===========================================================================
@@ -4685,21 +4675,20 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
 //        - none at all if not batchable
 //     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the free axis
 
-// (this #define overrides the constant in CNTKV2Library.h, which is expensive to modify)
-#define FORCE_IMMEDIATE m_forceImmediate
-//#define FORCE_IMMEDIATE (m_forceImmediate || true)
+bool forceImmediate = false; // for debugging: don't create a composite; instead, remember the lambda and execute that directly
 
 /*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
-    m_arity(arity), m_isBasicBlock(isBasicBlock)//             &&false)
+    m_arity(arity), m_isBasicBlock(isBasicBlock)
 {
-    // for debugging, we can disable static invocation altogether
-    if (FORCE_IMMEDIATE)
+#if 1 // for debugging, we can disable static invocation altogether
+    if (forceImmediate)
     {
         m_operands.resize(m_arity);
         m_lambdaRememberedForDebugging = lambda; // just remember the lambda, and done
         m_nameRememberedForDebugging = name;
         return;
     }
+#endif
 
     // -- create the composite
     // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
@@ -4838,7 +4827,7 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
 Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
 {
     auto& operands = m_operands; // TODO: pass as &, for clarity
-    if (FORCE_IMMEDIATE)
+    if (forceImmediate)
     {
         return m_lambdaRememberedForDebugging(m_operands);
     }

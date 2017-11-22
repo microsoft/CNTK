@@ -226,7 +226,9 @@ namespace CNTK
             }
 
             return (areVarKindsCompatible &&
+#if 1   // set to 0 to be able to load a 'float' models as 'double'
                     (var1.GetDataType() == var2.GetDataType()) &&
+#endif
                     (var1.IsSparse() == var2.IsSparse()) &&
                     (var1.Name() == var2.Name()) &&
                     areDynamicAxesCompatible &&
