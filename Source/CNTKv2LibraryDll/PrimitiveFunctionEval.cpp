@@ -85,9 +85,10 @@ namespace CNTK
     // This is addressed as:
     //  - All relative axis arguments must have been normalized already in InferOutputs. Can't call NormalizeStaticAxis() here.
     //  - All reduction axes are already completely specified by the output shape. Can't look at the axis parameter.
-    /*static*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp,  // execute this op
-                     const vector<NDArrayViewPtr>& args, const Dictionary& attributes, // on these inputs --TODO: move attributes up
-                     const NDShape& outputShape, NDArrayViewPtr&& out, // into this output (if null then create a new one)
+    /*static*/ NDArrayViewPtr PrimitiveFunction::Forward(PrimitiveOpType primitiveOp, // execute this op
+                     const Dictionary& attributes, bool isVolatile,                                // with these additional parameters
+                     const vector<NDArrayViewPtr>& args,                                           // on these inputs
+                     const NDShape& outputShape, NDArrayViewPtr&& out,                             // into this output (if null then create a new one)
                      const PrimitiveFunction& funcForErrMsg)
     {
         // Slice() can either create new data or not, so do it first
@@ -223,71 +224,92 @@ namespace CNTK
                 let& redBuf = args[6]; // mean buffer, also used for other ops later
                 let& sigma  = args[7];
                 let& xHat   = args[8]; // (x-mu)/sigma
-                // mu and sigma^2
+                // things related to running stats
                 let N = (double)x->Shape().TotalSize(/*check=*/false) / (double)bias->Shape().TotalSize(/*check=*/false);
+                if (N == 1) // (observed in a test case; leave it in until stuff is solid)
+                    fprintf(stderr, "WARNING: abnormal BatchNorm input with count=1\n"), fflush(stderr);
+                let isInferring = isVolatile; // this indicates inference mode
+                let normalizationTimeConstant = attributes[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
+                let blendTimeConstant         = attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>(); // consider running stats to have this many samples
+                double runningStatsWeight = isInferring ? 1 : blendTimeConstant / (N + blendTimeConstant); // mix-in factor for running stats
+                // mu and sigma^2
+                //x->LogToFile(L"x |> BatchNorm");
                 //fprintf(stderr, "BATCHNORM over %d, id=%d\n", (int)N, (int)attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()), fflush(stderr);
                 assert(N == (double)x->Shape().TotalSize(/*check=*/false) / (double)sigma->Shape().TotalSize(/*check=*/false)); // for now
                 let& mu = redBuf;
                 let& sigma2 = sigma; // we use sigma's location to first compute sigma^2
-                let isInferring = runSum->IsReadOnly(); // inference is indicated at this level by locking up the running accumulators
-                double blendFactor = isInferring ? 1 : 0; // mix-in factor for running stats
-                // TODO: base this on blendTimeConstant ^^. Code below already supports it.
-                if (blendFactor != 0) // we got a contribution from the running stats
+                // algorithm related to running stats vs. current MB stats
+                //  1. update accumulators with new raw MB stats if needed
+                //     As long as we are not inferring, compute the raw stats, then update running stats with it
+                //  2. update running stats
+                //  3. replace raw MB stats with smoothed MB stats if blend specified
+                //     Interpolate from running stats to raw model
+                //     BUGBUG: This will now bring in the current stats twice, unless we add code to adjust the weights, requiring GPU sync.
+                //     Maybe it's OK, since the running stats move very slowly, so the new contribution is very small.
+                //  4. in backprop: variance-estimation path should get weighted by the weight used for the raw MB data
+                // --- step 1. compute new raw MB stats
+                if (runningStatsWeight != 1) // actual MB stats (used in training only)
                 {
-                    //runCount ->LogToFile(L"runCount");
-                    //runSum   ->LogToFile(L"runSum");
-                    //runSqrSum->LogToFile(L"runSqrSum");
-                    NDArrayView::NumericOperation({ runSum,    runCount },  1, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, mu);
-                    NDArrayView::NumericOperation({ runSqrSum, runCount },  1, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, sigma2);
-                    // var = 1/count sqrSum - mu^2   --this subtracts mu^2
-                    NDArrayView::NumericOperation({ mu                  }, -1, Microsoft::MSR::CNTK::ElementWiseOperator::opSqr, sigma2, /*beta=*/1);
-                    //mu    ->LogToFile(L"mu");
-                    //sigma2->LogToFile(L"sigma2");
+                    NDArrayView::NumericOperation({ x     }, 1/ N   , Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,            mu    );
+                    NDArrayView::NumericOperation({ x, mu }, 1/ N   , Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2); // sigma^2
+                    //NDArrayView::NumericOperation({ x, mu }, 1/(N-1), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2); // sigma^2
+                    // TODO: ^^ figure out the bias problem
+                    mu    ->LogToFile(L"mu");
+                    sigma2->LogToFile(L"sigma2");
                 }
-                if (blendFactor != 1) // we got a contribution from actual data (training only)
-                {
-                    NDArrayView::NumericOperation({ x     }, (1.0 - blendFactor)/N, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,            mu    , blendFactor);
-                    NDArrayView::NumericOperation({ x, mu }, (1.0 - blendFactor)/N, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2, blendFactor); // sigma^2
-                    //mu    ->LogToFile(L"mu");
-                    //sigma2->LogToFile(L"sigma2");
-                }
-                // statistics update:
-                //  - running accumulator with numer and denom
-                //  - new minibatch has N samples
-                //  - gets decayed by N samples, where N may vary
-                //  - we store 0th, 1st, and 2nd-order accumlators
-                //    NOTE: This is not what is documented. But we consider this internal, so it's OK.
-                //  - and convert them when needed
-                //  - accumulators are actually stored pre-multiplied by (1 - exp(-1 / normalizationTimeConstant)),
-                //    as this keeps the count accumulator around 1 (it converges to a tiny bit above 1
-                //    since we add multiple samples at once; if it was 1 sample at a time, it would be 1).
-                //    This way, runningMean is *nearly* the correct mean, and runningVar would be the variance if the mean was 0.
-                //    This makes debugging those values more meaningful, but is otherwise not criticial for anything.
-                // using:
-                //  - 1/count sum_j(x_j-mu)^2 = 1/count sum_j x_j^2 - 1/count sum_j mu^2 = 1/count sum_j x_j^2 - mu^2
-                //  - var = 1/count sqrSum - mu^2
-                //  - sqrSum = (var + mu^2) * count
-                //  - newSqrSum = (oldVar + oldMu^2) * oldVount + mbSqrSum
-                //  - mbSqrSum = (mbVar + mbMu^2) * N
-                // update:
-                //  - newCount  = oldCount  * exp(-N/T) + N
-                //  - newSum    = oldSum    * exp(-N/T) + N * mbMu
-                //  - newSqrSum = oldSqrSum * exp(-N/T) + N * (mbVar + mbMu^2)
+                // --- step 2. update running stats
                 if (!isInferring)
                 {
-                    if (blendFactor != 0)
-                        LogicError("BatchNormalization: blendTimeConstant != 0 not supported yet"); // BUGBUG: This is hosed for blendFactor != 1, since we re-add our own history.
-                    let normalizationTimeConstant = attributes[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
+                    // statistics update:
+                    //  - running accumulator with numer and denom
+                    //  - new minibatch has N samples
+                    //  - gets decayed by N samples, where N may vary
+                    //  - we store 0th, 1st, and 2nd-order accumlators
+                    //    NOTE: This is not what is documented. But we consider this internal, so it's OK.
+                    //  - and convert them when needed
+                    //  - accumulators are actually stored pre-multiplied by (1 - exp(-1 / normalizationTimeConstant)),
+                    //    as this keeps the count accumulator around 1 (it converges to a tiny bit above 1
+                    //    since we add multiple samples at once; if it was 1 sample at a time, it would be 1).
+                    //    This way, runningMean is *nearly* the correct mean, and runningVar would be the variance if the mean was 0.
+                    //    This makes debugging those values more meaningful, but is otherwise not criticial for anything.
+                    // using:
+                    //  - 1/count sum_j(x_j-mu)^2 = 1/count sum_j x_j^2 - 1/count sum_j mu^2 = 1/count sum_j x_j^2 - mu^2
+                    //  - var = 1/count sqrSum - mu^2
+                    //  - sqrSum = (var + mu^2) * count
+                    //  - newSqrSum = (oldVar + oldMu^2) * oldVount + mbSqrSum
+                    //  - mbSqrSum = (mbVar + mbMu^2) * N
+                    // update:
+                    //  - newCount  = oldCount  * exp(-N/T) + N
+                    //  - newSum    = oldSum    * exp(-N/T) + N * mbMu
+                    //  - newSqrSum = oldSqrSum * exp(-N/T) + N * (mbVar + mbMu^2)
                     // momentum-like formula: xsmooted = xold * exp(-1/T) + xnew * (1 - exp(-1/T))
-                    let decay = exp(-N / normalizationTimeConstant);
-                    let complement = 1 - exp(-1 / normalizationTimeConstant);
-                    NDArrayView::NumericOperation({                }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, runCount,  decay);
-                    NDArrayView::NumericOperation({ mu             }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSum,    decay);
-                    NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
+                    let decay      =     exp(-N / normalizationTimeConstant); // decay for N steps
+                    let complement = 1 - exp(-1 / normalizationTimeConstant); // unit gain for 1 step
+                    if (!runCount->IsReadOnly())
+                        NDArrayView::NumericOperation({                }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, runCount,  decay);
+                    if (!runSum->IsReadOnly())
+                        NDArrayView::NumericOperation({ mu             }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSum,    decay);
+                    if (!runSqrSum->IsReadOnly())
+                        NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
+                    // now the running stats have been updated with the new MB stats
+                    runCount ->LogToFile(L"runCount");
+                    runSum   ->LogToFile(L"runSum");
+                    runSqrSum->LogToFile(L"runSqrSum");
+                }
+                if (runningStatsWeight != 0) // we got a contribution from the running stats
+                {
                     //runCount ->LogToFile(L"runCount");
                     //runSum   ->LogToFile(L"runSum");
                     //runSqrSum->LogToFile(L"runSqrSum");
+                    let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats. In inference, this is 0.
+                    NDArrayView::NumericOperation({ runSum,    runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    mu    , rawMBStatsWeight);
+                    NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
+                    NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
+                    // ^^ var = 1/count sqrSum - mu^2 = 1/count sqrSum - (sum/count)^2   --this subtracts mu^2
+                    mu    ->LogToFile(L"mu'");
+                    sigma2->LogToFile(L"sigma2'");
                 }
+                // now perform actual BatchNormalization based on the estimates of mu and sigma^2
                 // sigma (remember that this is in-place, &sigma2==&sigma)
                 NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
                 double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();

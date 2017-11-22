@@ -942,8 +942,8 @@ namespace CNTK
         void BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
 
     private:
-        void MemoizeKnowableValue() const;
-        static NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&, const PrimitiveFunction& funcForErrMsg);
+        void Forward() const;
+        static NDArrayViewPtr Forward(PrimitiveOpType, const Dictionary&, bool isVolatile, const std::vector<NDArrayViewPtr>&, const NDShape&, NDArrayViewPtr&&, const PrimitiveFunction& funcForErrMsg);
         static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& inputGradient, double beta, const PrimitiveFunction& funcForErrMsg);
 
     private:

@@ -298,6 +298,7 @@ DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
 DefBinaryOp(Pow, safepow_(a, b));
 DefBinaryOp(DivBySqrt, a / sqrt(b)); // TODO: CUDA has an rqsrt function; use it
+DefBinaryOp(ElementwiseQuotientSqr, Sqr(ClippedQuotient(a, b)));
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
 DefBinaryOp(Argmax, b > a); // dummy implementation, as this is handled by a special case

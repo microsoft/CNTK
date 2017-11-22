@@ -316,7 +316,7 @@ namespace CNTK
         if (!m_dataFields->m_value)
         {
 #if 0
-            OutputOwner()->MemoizeKnowableValue();
+            OutputOwner()->Forward();
 #else
             OutputOwner()->BatchedForward();
 #endif
