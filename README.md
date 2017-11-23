@@ -2,6 +2,21 @@
 
 ## Latest news
 
+***2017-11-22.* CNTK 2.3**
+Release of Cognitive Toolkit v.2.3.
+
+Highlights:
+* Better ONNX support.
+* Switched to NCCL2 for better performance in distributed training.
+* Improved C# API.
+* OpenCV is not required to install CNTK, it is only required for Tensorboard Image feature and image reader.
+* Various performance improvement.
+* Added Network Optimization API.
+* Faster Adadelta for sparse.
+
+See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_3_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
 ***2017-11-10.*** Switch from CNTKCustomMKL to Intel MKLML. MKLML is released with [Intel MKL-DNN](https://github.com/01org/mkl-dnn/releases) as a trimmed version of Intel MKL for MKL-DNN. To set it up:
 
 On Linux:
@@ -83,22 +98,6 @@ Hightlights:
 * Tensorboard image support for CNTK
 
 See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_2_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-08-04.*** CNTK August interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2194).
-
-***2017-07-31.* CNTK 2.1**  
-Release of Cognitive Toolkit v.2.1.
-
-Highlights:
-* cuDNN 6.0 integration
-* Support of Universal Windows Platform (UWP)
-* Improvements in backend for Keras
-* Performance improvements
-* New manuals, tutorials and examples
-* Multiple bug fixes
-
-See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_1_Release_Notes).  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
 See [all news](https://docs.microsoft.com/en-us/cognitive-toolkit/news)
