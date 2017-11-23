@@ -45,8 +45,8 @@ ZipFaceFileReader::ZipFaceFileReader(const std::string& zipPath) :
 ZipFaceFileReader::~ZipFaceFileReader()
 {
     assert(m_zipFile != nullptr);
-	int err = fclose(m_zipFile);
-	assert(0 == err);
+    int err = fclose(m_zipFile);
+    assert(0 == err);
 #ifdef NDEBUG
     UNUSED(err);
 #endif
@@ -54,9 +54,9 @@ ZipFaceFileReader::~ZipFaceFileReader()
 
 ZipFaceFileReader::ZipPtr ZipFaceFileReader::OpenZip()
 {
-	auto zip = fopen(m_zipPath.c_str(), "rb");
-	if (nullptr == zip)
-		RuntimeError("Failed to open %s\n", m_zipPath.c_str());
+    auto zip = fopen(m_zipPath.c_str(), "rb");
+    if (nullptr == zip)
+        RuntimeError("Failed to open %s\n", m_zipPath.c_str());
 
     return zip;
 }
@@ -155,14 +155,14 @@ void ZipFaceFileReader::Register(const MultiMap& sequences)
 {
     m_zipFile = OpenZip();
 
-	auto decoder = new ZipDecoder(m_zipFile);
+    auto decoder = new ZipDecoder(m_zipFile);
 
     size_t numberOfEntries = 0;
     size_t numEntries = decoder->zip_get_entries();
     for (size_t i = 0; i < numEntries; ++i)
     {
-		auto sequenceInfo = sequences.find(std::string(decoder->ZipInfo[i].zip_seq_name));
-		
+        auto sequenceInfo = sequences.find(std::string(decoder->ZipInfo[i].zip_seq_name));
+        
         if (sequenceInfo == sequences.end())
         {
             continue;
@@ -209,9 +209,9 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
     { 
         std::lock_guard<std::mutex> g(m_readLocker);
 
-		_fseeki64(m_zipFile, index, SEEK_SET);
-		assert(contents.size() >= size);
-		size_t bytesRead = fread(contents.data(), 1, size, m_zipFile);
+        _fseeki64(m_zipFile, index, SEEK_SET);
+        assert(contents.size() >= size);
+        size_t bytesRead = fread(contents.data(), 1, size, m_zipFile);
         assert(bytesRead == size);
         if (bytesRead != size)
         {
