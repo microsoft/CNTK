@@ -18,6 +18,7 @@
     <ClCompile Include="MLFIndexBuilder.cpp">
       <Filter>MLF</Filter>
     </ClCompile>
+    <ClCompile Include="LatticeDeserializer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -63,6 +64,7 @@
     <ClInclude Include="MLFIndexBuilder.h">
       <Filter>MLF</Filter>
     </ClInclude>
+    <ClInclude Include="LatticeDeserializer.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
