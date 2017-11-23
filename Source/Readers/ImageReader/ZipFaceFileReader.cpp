@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include <opencv2/opencv.hpp>
 #include "ByteReader.h"
+#include "ZipDecoder.h"
 
 #ifdef USE_ZIP
 #include <File.h>
@@ -44,8 +45,8 @@ ZipFaceFileReader::ZipFaceFileReader(const std::string& zipPath) :
 ZipFaceFileReader::~ZipFaceFileReader()
 {
     assert(m_zipFile != nullptr);
-    int err = zip_close(m_zipFile);
-    assert(ZIP_ER_OK == err);
+	int err = fclose(m_zipFile);
+	assert(0 == err);
 #ifdef NDEBUG
     UNUSED(err);
 #endif
@@ -53,10 +54,9 @@ ZipFaceFileReader::~ZipFaceFileReader()
 
 ZipFaceFileReader::ZipPtr ZipFaceFileReader::OpenZip()
 {
-    int err = ZIP_ER_OK;
-    auto zip = zip_open(m_zipPath.c_str(), 0, &err);
-    if (ZIP_ER_OK != err)
-        RuntimeError("Failed to open %s, zip library error: %s", m_zipPath.c_str(), GetZipError(err).c_str());
+	auto zip = fopen(m_zipPath.c_str(), "rb");
+	if (nullptr == zip)
+		RuntimeError("Failed to open %s\n", m_zipPath.c_str());
 
     return zip;
 }
@@ -155,25 +155,21 @@ void ZipFaceFileReader::Register(const MultiMap& sequences)
 {
     m_zipFile = OpenZip();
 
-    zip_stat_t stat;
-    zip_stat_init(&stat);
+	auto decoder = new ZipDecoder(m_zipFile);
 
     size_t numberOfEntries = 0;
-    size_t numEntries = zip_get_num_entries(m_zipFile, 0);
+    size_t numEntries = decoder->zip_get_entries();
     for (size_t i = 0; i < numEntries; ++i)
     {
-        int err = zip_stat_index(m_zipFile, i, 0, &stat);
-        if (ZIP_ER_OK != err)
-            RuntimeError("Failed to get file info for index %d, zip library error: %s", (int) i, GetZipError(err).c_str());
-
-        auto sequenceInfo = sequences.find(std::string(stat.name));
+		auto sequenceInfo = sequences.find(std::string(decoder->ZipInfo[i].zip_seq_name));
+		
         if (sequenceInfo == sequences.end())
         {
             continue;
         }
 
         for (auto sid : sequenceInfo->second)
-            m_seqIdToIndex[sid] = std::make_pair(stat.index, stat.size);
+            m_seqIdToIndex[sid] = std::make_pair(decoder->ZipInfo[i].zip_seq_index, decoder->ZipInfo[i].zip_seq_size);
         numberOfEntries++;
     }
 
@@ -213,25 +209,9 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
     { 
         std::lock_guard<std::mutex> g(m_readLocker);
 
-        std::unique_ptr<zip_file_t, void(*)(zip_file_t*)> file(
-            zip_fopen_index(m_zipFile, index, 0),
-            [](zip_file_t* f)
-            {
-                assert(f != nullptr);
-                int err = zip_fclose(f);
-                assert(ZIP_ER_OK == err);
-#ifdef NDEBUG
-                UNUSED(err);
-#endif
-            });
-        assert(nullptr != file);
-        if (nullptr == file)
-        {
-            RuntimeError("Could not open file %s in the zip file, sequence id = %lu, zip library error: %s",
-                         path.c_str(), (long)seqId, GetZipError(zip_error_code_zip(zip_get_error(m_zipFile))).c_str());
-        }
-        assert(contents.size() >= size);
-        zip_uint64_t bytesRead = zip_fread(file.get(), contents.data(), size);
+		_fseeki64(m_zipFile, index, SEEK_SET);
+		assert(contents.size() >= size);
+		size_t bytesRead = fread(contents.data(), 1, size, m_zipFile);
         assert(bytesRead == size);
         if (bytesRead != size)
         {

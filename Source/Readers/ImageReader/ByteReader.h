@@ -150,7 +150,7 @@ private:
     float m_relative_scale;
     float m_relative_trans;
 
-    using ZipPtr = zip_t*;
+    using ZipPtr = FILE*;
     ZipPtr OpenZip();
 
     std::mutex m_readLocker;
