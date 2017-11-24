@@ -92,12 +92,13 @@ void ZipDecoder::zip_get_central_directory(size_t& entries, size_t& size, size_t
     long len = 21;
     const size_t buffer_size = 1 << 12; //4KB buffer size
     auto buffer = new char[buffer_size];
+    size_t bytesRead;
 
     fseek(zip_file, -21, SEEK_END);
     do {
         ++len;
         fseek(zip_file, -1, SEEK_CUR);
-        fread(buffer, len, 1, zip_file);
+        bytesRead = fread(buffer, len, 1, zip_file);
         fseek(zip_file, -len, SEEK_END);
     } while (buffer[0] != 0x50 || buffer[1] != 0x4b || buffer[2] != 0x05 || buffer[3] != 0x06);
     entries = hex2dec(buffer + 10, 2);
@@ -110,7 +111,7 @@ void ZipDecoder::zip_get_central_directory(size_t& entries, size_t& size, size_t
         do {
             ++len;
             fseek(zip_file, -1, SEEK_CUR);
-            fread(buffer, 56, 1, zip_file);
+            bytesRead = fread(buffer, 56, 1, zip_file);
             fseek(zip_file, -56, SEEK_CUR);
         } while (buffer[0] != 0x50 || buffer[1] != 0x4b || buffer[2] != 0x06 || buffer[3] != 0x06);
         if (0xffff == entries)
@@ -120,6 +121,8 @@ void ZipDecoder::zip_get_central_directory(size_t& entries, size_t& size, size_t
         if (0xffffffff == offset)
             offset = hex2dec(buffer + 48, 8);
     }
+    
+    delete[] buffer;
 }
 
 void ZipDecoder::decode()
@@ -133,7 +136,7 @@ void ZipDecoder::decode()
     auto buffer = new char[buffer_size];
 
     _fseeki64(zip_file, central_directory_offset, SEEK_SET);
-    fread(buffer, central_directory_size, 1, zip_file);
+    size_t bytesRead = fread(buffer, central_directory_size, 1, zip_file);
 
     size_t offset;
     size_t compressed_size;
@@ -157,4 +160,6 @@ void ZipDecoder::decode()
         ZipInfo.push_back(ZipSeqInfo(string(buffer, file_name_length), offset + 30 + file_name_length, compressed_size));
         buffer += file_name_length + extra_field_length + file_comment_length;
     }
+    
+    delete[] buffer;
 }
