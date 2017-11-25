@@ -167,10 +167,10 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     name; axis;
     return Identity;
 #else
-    static const double normalizationTimeConstant = 4096000; // 1000 minibatches; TODO: make this a parameter
-    static const double blendTimeConstant         = 100000;
+    static const double normalizationTimeConstant = 2000*50; // 2000 sentences a ~50 words should provide a decent estimate; ~24 minibatches of 4096
+    static const double blendTimeConstant = numeric_limits<double>::infinity(); // running-stats only 100000;
     static size_t id = 0; // unique id
-    auto thisId = ++id;   // note: don't use 'id' in lambda; it will access the static variable directly
+    auto thisId = /*isinf(blendTimeConstant) ? 0 :*/ ++id;   // note: don't use 'id' in lambda below; it will access the static variable directly, not a captured value
     auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
     auto bias  = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"bias");
     auto runningMean   = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"runningMean");

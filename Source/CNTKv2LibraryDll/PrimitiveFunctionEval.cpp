@@ -226,12 +226,16 @@ namespace CNTK
                 let& xHat   = args[8]; // (x-mu)/sigma
                 // things related to running stats
                 let N = (double)x->Shape().TotalSize(/*check=*/false) / (double)bias->Shape().TotalSize(/*check=*/false);
-                if (N == 1) // (observed in a test case; leave it in until stuff is solid)
-                    fprintf(stderr, "WARNING: abnormal BatchNorm input with count=1\n"), fflush(stderr);
                 let isInferring = isVolatile; // this indicates inference mode
+                if (N == 1 && !isInferring) // (observed in a test case; leave it in until stuff is solid)
+                    fprintf(stderr, "WARNING: abnormal BatchNorm input with count=1\n"), fflush(stderr);
                 let normalizationTimeConstant = attributes[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
                 let blendTimeConstant         = attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>(); // consider running stats to have this many samples
-                double runningStatsWeight = isInferring ? 1 : blendTimeConstant / (N + blendTimeConstant); // mix-in factor for running stats
+                double runningStatsWeight =
+                    /*if*/ (isInferring || isinf(blendTimeConstant)) ?
+                        1 // inference or only using running stats
+                    /*else*/:
+                        blendTimeConstant / (N + blendTimeConstant); // mix-in factor for running stats
                 // mu and sigma^2
                 //x->LogToFile(L"x |> BatchNorm");
                 //fprintf(stderr, "BATCHNORM over %d, id=%d\n", (int)N, (int)attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()), fflush(stderr);
@@ -248,12 +252,12 @@ namespace CNTK
                 //     Maybe it's OK, since the running stats move very slowly, so the new contribution is very small.
                 //  4. in backprop: variance-estimation path should get weighted by the weight used for the raw MB data
                 // --- step 1. compute new raw MB stats
-                if (runningStatsWeight != 1) // actual MB stats (used in training only)
+                if (!isInferring) // actual MB stats (used in training only)
                 {
                     NDArrayView::NumericOperation({ x     }, 1/ N   , Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,            mu    );
                     NDArrayView::NumericOperation({ x, mu }, 1/ N   , Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2); // sigma^2
                     //NDArrayView::NumericOperation({ x, mu }, 1/(N-1), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2); // sigma^2
-                    // TODO: ^^ figure out the bias problem
+                    // TODO: better use the unbiased estimate (a simple test showed very little impact, though)
                     //mu    ->LogToFile(L"mu");
                     //sigma2->LogToFile(L"sigma2");
                 }
@@ -632,15 +636,22 @@ namespace CNTK
                 // scaled down by the weight that we actually use it, in case of blending
                 let N = (double)inputValues[0]->Shape().TotalSize(/*check=*/false) / (double)redBuf->Shape().TotalSize(/*check=*/false);
                 let blendTimeConstant = attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>(); // consider running stats to have this many samples
-                double runningStatsWeight = blendTimeConstant / (N + blendTimeConstant); // mix-in factor for running stats
+                double runningStatsWeight =
+                    /*if*/ (isinf(blendTimeConstant)) ?
+                        1 // only using running stats
+                    /*else*/:
+                        blendTimeConstant / (N + blendTimeConstant); // mix-in factor for running stats
                 let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats
                 // note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
-                let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
-                NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-rawMBStatsWeight / N, opAxBxCoverD, gradient, /*beta=*/1.0);
-                // add third term, that is, the path through std dev and mean estimator, which is
-                // (scale / sigma) * -1/N * biasGradient
-                let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1, opCopy, redBuf);
-                NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -rawMBStatsWeight / N, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
+                if (rawMBStatsWeight != 0)
+                {
+                    let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
+                    NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-rawMBStatsWeight / N, opAxBxCoverD, gradient, /*beta=*/1.0);
+                    // add third term, that is, the path through std dev and mean estimator, which is
+                    // (scale / sigma) * -1/N * biasGradient
+                    let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1, opCopy, redBuf);
+                    NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -rawMBStatsWeight / N, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
+                }
                 handled = true;
             }
             else if (i == 1) // scale is a reduction over outputGradientValue * (x-mu)/sigma

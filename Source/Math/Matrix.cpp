@@ -1968,21 +1968,23 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
     {
         m_CPUMatrix->Adam(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
-        (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
-        biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+                          (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+                          biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
         SetDataLocation(CPU);
     },
     {
         m_GPUMatrix->Adam(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
-        (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
-        biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+                          (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+                          biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
         SetDataLocation(GPU);
     },
     { NOT_IMPLEMENTED; },
-    { gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
-        (ElemType)learnRatePerSample, (ElemType)meanMomentum,
-        (ElemType)varMomentum, biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
-        SetDataLocation(GPU); });
+    {
+        gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
+                                          (ElemType)learnRatePerSample, (ElemType)meanMomentum,
+                                          (ElemType)varMomentum, biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+        SetDataLocation(GPU);
+    });
 
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }

@@ -1413,7 +1413,7 @@ class InternalVariable::AutoBatch
         //NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
         // TODO: remove barrierPendingCounts
         //vector<size_t> m_barrierPendingCounts;  // [barrier id] number of consumers of a barrier id that are not yet ready
-        vector<size_t> m_bnPendingCounts = vector<size_t>(16, 0);       // [bn id] number of pending (non-ready) BatchNormalization operations. We need 0, so why not allocate a few more already
+        vector<size_t> m_bnPendingCounts = vector<size_t>(1000, 0);       // [bn id] number of pending (non-ready) BatchNormalization operations. We need 0, so why not allocate a few more already
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction& a, const PrimitiveFunction& b) // TODO: change to & (NULL is not a valid value here)
@@ -1468,12 +1468,13 @@ class InternalVariable::AutoBatch
                         InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
                                         PrimitiveOpTypeName(op).c_str(), (int)aId, a.m_inputs.front().Shape().AsString().c_str(), b.m_inputs.front().Shape().AsString().c_str());
                 }
-                // check the remaining parameters--requires object identity
+                // check the remaining parameters (stats and "un-stats")--requires object identity
                 for (size_t i = 1; i < 6; i++)
                 {
                     if (a.m_inputs[i].m_dataFields != b.m_inputs[i].m_dataFields)
                         InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different %d-th argument.",
                             PrimitiveOpTypeName(op).c_str(), (int)aId, (int)i);
+                    fail_if(a.m_inputs[i].m_dataFields->m_shape.Rank() > batchAxis, "BatchNorm: shape of a statistic parameter exceeds batch axis??");
                 }
                 return true; // these *must* be batched
             }
@@ -1863,7 +1864,7 @@ class InternalVariable::AutoBatch
                 CudaStatsGuard cudaStatsGuard(PrimitiveOpType::BatchNormalization, L"Schedule(BN)", 3);
                 let bnId = f.m_autoBatchState.m_batchNormId;
                 fail_if(bnId != f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
-                m_bnPendingCounts[bnId]--; // only those with pending count 0 are ready
+                m_bnPendingCounts[bnId]--; // only those with pending count 0 are ready (exception: bnId == 0, caters to running-stats-BN only)
             }
             else if (op == PrimitiveOpType::Block)
             {
@@ -1917,25 +1918,23 @@ class InternalVariable::AutoBatch
         //size_t size() const { return (m_viewOps.size() > 0) /*+  + (m_barrierOps.size() > 0)*/; } // TODO: What is this double +??
         size_t numBatchableOpsPending() const { return m_regularOps.size(); }
         // helper to check whether this is a BatchNormalization op that still has some instances pending
-        // TODO: just return 'true'; or maybe rename to IsBatchNormPending()
-        bool GetBatchNormPending(const vector<NonOwningFunctionListBuilder>::const_iterator& iter)
+        // This handles the special case of bnId == 0, for which this constraint is not applied.
+        bool AnyBatchNormPending(const vector<NonOwningFunctionListBuilder>::const_iterator& iter)
         {
             let& f = iter->front();
             if (f.m_op == PrimitiveOpType::BatchNormalization)
             {
                 let bnId = f.m_autoBatchState.m_batchNormId;
                 fail_if(bnId != f.m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>(), "m_batchNormId not initialized correctly??"); // TODO: remove once confirmed not flagging for a while
-                return m_bnPendingCounts[bnId] > 0;
+                return bnId != 0 && m_bnPendingCounts[bnId] > 0;
             }
             else if (f.m_op == PrimitiveOpType::Block)
             {
                 // we also must count BatchNorm instances embedded inside basic-block composites
                 let* composite = static_cast<const CompositeFunction*>(static_cast<const BlockFunction&>(f).Composite().get());
                 for (let bnId : *composite->m_basicBlockInfo.m_batchNormIds)
-                    if (m_bnPendingCounts[bnId] > 0)
+                    if (bnId != 0 && m_bnPendingCounts[bnId] > 0)
                         return true;
-                //if (!composite->m_basicBlockInfo.m_batchNormIds->empty())
-                //    Break;
             }
             return false;
         }
@@ -1958,7 +1957,7 @@ class InternalVariable::AutoBatch
                     // TODO: optimize this further, e.g. don't get autobatch state over again
                     int diff = 0;
                     // TODO: just say if IsBatchNormPending(iter) continue;
-                    diff = -((int)GetBatchNormPending(iter) - (int)GetBatchNormPending(best)); // BatchNormalization with pending inputs always loses
+                    diff = -((int)AnyBatchNormPending(iter) - (int)AnyBatchNormPending(best)); // BatchNormalization with pending inputs always loses
                     if (diff) goto got_diff;
                     diff = -((int)iter->front().m_autoBatchState.m_depthHint - (int)best->front().m_autoBatchState.m_depthHint); // barrier: higher depthHint gets batched last
                     if (diff) goto got_diff;
@@ -1968,7 +1967,7 @@ class InternalVariable::AutoBatch
                         best = iter;
                 }
                 // special case BatchNormalization
-                if (GetBatchNormPending(best)) // the only ready op is BN with some instances still pending -> error (I am not sure under which circumstances this may ever happen)
+                if (AnyBatchNormPending(best)) // the only ready op is BN with some instances still pending -> error (I am not sure under which circumstances this may ever happen)
                     InvalidArgument("Primitive op '%S' with id %d must not be used in a recurrent loop (must not depend on its own output).",
                         PrimitiveOpTypeName(best->front().m_op).c_str(), (int)best->front().m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
                 // and remove this one from the list

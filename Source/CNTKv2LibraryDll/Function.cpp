@@ -2125,12 +2125,17 @@ namespace CNTK
                                    double epsilon,
                                    const std::wstring& name)
     {
+        // If BN only uses the running stats, we do not need to auto-batch all instances.
+        // In this case, pass id==0.
+        // This is to support BN inside sequence loops.
+        if (id == 0 && !isinf(blendTimeConstant))
+            InvalidArgument("BatchNormalization: id == 0 (unbatched) only allowed for infinite blendTimeConstant.");
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameSpatial] = spatial;
         additionalProperties[PrimitiveFunction::AttributeNameNormalizationTimeConstant] = normalizationTimeConstant;
         additionalProperties[PrimitiveFunction::AttributeNameBlendTimeConstant] = blendTimeConstant;
         additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
-        additionalProperties[PrimitiveFunction::AttributeNameSyncId] = id + 1; // the Dynamite version takes an extra parameter (+1 because 0 is reserved)
+        additionalProperties[PrimitiveFunction::AttributeNameSyncId] = id; // the Dynamite version takes this extra parameter
 
         std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization, operands, std::move(additionalProperties), name));
