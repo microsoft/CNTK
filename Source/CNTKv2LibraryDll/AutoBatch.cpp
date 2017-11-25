@@ -1976,9 +1976,13 @@ class InternalVariable::AutoBatch
                         best = iter;
                 }
                 // special case BatchNormalization
-                if (AnyBatchNormPending(best)) // the only ready op is BN with some instances still pending -> error (I am not sure under which circumstances this may ever happen)
-                    InvalidArgument("Primitive op '%S' with id %d must not be used in a recurrent loop (must not depend on its own output).",
-                        PrimitiveOpTypeName(best->front().m_op).c_str(), (int)best->front().m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+                if (AnyBatchNormPending(best))
+                {
+                    double blendTimeConstant = (*best).front().m_attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
+                    if (blendTimeConstant == 0) // the only ready op is BN with some instances still pending -> error (I am not sure under which circumstances this may ever happen)
+                        InvalidArgument("Primitive op '%S' with id %d must not be used in a recurrent loop (must not depend on its own output).",
+                            PrimitiveOpTypeName(best->front().m_op).c_str(), (int)best->front().m_attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>());
+                }
                 // and remove this one from the list
                 NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
                 m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem. Priority queue?
@@ -3158,9 +3162,9 @@ class InternalVariable::AutoBatch
             fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
             let& fromDims = fromOutput.Shape().Dimensions();  // ...and its shape dimensions
             fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
-            let fromSliceAxis = fromDims.size() - 1;          // the slice of from is taken along this axis
+            let fromRank = fromDims.size() - 1;          // the slice of from is taken along this axis
             Variable batchedInput = Variable(fromOutput, ConstFunctionPtr(), static_pointer_cast<PrimitiveFunction const>(from->shared_from_this())); // our return value
-            if (beginIndex == 0 && endIndex == fromDims.back()/*[fromSliceAxis]*/) // full range: just take it, no need to slice at all
+            if (beginIndex == 0 && endIndex == fromDims.back()/*[fromRank]*/) // full range: just take it, no need to slice at all
             {
                 // BUGBUG: ^^ This does not cover STACKING of a previously BATCHED result
                 batchedInput; // this is what we want here
@@ -3170,10 +3174,10 @@ class InternalVariable::AutoBatch
                 //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, numBatchItems);
                 // create a new PrimitiveFunction Slice()
                 auto outputShape = fromDims; // determine output shape
-                outputShape.back()/*[fromSliceAxis]*/ = endIndex - beginIndex; // narrow it down to the range of the slice we are taking
+                outputShape.back()/*[fromRank]*/ = endIndex - beginIndex; // narrow it down to the range of the slice we are taking
                 batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(nullptr/*1*/, batchedInput), outputShape,
                                                          Dictionary(
-                                                             PrimitiveFunction::AttributeNameAxis,       Axis((int)fromSliceAxis),
+                                                             PrimitiveFunction::AttributeNameAxis,       Axis((int)fromRank),
                                                              PrimitiveFunction::AttributeNameBeginIndex, (int)beginIndex,
                                                              PrimitiveFunction::AttributeNameEndIndex,   (int)endIndex
                                                          ),
@@ -3189,15 +3193,15 @@ class InternalVariable::AutoBatch
             // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
             // BUGBUG: This seems never called in the MT case?
             // TODO: Do this inside Gather, based on its output shape.
-            if (fromSliceAxis != batchAxis)
+            if (fromRank != batchAxis)
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"intermediate reshape", 3, numBatchItems);
                 // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
                 // start with actual shape we have, and make it the one we want
                 let& batchedInputDims = batchedInput.Shape().Dimensions();
-                if (batchAxis < fromSliceAxis)
+                if (batchAxis < fromRank)
                 {
-                    if (batchAxis + 1 != fromSliceAxis)
+                    if (batchAxis + 1 != fromRank)
                         LogicError("stacking axis not adjacent to batch axis??"); // TODO: Can this legally happen?
                     fail_if(batchedInputDims[batchAxis] * batchedInputDims[batchAxis + 1] != batchDim, "batch axis cannot be absorbed into stacking axis??");
                     auto outputShape = batchedInputDims.BackPopped();
@@ -3208,28 +3212,32 @@ class InternalVariable::AutoBatch
                                                              //f0.m_name,
                                                              f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 }
-                else // batchAxis > fromSliceAxis
+                else // batchAxis > fromRank
                 {
-                    auto& outputShape = m_CreateBatchedInputFor_outputShapeBuffer;
-                    outputShape.assign(batchedInputDims.begin(), batchedInputDims.end());
-                    //auto outputShape = MakeVector(batchedInputDims); // PERF BUGBUG--can we do better than this? E.g. use a shared vector class member for this?
-                    if (outputShape.back() == batchDim)
-                        outputShape.insert(outputShape.end() - 1, batchAxis - fromSliceAxis, 1);
+                    auto& outputShapeVec = m_CreateBatchedInputFor_outputShapeBuffer;
+                    outputShapeVec.assign(batchedInputDims.begin(), batchedInputDims.end());
+                    //auto outputShapeVec = MakeVector(batchedInputDims); // PERF BUGBUG--can we do better than this? E.g. use a shared vector class member for this?
+                    if (outputShapeVec.back() == batchDim)
+                        outputShapeVec.insert(outputShapeVec.end() - 1, batchAxis - fromRank, 1);
                     else
                     {
-                        if (fromSliceAxis + 1 != batchAxis)
+                        if (fromRank + 1 != batchAxis)
 #if 0                       // happens when disabling Barrier??
                             // BUGBUG: Will crash later. Fix this.
-                            outputShape.insert(outputShape.begin() + fromSliceAxis, batchAxis - (fromSliceAxis + 1), 1);
+                            // Observed: [3072*11] -> [1 x 3072 x 11], with expected Placeholder [3072 x FreeDim]
+                            // op = Block
+                            // batchAxis==2 vs. [3027 x FreeDim] is already mismatching
+                            // --> batchAxis is not determined correctly for Block. Reshape?
+                            outputShapeVec.insert(outputShapeVec.begin() + fromRank, batchAxis - (fromRank + 1), 1);
 #else
                             LogicError("batch axis not adjacent to stacking axis??"); // TODO: Can this legally happen? If yes, then we can just insert ones.
 #endif
-                        fail_if(outputShape.back() / batchDim * batchDim != outputShape.back(), "stacking axis cannot be converted to batching axis??");
-                        outputShape.back() /= batchDim;
-                        outputShape.push_back(batchDim);
+                        fail_if(outputShapeVec.back() / batchDim * batchDim != outputShapeVec.back(), "stacking axis cannot be converted to batching axis??");
+                        outputShapeVec.back() /= batchDim;
+                        outputShapeVec.push_back(batchDim);
                     }
                     // insert a Reshape() op
-                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), outputShape,
+                    batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), outputShapeVec,
                                                              Dictionary(),
                                                              //f0.m_name,
                                                              f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);

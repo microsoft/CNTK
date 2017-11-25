@@ -2125,10 +2125,10 @@ namespace CNTK
                                    double epsilon,
                                    const std::wstring& name)
     {
-        // If BN only uses the running stats, we do not need to auto-batch all instances.
+        // If BN also uses the running stats, we do not need to auto-batch all instances.
         // In this case, pass id==0.
         // This is to support BN inside sequence loops.
-        if (id == 0 && !isinf(blendTimeConstant))
+        if (id == 0 && blendTimeConstant == 0)
             InvalidArgument("BatchNormalization: id == 0 (unbatched) only allowed for infinite blendTimeConstant.");
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameSpatial] = spatial;
