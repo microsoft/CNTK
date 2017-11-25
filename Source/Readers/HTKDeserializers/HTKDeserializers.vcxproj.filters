@@ -18,7 +18,9 @@
     <ClCompile Include="MLFIndexBuilder.cpp">
       <Filter>MLF</Filter>
     </ClCompile>
-    <ClCompile Include="LatticeDeserializer.cpp" />
+    <ClCompile Include="LatticeDeserializer.cpp">
+      <Filter>Lattice</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -64,7 +66,9 @@
     <ClInclude Include="MLFIndexBuilder.h">
       <Filter>MLF</Filter>
     </ClInclude>
-    <ClInclude Include="LatticeDeserializer.h" />
+    <ClInclude Include="LatticeDeserializer.h">
+      <Filter>Lattice</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -78,6 +82,9 @@
     </Filter>
     <Filter Include="HTK">
       <UniqueIdentifier>{c786b890-c7e4-4617-b5df-e2fdef2291ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lattice">
+      <UniqueIdentifier>{f6fe345a-e603-491c-b9ed-8b46d01c070c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
