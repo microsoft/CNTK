@@ -4,7 +4,7 @@
 //
 
 #include "stdafx.h"
-#include "HTKDeserializer.h"
+#include "LatticeDeserializer.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
 #include "StringUtil.h"
@@ -14,12 +14,9 @@ namespace CNTK {
 
 using namespace Microsoft::MSR::CNTK;
 
-std::unordered_map<std::string, unsigned int> htkfeatreader::parsedpath::archivePathStringMap;
-std::vector<std::wstring> htkfeatreader::parsedpath::archivePathStringVector;
-
 using namespace std;
 
-HTKDeserializer::HTKDeserializer(
+LatticeDeserializer::LatticeDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& cfg,
     bool primary)
@@ -27,9 +24,6 @@ HTKDeserializer::HTKDeserializer(
       m_verbosity(0),
       m_corpus(corpus)
 {
-    // TODO: This should be read in one place, potentially given by SGD.
-    m_frameMode = (ConfigValue)cfg("frameMode", "true");
-
     m_verbosity = cfg(L"verbosity", 0);
 
     ConfigParameters input = cfg(L"input");

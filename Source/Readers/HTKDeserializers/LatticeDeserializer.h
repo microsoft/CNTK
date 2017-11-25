@@ -62,9 +62,6 @@ private:
     // General configuration
     int m_verbosity;
 
-    // Flag that indicates whether a single speech frames should be exposed as a sequence.
-    bool m_frameMode;
-
     // Used to correlate a sequence key with the sequence inside the chunk when deserializer is running not in primary mode.
     // <key, chunkid, offset inside chunk>, sorted by key to be able to retrieve by binary search.
     std::vector<std::tuple<size_t, ChunkIdType, uint32_t>> m_keyToChunkLocation;
@@ -78,7 +75,5 @@ private:
     // TODO: This should be moved to the packers when deserializers work in sequence mode only.
     bool m_expandToPrimary;
 };
-
-typedef std::shared_ptr<HTKDeserializer> HTKDeserializerPtr;
 
 }
