@@ -227,18 +227,21 @@ namespace CNTK
                 // things related to running stats
                 let N = (double)x->Shape().TotalSize(/*check=*/false) / (double)bias->Shape().TotalSize(/*check=*/false);
                 let isInferring = isVolatile; // this indicates inference mode
-                if (N == 1 && !isInferring) // (observed in a test case; leave it in until stuff is solid)
-                    fprintf(stderr, "WARNING: abnormal BatchNorm input with count=1\n"), fflush(stderr);
                 let normalizationTimeConstant = attributes[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
                 let blendTimeConstant         = attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>(); // consider running stats to have this many samples
+                if (N == 1 && !isInferring && !isinf(blendTimeConstant)) // (observed in a test case; leave it in until stuff is solid)
+                    fprintf(stderr, "WARNING: abnormal BatchNorm input with count=1\n"), fflush(stderr);
                 double runningStatsWeight =
                     /*if*/ (isInferring || isinf(blendTimeConstant)) ?
                         1 // inference or only using running stats
                     /*else*/:
                         blendTimeConstant / (N + blendTimeConstant); // mix-in factor for running stats
                 // mu and sigma^2
-                //x->LogToFile(L"x |> BatchNorm");
-                //fprintf(stderr, "BATCHNORM over %d, id=%d\n", (int)N, (int)attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()), fflush(stderr);
+#undef LOG_BN
+#ifdef LOG_BN
+                x->LogToFile(L"x |> BatchNorm");
+                fprintf(stderr, "BATCHNORM over %d, id=%d\n", (int)N, (int)attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()), fflush(stderr);
+#endif
                 assert(N == (double)x->Shape().TotalSize(/*check=*/false) / (double)sigma->Shape().TotalSize(/*check=*/false)); // for now
                 let& mu = redBuf;
                 let& sigma2 = sigma; // we use sigma's location to first compute sigma^2
@@ -258,8 +261,10 @@ namespace CNTK
                     NDArrayView::NumericOperation({ x, mu }, 1/ N   , Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2); // sigma^2
                     //NDArrayView::NumericOperation({ x, mu }, 1/(N-1), Microsoft::MSR::CNTK::ElementWiseOperator::opSqrOfDifference, sigma2); // sigma^2
                     // TODO: better use the unbiased estimate (a simple test showed very little impact, though)
-                    //mu    ->LogToFile(L"mu");
-                    //sigma2->LogToFile(L"sigma2");
+#ifdef LOG_BN
+                    mu    ->LogToFile(L"mu");
+                    sigma2->LogToFile(L"sigma2");
+#endif
                 }
                 // --- step 2. update running stats
                 if (!isInferring)
@@ -296,9 +301,11 @@ namespace CNTK
                     if (!runSqrSum->IsReadOnly())
                         NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
                     // now the running stats have been updated with the new MB stats
-                    //runCount ->LogToFile(L"runCount");
-                    //runSum   ->LogToFile(L"runSum");
-                    //runSqrSum->LogToFile(L"runSqrSum");
+#ifdef LOG_BN
+                    runCount ->LogToFile(L"runCount");
+                    runSum   ->LogToFile(L"runSum");
+                    runSqrSum->LogToFile(L"runSqrSum");
+#endif
                 }
                 if (runningStatsWeight != 0) // we got a contribution from the running stats
                 {
@@ -310,8 +317,10 @@ namespace CNTK
                     NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
                     NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
                     // ^^ var = 1/count sqrSum - mu^2 = 1/count sqrSum - (sum/count)^2   --this subtracts mu^2
-                    //mu    ->LogToFile(L"mu'");
-                    //sigma2->LogToFile(L"sigma2'");
+#ifdef LOG_BN
+                    mu    ->LogToFile(L"mu'");
+                    sigma2->LogToFile(L"sigma2'");
+#endif
                 }
                 // now perform actual BatchNormalization based on the estimates of mu and sigma^2
                 // sigma (remember that this is in-place, &sigma2==&sigma)

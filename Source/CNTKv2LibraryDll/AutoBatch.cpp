@@ -1458,22 +1458,31 @@ class InternalVariable::AutoBatch
                 // BUGBUG: How about strides?
                 let rank = aFields.m_shape.Rank();
                 if (rank != bFields.m_shape.Rank())
-                    InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different-rank shapes %S and %S.",
-                                    PrimitiveOpTypeName(op).c_str(), (int)aId, a.m_inputs.front().Shape().AsString().c_str(), b.m_inputs.front().Shape().AsString().c_str());
+                    if (aId == 0)
+                        return false;
+                    else
+                        InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different-rank shapes %S and %S.",
+                                        PrimitiveOpTypeName(op).c_str(), (int)aId, a.m_inputs.front().Shape().AsString().c_str(), b.m_inputs.front().Shape().AsString().c_str());
                 // shapes must have same rank and match up to the batch axis
                 // If the batch axis is not outside the shape, then this is the stacking case.
                 for (size_t k = 0; k < rank && k < batchAxis; k++)
                 {
                     if (aFields.m_shape[k] != bFields.m_shape[k])
-                        InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
-                                        PrimitiveOpTypeName(op).c_str(), (int)aId, a.m_inputs.front().Shape().AsString().c_str(), b.m_inputs.front().Shape().AsString().c_str());
+                        if (aId == 0)
+                            return false;
+                        else
+                            InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different shapes %S and %S.",
+                                            PrimitiveOpTypeName(op).c_str(), (int)aId, a.m_inputs.front().Shape().AsString().c_str(), b.m_inputs.front().Shape().AsString().c_str());
                 }
                 // check the remaining parameters (stats and "un-stats")--requires object identity
                 for (size_t i = 1; i < 6; i++)
                 {
                     if (a.m_inputs[i].m_dataFields != b.m_inputs[i].m_dataFields)
-                        InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different %d-th argument.",
-                            PrimitiveOpTypeName(op).c_str(), (int)aId, (int)i);
+                        if (aId == 0)
+                            return false;
+                        else
+                            InvalidArgument("Primitive op '%S' encountered two instances of the same id %d with different %d-th argument.",
+                                PrimitiveOpTypeName(op).c_str(), (int)aId, (int)i);
                     fail_if(a.m_inputs[i].m_dataFields->m_shape.Rank() > batchAxis, "BatchNorm: shape of a statistic parameter exceeds batch axis??");
                 }
                 return true; // these *must* be batched
@@ -1847,7 +1856,7 @@ class InternalVariable::AutoBatch
         // count an occurrence of a BatchNormalization with a given id
         void CountBatchNorm(size_t bnId)
         {
-            fail_if(bnId == 0, "batch norm id should not be 0!");
+            //fail_if(bnId == 0, "batch norm id should not be 0!");
             if (bnId >= m_bnPendingCounts.size())
                 m_bnPendingCounts.resize(bnId * 10, 0);
             m_bnPendingCounts[bnId]++;
