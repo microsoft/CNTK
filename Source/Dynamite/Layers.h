@@ -170,11 +170,11 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     static const double normalizationTimeConstant = 2000*50; // 2000 sentences a ~50 words should provide a decent estimate; ~24 minibatches of 4096
     static const double blendTimeConstant = numeric_limits<double>::infinity(); // running-stats only 100000;
     static size_t id = 0; // unique id
-    auto thisId = /*isinf(blendTimeConstant) ? 0 :*/ ++id;   // note: don't use 'id' in lambda below; it will access the static variable directly, not a captured value
+    auto thisId = isinf(blendTimeConstant) ? 0 : ++id;   // note: don't use 'id' in lambda below; it will access the static variable directly, not a captured value
     auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
     auto bias  = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"bias");
     auto runningMean   = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"runningMean");
-    auto runningInvStd = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"runningInvStd");
+    auto runningInvStd = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"runningInvStd");
     auto runningCount  = Parameter({                            }, CurrentDataType(), 0.0, CurrentDevice(), L"runningCount");
     axis;
     // TODO: figure out the spatial mess for BN
@@ -214,7 +214,7 @@ enum ProjectionOptions
 };
 static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
 
-static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
+static UnaryModel Dense(size_t outputDim, size_t inputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
 {
     let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
     // current hack logic ("noln"): no BN, LN becomes Droppo
@@ -232,7 +232,7 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
         InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
     if (hasScale && (hasBatchNorm || hasLengthNorm))
         InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
-    auto W                  = Parameter({ (NDShapeDimension)outputDim, NDShape::InferredDimension }, CurrentDataType(),  GlorotUniformInitializer(), CurrentDevice(), L"W");
+    auto W                  = Parameter({ (NDShapeDimension)outputDim, (NDShapeDimension)inputDim }, CurrentDataType(),  GlorotUniformInitializer(), CurrentDevice(), L"W");
     auto b                  = Parameter({                   outputDim                             }, CurrentDataType(),  0.0f,                       CurrentDevice(), L"b");
     auto scale              = Parameter({                                                         }, CurrentDataType(),  1.0,                        CurrentDevice(), L"scale");
     //let stabilizer = Stabilizer(4);
@@ -245,7 +245,7 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
         parameters.push_back(b);
     if (hasScale)
         parameters.push_back(scale);
-    if (hasWeightNorm)
+    if (hasWeightNorm && !(hasBatchNorm && !hasLengthNorm))
         parameters.push_back(weightNormRescale);
     map<wstring, ModelParametersPtr> nested{ { L"activation", activation } };
     //if (hasScale)
@@ -268,7 +268,7 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
         let invLen = Pow(rowNorm, weightNormMinusHalf);
         //if (hasBatchNorm && !hasLengthNorm) // batchNorm does element-wise rescaling, so no need to do it here as well
         //    return invLen;
-        let scale1 = invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
+        let scale1 = (hasBatchNorm && !hasLengthNorm) ? invLen : invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
         return scale1;
         //y = scale1 * y;
     }, Named("dense.normWeight"));
@@ -298,9 +298,19 @@ static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, Projecti
     });
 }
 
+static UnaryModel Dense(size_t outputDim, const UnaryModel& activation, ProjectionOptions opts, const wstring& name = wstring())
+{
+    return Dense(outputDim, NDShape::InferredDimension, activation, opts, name);
+}
+
+static UnaryModel Linear(size_t outputDim, size_t inputDim, ProjectionOptions opts, const wstring& name = wstring())
+{
+    return Dense(outputDim, inputDim, Identity, opts, name);
+}
+
 static UnaryModel Linear(size_t outputDim, ProjectionOptions opts, const wstring& name = wstring())
 {
-    return Dense(outputDim, Identity, opts, name);
+    return Dense(outputDim, NDShape::InferredDimension, Identity, opts, name);
 }
 
 // same as Linear() if not given an activation. Need to decide the name.
@@ -389,6 +399,10 @@ static BinaryModel GRU(size_t outputDim)
 static BinaryModel GRU(size_t outputDim)
 {
     // matrices are stacked in order (i, r, h)
+#if 1
+    auto projectInput = Linear(outputDim * 3,            ProjectionOptions::batchNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
+    auto projectState = Linear(outputDim * 3, outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectState"));
+#else
     auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
     //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, CurrentDevice());
     // using a local matrix here since we cannot infer the input dimension due to the initial state.
@@ -397,6 +411,7 @@ static BinaryModel GRU(size_t outputDim)
     auto R  = Parameter({ outputDim * 3, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
     //auto b  = Parameter({ outputDim * 3            }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
     let normR = LengthNormalization();
+#endif
     let stackAxis = Axis(0);
     let stackedDim = (int)outputDim;
     let profiler = Function::CreateDynamicProfiler(1, L"GRU");
@@ -442,15 +457,16 @@ static BinaryModel GRU(size_t outputDim)
     let doGRU = StaticModel(/*isBasicBlock=*/false,
         [=](const Variable& dh, const Variable& x) -> Variable
         {
-            let projx3 = projectInput(x); // note: this has a bias
-            let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
+            let projx3  = projectInput(x);  // note: this has a bias
+            let projdh3 = projectState(dh); // note: also got a bias; we got two. Should be OK.
+            //let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
             return gru3Composite(dh, projdh3, projx3);
         }, Named("gru"));
-    return BinaryModel({ R },
+    return BinaryModel({ /*R*/ },
         {
             { L"projectInput",  projectInput },
-            //{ L"projectState",  projectState },
-            { L"normR",  normR  },
+            { L"projectState",  projectState },
+            //{ L"normR",  normR  },
         },
         // TODO: can we pass doGRU here directly, instead of creating a new lambda? Needs some form of type cast of StaticModel to this lambda.
         [=](const Variable& dh, const Variable& x) //mutable
