@@ -229,7 +229,7 @@ namespace CNTK
                 let isInferring = isVolatile; // this indicates inference mode
                 let normalizationTimeConstant = attributes[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
                 let blendTimeConstant         = attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>(); // consider running stats to have this many samples
-                if (N == 1 && !isInferring && !isinf(blendTimeConstant)) // (observed in a test case; leave it in until stuff is solid)
+                if (N == 1 && !isInferring && blendTimeConstant == 0) // (observed in a test case; leave it in until stuff is solid)
                     fprintf(stderr, "WARNING: abnormal BatchNorm input with count=1\n"), fflush(stderr);
                 double runningStatsWeight =
                     /*if*/ (isInferring || isinf(blendTimeConstant)) ?
