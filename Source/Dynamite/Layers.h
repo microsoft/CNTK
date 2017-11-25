@@ -168,9 +168,9 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     return Identity;
 #else
     static const double normalizationTimeConstant = 2000*50; // 2000 sentences a ~50 words should provide a decent estimate; ~24 minibatches of 4096
-    static const double blendTimeConstant = numeric_limits<double>::infinity(); // running-stats only 100000;
+    static const double blendTimeConstant = 100000; // want stats from 100000 samples
     static size_t id = 0; // unique id
-    auto thisId = isinf(blendTimeConstant) ? 0 : ++id;   // note: don't use 'id' in lambda below; it will access the static variable directly, not a captured value
+    auto thisId = /*blendTimeConstant != 0 ? 0 :*/ ++id;   // note: don't use 'id' in lambda below; it will access the static variable directly, not a captured value
     auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
     auto bias  = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"bias");
     auto runningMean   = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"runningMean");
@@ -399,7 +399,7 @@ static BinaryModel GRU(size_t outputDim)
 static BinaryModel GRU(size_t outputDim)
 {
     // matrices are stacked in order (i, r, h)
-#if 1
+#if 0
     auto projectInput = Linear(outputDim * 3,            ProjectionOptions::batchNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
     auto projectState = Linear(outputDim * 3, outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectState"));
 #else
@@ -458,15 +458,15 @@ static BinaryModel GRU(size_t outputDim)
         [=](const Variable& dh, const Variable& x) -> Variable
         {
             let projx3  = projectInput(x);  // note: this has a bias
-            let projdh3 = projectState(dh); // note: also got a bias; we got two. Should be OK.
-            //let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
+            //let projdh3 = projectState(dh); // note: also got a bias; we got two. Should be OK.
+            let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
             return gru3Composite(dh, projdh3, projx3);
         }, Named("gru"));
     return BinaryModel({ /*R*/ },
         {
             { L"projectInput",  projectInput },
-            { L"projectState",  projectState },
-            //{ L"normR",  normR  },
+            //{ L"projectState",  projectState },
+            { L"normR",  normR  },
         },
         // TODO: can we pass doGRU here directly, instead of creating a new lambda? Needs some form of type cast of StaticModel to this lambda.
         [=](const Variable& dh, const Variable& x) //mutable

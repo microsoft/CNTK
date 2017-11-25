@@ -182,8 +182,9 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
 fun AttentionModelReference(size_t attentionDim1)
 {
     let projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize);
-    let normH = BatchNormalization(1, Named("bnAtt")); // note: can't move this inside Linear since it is applied after adding two factors
-    //let normH = LengthNormalization(); // note: can't move this inside Linear since it is applied after adding two factors
+    //let normH = BatchNormalization(1, Named("bnAtt")); // note: can't move this inside Linear since it is applied after adding two factors
+    let normH = LengthNormalization(); // note: can't move this inside Linear since it is applied after adding two factors
+    //let normH = Identity;// LengthNormalization(); // note: can't move this inside Linear since it is applied after adding two factors
     let profiler = Function::CreateDynamicProfiler(1, L"attention");
     let zBarrier = Barrier(20, Named("zBarrier"));
     // tanh(W1 h + W2 prevWord)
