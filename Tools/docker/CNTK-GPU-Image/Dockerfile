@@ -46,7 +46,7 @@ ENV PATH /usr/local/mpi/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
 
 RUN LIBZIP_VERSION=1.1.2 && \
-    wget -q -O - http://nih.at/libzip/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
+    wget -q -O - https://libzip.org/download/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
     cd libzip-${LIBZIP_VERSION} && \
     ./configure && \
     make -j"$(nproc)" install && \
@@ -166,6 +166,7 @@ RUN mkdir -p /usr/local/cudnn/cuda/include && \
 
 # Build CNTK
 RUN git clone --depth=1 -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
+    MKLML_VERSION_DETAIL=mklml_lnx_2018.0.1.20171007 && \
     CONFIGURE_OPTS="\
       --with-cuda=/usr/local/cuda \
       --with-gdk-include=/usr/local/cuda/include \
@@ -182,7 +183,7 @@ RUN git clone --depth=1 -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
     cd ../../.. && \
     mkdir -p build-mkl/gpu/release && \
     cd build-mkl/gpu/release && \
-    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
+    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/$MKLML_VERSION_DETAIL && \
     make -j"$(nproc)" all
 
 RUN cd Examples/Image/DataSets/CIFAR-10 && \

@@ -244,6 +244,9 @@
     <None Include="cntk\logging\tests\graph_test.py">
       <Filter>cntk\logging\tests</Filter>
     </None>
+    <None Include="cntk\logging\tests\progress_print_test.py">
+      <Filter>cntk\logging\tests</Filter>
+    </None>
     <None Include="cntk\losses\tests\__init__.py">
       <Filter>cntk\losses\tests</Filter>
     </None>

@@ -800,7 +800,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     return opt
 
 @typemap
-def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95, epsilon=1e-8,
+def adadelta(parameters, lr=learning_parameter_schedule_per_sample(1), rho=0.95, epsilon=1e-8,
              l1_regularization_weight=0.0, l2_regularization_weight=0.0,
              gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
              gradient_clipping_with_truncation=True, use_mean_gradient=None,

@@ -646,6 +646,8 @@ namespace CNTK
             return m_isDistributed;
         }
 
+        std::function<void(NDArrayViewPtr&, NDArrayViewPtr&)> DoAggregateMetricsIfNeededLambda;
+        
     private:
         void GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients);
         void CheckDistributedLearners();
@@ -713,15 +715,15 @@ namespace CNTK
     class Accumulator : public Value
     {
     public:
-        Accumulator() : Value(nullptr), m_numUpdates(0), m_isUninitialized(true) {}
+        Accumulator() : Value(nullptr), m_numUpdates(0), m_isInitialized(false) {}
 
         void Update(const ValuePtr& delta, const DeviceDescriptor& device);
         void Reset();
-
+        bool IsInitialized() { return m_isInitialized; }
     private:
         void ResetToZero();
 
-        bool m_isUninitialized;
+        bool m_isInitialized;
         size_t   m_numUpdates;
     };
 

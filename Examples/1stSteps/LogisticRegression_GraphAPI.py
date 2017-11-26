@@ -52,7 +52,7 @@ criterion = cntk.combine([loss, metric]) # criterion is a tuple-valued function 
 
 # Learner object. The learner implements the update algorithm, in this case plain SGD.
 learning_rate = 0.1
-learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(learning_rate, cntk.UnitType.minibatch))
+learner = cntk.sgd(model.parameters, cntk.learning_parameter_schedule(learning_rate))
 
 # Trainer.
 minibatch_size = 32
