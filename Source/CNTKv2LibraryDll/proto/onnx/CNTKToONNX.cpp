@@ -646,15 +646,12 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
         return;
 
     std::string opName = ToString(src->OpName());
-    if (src->IsBlock())
+    if (src->IsBlock() && (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())))
     {
-        if (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName()))
-        {
-            auto blockSrc = dynamic_cast<BlockFunction*>(src.get());
-            for (auto map : blockSrc->CompositeOutputsMap())
-                compositeOutputsMap.insert(map);
-            TraverseGraph(src->BlockRoot(), visited, compositeOutputsMap);
-        }
+        auto blockSrc = dynamic_cast<BlockFunction*>(src.get());
+        for (auto map : blockSrc->CompositeOutputsMap())
+            compositeOutputsMap.insert(map);
+        TraverseGraph(src->BlockRoot(), visited, compositeOutputsMap);
     }
     else
     {

@@ -764,7 +764,7 @@ std::pair<std::vector<size_t>, std::vector<size_t> > ONNXToCNTKHelper::AdjustONN
     int nPadDims = pads.size() / 2;
     int rankDiff = operand.Shape().Rank() - nPadDims;
     pads.insert(pads.begin(), rankDiff, 0);
-    pads.insert(pads.begin() + nPadDims, rankDiff, 0);
+    pads.insert(pads.begin() + nPadDims + rankDiff, rankDiff, 0);
 
     // Split this into head (lower padding) and foot (upper padding), and reverse them because 
     // CNTK dimensions are in reverse order than ONNX. 
