@@ -98,6 +98,7 @@ private:
     static Variable GetNodeOperandWithPaddingResolved(std::vector<bool>& cntkConvAutoPadding, 
         NDShape& strides, const Node *node, const std::vector<Variable>& inputs, const double padValue = 0.0);
     static FunctionPtr CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs);
+    static FunctionPtr CreateCNTKFCNode(const std::wstring& nodeName, const std::vector<Variable>& inputs);
 
     static ConvAutoPadType ConvertStrToConvAutoPadType(const string& str);
 };
@@ -781,19 +782,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     
     if (onnxOpName == "FC")
     {
-        // TODO: this is experimental code to load Facebook Caffe models. 
-        // "FC" is not in ONNX standard. Two cases need to be handled with 
-        // this type of Caffe model. 
-        // 1. Make trailing dimensions of operand 1 matches the heading dimensions of operant 2.
-        //  For example, with shape [1, dim0, dim1] * [dim2, dim3], we need to reshape 
-        //  first operand to [1, dim0 * dim1] In this case dim0 * dim1 has to be equal to dim2.
-        // 2. Broadcase bias if needed.
-        Variable input0 = inputs[0], input1 = inputs[1];
-        input0 = Reshape(input0, {1, NDShape::InferredDimension});
-
-        FunctionPtr cntkFunction = Reshape(Times(input0, input1, ToWString(node->Name())), { NDShape::InferredDimension });
-        cntkFunction = Plus(cntkFunction, inputs[2], ToWString(node->Name()));
-        return cntkFunction;
+        return CreateCNTKFCNode(ToWString(node->Name()), inputs);
     }
     else if (onnxOpName == "Sum")
     {
@@ -952,8 +941,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             LogicError("The rank of input C in GEMM operator (A*B + C) is not 2. Either specify a value with rank=2, or set the broadcast attribute to 1.");
 
         FunctionPtr A = ElementTimes(input0, Constant(NDShape({ 1, 1 }), DataType::Float, static_cast<double>(alpha)));
-        FunctionPtr B = (transB != 0) ? Transpose(input1) : (FunctionPtr)input1;
         FunctionPtr C = ElementTimes(input2, Constant(NDShape({ 1, 1 }), DataType::Float, static_cast<double>(beta)));
+        if (!transA && transB && broadcast) // Special case: Equivalent to FC (fully-connected) op. Takes in account broadcast of B, if needed. 
+        {
+            return CreateCNTKFCNode(ToWString(node->Name()), { (Variable)A, input1, (Variable)C });
+        }
+        FunctionPtr B = (transB != 0) ? Transpose(input1) : (FunctionPtr)input1;        
         FunctionPtr D = (transA != 0) ? Times(B, Transpose(A)) : Times(B, A);
         // If needed, Plus op will broadcast C automatically. 
         return Plus(C, D);
@@ -1281,6 +1274,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
 FunctionPtr ONNXToCNTKHelper::FromONNXNode(const Node *node, ONNXToCNTKMap &constructedNodeMap,
     const Graph* graph, const DeviceDescriptor& computeDevice)
 {
+    auto nodeOpStr = node->OpType();
     ONNXToCNTKMap::iterator itONNXToCNTKMap = constructedNodeMap.find(node);
     if (itONNXToCNTKMap != constructedNodeMap.end())
     {
@@ -1421,6 +1415,23 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
         groups,
         maxTempMemSizeInSamples,
         ToWString(node->Name()));
+}
+
+FunctionPtr ONNXToCNTKHelper::CreateCNTKFCNode(const std::wstring& nodeName, const std::vector<Variable>& inputs)
+{
+    // TODO: this is experimental code to load Facebook Caffe models. 
+    // "FC" is not in ONNX standard. Two cases need to be handled with 
+    // this type of Caffe model. 
+    // 1. Make trailing dimensions of operand 1 matches the heading dimensions of operant 2.
+    //  For example, with shape [1, dim0, dim1] * [dim2, dim3], we need to reshape 
+    //  first operand to [1, dim0 * dim1] In this case dim0 * dim1 has to be equal to dim2.
+    // 2. Broadcase bias if needed.
+    Variable input0 = inputs[0], input1 = inputs[1];
+    input0 = Reshape(input0, { 1, NDShape::InferredDimension });
+
+    FunctionPtr cntkFunction = Reshape(Times(input0, input1, nodeName), { NDShape::InferredDimension });
+    cntkFunction = Plus(cntkFunction, inputs[2], nodeName);
+    return cntkFunction;
 }
 
 FunctionPtr ONNXToCNTK::CreateGraph(ONNXIR::Graph* src, const DeviceDescriptor& computeDevice)
