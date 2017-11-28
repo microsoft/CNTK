@@ -892,30 +892,32 @@ def test_conv_free_static_with_sequence_unpack(num_features, sequence_len, filte
 
 GROUP_CONVOLUTION_DATA = [
     # 2D Convolution.
-    (2,         # groups
-     8,         # num_output_channels
-     4,         # num_input_channels
-     [30, 40],   # input_tensor_size (not including input channels)
-     [3, 3],    # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
-     2          # batch_size
+    (4,          # groups
+     112,        # num_output_channels
+     24,         # num_input_channels
+     [30, 40],   # input_tensor_size (not including channels)
+     [3, 3],     # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
+     6,          # kernel_channels: kC, number of input channels in kernel
+     2           # batch_size
      ),
     # 3D Convolution.
-    (3,              # groups
-     6,              # num_output_channels
-     9,              # num_input_channels
-     [15, 25, 30],   # input_tensor_size (not including input channels)
+    (2,              # groups
+     10,             # num_output_channels
+     6,              # num_input_channels
+     [15, 25, 30],   # input_tensor_size (not including channels)
      [3, 5, 7],      # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
+     3,              # kernel_channels: kC, number of input channels in kernel
      2               # batch_size
      )
 ]
 # This test point exercises group convolution, and tests against grouping simulated explicitly using convolution without grouping.
-@pytest.mark.parametrize("groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, batch_size", GROUP_CONVOLUTION_DATA)
-def test_group_conv(groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, batch_size, device_id, precision):
+@pytest.mark.parametrize("groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, kernel_channels, batch_size", GROUP_CONVOLUTION_DATA)
+def test_group_conv(groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, kernel_channels, batch_size, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
     # Generate result from CNTK API
-    conv_size = tuple([num_output_channels, num_input_channels]+filter_size)
+    conv_size = tuple([num_output_channels, kernel_channels]+filter_size)
     total_size = np.prod(conv_size)
     y = np.arange(total_size, dtype=dt).reshape(conv_size)
     conv_map = C.constant(value=y, device=dev)
@@ -933,8 +935,7 @@ def test_group_conv(groups, num_output_channels, num_input_channels, input_tenso
     # output for testing the CNTK implementation against.     
     num_out_channels_per_group = int(num_output_channels / groups)
     num_in_channels_per_group = int(num_input_channels / groups)
-    sub_kernels_init = [y[i * num_out_channels_per_group:(i+1) * num_out_channels_per_group, 
-                                 i * num_in_channels_per_group:(i+1) * num_in_channels_per_group, ...] for i in range(0, groups)]
+    sub_kernels_init = [y[i * num_out_channels_per_group:(i+1) * num_out_channels_per_group, ...] for i in range(0, groups)]
     sub_kernels = [C.ops.constant(value=np.ascontiguousarray(sub_kernels_init[i]), device=dev)
                           for i in range(0, groups)]
 

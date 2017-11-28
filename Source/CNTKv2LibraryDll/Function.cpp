@@ -2807,21 +2807,25 @@ namespace CNTK
             auto filterShape = convolutionMap.Shape();
             auto filterRank = static_cast<int>(filterShape.Rank());
             auto inputRank = static_cast<int>(operand.Shape().Rank());
-            if (filterShape[filterRank - 1] % groups)
-                LogicError("groups: number of input channels must be divisble by groups.");
-            if (filterShape[filterRank - 2] % groups)
+            auto M = filterShape[filterRank - 1]; // Number of output channels.
+            auto C = operand.Shape()[inputRank - 1]; // Number of input channels in operand.
+            auto kC = filterShape[filterRank - 2]; // Number of input channels in kernel.
+            if (M % groups)
                 LogicError("groups: number of output channels must be divisble by groups.");
+            if (C != (kC * groups))
+                LogicError("groups: number of input channels (C) must be equal to number of input kernel channels (kC) * groups (G).");
 
             auto operandPlaceholder = PlaceholderVariable();
             std::vector<Variable> opsOutputVector(groups);
-            auto outputChannelStepSize = static_cast<int>(filterShape[filterRank - 1] / groups);
-            auto inputChannelStepSize = static_cast<int>(filterShape[filterRank - 2] / groups);
+            auto outputChannelStepSize = static_cast<int>(M / groups);
+            auto inputChannelStepSize = static_cast<int>(C / groups); 
+            assert(inputChannelStepSize == static_cast<int>(kC));
             for (int i = 0; i < groups; ++i)
             {
-                auto groupConvMap = Slice(convolutionMap, { Axis(filterRank - 1), Axis(filterRank - 2) }, { i*outputChannelStepSize, i*inputChannelStepSize },
-                { (i + 1)*outputChannelStepSize, (i + 1)*inputChannelStepSize });
+                auto groupConvMap = Slice(convolutionMap, { Axis(filterRank - 1) }, { i*outputChannelStepSize },
+                            { (i + 1)*outputChannelStepSize });
                 auto groupOperand = Slice(operandPlaceholder, { Axis(inputRank - 1) }, { i*inputChannelStepSize },
-                { (i + 1)*inputChannelStepSize });
+                            { (i + 1)*inputChannelStepSize });
                 opsOutputVector[i] = Internal::Convolution(groupConvMap, groupOperand, strides, sharing, autoPadding, dilation,
                                                            false, { 0 }, maxTempMemSizeInSamples, name)->Output();
             }
