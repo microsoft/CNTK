@@ -44,6 +44,12 @@ namespace CNTK
             m_aggregatedEvaluationFunction = m_evaluationFunction;
             m_testSampleCountVar = m_evaluationFunction->RootFunction()->Inputs()[0];
         }
+        
+        // accumulate evaluation function in float32 for output in float16
+        if (m_aggregatedEvaluationFunction->Output().GetDataType() == DataType::Float16)
+        {
+            m_aggregatedEvaluationFunction = Cast(m_aggregatedEvaluationFunction, DataType::Float);
+        }
 
         if(initializeCombined)
             m_combinedEvalFunction = Combine(GetCombinedEvalFunctionArgs());

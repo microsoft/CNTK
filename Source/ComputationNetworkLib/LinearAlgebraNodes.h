@@ -1963,9 +1963,11 @@ public:
         result.CastAssignValuesOf(input);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        NOT_IMPLEMENTED
+        auto grad = GradientFor(fr);
+        auto inputGrad = static_cast<ComputationNode<InputType>&>(*m_inputs[0].get()).GradientFor(fr);
+        inputGrad.CastAssignValuesOf(grad);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

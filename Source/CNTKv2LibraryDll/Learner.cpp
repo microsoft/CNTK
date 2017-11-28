@@ -631,7 +631,20 @@ namespace CNTK
     /*virtual*/ void LearnerNesterov::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
                                              const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
     {
-        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+        switch (gradientValue->GetDataType())
+        {
+        case DataType::Float:
+            Update<float>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);
+            break;
+        case DataType::Double:
+            Update<double>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);
+            break;
+        case DataType::Float16:
+            UpdateHalf(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);
+            break;
+        default:
+            NOT_IMPLEMENTED;
+        }
     }
 
     template <typename ElementType>
@@ -646,6 +659,25 @@ namespace CNTK
 
         parameterMatrix->NesterovAcceleratedMomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
                                                               learningRate, momentum, unitGainFactor);
+    }
+
+    void LearnerNesterov::UpdateHalf(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        const auto& compoundMatrix = GetWritableMatrix<float>(smoothedGradientValue);
+        const auto& gradientMatrix = GetWritableMatrix<half>(gradientValue);
+        auto smoothedGradientMatrix = compoundMatrix->ColumnSlice(0, gradientMatrix->GetNumCols());
+        auto tempGradientMatrix = compoundMatrix->ColumnSlice(gradientMatrix->GetNumCols(), gradientMatrix->GetNumCols());
+        auto parameterMatrix = compoundMatrix->ColumnSlice(2 * gradientMatrix->GetNumCols(), gradientMatrix->GetNumCols());
+
+        tempGradientMatrix.CastAssignValuesOf(*gradientMatrix);
+
+        const auto learningRate = float(LearningRate(trainingSampleCount));
+        const auto momentum = float(MomentumValueForMB(trainingSampleCount));
+        const auto unitGainFactor = UnitGainFactor<float>(trainingSampleCount);
+
+        parameterMatrix.NesterovAcceleratedMomentumSGDUpdate(tempGradientMatrix, smoothedGradientMatrix,
+            learningRate, momentum, unitGainFactor);
     }
 
     LearnerAdaGrad::LearnerAdaGrad(const std::vector<Parameter>& parameters,
