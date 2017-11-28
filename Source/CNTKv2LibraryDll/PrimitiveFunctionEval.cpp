@@ -302,8 +302,8 @@ namespace CNTK
                     if (!runSum->IsReadOnly())
                         NDArrayView::NumericOperation({ mu             }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSum,    decay);
                     if (!runSqrSum->IsReadOnly())
-                        NDArrayView::NumericOperation({ sigma2         }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSqrSum, decay);
-                        //NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
+                        //NDArrayView::NumericOperation({ sigma2         }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSqrSum, decay);
+                        NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
                     // now the running stats have been updated with the new MB stats
 #ifdef LOG_BN
                     runCount ->LogToFile(L"runCount");
@@ -319,7 +319,7 @@ namespace CNTK
                     let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats. In inference, this is 0.
                     NDArrayView::NumericOperation({ runSum,    runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    mu    , rawMBStatsWeight);
                     NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
-                    //NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
+                    NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
                     // ^^ var = 1/count sqrSum - mu^2 = 1/count sqrSum - (sum/count)^2   --this subtracts mu^2
 #ifdef LOG_BN
                     mu    ->LogToFile(L"mu'");
