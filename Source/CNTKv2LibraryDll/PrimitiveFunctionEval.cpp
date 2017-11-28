@@ -157,12 +157,15 @@ namespace CNTK
         case PrimitiveOpType::ELU:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opExponentialLinearUnit; break;
         case PrimitiveOpType::StableSigmoid: op = Microsoft::MSR::CNTK::ElementWiseOperator::opStableSigmoid;         break;
             // ternary operations
-        case PrimitiveOpType::Clip:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opClip;                  break;
         case PrimitiveOpType::Select:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opCond;                  break;
             // Slice if copy requested or needed
         case PrimitiveOpType::Slice:
             // The slice view has already completed, but we must copy the result over. The following op is the same as the shared one except for taking the slice view as its input.
             NDArrayView::NumericOperation({ sliceView }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, out, 0.0, reductionOp);
+            break;
+        case PrimitiveOpType::Clip:
+            // special case since arg order of opClip is different
+            NDArrayView::NumericOperation({ args[1], args[2], args[0] }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opClip, out, 0.0, reductionOp);
             break;
             // reduction ops are also done outside, but set the reductionOp
         case PrimitiveOpType::ReduceElements:
@@ -239,8 +242,8 @@ namespace CNTK
                 // mu and sigma^2
 #undef LOG_BN
 #ifdef LOG_BN
-                x->LogToFile(L"x |> BatchNorm");
                 fprintf(stderr, "BATCHNORM over %d, id=%d\n", (int)N, (int)attributes[PrimitiveFunction::AttributeNameSyncId].Value<size_t>()), fflush(stderr);
+                x->LogToFile(L"x |> BatchNorm");
 #endif
                 assert(N == (double)x->Shape().TotalSize(/*check=*/false) / (double)sigma->Shape().TotalSize(/*check=*/false)); // for now
                 let& mu = redBuf;
@@ -299,7 +302,8 @@ namespace CNTK
                     if (!runSum->IsReadOnly())
                         NDArrayView::NumericOperation({ mu             }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSum,    decay);
                     if (!runSqrSum->IsReadOnly())
-                        NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
+                        NDArrayView::NumericOperation({ sigma2         }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     runSqrSum, decay);
+                        //NDArrayView::NumericOperation({ mu, mu, sigma2 }, N * complement, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, runSqrSum, decay);
                     // now the running stats have been updated with the new MB stats
 #ifdef LOG_BN
                     runCount ->LogToFile(L"runCount");
@@ -315,7 +319,7 @@ namespace CNTK
                     let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats. In inference, this is 0.
                     NDArrayView::NumericOperation({ runSum,    runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    mu    , rawMBStatsWeight);
                     NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
-                    NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
+                    //NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
                     // ^^ var = 1/count sqrSum - mu^2 = 1/count sqrSum - (sum/count)^2   --this subtracts mu^2
 #ifdef LOG_BN
                     mu    ->LogToFile(L"mu'");
@@ -580,6 +584,7 @@ namespace CNTK
         case PrimitiveOpType::Clip:
             if (i == 0)
             {
+                // BUGBUG: This is not working, when implementing a clipped ReLU with it in MT.cpp. Different result from double-ReLU expression.
                 op3Args = Microsoft::MSR::CNTK::ElementWiseOperator::opCopyIfEqual;
                 arg1 = inputValues[0];
                 arg2 = outputValue;
