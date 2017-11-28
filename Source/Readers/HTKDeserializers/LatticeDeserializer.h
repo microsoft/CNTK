@@ -9,6 +9,9 @@
 #include "Config.h"
 #include "CorpusDescriptor.h"
 #include "ConfigHelper.h"
+#include "UtteranceDescription.h"
+#include "Index.h"
+#include "HTKDeserializer.h"
 #include <boost/noncopyable.hpp>
 
 namespace CNTK {
@@ -21,6 +24,9 @@ public:
     // Expects new configuration.
     LatticeDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
+    // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
+    bool GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& s) override;
+
     // Get information about chunks.
     virtual std::vector<ChunkInfo> ChunkInfos() override;
 
@@ -30,50 +36,32 @@ public:
     // Retrieves data for a chunk.
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
-    // Gets sequence description by the primary one.
-    virtual bool GetSequenceInfo(const SequenceInfo& primary, SequenceInfo&) override;
-
 private:
-    class HTKChunk;
+    class LatticeChunk;
+    class ChunkBase;
+    class SequenceChunk;
 
     // Initialization functions.
-    void InitializeChunkInfos(ConfigHelper& config);
+    void InitializeChunkInfos(CorpusDescriptorPtr corpus, ConfigHelper& config);
     void InitializeStreams(const std::wstring& featureName);
     void InitializeFeatureInformation();
-    void InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow);
-
-    // Gets sequence by its chunk id and id inside the chunk.
-    void GetSequenceById(ChunkIdType chunkId, size_t id, std::vector<SequenceDataPtr>&);
-
-    // Dimension of features.
-    size_t m_dimension;
-
-    // Type of the features.
-    DataType m_elementType;
-
-    // Chunk descriptions.
-    std::vector<HTKChunkInfo> m_chunks;
-
-    // Augmentation window.
-    std::pair<size_t, size_t> m_augmentationWindow;
 
     CorpusDescriptorPtr m_corpus;
 
     // General configuration
     int m_verbosity;
 
+    // Chunk descriptions.
+    std::vector<HTKChunkInfo> m_chunks;
+
     // Used to correlate a sequence key with the sequence inside the chunk when deserializer is running not in primary mode.
     // <key, chunkid, offset inside chunk>, sorted by key to be able to retrieve by binary search.
     std::vector<std::tuple<size_t, ChunkIdType, uint32_t>> m_keyToChunkLocation;
 
-    // Auxiliary data for checking against the data in the feature file.
-    unsigned int m_samplePeriod = 0;
-    size_t m_ioFeatureDimension = 0;
-    std::string m_featureKind;
-
-    // A flag that indicates whether the utterance should be extended to match the length of the utterance from the primary deserializer.
-    // TODO: This should be moved to the packers when deserializers work in sequence mode only.
-    bool m_expandToPrimary;
+    std::vector<const ChunkDescriptor*> m_chunks;
+    std::map<const ChunkDescriptor*, size_t> m_chunkToFileIndex;
+    size_t m_chunkSizeBytes;
+    std::vector<std::shared_ptr<Index>> m_indices;
 };
 
 }

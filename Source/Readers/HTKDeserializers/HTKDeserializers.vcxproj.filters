@@ -21,6 +21,9 @@
     <ClCompile Include="LatticeDeserializer.cpp">
       <Filter>Lattice</Filter>
     </ClCompile>
+    <ClCompile Include="LatticeIndexBuilder.cpp">
+      <Filter>Lattice</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -67,6 +70,9 @@
       <Filter>MLF</Filter>
     </ClInclude>
     <ClInclude Include="LatticeDeserializer.h">
+      <Filter>Lattice</Filter>
+    </ClInclude>
+    <ClInclude Include="LatticeIndexBuilder.h">
       <Filter>Lattice</Filter>
     </ClInclude>
   </ItemGroup>
