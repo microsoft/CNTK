@@ -45,6 +45,15 @@ public:
     // Returns scp file path.
     std::string GetScpFilePath();
 
+    // Returns lattice index file (collection of lattice files)
+    std::string GetLatticeIndexFilePath();
+
+    // Returns the chunk size
+    std::string GetChunkSize();
+
+    // Returns lattice sym list file path
+    std::string GetSymListFilePath();
+
     // Returns scp file dir.
     std::string GetScpDir();
 
