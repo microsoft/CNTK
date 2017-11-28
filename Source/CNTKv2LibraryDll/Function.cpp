@@ -2807,10 +2807,10 @@ namespace CNTK
             auto filterShape = convolutionMap.Shape();
             auto filterRank = static_cast<int>(filterShape.Rank());
             auto inputRank = static_cast<int>(operand.Shape().Rank());
-            if (filterShape[filterRank - 1] % groups)
-                LogicError("groups: number of input channels must be divisble by groups.");
             if (filterShape[filterRank - 2] % groups)
-                LogicError("groups: number of output channels must be divisble by groups.");
+                LogicError("groups: number of input channels must be divisible by groups.");
+            if (filterShape[filterRank - 1] % groups)
+                LogicError("groups: number of output channels must be divisible by groups.");
 
             auto operandPlaceholder = PlaceholderVariable();
             std::vector<Variable> opsOutputVector(groups);
