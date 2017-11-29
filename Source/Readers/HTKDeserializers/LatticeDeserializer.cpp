@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "LatticeDeserializer.h"
+#include "LatticeIndexBuilder.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
 #include "StringUtil.h"
@@ -39,6 +40,12 @@ LatticeDeserializer::LatticeDeserializer(
     ConfigParameters streamConfig = input(inputName);
 
     ConfigHelper config(streamConfig);
+    wstring phoneFile = cfg(L"phoneFile");
+    wstring transpFile = cfg(L"transpFile");
+    wstring labelMappingFile = cfg(L"labelMappingFile");
+
+    m_hset.loadfromfile(phoneFile, labelMappingFile, transpFile);
+    const std::unordered_map<std::string, size_t>& modelsymmap = m_hset.getsymmap();
 
     InitializeStreams(inputName);
     InitializeChunkInfos(corpus, config);
@@ -52,21 +59,43 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
     
     fprintf(stderr, "Reading lattice index file %s ...", latticeIndexPath.c_str());
 
-    ifstream latticeIndexStream(latticeIndexPath.c_str());
+    wifstream latticeIndexStream(latticeIndexPath.c_str());
     if (!latticeIndexStream)
         RuntimeError("Failed to open input file: %s", latticeIndexPath.c_str());
+
+    bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
+
+    std::wstring path;
+    while (!latticeIndexStream.eof())
+    {
+        std::getline(latticeIndexStream, path);
+
+        attempt(5, [this, path, enableCaching, corpus]()
+        {
+            LatticeIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
+            builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
+            m_indices.emplace_back(builder.Build());
+        });
+
+        m_latticeFiles.push_back(path);
+
+    }
+    latticeIndexStream.close();
+
 
     deque<UtteranceDescription> utterances;
     size_t totalNumberOfBytes = 0;
     size_t totalNumSequences = 0;
-    bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
-    string latticeFile;
-
+    
     std::unordered_map<size_t, std::vector<string>> duplicates;
     std::unordered_set<size_t> uniqueIds;
-    while (getline(latticeIndexStream, latticeFile))
+    while (getline(latticeIndexStream, path))
     {
         // Read lattice file
+        //open(tocpaths[i])
+
+        
+
         ifstream latticeFileStream(latticeFile.c_str(), ios::binary | ios::ate);
         if (!latticeFileStream)
             RuntimeError("Failed to open input lattice file: %s", latticeFile.c_str());

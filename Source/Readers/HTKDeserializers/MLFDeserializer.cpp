@@ -318,7 +318,7 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
 
     m_frameMode = (ConfigValue)cfg("frameMode", "true");
 
-    wstring precision = cfg(L"precision", L"float");;
+    wstring precision = cfg(L"precision", L"float");
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? DataType::Float : DataType::Double;
 
     // Same behavior as for the old deserializer - keep almost all in memory,
