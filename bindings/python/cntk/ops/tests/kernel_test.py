@@ -154,6 +154,45 @@ def test_spatial_convolution(input_size, conv_size, result, device_id, precision
 
     unittest_helper(input_op, forward_input, expected_forward,
                     None, device_id=device_id, precision=precision)
+                    
+REDUCED_OUTPUT_CONVOLUTION_DATA = [
+    ([4,2,3], #input_size
+     [3,2,3], # convolution size
+     [[[55], [145], [235]],
+      [[145],[451], [757]],
+      [[235],[757], [1279]],
+      [[325],[1063],[1801]]])  # result
+]
+# this test handles 1D/2D convolution
+@pytest.mark.parametrize("input_size, conv_size, result", REDUCED_OUTPUT_CONVOLUTION_DATA)
+def test_reduced_output_convolution(input_size, conv_size, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(total_size, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+
+    # do the same for convolution kernel
+    total_size = np.prod(conv_size)
+    y = np.arange(total_size, dtype=dt)
+    conv_map = constant(value=y.reshape(conv_size), device=dev)
+
+    from cntk import convolution
+    input_op = convolution(conv_map, a, auto_padding=[False])
+
+    forward_input = {a: input_operand}
+    expected_forward = AA(result)
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                    None, device_id=device_id, precision=precision)
 
 POOLING_GEOMETRY_DATA = [
     ([1, 1, 6, 6], # input_size
