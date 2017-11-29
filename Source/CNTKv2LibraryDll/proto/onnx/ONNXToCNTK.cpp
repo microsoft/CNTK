@@ -75,6 +75,7 @@ private:
 
     static std::vector<int> VecInt64ToVecInt(const std::vector<int64_t> &vecInt64);
     static std::vector<int64_t> VecIntToVecInt64(const std::vector<int> &vecInt);
+    static std::vector<Axis> GetAxisVecFromIntVec(const std::vector<int> &vecInt);
 
     static float GetNamedAttributeAsFloat(const Node *node, const string &attributeName);
     static float GetNamedAttributeAsFloat(const Node *node, const string &attributeName, float defaultValue);
@@ -684,6 +685,17 @@ namespace CNTK
     }
 }
 
+std::vector<Axis> ONNXToCNTKHelper::GetAxisVecFromIntVec(const std::vector<int> &vecInt)
+{
+    std::vector<Axis> vecAxis;
+    for (const auto& val : vecInt)
+    {
+        Axis axis(val);
+        vecAxis.push_back(axis);
+    }
+    return vecAxis;
+}
+
 std::pair<Variable, Variable> ONNXToCNTKHelper::BroadcastElementWiseInput(
     const Node *node, const Variable &input0, const Variable &input1)
 {
@@ -1256,7 +1268,38 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Transpose")
     {
-        FunctionPtr cntkFunction = Transpose(inputs[0], ToWString(node->Name()));
+        std::vector<int> permVal;
+        if (HasNamedAttribute(node, "perm"))
+        {
+            permVal = VecInt64ToVecInt(GetNamedAttributeAsInt64Vec(node, "perm"));
+            auto rankDiff = static_cast<int>(permVal.size()) - static_cast<int>(inputs[0].Shape().Rank());
+            if (rankDiff > 1 || rankDiff < 0)
+            {
+                LogicError("Incorrect 'perm' attribute in Transpose. Length of 'perm' attribute should match the rank of the input tensor.");
+            }
+            else if (rankDiff == 1)
+            {
+                // REVIEW SPTIWARI: According to ONNX spec, 'perm' is defined for the tensor with the 
+                // batch axis included and will have the element for the batch axis as the first element.
+                // Since we strip the batch axis off of 'inputs', we will have to ignore the first element 
+                // of 'perm', and modify the other elements to reflect the reduced rank/dimensionality 
+                // of the input. Since the batch axis in ONNX is always the first axis in all nodes, there's 
+                // should not be any need to transpose the first axis and the first element of 'perm' should
+                // be 0. The implementation below is based on that assumption, otherwise it must be modified.
+                assert(permVal[0] == 0);
+                permVal.erase(permVal.begin());
+                std::for_each(permVal.begin(), permVal.end(), [](int& d) { d -= 1; });
+            }
+            // else this is the rankDiff == 0 case, so we do nothing and keep perm as it is.
+        }
+        else
+        {
+            int nDims = inputs[0].Shape().Rank();
+            permVal.resize(nDims);
+            std::generate(permVal.begin(), permVal.end(), [&nDims] { return --nDims; }); // Reverse the axes.
+        }
+        auto perm = GetAxisVecFromIntVec(permVal);
+        FunctionPtr cntkFunction = Transpose(inputs[0], perm, ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Gather")
@@ -1383,6 +1426,14 @@ Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool>& 
                 ToWString(node->Name() + std::string("_pad")));
             convOperand = (Variable)cntkPadFunction;
         }
+        cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), false); // For 'VALID' convolution
+    }
+    else
+    {
+        // REVIEW SPTIWARI: Ideally this should not happen. ONNX spec says that one
+        // and only one of these two attributes MUST be present. However, we are handling
+        // this case leniently for now and assuming that there's no padding and behavior
+        // is the same as when auto_pad == VALID.
         cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), false); // For 'VALID' convolution
     }
 
