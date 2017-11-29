@@ -20,7 +20,7 @@
 #include <memory>
 #include "fileutil.h"
 #include <type_traits>
-
+#include <boost/locale.hpp>
 
 namespace CNTK {
 
@@ -39,7 +39,7 @@ public:
         })
     {}
 
-    // This variant of the FileWrapper does not own the file pointer
+        // This variant of the FileWrapper does not own the file pointer
     // and does not close correspoinding file in the dtor.
     FileWrapper(const std::wstring& filename, FILE* file)
         : m_filename(filename),

@@ -47,6 +47,7 @@ private:
     void InitializeFeatureInformation();
 
     CorpusDescriptorPtr m_corpus;
+    msra::asr::simplesenonehmm m_hset;
 
     // General configuration
     int m_verbosity;
@@ -62,6 +63,7 @@ private:
     std::map<const ChunkDescriptor*, size_t> m_chunkToFileIndex;
     size_t m_chunkSizeBytes;
     std::vector<std::shared_ptr<Index>> m_indices;
+    std::vector<std::wstring> m_latticeFiles;
 };
 
 }
