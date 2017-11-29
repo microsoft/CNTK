@@ -1428,6 +1428,14 @@ Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool>& 
         }
         cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), false); // For 'VALID' convolution
     }
+    else
+    {
+        // REVIEW SPTIWARI: Ideally this should not happen. ONNX spec says that one
+        // and only one of these two attributes MUST be present. However, we are handling
+        // this case leniently for now and assuming that there's no padding and behavior
+        // is the same as when auto_pad == VALID.
+        cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), false); // For 'VALID' convolution
+    }
 
     AdjustAutoPaddingAndStrideForCNTKSpecialCases(operand, cntkConvAutoPadding, strides);
     return convOperand;
