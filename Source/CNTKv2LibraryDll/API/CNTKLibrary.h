@@ -167,14 +167,14 @@ namespace CNTK
         ///
         /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
         ///
-        static const NDShapeDimension InferredDimension = (NDShapeDimension)-1;
+        static constexpr NDShapeDimension InferredDimension{ (NDShapeDimension)-1 };
 
         ///
         /// A placeholder value to use for an axis whose dimension is unbound and is only determined
         /// when actual data is bound to the variable. Note that since the actual dimension is bound
         /// from actual minibatch data, the dimension can vary across different evaluations.
         ///
-        static const NDShapeDimension FreeDimension = (NDShapeDimension)-3;
+        static constexpr NDShapeDimension FreeDimension{ (NDShapeDimension)-3 };
 
         ///
         /// A placeholder shape to use to denote an unknown shape
@@ -234,7 +234,8 @@ namespace CNTK
         /// Returns the dimensions of 'this' shape as a std::vector<size_t>
         ///
 #ifndef SWIG
-        const auto& Dimensions() const { return m_shapeDims; }
+        const NDShapeDimensions/*auto*/& Dimensions() const { return m_shapeDims; }
+        //const auto& Dimensions() const { return m_shapeDims; }
 #endif
 
         ///
@@ -257,7 +258,8 @@ namespace CNTK
         /// Returns a reference to dimension size for the specified axis.
         ///
 #ifndef SWIG
-        auto& operator[](size_t axisId)
+        NDShapeDimension/*auto*/& operator[](size_t axisId)
+        //auto& operator[](size_t axisId)
         {
             return m_shapeDims.at(axisId);
         }
@@ -267,7 +269,8 @@ namespace CNTK
         /// Returns the dimension size for the specified axis.
         ///
 #ifndef SWIG
-        auto operator[](size_t axisId) const
+        NDShapeDimension/*auto*/ operator[](size_t axisId) const
+        //auto operator[](size_t axisId) const
         {
             return m_shapeDims.at(axisId);
         }
@@ -4155,7 +4158,8 @@ namespace CNTK
         // Returns a outputs without ref-counting the owner.
         friend class Variable;
 #ifndef SWIG
-        CNTK_API const auto RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
+        CNTK_API const Span<InternalVariable*>/*auto*/ RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
+        //CNTK_API const auto RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
 #endif
 
     private:

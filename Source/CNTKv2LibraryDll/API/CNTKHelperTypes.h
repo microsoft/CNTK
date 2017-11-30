@@ -6,6 +6,8 @@
 //
 
 #pragma once
+#ifndef _CNTK_HELPER_TYPES_H // gcc does not recognize the same file included via different relative paths (with or without ../)
+#define _CNTK_HELPER_TYPES_H
 
 #include <cstddef>
 #include <vector>
@@ -132,7 +134,8 @@ class TransformingSpan
         Iterator operator++() { auto cur = *this; argIter++; return cur; }
         Iterator operator++(int) { argIter++; return *this; }
         TLambda operator*() const { return lambda(std::move(*argIter)); }
-        TLambda*/*auto*/ operator->() const { return &operator*(); }
+        TLambda* /*auto*/ operator->() const { return &operator*(); }
+        //auto operator->() const { return &operator*(); }
         bool operator==(const Iterator& other) const { return argIter == other.argIter; }
         bool operator!=(const Iterator& other) const { return argIter != other.argIter; }
         // BUGBUG: The following won't work for forward iterators, such as NonOwningFunctionList
@@ -205,7 +208,8 @@ public:
         const_iterator operator++() { auto cur = *this; value += stepValue; return cur; }
         const_iterator operator++(int) { value += stepValue; return *this; }
         T operator*() const { return value; }
-        T*/*auto*/ operator->() const { return &operator*(); } // (who knows whether this is defined for the type)
+        T* /*auto*/ operator->() const { return &operator*(); } // (who knows whether this is defined for the type)
+        //auto operator->() const { return &operator*(); } // (who knows whether this is defined for the type)
         bool operator==(const const_iterator& other) const { return value == other.value; }
         bool operator!=(const const_iterator& other) const { return value != other.value; }
         const_iterator operator+(typename Base::difference_type offset) const { return const_iterator(value + offset * stepValue, stepValue); }
@@ -635,7 +639,11 @@ public: // required boilerplate --is there no base to derive from to provide thi
     inline bool operator!=(FixedSizePoolAllocatorT const& a) { return !operator==(a); }
 private:
     // say FixedSizePool::get() to get access to a globally shared instance for all pools of the same itemByteSize
-    static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)>/*auto*/& GetStorage() { static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)> s_storage; return s_storage; }
+#ifndef _MSC_VER // gcc -std=c++11 does not support auto; while MSVC cannot handle incomplete type here
+    static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)>/*auto*/& GetStorage() { static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)> s_storage1; return s_storage1; }
+#else
+    static auto& GetStorage() { static FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)> s_storage1; return s_storage1; }
+#endif
 public:
     __forceinline pointer allocate(size_type cnt = 1, typename std::allocator<void>::const_pointer = 0)
     {
@@ -752,6 +760,8 @@ public:
         }
     }
 };
+template <typename T>
+FixedSizePoolStorage<sizeof(FixedSizePoolItem<T>)> strong_shared_ptr<T>::Storage::s_storage;
 
 ///
 /// Creates a shared object using our own intrusive shared class.
@@ -806,3 +816,5 @@ public:
 };
 
 } // namespace
+
+#endif // _CNTK_HELPER_TYPES_H
