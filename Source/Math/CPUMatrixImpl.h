@@ -7583,7 +7583,9 @@ template short* CPUMatrix<short>::CopyToArray(void) const;
 template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, short* dst, size_t colStride) const;
 template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 
+// Support <int>
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
+template void CPUMatrix<int>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
 
 }}}
 

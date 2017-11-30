@@ -10,10 +10,7 @@
 
 #include "CNTKLibrary.h"
 #include "CNTKLibraryHelpers.h"
-#include "PlainTextDeseralizer.h"
 #include "Layers.h"
-#include "Common.h"
-#include "TimerUtility.h"
 
 #include <cstdio>
 #include <map>
@@ -403,13 +400,6 @@ public:
         DestructBuffer();
     }
 };
-#endif
-#if 1
-namespace X{
-
-}
-#endif
-
 
 class C : public CNTK::enable_strong_shared_ptr<C>
 {
@@ -424,11 +414,13 @@ public:
     }
 };
 
-template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<C>>                                    strong_shared_ptr<C                                   >::Storage::s_storage;
-template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<OptionalString::SharableString const>)> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;
+//template<> FixedSizePoolStorage<sizeof FixedSizePoolItem<C>>                                    strong_shared_ptr<C                                   >::Storage::s_storage;
+//template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<OptionalString::SharableString const>)> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;
+#endif
 
 int main(int argc, char *argv[])
 {
+#if 0
     {
         MakeSharedObject1<C>();
         CNTK::OptionalString pp(L"test");
@@ -475,7 +467,6 @@ int main(int argc, char *argv[])
         //FixedVectorWithBuffer<string, 2> vec2("s1"s, "s2"s);
         //vector<string> sv(vec2);
     }
-#if 0
     struct T { shared_ptr<int> x, y, z; };
     let e1 = T{ make_shared<int>(13), make_shared<int>(13), make_shared<int>(42) };
     let e2 = T{ make_shared<int>(42), make_shared<int>(13), make_shared<int>(42) };

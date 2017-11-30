@@ -9,14 +9,14 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-#include "CNTKLibrary.h"
-#include "Common.h"
+#include "API/CNTKLibrary.h"
 
 #include <functional>
 #include <cstdio>
 #include <map>
 #include <set>
 #include <vector>
+#include <stdio.h>
 
 #ifndef let
 #define let const auto
@@ -25,9 +25,29 @@
 #pragma warning(push)
 #pragma warning(disable: 4505) // unreferenced function was removed
 
+#ifndef _MSC_VER // some useful stuff missing on gcc
+#include <unistd.h>
+#define _dup2 dup2
+#define _fileno fileno
+static inline std::string utf8path(const wchar_t* s) { return string(s, s + wcslen(s)); }
+static inline int _wunlink(const wchar_t* s) { return remove(utf8path(s).c_str()); }
+static inline int  _wrename(const wchar_t* a, const wchar_t * b) { return rename(utf8path(a).c_str(), utf8path(b).c_str()); }
+static inline FILE* _wfopen(const wchar_t* a, const wchar_t * b) { return fopen(utf8path(a).c_str(), utf8path(b).c_str()); }
+static inline FILE* _wpopen(const wchar_t* a, const wchar_t * b) { return popen(utf8path(a).c_str(), utf8path(b).c_str()); }
+#define _wifstream(s) ifstream(utf8path((s.c_str())))
+#else
+#include <io.h>
+#define _wifstream ifstream
+#endif
+
 // helper to count API calls
 // Call with 0 to get the current count.
-__declspec(selectany) size_t g_numAPICallsSoFar = 0;
+#ifdef _MSC_VER // find out how to do this on gcc
+__declspec(selectany) // fails on gcc
+#else
+static
+#endif
+size_t g_numAPICallsSoFar = 0;
 static inline size_t CountAPICalls(size_t n = 1)
 {
     g_numAPICallsSoFar += n;
@@ -41,13 +61,15 @@ using namespace std;
 
 // globally set options
 // Use these to set the DataType and Device to be used for any call onwards.
-static auto& CurrentOptions()
+struct LayersOptions
 {
-    static struct
-    {
-        DataType         dataType = DataType::Float;
-        DeviceDescriptor device   = DeviceDescriptor::UseDefaultDevice();
-    } s_currentOptions;
+    DataType         dataType = DataType::Float;
+    DeviceDescriptor device = DeviceDescriptor::UseDefaultDevice();
+};
+
+static LayersOptions& CurrentOptions()
+{
+    static LayersOptions s_currentOptions;
     return s_currentOptions;
 };
 
@@ -60,7 +82,7 @@ static inline void             SetCurrentDataType(DataType dataType)            
 static inline NDArrayViewPtr GetValueAsTensor(const Variable& var) { return var.Value(); }
 static inline NDArrayViewPtr GetValueAsTensor(const FunctionPtr & fun) { return fun->Output().Value(); }
 static inline NDArrayViewPtr GetValueAsTensor(const vector<Variable>& vec) { return (Splice(vec, Axis((int)vec[0].Shape().Rank())))->Output().Value(); }
-#define LOG(var) (GetValueAsTensor(var)->LogToFile(L#var, stderr, 10)) // helper to log a value
+#define LOG(var) (GetValueAsTensor(var)->LogToFile(L ## #var, stderr, 10)) // helper to log a value
 
 static inline FunctionPtr operator*(const Variable& leftOperand, const Variable& rightOperand)
 {
@@ -174,6 +196,8 @@ class TModel : public Base, public ModelParametersPtr
 {
 public:
     TModel(const Base& f) : Base(f){}
+    template<typename F>
+    TModel(const F& f) : Base(f) {}
     // constructor with parameters (their names are the Name() properties)
     TModel(const vector<Parameter>& parameters, const Base& f)
         : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, map<wstring, ModelParametersPtr>()))

@@ -167,7 +167,7 @@ namespace CNTK
             m_dictionaryData = MakeSharedObject1<SharableDict>();
         return *m_dictionaryData;
     }
-    template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<Dictionary::SharableDict>)> strong_shared_ptr<Dictionary::SharableDict>::Storage::s_storage;
+    //template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<Dictionary::SharableDict>)> strong_shared_ptr<Dictionary::SharableDict>::Storage::s_storage;
 
     Dictionary::~Dictionary()
     {

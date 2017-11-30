@@ -531,14 +531,14 @@ void GPUMatrix<ElemType>::ZeroInit(int deviceId)
 
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(int deviceId) :
-    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
+    BaseMatrix<ElemType>(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit(deviceId);
 };
 
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId) :
-    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
+    BaseMatrix<ElemType>(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit(deviceId);
     m_numRows = numRows;
@@ -554,7 +554,7 @@ GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int d
 
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags) :
-    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
+    BaseMatrix<ElemType>(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit(deviceId);
     SetValue(numRows, numCols, deviceId, pArray, matrixFlags);
@@ -562,7 +562,7 @@ GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int d
 
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom) :
-    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
+    BaseMatrix<ElemType>(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit();
     SetValue(deepCopyFrom);
@@ -570,7 +570,7 @@ GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom) :
 
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(GPUMatrix<ElemType>&& moveFrom) :
-    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
+    BaseMatrix<ElemType>(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ShallowMoveFrom(move(moveFrom));
 }
@@ -648,7 +648,7 @@ void GPUMatrix<ElemType>::ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> 
 // column-slice constructor
 template <class ElemType>
 GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>&other, size_t startColumn, size_t numCols, size_t sourceNumCols) :
-    BaseMatrix(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
+    BaseMatrix<ElemType>(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     // we reinterpret the matrix to have sourceNumCols columns
     size_t sourceNumRows = other.GetNumRows();
@@ -782,7 +782,7 @@ void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const st
 {
     PrepareDevice();
     MaxFixedSizeParameterArray<const ElemType*> inputPointerBuffer; // leave some space for extra function args
-    static constexpr size_t capacity = inputPointerBuffer.CAPACITY;
+    static constexpr size_t capacity = MaxFixedSizeParameterArray<const ElemType*>::CAPACITY;
     // output-batch matrix iterator
     ElemType* dstPtr  = Data();
     size_t    dstLeft = GetNumElements();
@@ -907,7 +907,7 @@ void GPUMatrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t num
 {
     PrepareDevice();
     MaxFixedSizeParameterArray<ElemType*> outputPointerBuffer; // leave some space for extra function args
-    static constexpr size_t capacity = outputPointerBuffer.CAPACITY;
+    static constexpr size_t capacity = MaxFixedSizeParameterArray<ElemType*>::CAPACITY;
     // input-batch matrix iterator
     const ElemType* srcPtr  = Data();
     size_t srcLeft = GetNumElements();
@@ -5406,8 +5406,10 @@ template void GPUMatrix<short>::Reshape(const size_t, const size_t);
 template GPUMatrix<short>& GPUMatrix<short>::operator*=(short);
 template DEVICEID_TYPE GPUMatrix<short>::PrepareDevice(DEVICEID_TYPE deviceId) const;
 
+// Support <int>
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();
+template void GPUMatrix<int>::Resize(size_t, size_t, bool);
 
 template int* TracingGPUMemoryAllocator::Allocate<int>(int, size_t);
 template size_t* TracingGPUMemoryAllocator::Allocate<size_t>(int, size_t);

@@ -10,5 +10,3 @@ Function* CreateProposalLayer(const Variable* operands, size_t /*numOperands*/, 
 {
     return new ProposalLayer({operands[0], operands[1], operands[2]}, *attributes, name);
 }
-
-template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<OptionalString::SharableString const>)> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;

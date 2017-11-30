@@ -33,11 +33,6 @@ using namespace System::Collections::Generic;
 using namespace System::Collections;
 using namespace System::Runtime::InteropServices;
 
-namespace CNTK
-{
-    template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<OptionalString::SharableString const>)> strong_shared_ptr<OptionalString::SharableString const>::Storage::s_storage;
-}
-
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
 
 namespace Native = Microsoft::MSR::CNTK;

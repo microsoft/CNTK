@@ -6450,30 +6450,3 @@ template short* Matrix<short>::CopyToArray(void) const;
 
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 }}}
-
-namespace OuterCNTK = ::CNTK;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUSparseMatrix<int>     >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<int>     >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUSparseMatrix<int>     >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<int>     >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUMatrix<int>           >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUMatrix<int>           >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUMatrix<int>           >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUMatrix<int>           >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUSparseMatrix<short>   >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<short>   >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUSparseMatrix<short>   >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<short>   >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUMatrix<short>         >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUMatrix<short>         >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUMatrix<short>         >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUMatrix<short>         >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUSparseMatrix<char>    >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<char>    >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUSparseMatrix<char>    >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<char>    >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUMatrix<char>          >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUMatrix<char>          >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUMatrix<char>          >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUMatrix<char>          >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUSparseMatrix<double>  >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<double>  >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUSparseMatrix<double>  >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<double>  >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUMatrix<double>        >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUMatrix<double>        >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUMatrix<double>        >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUMatrix<double>        >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUSparseMatrix<float>   >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<float>   >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUSparseMatrix<float>   >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<float>   >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::CPUMatrix<float>         >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::CPUMatrix<float>         >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::GPUMatrix<float>         >)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::GPUMatrix<float>         >::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::BaseMatrixStorage<int   >>)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::BaseMatrixStorage<int   >>::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::BaseMatrixStorage<short >>)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::BaseMatrixStorage<short >>::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::BaseMatrixStorage<char  >>)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::BaseMatrixStorage<char  >>::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::BaseMatrixStorage<double>>)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::BaseMatrixStorage<double>>::Storage::s_storage;
-template<> ::CNTK::FixedSizePoolStorage<sizeof (::CNTK::FixedSizePoolItem<Microsoft::MSR::CNTK::BaseMatrixStorage<float >>)> OuterCNTK::strong_shared_ptr<Microsoft::MSR::CNTK::BaseMatrixStorage<float >>::Storage::s_storage;
