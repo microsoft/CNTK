@@ -602,8 +602,6 @@ namespace CNTK
         return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, seed);
     }
 
-    template<> FixedSizePoolStorage<sizeof (FixedSizePoolItem<VariableFields>)> strong_shared_ptr<VariableFields>::Storage::s_storage;
-
     InternalVariable::InternalVariable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, bool isVolatile, const std::wstring& name, const std::wstring& uid) :
         m_dataFields(MakeSharedObject1<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, isVolatile, name, uid))
     {}
