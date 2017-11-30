@@ -178,7 +178,7 @@ namespace ONNX
             // { L"", "exponent" },
         } } },
         { L"Times", { {
-            { L"Times", "Dot" },
+            { L"Times", "MatMul" },
         } } },
         { L"PReLU", { {
             { L"PReLU", "PRelu" },

@@ -32,18 +32,18 @@ private:
     static FunctionPtr CreateCNTKNode(const Node *node, const std::vector<Variable> &inputs,
         const DeviceDescriptor& computeDevice);
     static Constant CreateConstant(const Node *node, const DeviceDescriptor& computeDevice);
-    static Constant CreateConstant(const ONNXIR::TensorProto &valueProto, const std::string &nodeName,
+    static Constant CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
         const DeviceDescriptor& computeDevice);
     static Variable CreateLeafVariableOrConstant(const NodeArg *nodeArg, const Graph *graph,
         const DeviceDescriptor& computeDevice);
     static FunctionPtr CreateFunction(const Node *node, const std::vector<Variable> &inputs);
 
     static std::vector<Axis> AttributeProtoToAxes(const AttributeProto &attributeProto);
-    static ONNXIR::TypeProto FromINTS(const std::vector<int64_t> &shape);
-    static NDShape FromTypeProto(const ONNXIR::TypeProto& tensorShape);
-    static NDShape FromTensorShapeProto(const ONNXIR::TypeProto::TensorShapeProto& tensorShape);
-    static std::vector<bool> FromTypeProtoAsBool(const ONNXIR::TypeProto& tensorShape);
-    static DataType FromONNXType(ONNXIR::TypeProto type);
+    static onnx::TypeProto FromINTS(const std::vector<int64_t> &shape);
+    static NDShape FromTypeProto(const onnx::TypeProto& tensorShape);
+    static NDShape FromTensorShapeProto(const onnx::TensorShapeProto& tensorShape);
+    static std::vector<bool> FromTypeProtoAsBool(const onnx::TypeProto& tensorShape);
+    static DataType FromONNXType(onnx::TypeProto type);
 
     static NodeAttributes::const_iterator FindAttributeIterator(const Node *node,
         const string &attributeName, bool required);
@@ -127,9 +127,9 @@ std::vector<Axis> ONNXToCNTKHelper::AttributeProtoToAxes(const AttributeProto &a
     return axes;
 }
 
-ONNXIR::TypeProto ONNXToCNTKHelper::FromINTS(const std::vector<int64_t> &shape)
+onnx::TypeProto ONNXToCNTKHelper::FromINTS(const std::vector<int64_t> &shape)
 {
-    ONNXIR::TypeProto newShape;
+    onnx::TypeProto newShape;
 
     for (std::vector<int64_t>::const_iterator it = shape.begin(); it != shape.end(); it++)
     {
@@ -139,12 +139,12 @@ ONNXIR::TypeProto ONNXToCNTKHelper::FromINTS(const std::vector<int64_t> &shape)
     return newShape;
 }
 
-NDShape ONNXToCNTKHelper::FromTypeProto(const ONNXIR::TypeProto& tensorShape)
+NDShape ONNXToCNTKHelper::FromTypeProto(const onnx::TypeProto& tensorShape)
 {
     return FromTensorShapeProto(tensorShape.tensor_type().shape());
 }
 
-NDShape ONNXToCNTKHelper::FromTensorShapeProto(const ONNXIR::TypeProto::TensorShapeProto& tensorShape)
+NDShape ONNXToCNTKHelper::FromTensorShapeProto(const onnx::TensorShapeProto& tensorShape)
 {
     std::vector<size_t> dimensions;
     for (int index = 0; index < tensorShape.dim_size(); index++)
@@ -164,7 +164,7 @@ NDShape ONNXToCNTKHelper::ReverseShape(const NDShape &shape)
     return dimensions;
 }
 
-std::vector<bool> ONNXToCNTKHelper::FromTypeProtoAsBool(const ONNXIR::TypeProto& tensorShape)
+std::vector<bool> ONNXToCNTKHelper::FromTypeProtoAsBool(const onnx::TypeProto& tensorShape)
 {
     std::vector<bool> dimensions;
     for (int index = 0; index < tensorShape.tensor_type().shape().dim_size(); index++)
@@ -175,13 +175,13 @@ std::vector<bool> ONNXToCNTKHelper::FromTypeProtoAsBool(const ONNXIR::TypeProto&
     return dimensions;
 }
 
-DataType ONNXToCNTKHelper::FromONNXType(ONNXIR::TypeProto type)
+DataType ONNXToCNTKHelper::FromONNXType(onnx::TypeProto type)
 {
     switch (type.tensor_type().elem_type())
     {
-    case ONNXIR::TensorProto_DataType_FLOAT:
+    case onnx::TensorProto_DataType_FLOAT:
         return DataType::Float;
-    case ONNXIR::TensorProto_DataType_DOUBLE:
+    case onnx::TensorProto_DataType_DOUBLE:
         return DataType::Double;
         break;
     default:
@@ -216,13 +216,13 @@ float UnpackFloat(const char *buf, int i)
     return temp;
 }
 
-void RetrieveRawDataAsFloat(const ONNXIR::TensorProto &valueProto)
+void RetrieveRawDataAsFloat(const onnx::TensorProto &valueProto)
 {
     if (!valueProto.float_data().empty())
         return;
 
     auto raw_data = valueProto.raw_data();
-    ONNXIR::TensorProto &mutableProto = const_cast<ONNXIR::TensorProto &>(valueProto);
+    onnx::TensorProto &mutableProto = const_cast<onnx::TensorProto &>(valueProto);
     ::google::protobuf::RepeatedField< float >* p_mutable_float_data = mutableProto.mutable_float_data();
     if (!raw_data.empty())
     {
@@ -251,13 +251,13 @@ double UnpackDouble(const char *buf, int i)
     return temp;
 }
 
-void RetrieveRawDataAsDouble(const ONNXIR::TensorProto &valueProto)
+void RetrieveRawDataAsDouble(const onnx::TensorProto &valueProto)
 {
     if (!valueProto.double_data().empty())
         return;
 
     auto raw_data = valueProto.raw_data();
-    ONNXIR::TensorProto &mutableProto = const_cast<ONNXIR::TensorProto &>(valueProto);
+    onnx::TensorProto &mutableProto = const_cast<onnx::TensorProto &>(valueProto);
     ::google::protobuf::RepeatedField< double >* p_mutable_double_data = mutableProto.mutable_double_data();
     if (!raw_data.empty())
     {
@@ -273,12 +273,12 @@ void RetrieveRawDataAsDouble(const ONNXIR::TensorProto &valueProto)
 Constant ONNXToCNTKHelper::CreateConstant(const Node *node, const DeviceDescriptor& computeDevice)
 {
     NodeAttributes::const_iterator itValue = node->GetAttributes().find("value");
-    const ONNXIR::TensorProto valueProto = itValue->second.t();
+    const onnx::TensorProto valueProto = itValue->second.t();
 
     return CreateConstant(valueProto, node->Name(), computeDevice);
 }
 
-Constant ONNXToCNTKHelper::CreateConstant(const ONNXIR::TensorProto &valueProto, const std::string &nodeName,
+Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
     const DeviceDescriptor& computeDevice)
 {
     auto dataType = valueProto.data_type();
@@ -411,7 +411,7 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg, 
 {
     std::string nodeName = nodeArg->Name();
 
-    ONNXIR::TensorProto valueProto;
+    onnx::TensorProto valueProto;
     if (graph->GetInitialTensor(nodeName, valueProto))
     {
         return CreateConstant(valueProto, nodeName, computeDevice);
@@ -1113,7 +1113,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         return nullptr;
     }
-    else if (onnxOpName == "Dot")
+    else if (onnxOpName == "MatMul")
     {
         FunctionPtr cntkFunction = Times(inputs[1], inputs[0], ToWString(node->Name()));
         return cntkFunction;

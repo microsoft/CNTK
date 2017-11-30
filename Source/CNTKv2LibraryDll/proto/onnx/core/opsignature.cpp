@@ -84,11 +84,19 @@ namespace ONNXIR
         return m_hasDefaultValue;
     }
 
-
-
     const std::string& OpSignature::GetName() const
     {
         return m_name;
+    }
+
+    int OpSignature::SinceVersion() const
+    {
+        return m_sinceVersion;
+    }
+
+    const std::string& OpSignature::Domain() const
+    {
+        return m_domain;
     }
 
     const std::string& OpSignature::GetDescription() const

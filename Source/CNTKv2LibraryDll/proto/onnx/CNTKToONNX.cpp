@@ -31,14 +31,14 @@ ItrType reverse(ItrType v)
 //
 // Helper function to reduce the rank of a shape.
 //
-ONNXIR::TypeProto ReduceRank(const ONNXIR::TypeProto::TensorShapeProto* inputShape, int reductionRank, bool rightReduction)
+onnx::TypeProto ReduceRank(const onnx::TensorShapeProto* inputShape, int reductionRank, bool rightReduction)
 {
     assert(inputShape != nullptr);
 
     int inputRank = inputShape->dim_size();
     assert(inputRank > reductionRank);
 
-    ONNXIR::TypeProto newShape;
+    onnx::TypeProto newShape;
     int64_t reduceDim = 1;
 
     if (rightReduction)
@@ -97,7 +97,7 @@ private:
     // Copy the content of NDArrayView to TensorProto, and do the needed
     // convergence.
     //
-    static void CopyTensor(const NDArrayViewPtr src, ONNXIR::TensorProto& dst, ONNXIR::TypeProto *inputArgType = nullptr);
+    static void CopyTensor(const NDArrayViewPtr src, onnx::TensorProto& dst, onnx::TypeProto *inputArgType = nullptr);
 
     //
     // Copy supported attributes from CNTK node to corresponding ONNX node.
@@ -112,15 +112,15 @@ private:
     //
     // Convert NDShape and various std::vector types to TensorShape
     //
-    static ONNXIR::TypeProto ToTypeProto(const NDShape& shape, bool hasBatchAxis = false);
-    static ONNXIR::TypeProto ToTypeProto(const std::vector<bool>& shape);
-    static ONNXIR::TypeProto ToTypeProto(const std::vector<int>& shape, bool doReverseVec = true);
-    static ONNXIR::TypeProto ToTypeProto(const std::vector<Axis>& axes);
+    static onnx::TypeProto ToTypeProto(const NDShape& shape, bool hasBatchAxis = false);
+    static onnx::TypeProto ToTypeProto(const std::vector<bool>& shape);
+    static onnx::TypeProto ToTypeProto(const std::vector<int>& shape, bool doReverseVec = true);
+    static onnx::TypeProto ToTypeProto(const std::vector<Axis>& axes);
 
     //
     // Convert TypeProto, NDShape and various std::vector types to std::vector
     //
-    static std::vector<int64_t> ToINTS(const ONNXIR::TypeProto& shape);
+    static std::vector<int64_t> ToINTS(const onnx::TypeProto& shape);
     static std::vector<int64_t> ToINTS(const NDShape& shape, bool hasBatchAxis = false);
     static std::vector<int64_t> ToINTS(const std::vector<bool>& shape);
     static std::vector<int64_t> ToINTS(const std::vector<int>& shape, bool doReverseVec = true);
@@ -129,7 +129,7 @@ private:
     //
     // Convert data types from CNTK to ONNX.
     //
-    static void UpdateONNXType(DataType dataType, ONNXIR::TypeProto& type);
+    static void UpdateONNXType(DataType dataType, onnx::TypeProto& type);
 
     //
     // Map CNTK OP names to ONNX OP Names.
@@ -180,7 +180,7 @@ std::unique_ptr<ONNXIR::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
     ONNXIR::Common::Status status = dstGraph->Resolve();
     if (!status.Ok())
         LogicError("%s", status.ErrorMessage().c_str());
-    model->SetIrVersion(static_cast<ONNXIR::VERSION>(CNTK_ONNX_MODEL_VERSION));
+    model->SetModelversion(static_cast<ONNXIR::VERSION>(CNTK_ONNX_MODEL_VERSION));
     return model;
 }
 
@@ -203,7 +203,7 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, ONNXIR::Graph* dst)
     CreateNode(src, dst, functionNodes, variableNodes, compositeOutputsMap);
 }
 
-void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, ONNXIR::TensorProto& dst, ONNXIR::TypeProto *inputArgType /*=nullptr*/)
+void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, onnx::TensorProto& dst, onnx::TypeProto *inputArgType /*=nullptr*/)
 {
     auto dataType = src->GetDataType();
     auto srcTemp = src->DeepClone();
@@ -217,7 +217,7 @@ void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, ONNXIR::TensorProto&
     {
         case DataType::Float:
         {
-            dst.set_data_type(ONNXIR::TensorProto_DataType_FLOAT);
+            dst.set_data_type(onnx::TensorProto_DataType_FLOAT);
             auto data = srcTemp->DataBuffer<float>();
             for (size_t index = 0; index < totalSize; index++)
                 *(dst.mutable_float_data()->Add()) = data[index];
@@ -226,7 +226,7 @@ void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, ONNXIR::TensorProto&
         }
         case DataType::Double:
         {
-            dst.set_data_type(ONNXIR::TensorProto_DataType_DOUBLE);
+            dst.set_data_type(onnx::TensorProto_DataType_DOUBLE);
             auto data = srcTemp->DataBuffer<double>();
             for (size_t index = 0; index < totalSize; index++)
                 *(dst.mutable_double_data()->Add()) = data[index];
@@ -266,9 +266,9 @@ int CNTKToONNXHelper::ToIndex(const Axis& axis)
     return axis.StaticAxisIndex() + 1;
 }
 
-ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const NDShape& shape, bool hasBatchAxis)
+onnx::TypeProto CNTKToONNXHelper::ToTypeProto(const NDShape& shape, bool hasBatchAxis)
 {
-    ONNXIR::TypeProto newShape;
+    onnx::TypeProto newShape;
     if (shape.HasUnboundDimension())
         LogicError("Inferred and FreeDimension aren't currently supported.");
 
@@ -284,9 +284,9 @@ ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const NDShape& shape, bool hasBa
     return newShape;
 }
 
-ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<bool>& shape)
+onnx::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<bool>& shape)
 {
-    ONNXIR::TypeProto newShape;
+    onnx::TypeProto newShape;
     auto dimensions = reverse(shape);
     for (auto dimension : dimensions)
         newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(dimension ? 1:0);
@@ -294,10 +294,10 @@ ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<bool>& shape)
     return newShape;
 }
 
-ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<int>& shape,
+onnx::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<int>& shape,
     bool doReverseVec /* = true*/)
 {
-    ONNXIR::TypeProto newShape;
+    onnx::TypeProto newShape;
     std::vector<int> dimensions(shape);
     if (doReverseVec)
         dimensions = reverse(dimensions);
@@ -307,7 +307,7 @@ ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<int>& shape,
     return newShape;
 }
 
-ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<Axis>& axes)
+onnx::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<Axis>& axes)
 {
     std::vector<int> axesValue;
     for (auto axis : axes)
@@ -316,14 +316,14 @@ ONNXIR::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<Axis>& axes)
     }
     std::sort(axesValue.begin(), axesValue.end());
 
-    ONNXIR::TypeProto newShape;
+    onnx::TypeProto newShape;
     for (auto dimension : axesValue)
         newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(dimension);
 
     return newShape;
 }
 
-std::vector<int64_t> CNTKToONNXHelper::ToINTS(const ONNXIR::TypeProto& shape)
+std::vector<int64_t> CNTKToONNXHelper::ToINTS(const onnx::TypeProto& shape)
 {
     std::vector<int64_t> newShape;
 
@@ -354,15 +354,15 @@ std::vector<int64_t> CNTKToONNXHelper::ToINTS(const std::vector<Axis>& axes)
     return ToINTS(ToTypeProto(axes));
 }
 
-void CNTKToONNXHelper::UpdateONNXType(DataType dataType, ONNXIR::TypeProto& type)
+void CNTKToONNXHelper::UpdateONNXType(DataType dataType, onnx::TypeProto& type)
 {
     switch (dataType)
     {
     case DataType::Float:
-        type.mutable_tensor_type()->set_elem_type(ONNXIR::TensorProto_DataType_FLOAT);
+        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
         break;
     case DataType::Double:
-        type.mutable_tensor_type()->set_elem_type(ONNXIR::TensorProto_DataType_DOUBLE);
+        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_DOUBLE);
         break;
     default:
         NOT_IMPLEMENTED;
@@ -570,7 +570,7 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                 ((src->OpName() == L"Plus") || (src->OpName() == L"Minus") ||
                 (src->OpName() == L"ElementTimes") || (src->OpName() == L"ElementDivide"));
 
-            ONNXIR::TypeProto inputArgType;
+            onnx::TypeProto inputArgType;
 
             if (reshapeNeededForBroadcastConstant)
             {
@@ -609,7 +609,7 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                         variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
                         auto srcTensor = input.IsParameter() ? Parameter(input).Value() : Constant(input).Value();
                         
-                        ONNXIR::TensorProto dstTensor;
+                        onnx::TensorProto dstTensor;
                         CopyTensor(srcTensor, dstTensor, &inputArgType);
 
                         variableNode->AddAttribute("value", dstTensor);

@@ -16,9 +16,6 @@
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="ComputeInputStatistics.cpp" />
     <ClCompile Include="Serialization.cpp" />
-    <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp">
-      <Filter>proto</Filter>
-    </ClCompile>
     <ClCompile Include="DistributedCommunicator.cpp" />
     <ClCompile Include="CompositeFunction.cpp" />
     <ClCompile Include="PrimitiveFunction.cpp" />
@@ -37,9 +34,6 @@
     <ClCompile Include="ProgressWriter.cpp" />
     <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="UserDefinedFunction.cpp" />
-    <ClCompile Include="proto\onnx\protobuf\graph.pb.cc.VS_wrapper.cpp">
-      <Filter>proto\onnx\protobuf</Filter>
-    </ClCompile>
     <ClCompile Include="proto\onnx\CNTKToONNX.cpp">
       <Filter>proto\onnx</Filter>
     </ClCompile>
@@ -108,6 +102,12 @@
     </ClCompile>
     <ClCompile Include="EvaluatorWrapper.cpp" />
     <ClCompile Include="CNTKLibraryC.cpp" />
+    <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp">
+      <Filter>proto</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\protobuf\onnx-ml.pb.cc.VS_wrapper.cpp">
+      <Filter>proto\onnx\protobuf</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -245,7 +245,7 @@
     <Proto Include="tensorboard\tensorboard.proto">
       <Filter>tensorboard</Filter>
     </Proto>
-    <Proto Include="proto\onnx\protobuf\graph.proto">
+    <Proto Include="proto\onnx\protobuf\onnx-ml.proto">
       <Filter>proto\onnx\protobuf</Filter>
     </Proto>
   </ItemGroup>
