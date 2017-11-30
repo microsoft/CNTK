@@ -501,16 +501,14 @@ static UnaryModel ResidualNet(size_t outputDim)
 
 // simple wrapper, use as Activation(Tanh)
 // Use this to simplify expressions where one would otherwise need a lambda due to the name parameter.
-template<typename ActivationFunctionType>
-static UnaryModel Activation(const ActivationFunctionType& activation, const std::wstring& name = std::wstring())
+//template<typename ActivationFunctionType>
+static UnaryModel Activation(const function<Variable(Variable, const wstring&)>/*ActivationFunctionType*/& activation, const std::wstring& name = std::wstring())
 {
-    let activationAsLambda = [=](const Variable& x) { return activation(x, name); };
-    // note: gcc won't let us call activation() directly inside the lambda below
     return UnaryModel(
         [=](const Variable& x) -> Variable
         {
             CountAPICalls();
-            return activationAsLambda(x);
+            return activation(x, name);
         });
 }
 
