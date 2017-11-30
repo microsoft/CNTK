@@ -1100,11 +1100,11 @@ DYNAMITE:=$(BINDIR)/DynamiteTest
 ALL+=$(DYNAMITE)
 SRC+=$(DYNAMITE_SRC)
 
-$(DYNAMITE): $(DYNAMITE_OBJ) | $(READER_LIBS) $(MULTIVERSO_LIB)
+$(DYNAMITE): $(DYNAMITE_OBJ) | $(READER_LIBS) $(CNTKLIBRARY_LIB) 
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) $(L_READER_LIBS) $(lMULTIVERSO) -ldl -fopenmp $(PROTOBUF_PATH)/lib/libprotobuf.a $(OPENCV_LIBS)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl -l$(CNTKLIBRARY) $(L_READER_LIBS)
 
 ########################################
 # cntk

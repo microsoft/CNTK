@@ -30,10 +30,10 @@
 #define _dup2 dup2
 #define _fileno fileno
 static inline std::string utf8path(const wchar_t* s) { return string(s, s + wcslen(s)); }
-int _wunlink(const wchar_t* s) { return remove(utf8path(s).c_str()); }
-int  _wrename(const wchar_t* a, const wchar_t * b) { return rename(utf8path(a).c_str(), utf8path(b).c_str()); }
-FILE* _wfopen(const wchar_t* a, const wchar_t * b) { return fopen(utf8path(a).c_str(), utf8path(b).c_str()); }
-FILE* _wpopen(const wchar_t* a, const wchar_t * b) { return popen(utf8path(a).c_str(), utf8path(b).c_str()); }
+static inline int _wunlink(const wchar_t* s) { return remove(utf8path(s).c_str()); }
+static inline int  _wrename(const wchar_t* a, const wchar_t * b) { return rename(utf8path(a).c_str(), utf8path(b).c_str()); }
+static inline FILE* _wfopen(const wchar_t* a, const wchar_t * b) { return fopen(utf8path(a).c_str(), utf8path(b).c_str()); }
+static inline FILE* _wpopen(const wchar_t* a, const wchar_t * b) { return popen(utf8path(a).c_str(), utf8path(b).c_str()); }
 #define _wifstream(s) ifstream(utf8path((s.c_str())))
 #else
 #include <io.h>
@@ -44,6 +44,8 @@ FILE* _wpopen(const wchar_t* a, const wchar_t * b) { return popen(utf8path(a).c_
 // Call with 0 to get the current count.
 #ifdef _MSC_VER // find out how to do this on gcc
 __declspec(selectany) // fails on gcc
+#else
+static
 #endif
 size_t g_numAPICallsSoFar = 0;
 static inline size_t CountAPICalls(size_t n = 1)
