@@ -2932,12 +2932,12 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     }
     if (numCols != GetNumCols())
         InvalidArgument("GatherBatch: Total number of input columns (%d) must be equal to number of output columns (%d).",
-                        numCols, GetNumCols());
+                        (int)numCols, (int)GetNumCols());
     // allocate
     RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
     // process all inputs
     MaxFixedSizeParameterArray<CSCSlice<const ElemType*>> inputSliceBuffer;
-    static constexpr size_t capacity = inputSliceBuffer.CAPACITY;
+    static constexpr size_t capacity = MaxFixedSizeParameterArray<CSCSlice<const ElemType*>>::CAPACITY;
     m_sliceViewOffset = 0;
     CSCSlice<ElemType*> outputSlice =
     {
@@ -3531,6 +3531,7 @@ template void GPUSparseMatrix<char>::Reset();
 template GPUSPARSE_INDEX_TYPE GPUSparseMatrix<char>::SecondaryIndexValueAt(size_t) const;
 template GPUSparseMatrix<char>::~GPUSparseMatrix();
 template GPUSparseMatrix<char> GPUSparseMatrix<char>::ColumnSlice(size_t, size_t) const;
+template void GPUSparseMatrix<char>::AssignColumnSliceToDense(GPUMatrix<char>&, size_t, size_t) const;
 template GPUMatrix<char> GPUSparseMatrix<char>::CopyColumnSliceToDense(size_t, size_t) const;
 template GPUSparseMatrix<char>& GPUSparseMatrix<char>::operator=(GPUSparseMatrix<char>&&);
 template void GPUSparseMatrix<char>::Reshape(const size_t, const size_t);
@@ -3556,12 +3557,14 @@ template void GPUSparseMatrix<short>::Reset();
 template GPUSPARSE_INDEX_TYPE GPUSparseMatrix<short>::SecondaryIndexValueAt(size_t) const;
 template GPUSparseMatrix<short>::~GPUSparseMatrix();
 template GPUSparseMatrix<short> GPUSparseMatrix<short>::ColumnSlice(size_t, size_t) const;
+template void GPUSparseMatrix<short>::AssignColumnSliceToDense(GPUMatrix<short>&, size_t, size_t) const;
 template GPUMatrix<short> GPUSparseMatrix<short>::CopyColumnSliceToDense(size_t, size_t) const;
 template GPUSparseMatrix<short>& GPUSparseMatrix<short>::operator=(GPUSparseMatrix<short>&&);
 template void GPUSparseMatrix<short>::Reshape(const size_t, const size_t);
 template void GPUSparseMatrix<short>::ScaleAndAdd(short, GPUSparseMatrix<short> const &, GPUMatrix<short> &);
 template void GPUSparseMatrix<short>::ColumnwiseScaleAndWeightedAdd(short, const GPUSparseMatrix<short>&, const GPUMatrix<short>&, short, GPUMatrix<short>&);
 
+// Support <int>
 template GPUSparseMatrix<int>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<int>::~GPUSparseMatrix();
 template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
