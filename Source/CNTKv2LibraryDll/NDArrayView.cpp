@@ -1617,6 +1617,12 @@ namespace CNTK
     //template std::shared_ptr<TensorView<float>> NDArrayView::GetWritableTensorViewMin2D<float>();
     //template std::shared_ptr<TensorView<double>> NDArrayView::GetWritableTensorViewMin2D<double>();
 
+    template const Microsoft::MSR::CNTK::TensorView<float>& NDArrayView::NativeTensorView() const;
+    template const Microsoft::MSR::CNTK::TensorView<double>& NDArrayView::NativeTensorView() const;
+
+    template Microsoft::MSR::CNTK::TensorView<float>& NDArrayView::WritableNativeTensorView();
+    template Microsoft::MSR::CNTK::TensorView<double>& NDArrayView::WritableNativeTensorView();
+
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
 

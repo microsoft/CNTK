@@ -183,8 +183,8 @@ class TModel : public Base, public ModelParametersPtr
 {
 public:
     TModel(const Base& f) : Base(f){}
-    //template<typename F>
-    //TModel(const F& f) : Base(f) {}
+    template<typename F>
+    TModel(const F& f) : Base(f) {}
     // constructor with parameters (their names are the Name() properties)
     TModel(const vector<Parameter>& parameters, const Base& f)
         : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, map<wstring, ModelParametersPtr>()))

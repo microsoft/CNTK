@@ -27,6 +27,10 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    // TODO: somehow gcc requires this to link; but before it did not. What's the problem?
+    constexpr NDShapeDimension NDShape::FreeDimension;
+    constexpr NDShapeDimension NDShape::InferredDimension;
+
     std::atomic<bool> s_checkedMode(false);
     void SetCheckedMode(bool enable)
     {
