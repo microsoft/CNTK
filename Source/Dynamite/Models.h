@@ -94,12 +94,14 @@ struct ModelParameters
         // remove nested parameters that are empty (which happens for plain lambdas without parameters)
         for (let& kv : parentParameters)
             if (kv.second)
-                m_nestedParameters.insert(kv);
+                if (!m_nestedParameters.insert(kv).second)
+                    LogicError("parameters must be uniquely named");
         for (const auto& p : parameters)
             if (p.Name().empty())
                 LogicError("parameters must be named");
             else
-                m_parameters.insert(make_pair(p.Name(), p));
+                if (!m_parameters.insert(make_pair(p.Name(), p)).second)
+                    LogicError("parameters must be uniquely named");
     }
     /*const*/ Parameter& operator[](const wstring& name) const
     {
@@ -140,8 +142,17 @@ public:
             kv.second->LogParameters(prefix + kv.first + L".");
         for (let& kv : m_parameters) // log parameters defined right here
         {
-            let name = prefix + kv.first;
-            fprintf(stderr, "  %-30S : %S\n", name.c_str(), kv.second.AsString().c_str());
+            // operator>>() generates prefixes like ">.>.>.>", which we replace by "[4]" in this case
+            auto scope = prefix;
+            for (auto spos = scope.find_first_of(L"<>"); spos != wstring::npos; spos = scope.find_first_of(L"<>"))
+            {
+                auto epos = spos;
+                while (epos + 2 < scope.size() && scope[epos + 1] == L'.' && (scope[epos + 2] == L'<' || scope[epos + 2] == L'>'))
+                    epos += 2;
+                scope.replace(spos, epos - spos + 1, L"[" + to_wstring((epos - spos) / 2 - 1) + L"]");
+            }
+            let name = scope + kv.first;
+            fprintf(stderr, " %-50S : %S\n", name.c_str(), kv.second.AsString().c_str());
             // for debugging, implant the full name. This way, the full name will show up in AutoBatch log output.
             const_cast<Parameter&>(kv.second).DebugUpdateName(name);
         }
@@ -445,7 +456,8 @@ struct Batch
 // TODO: Do we need other overloads as well? SequenceModel, and going back and forth?
 static inline UnaryModel operator>> (const UnaryModel& before, const UnaryModel& after)
 {
-    return UnaryModel({}, { { L"f", before },{ L"g", after } }, [=](const Variable& x) -> Variable
+    // we use a special name here that is recognized by LogParameters()
+    return UnaryModel({}, { { L"<", before },{ L">", after } }, [=](const Variable& x) -> Variable
     {
         return after(before(x));
     });
