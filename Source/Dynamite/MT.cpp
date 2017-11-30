@@ -17,7 +17,6 @@
 #include <set>
 #include <vector>
 #include <iostream>
-#include <io.h>
 #include <boost/filesystem.hpp>
 #include <sstream>
 
@@ -134,15 +133,15 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         // TODO: dev and test paths
     }
     else
-        InvalidArgument("Invalid system id '%S'", systemId.c_str());
+        InvalidArgument("Invalid system id '%s'", systemId.c_str());
 }
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var)                  ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? LOG(var)                                : 0)
+#define DOLOG(var)                  ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? (LOG(var),0)                            : 0)
 #define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? PrintSequence((prefix), (var), (vocab)) : string())
 static string PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile);
 
-fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
+BinaryModel/*auto*/ BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
 {
     dropoutInputKeepProb;
     vector<BinaryModel> layers;
@@ -179,7 +178,7 @@ fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutI
 
 // reference attention model
 // Returns the attention probabilities. Caller must do the weighted average.
-fun AttentionModelReference(size_t attentionDim1)
+TernaryModel/*auto*/ AttentionModelReference(size_t attentionDim1)
 {
     let projectQuery = Linear(attentionDim1, ProjectionOptions::weightNormalize);
     let normH = LengthNormalization(); // note: can't move this inside Linear since it is applied after adding two factors
@@ -211,7 +210,7 @@ fun AttentionModelReference(size_t attentionDim1)
 
 // helper to extract a struct member
 template<typename CollectionType, typename CollectionMemberType>
-auto TransformSelectMember(const CollectionType& fromCollection, CollectionMemberType pMember)
+vector<Variable/*ValueType*/>/*auto*/ TransformSelectMember(const CollectionType& fromCollection, CollectionMemberType pMember)
 {
     typedef typename CollectionType::value_type ValueType;
     // BUGBUG: Figure out the return type. Getting random compilation errors.
@@ -243,6 +242,8 @@ static Variable OneHotConstant(const vector<double>& ids)
     let indexView = MakeSharedObject<NDArrayView>(ids.data(), CurrentDataType(), NDShape{ ids.size() }, CurrentDevice(), /*readOnly=*/true);
     return OneHotOp(Constant(indexView), tgtVocabSize, /*outputSparse=*/true, Axis(0));
 }
+
+static const vector<string>& GetAndCacheDictionary(const wstring& vocabFile);
 
 // this is the main beam decoder, for a single sentence
 template<typename InitFunctionType, typename EmbedFunctionType, typename StepFunctionType, typename OutputFunctionType>
@@ -377,7 +378,7 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
 }
 
 // TODO: Break out initial step and recurrent step layers. Decoder will later pull them out from here.
-fun AttentionDecoder(double dropoutInputKeepProb)
+BinaryModel/*auto*/ AttentionDecoder(double dropoutInputKeepProb)
 {
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
@@ -532,7 +533,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         });
 }
 
-fun CreateModelFunction()
+BinaryModel/*auto*/ CreateModelFunction()
 {
     let embedFwd = Embedding(embeddingDim, Named("embedFwd"));
     //let embedBwd = Embedding(embeddingDim, Named("embedBwd"));
@@ -563,7 +564,7 @@ fun CreateModelFunction()
         });
 }
 
-fun CreateCriterionFunction(const BinaryModel& model_fn)
+BinaryFoldingModel/*auto*/ CreateCriterionFunction(const BinaryModel& model_fn)
 {
     // features and labels are tensors with first dimension being the length
     BinaryModel criterion = [=](const Variable& sourceSeq, const Variable& targetSeq) mutable -> Variable
@@ -604,9 +605,9 @@ fun CreateCriterionFunction(const BinaryModel& model_fn)
 
 // join
 template<typename StringCollection>
-static auto Join(const StringCollection& tokens)
+static typename StringCollection::value_type/*auto*/ Join(const StringCollection& tokens)
 {
-    StringCollection::value_type res;
+    typename StringCollection::value_type res;
     for (let token : tokens)
     {
         if (!res.empty())
@@ -626,7 +627,7 @@ static const vector<string>& GetAndCacheDictionary(const wstring& vocabFile)
         return iter->second;
     // not in cache: create and read from file
     auto& dict = dicts[vocabFile];
-    ifstream f(vocabFile);
+    auto f = _wifstream(vocabFile);
     copy(istream_iterator<string>(f), istream_iterator<string>(), back_inserter(dict));
     return dict;
 }
@@ -1108,7 +1109,7 @@ class GetCommandLineArguments
         bool optional = argTag[0] == '?';
         if (optional)
             argTag++;
-        if (argc > 0 && Front() == "--"s + argTag)
+        if (argc > 0 && Front() == string("--") + argTag)
         {
             let argStr = (Pop(), Pop());
             SetArg(argStr, argVal);
@@ -1123,6 +1124,10 @@ class GetCommandLineArguments
     }
     // back conversion for printing --thanks to Billy O'Neal for the SFINAE hacking
     struct unique_c1xx_workaround_tag_give_this_a_fun_name;
+#ifndef _MSC_VER // missing in C++11
+    template<typename... Ts> struct make_void { typedef void type; };
+    template<typename... Ts> using void_t = typename make_void<Ts...>::type;
+#endif
     template<typename T, typename = void> struct has_towstring : false_type {};
     template<typename T> struct has_towstring<T, void_t<unique_c1xx_workaround_tag_give_this_a_fun_name, decltype(declval<T>().ToWString())>> : true_type {};
     template<typename T> static wstring ToWStringImpl(const T& val, true_type) { return val.ToWString(); }
@@ -1157,7 +1162,7 @@ private:
     void Get() // end of recursion
     {
         if (argc > 0)
-            InvalidArgument("unexpected extraneous command-line argument '%s'", Pop());
+            InvalidArgument("unexpected extraneous command-line argument '%s'", Pop().c_str());
     }
 public:
     // call this way: GetCommandLineArguments(argc, argv, "--tag1", variable1, "--tag2", variable2...)
