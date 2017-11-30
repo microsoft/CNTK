@@ -119,10 +119,12 @@ enum ElementWiseOperator
     opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
     opAxBplusC, /* a * b + c */
     opAminusCoverB, /* (a-c) / b + c */
+    opSubtractQuotient, /* a - (b ? b / c : 0)) */
     // quaternary
     opAxBplusCxD, /* a * b + c * d */
     opAxBxCoverD, /* a * b * c / d */
     opAminusBtimesCplusD, /* (a-b)*c+d */
+    opMVNormFromStats, /* (x, sqrSum, sum, count) -> (x-mu)/sigma */
     // Note: not all that's implemented in CNTK ComputationNodes has a TensorView opcode yet
 };
 
@@ -205,12 +207,14 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithPowExponentDerivative); \
     Macro(ElementwiseProductWithPowBaseDerivative);     \
     Macro(AxBplusC);                                    \
-    Macro(AminusCoverB);
+    Macro(AminusCoverB);                                \
+    Macro(SubtractQuotient);
 
 #define ForAllQuaternaryOps(Macro)                      \
     Macro(AxBplusCxD);                                  \
     Macro(AxBxCoverD);                                  \
-    Macro(AminusBtimesCplusD);
+    Macro(AminusBtimesCplusD);                          \
+    Macro(MVNormFromStats);
 
 #define ForAllElementWiseOps(Macro) ForAllNullaryOps(Macro) ForAllUnaryOps(Macro) ForAllBinaryOps(Macro) ForAllTernaryOps(Macro) ForAllQuaternaryOps(Macro)
 

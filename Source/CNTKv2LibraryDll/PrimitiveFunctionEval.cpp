@@ -311,31 +311,56 @@ namespace CNTK
                     runSqrSum->LogToFile(L"runSqrSum");
 #endif
                 }
-                if (runningStatsWeight != 0) // we got a contribution from the running stats
+                let doBatchRenorm = runningStatsWeight == 1;
+                if (doBatchRenorm) // this triggers Batch Renormalization
                 {
-                    //runCount ->LogToFile(L"runCount");
-                    //runSum   ->LogToFile(L"runSum");
-                    //runSqrSum->LogToFile(L"runSqrSum");
-                    let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats. In inference, this is 0.
-                    NDArrayView::NumericOperation({ runSum,    runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    mu    , rawMBStatsWeight);
-                    NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
-                    NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
-                    // ^^ var = 1/count sqrSum - mu^2 = 1/count sqrSum - (sum/count)^2   --this subtracts mu^2
-#ifdef LOG_BN
-                    mu    ->LogToFile(L"mu'");
-                    sigma2->LogToFile(L"sigma2'");
-#endif
+                    // in Batch Renorm, we normalize against the running stats
+                    // Note: don't touch mu and sigma here, we need them below
+                    // xHat = x - runningSum/runCount
+                    NDArrayView::NumericOperation({ x, runSum, runCount }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSubtractQuotient, xHat); // (x-running mu)
+                    // xHat /= (sqrt(sigma2) + eps), with
+                    // sigma2 = (runSqrSum/runCount) - (runSum/runCount)^2
+                    NDArrayView::NumericOperation({ xHat, runSqrSum, runSum, runCount }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opMVNormFromStats, xHat);
+                    // apply scale and bias
+                    NDArrayView::NumericOperation({ xHat, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
+                    // Now our output value has been computed.
+
+                    // compute sigma and xHat to represent the local MB stats, for use in Backprop
+                    // xHat = (x-mu)/sigma
+                    NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
+                    double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
+                    if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
+                        NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
+                    NDArrayView::NumericOperation({ x, sigma, mu }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, xHat);  // (x-mu)/sigma
                 }
-                // now perform actual BatchNormalization based on the estimates of mu and sigma^2
-                // sigma (remember that this is in-place, &sigma2==&sigma)
-                NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
-                double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
-                if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
-                    NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
-                // xHat = (x-mu)/sigma
-                NDArrayView::NumericOperation({ x, sigma, mu }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, xHat);  // (x-mu)/sigma
-                // apply scale and bias
-                NDArrayView::NumericOperation({ xHat, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
+                else
+                {
+                    if (runningStatsWeight != 0) // we got a contribution from the running stats
+                    {
+                        //runCount ->LogToFile(L"runCount");
+                        //runSum   ->LogToFile(L"runSum");
+                        //runSqrSum->LogToFile(L"runSqrSum");
+                        let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats. In inference, this is 0.
+                        NDArrayView::NumericOperation({ runSum,    runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    mu    , rawMBStatsWeight);
+                        NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
+                        NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
+                        // ^^ var = 1/count sqrSum - mu^2 = 1/count sqrSum - (sum/count)^2   --this subtracts mu^2
+#ifdef LOG_BN
+                        mu    ->LogToFile(L"mu'");
+                        sigma2->LogToFile(L"sigma2'");
+#endif
+                    }
+                    // now perform actual BatchNormalization based on the estimates of mu and sigma^2
+                    // sigma (remember that this is in-place, &sigma2==&sigma)
+                    NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
+                    double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
+                    if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
+                        NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
+                    // xHat = (x-mu)/sigma
+                    NDArrayView::NumericOperation({ x, sigma, mu }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, xHat);  // (x-mu)/sigma
+                    // apply scale and bias
+                    NDArrayView::NumericOperation({ xHat, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
+                }
             }
             break;
         case PrimitiveOpType::OneHot:
@@ -641,7 +666,7 @@ namespace CNTK
                 //     (scale / sigma) * -1/N * (xHat * scaleGradient)
                 //     (scale / sigma) * -1/N * biasGradient;
                 // TODO: redundant with gradients[1] and [2]--how to cache this?
-                // In case of fixed stats, we only have the first term.
+                // In case of fixed stats, we only have the first term. That'd be bad, since it no longer leaves the length of the input unchanged.
                 //   ^^ BUGBUG: We need to check the volatile flag correctly, to make this test work.
                 // what the gradients are, in words, of the normalization part:
                 //  - bn = meanNorm >> lengthNorm >> mul_by_sqrt_N >> scale >> addBias
@@ -680,7 +705,6 @@ namespace CNTK
                 //         = lambda g: (x-Mx) * (x-Mx)^T *  g / |x'|        # M = eye(N,N)/N computes mean and broadcasts it
                 //         = lambda g: [x x^T - M x x^T - x x^T M^T + M x x^T M^T]  *  g / |x'|        # M = eye(N,N)/N computes mean and broadcasts it
 
-
                 // add first term to gradient. This is the main path.
                 // outGradVal * (scale / sigma) == gradient through scale. This gives us the "gradient from top" of lengthNorm.
                 NDArrayView::NumericOperation({ outGradVal, scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, beta);
@@ -695,22 +719,36 @@ namespace CNTK
                         1 // only using running stats
                     /*else*/:
                         blendTimeConstant / (N + blendTimeConstant); // mix-in factor for running stats
-                let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats
+                let doBatchRenorm = runningStatsWeight == 1; // this triggers Batch Renormalization
+                let rawMBStatsWeight =
+                    /*if*/ (doBatchRenorm) ?
+                        1.0             // renorm: just use raw MB stats for backprop
+                    /*else*/:
+                        1.0 - runningStatsWeight; // actual contribution from raw MB stats
                 // note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
                 if (rawMBStatsWeight != 0)
                 {
-                    let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1, opElementwiseProduct, redBuf);
-                    NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-rawMBStatsWeight / N, opAxBxCoverD, gradient, /*beta=*/1.0);
+                    let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1 / sqrt(N), opElementwiseProduct, redBuf);
+                    // This gets the projection coefficients for projecting outGradVal onto (x-mu).
+                    // Now multiply it with xHat, to get the projection of outGradVal onto (x-mu),
+                    // and then subtract it from outGradVal. If rawMBStatsWeight==1 then that will leave only the contribution
+                    // that is perpendicular to (x-mu).
+                    // Note that xHat has norm sqrt(N), not 1. Hence we must divide by sqrt(N).
+                    NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-rawMBStatsWeight / sqrt(N), opAxBxCoverD, gradient, /*beta=*/1.0);
                     // add third term, that is, the path through std dev and mean estimator, which is
                     // (scale / sigma) * -1/N * biasGradient
-                    // This seems wrong.
-                    let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1, opCopy, redBuf);
-                    NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -rawMBStatsWeight / N, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
+                    let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1 / N, opCopy, redBuf);
+                    // ^^ this computes the batch means of the incoming gradient
+                    NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -rawMBStatsWeight, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
+                    // This subtracts the batch mean, hence makes the gradient zero-mean.
+                    // TODO: This seems to ignore the path through the variance normalizer. Is that already zero mean?
                 }
                 handled = true;
             }
             else if (i == 1) // scale is a reduction over outputGradientValue * (x-mu)/sigma
             {
+                // Note: In case of Batch Renormalization, this may be wrong, in that it should use the smoothed statistics.
+                //       Hence, do not use learnable scale for Batch Renormalization. --TODO: add a check here
                 let& xHat = inputValues[8]; // (x-mu)/sigma
                 NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradientValue)->shared_from_this(),
                                                 const_cast<NDArrayView*>(xHat)->shared_from_this() },

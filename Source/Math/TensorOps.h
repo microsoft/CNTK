@@ -225,6 +225,17 @@ DECL ElemType LogAdd(ElemType x, ElemType y)
     return x + log1p_(exp_(y - x));
 }
 
+// for given sufficient statistics, normalize x as compute (x-mu)/sigma
+template <typename ElemType>
+DECL ElemType NormalizeMeanVarFromStats(ElemType x, ElemType sqrSum, ElemType sum, ElemType count)
+{
+    let mu = sum ? sum / count : 0;
+    let sigma2 = (sqrSum ? sqrSum / count : 0) - mu * mu;
+    let eps = (ElemType)1e-5; // note: for now this is not configurable, which would be better
+    let sigma = eps + sqrt((max(sigma2, (ElemType)0)));
+    return (x - mu) / sigma;
+}
+
 // IndexElement reindexes a tensor along one dimension.
 // For the indexed dimension, the tensor op is prepared by setting 'a' to be broadcasting along the indexed dimension.
 // I.e. pa = &a points to the first element (as if index == 0).
@@ -350,6 +361,7 @@ DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? 0 : a * b * l
 DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
 DefTernaryOp(AxBplusC, a * b + c);
 DefTernaryOp(AminusCoverB, (a - c) / b);
+DefTernaryOp(SubtractQuotient, a - (b ? b / c : 0));
 
 #pragma pop_macro("DefTernaryOp")
 
@@ -364,6 +376,7 @@ DefTernaryOp(AminusCoverB, (a - c) / b);
 DefQuaternaryOp(AxBplusCxD, a * b + c * d);
 DefQuaternaryOp(AxBxCoverD, a * b * c * OpReciprocal(d));
 DefQuaternaryOp(AminusBtimesCplusD, (a - b) * c + d);
+DefQuaternaryOp(MVNormFromStats, NormalizeMeanVarFromStats(/*x=*/a, /*sqr sum=*/b, /*sum=*/c, /*count=*/d));
 
 #pragma pop_macro("DefQuaternaryOp")
 
