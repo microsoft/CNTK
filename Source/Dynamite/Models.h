@@ -137,7 +137,7 @@ public:
     void LogParameters(const wstring& prefix = L"") const
     {
         for (let& kv : m_nestedParameters) // log nested functions
-            kv.second->LogParameters(kv.first + L".");
+            kv.second->LogParameters(prefix + kv.first + L".");
         for (let& kv : m_parameters) // log parameters defined right here
         {
             let name = prefix + kv.first;
