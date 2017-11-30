@@ -504,11 +504,13 @@ static UnaryModel ResidualNet(size_t outputDim)
 template<typename ActivationFunctionType>
 static UnaryModel Activation(const ActivationFunctionType& activation, const std::wstring& name = std::wstring())
 {
+    let activationAsLambda = [=](const Variable& x) { return activation(x, name); };
+    // note: gcc won't let us call activation() directly inside the lambda below
     return UnaryModel(
-        [&](const Variable& x) -> Variable
+        [=](const Variable& x) -> Variable
         {
             CountAPICalls();
-            return activation(x, name);
+            return activationAsLambda(x);
         });
 }
 
