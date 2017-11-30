@@ -703,6 +703,7 @@ namespace CNTK
                     NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-rawMBStatsWeight / N, opAxBxCoverD, gradient, /*beta=*/1.0);
                     // add third term, that is, the path through std dev and mean estimator, which is
                     // (scale / sigma) * -1/N * biasGradient
+                    // This seems wrong.
                     let biasGradient = NDArrayView::NumericOperation({ outGradVal }, /*alpha=*/1, opCopy, redBuf);
                     NDArrayView::NumericOperation({ biasGradient, scale, sigma }, -rawMBStatsWeight / N, opElementwiseProductWithQuotient, gradient, /*beta=*/1.0);
                 }

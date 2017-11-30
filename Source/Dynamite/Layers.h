@@ -173,6 +173,8 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     static const double blendTimeConstant = 100000; // want stats from 100000 samples
     static size_t id = 0; // unique id
     auto thisId = /*blendTimeConstant != 0 ? 0 :*/ ++id;   // note: don't use 'id' in lambda below; it will access the static variable directly, not a captured value
+    auto one  = Constant({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"one");
+    auto zero = Constant({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"zero");
     auto scale = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"scale");
     auto bias  = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"bias");
     auto runningMean   = Parameter({ NDShape::InferredDimension }, CurrentDataType(), 0.0, CurrentDevice(), L"runningMean");
@@ -187,9 +189,16 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
         [=](const Variable& x) -> Variable
         {
             CountAPICalls(1);
+#if 1       // this version does the scale and bias explicitly
+            let xNorm = CNTK::BatchNormalization(x, thisId, one, zero,
+                                                 runningMean, runningInvStd, runningCount, /*spatial=*/false,
+                                                 normalizationTimeConstant, blendTimeConstant, DEFAULT_EPSILON, name);
+            return xNorm * scale + bias;
+#else
             return CNTK::BatchNormalization(x, thisId, scale, bias,
                                             runningMean, runningInvStd, runningCount, /*spatial=*/false,
                                             normalizationTimeConstant, blendTimeConstant, DEFAULT_EPSILON, name);
+#endif
         });
 #endif
 }
@@ -502,6 +511,7 @@ static UnaryModel ResidualNet(size_t outputDim)
 // simple wrapper, use as Activation(Tanh)
 // Use this to simplify expressions where one would otherwise need a lambda due to the name parameter.
 //template<typename ActivationFunctionType>
+// Due to what seems a gcc bug, the template does not work. According to Jason Barnett, it does work with gcc 8.
 static UnaryModel Activation(const function<Variable(Variable, const wstring&)>/*ActivationFunctionType*/& activation, const std::wstring& name = std::wstring())
 {
     return UnaryModel(
