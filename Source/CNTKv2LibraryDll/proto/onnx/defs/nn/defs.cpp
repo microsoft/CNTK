@@ -10,7 +10,7 @@ namespace ONNXIR {
             "where M is often the batch size.")
         .Input("X", "input tensor that's coerced into a 2D matrix of size (MxK) ", "T")
         .Input("W", "A tensor that is coerced into a 2D blob of size (KxN) containing fully connected weight matrix", "T")
-        .Input("b", "1D blob containing bias vector", "T")
+        .Input("B", "1D blob containing bias vector", "T")
         .Output("Y", "output tensor", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" }, "Constrain input and output types to float tensors.")
         .Attr("axis",
@@ -32,13 +32,13 @@ namespace ONNXIR {
              " H and W are the height and width. Note that this is for the 2D image."
              "Otherwise the size is (N x D1 x D2 ... x Dn)",
              "T")
-        .Input("weights",
+        .Input("W",
              "The weight tensor that will be used in the convolutions; has size (M x C x kH x kW), "
              "where C is the number of channels, and kH and kW are the height and width of the kernel, "
              "and M is the number of feature maps. For more than 2 dimensions, the kernel shape will be "
              "(M x C x k1 x k2 x ... x kn), where is the dimension of the kernel",
              "T")
-        .Input("bias",
+        .Input("B",
             "Optional 1D bias to be added to the convolution, has size of M.",
             "T")
         .Output("Y",
@@ -86,13 +86,13 @@ namespace ONNXIR {
              " H and W are the height and width. Note that this is for the 2D image."
              "Otherwise the size is (N x D1 x D2 ... x Dn)",
              "T")
-        .Input("weights",
+        .Input("W",
              "The weight tensor that will be used in the convolutions; has size (C x M x kH x kW), "
              "where C is the number of channels, and kH and kW are the height and width of the kernel, "
              "and M is the number of feature maps. For more than 2 dimensions, the kernel shape will be "
              "(M x C x k1 x k2 x ... x kn), where is the dimension of the kernel",
              "T")
-        .Input("bias",
+        .Input("B",
             "Optional 1D bias to be added to the convolution, has size of C.",
             "T")
         .Output("Y",
@@ -277,7 +277,7 @@ namespace ONNXIR {
             "The scale as a 1-dimensional tensor of size C to be applied to the "
             "output.",
             "T")
-        .Input("bias",
+        .Input("B",
             "The bias as a 1-dimensional tensor of size C to be applied to the "
             "output.",
             "T")
@@ -323,30 +323,41 @@ namespace ONNXIR {
             "Compute the mean and variance across all spatial elements or per feature.",
             AttrType::AttributeProto_AttributeType_INT);
 
+    REGISTER_OPERATOR_SCHEMA(InstanceNormalization)
+        .Description("Carries out instance normalization as described in the paper "
+            "https://arxiv.org/abs/1607.08022. "
+            "y = scale * (x - mean) / sqrt(variance + epsilon) + B, "
+            "where mean and B are computed per instance per channel.")
+        .Input("input",
+            "The input 4-dimensional tensor of shape NCHW.", "T")
+        .Input("scale",
+            "The input 1-dimensional scale tensor of size C.", "T")
+        .Input("B",
+            "The input 1-dimensional bias tensor of size C.", "T")
+        .Output("output",
+            "The output 4-dimensional tensor of the same shape as input.", "T")
+        .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
+            "Constrain input and output types to float tensors.")
+        .Attr("epsilon",
+            "The epsilon value to use to avoid division by zero.",
+            AttrType::AttributeProto_AttributeType_FLOAT);
+
     // Taken from Caffe2
-    REGISTER_OPERATOR_SCHEMA(RoIPool)
-        .Description("Carries out ROI Pooling for Faster-RCNN. Depending on the mode, "
-            "there are multiple output cases: "
-            "Output case #1: Y, argmaxes (train mode)"
-            "Output case #2: Y           (test mode)")
+    REGISTER_OPERATOR_SCHEMA(MaxRoiPool)
+        .Description("ROI max pool consumes an input tensor X and region of interests (RoIs) to "
+            "apply max pooling across each RoI, to produce output 4-D tensor of shape "
+            "(num_rois, channels, pooled_shape[0], pooled_shape[1]).")
         .Input("X", "The input 4-D tensor of data. Only NCHW order is currently supported.", "T")
         .Input("rois", "RoIs (Regions of Interest) to pool over. Should be a 2-D tensor of "
             "shape (num_rois, 5) given as [[batch_id, x1, y1, x2, y2], ...].", "T")
         .Output("Y", "RoI pooled output 4-D tensor of shape "
             "(num_rois, channels, pooled_h, pooled_w).", "T")
-        .Output("argmaxes", "Argmaxes corresponding to indices in X used for gradient "
-            "computation. Only output if arg “is_test” is false.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
-        .Attr("is_test", "If set, run in test mode and skip computation of argmaxes (used "
-            "for gradient computation). Only one output tensor is produced. (Default: false).",
-            AttrType::AttributeProto_AttributeType_INT, int64_t(0))
+        .Attr("pooled_shape", "ROI pool output shape (height, width).",
+            AttrType::AttributeProto_AttributeType_FLOATS)
         .Attr("spatial_scale", "Multiplicative spatial scale factor to translate ROI "
             "coordinates from their input scale to the scale used when pooling (Default: 1.0).",
-            AttrType::AttributeProto_AttributeType_FLOAT, float(1.0))
-        .Attr("pooled_h", "The pooled output height (Default: 1).",
-            AttrType::AttributeProto_AttributeType_FLOAT, float(1.0))
-        .Attr("pooled_w", "The pooled output width (Default: 1).",
             AttrType::AttributeProto_AttributeType_FLOAT, float(1.0));
 
     REGISTER_OPERATOR_SCHEMA(LpPool)
@@ -375,7 +386,7 @@ namespace ONNXIR {
         .Attr("strides", "Stride along each axis.", AttrType::AttributeProto_AttributeType_INTS)
         .Attr("pads", "Padding along each axis, can take the value 0 (False) or non 0 (True)",
             AttrType::AttributeProto_AttributeType_INTS)
-        .Attr("p", "Value of p, default 2.0.", AttrType::AttributeProto_AttributeType_FLOAT, float(2.0));
+        .Attr("p", "Value of p, default 2.", AttrType::AttributeProto_AttributeType_INT, int64_t(2));
 
     REGISTER_OPERATOR_SCHEMA(GlobalLpPool)
         .Description("GlobalLpPool consumes an input tensor X and applies lp-pool across the "
@@ -389,7 +400,7 @@ namespace ONNXIR {
         .Output("Y", "Y Output data tensor from L-p pooling across the input tensor. Dimensions will "
             "vary based on various kernel, stride, and pad sizes.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" }, "Constrain input and output types to float tensors.")
-        .Attr("p", "Value of p, default 2.0.", AttrType::AttributeProto_AttributeType_FLOAT, float(2.0));
+        .Attr("p", "Value of p, default 2.", AttrType::AttributeProto_AttributeType_INT, int64_t(2));
 
     REGISTER_OPERATOR_SCHEMA(LRN)
         .Description("Perform local response normalization. "
@@ -417,14 +428,18 @@ namespace ONNXIR {
         .Attr("normalize_variance", "If false, normalize the mean only. Default is true.",
             AttrType::AttributeProto_AttributeType_INT, int64_t(1));
 
-    REGISTER_OPERATOR_SCHEMA(L2Normalization)
-        .Description("Perform L2 normalization  Divide each element by the square root of the "
-            "sum of squares of all elements in the input tensor.")
+    REGISTER_OPERATOR_SCHEMA(LpNormalization)
+        .Description("Given a matrix, apply Lp-normalization along the provided axis. "
+            "For RS4 default of p = 2 and it will perform L2 normalization. Divide each "
+            "element by the square root of the sum of squares of all elements in the input tensor.")
         .Input("input", "Input tensor of any shape", "T")
         .Output("output", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(float)" }, "Constrain input and output "
             "types to float tensors.")
-        .Attr("Axis", "Axis along which to perform normalization.", AttrType::AttributeProto_AttributeType_INT);
+        .Attr("axis", "Axis along which to perform normalization.",
+            AttrType::AttributeProto_AttributeType_INT)
+        .Attr("p", "(int64, default 2) the order of the normalization, only 1 or 2 are supported.",
+            AttrType::AttributeProto_AttributeType_INT);
 
     // Take from RS4
     REGISTER_OPERATOR_SCHEMA(Embedding)
@@ -433,13 +448,13 @@ namespace ONNXIR {
             "TODO: Omits use of CoreML bias parameter.")
         .Input("input", "1-D tensor of integers representing indices in the embedding "
             "dictionary with length [N] and values [0, input_dim -1]", "T1")
+        .Input("W", "2-D tensor of weights [O, I]", "T2")
         .Output("output", "Output tensor of computed features [N, O].", "T2")
         .TypeConstraint("T1", { "tensor(uint64)" }, "Constrain input types to ints.")
         .TypeConstraint("T2", { "tensor(float16)", "tensor(float)", "tensor(double)" },
                 "Constrain output types to float tensors.")
         .Attr("input_dim", "Size of the input vocabulary.", AttrType::AttributeProto_AttributeType_INT)
-        .Attr("output_dim", "Dimension of the embedding output vectors.", AttrType::AttributeProto_AttributeType_INT)
-        .Attr("weights", "2-D tensor of weights [O,I]", AttrType::AttributeProto_AttributeType_FLOATS);
+        .Attr("output_dim", "Dimension of the embedding output vectors.", AttrType::AttributeProto_AttributeType_INT);
 
     // Taken from RS4
     REGISTER_OPERATOR_SCHEMA(ImageScaler)
@@ -488,7 +503,7 @@ namespace ONNXIR {
         .Output("output", "Tensor after padding.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
-        .Attr("paddings",
+        .Attr("pads",
               "List of integers indicate the padding sizes, paddings's length "
               "should be the double of input's dimension. "
               "The order should be axis_0_begin, axis_0_end, axis_1_begin, ..., "
