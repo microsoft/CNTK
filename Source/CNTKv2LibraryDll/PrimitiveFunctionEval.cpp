@@ -643,11 +643,51 @@ namespace CNTK
                 // TODO: redundant with gradients[1] and [2]--how to cache this?
                 // In case of fixed stats, we only have the first term.
                 //   ^^ BUGBUG: We need to check the volatile flag correctly, to make this test work.
+                // what the gradients are, in words, of the normalization part:
+                //  - bn = meanNorm >> lengthNorm >> mul_by_sqrt_N >> scale >> addBias
+                //    with
+                //     - lengthNorm(x') = x' / |x'|
+                //     - meanNorm(x)    = x  - mean(x)         # == x'
+                //  - gradient through lengthNorm(x'):
+                //     - starting with gradient from top,
+                //     - divide it by |x'|, and
+                //     - "orthogonally reject" it on x' == only keep components perpendicular to x'
+                //     - expressed as function composition:
+                //       divide_by_length{x'} >> Sum(identity, orthogonal_projection_on{x'} >> negate)
+                //  - gradient through meanNorm(x):
+                //     - starting with gradient from top,
+                //     - make it zero-mean
+                //     - expressed as function composition:
+                //       Sum(identity, mean >> negate)
+
+                //  - total gradient function G = d(meanNorm >> lengthNorm)(x)/dx:
+                //       G = divide_by_length{x'} >> Sum(identity, orthogonal_projection_on{x'} >> negate) >> Sum(identity, mean >> negate)
+                //         = Sum(divide_by_length{x'} >> identity, divide_by_length{x'} >> orthogonal_projection_on{x'} >> negate) >> Sum(identity, mean >> negate)
+                //         = Sum(divide_by_length{x'} >> identity >> Sum(identity, mean >> negate),
+                //               divide_by_length{x'} >> orthogonal_projection_on{x'} >> negate >> Sum(identity, mean >> negate))
+                //         = Sum(divide_by_length{x'} >> identity >> identity,
+                //               divide_by_length{x'} >> identity >> mean >> negate,
+                //               divide_by_length{x'} >> orthogonal_projection_on{x'} >> negate >> identity),
+                //               divide_by_length{x'} >> orthogonal_projection_on{x'} >> negate >> mean >> negate)
+                //         = Sum(divide_by_length{x'},
+                //               divide_by_length{x'} >> mean >> negate,
+                //               divide_by_length{x'} >> orthogonal_projection_on{x'} >> negate),
+                //               divide_by_length{x'} >> orthogonal_projection_on{x'} >> mean)
+                //  - orthogonal_projection_on{x'}
+                //         = lambda g: x' * (x'/|x'|)^T * g         # x' = meanNorm(x)               --is g a row or a column?
+
+                //         = lambda g: x' * x'^T *  g / |x'|
+                //         = lambda g: (x-Mx) * (x-Mx)^T *  g / |x'|        # M = eye(N,N)/N computes mean and broadcasts it
+                //         = lambda g: [x x^T - M x x^T - x x^T M^T + M x x^T M^T]  *  g / |x'|        # M = eye(N,N)/N computes mean and broadcasts it
+
+
                 // add first term to gradient. This is the main path.
+                // outGradVal * (scale / sigma) == gradient through scale. This gives us the "gradient from top" of lengthNorm.
                 NDArrayView::NumericOperation({ outGradVal, scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, beta);
                 // add second term, that is, the path through the std dev estimator, which is
                 // -(xHat * scaleGradient/N) * (scale / sigma)
                 // scaled down by the weight that we actually use it, in case of blending
+                // orthogonally project gradient from top onto x
                 let N = (double)inputValues[0]->Shape().TotalSize(/*check=*/false) / (double)redBuf->Shape().TotalSize(/*check=*/false);
                 let blendTimeConstant = attributes[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>(); // consider running stats to have this many samples
                 double runningStatsWeight =
