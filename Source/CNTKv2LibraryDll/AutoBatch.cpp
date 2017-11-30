@@ -2504,7 +2504,18 @@ class InternalVariable::AutoBatch
         //if (f.m_op == PrimitiveOpType::Slice && !any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); }))
         //    Break;
         // execute it
+        //if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
+        //    Break;
         auto res = PrimitiveFunction::Forward(f.m_op, f.Attributes(), output.IsVolatile(), inputValues, outputShape, move(outValue), f);
+#if 0
+        if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
+        {
+            for (size_t i = 0; i < inputs.size(); i++)
+                inputValues[i]->LogToFile(L"###" + std::to_wstring(i), stderr, 800);
+            res->LogToFile(L"###->", stderr, 800);
+            fflush(stderr);
+        }
+#endif
         EndCudaStats(cudaStatsPtr, inputValues.front()->Device());
         // special case: a Slice op is non-contiguous. We must copy.
         if (f.m_op == PrimitiveOpType::Slice && !res->IsContiguous())
@@ -2514,6 +2525,10 @@ class InternalVariable::AutoBatch
             res = move(NDArrayView::NumericOperation({ move(res) }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
                         m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device())));
         }
+#if 0
+        LogFunction(f, f.m_profiler);
+        res->LogToFile(f.Name());
+#endif
         GetOutputFields(f).m_value = move(res);
         // we can free the inputs if they are no longer needed
         // TODO: For now this only helps for inference. For training, we need a more elaborate check.

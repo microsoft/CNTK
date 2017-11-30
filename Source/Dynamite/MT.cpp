@@ -20,6 +20,9 @@
 #include <io.h>
 #include <boost/filesystem.hpp>
 #include <sstream>
+#ifdef _MSC_VER
+#include <Windows.h> // for process killing
+#endif
 
 #define let const auto
 #define fun const auto
@@ -65,6 +68,7 @@ bool use1BitSgd = false;
 size_t saveEvery = 2000;
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
+int/*bool*/ runProfiling = false;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -138,8 +142,8 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
 }
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var)                  ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? LOG(var)                                : 0)
-#define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2) ? PrintSequence((prefix), (var), (vocab)) : string())
+#define DOLOG(var)                  ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2 && !runProfiling) ? (LOG(var),0)                            : 0)
+#define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2 && !runProfiling) ? PrintSequence((prefix), (var), (vocab)) : string())
 static string PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile);
 
 fun BidirectionalLSTMEncoder(size_t numLayers, size_t hiddenDim, double dropoutInputKeepProb)
@@ -385,20 +389,26 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     // create all the layer objects
     let encBarrier = Barrier(600, Named("encBarrier"));
     let encoderKeysProjection = encBarrier // keys projection for attention
-                             >> Linear(attentionDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias)
+        // batch norm after Linear causes huge std dev values
+                             >> Linear(attentionDim, ProjectionOptions::weightNormalize |/*ProjectionOptions_batchNormalize |*/ ProjectionOptions::bias)
                              >> Activation(Tanh)
                              >> Label(Named("encoderKeysProjection"));
     let encoderDataProjection = encBarrier // data projection for attention
         // stabilizer causes fluctuations
-                             >> Dense(attentionDim, /*ProjectionOptions_batchNormalize |*/ ProjectionOptions::bias)
+                             >> Dense(attentionDim, ProjectionOptions::weightNormalize |/*ProjectionOptions_batchNormalize |*/ ProjectionOptions::bias)
                              >> Activation(Tanh)
                              >> Label(Named("encoderDataProjection"));
     let embedTarget = Barrier(600, Named("embedTargetBarrier"))     // target embeddding
                    >> Embedding(embeddingDim)
+#if 0
+                   >> Dynamite::Sequence::Recurrence(GRU(encoderRecurrentDim), Constant({ encoderRecurrentDim }, CurrentDataType(), 0.0, CurrentDevice(), Named("historyInitialValue")))
+                   >> Dense(attentionDim, ProjectionOptions::weightNormalize | ProjectionOptions_batchNormalize |/*ProjectionOptions_batchNormalize |*/ ProjectionOptions::bias)
+                   >> Activation(Tanh)
+#endif
                    >> Label(Named("embedTarget"));
     let initialContext = Constant({ attentionDim }, CurrentDataType(), 0.0, CurrentDevice(), L"initialContext"); // 2 * because bidirectional --TODO: can this be inferred?
     let initialStateProjection = Barrier(20, Named("initialStateProjectionBarrier"))
-                              >> Dense(decoderRecurrentDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
+                              >> Dense(decoderRecurrentDim, ProjectionOptions::weightNormalize | /*ProjectionOptions_batchNormalize |*/ ProjectionOptions::bias)
                               >> Activation(Tanh)
                               >> Label(Named("initialStateProjection"));
     let stepBarrier = Barrier(20, Named("stepBarrier"));
@@ -409,7 +419,7 @@ fun AttentionDecoder(double dropoutInputKeepProb)
     let firstHiddenProjection = Barrier(600, Named("projBarrier"));
 #else
     let firstHiddenProjection = Barrier(600, Named("projBarrier"))
-                             >> Dense(decoderProjectionDim, ProjectionOptions::weightNormalize | ProjectionOptions::bias)
+                             >> Dense(decoderProjectionDim, ProjectionOptions::weightNormalize | /*ProjectionOptions_batchNormalize |*/ ProjectionOptions::bias)
                              >> Activation(ReLU)
                              >> Label(Named("firstHiddenProjection"));
 #endif
@@ -500,8 +510,9 @@ fun AttentionDecoder(double dropoutInputKeepProb)
         { L"topHiddenProjection",    topHiddenProjection },
         { L"outputProjection",       outputProjection },
     };
+    size_t n = 0;
     for (let& resnet : resnets)
-        nestedLayers[L"resnet[" + std::to_wstring(nestedLayers.size()) + L"]"] = resnet;
+        nestedLayers[L"resnet[" + std::to_wstring(n++) + L"]"] = resnet;
 
     // perform the entire thing
     return /*Dynamite::Model*/BinaryModel({ }, nestedLayers,
@@ -700,20 +711,28 @@ class SmoothedVar
 {
     double smoothedNumer = 0; double smoothedDenom = 0;
     const double smoothingTimeConstant = 409600; // smooth over 100 minibatches
+    double rateOfChange = 0;
 public:
     double Update(double avgVal, size_t count)
     {
+        let prevValue = Value();
         // this smoothing will approximate 1.0 for the denominator
         // (actually a little higher since we add 'count' items instead of 1)
         let decay      =     exp(-(double)count / smoothingTimeConstant);
         let complement = 1 - exp(-1             / smoothingTimeConstant);
         smoothedDenom = decay * smoothedDenom + complement * count;
         smoothedNumer = decay * smoothedNumer + complement * count * avgVal;
+        let newValue = Value();
+        rateOfChange = (prevValue - newValue) / count;
         return Value();
     }
     double Value() const
     {
         return smoothedNumer / smoothedDenom;
+    }
+    double RateOfChange() const
+    {
+        return rateOfChange;
     }
 } smoothedLoss;
 
@@ -724,6 +743,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // data
+    if (runProfiling) // if profiling then use small files so we don't measure the load time
+        srcTrainFile = srcTestFile, tgtTrainFile = tgtTestFile;
     let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/true);
 
     // run something through to get the parameter matrices shaped --ugh!
@@ -740,7 +761,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     let isDebugging = communicator->Workers().size() == 1;
     let minibatchSize = 4096 / (isDebugging ? 6 : 1); // for debugging: smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
-    learnerOptions.gradientClippingThresholdPerSample = 0.2;
+    learnerOptions.gradientClippingThresholdPerSample = 0.2 / 4096;
     LearnerPtr baseLearner;
     double lr0;
     if (learnerType == "sgd")
@@ -755,8 +776,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //  - LR is specified for av gradient
         //  - numer should be /minibatchSize
         //  - denom should be /sqrt(minibatchSize)
-        let f = 1 / sqrt(minibatchSize)/*AdaGrad correction-correction*/;
-        // ...TODO: Haven't I already added that to the base code??
+        let f = 1 / sqrt(4096/*minibatchSize*/)/*AdaGrad correction-correction*/;
+        // ...TODO: Haven't I already added that to the base code?? Or is this only for compat with Jacob's parameters?
         lr0 = learningRate * f;
         baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
                                   MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
@@ -842,7 +863,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #if 1
         // dynamically adjust the MB size lower at the start to ramp up
         let fullMbSizeAt = 1000000;
-        let lowMbSize = isDebugging ? minibatchSize : minibatchSize / (communicator->Workers().size() > 6 ? 8 : 16);
+        let lowMbSize = (isDebugging || runProfiling || startMbCount > 0) ? minibatchSize : minibatchSize / (communicator->Workers().size() > 6 ? 8 : 16);
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
         let actualMinibatchSize = clamp(lowMbSize + (minibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, minibatchSize);
 #else
@@ -937,9 +958,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //partTimer.Log("criterion_fn", numLabels);
             // backprop and model update
             let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
-#if 1       // use 0 to measure graph building only
             partTimer.Restart();
             fprintf(stderr, "%5d:  ", (int)mbCount); // prefix for the log
+            if (!runProfiling)
+            { // use 0 to measure forward time only
+
             mbLoss.Value()->AsScalar<float>(); // trigger computation
             let timeForward = partTimer.Elapsed();
             //fprintf(stderr, "%.7f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
@@ -959,6 +982,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             partTimer.Restart();
 #if 1       // log the gradients
+            //for (let& p : parameters) if (p.Name() == L"project1.W")
+            //{
+            //    p.Value()->LogToFile(p.Name(), stderr, 800);
+            //}
+            //if (mbCount > 1)
+            //    exit(0);
             if (mbCount % 50 == 1) for (let& p : parameters)
             {
                 if (gradients[p]->GetStorageFormat() != StorageFormat::SparseBlockCol)
@@ -983,8 +1012,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             mbLoss = Variable(); // this destructs the entire graph
             let timeDeleteGraph = partTimer.Elapsed();
             if (communicator->CurrentWorker().IsMain())
-                fprintf(stderr, "%5d:  loss, PPL = [smoothed] %4.2f, ### %8.2f ### [this] %9.7f, %6.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
-                                (int)mbCount, smoothedLossVal, exp(smoothedLossVal), lossPerLabel, exp(lossPerLabel), (int)totalLabels,
+                fprintf(stderr, "%5d:  loss, PPL = [smoothed] %4.2f, ### %8.2f ### [this] %9.7f * %d, %6.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
+                                (int)mbCount, smoothedLossVal, exp(smoothedLossVal), lossPerLabel, (int)info.numberOfSamples, exp(lossPerLabel), (int)totalLabels,
                                 info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples,
                                 1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
             // log
@@ -993,24 +1022,31 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 fflush(stderr);
             if (std::isnan(lossPerLabel))
                 throw runtime_error("Loss is NaN.");
-#else
-            let elapsed = timer.ElapsedSeconds(); // [sec]
-            double lossPerLabel = 0, smoothedLossVal = 0;
-            fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, d=%.0f ms\n",
-                            (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
-                            numScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numScoredLabels,
-                            1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeDeleteGraph);
-            totalLabels;
-#endif
-            //if (mbCount == 10)
-            //    exit(0);
+            }
+            else // runProfiling
+            {
+                double lossPerLabel = mbLoss.Value()->AsScalar<float>() / numScoredLabels, smoothedLossVal = 0;
+                partTimer.Restart();
+                mbLoss = Variable(); // this destructs the entire graph
+                let timeDeleteGraph = partTimer.Elapsed();
+                let elapsed = timer.ElapsedSeconds(); // [sec]
+                fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, d=%.0f ms\n",
+                    (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
+                    numScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numScoredLabels,
+                    1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeDeleteGraph);
+                totalLabels;
+            }
             mbCount++;
+            //fflush(stderr);
+            //if (mbCount >= startMbCount + 1)
+            //    return;
         }
-        if (mbCount == 20)
+        if (mbCount == 200)
         {
             let numAPICalls = CountAPICalls(0) - numAPICalls00;
             fprintf(stderr, "#API calls in last minibatch = %.1f * %d\n", numAPICalls / (float)subMinibatches, (int)subMinibatches), fflush(stderr);
-            //_exit(0);
+            if (runProfiling)
+                return;
         }
     }
 }
@@ -1212,6 +1248,7 @@ int mt_main(int argc, char *argv[])
         {
             GetCommandLineArguments(argc, argv,
                 "command", command,
+                "?runProfiling", runProfiling,
                 "system", systemId,
                 "id", experimentId,
                 // optional overrides of global stuff
@@ -1310,9 +1347,17 @@ int mt_main(int argc, char *argv[])
     {
         fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
         fflush(stderr);
+#ifdef _MSC_VER
+        TerminateProcess(OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, TRUE, GetCurrentProcessId()), 0);
+#else
         std::terminate(); // work around the crash when unloading DLLs with CUDA
+#endif
         // BUGBUG: Does not do what I thought it would do.
         //return EXIT_FAILURE;
     }
+#ifdef _MSC_VER
+    if (runProfiling)
+        TerminateProcess(OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, TRUE, GetCurrentProcessId()), 0);
+#endif
     return EXIT_SUCCESS;
 }

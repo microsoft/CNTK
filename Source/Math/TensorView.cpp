@@ -844,6 +844,13 @@ string TensorView<ElemType>::AsString(size_t maxItems /*= 6*/, bool columnMajor 
         let strides = m_shape.GetStrides();
         let rank = m_shape.GetRank();
         res.reserve(sobViewPtr->GetNumElements() * 10);
+#if 1   // show the abs max value and its location
+        auto maxIter = max_element(data.get(), data.get() + sobViewPtr->GetNumElements());
+        let  minIter = min_element(data.get(), data.get() + sobViewPtr->GetNumElements());
+        if (-*minIter > *maxIter)
+            maxIter = minIter;
+        res += "_[" + to_string(maxIter - data.get()) + "] = " + to_string(*maxIter) + " ";
+#endif
         TensorDataAsString(res, data.get(), dims, strides, rank, rank, 0, maxItems, columnMajor);
     }
     return res;

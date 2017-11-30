@@ -26,6 +26,9 @@
 //#define ProjectionOptions_batchNormalize ProjectionOptions::stabilize/*batchNormalize*/
 #define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
 
+#define DEFAULT_EPSILON 1e-4
+//#define DEFAULT_EPSILON 1e-1
+
 #ifndef let
 #define let const auto
 #endif
@@ -118,7 +121,7 @@ static UnaryModel LengthNormalization(const Axis& axis = Axis(0))
     });
 #else
     auto scale    = Parameter({ },   CurrentDataType(), 1.0,   CurrentDevice(), L"scale");
-    let eps       = Constant::Scalar(CurrentDataType(), 1e-16, CurrentDevice());
+    let epsSqr    = Constant::Scalar(CurrentDataType(), DEFAULT_EPSILON * DEFAULT_EPSILON, CurrentDevice());
     let minusHalf = Constant::Scalar(CurrentDataType(), -0.5,  CurrentDevice());
     let profiler = Function::CreateDynamicProfiler(1, L"lnorm");
 
@@ -136,7 +139,7 @@ static UnaryModel LengthNormalization(const Axis& axis = Axis(0))
         [=](const Variable& x0) -> Variable
         {
             CountAPICalls(3);
-            let invLen = Pow(InnerProduct(x0, x0, axis) + eps, minusHalf);
+            let invLen = Pow(InnerProduct(x0, x0, axis) + epsSqr, minusHalf);
             return invLen;
         }, Named("doGetInverseOfL2Norm"));
     // perform the length-normalization operation
@@ -187,7 +190,7 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
             CountAPICalls(1);
             return CNTK::BatchNormalization(x, thisId, scale, bias,
                                             runningMean, runningInvStd, runningCount, /*spatial=*/false,
-                                            normalizationTimeConstant, blendTimeConstant, /*epsilon=*/0.0001, name);
+                                            normalizationTimeConstant, blendTimeConstant, DEFAULT_EPSILON, name);
         });
 #endif
 }
@@ -218,26 +221,27 @@ static UnaryModel Dense(size_t outputDim, size_t inputDim, const UnaryModel& act
 {
     let hasBatchNorm  = (opts & (ProjectionOptions::batchNormalize )) != 0;
     // current hack logic ("noln"): no BN, LN becomes Droppo
-    //let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
-    let hasLengthNorm = false;// (opts & (ProjectionOptions::lengthNormalize)) != 0;
+    let hasLengthNorm = (opts & (ProjectionOptions::lengthNormalize)) != 0;
+    //let hasLengthNorm = false;// (opts & (ProjectionOptions::lengthNormalize)) != 0;
     let hasWeightNorm = (opts & (ProjectionOptions::weightNormalize)) != 0;
     let hasBias       = (opts & (ProjectionOptions::bias           )) != 0;
 #ifdef DISABLE_NORMALIZATIONS
     let hasScale = false;
 #else
-    //let hasScale      = (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
-    let hasScale      = (opts & (ProjectionOptions::lengthNormalize)) != 0 ||       (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
+    let hasScale      = (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
+    //let hasScale      = (opts & (ProjectionOptions::lengthNormalize)) != 0 ||       (opts & (ProjectionOptions::stabilize      )) != 0; // Droppo stabilizer
 #endif
     if (hasBatchNorm && !hasBias)
         InvalidArgument("Dense: ProjectionOptions::batchNormalize requires ProjectionOptions::bias to be specified as well");
     if (hasScale && (hasBatchNorm || hasLengthNorm))
         InvalidArgument("Dense: ProjectionOptions::stabilize is not meaningful (will cancel out) with batch or layer normalization");
-    auto W                  = Parameter({ (NDShapeDimension)outputDim, (NDShapeDimension)inputDim }, CurrentDataType(),  GlorotUniformInitializer(), CurrentDevice(), L"W");
-    auto b                  = Parameter({                   outputDim                             }, CurrentDataType(),  0.0f,                       CurrentDevice(), L"b");
-    auto scale              = Parameter({                                                         }, CurrentDataType(),  1.0,                        CurrentDevice(), L"scale");
+    auto W                  = Parameter({ (NDShapeDimension)outputDim, (NDShapeDimension)inputDim }, CurrentDataType(),  GlorotUniformInitializer(),       CurrentDevice(), L"W");
+    auto b                  = Parameter({                   outputDim                             }, CurrentDataType(),  0.0f,                             CurrentDevice(), L"b");
+    auto scale              = Parameter({                                                         }, CurrentDataType(),  1.0,                              CurrentDevice(), L"scale");
     //let stabilizer = Stabilizer(4);
-    auto weightNormRescale  = Parameter({                   outputDim                             }, CurrentDataType(),  1.0,                        CurrentDevice(), L"weightNormRescale");
-    let weightNormMinusHalf = Constant::Scalar(                                                      CurrentDataType(), -0.5,                        CurrentDevice());
+    auto weightNormRescale  = Parameter({                   outputDim                             }, CurrentDataType(),  1.0,                              CurrentDevice(), L"weightNormRescale");
+    let epsSqr              = Constant::Scalar(                                                      CurrentDataType(), DEFAULT_EPSILON * DEFAULT_EPSILON, CurrentDevice());
+    let weightNormMinusHalf = Constant::Scalar(                                                      CurrentDataType(), -0.5,                              CurrentDevice());
     let batchNorm = hasBatchNorm ? BatchNormalization(/*axis=*/1, Named("DenseBN")) : Identity;
     let lengthNorm = hasLengthNorm ? LengthNormalization() : Identity;
     vector<Parameter> parameters{ W };
@@ -245,7 +249,7 @@ static UnaryModel Dense(size_t outputDim, size_t inputDim, const UnaryModel& act
         parameters.push_back(b);
     if (hasScale)
         parameters.push_back(scale);
-    if (hasWeightNorm && !(hasBatchNorm && !hasLengthNorm))
+    if (hasWeightNorm /*&& !(hasBatchNorm && !hasLengthNorm)*/)
         parameters.push_back(weightNormRescale);
     map<wstring, ModelParametersPtr> nested{ { L"activation", activation } };
     //if (hasScale)
@@ -265,10 +269,10 @@ static UnaryModel Dense(size_t outputDim, size_t inputDim, const UnaryModel& act
         let rowNorm = InnerProduct(W, W, /*Axis(1)*/Axis_DropLastAxis);
         // BUGBUG: ^^ this reduction is wrong if W has more than one input axes, e.g. for image
         // TODO: need a ReduceToShape operation? Where instead of an axis, the target shape is specified?
-        let invLen = Pow(rowNorm, weightNormMinusHalf);
+        let invLen = Pow(rowNorm + epsSqr, weightNormMinusHalf);
         //if (hasBatchNorm && !hasLengthNorm) // batchNorm does element-wise rescaling, so no need to do it here as well
         //    return invLen;
-        let scale1 = (hasBatchNorm && !hasLengthNorm) ? invLen : invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
+        let scale1 = /*(hasBatchNorm && !hasLengthNorm) ? invLen :*/ invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
         return scale1;
         //y = scale1 * y;
     }, Named("dense.normWeight"));
@@ -346,62 +350,14 @@ static BinaryModel RNNStep(size_t outputDim)
     });
 }
 
-#if 0
-static BinaryModel GRU(size_t outputDim)
-{
-    let activation = [](const Variable& x) { return Tanh(x); };
-    auto W  = Parameter({ outputDim * 3, NDShape::InferredDimension }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"W");
-    auto R  = Parameter({ outputDim * 2, outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R");
-    auto R1 = Parameter({ outputDim    , outputDim }, CurrentDataType(), GlorotUniformInitializer(), CurrentDevice(), L"R1");
-    auto b  = Parameter({ outputDim * 3 }, CurrentDataType(), 0.0f, CurrentDevice(), L"b");
-    let normW = LengthNormalization();
-    let normR = LengthNormalization();
-    let normR1 = LengthNormalization();
-    let stackAxis = Axis(0);
-    let stackedDim = (int)outputDim;
-    let one = Constant::Scalar(CurrentDataType(), 1.0, CurrentDevice()); // for "1 -"...
-    // e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    return BinaryModel({ W, R, R1, b },
-    {
-        { L"normW",  normW  },
-        { L"normR",  normR  },
-        { L"normR1", normR1 }
-    },
-    [=](const Variable& dh, const Variable& x)
-    {
-        let& dhs = dh;
-        // projected contribution from input(s), hidden, and bias
-        let projx3 = b + normW(Times(W, x));
-        let projh2 = normR(Times(R, dh));
-        let zt_proj = Slice(projx3, stackAxis, 0 * stackedDim, 1 * stackedDim) + Slice(projh2, stackAxis, 0 * stackedDim, 1 * stackedDim);
-        let rt_proj = Slice(projx3, stackAxis, 1 * stackedDim, 2 * stackedDim) + Slice(projh2, stackAxis, 1 * stackedDim, 2 * stackedDim);
-        let ct_proj = Slice(projx3, stackAxis, 2 * stackedDim, 3 * stackedDim);
-
-        let zt = Sigmoid(zt_proj)->Output();        // update gate z(t)
-
-        let rt = Sigmoid(rt_proj);                  // reset gate r(t)
-
-        let rs = dhs * rt;                          // "cell" c
-        let ct = activation(ct_proj + normR1(Times(R1, rs)));
-
-        let ht = (one - zt) * ct + zt * dhs; // hidden state ht / output
-
-        //# for comparison: CUDNN_GRU
-        //# i(t) = sigmoid(W_i x(t) + R_i h(t - 1) + b_Wi + b_Ru)
-        //# r(t) = sigmoid(W_r x(t) + R_r h(t - 1) + b_Wr + b_Rr)   --same up to here
-        //# h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
-        //# h(t) = (1 - i(t).*h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
-
-        return ht;
-    });
-}
-#else
 static BinaryModel GRU(size_t outputDim)
 {
     // matrices are stacked in order (i, r, h)
-#if 0
-    auto projectInput = Linear(outputDim * 3,            ProjectionOptions::batchNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
-    auto projectState = Linear(outputDim * 3, outputDim, ProjectionOptions::batchNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectState"));
+#if 1
+    auto projectInput = Linear(outputDim * 3,            ProjectionOptions::weightNormalize | ProjectionOptions::lengthNormalize /*ProjectionOptions_batchNormalize*/ | ProjectionOptions::bias, Named("projectInput"));
+    auto projectState = Linear(outputDim * 3, outputDim, /*ProjectionOptions::weightNormalize |*/ ProjectionOptions::lengthNormalize /*ProjectionOptions_batchNormalize*/ | ProjectionOptions::bias, Named("projectState"));
+    // BUGBUG: This crashes "batch axis not adjacent to stacking axis??" vvvvv
+    //auto projectState = Linear(outputDim * 3, outputDim, ProjectionOptions::weightNormalize | ProjectionOptions::lengthNormalize /*ProjectionOptions_batchNormalize*/ | ProjectionOptions::bias, Named("projectState"));
 #else
     auto projectInput = Linear(outputDim * 3, ProjectionOptions::lengthNormalize | ProjectionOptions::weightNormalize | ProjectionOptions::bias, Named("projectInput"));
     //auto projectState = Linear(outputDim * 3, ProjectionOptions::none, CurrentDevice());
@@ -458,15 +414,15 @@ static BinaryModel GRU(size_t outputDim)
         [=](const Variable& dh, const Variable& x) -> Variable
         {
             let projx3  = projectInput(x);  // note: this has a bias
-            //let projdh3 = projectState(dh); // note: also got a bias; we got two. Should be OK.
-            let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
+            let projdh3 = projectState(dh); // note: also got a bias; we got two. Should be OK.
+            //let projdh3 = normR(Times(R, dh)); CountAPICalls(1);
             return gru3Composite(dh, projdh3, projx3);
         }, Named("gru"));
     return BinaryModel({ /*R*/ },
         {
             { L"projectInput",  projectInput },
-            //{ L"projectState",  projectState },
-            { L"normR",  normR  },
+            { L"projectState",  projectState },
+            //{ L"normR",  normR  },
         },
         // TODO: can we pass doGRU here directly, instead of creating a new lambda? Needs some form of type cast of StaticModel to this lambda.
         [=](const Variable& dh, const Variable& x) //mutable
@@ -474,7 +430,6 @@ static BinaryModel GRU(size_t outputDim)
             return doGRU(dh, x);
         });
 }
-#endif
 
 static TernaryModel LSTM(size_t outputDim) // TODO: finish this once we have tuples
 {
@@ -495,17 +450,42 @@ static TernaryModel LSTM(size_t outputDim) // TODO: finish this once we have tup
 static UnaryModel ResidualNet(size_t outputDim)
 {
     // TODO: why not combine with weightNormalize?
-    let project1 = Linear(outputDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias, Named("project1"));
-    let project2 = Linear(outputDim, ProjectionOptions_batchNormalize | ProjectionOptions::bias, Named("project2"));
+    let project1 = Linear(outputDim, ProjectionOptions::weightNormalize | ProjectionOptions_batchNormalize | ProjectionOptions::bias, Named("project1"));
+    let project2 = Linear(outputDim, ProjectionOptions::weightNormalize | ProjectionOptions_batchNormalize | ProjectionOptions::bias, Named("project2"));
+    auto min   = Constant({ outputDim }, CurrentDataType(),  0.0, CurrentDevice(), L"min");
+    auto max   = Constant({ outputDim }, CurrentDataType(), 10.0, CurrentDevice(), L"max");
+    auto slope = Constant({ outputDim }, CurrentDataType(),  0.8, CurrentDevice(), L"slope");
+    auto skipScale = Parameter({ outputDim }, CurrentDataType(), 1.0f, CurrentDevice(), L"skipScale");
+
+    // change ReLU to Softplus(4x)/4, hoping to improve the BN issue
+    auto zero = Constant({ outputDim }, CurrentDataType(), 0.0, CurrentDevice(), L"zero");
+    let steepness = 4.0;
+    auto steepFactor    = Constant({ outputDim }, CurrentDataType(), steepness, CurrentDevice(), L"steepFactor");
+    auto invSteepFactor = Constant({ outputDim }, CurrentDataType(), 1 / steepness / sqrt(2.), CurrentDevice(), L"invSteepFactor");
+    // BUGBUG: auto-batch blows up on dim {}, batchAxis screwed up
     let doResidualNet = StaticModel(/*isBasicBlock=*/false,
         [=](const Variable& x)
         {
+#if 0       // clipped ReLU version
+            CountAPICalls(7);
+            let h = Clip((project1(x)                ), min, max, Named("hRes"));
+            let r = Clip((project2(h) + x * skipScale), min, max, Named("rRes"));
+            //let h = max - ReLU(max - ReLU(project1(x),     Named("hRes")));
+            //let r = max - ReLU(max - ReLU(project2(h) + x, Named("rRes")));
+#else
+#if 1       // soft plus version
+            CountAPICalls(7);
+            let h = LogAddExp((project1(x)                ) * steepFactor, zero, Named("hRes")) * invSteepFactor;
+            let r = LogAddExp((project2(h) + x * skipScale) * steepFactor, zero, Named("rRes")) * invSteepFactor;
+#else       // regular version
             CountAPICalls(3);
             let h = ReLU(project1(x)    , Named("hRes"));
             let r = ReLU(project2(h) + x, Named("rRes"));
+#endif
+#endif
             return r;
         }, Named("doResidualNet"));
-    return UnaryModel({ },
+    return UnaryModel({ skipScale },
         {
             { L"project1", project1 },
             { L"project2", project2 },
