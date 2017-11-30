@@ -13,53 +13,8 @@ namespace CNTK
     using namespace std;
     using namespace std::placeholders;
 
-    // Auxiliary functions
-    static ParameterCloningMethod ToNative(CNTK_ParameterCloningMethod method)
-    {
-        switch (method)
-        {
-        case CNTK_ModelParameterShare:
-            return ParameterCloningMethod::Share;
-        case CNTK_ModelParameterClone:
-            return ParameterCloningMethod::Clone;
-        case CNTK_ModelParameterFreeze:
-            return ParameterCloningMethod::Freeze;
-        default:
-            InvalidArgument("Cloning method is invalid");
-            return ParameterCloningMethod::Invalid;
-        }
-    }
-
-    static inline NDShape ToNDShape(const CNTK_Shape& shape)
-    {
-        vector<size_t> dimensions;
-        dimensions.reserve(shape.size);
-        for (size_t i = 0; i < shape.size; ++i)
-            dimensions.push_back(shape.value[i]);
-        return NDShape(dimensions);
-    }
-
-    static inline CNTK_Shape FromNDShape(const NDShape& shape) noexcept
-    {
-        CNTK_Shape result;
-        result.size = (uint32_t)shape.Rank();
-        result.value = new uint32_t[result.size];
-        for (size_t i = 0; i < shape.Dimensions().size(); i++)
-            result.value[i] = (uint32_t)shape.Dimensions()[i];
-        return result;
-    }
-
-    DeviceDescriptor GetDeviceDescriptor(const wchar_t* device)
-    {
-        if (!device)
-            InvalidArgument("Device is not allowed to be null.");
-        if (wstring(L"cpu") != device)
-            RuntimeError("Device '%ls' is not supported. Currently only CPU device is supported.", device);
-        return DeviceDescriptor::CPUDevice();
-    }
-
     // Main interface
-    EvaluatorWrapper::EvaluatorWrapper(FunctionPtr model, DeviceDescriptor device)
+    CNTKEvaluatorWrapper::CNTKEvaluatorWrapper(FunctionPtr model, DeviceDescriptor device)
         : m_func(model), m_device(device)
     {
         for (const auto arg : m_func->Arguments())
@@ -69,70 +24,29 @@ namespace CNTK
             m_outputs.insert(make_pair(arg.Name(), arg));
     }
 
-    EvaluatorWrapper::EvaluatorWrapper(const wchar_t* modelFilePath, DeviceDescriptor device) :
-        EvaluatorWrapper::EvaluatorWrapper(Function::Load(modelFilePath, m_device), device)
+    CNTKEvaluatorWrapper::CNTKEvaluatorWrapper(const wchar_t* modelFilePath, DeviceDescriptor device) :
+        CNTKEvaluatorWrapper(Function::Load(modelFilePath, device), device)
     {}
 
-    EvaluatorWrapper::EvaluatorWrapper(const wchar_t* modelFilePath, const wchar_t* device) :
-        EvaluatorWrapper(modelFilePath, GetDeviceDescriptor(device))
+    CNTKEvaluatorWrapper::CNTKEvaluatorWrapper(const wchar_t* modelFilePath, const wchar_t* device) :
+        CNTKEvaluatorWrapper(modelFilePath, GetDeviceDescriptor(device))
     {}
 
-    void EvaluatorWrapper::GetModelArgumentsInfo(CNTK_Variable** inputs, uint32_t* numInputs)
+    void CNTKEvaluatorWrapper::GetModelArgumentsInfo(CNTK_Variable** inputs, uint32_t* numInputs)
     {
         assert(inputs != nullptr);
         assert(numInputs != nullptr);
         return GetVariableInfo(m_func->Arguments(), inputs, numInputs);
     }
 
-    void EvaluatorWrapper::GetModelOutputsInfo(CNTK_Variable** outputs, uint32_t* numOutputs)
+    void CNTKEvaluatorWrapper::GetModelOutputsInfo(CNTK_Variable** outputs, uint32_t* numOutputs)
     {
         assert(outputs != nullptr);
         assert(numOutputs != nullptr);
         return GetVariableInfo(m_func->Outputs(), outputs, numOutputs);
     }
 
-    static void CleanAndDestroyVariables(CNTK_Variable* array, size_t length)
-    {
-        for (size_t i = 0; i < length; i++)
-            CNTK_CleanVariable(&array[i]);
-        delete[] array;
-    }
-
-    static void CleanAndDestroyValues(CNTK_Value* array, size_t length)
-    {
-        for (size_t i = 0; i < length; i++)
-            CNTK_CleanValue(&array[i]);
-        delete[] array;
-    }
-
-    void EvaluatorWrapper::GetVariableInfo(const vector<Variable>& vars, CNTK_Variable** resultVars, uint32_t* numResultVars)
-    {
-        assert(numResultVars != nullptr);
-        auto arrayVarCleaner = std::bind(CleanAndDestroyVariables, _1, vars.size());
-        unique_ptr<CNTK_Variable, decltype(arrayVarCleaner)> result(new CNTK_Variable[vars.size()], arrayVarCleaner);
-        memset(result.get(), 0, sizeof(CNTK_Variable) * vars.size());
-
-        for (size_t i = 0; i < vars.size(); i++)
-        {
-            // Making sure with cleaners we do not leak anything on exception.
-            CNTK_Variable resultVar{ 0 ,{ 0, 0 } };
-            unique_ptr<CNTK_Variable, decltype(&CNTK_CleanVariable)> varCleaner(&resultVar, CNTK_CleanVariable);
-
-            const auto& var = vars[i];
-            resultVar.name = new wchar_t[var.Name().size() + 1];
-            copy(var.Name().c_str(), var.Name().c_str() + var.Name().size(), resultVar.name);
-            resultVar.name[var.Name().size()] = 0;
-            resultVar.shape = FromNDShape(var.Shape());
-            result.get()[i] = resultVar;
-
-            varCleaner.release();
-        }
-
-        *numResultVars = (uint32_t)vars.size();
-        *resultVars = result.release();
-    }
-
-    void EvaluatorWrapper::EvaluateSequence(
+    void CNTKEvaluatorWrapper::EvaluateSequence(
         const CNTK_Variable* inputs,
         const CNTK_Value* inputValues,
         const bool* inputResetFlags,
@@ -241,13 +155,13 @@ namespace CNTK
         *outputValues = result.release();
     }
 
-    unique_ptr<EvaluatorWrapper> EvaluatorWrapper::Clone(CNTK_ParameterCloningMethod method, bool flatten)
+    unique_ptr<EvaluatorWrapper> CNTKEvaluatorWrapper::Clone(CNTK_ParameterCloningMethod method, bool flatten)
     {
         FunctionPtr cloned;
         if (flatten)
             cloned = m_func->CloneFlattened(ToNative(method));
         else
             cloned = m_func->Clone(ToNative(method));
-        return unique_ptr<EvaluatorWrapper>(new EvaluatorWrapper(cloned, m_device));
+        return unique_ptr<EvaluatorWrapper>(new CNTKEvaluatorWrapper(cloned, m_device));
     }
 }

@@ -7,14 +7,14 @@
 // it should pass the result to the calling side to avoid any resource leaks.
 //
 
+#define _SCL_SECURE_NO_WARNINGS
+
 #include "stdafx.h"
 #include <string>
 #include <algorithm>
 #include <boost/noncopyable.hpp>
-#include "CNTKLibrary.h"
-#include "CNTKLibraryC.h"
-#include "EvaluatorWrapper.h"
 #include "ExceptionWithCallStack.h"
+#include "EvaluatorWrapper.h"
 
 using namespace Microsoft::MSR::CNTK;
 using namespace CNTK;
@@ -69,7 +69,7 @@ CNTK_StatusCode CNTK_LoadModel(const wchar_t* modelFilePath, const wchar_t* devi
         return StatusCode(CNTK_ERROR_NULL_POINTER, "'device' parameter is not allowed to be null");
 
     *handle = nullptr;
-    return ExceptionCatcher::Call([&]() { *handle = new EvaluatorWrapper(modelFilePath, device); });
+    return ExceptionCatcher::Call([&]() { *handle = new CNTKEvaluatorWrapper(modelFilePath, device); });
 }
 
 CNTK_StatusCode CNTK_CloneModel(CNTK_ModelHandle model, CNTK_ParameterCloningMethod method, bool flatten, CNTK_ModelHandle* cloned)
