@@ -11,7 +11,6 @@
 
 #include "CNTKLibrary.h"
 #include "Models.h"
-#include "Common.h"
 
 #include <functional>
 #include <cstdio>
@@ -509,7 +508,7 @@ template<typename ActivationFunctionType>
 static UnaryModel Activation(const ActivationFunctionType& activation, const std::wstring& name = std::wstring())
 {
     return UnaryModel(
-        [=](const Variable& x) -> Variable
+        [&](const Variable& x) -> Variable
         {
             CountAPICalls();
             return activation(x, name);
