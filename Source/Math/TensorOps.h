@@ -232,7 +232,7 @@ DECL ElemType NormalizeMeanVarFromStats(ElemType x, ElemType sqrSum, ElemType su
     let mu = sum ? sum / count : 0;
     let sigma2 = (sqrSum ? sqrSum / count : 0) - mu * mu;
     let eps = (ElemType)1e-5; // note: for now this is not configurable, which would be better
-    let sigma = eps + sqrt((max(sigma2, (ElemType)0)));
+    let sigma = eps + sqrt_((max(sigma2, (ElemType)0)));
     return (x - mu) / sigma;
 }
 

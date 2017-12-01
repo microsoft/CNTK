@@ -316,14 +316,14 @@ namespace CNTK
                 {
                     // in Batch Renorm, we normalize against the running stats
                     // Note: don't touch mu and sigma here, we need them below
-                    // xHat = x - runningSum/runCount
-                    NDArrayView::NumericOperation({ x, runSum, runCount }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSubtractQuotient, xHat); // (x-running mu)
-                    // xHat /= (sqrt(sigma2) + eps), with
+                    // xHat = (x - runningSum/runCount) / (sqrt(sigma2) + eps), with
                     // sigma2 = (runSqrSum/runCount) - (runSum/runCount)^2
-                    NDArrayView::NumericOperation({ xHat, runSqrSum, runSum, runCount }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opMVNormFromStats, xHat);
+                    NDArrayView::NumericOperation({ x, runSqrSum, runSum, runCount }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opMVNormFromStats, xHat);
+                    //xHat->LogToFile(L"xHat (after var norm)");
                     // apply scale and bias
                     NDArrayView::NumericOperation({ xHat, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
                     // Now our output value has been computed.
+                    //out->LogToFile(L"out");
 
                     // compute sigma and xHat to represent the local MB stats, for use in Backprop
                     // xHat = (x-mu)/sigma
@@ -332,6 +332,10 @@ namespace CNTK
                     if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
                         NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
                     NDArrayView::NumericOperation({ x, sigma, mu }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, xHat);  // (x-mu)/sigma
+#ifdef LOG_BN
+                    sigma->LogToFile(L"sigma (local)");
+                    xHat->LogToFile(L"xHat (local)");
+#endif
                 }
                 else
                 {
