@@ -9,9 +9,7 @@
 #include "Config.h"
 #include "CorpusDescriptor.h"
 #include "ConfigHelper.h"
-#include "UtteranceDescription.h"
 #include "Index.h"
-#include "HTKDeserializer.h"
 #include <boost/noncopyable.hpp>
 
 namespace CNTK {
@@ -44,16 +42,12 @@ private:
     // Initialization functions.
     void InitializeChunkInfos(CorpusDescriptorPtr corpus, ConfigHelper& config);
     void InitializeStreams(const std::wstring& featureName);
-    void InitializeFeatureInformation();
+    size_t RecordChunk(const string& latticePath, const vector<string>& tocLines, CorpusDescriptorPtr corpus, bool enableCaching);
 
     CorpusDescriptorPtr m_corpus;
-    msra::asr::simplesenonehmm m_hset;
 
     // General configuration
     int m_verbosity;
-
-    // Chunk descriptions.
-    std::vector<HTKChunkInfo> m_chunks;
 
     // Used to correlate a sequence key with the sequence inside the chunk when deserializer is running not in primary mode.
     // <key, chunkid, offset inside chunk>, sorted by key to be able to retrieve by binary search.

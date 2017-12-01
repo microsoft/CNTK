@@ -13,15 +13,13 @@ namespace CNTK {
     class LatticeIndexBuilder : public IndexBuilder
     {
     public:
-        LatticeIndexBuilder(const FileWrapper& input, CorpusDescriptorPtr corpus);
+        LatticeIndexBuilder(const FileWrapper& latticeFile, const std::vector<std::string>& latticeToc, CorpusDescriptorPtr corpus);
 
         virtual std::wstring GetCacheFilename() override;
 
     private:
-
         virtual void Populate(std::shared_ptr<Index>& index) override;
-
-        inline bool TryParseSequenceKey(const std::string& line, size_t& id, std::function<size_t(const std::string&)> keyToId);
+        std::vector<std::string> m_latticeToc;
     };
 
 } // namespace
