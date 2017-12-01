@@ -120,14 +120,14 @@ def convert_to_binary_convolution(model, filter_function = None):
             pad = padding[-1]        
             # Checking for the last two elements in the padding vector. 
             assert(pad == padding[-2])
-
+          
             return  binary_convolution(
                     filter_shape, 
                     num_filters = num_filters, 
                     channels = depth, 
                     strides=strides, 
                     pad = pad,          
-                    name='BinaryConvolution')(block.inputs[2])
+                    name='BinaryConvolution')(block.inputs[-1])
 
         return C.misc.convert(C.as_composite(block.block_root), 
                               convo_filter, 
