@@ -17,6 +17,74 @@ using namespace Microsoft::MSR::CNTK;
 
 using namespace std;
 
+// Base class for chunks in frame and sequence mode.
+// The lifetime is always less than the lifetime of the parent deserializer.
+class LatticeDeserializer::ChunkBase : public Chunk
+{
+protected:
+    vector<char> m_buffer;   // Buffer for the whole chunk
+    vector<bool> m_valid;    // Bit mask whether the parsed sequence is valid.
+
+    const LatticeDeserializer& m_deserializer;
+    const ChunkDescriptor& m_descriptor;     // Current chunk descriptor.
+
+    ChunkBase(const LatticeDeserializer& deserializer, const ChunkDescriptor& descriptor, const wstring& fileName):
+        m_descriptor(descriptor),
+        m_deserializer(deserializer)
+    {
+        if (descriptor.NumberOfSequences() == 0 || descriptor.SizeInBytes() == 0)
+            LogicError("Empty chunks are not supported.");
+
+        auto f = FileWrapper::OpenOrDie(fileName, L"rbS");
+        size_t sizeInBytes = descriptor.SizeInBytes();
+
+        // Make sure we always have 0 at the end for buffer overrun.
+        m_buffer.resize(sizeInBytes + 1);
+        m_buffer[sizeInBytes] = 0;
+
+        // Seek and read chunk into memory.
+        f.SeekOrDie(descriptor.StartOffset(), SEEK_SET);
+
+        f.ReadOrDie(m_buffer.data(), sizeInBytes, 1);
+
+        // all sequences are valid by default.
+        m_valid.resize(m_descriptor.NumberOfSequences(), true);
+    }
+
+    string KeyOf(const SequenceDescriptor& s)
+    {
+        return m_deserializer.m_corpus->IdToKey(s.m_key);
+    }
+};
+
+// MLF chunk when operating in sequence mode.
+class LatticeDeserializer::SequenceChunk : public LatticeDeserializer::ChunkBase
+{
+
+public:
+    SequenceChunk(const LatticeDeserializer& parent, const ChunkDescriptor& descriptor, const wstring& fileName)
+        : ChunkBase(parent, descriptor, fileName)
+    {
+    }
+
+    void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result) override
+    {
+        return GetSequence<float>(sequenceIndex, result);
+    }
+
+    template<class ElementType>
+    void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result)
+    {
+        const auto& sequence = m_descriptor.Sequences()[sequenceIndex];
+//        auto start = m_buffer.data() + sequence.OffsetInChunk();
+        //auto end = start + sequence.SizeInBytes();
+        // Deserialize the binary lattice graph and serialize it into a vector
+        SequenceDataPtr s = make_shared<DenseSequenceData>(sequence.SizeInBytes(), true);
+
+        result.push_back(s);
+    }
+};
+
 LatticeDeserializer::LatticeDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& cfg,
@@ -40,15 +108,57 @@ LatticeDeserializer::LatticeDeserializer(
     ConfigParameters streamConfig = input(inputName);
 
     ConfigHelper config(streamConfig);
-    wstring phoneFile = cfg(L"phoneFile");
+    /*wstring phoneFile = cfg(L"phoneFile");
     wstring transpFile = cfg(L"transpFile");
     wstring labelMappingFile = cfg(L"labelMappingFile");
 
     m_hset.loadfromfile(phoneFile, labelMappingFile, transpFile);
     const std::unordered_map<std::string, size_t>& modelsymmap = m_hset.getsymmap();
-
+    */
     InitializeStreams(inputName);
     InitializeChunkInfos(corpus, config);
+}
+
+size_t LatticeDeserializer::RecordChunk(const string& latticePath, const vector<string>& tocLines, CorpusDescriptorPtr corpus, bool enableCaching)
+{
+    size_t totalNumSequences = 0;
+    wstring latticePathW;
+    latticePathW.assign(latticePath.begin(), latticePath.end());
+    attempt(5, [this, latticePathW, tocLines, enableCaching, corpus]()
+    {
+        LatticeIndexBuilder builder(FileWrapper(latticePathW, L"rbS"), tocLines, corpus);
+        builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
+        m_indices.emplace_back(builder.Build());
+    });
+
+    m_latticeFiles.push_back(latticePathW);
+
+    auto& index = m_indices.back();
+    // Build auxiliary for GetSequenceByKey.
+    for (const auto& chunk : index->Chunks())
+    {
+        // Preparing chunk info that will be exposed to the outside.
+        auto chunkId = static_cast<ChunkIdType>(m_chunks.size());
+        for (uint32_t i = 0; i < chunk.NumberOfSequences(); ++i)
+        {
+            const auto& sequence = chunk[i];
+            auto sequenceIndex = i;
+            m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex));
+        }
+
+        totalNumSequences += chunk.NumberOfSequences();
+        m_chunkToFileIndex.insert(make_pair(&chunk, m_latticeFiles.size() - 1));
+        m_chunks.push_back(&chunk);
+        if (m_chunks.size() >= numeric_limits<ChunkIdType>::max())
+            RuntimeError("Number of chunks exceeded overflow limit.");
+    }
+
+    return totalNumSequences;
+}
+
+static inline bool LessByFirstItem(const std::tuple<size_t, size_t, size_t>& a, const std::tuple<size_t, size_t, size_t>& b)
+{
+    return std::get<0>(a) < std::get<0>(b);
 }
 
 // Initializes chunks based on the configuration and utterance descriptions.
@@ -64,143 +174,45 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
         RuntimeError("Failed to open input file: %s", latticeIndexPath.c_str());
 
     bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
-
-    std::wstring path;
+    size_t totalNumSequences = 0;
+    std::wstring tocPath;
+    vector<string> tocLines;
     while (!latticeIndexStream.eof())
     {
-        std::getline(latticeIndexStream, path);
+        std::getline(latticeIndexStream, tocPath);
 
-        attempt(5, [this, path, enableCaching, corpus]()
+        std::ifstream tocFileStream(tocPath);
+        std::string tocLine;
+        tocLines.clear();
+        bool firstIndex = true;
+        string prevLatticePath;
+        while (std::getline(tocFileStream, tocLine))
         {
-            LatticeIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
-            builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
-            m_indices.emplace_back(builder.Build());
-        });
+            size_t start = tocLine.find("=") + 1;
+            size_t end = tocLine.find("[");
+            string latticePath = tocLine.substr(start, end - start);
+            if (latticePath.size() > 0) {
+                if (firstIndex)
+                    firstIndex = false;
+                else {
+                    totalNumSequences += RecordChunk(latticePath, tocLines, corpus, enableCaching);
+                    tocLines.clear();
+                }
 
-        m_latticeFiles.push_back(path);
+                prevLatticePath = latticePath;
+            }
+                
+            tocLines.push_back(tocLine);
+        }
 
+        totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching);
     }
     latticeIndexStream.close();
 
+    std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), LessByFirstItem);
 
-    deque<UtteranceDescription> utterances;
-    size_t totalNumberOfBytes = 0;
-    size_t totalNumSequences = 0;
-    
-    std::unordered_map<size_t, std::vector<string>> duplicates;
-    std::unordered_set<size_t> uniqueIds;
-    while (getline(latticeIndexStream, path))
-    {
-        // Read lattice file
-        //open(tocpaths[i])
-
-        
-
-        ifstream latticeFileStream(latticeFile.c_str(), ios::binary | ios::ate);
-        if (!latticeFileStream)
-            RuntimeError("Failed to open input lattice file: %s", latticeFile.c_str());
-
-        string line, key;
-        while (getline(latticeFileStream, line))
-        {
-            key.clear();
-            
-            //TODO: check how this method works for consequtive lines
-            UtteranceDescription description(htkfeatreader::parsedpath::Parse(line, key));
-
-            size_t id = m_corpus->KeyToId(key);
-            description.SetId(id);
-            if (uniqueIds.find(id) == uniqueIds.end())
-            {
-                utterances.push_back(std::move(description));
-                uniqueIds.insert(id);
-            }
-            else
-            {
-                duplicates[id].push_back(key);
-            }
-        }
-
-        if (latticeFileStream.bad())
-            RuntimeError("An error occurred while reading input file: %s", line.c_str());
-
-        totalNumberOfBytes += latticeIndexStream.tellg();
-    }
-   
-    if (latticeIndexStream.bad())
-        RuntimeError("An error occurred while reading input file: %s", latticeIndexPath.c_str());
-
-    fprintf(stderr, " %zu entries\n", utterances.size());
-
-    m_chunks.reserve(totalNumberOfBytes / chunkSizeBytes + 1);
-
-    ChunkIdType chunkId = 0;
-    foreach_index(i, utterances)
-    {
-        // Skip duplicates.
-        if (duplicates.find(utterances[i].GetId()) != duplicates.end())
-        {
-            continue;
-        }
-
-        // if exceeding current entry--create a new one
-        // I.e. our chunks are a little larger than wanted (on av. half the av. utterance length).
-        if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > ChunkFrames)
-        {
-            m_chunks.push_back(HTKChunkInfo(chunkId++));
-        }
-
-        // append utterance to last chunk
-        HTKChunkInfo& currentChunk = m_chunks.back();
-        if (!m_primary)
-        {
-            // Have to store key <-> utterance mapping for non primary deserializers.
-            m_keyToChunkLocation.push_back(std::make_tuple(utterances[i].GetId(), currentChunk.GetChunkId(), currentChunk.GetNumberOfUtterances()));
-        }
-
-        currentChunk.Add(move(utterances[i]));
-    }
-
-    std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(),
-        [](const std::tuple<size_t, size_t, size_t>& a, const std::tuple<size_t, size_t, size_t>& b)
-    {
-        return std::get<0>(a) < std::get<0>(b);
-    });
-
-    // Report duplicates.
-    size_t numberOfDuplicates = 0;
-    for (const auto& u : duplicates)
-    {
-        if (m_verbosity)
-        {
-            fprintf(stderr, "ID '%zu':\n", u.first);
-            for (const auto& k : u.second)
-                fprintf(stderr, "Key '%s'\n", k.c_str());
-        }
-
-        numberOfDuplicates += (u.second.size() + 1);
-    }
-
-    if (numberOfDuplicates)
-        fprintf(stderr, "WARNING: Number of duplicates is '%zu'. All duplicates will be dropped. Consider switching to numeric sequence ids.\n", numberOfDuplicates);
-
-    fprintf(stderr,
-        "HTKDeserializer: selected '%zu' utterances grouped into '%zu' chunks, "
-        "average chunk size: %.1f utterances, %.1f frames "
-        "(for I/O: %.1f utterances, %.1f frames)\n",
-        utterances.size(),
-        m_chunks.size(),
-        utterances.size() / (double)m_chunks.size(),
-        totalNumberOfFrames / (double)m_chunks.size(),
-        utterances.size() / (double)m_chunks.size(),
-        totalNumberOfFrames / (double)m_chunks.size());
-
-    if (utterances.empty())
-    {
-        RuntimeError("HTKDeserializer: No utterances to process.");
-    }
+    fprintf(stderr, "LatticeDeserializer: '%zu' sequences\n", totalNumSequences);
 }
-
 
 // Describes exposed stream - a single stream of htk features.
 void LatticeDeserializer::InitializeStreams(const wstring& featureName)
@@ -235,7 +247,7 @@ std::vector<ChunkInfo> LatticeDeserializer::ChunkInfos()
 
 // Gets sequences for a particular chunk.
 // This information is used by the randomizer to fill in current windows of sequences.
-void LatticeDeserializer::SequenceInfosForChunk(ChunkIdType chunkId, vector<SequenceInfo>& result)
+void LatticeDeserializer::SequenceInfosForChunk(ChunkIdType, vector<SequenceInfo>& result)
 {
     UNUSED(result);
     LogicError("Lattice deserializer does not support primary mode, it cannot control chunking. "
@@ -249,12 +261,38 @@ ChunkPtr LatticeDeserializer::GetChunk(ChunkIdType chunkId)
     attempt(5, [this, &result, chunkId]()
     {
         auto chunk = m_chunks[chunkId];
-        auto& fileName = m_mlfFiles[m_chunkToFileIndex[chunk]];
+        auto& fileName = m_latticeFiles[m_chunkToFileIndex[chunk]];
 
-        result = make_shared<SequenceChunk>(*this, *chunk, fileName, m_stateTable);
+        result = make_shared<SequenceChunk>(*this, *chunk, fileName);
     });
 
     return result;
 };
+
+bool LatticeDeserializer::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& result)
+{
+    auto found = std::lower_bound(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), std::make_tuple(key.m_sequence, 0, 0),
+        LessByFirstItem);
+
+    if (found == m_keyToChunkLocation.end() || std::get<0>(*found) != key.m_sequence)
+    {
+        return false;
+    }
+
+    auto chunkId = std::get<1>(*found);
+    auto sequenceIndexInChunk = std::get<2>(*found);
+
+    result.m_chunkId = std::get<1>(*found);
+    result.m_key = key;
+
+    assert(result.m_key.m_sample == 0);
+
+    const auto* chunk = m_chunks[chunkId];
+    const auto& sequence = chunk->Sequences()[sequenceIndexInChunk];
+    result.m_indexInChunk = sequenceIndexInChunk;
+    result.m_numberOfSamples = sequence.m_numberOfSamples;
+
+    return true;
+}
 
 }
