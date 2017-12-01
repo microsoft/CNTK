@@ -333,15 +333,17 @@ public:
                 if (maxValues(0, frameInd) == 2) 
                 {
                     prevPhoneId = (size_t)maxIndexes(0, frameInd);
-
-                    phoneSeq.push_back(blankTokenId);
-                    phoneBound.push_back(frameCounter);
+                    if (prevPhoneId == 0 || prevPhoneId == 1)
+                    {
+                        phoneSeq.push_back(blankTokenId);
+                        phoneBound.push_back(frameCounter);
+                    }
                     phoneSeq.push_back(prevPhoneId);
                     phoneBound.push_back(frameCounter);
                 }
             }
-            phoneSeq.push_back(blankTokenId);
-            phoneBound.push_back(numFrames);
+            //phoneSeq.push_back(blankTokenId);
+            //phoneBound.push_back(numFrames);
             phoneSeq.push_back(SIZE_MAX);
             phoneBound.push_back(numFrames);
 
