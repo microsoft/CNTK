@@ -315,6 +315,20 @@ namespace CNTK
                 if (doBatchRenorm) // this triggers Batch Renormalization
                 {
                     // in Batch Renorm, we normalize against the running stats
+                    // Batch Renormalization inserts an additional step:
+                    //  - brn = subtract_mean >> var_norm >> StopGradient(affine_transform) >> mul{scale} >> add{bias}
+                    //  - where affine_transform is:
+                    //     - replace MB stddev by running stddev (*runningSigma/mbSigma)
+                    //     - replace MB mean by running mean
+                    //     - where these parameters are considered constants, no backprop through them
+                    // Properties:
+                    //  - ends up using final/smooth estimates for normalization
+                    //  - while still producing gradients that have these properties:
+                    //     - perpendicular to the input
+                    //       <x_n, dL/dx_n> = 0
+                    //     - zero mean
+                    //       sum_n dL/dx_n = 0
+
                     // Note: don't touch mu and sigma here, we need them below
                     // xHat = (x - runningSum/runCount) / (sqrt(sigma2) + eps), with
                     // sigma2 = (runSqrSum/runCount) - (runSum/runCount)^2
@@ -326,12 +340,22 @@ namespace CNTK
                     //out->LogToFile(L"out");
 
                     // compute sigma and xHat to represent the local MB stats, for use in Backprop
+                    // BUGBUG: We need to keep sigma to be the smoothed value.
                     // xHat = (x-mu)/sigma
                     NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
                     double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                     if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
                         NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
                     NDArrayView::NumericOperation({ x, sigma, mu }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, xHat);  // (x-mu)/sigma
+
+                    // TODO: make thsi nice
+                    // actually, sigma should be the smoothed value
+                    NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, 0.0);
+                    NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
+                    NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
+                    if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
+                        NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
+
 #ifdef LOG_BN
                     sigma->LogToFile(L"sigma (local)");
                     xHat->LogToFile(L"xHat (local)");
@@ -688,6 +712,7 @@ namespace CNTK
                 //     - make it zero-mean
                 //     - expressed as function composition:
                 //       Sum(identity, mean >> negate)
+                // In this gradient computation, xHat's role is a unit-length direction vector of (x-mu).
 
                 //  - total gradient function G = d(meanNorm >> lengthNorm)(x)/dx:
                 //       G = divide_by_length{x'} >> Sum(identity, orthogonal_projection_on{x'} >> negate) >> Sum(identity, mean >> negate)

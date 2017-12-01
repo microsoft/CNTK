@@ -25,7 +25,7 @@
 //#define ProjectionOptions_batchNormalize ProjectionOptions::stabilize/*batchNormalize*/
 #define ProjectionOptions_batchNormalize (ProjectionOptions::batchNormalize | ProjectionOptions::bias) /*requires bias for now*/
 
-#define DEFAULT_EPSILON 1e-4
+#define DEFAULT_EPSILON 1e-5
 //#define DEFAULT_EPSILON 1e-1
 
 #ifndef let
