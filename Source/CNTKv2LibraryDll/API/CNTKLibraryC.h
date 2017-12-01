@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #ifdef _WIN32
 #ifdef CNTKV2LIBRARYDLL
 #define CNTK_API __declspec(dllexport)
