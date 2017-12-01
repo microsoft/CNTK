@@ -225,15 +225,24 @@ DECL ElemType LogAdd(ElemType x, ElemType y)
     return x + log1p_(exp_(y - x));
 }
 
+// normalize x as compute (x-mu)/sigma
+// with sigma = eps + sqrt(sigma2)
+template <typename ElemType>
+DECL ElemType NormalizeMeanVar(ElemType x, ElemType mu, ElemType sigma2)
+{
+    let eps = (ElemType)1e-5; // note: for now, epsilon is not configurable
+    let sigma = eps + sqrt_((max(sigma2, (ElemType)0)));
+    return (x - mu) / sigma;
+}
+
 // for given sufficient statistics, normalize x as compute (x-mu)/sigma
+// TODO: make parameter order consistent with NormalizeMeanVar().
 template <typename ElemType>
 DECL ElemType NormalizeMeanVarFromStats(ElemType x, ElemType sqrSum, ElemType sum, ElemType count)
 {
     let mu = sum ? sum / count : 0;
     let sigma2 = (sqrSum ? sqrSum / count : 0) - mu * mu;
-    let eps = (ElemType)1e-5; // note: for now this is not configurable, which would be better
-    let sigma = eps + sqrt_((max(sigma2, (ElemType)0)));
-    return (x - mu) / sigma;
+    return NormalizeMeanVar(x, mu, sigma2);
 }
 
 // IndexElement reindexes a tensor along one dimension.
@@ -362,6 +371,7 @@ DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); 
 DefTernaryOp(AxBplusC, a * b + c);
 DefTernaryOp(AminusCoverB, (a - c) / b);
 DefTernaryOp(SubtractQuotient, a - (b ? b / c : 0));
+DefTernaryOp(NormalizeMeanVar, NormalizeMeanVar(/*x=*/a, /*mu=*/b, /*sigma2=*/c));
 
 #pragma pop_macro("DefTernaryOp")
 

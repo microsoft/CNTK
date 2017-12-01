@@ -120,6 +120,7 @@ enum ElementWiseOperator
     opAxBplusC, /* a * b + c */
     opAminusCoverB, /* (a-c) / b + c */
     opSubtractQuotient, /* a - (b ? b / c : 0)) */
+    opNormalizeMeanVar, /* (a - b) / (eps + sqrt(max(c,0))) */
     // quaternary
     opAxBplusCxD, /* a * b + c * d */
     opAxBxCoverD, /* a * b * c / d */
@@ -208,7 +209,8 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithPowBaseDerivative);     \
     Macro(AxBplusC);                                    \
     Macro(AminusCoverB);                                \
-    Macro(SubtractQuotient);
+    Macro(SubtractQuotient);                            \
+    Macro(NormalizeMeanVar);
 
 #define ForAllQuaternaryOps(Macro)                      \
     Macro(AxBplusCxD);                                  \

@@ -311,7 +311,8 @@ namespace CNTK
                     runSqrSum->LogToFile(L"runSqrSum");
 #endif
                 }
-                let doBatchRenorm = runningStatsWeight == 1;
+                let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats. In inference, this is 0.
+                let doBatchRenorm = runningStatsWeight != 0;
                 if (doBatchRenorm) // this triggers Batch Renormalization
                 {
                     // in Batch Renorm, we normalize against the running stats
@@ -329,32 +330,52 @@ namespace CNTK
                     //     - zero mean
                     //       sum_n dL/dx_n = 0
 
-                    // Note: don't touch mu and sigma here, we need them below
-                    // xHat = (x - runningSum/runCount) / (sqrt(sigma2) + eps), with
-                    // sigma2 = (runSqrSum/runCount) - (runSum/runCount)^2
-                    NDArrayView::NumericOperation({ x, runSqrSum, runSum, runCount }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opMVNormFromStats, xHat);
-                    //xHat->LogToFile(L"xHat (after var norm)");
-                    // apply scale and bias
-                    NDArrayView::NumericOperation({ xHat, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
-                    // Now our output value has been computed.
-                    //out->LogToFile(L"out");
-
-                    // compute sigma and xHat to represent the local MB stats, for use in Backprop
-                    // BUGBUG: We need to keep sigma to be the smoothed value.
-                    // xHat = (x-mu)/sigma
+                    // sigma    --remember that this is in-place, &sigma2==&sigma
+                    //sigma2->LogToFile(L"sigma2 (local)");
                     NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
                     double epsilon = attributes[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                     if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
                         NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
-                    NDArrayView::NumericOperation({ x, sigma, mu }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, xHat);  // (x-mu)/sigma
+                    //sigma->LogToFile(L"sigma (local)");
 
-                    // TODO: make thsi nice
-                    // actually, sigma should be the smoothed value
-                    NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, 0.0);
+                    // normalize input by MB statistics: xHat = (x-mu)/sigma
+                    // This represents the first two steps of Batch Renorm.
+                    // It also produces a unit-length direction vector used for projection in backprop.
+                    NDArrayView::NumericOperation({ x, sigma, mu }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusCoverB, xHat);  // (x-mu)/sigma
+                    //xHat->LogToFile(L"xHat");
+
+                    // apply the batch renorm factors, to produce the output
+                    //  - out = xHat * sigma_MB / sigma_running
+                    //  - out += (- mu_MB + mu_running) / sigma_running
+                    // undo MB sigma
+                    NDArrayView::NumericOperation({ xHat, sigma }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, out);  // -> (x-mu) again
+                    //out->LogToFile(L"x-mu");
+                    // compute running sigma   --this overwrites MB sigma
+                    if (rawMBStatsWeight != 0) // if we should interpolate with MB stats, then need to recover it
+                                               // BUGBUG: This does not exactly reproduce sigma2 due to epsilon.
+                        NDArrayView::NumericOperation({ sigma }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqr, sigma2);
+                    NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
                     NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
+                    //sigma2->LogToFile(L"sigma2 (running)");
                     NDArrayView::NumericOperation({ sigma2 }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSqrt, sigma);
                     if (epsilon > 0) // we add eps to sigma to avoid dividing by 0 or very small estimates
                         NDArrayView::NumericOperation({ }, epsilon, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, sigma, /*beta=*/1.0); // sigma + eps (in-place)
+                    //sigma->LogToFile(L"sigma (running)");
+                    // apply running sigma  --in-place
+                    NDArrayView::NumericOperation({ out, sigma }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, out);  // (x-muMb)/sigmaRunning
+                    //out->LogToFile(L"(x-mu)/sigmaRunning");
+                    // undo MB mu
+                    NDArrayView::NumericOperation({ mu, sigma }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, out, 1.0);  // += muMb/sigmaRunning
+                    //out->LogToFile(L"(x-mu)/sigmaRunning + mu/sigmaRunning");
+                    // compute running mu   --this overwrites MB mu
+                    NDArrayView::NumericOperation({ runSum, runCount }, runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient, mu, rawMBStatsWeight);
+                    //mu->LogToFile(L"mu (running)");
+                    // apply running mu
+                    NDArrayView::NumericOperation({ mu, sigma }, -1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct, out, 1.0);  // -= muRunning/sigmaRunning
+                    //out->LogToFile(L"(x-muRunning)/sigmaRunning");
+
+                    // apply scale and bias (in-place)
+                    NDArrayView::NumericOperation({ out, scale, bias }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC, out);
 
 #ifdef LOG_BN
                     sigma->LogToFile(L"sigma (local)");
@@ -368,7 +389,6 @@ namespace CNTK
                         //runCount ->LogToFile(L"runCount");
                         //runSum   ->LogToFile(L"runSum");
                         //runSqrSum->LogToFile(L"runSqrSum");
-                        let rawMBStatsWeight = 1.0 - runningStatsWeight; // actual contribution from raw MB stats. In inference, this is 0.
                         NDArrayView::NumericOperation({ runSum,    runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    mu    , rawMBStatsWeight);
                         NDArrayView::NumericOperation({ runSqrSum, runCount },  runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotient,    sigma2, rawMBStatsWeight);
                         NDArrayView::NumericOperation({ runSum,    runCount }, -runningStatsWeight, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseQuotientSqr, sigma2, 1.0);
