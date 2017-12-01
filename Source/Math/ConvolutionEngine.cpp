@@ -912,10 +912,23 @@ protected:
             }
         } m_context[ContextIndex_Total];
 
-        static void GetSizesAndStrides(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides)
+        static void GetSizesAndStrides(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount = 0)
         {
             sizes = shape.GetDims();
-            while (sizes.size() < m_dimension - 1) sizes.push_back(1);
+            if (mapCount)
+            {
+                if (mapCount != shape.GetDim(shape.GetRank() - 1))
+                    RuntimeError("Mismatching outputShape and mapCount");
+
+                // for outputShape, pad 1 before mapCount (the last dim in shape)
+                sizes.pop_back();
+                while (sizes.size() < m_dimension - 2) sizes.push_back(1);
+                sizes.push_back(mapCount);
+            }
+            else
+            {
+                while (sizes.size() < m_dimension - 1) sizes.push_back(1);
+            }
             sizes.push_back(lastDim);
             strides.clear();
             strides.push_back(1);
@@ -975,7 +988,7 @@ protected:
             SmallVector<size_t> outputSize, outputStrides, filterSize, filterStrides, inputSize,  inputStrides;
             SmallVector<int>    inputOffset;
 
-            GetSizesAndStrides(geometry->OutputShape(), batchSize, outputSize, outputStrides);
+            GetSizesAndStrides(geometry->OutputShape(), batchSize, outputSize, outputStrides, mapCount);
             GetSizesAndStrides(geometry->KernelShape(), mapCount, filterSize, filterStrides);
             GetSizesAndStrides(geometry->InputShape(), batchSize, inputSize, inputStrides);
             GetInputOffsets(geometry, inputOffset);

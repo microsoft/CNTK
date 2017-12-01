@@ -88,6 +88,10 @@ namespace CNTK
             }
 
             m_composite->ReplacePlaceholders(blockCompositePlaceholderReplacements);
+
+            // Because some placeholders were replaced in the composite, the inputs of the block became stale,
+            // so we need to update them to match the underlying composite function.
+            m_inputs = DetermineInputs(m_composite, CompositeArgumentsMap(), Name());
         }
 
     private:

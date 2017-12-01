@@ -15,15 +15,17 @@ def _create_convolution_model():
     
     with C.layers.default_options(init=C.glorot_uniform(), activation=C.relu):
         h = feature_var
+        # The first two layers has bias=False to test, the conversion
+        # work with and without bias in the Convolution.
         h = C.layers.Convolution2D(filter_shape=(5,5),
                                            num_filters=8,
                                            strides=(2,2),
-                                           pad=True, name='first_convo')(h)
+                                           pad=True, bias=False, name='first_convo')(h)
         
         h = C.layers.Convolution2D(filter_shape=(5,5),
                                            num_filters=16,
                                            strides=(2,2),
-                                           pad=True, name='second_convo')(h)
+                                           pad=True, bias=False, name='second_convo')(h)
 
         h = C.layers.Convolution2D(filter_shape=(5,5),
                                            num_filters=16,

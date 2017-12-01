@@ -137,6 +137,9 @@ namespace CNTK
 
         m_distributed = m_parameterLearners->IsDistributed();
 
+        if (m_distributed)
+            Evaluator::SetCommunicator(dynamic_cast<DistributedLearner*>(m_parameterLearners->ParameterLearners()[0].get())->GetCommunicator());
+
         for (auto& learner : m_parameterLearners->ParameterLearners())
         {
             learner->AddProgressWriters(progressWriters);
@@ -287,6 +290,24 @@ namespace CNTK
 
     void Trainer::SummarizeTrainingProgress()
     {
+        // Aggregate across workers training loss and eval criteria. Needed for BMUF like learner which don't aggregate after every minibatch.
+        if (m_parameterLearners->DoAggregateMetricsIfNeededLambda)
+        {
+            NDArrayViewPtr localLossValue = nullptr;
+            if (m_aggregatedTrainingLossValue && m_aggregatedTrainingLossValue->IsInitialized())
+            {
+                localLossValue = m_aggregatedTrainingLossValue->Data();
+            }
+
+            NDArrayViewPtr localEvalCriterion = nullptr;
+            if (m_aggregatedTrainingEvalCriterionValue && m_aggregatedTrainingEvalCriterionValue->IsInitialized())
+            {
+                localEvalCriterion = m_aggregatedTrainingEvalCriterionValue->Data();
+            }
+
+            m_parameterLearners->DoAggregateMetricsIfNeededLambda(localLossValue, localEvalCriterion);
+        }
+
         for (auto& progressWriter : m_progressWriters)
         {
             progressWriter->WriteTrainingSummary(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);

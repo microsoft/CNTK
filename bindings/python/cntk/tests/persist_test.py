@@ -219,3 +219,27 @@ def test_restore_constants(tmpdir):
 
     _setall(f2, 5)
     _checkall(f2, 5)
+
+
+def test_replace_save_restoreinplace_constant(tmpdir):
+    from cntk import placeholder
+
+    c1 = C.constant(value=0)
+    c2 = C.constant(value=0)
+    c3 = C.constant(value=0)
+    p1 = placeholder(name="placeholder1")
+    p2 = placeholder(name="placeholder2")
+    result = (c1 * p1) * c2 + c3 + p2
+
+    p3 = placeholder(name="placeholder3")
+    p4 = placeholder(name="placeholder4")
+    block = C.ops.as_block(result, [(p2, p4), (p1, p3)], "test_block")
+
+    arg_map = { p3: C.constant(value=0) }
+    block.replace_placeholders(arg_map)
+
+    model_filename = str(tmpdir / 'simple_block.mod')
+    block.save(model_filename)
+    block.restore(model_filename)
+
+    assert len(block.placeholders) == 1

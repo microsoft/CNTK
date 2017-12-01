@@ -2,32 +2,50 @@
 
 namespace ONNXIR {
 
-    #define REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(OpName)                                                    \
+    #define REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(OpName)                                          \
     REGISTER_OPERATOR_SCHEMA(OpName)                                                                        \
         .Description("Elementwise "#OpName" takes one or more input data (Tensor<T>) and produces one "     \
             "output data (Tensor<T>) where the declared function is applied to the input "                  \
             "tensors elementwise.")                                                                         \
-        .Input("data_0", "First of the input tensors. Can be inplace.", "T")                                \
-        .Output("output", "Output tensor. Same dimension as inputs.", "T")                                  \
-        .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },                                              \
+        .Input("A", "First operand, should share the type with the second operand.", "T")                   \
+        .Input("B", "Second operand. With broadcasting can be of smaller size than A. "                     \
+            "If broadcasting is disabled it should be of the same size..", "T")                             \
+        .Output("C", "Result, has same dimensions and type as A.", "T")                                     \
+        .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },                      \
+            "Constrain input and output types to float tensors.")                                           \
+        .Attr("axis", "If set, defines the broadcast dimensions.",                                          \
+            AttrType::AttributeProto_AttributeType_INT)                                                     \
+        .Attr("broadcast", "Enable broadcasting.",                                                          \
+            AttrType::AttributeProto_AttributeType_INT);
+
+    REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Add)
+    REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Sub)
+    REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Mul)
+    REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Div)
+
+    #define REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(OpName, output)                                            \
+    REGISTER_OPERATOR_SCHEMA(OpName)                                                                        \
+        .Description("Element-wise "#OpName" of each of the input tensors. The first input tensor can be "  \
+            "used in-place as the output tensor, in which case the "#OpName" will be done in "              \
+            "place and results will be accumulated in input0. All inputs and outputs must "                 \
+            "have the same shape and data type.")                                                           \
+        .Input("data_0", "First operand, should share the type with the second operand.", "T")              \
+        .Output(#output, "Result, has same dimensions and type as A.", "T")                                 \
+        .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },                      \
             "Constrain input and output types to float tensors.");
 
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Add)
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Sub)
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Mul)
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Div)
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Max)
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Min)
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Sum)
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Mean)
+    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Max, "max")
+    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Min, "min")
+    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Sum, "sum")
+    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Mean, "mean")
 
     // Taken from ONNX
     REGISTER_OPERATOR_SCHEMA(Neg)
-        .Description("Neg takes one input data (Tensor<T>) and produces one output data \
-            (Tensor<T>) where each element flipped sign, y = -x, is applied to \
-            the tensor elementwise.")
-        .Input("input", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Description("Neg takes one input data (Tensor<T>) and produces one output data "
+            "(Tensor<T>) where each element flipped sign, y = -x, is applied to "
+            "the tensor elementwise.")
+        .Input("X", "Input tensor of any shape", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.");
 
@@ -36,8 +54,8 @@ namespace ONNXIR {
         .Description("Absolute takes one input data (Tensor<T>) and produces one output data "
             "(Tensor<T>) where the absolute is, y = abs(x), is applied to "
             "the tensor elementwise.")
-        .Input("input", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Input("X", "Input tensor of any shape", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
              "Constrain input and output types to float tensors.");
 
@@ -46,8 +64,8 @@ namespace ONNXIR {
         .Description("Reciprocal takes one input data (Tensor<T>) and produces one output data "
             "(Tensor<T>) where the reciprocal is, y = 1/x, is applied to "
             "the tensor elementwise.")
-        .Input("input", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Input("X", "Input tensor of any shape", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.");
 
@@ -82,16 +100,18 @@ namespace ONNXIR {
         .Output("output", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
-        .Attr("min", "Minimum value, under which element is replaced by min", AttrType::AttributeProto_AttributeType_FLOAT)
-        .Attr("max", "Maximum value, under which element is replaced by max", AttrType::AttributeProto_AttributeType_FLOAT);
+        .Attr("min", "Minimum value, under which element is replaced by min",
+            AttrType::AttributeProto_AttributeType_FLOAT)
+        .Attr("max", "Maximum value, under which element is replaced by max",
+            AttrType::AttributeProto_AttributeType_FLOAT);
 
     // Taken from ONNX
     REGISTER_OPERATOR_SCHEMA(Sqrt)
         .Description("Square root takes one input data (Tensor<T>) and produces one output "
             "data Tensor<T>) where the square root is, y = x^0.5, is applied to "
             "the tensor elementwise. If x is negative, then it will return NaN.")
-        .Input("input", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Input("X", "Input tensor of any shape", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.");
 
@@ -120,19 +140,19 @@ namespace ONNXIR {
         .Description("Pow takes input data (Tensor<T>) and an argument exponent, and "
             "produces one output data (Tensor<T>) where the function `f(x) = x^exponent`, "
             "is applied to the data tensor elementwise.")
-        .Input("input", "input tensor", "T")
-        .Output("output", "The x^exponent value of the input tensor computed element-wise", "T")
+        .Input("X", "Input tensor of any shape", "T")
+        .Input("Y", "The exponent of the power function.", "T")
+        .Output("Z", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
-            "Constrain input and output types to float tensors.")
-        .Attr("exponent", "The exponent of the power function.", AttrType::AttributeProto_AttributeType_FLOAT);
+            "Constrain input and output types to float tensors.");
 
     // Taken from ONNX
-    REGISTER_OPERATOR_SCHEMA(Dot)
-        .Description("Apply dot product between 2 tensors. Similar to numpy implementation: "
-            "https://docs.scipy.org/doc/numpy/reference/generated/numpy.dot.html")
-        .Input("X", "Input tensor of any shape", "T")
-        .Input("Y", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor the dot product between X and Y.", "T")
+    REGISTER_OPERATOR_SCHEMA(MatMul)
+        .Description("Matrix product that behaves like numpy.matmul: "
+            "https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.matmul.html")
+        .Input("A", "N-dimensional matrix A", "T")
+        .Input("B", "N-dimensional matrix B", "T")
+        .Output("Y", "Matrix multiply results from A * B", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.");
 

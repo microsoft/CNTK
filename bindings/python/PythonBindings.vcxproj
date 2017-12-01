@@ -85,6 +85,7 @@
     <None Include="cntk\logging\graph.py" />
     <None Include="cntk\logging\progress_print.py" />
     <None Include="cntk\logging\tests\graph_test.py" />
+    <None Include="cntk\logging\tests\progress_print_test.py" />
     <None Include="cntk\logging\tests\__init__.py" />
     <None Include="cntk\logging\__init__.py" />
     <None Include="cntk\losses\tests\cosine_distance_test.py" />

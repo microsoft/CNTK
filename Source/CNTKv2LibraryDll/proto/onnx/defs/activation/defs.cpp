@@ -6,8 +6,8 @@ namespace ONNXIR {
         .Description("Sigmoid takes one input data (Tensor<T>) and produces one output data "
             "(Tensor<T>) where the sigmoid function, y = 1 / (1 + exp(-x)), is applied to the "
             "tensor elementwise.")
-        .Input("input", "input tensor", "T")
-        .Output("output", "The sigmoid value of the input tensor computed element-wise", "T")
+        .Input("X", "input tensor", "T")
+        .Output("Y", "The sigmoid value of the input tensor computed element-wise", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.");
 
@@ -26,8 +26,8 @@ namespace ONNXIR {
         .Description("Relu takes one input data (Tensor<T>) and produces one output "
             "data (Tensor<T>) where the rectified linear function, y = max(0, x), is "
             "applied to the tensor elementwise.")
-        .Input("input", "input tensor", "T")
-        .Output("output", "The Relu value of the input tensor computed element-wise", "T")
+        .Input("X", "input tensor", "T")
+        .Output("Y", "The Relu value of the input tensor computed element-wise", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.");
 
@@ -37,8 +37,8 @@ namespace ONNXIR {
             "and produces one output data (Tensor<T>) where the function "
             ":`f(x) = alpha * x for x < 0`, `f(x) = x for x >= 0`, is applied to the data "
             "tensor elementwise.")
-        .Input("input", "input tensor", "T")
-        .Output("output", "The LeakyRelu value of the input tensor computed element-wise", "T")
+        .Input("X", "input tensor", "T")
+        .Output("Y", "The LeakyRelu value of the input tensor computed element-wise", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
         .Attr("alpha","Coefficient of leakage", AttrType::AttributeProto_AttributeType_FLOAT);
@@ -61,11 +61,12 @@ namespace ONNXIR {
         .Description("Elu takes one input data (Tensor<T>) and produces one output data"
             "(Tensor<T>) where the function `f(x) = alpha * (exp(x) - 1.) for x < 0`, "
             "`f(x) = x for x >= 0`., is applied to the tensor elementwise.")
-        .Input("input", "input tensor", "T")
-        .Output("output", "The elu value of the input tensor computed element-wise", "T")
+        .Input("X", "input tensor", "T")
+        .Output("Y", "The elu value of the input tensor computed element-wise", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
-        .Attr("alpha", "Coefficient of ELU default to 1", AttrType::AttributeProto_AttributeType_FLOAT, float(1.0));
+        .Attr("alpha", "Coefficient of ELU default to 1",
+            AttrType::AttributeProto_AttributeType_FLOAT, float(1.0));
 
     // Taken from ONNX
     REGISTER_OPERATOR_SCHEMA(Selu)
@@ -77,8 +78,10 @@ namespace ONNXIR {
         .Output("output", "The selu value of the input tensor computed element-wise", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
-        .Attr("alpha", "Coefficient of SELU default to 1.6732.", AttrType::AttributeProto_AttributeType_FLOAT, float(1.6732))
-        .Attr("gamma", "Coefficient of SELU default to 1.0507.", AttrType::AttributeProto_AttributeType_FLOAT, float(1.0507));
+        .Attr("alpha", "Coefficient of SELU default to 1.6732.",
+            AttrType::AttributeProto_AttributeType_FLOAT, float(1.6732))
+        .Attr("gamma", "Coefficient of SELU default to 1.0507.",
+            AttrType::AttributeProto_AttributeType_FLOAT, float(1.0507));
 
     // Taken from ONNX
     REGISTER_OPERATOR_SCHEMA(Softmax)
@@ -112,8 +115,8 @@ namespace ONNXIR {
         .Description("Linear takes one input data (Tensor<T>) and produces one output "
             "data (Tensor<T>) where the linear function, f(x)= alpha * x + beta is "
             "applied to the tensor elementwise.")
-        .Input("input", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Input("X", "Input tensor of any shape", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
         .Attr("alpha", "Scalar multiplication factor", AttrType::AttributeProto_AttributeType_FLOAT)
@@ -124,8 +127,8 @@ namespace ONNXIR {
         .Description("HardSigmoid takes one input data (Tensor<T>) and produces one output "
             "data (Tensor<T>) where the hard sigmoid function, f(x) = max⁡(0,min⁡(alpha*x+beta,1)), "
             "is applied to the  tensor elementwise.")
-        .Input("input", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Input("X", "Input tensor of any shape", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
         .Attr("alpha", "Scaling value", AttrType::AttributeProto_AttributeType_FLOAT)
@@ -148,8 +151,8 @@ namespace ONNXIR {
         .Description("Thresholded Relu takes input data (Tensor<T>) and threshold as input, and "
             "produces one output data (Tensor<T>) where the function `f(x) = 0 for x < alpha, "
             "x for x >= alpha`, is applied to the data tensor elementwise.")
-        .Input("input", "Input tensor, typically 1-D.", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Input("X", "Input tensor, typically 1-D.", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
         .Attr("alpha", "Scalar threshold value", AttrType::AttributeProto_AttributeType_FLOAT);
@@ -201,33 +204,33 @@ namespace ONNXIR {
         .Input("input", "Input tensor, typically 1-D.", "T")
         .Output("output", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
-            "Constrain input and output types to float tensors.")
-        .Attr("alpha", "Coefficient of SELU default to 1.6732.", AttrType::AttributeProto_AttributeType_FLOAT, float(1.6732));
+            "Constrain input and output types to float tensors.");
 
     // Taken from Caffe2
     REGISTER_OPERATOR_SCHEMA(Softplus)
         .Description("Softplus takes one input data (Tensor<T>) and produces one output "
             "data (Tensor<T>) where the function, y = ln(1 + exp(steepness * x)), is "
             "applied to the tensor elementwise.")
-        .Input("input", "Input tensor, typically 1-D.", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Input("X", "Input tensor, typically 1-D.", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
-            "Constrain input and output types to float tensors.")
-        .Attr("steepness", "Steepness (default to 1, must be > 1)", AttrType::AttributeProto_AttributeType_FLOAT, float(1.0));
+            "Constrain input and output types to float tensors.");
 
     // Taken from RS4
     REGISTER_OPERATOR_SCHEMA(ParametericSoftplus)
         .Description("Softplus takes input data (Tensor<T>) and parametric tensors, "
             "producing one output data (Tensor<T>) where the function, "
             "y = alpha * log(1 + exp(beta * x), is applied to the tensor elementwise.")
-        .Input("input", "Input tensor, typically 1-D.", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .Input("X", "Input tensor, typically 1-D.", "T")
+        .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
         .Attr("alpha", "Alpha tensor. If `alpha` is of size 1, "
-            "the value is shared across different channels.", AttrType::AttributeProto_AttributeType_FLOAT, float(1.0))
+            "the value is shared across different channels.",
+            AttrType::AttributeProto_AttributeType_FLOAT, float(1.0))
         .Attr("beta", "Beta tensor. If `beta` is of size 1, "
-            "the value is shared across different channels.", AttrType::AttributeProto_AttributeType_FLOAT, float(1.0));
+            "the value is shared across different channels.",
+            AttrType::AttributeProto_AttributeType_FLOAT, float(1.0));
 
     // Taken from RS4
     REGISTER_OPERATOR_SCHEMA(Identity)

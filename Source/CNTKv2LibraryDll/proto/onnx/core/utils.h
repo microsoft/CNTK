@@ -4,12 +4,12 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
-
 #pragma warning(push)
-#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996)
-#include "proto/onnx/protobuf/graph.pb.h"
+#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996 4503)
+#include "proto/onnx/protobuf/onnx-ml.pb.h"
 #pragma warning(pop)
+
+using namespace onnx;
 
 namespace ONNXIR
 {
@@ -26,7 +26,6 @@ namespace ONNXIR
             static const TypeProto& ToTypeProto(const PTYPE& p_type);
             static std::string ToString(const TypeProto& p_type, const std::string& left = "", const std::string& right = "");
             static std::string ToDataTypeString(const TensorProto::DataType& p_type);
-            static std::string ToAttrTypeString(const ValueProto& p_value, const std::string& left = "", const std::string& right = "");
             static void FromString(const std::string& p_src, TypeProto& p_type);
             static void FromDataTypeString(const std::string& p_src, TensorProto::DataType& p_type);
             static bool IsValidDataTypeString(const std::string &p_dataType);

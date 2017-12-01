@@ -85,6 +85,8 @@ namespace ONNXIR {
     REGISTER_OPERATOR_SCHEMA(Tile)
         .Description("Repeat the elements of a tensor along an axis.")
         .Input("input", "An input tensor.", "T")
+        .Input("tiles", "Number of repeated copies to make of the input tensor.", "T")
+        .Input("axis", "Axis along which to repeat.", "T")
         .Output("output", "Repeated output.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
@@ -99,7 +101,7 @@ namespace ONNXIR {
             "expect for the concatenation axis, and returns a single tensor, the concatenation"
             "of all inputs.")
         .Input("input", "A list of input tensors.", "T")
-        .Output("output", "Concatenated tensor", "T")
+        .Output("concat_result", "Concatenated tensor", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
         .Attr("axis", "Axis along which to concatenate", AttrType::AttributeProto_AttributeType_INT);
@@ -150,12 +152,12 @@ namespace ONNXIR {
             AttrType::AttributeProto_AttributeType_INTS, int64_t(1));
 
     // Taken from Caffe2
-    REGISTER_OPERATOR_SCHEMA(BatchToSpace)
-        .Description("BatchToSpace for 4-D tensors of type T. "
-            "Rearranges (permutes) data from batch into blocks of spatial data, "
+    REGISTER_OPERATOR_SCHEMA(DepthToSpace)
+        .Description("DepthToSpace for 4-D tensors of type T. "
+            "Rearranges (permutes) data from channel into blocks of spatial data, "
             "followed by cropping. This is the reverse transformation of "
-            "SpaceToBatch. More specifically, this op outputs a copy of the input "
-            "tensor where values from the batch dimension are moved in spatial "
+            "SpaceToDepth. More specifically, this op outputs a copy of the input "
+            "tensor where values from the channel dimension are moved in spatial "
             "blocks to the height and width dimensions, followed by cropping along "
             "the height and width dimensions.")
         .Input("input", "Input tensor of [N,C,H,W]", "T")
@@ -166,12 +168,12 @@ namespace ONNXIR {
         .Attr("blocksize", "Blocks of [blocksize,blocksize] are moved.", AttrType::AttributeProto_AttributeType_INT);
 
     // Taken from Caffe2
-    REGISTER_OPERATOR_SCHEMA(SpaceToBatch)
-        .Description("SpaceToBatch for 4-D tensors of type T. "
+    REGISTER_OPERATOR_SCHEMA(SpaceToDepth)
+        .Description("SpaceToDepth for 4-D tensors of type T. "
             "Zero-pads and then rearranges (permutes) blocks of spatial data into "
-            "batch. More specifically, this op outputs a copy of the input tensor "
+            "channel. More specifically, this op outputs a copy of the input tensor "
             "where values from the height and width dimensions are moved to the "
-            "batch dimension. After the zero-padding, both height and width of the "
+            "channel dimension. After the zero-padding, both height and width of the "
             "input must be divisible by the block size.")
         .Input("input", "Input tensor of [N,C,H,W]", "T")
         .Output("output", "Output tensor of [N, C * blocksize * blocksize, H/blocksize, "

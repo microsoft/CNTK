@@ -1,13 +1,26 @@
+#pragma warning(disable : 4503)
+
 #include "op.h"
 #include "opsignature.h"
 #include "utils.h"
 #include <cstring>
+
 
 namespace ONNXIR
 {
     const std::string& OperatorSchema::GetName() const
     {
         return m_opSignature.GetName();
+    }
+
+    int OperatorSchema::SinceVersion() const
+    {
+        return m_opSignature.SinceVersion();
+    }
+
+    const std::string& OperatorSchema::Domain() const
+    {
+        return m_opSignature.Domain();
     }
 
     const OpSignature& OperatorSchema::GetOpSignature() const
@@ -32,7 +45,19 @@ namespace ONNXIR
         return *this;
     }
 
+    OperatorSchemaSetter&
+        OperatorSchemaSetter::SinceVersion(int p_opSetVersion)
+    {
+        m_opSchema.m_opSignature.m_sinceVersion = p_opSetVersion;
+        return *this;
+    }
 
+    OperatorSchemaSetter&
+        OperatorSchemaSetter::SetDomain(const std::string& p_domain)
+    {
+        m_opSchema.m_opSignature.m_domain = p_domain;
+        return *this;
+    }
 
     OperatorSchemaSetter&
         OperatorSchemaSetter::Description(const std::string& p_description)
@@ -41,7 +66,7 @@ namespace ONNXIR
         return *this;
     }
 
-    #pragma warning(disable : 4100) // unused p_optional
+#pragma warning(disable : 4100) // unused p_optional
     OperatorSchemaSetter&
         OperatorSchemaSetter::Input(const std::string& p_inputName,
             const std::string& p_description,
@@ -114,16 +139,16 @@ namespace ONNXIR
     }                                                                                     \
 
     ATTR_SETTER_BASIC_IMPL(int64_t, i)
-        ATTR_SETTER_BASIC_IMPL(float, f)
-        ATTR_SETTER_BASIC_IMPL(std::string, s)
-        ATTR_SETTER_LIST_IMPL(int64_t, ints)
-        ATTR_SETTER_LIST_IMPL(float, floats)
-        ATTR_SETTER_LIST_IMPL(std::string, strings)
+    ATTR_SETTER_BASIC_IMPL(float, f)
+    ATTR_SETTER_BASIC_IMPL(std::string, s)
+    ATTR_SETTER_LIST_IMPL(int64_t, ints)
+    ATTR_SETTER_LIST_IMPL(float, floats)
+    ATTR_SETTER_LIST_IMPL(std::string, strings)
 
-        OperatorSchemaSetter&
-        OperatorSchemaSetter::TypeConstraint(const std::string& p_typeName,
-            const std::vector<std::string>& p_constraints,
-            const std::string& p_description)
+    OperatorSchemaSetter&
+    OperatorSchemaSetter::TypeConstraint(const std::string& p_typeName,
+        const std::vector<std::string>& p_constraints,
+        const std::string& p_description)
     {
         m_constraints.push_back(std::make_tuple(p_typeName, p_constraints, p_description));
         return *this;
@@ -151,103 +176,6 @@ namespace ONNXIR
             populator(*this);
         }
         return *this;
-    }
-
-    OperatorSchemaRegistry::RegisterOnce::RegisterOnce(
-        OperatorSchemaSetter& p_opSchemaSetter)
-    {
-        auto& opSchema = p_opSchemaSetter.m_opSchema;
-        // Process type constraints.
-        for (const auto& constraint : p_opSchemaSetter.m_constraints)
-        {
-            std::string name;
-            std::vector<std::string> types;
-            std::string desc;
-            std::tie(name, types, desc) = constraint;
-
-            auto it = opSchema.m_opSignature.m_typeConstraintMap.find(name);
-            if (it == opSchema.m_opSignature.m_typeConstraintMap.end())
-            {
-                DataTypeSet d;
-                for (const auto& t : types)
-                {
-                    d.insert(Utils::OpUtils::ToType(t));
-                }
-                opSchema.m_opSignature.m_typeConstraintMap.insert(std::make_pair(name, std::make_pair(d, desc)));
-            }
-            else
-            {
-                // already a constraint with the same name. error.
-            }
-        }
-
-        opSchema.m_opSignature.m_inputs.reserve(p_opSchemaSetter.m_inputs.size());
-        for (const auto& input : p_opSchemaSetter.m_inputs)
-        {
-            std::string name;
-            std::string type;
-            std::string desc;
-            std::tie(name, desc, type) = input;
-            opSchema.m_opSignature.m_inputs.push_back(
-                OpSignature::FormalParameter(name, type, desc, opSchema.m_opSignature.m_typeConstraintMap));
-        }
-
-        opSchema.m_opSignature.m_outputs.reserve(p_opSchemaSetter.m_outputs.size());
-        for (const auto& output : p_opSchemaSetter.m_outputs)
-        {
-            std::string name;
-            std::string type;
-            std::string desc;
-            std::tie(name, desc, type) = output;
-            opSchema.m_opSignature.m_outputs.push_back(
-                OpSignature::FormalParameter(name, type, desc,
-                    opSchema.m_opSignature.m_typeConstraintMap));
-        }
-
-        OperatorSchemaRegistry::Get()->Register(p_opSchemaSetter.m_opSchema);
-    }
-
-    bool OperatorSchemaRegistry::TryGetOp(const std::string& p_name,
-        const OperatorSchema** p_opSchema) const
-    {
-        if (nullptr == p_opSchema)
-        {
-            return false;
-        }
-
-        auto iter = m_opNameToOpSchemaMap.find(p_name);
-        if (m_opNameToOpSchemaMap.end() == iter)
-        {
-            return false;
-        }
-        *p_opSchema = &(iter->second);
-        return true;
-    }
-
-    Status OperatorSchemaRegistry::Register(
-        const OperatorSchema& p_opSchema)
-    {
-        auto iter = m_opNameToOpSchemaMap.find(p_opSchema.GetName());
-        if (m_opNameToOpSchemaMap.end() != iter)
-        {
-            Status status(ONNX, FAIL,
-                "Error: operator schema with same name ("
-                + p_opSchema.GetName() + ") exists.");
-            assert(false);
-            return status;
-        }
-        else
-        {
-            m_opNameToOpSchemaMap[p_opSchema.GetName()] = p_opSchema;
-            return Status::OK();
-        }
-    }
-
-    OperatorSchemaRegistry* OperatorSchemaRegistry::Get()
-    {
-        static OperatorSchemaRegistry* s_registry
-            = new OperatorSchemaRegistry();
-        return s_registry;
     }
 
     Status TypeUtils::GetType(const AttributeProto& p_attr, AttrType& p_type)
@@ -306,5 +234,128 @@ namespace ONNXIR
             }
         }
         return Status::OK();
+    }
+
+    OpSchemaRegistry::DomainToVersionRange::DomainToVersionRange()
+    {
+        // Increase the highest version when you make BC-breaking changes to the
+        // operator schema on specific domain. Update the lowest version when it's
+        // determined to remove too old version history.
+        m_map[""] = std::make_pair(1, 2);
+        m_map["ai.onnx.ml"] = std::make_pair(1, 1);
+    }
+
+    const std::unordered_map<std::string, std::pair<int, int>>&
+        OpSchemaRegistry::DomainToVersionRange::Map() const
+    {
+        return m_map;
+    }
+
+    OpSchemaRegistry::DomainToVersionRange& OpSchemaRegistry::DomainToVersionRange::Instance()
+    {
+        static DomainToVersionRange domain_to_version_range;
+        return domain_to_version_range;
+    }
+
+    OpSchemaRegistry::OpSchemaRegisterOnce::OpSchemaRegisterOnce(OperatorSchemaSetter& p_opSchemaSetter)
+    {
+        auto& opSchema = p_opSchemaSetter.m_opSchema;
+        // Process type constraints.
+        for (const auto& constraint : p_opSchemaSetter.m_constraints)
+        {
+            std::string name;
+            std::vector<std::string> types;
+            std::string desc;
+            std::tie(name, types, desc) = constraint;
+
+            auto it = opSchema.m_opSignature.m_typeConstraintMap.find(name);
+            assert(it == opSchema.m_opSignature.m_typeConstraintMap.end());
+            DataTypeSet d;
+            for (const auto& t : types)
+            {
+                d.insert(Utils::OpUtils::ToType(t));
+            }
+            opSchema.m_opSignature.m_typeConstraintMap.insert(std::make_pair(name, std::make_pair(d, desc)));
+        }
+
+        opSchema.m_opSignature.m_inputs.reserve(p_opSchemaSetter.m_inputs.size());
+        for (const auto& input : p_opSchemaSetter.m_inputs)
+        {
+            std::string name;
+            std::string type;
+            std::string desc;
+            std::tie(name, desc, type) = input;
+            opSchema.m_opSignature.m_inputs.push_back(
+                OpSignature::FormalParameter(name, type, desc, opSchema.m_opSignature.m_typeConstraintMap));
+        }
+
+        opSchema.m_opSignature.m_outputs.reserve(p_opSchemaSetter.m_outputs.size());
+        for (const auto& output : p_opSchemaSetter.m_outputs)
+        {
+            std::string name;
+            std::string type;
+            std::string desc;
+            std::tie(name, desc, type) = output;
+            opSchema.m_opSignature.m_outputs.push_back(
+                OpSignature::FormalParameter(name, type, desc,
+                    opSchema.m_opSignature.m_typeConstraintMap));
+        }
+
+        auto& m = map();
+        auto& op_name = p_opSchemaSetter.m_opSchema.GetName();
+        auto& op_domain = p_opSchemaSetter.m_opSchema.Domain();
+        auto ver = p_opSchemaSetter.m_opSchema.SinceVersion();
+        assert(m[op_name][op_domain].count(ver) == 0);
+        m[op_name][op_domain].emplace(std::make_pair(ver, p_opSchemaSetter.m_opSchema));
+    }
+
+    const OperatorSchema* OpSchemaRegistry::Schema(
+        const std::string& p_key,
+        const std::string& p_domain)
+    {
+        auto& m = map();
+        if (m.count(p_key) && m[p_key].count(p_domain))
+        {
+            return &m[p_key][p_domain].rbegin()->second;
+        }
+        else {
+            return nullptr;
+        }
+    }
+
+    const OperatorSchema* OpSchemaRegistry::Schema(
+        const std::string& p_key,
+        const int p_maxInclusiveVersion,
+        const std::string& p_domain)
+    {
+        auto& m = map();
+        if (m.count(p_key) && m[p_key].count(p_domain))
+        {
+            auto pos = m[p_key][p_domain].lower_bound(p_maxInclusiveVersion);
+            if (m[p_key][p_domain].begin() == pos && pos->first > p_maxInclusiveVersion)
+            {
+                // All versions are greater than specified version.
+                return nullptr;
+            }
+
+            if (m[p_key][p_domain].end() == pos || pos->first > p_maxInclusiveVersion)
+            {
+                // All versions are less than specified version, or,
+                // The <pos> version is greater than specified version.
+                pos--;
+                return &(pos->second);
+            }
+            // Schema with exact version as specified one exists.
+            return &(pos->second);
+        }
+        else {
+            return nullptr;
+        }
+    }
+
+    OpSchemaMap& OpSchemaRegistry::map()
+    {
+        static OpSchemaMap map;
+        return map;
     }
 }
