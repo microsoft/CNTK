@@ -8,14 +8,35 @@
 #include "LatticeIndexBuilder.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
-#include "StringUtil.h"
-#include <unordered_set>
 
 namespace CNTK {
 
 using namespace Microsoft::MSR::CNTK;
 
 using namespace std;
+
+// This class stores sequence data for HTK for floats.
+struct LatticeFloatSequenceData : DenseSequenceData
+{
+    LatticeFloatSequenceData(void* data, unsigned int bufferSize, const NDShape& frameShape) :DenseSequenceData(bufferSize,true),
+        m_buffer(data), m_frameShape(frameShape)
+    {
+    }
+
+    const void* GetDataBuffer() override
+    {
+        return m_buffer;
+    }
+
+    const NDShape& GetSampleShape() override
+    {
+        return m_frameShape;
+    }
+
+private:
+    const NDShape& m_frameShape;
+    void* m_buffer;
+};
 
 // Base class for chunks in frame and sequence mode.
 // The lifetime is always less than the lifetime of the parent deserializer.
@@ -63,7 +84,7 @@ class LatticeDeserializer::SequenceChunk : public LatticeDeserializer::ChunkBase
 
 public:
     SequenceChunk(const LatticeDeserializer& parent, const ChunkDescriptor& descriptor, const wstring& fileName)
-        : ChunkBase(parent, descriptor, fileName)
+        : ChunkBase(parent, descriptor, fileName), m_ndShape({ 1 })
     {
     }
 
@@ -76,13 +97,14 @@ public:
     void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result)
     {
         const auto& sequence = m_descriptor.Sequences()[sequenceIndex];
-//        auto start = m_buffer.data() + sequence.OffsetInChunk();
-        //auto end = start + sequence.SizeInBytes();
         // Deserialize the binary lattice graph and serialize it into a vector
-        SequenceDataPtr s = make_shared<DenseSequenceData>(sequence.SizeInBytes(), true);
+        SequenceDataPtr s = make_shared<LatticeFloatSequenceData>(m_buffer.data() + sequence.OffsetInChunk(), sequence.SizeInBytes(), m_ndShape);
 
         result.push_back(s);
     }
+
+private:
+    const NDShape m_ndShape; 
 };
 
 LatticeDeserializer::LatticeDeserializer(
