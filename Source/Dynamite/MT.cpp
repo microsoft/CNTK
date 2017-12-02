@@ -989,21 +989,21 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //}
             //if (mbCount > 1)
             //    exit(0);
-            if (mbCount % 50 == 1) for (let& p : parameters)
+            if (mbCount % 50 == 0)
             {
-                if (gradients[p]->GetStorageFormat() != StorageFormat::SparseBlockCol)
-                    gradients[p]->LogToFile(L"grad " + p.Name(), stderr, 10);
+                if (mbCount > 0) for (let& p : parameters)
+                {
+                    if (gradients[p]->GetStorageFormat() != StorageFormat::SparseBlockCol)
+                        gradients[p]->LogToFile(L"grad " + p.Name(), stderr, 10);
+                }
+                // log the parameters
+                for (let& p : parameters)
+                    p.Value()->LogToFile(p.Name(), stderr, 10);
             }
 #endif
             learner->Update(gradients, info);
             //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             let timePerUpdate = partTimer.Elapsed();
-#if 1       // log the parameters
-            if (mbCount % 50 == 1) for (let& p : parameters)
-            {
-                p.Value()->LogToFile(p.Name(), stderr, 10);
-            }
-#endif
             //partTimer.Log("Update", numLabels);
             let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
             totalLabels += info.numberOfSamples;
