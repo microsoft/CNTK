@@ -1968,6 +1968,12 @@ bool Matrix<ElemType>::IsEmpty() const
     return m_baseMatrix->IsEmpty();
 }
 
+template <class ElemType>
+bool Matrix<ElemType>::IsView() const
+{
+    return m_baseMatrix->IsView();
+}
+
 #pragma endregion Basic Operators
 
 #pragma region Member BLAS Functions
@@ -6248,6 +6254,7 @@ template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 template void Matrix<char>::Reshape(const size_t, const size_t);
 template char* Matrix<char>::CopyToArray(void) const;
+template bool Matrix<char>::IsView() const;
 
 // Matrix<short> methods
 template Matrix<short>::Matrix(DEVICEID_TYPE);
@@ -6274,6 +6281,7 @@ template bool Matrix<short>::IsEmpty() const;
 template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 template void Matrix<short>::Reshape(const size_t, const size_t);
 template short* Matrix<short>::CopyToArray(void) const;
+template bool Matrix<short>::IsView() const;
 
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 

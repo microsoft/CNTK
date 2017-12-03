@@ -917,6 +917,18 @@ def test_layers_layer_normalization():
     dat = np.array([[1.0,2.0,3.0,4.0]], dtype=np.float32)
     res =  p(y).eval({y: dat})
 
+    checkedBias = False
+    checkedScale = False
+    for param in p.parameters:
+        if param.name == "bias":
+            assert param.value.shape == y.shape
+            checkedBias = True
+        elif param.name == "scale":
+            assert param.value.shape == y.shape
+            checkedScale = True
+
+    assert checkedBias and checkedScale
+
     mean_dat = np.mean(dat)
     x = dat-mean_dat
     std = np.sqrt(np.mean(x*x))

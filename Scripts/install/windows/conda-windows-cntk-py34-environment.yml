@@ -5,7 +5,6 @@ channels:
 - conda-forge
 dependencies:
 - h5py=2.6.0=np111py34_2
-- imageio=2.1.1=py34_0
 - jupyter=1.0.0=py34_3
 - matplotlib=1.5.3=np111py34_0
 - numpy=1.11.2=py34_0
@@ -34,3 +33,4 @@ dependencies:
   - nbsphinx==0.2.14
   - twine==1.8.1
   - protobuf==3.2.0
+  - imageio==2.2.0

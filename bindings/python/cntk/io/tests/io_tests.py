@@ -896,8 +896,8 @@ def test_usermbsource_training(tmpdir, with_checkpoint_impl):
     mbs_cv = MBS_CV_CLASS(input_dim, num_output_classes)
 
     from cntk import sequence, parameter, plus, cross_entropy_with_softmax, \
-            classification_error, learning_rate_schedule, sgd, Trainer, \
-            training_session, times, UnitType
+            classification_error, learning_parameter_schedule_per_sample, sgd, Trainer, \
+            training_session, times
 
     feature = sequence.input_variable(shape=(input_dim,))
     label = C.input_variable(shape=(num_output_classes,))
@@ -908,7 +908,7 @@ def test_usermbsource_training(tmpdir, with_checkpoint_impl):
 
     #having a large learning rate to prevent the model from converging earlier where not all the intended samples are fed
     #note that training session can end earlier if there is no updates
-    lr_per_sample = learning_rate_schedule(0.3, UnitType.sample)
+    lr_per_sample = learning_parameter_schedule_per_sample(0.3)
     learner = sgd(z.parameters, lr_per_sample)
     trainer = Trainer(z, (ce, errs), [learner])
     input_map = {

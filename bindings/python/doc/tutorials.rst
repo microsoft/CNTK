@@ -62,6 +62,10 @@ Tutorials
 #.  *Recognize flowers and animals in natural scene images using deep transfer learning*
      CNTK 301: `Deep transfer learning with pre-trained ResNet model <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.html>`_ (:cntktut:`source <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning>`)    
      
+#.  *Generate higher resolution images from low resolution ones*
+     CNTK 302 Part A : `Use pre-trained models for generating super-resolution images <CNTK_301A_Evaluation_of_Pretrained_Super-resolution_Models.html>`_ (:cntktut:`source <CNTK_301A_Evaluation_of_Pretrained_Super-resolution_Models>`),
+     Part B: `Train super resolution models using CNNs and GANs <CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs.html>`_ (:cntktut:`source <CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs>`)     
+     
 #.  *Compare the similarity between a pair of documents*
      CNTK 303: `Deep structured semantic modeling with LSTM <CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.html>`_ (:cntktut:`source <CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks>`)   
 

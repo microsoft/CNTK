@@ -1,9 +1,7 @@
-#pragma warning(push)
-#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456)
-
 #include <fstream>
 #include <iostream>
 #include <numeric>
+#include <stack>
 
 #include "graph.h"
 #include "op.h"
@@ -13,10 +11,20 @@ using namespace ONNXIR::Utils;
 
 namespace ONNXIR
 {
+
+#define NO_CHANGE_ON_SYNC_FLAG(...)                 \
+    do {                                            \
+        bool syncNeeded = m_graphProtoSyncNeeded;   \
+        {__VA_ARGS__;}                               \
+        m_graphProtoSyncNeeded = syncNeeded;        \
+    } while (0)                                     \
+
     NodeArg::NodeArg(const std::string& p_name,
         const TypeProto* p_nodeArgType)
     {
         m_nodeArgInfo.set_name(p_name);
+        // If the name is empty, it means the arg does not exist.
+        m_exist = !(p_name.empty());
         if (nullptr != p_nodeArgType)
         {
             (*m_nodeArgInfo.mutable_type()) = *p_nodeArgType;
@@ -34,7 +42,7 @@ namespace ONNXIR
         return m_type;
     }
 
-    const TypeProto::TensorShapeProto* NodeArg::Shape() const
+    const TensorShapeProto* NodeArg::Shape() const
     {
         if (!m_nodeArgInfo.has_type())
         {
@@ -44,21 +52,17 @@ namespace ONNXIR
         auto typeCase = m_nodeArgInfo.type().value_case();
         switch (typeCase)
         {
-        case ONNXIR::TypeProto::kTensorType:
+        case TypeProto::kTensorType:
             return &(m_nodeArgInfo.type().tensor_type().shape());
-        case ONNXIR::TypeProto::kSparseTensorType:
-            return &(m_nodeArgInfo.type().sparse_tensor_type().shape());
-        case ONNXIR::TypeProto::kHandleType:
-        case ONNXIR::TypeProto::kTupleType:
-        case ONNXIR::TypeProto::kSeqType:
-        case ONNXIR::TypeProto::kMapType:
-        case ONNXIR::TypeProto::VALUE_NOT_SET:
+        case TypeProto::kSequenceType:
+        case TypeProto::kMapType:
+        case TypeProto::VALUE_NOT_SET:
         default:
             return nullptr;
         }
     }
 
-    void NodeArg::SetShape(const TypeProto::TensorShapeProto& p_shape)
+    void NodeArg::SetShape(const TensorShapeProto& p_shape)
     {
         if (!m_nodeArgInfo.has_type())
         {
@@ -68,17 +72,12 @@ namespace ONNXIR
         auto typeCase = m_nodeArgInfo.type().value_case();
         switch (typeCase)
         {
-        case ONNXIR::TypeProto::kTensorType:
+        case TypeProto::kTensorType:
             *(m_nodeArgInfo.mutable_type()->mutable_tensor_type()->mutable_shape()) = p_shape;
             break;
-        case ONNXIR::TypeProto::kSparseTensorType:
-            *(m_nodeArgInfo.mutable_type()->mutable_sparse_tensor_type()->mutable_shape()) = p_shape;
-            break;
-        case ONNXIR::TypeProto::kHandleType:
-        case ONNXIR::TypeProto::kTupleType:
-        case ONNXIR::TypeProto::kSeqType:
-        case ONNXIR::TypeProto::kMapType:
-        case ONNXIR::TypeProto::VALUE_NOT_SET:
+        case TypeProto::kSequenceType:
+        case TypeProto::kMapType:
+        case TypeProto::VALUE_NOT_SET:
         default:
             return;
         }
@@ -107,25 +106,9 @@ namespace ONNXIR
         *(m_nodeArgInfo.mutable_type()) = p_typeProto;
     }
 
-    Function::Function(Node* p_node,
-        const FunctionDefProto& p_funcProto)
+    bool NodeArg::Exist() const
     {
-        m_body.reset(new Graph(p_node, p_funcProto));
-    }
-
-    Graph* Function::Body()
-    {
-        return m_body.get();
-    }
-
-    const std::string& Function::Name()
-    {
-        return m_body->Name();
-    }
-
-    const FunctionDefProto& Function::ToProto()
-    {
-        return m_body->ToFuncProto();
+        return m_exist;
     }
 
     Node::EdgeEnd::EdgeEnd(const Node& p_node, const NodeArg& p_nodeArg)
@@ -176,6 +159,7 @@ namespace ONNXIR
     {
         m_name = p_other.m_name;
         m_opType = p_other.m_opType;
+        m_domain = p_other.m_domain;
         m_inputDefs = p_other.m_inputDefs;
         m_inputs = p_other.m_inputs;
         m_inputNodes = p_other.m_inputNodes;
@@ -204,6 +188,16 @@ namespace ONNXIR
     const std::string& Node::Description() const
     {
         return m_description;
+    }
+
+    const std::string& Node::Domain() const
+    {
+        return m_domain;
+    }
+
+    const OperatorSchema* Node::Op() const
+    {
+        return m_op;
     }
 
     const std::vector<NodeArg>& Node::InputDefs() const
@@ -298,21 +292,10 @@ namespace ONNXIR
         p_proto.set_name(m_name);
         // Set op type.
         p_proto.set_op_type(m_opType);
+        // Set op domain;
+        p_proto.set_domain(m_domain);
         // Set doc string.
         p_proto.set_doc_string(m_description);
-
-        // Set control inputs.
-        p_proto.clear_control_input();
-        for (auto& control_input : m_controlInputs)
-        {
-            if (0 == m_graph->SourceNode()->Name().compare(control_input))
-            {
-                // Source node will be removed during serialization.
-                continue;
-            }
-
-            *p_proto.add_control_input() = control_input;
-        }
 
         // Set attributes.
         p_proto.clear_attribute();
@@ -330,13 +313,6 @@ namespace ONNXIR
             *input = inputDef.Name();
         }
 
-        // Set input arg count.
-        p_proto.clear_input_arg_count();
-        for (auto argCount : m_inputArgCount)
-        {
-            *(p_proto.mutable_input_arg_count()->Add()) = argCount;
-        }
-
         // Set outputs' definitions.
         p_proto.clear_output();
         for (auto& outputDef : m_outputDefs)
@@ -351,6 +327,7 @@ namespace ONNXIR
     {
         m_name = p_nodeProto.name();
         m_opType = p_nodeProto.op_type();
+        m_domain = p_nodeProto.domain();
 
         for (int i = 0; i < p_nodeProto.input().size(); ++i)
         {
@@ -367,18 +344,11 @@ namespace ONNXIR
             m_inputDefs.push_back(NodeArg(p_nodeProto.input(i), type));
         }
 
-        for (auto argCount : p_nodeProto.input_arg_count())
-        {
-            m_inputArgCount.push_back(argCount);
-        }
-        if (0 == m_inputArgCount.size())
-        {
-            // Input arg count information is not provided in proto file.
-            // Set each arg count as 1 by default.
-            // It could be adjusted when resolving the node with its operator
-            // information.
-            m_inputArgCount.assign(m_inputDefs.size(), 1);
-        }
+        // Set input arg count as 1:1 maping with input defs.
+        // NOTE: it may be refined per operator definition.
+        // There will be cases having arg count as, 1, 1, ..., 1, N.
+        // It means that the last operator input is variadic.
+        m_inputArgCount.assign(m_inputDefs.size(), 1);
 
         for (int i = 0; i < p_nodeProto.output().size(); ++i)
         {
@@ -395,11 +365,6 @@ namespace ONNXIR
             m_outputDefs.push_back(NodeArg(p_nodeProto.output(i), type));
         }
 
-        for (auto control_input : p_nodeProto.control_input())
-        {
-            m_controlInputs.insert(control_input);
-        }
-
         for (int i = 0; i < p_nodeProto.attribute_size(); ++i)
         {
             auto& attr = p_nodeProto.attribute(i);
@@ -411,17 +376,15 @@ namespace ONNXIR
         const std::string& p_opType,
         const std::string& p_description,
         const std::vector<NodeArg>& p_inputArgs,
-        const std::vector<NodeArg>& p_outputArgs)
+        const std::vector<NodeArg>& p_outputArgs,
+        const std::string& p_domain)
     {
-        m_name = p_name;
-        m_opType = p_opType;
-        m_description = p_description;
+        Init(p_name, p_opType, p_description, p_outputArgs, p_domain);
         m_inputDefs = p_inputArgs;
         // Set each arg count as 1 by default.
         // It could be adjusted when resolving the node with its operator
         // information.
         m_inputArgCount.assign(m_inputDefs.size(), 1);
-        m_outputDefs = p_outputArgs;
     }
 
     void Node::Init(const std::string& p_name,
@@ -429,25 +392,25 @@ namespace ONNXIR
         const std::string& p_description,
         const std::vector<NodeArg>& p_inputArgs,
         const std::vector<int>& p_inputArgCount,
-        const std::vector<NodeArg>& p_outputArgs)
+        const std::vector<NodeArg>& p_outputArgs,
+        const std::string& p_domain)
     {
-        m_name = p_name;
-        m_opType = p_opType;
-        m_description = p_description;
+        Init(p_name, p_opType, p_description, p_outputArgs, p_domain);
         m_inputDefs = p_inputArgs;
         m_inputArgCount = p_inputArgCount;
-        m_outputDefs = p_outputArgs;
     }
 
     void Node::Init(const std::string& p_name,
         const std::string& p_opType,
         const std::string& p_description,
-        const std::vector<NodeArg>& p_outputArgs)
+        const std::vector<NodeArg>& p_outputArgs,
+        const std::string& p_domain)
     {
         m_name = p_name;
         m_opType = p_opType;
         m_description = p_description;
         m_outputDefs = p_outputArgs;
+        m_domain = p_domain;
     }
 
     bool Node::AddAttribute(const std::string& p_attrName, const AttributeProto& p_value)
@@ -534,16 +497,12 @@ namespace ONNXIR
     ADD_BASIC_ATTR_IMPL(int64_t, i)
     ADD_BASIC_ATTR_IMPL(std::string, s)
     ADD_ATTR_IMPL(TensorProto, t)
-    ADD_ATTR_IMPL(TypeProto::TensorShapeProto, shape)
     ADD_ATTR_IMPL(GraphProto, g)
-    ADD_ATTR_IMPL(TypeProto, type)
     ADD_LIST_ATTR_IMPL(float, floats)
     ADD_LIST_ATTR_IMPL(int64_t, ints)
     ADD_LIST_ATTR_IMPL(std::string, strings)
     ADD_LIST_ATTR_IMPL(TensorProto, tensors)
-    ADD_LIST_ATTR_IMPL(TypeProto::TensorShapeProto, shapes)
     ADD_LIST_ATTR_IMPL(GraphProto, graphs)
-    ADD_LIST_ATTR_IMPL(TypeProto, types)
 
     bool Node::ClearAttribute(const std::string& p_attrName)
     {
@@ -591,25 +550,13 @@ namespace ONNXIR
     Graph::Graph(const GraphProto& p_graphProto)
         : m_graphProto(p_graphProto),
         m_graphProtoSyncNeeded(false),
-        m_graphResolveNeeded(true)
+        m_graphResolveNeeded(true),
+        m_numOfNodes(0)
     {
         // This is a main graph, and strict type checking needed..
         m_graphType |= Type::Main;
 
-        if (m_graphProto.node_size() > 0
-            && m_graphProto.node(0).input_arg_count_size() > 0)
-        {
-            // The condition above now is used to judge
-            // whether 1) node input arg count is specified or not,
-            // to determin whether strict type checking needed or not.
-            m_graphType |= Type::Strict;
-        }
-
-        // Copy function definitions to a map.
-        for (auto funcDef : p_graphProto.function())
-        {
-            m_funcDefMap[funcDef.name()] = funcDef;
-        }
+        // TODO: add Type::Strict back.
 
         // Copy initial tensors to a map.
         for (auto tensor : p_graphProto.initializer())
@@ -649,48 +596,12 @@ namespace ONNXIR
         {
             AddNode(nodeProto, nameToTypeMap);
         }
-
-    }
-
-    Graph::Graph(Node* p_node,
-        const FunctionDefProto& p_functionProto)
-        : m_graphProtoSyncNeeded(false),
-        m_graphResolveNeeded(true)
-    {
-        // This is a function (subgraph).
-        m_graphType |= (Type::Main | Type::Strict);
-
-        m_node = p_node;
-        m_funcDefProto = p_functionProto;
-
-        AddSourceSinkNodes();
-
-        ArgNameToTypeMap nameToType;
-        if (nullptr != p_node)
-        {
-            // <p_node> is the one which refers to the function <p_functionProto>.
-            // The inputs/outputs of <p_node> should also be matched with function
-            // inputs/outputs in order.
-            int i = 0;
-            for (auto inputDef : p_node->InputDefs())
-            {
-                if (nullptr != inputDef.Type())
-                {
-                    nameToType[p_functionProto.input_params(i).name()] = OpUtils::ToTypeProto(inputDef.Type());
-                }
-                ++i;
-            }
-        }
-
-        for (auto& nodeProto : p_functionProto.node())
-        {
-            AddNode(nodeProto, nameToType);
-        }
     }
 
     Graph::Graph(const std::string& p_name, bool p_isONNX)
         : m_graphProtoSyncNeeded(false),
-        m_graphResolveNeeded(true)
+        m_graphResolveNeeded(true),
+        m_numOfNodes(0)
     {
         m_graphProto.set_name(p_name);
         m_graphType |= Type::Main;
@@ -705,7 +616,8 @@ namespace ONNXIR
     Graph::Graph(const std::string& p_name,
         const std::string& p_docString)
         : m_graphProtoSyncNeeded(false),
-        m_graphResolveNeeded(true)
+        m_graphResolveNeeded(true),
+        m_numOfNodes(0)
     {
         m_graphProto.set_name(p_name);
         m_graphProto.set_doc_string(p_docString);
@@ -732,20 +644,22 @@ namespace ONNXIR
                 && p_nodeNameToIndex.end() != p_nodeNameToIndex.find(nodeName))
             {
                 // The node has name and its name was used by another node.
-                Status status(false,
+                Status status(ONNX,
+                    FAIL,
                     "Error: two nodes with same node name (" + nodeName + ").");
                 return status;
             }
             p_nodeNameToIndex[nodeName] = (*nodeIter)->Index();
 
             // Verify node outputs' name should be unique.
-            for (auto& outputDef : (*nodeIter)->Mutable_OutputDefs())
+            for (auto& outputDef : (*nodeIter)->OutputDefs())
             {
                 std::string outputArgname = outputDef.Name();
                 if (p_outputArgs.end() != p_outputArgs.find(outputArgname))
                 {
                     // Two outputs with same name.
-                    Status status(false,
+                    Status status(ONNX,
+                        FAIL,
                         "Error: two output args with same name ("
                         + outputArgname + ").");
                     return status;
@@ -755,19 +669,6 @@ namespace ONNXIR
             }
         }
         return Status::OK();
-    }
-
-    void Graph::CleanFunctionDefMap(
-        const std::set<std::string>& p_funcDefNames)
-    {
-        for (auto funcDef : m_funcDefMap)
-        {
-            if (p_funcDefNames.end() == p_funcDefNames.find(funcDef.first))
-            {
-                // The <funcDef> is NOT used any more, remove it.
-                m_funcDefMap.erase(funcDef.first);
-            }
-        }
     }
 
     Status Graph::BuildConnections(
@@ -790,7 +691,7 @@ namespace ONNXIR
                 auto nameToIndexIter = p_nodeNameToIndex.find(controlInput);
                 if (p_nodeNameToIndex.end() == nameToIndexIter)
                 {
-                    Status status(false,
+                    Status status(ONNX, FAIL,
                         "The control input (" + controlInput + ") of Node ("
                         + (*nodeIter)->Name() + ") does not exist in the graph.");
                     return status;
@@ -811,6 +712,12 @@ namespace ONNXIR
 
                 for (auto& inputArg : inputArgs)
                 {
+                    if (!inputArg.Exist())
+                    {
+                        // This input could be optional and it does not exist in this case.
+                        continue;
+                    }
+
                     auto outputArgIter = p_outputArgs.find(inputArg.Name());
                     if (p_outputArgs.end()
                         == outputArgIter)
@@ -876,45 +783,74 @@ namespace ONNXIR
     Status Graph::CheckIsAcyclic(
         std::vector<NODEINDEX>& p_nodesInTopologicalOrder)
     {
+        p_nodesInTopologicalOrder.clear();
+        // nodes that have been processed and added to p_nodesInTopologicalOrder.
         std::unordered_set<NODEINDEX> visitedNodes;
         std::unordered_set<NODEINDEX> ancestorNodes;
-        return DepthFirstAccess(ancestorNodes,
-            m_sinkNodeIndex,
-            visitedNodes,
-            p_nodesInTopologicalOrder);
-    }
+        // tracks nodes whose child nodes have been processed.
+        std::unordered_set<NODEINDEX> childrenVisitedNodes;
+        std::stack<NODEINDEX> stack;
+        stack.push(m_sinkNodeIndex);
 
-    Status Graph::DepthFirstAccess(std::unordered_set<NODEINDEX> p_ancestors,
-        NODEINDEX p_current,
-        std::unordered_set<NODEINDEX>& p_visitedNodes,
-        std::vector<NODEINDEX>& p_nodesInTopologicalOrder)
-    {
-        if (p_visitedNodes.end() != p_visitedNodes.find(p_current))
+        while (!stack.empty())
         {
-            // The node has been visited before.
-            return Status::OK();
-        }
+            NODEINDEX current = stack.top();
+            stack.pop();
 
-        p_ancestors.insert(p_current);
-        for (auto iter = m_nodes[p_current]->InputNodes_begin();
-            iter != m_nodes[p_current]->InputNodes_end();
-            ++iter)
-        {
-            if (p_ancestors.end() != p_ancestors.find((*iter)->Index()))
+            if (visitedNodes.end() != visitedNodes.find(current))
             {
-                Status status(false,
-                    "Error: the graph is not acyclic.");
-                return status;
+                // The node has been visited before
+                continue;
             }
 
-            RETURN_IF_ERROR(DepthFirstAccess(p_ancestors,
-                (*iter)->Index(),
-                p_visitedNodes,
-                p_nodesInTopologicalOrder));
-        }
-        p_visitedNodes.insert(p_current);
-        p_nodesInTopologicalOrder.push_back(p_current);
+            if (childrenVisitedNodes.end() != childrenVisitedNodes.find(current))
+            {
+                // children are done so we mark this one complete.
+                visitedNodes.insert(current);
+                p_nodesInTopologicalOrder.push_back(current);
+                ancestorNodes.erase(current);
+                continue;
+            }
 
+            if (m_nodes[current]->InputNodes_begin() ==
+                m_nodes[current]->InputNodes_end())
+            {
+                // no children
+                childrenVisitedNodes.insert(current);
+                visitedNodes.insert(current);
+                p_nodesInTopologicalOrder.push_back(current);
+                ancestorNodes.erase(current);
+                continue;
+            }
+
+            stack.push(current);
+
+            // mark as children done. by the time the node is popped off the stack again,
+            // its children will have been processed
+            childrenVisitedNodes.insert(current);
+
+            ancestorNodes.insert(current);
+
+            // check children
+            for (auto iter = m_nodes[current]->InputNodes_begin();
+                iter != m_nodes[current]->InputNodes_end();
+                ++iter)
+            {
+                NODEINDEX idx = (*iter)->Index();
+                if (ancestorNodes.end() != ancestorNodes.find(idx))
+                {
+                    Status status(ONNX, FAIL,
+                        "Error: the graph is not acyclic.");
+                    return status;
+                }
+
+                // avoid re-processing nodes
+                if (childrenVisitedNodes.end() == childrenVisitedNodes.find(idx))
+                {
+                    stack.push(idx);
+                }
+            }
+        }
         return Status::OK();
     }
 
@@ -937,7 +873,7 @@ namespace ONNXIR
 
             // Infer and verify all <arguCount> inputs (k-th input)
             // matching operator definition (i-th argument).
-            for (int j = 0;j < argCount;++j, ++k)
+            for (int j = 0; j < argCount; ++j, ++k)
             {
                 auto& inputDef = p_node->Mutable_InputDefs()[k];
 
@@ -960,12 +896,20 @@ namespace ONNXIR
                         initialTensorType.mutable_tensor_type()->set_elem_type(
                             initialTensorIter->second.data_type());
                         inputDef.SetType(OpUtils::ToType(initialTensorType));
+
+                        // Set shape accordingly.
+                        TensorShapeProto shape;
+                        for (auto dim : initialTensorIter->second.dims())
+                        {
+                            shape.add_dim()->set_dim_value(dim);
+                        }
+                        inputDef.SetShape(shape);
                     }
                     else if (!inputDef.m_nodeArgInfo.has_type())
                     {
                         // This input is fed by callers and its type has to be specified.
 
-                        Status status(false,
+                        Status status(ONNX, FAIL,
                             "Node (" + nodeName + ") input arg ("
                             + inputDef.Name()
                             + ") does not have type information.");
@@ -989,7 +933,7 @@ namespace ONNXIR
                 auto iter = opFormalParameter.GetTypes().find(inputDef.Type());
                 if (opFormalParameter.GetTypes().end() == iter)
                 {
-                    Status status(false,
+                    Status status(ONNX, FAIL,
                         "Node (" + nodeName + ") input arg ("
                         + inputDef.Name() + ") type does not match operator ("
                         + p_op->GetName() + ") definition.");
@@ -1003,12 +947,15 @@ namespace ONNXIR
                         = inputDef.Type();
 
                 }
-                else if (paramToTypeIter->second != inputDef.Type())
+                else if (paramToTypeIter->second != inputDef.Type() && argCount == 1)
                 {
                     // This is the case.
                     // An operator's inputs' type is "T", and T"s allowed value set is "float, int32".
                     // However, one input is specified as "float", and another one is specified as "int".
-                    Status status(false,
+                    // NOTE: for variadic arguments (argCount > 1), this verification rule is not applicable.
+                    // Different types are allowed for variadic arguments although there's only one type "T"
+                    // specified in op definition.
+                    Status status(ONNX, FAIL,
                         "Node (" + nodeName + ") has different input"
                         " types (" + *(paramToTypeIter->second) + ","
                         + *(inputDef.Type()) + ") matching to same "
@@ -1047,7 +994,7 @@ namespace ONNXIR
                     = p_node->GetAttributes().find(c_constantValue);
                 if (p_node->GetAttributes().end() == nodeAttributesIter)
                 {
-                    Status status(false,
+                    Status status(ONNX, FAIL,
                         "Node (" + nodeName + ") output arg value should"
                         "be specified via node attribute '" + c_constantValue + "'.");
                     return status;
@@ -1055,7 +1002,7 @@ namespace ONNXIR
 
                 AttrType attrType;
                 RETURN_IF_ERROR(TypeUtils::GetType(nodeAttributesIter->second, attrType));
-                if (AttrType::TENSOR == attrType)
+                if (AttrType::AttributeProto_AttributeType_TENSOR == attrType)
                 {
                     auto& tensor = nodeAttributesIter->second.t();
                     TypeProto typeProto;
@@ -1064,7 +1011,7 @@ namespace ONNXIR
                 }
                 else
                 {
-                    Status status(false,
+                    Status status(ONNX, FAIL,
                         "For attribute " + c_constantValue + " , only Tensor type"
                         "is allowed. The attribute type in this model is "
                         + ONNXIR::c_attrTypeStr[(int)attrType] + ".");
@@ -1082,7 +1029,7 @@ namespace ONNXIR
                 auto iter = opFormalParameter.GetTypes().find(outputDef.Type());
                 if (opFormalParameter.GetTypes().end() == iter)
                 {
-                    Status status(false,
+                    Status status(ONNX, FAIL,
                         "Node (" + nodeName + ") output arg ("
                         + outputDef.Name() + ") type does not match operator ("
                         + p_op->GetName() + ") definition.");
@@ -1103,7 +1050,7 @@ namespace ONNXIR
             // Output arg has no type information, and there're
             // multiple allowed types defined in operator definition.
             // Type inference fails in this case.
-            Status status(false,
+            Status status(ONNX, FAIL,
                 "Node (" + nodeName + ") output arg ("
                 + outputDef.Name() + ") type inference failed");
             return status;
@@ -1114,8 +1061,7 @@ namespace ONNXIR
 
     Status Graph::VerifyNodeAndOpMatch(
         const std::vector<NODEINDEX>& p_nodesInTopologicalOrder,
-        std::unordered_map<std::string, Node::EdgeEnd>& p_outputArgs,
-        /*out*/ std::set<std::string>& p_funcDefNames)
+        std::unordered_map<std::string, Node::EdgeEnd>& p_outputArgs)
     {
         for (auto nodeIndex : p_nodesInTopologicalOrder)
         {
@@ -1126,204 +1072,148 @@ namespace ONNXIR
             }
 
             auto node = GetNode(nodeIndex);
-            std::string nodeName = node->Name();
-            std::string op_type = node->OpType();
-            const OperatorSchema* opSchema = nullptr;
-            bool success
-                = OperatorSchemaRegistry::Get()->TryGetOp(op_type, &opSchema);
-            if (success)
+            auto& nodeName = node->Name();
+            auto& op_type = node->OpType();
+            auto& domain = node->Domain();
+
+            // Get op schema with latest version given op name and domain.
+            // TODO: version may be used when we want to support versioning in run time.
+            node->m_op = OpSchemaRegistry::Schema(op_type, domain);
+            if (nullptr == node->m_op)
             {
-                auto& op = opSchema->GetOpSignature();
+                // A op_type refers to nothing.
+                Status status(ONNX, FAIL,
+                    "Error: the operator or function (" + op_type
+                    + ") refered by node (" + nodeName
+                    + ") does not exist.");
+                return status;
+            }
 
-                // The node refers to a primitive operator.
-                // Infer and verify node input arg type information.
-                size_t totalArgCount = std::accumulate(node->InputArgCount().begin(),
-                    node->InputArgCount().end(), 0);
-                if (totalArgCount != node->InputDefs().size())
+            auto& op = node->Op()->GetOpSignature();
+
+            // The node refers to a primitive operator.
+            // Infer and verify node input arg type information.
+            auto totalArgCount = std::accumulate(node->InputArgCount().begin(),
+                node->InputArgCount().end(), 0);
+            if (totalArgCount != node->InputDefs().size())
+            {
+                Status status(ONNX, FAIL,
+                    "The sum of input arg count is not equal to size of"
+                    "input defs in node (" + nodeName + ").");
+                return status;
+            }
+
+            // Verify size of node arg count is same as input number in
+            // operator definition.
+            if (op.GetInputs().size() != node->InputArgCount().size())
+            {
+                if (0 == (m_graphType & Type::Strict))
                 {
-                    Status status(false,
-                        "The sum of input arg count is not equal to size of"
-                        "input defs in node (" + nodeName + ").");
-                    return status;
-                }
+                    // It's ONNX case.
+                    // Adjust input arg count array with op definition
+                    // The adjustment will work as below,
+                    // In total, there're <totalArgCount> inputs, which
+                    // will be split as <1, 1, 1, 1, ... 1, x> or
+                    // <1, 1, 1, 1, ...1, 0, 0, ...0>. The final input 
+                    // arg count array's element number will be the same
+                    // as op definition, and the sum of all elements will
+                    // be equal to <totalArgCount>.
+                    auto& inputArgCount = node->Mutable_InputArgCount();
+                    inputArgCount.clear();
+                    size_t m = 0;
+                    auto argCountLeft = totalArgCount;
+                    if (0 < op.GetInputs().size())
+                    {
+                        for (; m < op.GetInputs().size() - 1; ++m)
+                        {
+                            if (argCountLeft > 0)
+                            {
+                                inputArgCount.push_back(1);
+                                argCountLeft--;
+                            }
+                            else
+                            {
+                                inputArgCount.push_back(0);
+                            }
+                        }
+                    }
 
-                if (totalArgCount > op.GetOnnxMaxInput() ||
-                    totalArgCount < op.GetOnnxMinInput() ||
-                    !op.GetOnnxNumInputsAllowedFunc()(totalArgCount))
+                    // Set the arg count for the last input formal parameter.
+                    // NOTE: in the case that there's no .input(...) defined
+                    // in op schema, all input args will be fed as one input
+                    // of the operator.
+                    inputArgCount.push_back(argCountLeft);
+                }
+                else
                 {
                     // Number of inputs do not match.
-                    Status status(false, "Error: node (" + nodeName
+                    Status status(ONNX, FAIL, "Error: node (" + nodeName
                         + ")'s number of inputs do not match its operator ("
                         + op_type + ") specification.");
                     return status;
                 }
+            }
 
-                // Verify size of node arg count is same as input number in
-                // operator definition.
-                if (op.GetInputs().size() != node->InputArgCount().size())
-                {
-                    if (0 == (m_graphType & Type::Strict))
-                    {
-                        // It's ONNX case.
-                        // Adjust input arg count array with op definition
-                        // The adjustment will work as below,
-                        // In total, there're <totalArgCount> inputs, which
-                        // will be split as <1, 1, 1, 1, ... 1, x> or
-                        // <1, 1, 1, 1, ...1, 0, 0, ...0>. The final input 
-                        // arg count array's element number will be the same
-                        // as op definition, and the sum of all elements will
-                        // be equal to <totalArgCount>.
-                        auto& inputArgCount = node->Mutable_InputArgCount();
-                        inputArgCount.clear();
-                        size_t m = 0;
-                        auto argCountLeft = totalArgCount;
-                        if (0 < op.GetInputs().size())
-                        {
-                            for (; m < op.GetInputs().size() - 1;++m)
-                            {
-                                if (argCountLeft > 0)
-                                {
-                                    inputArgCount.push_back(1);
-                                    argCountLeft--;
-                                }
-                                else
-                                {
-                                    inputArgCount.push_back(0);
-                                }
-                            }
-                        }
-
-                        // Set the arg count for the last input formal parameter.
-                        // NOTE: in the case that there's no .input(...) defined
-                        // in op schema, all input args will be fed as one input
-                        // of the operator.
-                        inputArgCount.push_back(argCountLeft);
-                    }
-                    else
-                    {
-                        // Number of inputs do not match.
-                        Status status(false, "Error: node (" + nodeName
-                            + ")'s number of inputs do not match its operator ("
-                            + op_type + ") specification.");
-                        return status;
-                    }
-                }
-
-                // Verify node outputs have same size with operator definition.
-                size_t outputCount = node->OutputDefs().size();
-                if (op.GetOutputs().size() != node->OutputDefs().size())
-                {
-                    // Number of outputs do not match.
-                    Status status(false, "Error: node (" + nodeName
-                        + ")'s number of outputs does not match its operator ("
-                        + op_type + ") specification.");
-
-                    if (0 == (m_graphType & Type::Strict))
-                    {
-                        // It's ONNX case.
-                        // TODO: more understanding is still needed about ONNX
-                        // on how to distributing the output args to output formal
-                        // parameter (same as input?)
-                        if (outputCount > op.GetOnnxMaxOutput() ||
-                            outputCount < op.GetOnnxMinOutput() ||
-                            !op.GetOnnxNumOutputsAllowedFunc()(outputCount))
-                        {
-                            return status;
-                        }
-                    }
-                    else
-                    {
-                        return status;
-                    }
-                }
-
+            // Verify node outputs have same size with operator definition.
+            if (op.GetOutputs().size() != node->OutputDefs().size())
+            {
                 if (0 != (m_graphType & Type::Strict))
                 {
-                    // Strict type checking needed.
+                    // Number of outputs do not match.
+                    Status status(ONNX, FAIL, "Error: node (" + nodeName
+                        + ")'s number of outputs does not match its operator ("
+                        + op_type + ") specification.");
+                    return status;
+                }
+            }
 
-                    RETURN_IF_ERROR(InferAndVerifyTypeMatch(node, &op, p_outputArgs));
-                }
+            if (0 != (m_graphType & Type::Strict))
+            {
+                // Strict type checking needed.
+                NO_CHANGE_ON_SYNC_FLAG(RETURN_IF_ERROR(InferAndVerifyTypeMatch(node, &op, p_outputArgs)));
+            }
 
-                // Attribute verification and fill node attribute with
-                // default value defined in operator definition if needed.
-                auto attrParser = opSchema->GetAttributeParser();
-                if (nullptr != attrParser)
-                {
-                    // Attribute parser registered.
-                    // Verifying attribute match by running attribute parser.
-                    RETURN_IF_ERROR(attrParser(node->GetAttributes()));
-                }
-                else
-                {
-                    // No attribute parser registered.
-                    auto nodeAttributes = node->GetAttributes();
-                    for (auto attrDef : op.GetAttributes())
-                    {
-                        auto nodeAttrIter = nodeAttributes.find(attrDef.GetName());
-                        if (nodeAttributes.end() == nodeAttrIter)
-                        {
-                            const AttributeProto* defaultValue = nullptr;
-                            bool hasDefaultValue
-                                = attrDef.HasDefaultValue(&defaultValue);
-                            if (hasDefaultValue)
-                            {
-                                // Set default value to the node attributes.
-                                node->AddAttribute(attrDef.GetName(), *defaultValue);
-                            }
-                        }
-                        else
-                        {
-                            // Verify node attribute type matching type of
-                            // attribute defined in operator definition.
-                            AttrType nodeAttrType;
-                            RETURN_IF_ERROR(TypeUtils::GetType(nodeAttrIter->second, nodeAttrType));
-                            if (nodeAttrType != attrDef.GetType())
-                            {
-                                Status status(false,
-                                    "Node (" + nodeName + ") attribute ("
-                                    + nodeAttrIter->first + ") type does not match operator definition.");
-                                return status;
-                            }
-                        }
-                    }
-                }
+            // Attribute verification and fill node attribute with
+            // default value defined in operator definition if needed.
+            auto attrParser = node->Op()->GetAttributeParser();
+            if (nullptr != attrParser)
+            {
+                // Attribute parser registered.
+                // Verifying attribute match by running attribute parser.
+                RETURN_IF_ERROR(attrParser(node->GetAttributes()));
             }
             else
             {
-                auto funcIter = m_funcDefMap.find(op_type);
-                if (m_funcDefMap.end() == funcIter)
+                // No attribute parser registered.
+                auto nodeAttributes = node->GetAttributes();
+                for (auto attrDef : op.GetAttributes())
                 {
-                    // A op_type refers to nothing.
-                    Status status(false,
-                        "Error: the operator or function (" + op_type
-                        + ") referred by node (" + nodeName
-                        + ") does not exist.");
-                    return status;
-                }
-
-                // The node refers to a function.
-                p_funcDefNames.insert(op_type);
-
-                // Verify node inputs have same size with function definition.
-                if ((size_t)funcIter->second.input_params_size()
-                    != node->InputDefs().size())
-                {
-                    // Number of inputs do not match.
-                    Status status(false, "Error: node (" + nodeName
-                        + ")'s number of inputs do not match its function ("
-                        + op_type + ") specification.");
-                    return status;
-                }
-
-                // Verify node outputs have same size with function definition.
-                if ((size_t)funcIter->second.output_params_size()
-                    != node->OutputDefs().size())
-                {
-                    // Number of outputs do not match.
-                    Status status(false, "Error: node (" + nodeName
-                        + ")'s number of outputs do not match its function ("
-                        + op_type + ") specification.");
-                    return status;
+                    auto nodeAttrIter = nodeAttributes.find(attrDef.GetName());
+                    if (nodeAttributes.end() == nodeAttrIter)
+                    {
+                        const AttributeProto* defaultValue = nullptr;
+                        bool hasDefaultValue
+                            = attrDef.HasDefaultValue(&defaultValue);
+                        if (hasDefaultValue)
+                        {
+                            // Set default value to the node attributes.
+                            node->AddAttribute(attrDef.GetName(), *defaultValue);
+                        }
+                    }
+                    else
+                    {
+                        // Verify node attribute type matching type of
+                        // attribute defined in operator definition.
+                        AttrType nodeAttrType;
+                        RETURN_IF_ERROR(TypeUtils::GetType(nodeAttrIter->second, nodeAttrType));
+                        if (nodeAttrType != attrDef.GetType())
+                        {
+                            Status status(ONNX, FAIL,
+                                "Node (" + nodeName + ") attribute ("
+                                + nodeAttrIter->first + ") type does not match operator definition.");
+                            return status;
+                        }
+                    }
                 }
             }
         }
@@ -1342,16 +1232,9 @@ namespace ONNXIR
         std::unordered_map<std::string, NODEINDEX> nodeNameToIndex;
         RETURN_IF_ERROR(VerifyNoDuplicateName(outputArgs, nodeNameToIndex));
         RETURN_IF_ERROR(BuildConnections(outputArgs, nodeNameToIndex));
-
         RETURN_IF_ERROR(CheckIsAcyclic(m_nodesInTopologicalOrder));
-
-        /* TODO: Uncomment
-        std::set<std::string> funcDefNames;
-        RETURN_IF_ERROR(VerifyNodeAndOpMatch(m_nodesInTopologicalOrder,
-            outputArgs,
-            funcDefNames));
-        CleanFunctionDefMap(funcDefNames);
-        */
+        RETURN_IF_ERROR(VerifyNodeAndOpMatch(m_nodesInTopologicalOrder, outputArgs));
+        SetGraphInputsOutputs();
 
         m_graphResolveNeeded = false;
         return Status::OK();
@@ -1421,26 +1304,19 @@ namespace ONNXIR
         return m_nameToInitialTensor;
     }
 
-    bool Graph::AddFunctionDef(const FunctionDefProto& p_funcDef)
+    const std::vector<const NodeArg*>& Graph::GetInputs() const
     {
-        auto funcDefName = p_funcDef.name();
-        if (m_funcDefMap.end() != m_funcDefMap.find(funcDefName))
-        {
-            // Same function definition exists.
-            return false;
-        }
-        m_funcDefMap[funcDefName] = p_funcDef;
-        m_graphProtoSyncNeeded = true;
-        m_graphResolveNeeded = true;
-        return true;
+        return m_graphInputs;
     }
 
-    void Graph::RemoveFunctionDef(const std::string& p_funcDefName)
+    const std::vector<const NodeArg*>& Graph::GetOutputs() const
     {
-        m_funcDefMap.erase(p_funcDefName);
-        // Set flag to indicates that the graph needs to be resolved.
-        m_graphProtoSyncNeeded = true;
-        m_graphResolveNeeded = true;
+        return m_graphOutputs;
+    }
+
+    const std::vector<const NodeArg*>& Graph::GetValueInfo() const
+    {
+        return m_valueInfo;
     }
 
     Node* Graph::GetNode(NODEINDEX p_nodeIndex)
@@ -1485,10 +1361,15 @@ namespace ONNXIR
         const std::string& p_opType,
         const std::string& p_description,
         const std::vector<NodeArg>& p_inputArgs,
-        const std::vector<NodeArg>& p_outputArgs)
+        const std::vector<NodeArg>& p_outputArgs,
+        const std::string& p_domain)
     {
         auto node = AllocateNode();
-        node->Init(p_name, p_opType, p_description, p_inputArgs, p_outputArgs);
+        node->Init(p_name, p_opType, p_description, p_inputArgs, p_outputArgs, p_domain);
+        if (0 != p_opType.compare(c_noOp))
+        {
+            m_graphProtoSyncNeeded = true;
+        }
         return node;
     }
 
@@ -1497,7 +1378,8 @@ namespace ONNXIR
         const std::string& p_description,
         const std::vector<NodeArg>& p_inputArgs,
         const std::vector<int>& p_inputArgCount,
-        const std::vector<NodeArg>& p_outputArgs)
+        const std::vector<NodeArg>& p_outputArgs,
+        const std::string& p_domain)
     {
         auto node = AllocateNode();
         node->Init(p_name,
@@ -1505,20 +1387,25 @@ namespace ONNXIR
             p_description,
             p_inputArgs,
             p_inputArgCount,
-            p_outputArgs);
+            p_outputArgs,
+            p_domain);
+        m_graphProtoSyncNeeded = true;
         return node;
     }
 
     Node* Graph::AddNode(const std::string& p_name,
         const std::string& p_opType,
         const std::string& p_description,
-        const std::vector<NodeArg>& p_outputArgs)
+        const std::vector<NodeArg>& p_outputArgs,
+        const std::string& p_domain)
     {
         auto node = AllocateNode();
         node->Init(p_name,
             p_opType,
             p_description,
-            p_outputArgs);
+            p_outputArgs,
+            p_domain);
+        m_graphProtoSyncNeeded = true;
         return node;
     }
 
@@ -1526,6 +1413,7 @@ namespace ONNXIR
     {
         auto node = AllocateNode();
         *node = p_other;
+        m_graphProtoSyncNeeded = true;
         return node;
     }
 
@@ -1568,40 +1456,13 @@ namespace ONNXIR
         m_nodes[p_dstNodeIndex]->
             m_controlInputs.insert(m_nodes[p_srcNodeIndex]->Name());
 
-        m_graphProtoSyncNeeded = true;
-        m_graphResolveNeeded = true;
-
-        return true;
-    }
-
-    bool Graph::TryGetFunction(NODEINDEX p_index, /*out*/Function** p_function)
-    {
-        if (MaxNodeIndex() <= p_index || nullptr == p_function)
+        if (!IsSourceNode(p_srcNodeIndex)
+            && !IsSinkNode(p_dstNodeIndex))
         {
-            return false;
+            m_graphProtoSyncNeeded = true;
+            m_graphResolveNeeded = true;
         }
 
-        auto& funcDefName = m_nodes[p_index]->OpType();
-        auto funcDefIter = m_funcDefMap.find(funcDefName);
-        if (m_funcDefMap.end() == funcDefIter)
-        {
-            // There's no such function definition.
-            return false;
-        }
-
-        auto funcIter = m_functionMap.find(funcDefName);
-        if (m_functionMap.end() != funcIter)
-        {
-            // A function instantiation exists.
-            *p_function = funcIter->second.get();
-            return true;
-        }
-
-        m_functionMap[funcDefName] =
-            std::unique_ptr<Function>(
-                new Function(m_nodes[p_index].get(), funcDefIter->second));
-
-        *p_function = m_functionMap[funcDefName].get();
         return true;
     }
 
@@ -1614,24 +1475,17 @@ namespace ONNXIR
 
         // Nodes.
         m_graphProto.clear_node();
-        for (auto& node : m_nodes)
+
+        // Nodes must be sorted in Topological Order in the GraphProto per ONNX spec.
+        for (auto& nodeIdx : m_nodesInTopologicalOrder)
         {
-            if (nullptr == node
-                || IsSourceNode(node->Index())
-                || IsSinkNode(node->Index()))
+            if (IsSourceNode(nodeIdx)
+                || IsSinkNode(nodeIdx))
             {
                 continue;
             }
             auto nodeProto = m_graphProto.add_node();
-            node->ToProto(*nodeProto);
-        }
-
-        // Functions.
-        m_graphProto.clear_function();
-        for (auto& func : m_funcDefMap)
-        {
-            auto funcDef = m_graphProto.add_function();
-            (*funcDef) = func.second;
+            m_nodes[nodeIdx]->ToProto(*nodeProto);
         }
 
         // Initial tensors;
@@ -1642,37 +1496,56 @@ namespace ONNXIR
             *tensor = item.second;
         }
 
-        // Set graph inputs/outputs.
-        // Set graph value_info.
-        SetGraphInputsOutputs();
+        // Sync graph inputs/outputs/valueInfo.
+        SyncGraphInputsOutputs();
 
         m_graphProtoSyncNeeded = false;
 
         return m_graphProto;
     }
 
-    void Graph::SetGraphInputsOutputs()
+    void Graph::SyncGraphInputsOutputs()
     {
         m_graphProto.clear_input();
         m_graphProto.clear_output();
         m_graphProto.clear_value_info();
 
-        std::unordered_map<std::string, Node::EdgeEnd> allOutputArgs;
+        for (auto inputArg : m_graphInputs)
+        {
+            *(m_graphProto.mutable_input()->Add()) = inputArg->ToProto();
+        }
+
+        for (auto outputArg : m_graphOutputs)
+        {
+            *(m_graphProto.mutable_output()->Add()) = outputArg->ToProto();
+        }
+
+        for (auto valueInfo : m_valueInfo)
+        {
+            *(m_graphProto.mutable_value_info()->Add()) = valueInfo->ToProto();
+        }
+    }
+
+    void Graph::SetGraphInputsOutputs()
+    {
+        // Reset graphInputs/graphOutputs/valueInfo state.
+        m_graphInputs.clear();
+        m_graphOutputs.clear();
+        m_valueInfo.clear();
+
+        std::unordered_map<std::string, const NodeArg*> outputNameToNodeArg;
         for (auto nodeIter = Nodes_begin();
             nodeIter != Nodes_end();
             ++nodeIter)
         {
             for (auto& outputDef : (*nodeIter)->OutputDefs())
             {
-                auto& outputArgname = outputDef.Name();
-
-                allOutputArgs.insert(
-                { outputArgname, Node::EdgeEnd(*(*nodeIter), outputDef) });
+                outputNameToNodeArg.insert({ outputDef.Name(), &outputDef });
             }
         }
 
         // Init graph output args with all node output args.
-        auto graphOutputArgs = allOutputArgs;
+        auto graphOutputArgs = outputNameToNodeArg;
 
         std::unordered_set<Node*> innerNodes;
         for (auto nodeIter = Nodes_begin();
@@ -1688,14 +1561,14 @@ namespace ONNXIR
             // Go thru all node's inputs.
             for (auto& inputArg : (*nodeIter)->InputDefs())
             {
-                auto outputArgIter = allOutputArgs.find(inputArg.Name());
-                if (allOutputArgs.end()
+                auto outputArgIter = outputNameToNodeArg.find(inputArg.Name());
+                if (outputNameToNodeArg.end()
                     == outputArgIter)
                 {
                     // No such outputArg matching this inputArg.
                     // This input arg should be fed when running evaluation.
                     // it should be a graph input or initializer (say, weight).
-                    *(m_graphProto.mutable_input()->Add()) = inputArg.ToProto();
+                    m_graphInputs.push_back(&inputArg);
                     continue;
                 }
 
@@ -1703,7 +1576,7 @@ namespace ONNXIR
                 // feeding another node as the node's input.
                 if (graphOutputArgs.erase(outputArgIter->first) >= 1)
                 {
-                    *(m_graphProto.mutable_value_info()->Add()) = inputArg.ToProto();
+                    m_valueInfo.push_back(&inputArg);
                 }
             }
         }
@@ -1711,24 +1584,8 @@ namespace ONNXIR
         // Set graph outputs.
         for (auto& outputArg : graphOutputArgs)
         {
-            *(m_graphProto.mutable_output()->Add()) = outputArg.second.GetNodeArg()->ToProto();
+            m_graphOutputs.push_back(outputArg.second);
         }
-    }
-
-    const FunctionDefProto& Graph::ToFuncProto()
-    {
-        return m_funcDefProto;
-    }
-
-    bool Graph::InlineAllFunctions(/*out*/Graph* p_graph) const
-    {
-        if (nullptr == p_graph)
-        {
-            return false;
-        }
-
-        // TODO: add implementation.
-        return true;
     }
 
     bool Graph::IsSourceNode(NODEINDEX p_index) const
@@ -1756,7 +1613,6 @@ namespace ONNXIR
         std::unique_ptr<Node> node(new Node(MaxNodeIndex(), this));
         m_nodes.push_back(std::move(node));
         m_numOfNodes++;
-        m_graphProtoSyncNeeded = true;
         m_graphResolveNeeded = true;
         return m_nodes.back().get();
     }
@@ -1769,5 +1625,3 @@ namespace ONNXIR
         m_graphResolveNeeded = true;
     }
 }
-
-#pragma warning(pop)

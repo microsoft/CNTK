@@ -6,9 +6,9 @@
 import os
 import numpy as np
 import cntk as C
+import pytest
 
 def test_load_save_constant(tmpdir):
-    # import pdb;pdb.set_trace()
     c = C.constant(value=[1,3])
     root_node = c * 5
 
@@ -41,15 +41,29 @@ def test_dense_layer(tmpdir):
     x_ = loaded_node.arguments[0]
     assert np.allclose(loaded_node.eval({x_:img}), root_node.eval({x:img}))
 
-def test_convolution(tmpdir):
+CONVOLUTION_TEST_DATA = [
+    # auto_padding: Value for the auto_adding parameter to convolution. 
+    ([False, True, True]   # Equivalent to "SAME_UPPER".
+     ),
+    ([False, False, False] # Equivalent to "VALID" padding.     
+     ),
+    ([False, False, True]  # Equivalent to "VALID" padding.     
+     ),
+    ([False, True, False]  # Equivalent to "VALID" padding.     
+     )
+]
+# This is a roundtrip test. It saves a CNTK convolution node in ONNX format (with different padding options), 
+# and loads it back to check that the same results are produced.
+@pytest.mark.parametrize("auto_padding", CONVOLUTION_TEST_DATA)
+def test_convolution(tmpdir, auto_padding):
     img_shape = (1, 5, 5)
     img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
 
     x = C.input_variable(img.shape)
-    filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+    filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 1, 2, 2))
     kernel = C.constant(value = filter)
-    root_node = C.convolution(kernel, x, auto_padding=[False])
-    
+    root_node = C.convolution(kernel, x, auto_padding=auto_padding)
+
     filename = os.path.join(str(tmpdir), R'conv.onnx')
     root_node.save(filename, format=C.ModelFormat.ONNX)
 
@@ -69,6 +83,48 @@ def test_convolution_transpose(tmpdir):
     root_node = C.convolution_transpose(kernel, x, auto_padding=[False], output_shape=(1, 4, 4))
     
     filename = os.path.join(str(tmpdir), R'conv_transpose.onnx')
+    root_node.save(filename, format=C.ModelFormat.ONNX)
+
+    loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    assert root_node.shape == loaded_node.shape
+
+    x_ = loaded_node.arguments[0]
+    assert np.allclose(loaded_node.eval({x_:[img]}), root_node.eval({x:[img]}))
+
+POOLING_TEST_DATA = [
+    # auto_padding: Value for the auto_adding parameter to pooling. 
+    ([True, True],   # Equivalent to "SAME_UPPER".
+    True                    # pooling_type: True := MaxPooling, False := AveragePooling
+     ),
+    ([False, False], # Equivalent to "VALID" padding.
+    True
+     ),
+    ([False, True],  # Equivalent to "VALID" padding.
+    True     
+     ),
+    ([True, True],   # Equivalent to "SAME_UPPER".
+    False
+     ),
+    ([False, False], # Equivalent to "VALID" padding.
+    False
+     ),
+    # Enable this test case when we fix ONNX AveragePool to match even for edge pixels in {False, True] case.}
+    # ([False, True],  # Equivalent to "VALID" padding.
+    # False     
+    #  )
+]
+# This is a roundtrip test. It saves a CNTK pooling node in ONNX format (with different padding options), 
+# and loads it back to check that the same results are produced.
+@pytest.mark.parametrize("auto_padding, pooling_type", POOLING_TEST_DATA)
+def test_pooling(tmpdir, auto_padding, pooling_type):
+    img_shape = (1, 5, 5)
+    img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
+
+    x = C.input_variable(img.shape)    
+    pool_type = C.MAX_POOLING if pooling_type else C.AVG_POOLING
+    root_node = C.pooling(x, pool_type, (2, 2), auto_padding=auto_padding)
+
+    filename = os.path.join(str(tmpdir), R'conv.onnx')
     root_node.save(filename, format=C.ModelFormat.ONNX)
 
     loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)

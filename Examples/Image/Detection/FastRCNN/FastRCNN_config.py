@@ -29,7 +29,7 @@ __C.CNTK.GRAPH_TYPE = "png" # "png" or "pdf"
 __C.CNTK.L2_REG_WEIGHT = 0.0005
 __C.CNTK.MOMENTUM_PER_MB = 0.9
 __C.CNTK.MAX_EPOCHS = 20
-__C.CNTK.LR_FACTOR = 10.0 # 10.0 is used for the Grocery example data. Start with 1.0 for other data sets.
+__C.CNTK.LR_FACTOR = 10.0 # 10.0 is used for the Grocery example data. Start with 1.0 for other data or when using VGG16 as base model.
 __C.CNTK.LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
 # The learning rate multiplier for all bias weights
 __C.CNTK.BIAS_LR_MULT = 2.0

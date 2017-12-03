@@ -1,16 +1,26 @@
-#pragma warning(push)
-#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456)
+#pragma warning(disable : 4503)
 
 #include "op.h"
 #include "opsignature.h"
 #include "utils.h"
 #include <cstring>
 
+
 namespace ONNXIR
 {
     const std::string& OperatorSchema::GetName() const
     {
         return m_opSignature.GetName();
+    }
+
+    int OperatorSchema::SinceVersion() const
+    {
+        return m_opSignature.SinceVersion();
+    }
+
+    const std::string& OperatorSchema::Domain() const
+    {
+        return m_opSignature.Domain();
     }
 
     const OpSignature& OperatorSchema::GetOpSignature() const
@@ -35,7 +45,19 @@ namespace ONNXIR
         return *this;
     }
 
+    OperatorSchemaSetter&
+        OperatorSchemaSetter::SinceVersion(int p_opSetVersion)
+    {
+        m_opSchema.m_opSignature.m_sinceVersion = p_opSetVersion;
+        return *this;
+    }
 
+    OperatorSchemaSetter&
+        OperatorSchemaSetter::SetDomain(const std::string& p_domain)
+    {
+        m_opSchema.m_opSignature.m_domain = p_domain;
+        return *this;
+    }
 
     OperatorSchemaSetter&
         OperatorSchemaSetter::Description(const std::string& p_description)
@@ -44,10 +66,12 @@ namespace ONNXIR
         return *this;
     }
 
+#pragma warning(disable : 4100) // unused p_optional
     OperatorSchemaSetter&
         OperatorSchemaSetter::Input(const std::string& p_inputName,
             const std::string& p_description,
-            const std::string& p_type)
+            const std::string& p_type,
+            bool p_optional) /* TODO: add logic for this */
     {
         m_inputs.push_back(std::make_tuple(p_inputName, p_description, p_type));
         return *this;
@@ -65,17 +89,16 @@ namespace ONNXIR
     OperatorSchemaSetter&
         OperatorSchemaSetter::Attr(const std::string& p_attrName,
             const std::string& p_description,
-            AttrType p_attrType, bool required)
+            AttrType p_attrType, bool /*required*/)
     {
         m_opSchema.m_opSignature.m_attributes.push_back(
             OpSignature::Attribute(p_attrName, p_attrType, p_description));
-
         return *this;
     }
 
 #define ATTR_SETTER_BASIC_IMPL(type, field)                                               \
-    OperatorSchemaSetter&                                                         \
-        OperatorSchemaSetter::Attr(const std::string& p_attrName,                 \
+    OperatorSchemaSetter&                                                                 \
+        OperatorSchemaSetter::Attr(const std::string& p_attrName,                         \
             const std::string& p_description,                                             \
             AttrType p_attrType,                                                          \
             const type& p_defaultValue)                                                   \
@@ -84,8 +107,8 @@ namespace ONNXIR
         a.set_name(p_attrName);                                                           \
         a.set_##field(p_defaultValue);                                                    \
                                                                                           \
-        m_opSchema.m_opSignature.m_attributes.push_back(                                    \
-            OpSignature::Attribute(p_attrName,                                         \
+        m_opSchema.m_opSignature.m_attributes.push_back(                                  \
+            OpSignature::Attribute(p_attrName,                                            \
                                         p_attrType,                                       \
                                         p_description,                                    \
                                         a));                                              \
@@ -94,8 +117,8 @@ namespace ONNXIR
     }                                                                                     \
 
 #define ATTR_SETTER_LIST_IMPL(type, field)                                                \
-    OperatorSchemaSetter&                                                         \
-        OperatorSchemaSetter::Attr(const std::string& p_attrName,                 \
+    OperatorSchemaSetter&                                                                 \
+        OperatorSchemaSetter::Attr(const std::string& p_attrName,                         \
             const std::string& p_description,                                             \
             AttrType p_attrType,                                                          \
             const std::vector<type>& p_defaultValue)                                      \
@@ -107,8 +130,8 @@ namespace ONNXIR
             a.add_##field(v);                                                             \
         }                                                                                 \
                                                                                           \
-        m_opSchema.m_opSignature.m_attributes.push_back(                                    \
-        OpSignature::Attribute(p_attrName,                                             \
+        m_opSchema.m_opSignature.m_attributes.push_back(                                  \
+        OpSignature::Attribute(p_attrName,                                                \
             p_attrType,                                                                   \
             p_description,                                                                \
             a));                                                                          \
@@ -147,8 +170,94 @@ namespace ONNXIR
         return *this;
     }
 
-    OperatorSchemaRegistry::RegisterOnce::RegisterOnce(
-        OperatorSchemaSetter& p_opSchemaSetter)
+    OperatorSchemaSetter& OperatorSchemaSetter::FillUsing(std::function<void(OperatorSchemaSetter&)> populator)
+    {
+        if (populator) {
+            populator(*this);
+        }
+        return *this;
+    }
+
+    Status TypeUtils::GetType(const AttributeProto& p_attr, AttrType& p_type)
+    {
+        if (!OpSignature::IsValidAttribute(p_attr))
+        {
+            return Status(ONNX, FAIL, "Invalid AttributeProto.");
+        }
+
+        p_type = p_attr.type();
+        if (AttrType::AttributeProto_AttributeType_UNDEFINED == p_type)
+        {
+            if (p_attr.has_f())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_FLOAT;
+            }
+            else if (p_attr.has_i())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_INT;
+            }
+            else if (p_attr.has_s())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_STRING;
+            }
+            else if (p_attr.has_t())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_TENSOR;
+            }
+            else if (p_attr.has_g())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_GRAPH;
+            }
+            else if (p_attr.floats_size())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_FLOATS;
+            }
+            else if (p_attr.ints_size())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_INTS;
+            }
+            else if (p_attr.strings_size())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_STRINGS;
+            }
+            else if (p_attr.tensors_size())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_TENSORS;
+            }
+            else if (p_attr.graphs_size())
+            {
+                p_type = AttrType::AttributeProto_AttributeType_GRAPHS;
+            }
+            else
+            {
+                return Status(ONNX, FAIL, "Invalid AttributeProto.");
+            }
+        }
+        return Status::OK();
+    }
+
+    OpSchemaRegistry::DomainToVersionRange::DomainToVersionRange()
+    {
+        // Increase the highest version when you make BC-breaking changes to the
+        // operator schema on specific domain. Update the lowest version when it's
+        // determined to remove too old version history.
+        m_map[""] = std::make_pair(1, 2);
+        m_map["ai.onnx.ml"] = std::make_pair(1, 1);
+    }
+
+    const std::unordered_map<std::string, std::pair<int, int>>&
+        OpSchemaRegistry::DomainToVersionRange::Map() const
+    {
+        return m_map;
+    }
+
+    OpSchemaRegistry::DomainToVersionRange& OpSchemaRegistry::DomainToVersionRange::Instance()
+    {
+        static DomainToVersionRange domain_to_version_range;
+        return domain_to_version_range;
+    }
+
+    OpSchemaRegistry::OpSchemaRegisterOnce::OpSchemaRegisterOnce(OperatorSchemaSetter& p_opSchemaSetter)
     {
         auto& opSchema = p_opSchemaSetter.m_opSchema;
         // Process type constraints.
@@ -160,19 +269,13 @@ namespace ONNXIR
             std::tie(name, types, desc) = constraint;
 
             auto it = opSchema.m_opSignature.m_typeConstraintMap.find(name);
-            if (it == opSchema.m_opSignature.m_typeConstraintMap.end())
+            assert(it == opSchema.m_opSignature.m_typeConstraintMap.end());
+            DataTypeSet d;
+            for (const auto& t : types)
             {
-                DataTypeSet d;
-                for (const auto& t : types)
-                {
-                    d.insert(Utils::OpUtils::ToType(t));
-                }
-                opSchema.m_opSignature.m_typeConstraintMap.insert(std::make_pair(name, std::make_pair(d, desc)));
+                d.insert(Utils::OpUtils::ToType(t));
             }
-            else
-            {
-                // already a constraint with the same name. error.
-            }
+            opSchema.m_opSignature.m_typeConstraintMap.insert(std::make_pair(name, std::make_pair(d, desc)));
         }
 
         opSchema.m_opSignature.m_inputs.reserve(p_opSchemaSetter.m_inputs.size());
@@ -198,157 +301,61 @@ namespace ONNXIR
                     opSchema.m_opSignature.m_typeConstraintMap));
         }
 
-        auto& opSignature = p_opSchemaSetter.m_opSchema.m_opSignature;
-        if (0 == opSignature.m_inputs.size())
+        auto& m = map();
+        auto& op_name = p_opSchemaSetter.m_opSchema.GetName();
+        auto& op_domain = p_opSchemaSetter.m_opSchema.Domain();
+        auto ver = p_opSchemaSetter.m_opSchema.SinceVersion();
+        assert(m[op_name][op_domain].count(ver) == 0);
+        m[op_name][op_domain].emplace(std::make_pair(ver, p_opSchemaSetter.m_opSchema));
+    }
+
+    const OperatorSchema* OpSchemaRegistry::Schema(
+        const std::string& p_key,
+        const std::string& p_domain)
+    {
+        auto& m = map();
+        if (m.count(p_key) && m[p_key].count(p_domain))
         {
-            for (int i = 0; i < opSignature.m_onnxMinInput; ++i)
+            return &m[p_key][p_domain].rbegin()->second;
+        }
+        else {
+            return nullptr;
+        }
+    }
+
+    const OperatorSchema* OpSchemaRegistry::Schema(
+        const std::string& p_key,
+        const int p_maxInclusiveVersion,
+        const std::string& p_domain)
+    {
+        auto& m = map();
+        if (m.count(p_key) && m[p_key].count(p_domain))
+        {
+            auto pos = m[p_key][p_domain].lower_bound(p_maxInclusiveVersion);
+            if (m[p_key][p_domain].begin() == pos && pos->first > p_maxInclusiveVersion)
             {
-                std::string name = "p" + std::to_string(i);
-                std::string desc = "Input Parameter " + std::to_string(i);
-                opSignature.m_inputs.push_back(
-                    OpSignature::FormalParameter(name, "", desc, opSignature.m_typeConstraintMap));
+                // All versions are greater than specified version.
+                return nullptr;
             }
-        }
 
-        if (0 == opSignature.m_outputs.size())
-        {
-            for (int i = 0; i < opSignature.m_onnxMinOutput; ++i)
+            if (m[p_key][p_domain].end() == pos || pos->first > p_maxInclusiveVersion)
             {
-                std::string name = "p" + std::to_string(i);
-                std::string desc = "Output Result " + std::to_string(i);
-                opSignature.m_outputs.push_back(
-                    OpSignature::FormalParameter(name, "", desc, opSignature.m_typeConstraintMap));
+                // All versions are less than specified version, or,
+                // The <pos> version is greater than specified version.
+                pos--;
+                return &(pos->second);
             }
+            // Schema with exact version as specified one exists.
+            return &(pos->second);
         }
-        OperatorSchemaRegistry::Get()->Register(p_opSchemaSetter.m_opSchema);
-    }
-
-    bool OperatorSchemaRegistry::TryGetOp(const std::string& p_name,
-        const OperatorSchema** p_opSchema) const
-    {
-        if (nullptr == p_opSchema)
-        {
-            return false;
-        }
-
-        auto iter = m_opNameToOpSchemaMap.find(p_name);
-        if (m_opNameToOpSchemaMap.end() == iter)
-        {
-            return false;
-        }
-        *p_opSchema = &(iter->second);
-        return true;
-    }
-
-    Status OperatorSchemaRegistry::Register(
-        const OperatorSchema& p_opSchema)
-    {
-        auto iter = m_opNameToOpSchemaMap.find(p_opSchema.GetName());
-        if (m_opNameToOpSchemaMap.end() != iter)
-        {
-            Status status(false,
-                "Error: operator schema with same name ("
-                + p_opSchema.GetName() + ") exists.");
-            return status;
-        }
-        else
-        {
-            m_opNameToOpSchemaMap[p_opSchema.GetName()] = p_opSchema;
-            return Status::OK();
+        else {
+            return nullptr;
         }
     }
 
-    OperatorSchemaRegistry* OperatorSchemaRegistry::Get()
+    OpSchemaMap& OpSchemaRegistry::map()
     {
-        static OperatorSchemaRegistry* s_registry
-            = new OperatorSchemaRegistry();
-        return s_registry;
-    }
-
-    Status TypeUtils::GetType(const AttributeProto& p_attr, AttrType& p_type)
-    {
-        if (!OpSignature::IsValidAttribute(p_attr))
-        {
-            return Status(false, "Invalid AttributeProto.");
-        }
-
-        if (p_attr.has_f())
-        {
-            p_type = AttrType::FLOAT;
-        }
-        else if (p_attr.has_i())
-        {
-            p_type = AttrType::INT;
-        }
-        else if (p_attr.has_s())
-        {
-            p_type = AttrType::STRING;
-        }
-        else if (p_attr.has_t())
-        {
-            p_type = AttrType::TENSOR;
-        }
-        else if (p_attr.has_g())
-        {
-            p_type = AttrType::GRAPH;
-        }
-        else if (p_attr.floats_size())
-        {
-            p_type = AttrType::FLOATS;
-        }
-        else if (p_attr.ints_size())
-        {
-            p_type = AttrType::INTS;
-        }
-        else if (p_attr.strings_size())
-        {
-            p_type = AttrType::STRINGS;
-        }
-        else if (p_attr.tensors_size())
-        {
-            p_type = AttrType::TENSORS;
-        }
-        else if (p_attr.graphs_size())
-        {
-            p_type = AttrType::GRAPHS;
-        }
-        else if (p_attr.has_type())
-        {
-            p_type = AttrType::TYPE;
-        }
-        else if (p_attr.types_size())
-        {
-            p_type = AttrType::TYPES;
-        }
-        else if (p_attr.has_shape())
-        {
-            p_type = AttrType::SHAPE;
-        }
-        else if (p_attr.has_shape())
-        {
-            p_type = AttrType::SHAPES;
-        }
-        else
-        {
-            p_type = AttrType::NONE;
-            return Status(false, "Invalid AttributeProto.");
-        }
-
-        return Status::OK();
-    }
-
-    size_t ReplaceAll(std::string& s, const char* from, const char* to)
-    {
-        size_t numReplaced = 0;
-        std::string::size_type lenFrom = std::strlen(from);
-        std::string::size_type lenTo = std::strlen(to);
-        for (std::string::size_type pos = s.find(from); pos != std::string::npos;
-            pos = s.find(from, pos + lenTo)) {
-            s.replace(pos, lenFrom, to);
-            numReplaced++;
-        }
-        return numReplaced;
+        static OpSchemaMap map;
+        return map;
     }
 }
-
-#pragma warning(pop)

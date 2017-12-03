@@ -1,11 +1,17 @@
 #ifndef CORE_GRAPH_SHAPEINFERENCE_H
 #define CORE_GRAPH_SHAPEINFERENCE_H
 
-#include "graph.h"
+#include <functional>
+
 #include "opsignature.h"
+#include "status.h"
+
+using namespace ONNXIR::Common;
 
 namespace ONNXIR
 {
+    class Node;
+    class NodeArg;
 
     // A context to contain information for shape inference function.
     // It includes the operator registry, input arguments definition,

@@ -1,6 +1,3 @@
-#pragma warning(push)
-#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456)
-
 #ifndef CORE_GRAPH_GRAPH_H
 #define CORE_GRAPH_GRAPH_H
 
@@ -9,15 +6,26 @@
 #include <unordered_set>
 
 #include "constants.h"
-#include "proto/onnx/protobuf/graph.pb.h"
+#include "op.h"
 #include "status.h"
 #include "utils.h"
+#pragma warning(push)
+#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996 4503)
+#include "proto/onnx/protobuf/onnx-ml.pb.h"
+#pragma warning(pop)
+
+using namespace ONNXIR::Common;
+using namespace onnx;
+
+namespace ONNXRT
+{
+    class ONNXRT;
+};
 
 namespace ONNXIR
 {
     typedef size_t NODEINDEX;
     typedef int64_t VERSION;
-    typedef std::unordered_map<std::string, AttributeProto> NodeAttributes;
     typedef ValueInfoProto NodeArgInfo;
     typedef std::unordered_map<std::string, TensorProto> InitialTensorSet;
     typedef std::unordered_map<std::string, TypeProto> ArgNameToTypeMap;
@@ -60,20 +68,26 @@ namespace ONNXIR
 
         // Get node arg shape.
         // Return null pointer if there's no shape specified.
-        const TypeProto::TensorShapeProto* Shape() const;
+        const TensorShapeProto* Shape() const;
 
         // Set node arg shape.
         // Shape could only be set after setting type since shape information
         // now is part of TypeProto.
-        void SetShape(const TypeProto::TensorShapeProto& p_shape);
+        void SetShape(const TensorShapeProto& p_shape);
 
         // Get node arg info proto.
         const NodeArgInfo& ToProto() const;
+
+        // Indicates whether <*this> node arg exists or not.
+        // Optional inputs are allowed in ONNX. Empty arg name represents 
+        // a non-existing input argument.
+        bool Exist() const;
 
     private:
 
         friend class Node;
         friend class Graph;
+        friend class ONNXRT::ONNXRT;
 
         void SetType(PTYPE p_type);
         void SetType(const TypeProto& p_typeProto);
@@ -83,55 +97,9 @@ namespace ONNXIR
 
         // Node arg name, type and shape.
         NodeArgInfo m_nodeArgInfo;
-    };
 
-    // Function representation.
-    // It could present two cases of functions.
-    // 1. Function without instantiation (No Node* sent to constructor). This
-    //    may be used in pure function optimization.
-    //    Function body (subgraph) should not be able to executed since no real
-    //    tensor binded with inputs/outputs of the function.
-    // 2. Function with instantiation (A non-empty Node* sent to constructor).
-    //    Function body (subgraph) should be able to be executed since all 
-    //    input/output names among nodes inside are refering real tensor names.
-    //    2_a. Function with template type parameter.
-    //    2_b. Function without template type parameter.
-    // Function definition (FunctionDefProto) will be synced only when its body
-    // is changed. Meanwhile, in 2_a case above, the function definition name
-    // will be appended with real type string.
-    class Function
-    {
-    public:
-
-        // Get function body - a subgraph.
-        // Returned pointer owned by <*this> Function.
-        Graph* Body();
-
-        // Get function name.
-        // A function's name could be either its function definition name
-        // m_functionDefProto.name(), or m_functionDefProto.name() + template
-        // argument value.
-        const std::string& Name();
-
-        // Get the protobuf representation of <*this> function.
-        const FunctionDefProto& ToProto();
-
-    private:
-
-        friend class Graph;
-
-        Function() = delete;
-
-        // Constructor.
-        // <p_node> specifies the node that refers to <*this> function. It's
-        // used to instantiate <p_funcProto> if <p_funcProto> is a function
-        // template.
-        // <p_funcProto> specifies a function definition that a node refers to.
-        Function(Node* p_node,
-            const FunctionDefProto& p_funcProto);
-
-        // Function body which is a SubGraph.
-        std::unique_ptr<Graph> m_body;
+        // Flag indicates whether <*this> node arg exists or not.
+        bool m_exist;
     };
 
     // A node representation class.
@@ -195,6 +163,12 @@ namespace ONNXIR
         // Get node operator type.
         const std::string& OpType() const;
 
+        // Get the domain of the OperatorSet that specifies the operator named by <m_opType>.
+        const std::string& Domain() const;
+
+        // Get the OperatorSchema this node refers to.
+        const OperatorSchema* Op() const;
+
         // Get node description.
         const std::string& Description() const;
 
@@ -236,8 +210,6 @@ namespace ONNXIR
         ADD_ATTR_INTERFACES(std::string)
         ADD_ATTR_INTERFACES(TensorProto)
         ADD_ATTR_INTERFACES(GraphProto)
-        ADD_ATTR_INTERFACES(TypeProto)
-        ADD_ATTR_INTERFACES(TypeProto::TensorShapeProto)
 
         // Clear specified node attribute.
         bool ClearAttribute(const std::string& p_attrName);
@@ -275,17 +247,20 @@ namespace ONNXIR
             const std::string& p_opType,
             const std::string& p_description,
             const std::vector<NodeArg>& p_inputArgs,
-            const std::vector<NodeArg>& p_outputArgs);
+            const std::vector<NodeArg>& p_outputArgs,
+            const std::string& p_domain);
         void Init(const std::string& p_name,
             const std::string& p_opType,
             const std::string& p_description,
             const std::vector<NodeArg>& p_inputArgs,
             const std::vector<int>& p_inputArgCount,
-            const std::vector<NodeArg>& p_outputArgs);
+            const std::vector<NodeArg>& p_outputArgs,
+            const std::string& p_domain);
         void Init(const std::string& p_name,
             const std::string& p_opType,
             const std::string& p_description,
-            const std::vector<NodeArg>& p_outputArgs);
+            const std::vector<NodeArg>& p_outputArgs,
+            const std::string& p_domain);
 
         // Node index.
         NODEINDEX m_index;
@@ -295,6 +270,12 @@ namespace ONNXIR
 
         // Node operator type.
         std::string m_opType;
+
+        // OperatorSet domain of <m_opType).
+        std::string m_domain;
+
+        // OperatorSchema that <*this> node refers to.
+        const OperatorSchema* m_op;
 
         // Node doc string.
         std::string m_description;
@@ -377,22 +358,13 @@ namespace ONNXIR
         // a <Graph> object.
         Graph(const GraphProto& p_graphProto);
 
-        // Constructor: Given a function definition and a node which refers to
-        // the function, construct a <Graph> object.
-        // Normally the <p_name> could be the parent node name and the
-        // <p_version> could be the parent graph's version.
-        // Question: will a node defined in a function refers another function
-        // please? I (Ke) am assuming we don't allow such case here for now.
-        Graph(Node* p_node,
-            const FunctionDefProto& p_functionProto);
-
         // Resolve <*this> graph to ensure it's in a good shape with full
         // functionality.
         // 1. Run through all validation rules.
         //    a. Node name and node output's names should be unique.
         //    b. Attribute match between node and op definition.
         //    c. Input/Output match between node and op definition.
-        //    d. Graph is acyclic.
+        //    d. Graph is acyclic and sort nodes in topological order.
         // 2. Check & Setup inner nodes' dependency.
         // 3. Cleanup function definition lists.
         // Returns resolving status.
@@ -409,9 +381,10 @@ namespace ONNXIR
             TensorProto& p_value) const;
         const InitialTensorSet& GetAllInitialTensors() const;
 
-        // Add or Remove a function definition.
-        bool AddFunctionDef(const FunctionDefProto& p_function);
-        void RemoveFunctionDef(const std::string& p_functionName);
+        // Get graph inputs/outputs.
+        const std::vector<const NodeArg*>& GetInputs() const;
+        const std::vector<const NodeArg*>& GetOutputs() const;
+        const std::vector<const NodeArg*>& GetValueInfo() const;
 
         // Get node given specific node index.
         Node* GetNode(NODEINDEX p_nodeIndex);
@@ -433,17 +406,20 @@ namespace ONNXIR
             const std::string& p_opType,
             const std::string& p_description,
             const std::vector<NodeArg>& p_inputArgs,
-            const std::vector<NodeArg>& p_outputArgs);
+            const std::vector<NodeArg>& p_outputArgs,
+            const std::string& p_domain = "");
         Node* AddNode(const std::string& p_name,
             const std::string& p_opType,
             const std::string& p_description,
             const std::vector<NodeArg>& p_inputArgs,
             const std::vector<int>& p_inputArgCount,
-            const std::vector<NodeArg>& p_outputArgs);
+            const std::vector<NodeArg>& p_outputArgs,
+            const std::string& p_domain = "");
         Node* AddNode(const std::string& p_name,
             const std::string& p_opType,
             const std::string& p_description,
-            const std::vector<NodeArg>& p_outputArgs);
+            const std::vector<NodeArg>& p_outputArgs,
+            const std::string& p_domain = "");
         Node* AddNode(const Node& p_other);
         bool RemoveNode(NODEINDEX p_nodeIndex);
 
@@ -458,22 +434,8 @@ namespace ONNXIR
         // <p_srcNodeIndex>, but it's designed to be executed behind.
         bool AddControlEdge(NODEINDEX p_srcNodeIndex, NODEINDEX p_dstNodeIndex);
 
-        // Try to get function with specified <p_nodeIndex>. Return true if the
-        // specified node refers to a function, and <p_function> will be the 
-        // function; false otherwise, and <p_function> will be unchanged.
-        bool TryGetFunction(NODEINDEX p_nodeIndex,
-            /*out*/ Function** p_function);
-
         // Serialize the <Graph> into <GraphProto>.
         const GraphProto& ToGraphProto();
-
-        // Serialize the <Graph> into <FunctionDefProto>.
-        // This is used when the graph is a subgraph of a main graph.
-        const FunctionDefProto& ToFuncProto();
-
-        // Inline all function in <*this> and construct <p_graph>
-        // without any functions. <p_graph> owned by caller.
-        bool InlineAllFunctions(/*out*/Graph* p_graph) const;
 
         bool IsSourceNode(NODEINDEX p_index) const;
         bool IsSinkNode(NODEINDEX p_index) const;
@@ -522,38 +484,29 @@ namespace ONNXIR
         Status CheckIsAcyclic(
             /*out*/std::vector<NODEINDEX>& p_nodesInToplogicalOrder);
 
-        // Depth-first graph access.
-        // <p_ancestors> specifies all ancestor nodes of <p_current> node.
-        // <p_current> specifies current node being accessed.
-        // <p_visitedNodes> specifies nodes already visited.
-        // <p_nodesInToplogicalOrder> returns nodes' indexes in toplogical
-        // order if the graph is acyclic.
-        Status DepthFirstAccess(std::unordered_set<NODEINDEX> p_ancestors,
-            NODEINDEX p_current,
-            /*in | out*/std::unordered_set<NODEINDEX>& p_visitedNodes,
-            /*out*/std::vector<NODEINDEX>& p_nodesInToplogicalOrder);
-
-        // Given nodes in toplogical order, infer and set type information
+        // Given nodes in topological order, infer and set type information
         // across <*this> graph if needed, and verify type/attribute
         // information match between node and op.
         Status VerifyNodeAndOpMatch(
             const std::vector<NODEINDEX>& p_nodesInToplogicalOrder,
-            std::unordered_map<std::string, Node::EdgeEnd>& p_outputArgs,
-            /*out*/ std::set<std::string>& p_funcDefNames);
+            std::unordered_map<std::string, Node::EdgeEnd>& p_outputArgs);
 
         Status InferAndVerifyTypeMatch(Node* p_node,
             const OpSignature* p_op,
             const std::unordered_map<std::string, Node::EdgeEnd>& p_outputArgs);
 
         // Clean function definition map.
-        // Remove function definitions not referred by any node.
+        // Remove function definitions not refered by any node.
         void CleanFunctionDefMap(const std::set<std::string>& p_funcDefNames);
 
         // Add source/sink nodes to <*this> graph.
         void AddSourceSinkNodes();
 
-        // Set graph inputs/outputs when serializing to proto.
+        // Set graph inputs/outputs when resolving a graph..
         void SetGraphInputsOutputs();
+
+        // Sync graph inputs/outputs when serializing to proto.
+        void SyncGraphInputsOutputs();
 
         // Graph nodes.
         // Element in <m_nodes> may be nullptr due to graph optimization.
@@ -573,17 +526,9 @@ namespace ONNXIR
         // functions in <Graph> will also be fed into <m_graphProto> so that
         // it's consistent with <*this> graph.
         GraphProto m_graphProto;
-        FunctionDefProto m_funcDefProto;
 
         // The node which refers to <*this> graph (Function).
         Node* m_node;
-
-        // Graph function instantiations.
-        std::unordered_map<std::string,
-            std::unique_ptr<Function>> m_functionMap;
-
-        // Graph function definitions.
-        std::unordered_map<std::string, FunctionDefProto> m_funcDefMap;
 
         InitialTensorSet m_nameToInitialTensor;
 
@@ -594,11 +539,18 @@ namespace ONNXIR
 
         int m_graphType = 0;
 
-        // the topologic order of node index
+        // The topologic order of node index.
         std::vector<NODEINDEX> m_nodesInTopologicalOrder;
+
+        // Graph inputs.
+        std::vector<const NodeArg*> m_graphInputs;
+
+        // Graph outputs.
+        std::vector<const NodeArg*> m_graphOutputs;
+
+        // Graph value_info.
+        std::vector<const NodeArg*> m_valueInfo;
     };
 }
 
 #endif  // CORE_GRAPH_GRAPH_H
-
-#pragma warning(pop)

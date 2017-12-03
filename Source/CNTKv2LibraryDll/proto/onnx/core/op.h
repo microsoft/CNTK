@@ -1,4 +1,4 @@
-#ifndef CORE_GRAPH_OP_H
+﻿#ifndef CORE_GRAPH_OP_H
 #define CORE_GRAPH_OP_H
 
 #include <functional>
@@ -10,8 +10,7 @@
 namespace ONNXIR
 {
     class OpSignature;
-    class OperatorSchemaSetter;
-    typedef OperatorSchemaSetter OpSchema;
+    typedef std::unordered_map<std::string, AttributeProto> NodeAttributes;
 
     class TypeUtils
     {
@@ -37,6 +36,9 @@ namespace ONNXIR
     public:
 
         const std::string& GetName() const;
+        int SinceVersion() const;
+        const std::string& Domain() const;
+
         const OpSignature& GetOpSignature() const;
         ShapeInferenceFunc GetShapeInferenceFn() const;
         AttributeParser GetAttributeParser() const;
@@ -44,7 +46,7 @@ namespace ONNXIR
     private:
 
         friend class OperatorSchemaSetter;
-        friend class OperatorSchemaRegistry;
+        friend class OpSchemaRegistry;
 
         OpSignature m_opSignature;
         ShapeInferenceFunc m_shapeInferenceFunc;
@@ -76,15 +78,31 @@ namespace ONNXIR
 
         OperatorSchemaSetter& Name(const std::string& p_opName);
 
+        OperatorSchemaSetter& SinceVersion(int p_opSetVersion);
+
+        OperatorSchemaSetter& SetDomain(const std::string& p_domain);
+
         OperatorSchemaSetter& Description(const std::string& p_description);
 
+        // Grammar for type strings used in Input(), Output(), AttrWithRichType(), and TypeConstraint() api's
+        // <type> ::= <data_type> |
+        //            tensor(<data_type>) |
+        //            seq(<type>) |
+        //            map(<data_type>, <type>)
+        // <name_type_list> :: = <name>:<type>{ ,<name_type_list> }
+        // <data_type> :: = float | uint8 | ...   (see data_type strings defined in constants.h)
         OperatorSchemaSetter& Input(const std::string& p_inputName,
             const std::string& p_description,
-            const std::string& p_type = "");
+            const std::string& p_type = "",
+            bool p_optional = false);
 
         OperatorSchemaSetter& Output(const std::string& p_outputName,
             const std::string& p_description,
-            const std::string& p_type = "");
+            const std::string& p_type = ""); // see grammar above.
+
+        OperatorSchemaSetter& TypeConstraint(const std::string& p_typeName,
+            const std::vector<std::string>& p_constraints, // see grammar above.
+            const std::string& p_description);
 
         OperatorSchemaSetter& Attr(const std::string& p_attrName,
             const std::string& p_description,
@@ -95,12 +113,6 @@ namespace ONNXIR
         ATTR_SETTER_INTERFACE(std::string)
         ATTR_SETTER_INTERFACE(TensorProto)
         ATTR_SETTER_INTERFACE(GraphProto)
-        ATTR_SETTER_INTERFACE(TypeProto)
-        ATTR_SETTER_INTERFACE(TypeProto::TensorShapeProto)
-
-        OperatorSchemaSetter& TypeConstraint(const std::string& p_typeName,
-            const std::vector<std::string>& p_constraints,
-            const std::string& p_description);
 
         // Shape inference function will be used to infer outputs' shape with
         // inputs' shape.
@@ -112,92 +124,13 @@ namespace ONNXIR
         OperatorSchemaSetter& SetAttributeParser(
             AttributeParser p_attrParser);
 
-        enum class SupportType {
-            COMMON,
-            EXPERIMENTAL,
-        };
-        // Methods added for compatibility with ONNX OpSchema registration API
-        OpSchema& NumInputs(int n)
-        {
-            return NumInputs(n, n);
-        }
-        OpSchema& NumInputs(int min, int max)
-        {
-            m_opSchema.m_opSignature.m_onnxMinInput = min;
-            m_opSchema.m_opSignature.m_onnxMaxInput = max;
-            return *this;
-        }
-        OpSchema& NumInputs(std::set<int> allowed_input_nums)
-        {
-            return NumInputs([allowed_input_nums](int n)-> bool {
-                return allowed_input_nums.count(n) > 0;
-            });
-        }
-        OpSchema& NumInputs(std::function<bool(int)> func)
-        {
-            m_opSchema.m_opSignature.m_onnxNumInputsAllowed = func;
-            return *this;
-        }
-        OpSchema& NumOutputs(int n) {
-            return NumOutputs(n, n);
-        }
-        OpSchema& NumOutputs(int min, int max)
-        {
-            m_opSchema.m_opSignature.m_onnxMinOutput = min;
-            m_opSchema.m_opSignature.m_onnxMaxOutput = max;
-            return *this;
-        }
-        OpSchema& NumOutputs(std::set<int> allowed_output_nums)
-        {
-            return NumOutputs([allowed_output_nums](int n)-> bool {
-                return allowed_output_nums.count(n) > 0;
-            });
-        }
-        OpSchema& NumOutputs(std::function<bool(int)> func)
-        {
-            m_opSchema.m_opSignature.m_onnxNumOutputsAllowed = func;
-            return *this;
-        }
-        OpSchema& NumInputsOutputs(std::function<bool(int, int)> func)
-        {
-            m_opSchema.m_opSignature.m_onnxNumInputsOutputsAllowed = func;
-            return *this;
-        }
-        OpSchema& OutputCalculator(std::function<int(int)> calc) { return *this; }
-        OpSchema& SameNumberOfOutput() { return *this; }
-        OpSchema& AllowConsumed(std::function<std::pair<bool, int>(int)> inplace) { return *this; }
-        OpSchema& AllowConsumed(std::unordered_map<int, int> inplace) { return *this; }
-        OpSchema& AllowOneToOneConsumed() { return *this; }
-        OpSchema& EnforceConsumed(std::function<std::pair<bool, int>(int)> inplace) { return *this; }
-        OpSchema& EnforceConsumed(std::unordered_map<int, int> inplace) { return *this; }
-        OpSchema& EnforceOneToOneConsumed() { return *this; }
-        OpSchema& SetSupportLevel(SupportType) { return *this; }
-        OpSchema& AllowUncheckedAttributes() { return *this; }
-        OpSchema& FillUsing(std::function<void(OpSchema&)> populator)
-        {
-            if (populator)
-            {
-                populator(*this);
-            }
-            return *this;
-        }
-        OpSchema& Input(const int, const char* name, const char* description)
-        {
-            return Input(name, description);
-        }
-        OpSchema& Output(const int, const char* name, const char* description)
-        {
-            return Output(name, description);
-        }
-        OpSchema& SetDoc(const std::string& doc)
-        {
-            return Description(doc);
-        }
+        // adding docs for temlated/macro ops.
+        OperatorSchemaSetter& FillUsing(std::function<void(OperatorSchemaSetter&)> populator);
 
     private:
 
         //friend class OpSignature;
-        friend class OperatorSchemaRegistry;
+        friend class OpSchemaRegistry;
 
         OperatorSchema m_opSchema;
 
@@ -211,54 +144,83 @@ namespace ONNXIR
         std::vector<TypeConstraintParam> m_constraints;
     };
 
-    // Operator schema registry. A singleton registry to manage all operator
-    // schemas.
-    class OperatorSchemaRegistry
+    // Map type to store operator schemas. The format is,
+    // <OpName, <Domain, <OperatorSetVersion, OpSchema>>>.
+    typedef std::unordered_map<
+        std::string,
+        std::unordered_map<std::string, std::map<int, OperatorSchema>>>
+        OpSchemaMap;
+
+    class OpSchemaRegistry
     {
     public:
+        class DomainToVersionRange
+        {
+        public:
+            DomainToVersionRange();
 
-        // Helper function providing a way to call
-        // OpSignatureFactory::Register().
-        class RegisterOnce
+            const std::unordered_map<std::string, std::pair<int, int>>& Map() const;
+
+            static DomainToVersionRange& Instance();
+
+        private:
+
+            // Key: domain. Value: <lowest version, highest version> pair.
+            std::unordered_map<std::string, std::pair<int, int>> m_map;
+        };
+
+        class OpSchemaRegisterOnce
         {
         public:
 
-            RegisterOnce(OperatorSchemaSetter& p_opRegistry);
+            OpSchemaRegisterOnce(OperatorSchemaSetter& p_opSchemaSetter);
         };
 
-        // Try to get operator with specified operator name.
-        bool TryGetOp(const std::string& p_name,
-            const OperatorSchema** p_opRegistry) const;
+        // Return the latest schema for an operator in specified domain.
+        // Domain with default value "" means ONNX.
+        static const OperatorSchema* Schema(
+            const std::string& p_key,
+            const std::string& p_domain = "");
 
-        // Register an operator.
-        Status Register(const OperatorSchema& p_opSchema);
-
-        // Get the global operator registry factory instance.
-        static OperatorSchemaRegistry* Get();
+        // Return the schema with biggest version, which is not greater than specified
+        // <maxInclusiveVersion> in specified domain. Domain with default value "" means ONNX.
+        static const OperatorSchema* Schema(
+            const std::string& p_key,
+            const int p_maxInclusiveVersion,
+            const std::string& p_domain = "");
 
     private:
 
-        OperatorSchemaRegistry() = default;
+        // OpSchemaRegistry should not need to be instantiated.
+        OpSchemaRegistry() = delete;
 
-        // An operator name to operator definition data map.
-        std::unordered_map<std::string, OperatorSchema> m_opNameToOpSchemaMap;
+        /**
+        * @brief Returns the underlying string to OpSchema map.
+        *
+        * You should not manually manipulate the map object returned. Instead, use
+        * the macros defined such as OPERATOR_SCHEMA to register your operator
+        * schema.
+        *
+        * We wrap it inside a function to avoid the statia initialization order
+        * fiasco.
+        */
+        static OpSchemaMap& map();
     };
 
-    // utility function used by ONNX v1 op registration defs.
-    size_t ReplaceAll(std::string& s, const char* from, const char* to);
+
+
 
 #define REGISTER_OPERATOR_SCHEMA(OpName) OPERATOR_SCHEMA_UNIQ_HELPER(__COUNTER__, OpName)
 #define OPERATOR_SCHEMA_UNIQ_HELPER(Counter, OpName) OPERATOR_SCHEMA_UNIQ(Counter, OpName)
 #define OPERATOR_SCHEMA_UNIQ(Counter, OpName)                     \
-    static OperatorSchemaRegistry::RegisterOnce op_##Counter  \
+    static OpSchemaRegistry::OpSchemaRegisterOnce op_##Counter  \
     = OperatorSchemaSetter().Name(#OpName)
 
     // Operator registration example.
-    // OPERATOR_DEFINITION(Add).Description("An operator to sum two float numbers.")
+    // REGISTER_OPERATOR_SCHEMA(Add).Description("An operator to sum two float numbers.")
     //   .Input("input_1", "docstr for input_1.", "T")
     //   .Input("input_2", "docstr for input_2.", "T")
     //   .Output("output_1", "docstr for output_1.", "T")
-    //   .TypeConstraint("T", { "float16", "float32", "float64" }, "Constrain input and output types to floats.");
+    //   .TypeConstraint("T", { "float16", "float", "double" }, "Constrain input and output types to floats.");
 }
-
 #endif
