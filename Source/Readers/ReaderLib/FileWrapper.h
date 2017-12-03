@@ -20,7 +20,6 @@
 #include <memory>
 #include "fileutil.h"
 #include <type_traits>
-#include <boost/locale.hpp>
 
 namespace CNTK {
 
