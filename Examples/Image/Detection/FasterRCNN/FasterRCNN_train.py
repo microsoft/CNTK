@@ -11,7 +11,7 @@ import argparse
 import easydict # pip install easydict
 import cntk
 from cntk import Trainer, load_model, Axis, input_variable, parameter, times, combine, \
-    softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum
+    softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum, distributed
 from cntk.core import Value
 from cntk.io import MinibatchData
 from cntk.initializer import normal
@@ -21,7 +21,6 @@ from cntk.logging import log_number_of_parameters, ProgressPrinter
 from cntk.logging.graph import find_by_name, plot
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk import distributed
 from _cntk_py import force_deterministic_algorithms
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
