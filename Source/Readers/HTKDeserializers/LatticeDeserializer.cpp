@@ -8,6 +8,7 @@
 #include "LatticeIndexBuilder.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
+#include "MLFUtils.h"
 
 namespace CNTK {
 
@@ -188,21 +189,18 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
 {
     std::string symListPath = config.GetSymListFilePath();
     std::string latticeIndexPath = config.GetLatticeIndexFilePath();
-    
-    fprintf(stderr, "Reading lattice index file %s ...", latticeIndexPath.c_str());
 
-    wifstream latticeIndexStream(latticeIndexPath.c_str());
+    fprintf(stderr, "Reading lattice index file %s ...", latticeIndexPath.c_str());
+    ifstream latticeIndexStream(latticeIndexPath.c_str());
     if (!latticeIndexStream)
         RuntimeError("Failed to open input file: %s", latticeIndexPath.c_str());
 
     bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
     size_t totalNumSequences = 0;
-    std::wstring tocPath;
     vector<string> tocLines;
-    while (!latticeIndexStream.eof())
+    string tocPath;
+    while (getline(latticeIndexStream, tocPath))
     {
-        std::getline(latticeIndexStream, tocPath);
-
         std::ifstream tocFileStream(tocPath);
         std::string tocLine;
         tocLines.clear();
@@ -217,7 +215,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                 if (firstIndex)
                     firstIndex = false;
                 else {
-                    totalNumSequences += RecordChunk(latticePath, tocLines, corpus, enableCaching);
+                    totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching);
                     tocLines.clear();
                 }
 

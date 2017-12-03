@@ -56,7 +56,6 @@ namespace CNTK {
 
 
         size_t id = 0;
-        vector<boost::iterator_range<char*>> tokens;
         IndexedSequence sequence;
         string latticeFile = "";
 
@@ -75,12 +74,12 @@ namespace CNTK {
             if (eqLoc == string::npos || openBracketLoc == string::npos || closeBracketLoc == string::npos)
                 RuntimeError("The lattice TOC line is malformed: %s", line.c_str());
 
-            string seqKey = "\"" + line.substr(0, eqLoc) + "\"";
+            string seqKey = line.substr(0, eqLoc);
             
             size_t byteOffset;
             sscanf(line.substr(openBracketLoc + 1, closeBracketLoc).c_str(), "%zu", &byteOffset);
-            
-            string curLatticeFile = line.substr(eqLoc + 1, openBracketLoc);
+            size_t fileStart = eqLoc + 1;
+            string curLatticeFile = line.substr(fileStart, openBracketLoc - fileStart);
             if (curLatticeFile.empty()) {
                 //This line should contain pointer to the lattice file
                 if (latticeFile.empty()) 
@@ -104,6 +103,12 @@ namespace CNTK {
             prevId = id;
             prevSequenceStartOffset = byteOffset;
         }
+
+        sequence.SetKey(prevId)
+            .SetNumberOfSamples(1)
+            .SetOffset(prevSequenceStartOffset)
+            .SetSize(filesize(m_input.File()) - prevSequenceStartOffset);
+        index->AddSequence(sequence);
     }
 
 }
