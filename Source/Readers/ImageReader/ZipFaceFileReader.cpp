@@ -172,6 +172,7 @@ void ZipFaceFileReader::Register(const MultiMap& sequences)
             m_seqIdToIndex[sid] = std::make_pair(decoder->ZipInfo[i].zip_seq_index, decoder->ZipInfo[i].zip_seq_size);
         numberOfEntries++;
     }
+	delete decoder;
 
     if (numberOfEntries == sequences.size())
         return;
