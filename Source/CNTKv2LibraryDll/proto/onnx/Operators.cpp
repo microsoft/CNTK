@@ -35,6 +35,12 @@ namespace ONNX
             { L"strides", "strides" },
             { L"autoPadding", "pads" },
         } } },
+        { L"ROIPooling",{ {
+            { L"ROIPooling",  "MaxRoiPool" },
+            // { L"poolingType",  "" }, // always Max
+            { L"roiOutputShape", "pooled_shape" },
+            { L"spatialScale", "spatial_scale" },
+            } } },
         { L"Convolution", { {
             { L"Convolution", "Conv" },
             { L"kernelShape", "kernel_shape" },
@@ -85,10 +91,14 @@ namespace ONNX
             { L"dropoutRate", "ratio" },
             // { L"", "is_test" },
         } } },
-        { L"Flatten",{ {
-            { L"Flatten", "Flatten" },
-        } } },
-
+        { L"Reshape",{ {
+            { L"Reshape", "Reshape" },
+            { L"newShape", "shape" },
+            } } },
+        //{ L"Reshape",{ {
+        //    { L"Reshape", "Flatten" },
+        //    { L"axis", "axis" },
+        //} } },
         // From Generator
         { L"RandomDistribution", { {
             { L"UniformRandom", "RandomUniform" },
@@ -145,6 +155,9 @@ namespace ONNX
         { L"Ceil", { {
             { L"Ceil", "Ceil" },
         } } },
+        { L"Clip",{ {
+            { L"Clip", "Clip" },
+        } } },
         { L"Sqrt", { {
             { L"Sqrt", "Sqrt" },
         } } },
@@ -189,63 +202,80 @@ namespace ONNX
         { L"ElementMax", { {
             { L"ElementMax", "Max" },
         } } },
-        { L"ElementMax", { {
-            { L"ElementMax", "Min" },
+        { L"ElementMin", { {
+            { L"ElementMin", "Min" },
         } } },
-        // { L"", "Sum" },
+        { L"Hardmax",{ {
+            { L"Hardmax", "Hardmax" },
+            { L"axis", "axis" },
+        } } },
         { L"Softmax", { {
             { L"Softmax", "Softmax" },
             { L"axis", "axis" },
         } } },
+        { L"Softplus",{ {
+            { L"Softplus", "Softplus" },
+        } } },
+        { L"Equal",{ {
+            { L"Equal", "Equal" },
+            { L"axis ", "axis" },
+            { L"broadcast", "broadcast" },
+        } } },
+        { L"Greater",{ {
+            { L"Greater", "Greater" },
+            { L"axis ", "axis" },
+            { L"broadcast", "broadcast" },
+            } } },
+        { L"Less",{ { 
+            { L"Less", "Less" }, 
+            { L"axis ", "axis" }, 
+            { L"broadcast", "broadcast" }, 
+        } } },
 
         // From reduction
-        { L"ReduceMax", { {
-            { L"ReduceMax", "ReduceMax" },
+        { L"ReduceElements", { {
+            { L"Max", "ReduceMax" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceMin", { {
-            { L"ReduceMin", "ReduceMin" },
+        { L"ReduceElements", { {
+            { L"Min", "ReduceMin" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceSum", { {
-            { L"ReduceSum", "ReduceSum" },
+        { L"ReduceElements", { {
+            { L"Sum", "ReduceSum" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceMean", { {
-            { L"ReduceMean", "ReduceMean" },
+        { L"ReduceElements", { {
+            { L"Mean", "ReduceMean" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceProd", { {
-            { L"ReduceProd", "ReduceProd" },
+        { L"ReduceElements", { {
+            { L"Prod", "ReduceProd" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceLogSum", { {
-            { L"ReduceLogSum", "ReduceLogSumExp" },
+        { L"ReduceElements", { {
+            { L"LogSum", "ReduceLogSumExp" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"Argmax", { {
+        { L"ReduceElements", { {
             { L"Argmax", "ArgMax" },
             { L"axis", "axes" },
-            // { L"", "keepdims" },
+            { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"Argmin", { {
+        { L"ReduceElements", { {
             { L"Argmin", "ArgMin" },
             { L"axis", "axes" },
-            // { L"", "keepdims" },
+            { L"reductionKeepDimensions", "keepdims" },
         } } },
 
         // From tensor
         // { L"", "Cast" },
-        { L"Reshape", { {
-            { L"Reshape", "Reshape" },
-            { L"newShape", "shape" },
-        } } },
         { L"Splice", { {
             { L"Splice", "Concat" },
             { L"axis", "axis" },
@@ -266,6 +296,33 @@ namespace ONNX
         } } },
         // { L"", "Squeeze" },
     };
+
+    std::map<std::pair<string, int>, bool> Operators::_onnxOpInputIndexToHasBatchAxis = 
+    { 
+        {{"Abs", 0}, true}, 
+        {{"Conv", 1}, false},
+        {{"ConvTranspose", 1}, false},
+        {{"MatMul", 0}, false}, 
+        {{"MatMul", 1 }, false },
+    };
+
+    // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
+    // return a map from cntk attribute name to onnx attribute name. 
+    const AttributesMapping& Operators::FindAttributeMap(const std::wstring &cntkOpName, const std::wstring& cntkAttributeOpName)
+    {
+        std::unordered_multimap<std::wstring, AttributesMapping>::iterator itNodeFn = 
+            std::find_if(_cntkToONNXOpName.begin(), _cntkToONNXOpName.end(),
+            [cntkOpName, cntkAttributeOpName](std::unordered_multimap<std::wstring, AttributesMapping>::value_type nodeFn)
+        {return nodeFn.first == cntkOpName && nodeFn.second.map.find(cntkAttributeOpName) != nodeFn.second.map.end(); });
+
+        if (itNodeFn == _cntkToONNXOpName.end())
+        {
+            LogicError("Cannot map to ONNX op from CNTK ReduceElements operation: %s / %s",
+                ToString(cntkOpName).c_str(), ToString(cntkAttributeOpName).c_str());
+        }
+
+        return itNodeFn->second;
+    }
 
     std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
         { L"LeakyReLU", { 0, 1 } },

@@ -19,11 +19,14 @@ namespace CNTK
 {
 namespace ONNX
 {
-
     struct AttributesMapping
     {
         std::unordered_map<std::wstring, std::string> map;
     };
+
+    typedef std::unordered_multimap<std::wstring, AttributesMapping>::iterator CNTKToOnnxMapIt;
+    typedef const std::unordered_multimap<std::wstring, AttributesMapping>::const_iterator CNTKToOnnxMapItConst;
+    typedef std::map<std::pair<std::string, int>, bool>::const_iterator OnnxOpInputIndexToHasBatchAxisItConst;
 
     class Operators
     {
@@ -51,6 +54,25 @@ namespace ONNX
         static inline const std::unordered_multimap<std::wstring, AttributesMapping>& CntkToONNXLookup()
         {
             return _cntkToONNXOpName;
+        }
+
+        static bool SpecHasPatchAxis(const std::string &onnxOpName, int inputIndex)
+        {
+            OnnxOpInputIndexToHasBatchAxisItConst it = _onnxOpInputIndexToHasBatchAxis.find(
+                std::pair<std::string, int>(onnxOpName, inputIndex));
+            if (it == _onnxOpInputIndexToHasBatchAxis.end())
+            {
+                return true;
+            }
+            else
+            {
+                return it->second;
+            }
+        }
+
+        static inline const std::map<std::pair<std::string, int>, bool>& OnnxOpInputIndexToHasBatchAxisLookup()
+        {
+            return _onnxOpInputIndexToHasBatchAxis;
         }
 
         //
@@ -100,11 +122,15 @@ namespace ONNX
             return false;
         }
 
+        static const AttributesMapping& FindAttributeMap(const std::wstring& cntkOpName, const std::wstring& cntkAttributeOpName);
+
+
     private:
         static std::unordered_multimap<std::wstring, AttributesMapping> _cntkToONNXOpName;
         static std::unordered_map<std::wstring, std::set<size_t>> _cntkBlockOPInvalidIndices;
         static std::unordered_map<std::wstring, std::vector<int>> _cntkToONNXInputIndices;
         static std::set<std::wstring> _cntkLayerOPName;
+        static std::map<std::pair<std::string, int>, bool> _onnxOpInputIndexToHasBatchAxis;
     };
 
 }
