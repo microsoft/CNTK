@@ -5581,10 +5581,10 @@ __global__ void _assignAlphaScore(
             else
                 ascore = 0;
             alphaScore[alphaId] = (ElemType)x + ascore;
-            if (delayConstraint != -1 && phoneSeqId <= phoneNum - 3)
+            if (delayConstraint != -1 && phoneSeqId <= phoneNum - 2)
             {
-                LONG64 labelid_r = labelid + 2;
-                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_r]);
+                //LONG64 labelid_r = labelid + 2;
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid]);
                 LONG64 phoneid_r = (LONG64)(phoneSeq[labelid + 1]);
                 if (phoneId == blankTokenId && (phoneid_r == 0 || phoneid_r == 1))
                 {
@@ -5677,9 +5677,9 @@ __global__ void _assignBetaScore(
             else
                 ascore = 0;
             betaScore[betaid] = (ElemType)x + ascore;
-            if (delayConstraint != -1 && phoneSeqId <= phoneNum -3)
+            if (delayConstraint != -1 && phoneSeqId <= phoneNum -2)
             {
-                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid]);
                 LONG64 phoneid_r = (LONG64)(phoneSeq[labelid + 1]);
                 if (phoneId == blankTokenId && (phoneid_r==0 || phoneid_r == 1))
                 {

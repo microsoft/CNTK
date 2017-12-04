@@ -283,6 +283,7 @@ public:
         int maxPhoneNum = 0;
         std::vector<size_t> phoneSeq;
         std::vector<size_t> phoneBound;
+        std::vector<size_t> phoneBound_backup;
 
         if (blankTokenId == SIZE_MAX)
             blankTokenId = numRows - 1;
@@ -320,6 +321,8 @@ public:
             phoneSeq.push_back(SIZE_MAX);
             phoneBound.clear();
             phoneBound.push_back(0);
+            phoneBound_backup.clear();
+            phoneBound_backup.push_back(0);
             int prevPhoneId = -1;
             size_t startFrameInd = seq.tBegin * numParallelSequences + seq.s;
             size_t endFrameInd   = seq.tEnd   * numParallelSequences + seq.s;
@@ -346,9 +349,16 @@ public:
             //phoneBound.push_back(numFrames);
             phoneSeq.push_back(SIZE_MAX);
             phoneBound.push_back(numFrames);
-
+            for (size_t i = 1; i < phoneSeq.size()-1; i++)
+            {
+                if (phoneSeq[i] == blankTokenId)
+                    phoneBound_backup.push_back(phoneBound[i + 2]);
+                else
+                    phoneBound_backup.push_back(phoneBound[i + 1]);
+            }
+            phoneBound_backup.push_back(numFrames);
             allUttPhoneSeqs.push_back(phoneSeq);
-            allUttPhoneBounds.push_back(phoneBound);
+            allUttPhoneBounds.push_back(phoneBound_backup);
 
             uttPhoneNum.push_back(phoneSeq.size());
 
