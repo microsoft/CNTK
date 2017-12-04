@@ -557,6 +557,12 @@ public:
     const MBLayoutPtr& GetMBLayout() const { return m_pMBLayout; }
     bool HasMBLayout() const { return !!m_pMBLayout; }
 
+    bool IsMBLayoutCompatibleWith(ComputationNodeBasePtr otherNode)
+    {
+        if (!HasMBLayout() || !otherNode->HasMBLayout()) return true; // broadcasting is compatible
+        return *m_pMBLayout == *(otherNode->m_pMBLayout);
+    }
+
     // for logging: get the string fragment for displaying the dimension
     std::wstring GetMBLayoutAxisString() const
     {
