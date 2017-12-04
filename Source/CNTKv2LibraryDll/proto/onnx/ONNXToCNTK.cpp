@@ -451,11 +451,11 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg, 
     {
     case DataType::Float:
     {
-        return InputVariable(shape, DataType::Float, ToWString(nodeArg->Name()));
+        return InputVariable(shape, DataType::Float, ToWString(nodeArg->Name()), { Axis::DefaultBatchAxis() });
     }
     case DataType::Double:
     {
-        return InputVariable(shape, DataType::Double, ToWString(nodeArg->Name()));
+        return InputVariable(shape, DataType::Double, ToWString(nodeArg->Name()), { Axis::DefaultBatchAxis() });
     }
     default:
         NOT_IMPLEMENTED;
