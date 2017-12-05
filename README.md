@@ -2,6 +2,11 @@
 
 ## Latest news
 
+***2017-12-05.* CNTK 2.3.1**
+Release of Cognitive Toolkit v.2.3.1.
+
+CNTK support for ONNX format is now out of preview mode.
+
 ***2017-11-22.* CNTK 2.3**
 Release of Cognitive Toolkit v.2.3.
 
