@@ -122,7 +122,7 @@ else:
     ]
     extra_link_args = []
 
-    # Expecting the dependent libs (libcntklibrary-2.2.so, etc.) inside
+    # Expecting the dependent libs (libcntklibrary-2.3.so, etc.) inside
     # site-packages/cntk/libs.
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
     os.environ["CXX"] = "mpic++"
@@ -178,7 +178,7 @@ if IS_PY2:
     cntk_install_requires.append('enum34>=1.1.6')
 
 setup(name="cntk",
-      version="2.2",
+      version="2.3",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

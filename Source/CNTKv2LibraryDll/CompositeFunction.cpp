@@ -365,7 +365,7 @@ namespace CNTK
             return;
         }
 
-        // build a map of souce funtion to the destination (this) function UIDs.
+        // build a map of souce function to the destination (this) function UIDs.
         map<wstring, wstring> uidMap;
         for (auto i = 0; i < theirUIDs.size(); i++)
             uidMap[theirUIDs[i]] = ourUIDs[i];
@@ -626,6 +626,9 @@ namespace CNTK
                 case PrimitiveOpType::Sigmoid:
                     computationNodePtr = New<SigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::Atanh:
+                    computationNodePtr = New<AtanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Tanh:
                     computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
@@ -643,6 +646,9 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::Cosh:
                     computationNodePtr = New<CoshNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Asinh:
+                    computationNodePtr = New<AsinhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
                 case PrimitiveOpType::Sinh:
                     computationNodePtr = New<SinhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
@@ -1043,8 +1049,14 @@ namespace CNTK
                     auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
                     auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                     auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
-
-                    computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW);
+                    
+                    bool disableRegularization = false;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDisableRegularization))
+                    {
+                        disableRegularization = functionConfig[PrimitiveFunction::AttributeNameDisableRegularization].Value<bool>();
+                    }
+                    
+                    computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, disableRegularization, ImageLayoutKind::CHW);
                     break;
                 }
                 case PrimitiveOpType::Combine:
@@ -1387,6 +1399,10 @@ namespace CNTK
             {
                 // This ComputationNode has at least one null input which now needs to be properly attached
                 const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.Owner().get());
+
+                if (primitiveFunc == nullptr) {
+                    LogicError("Non-primitive function '%S' cannot be a part of the CNTK recurrent loop.", currentVar.Owner()->Name().c_str());
+                }
 
                 // Skip block primitives since they do not directly map to a computation node
                 if (primitiveFunc->OpType() == PrimitiveOpType::Block)

@@ -7,6 +7,7 @@
 #include <functional>
 #include "Common.h"
 #include <numeric>
+#include "CNTKLibraryC.h"
 
 using namespace CNTK;
 
@@ -417,6 +418,122 @@ BOOST_AUTO_TEST_CASE(RecurrentNetworkCreationInGPU)
 {
     if (ShouldRunOnGpu())
         TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
+}
+
+BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    const size_t inputDim = 937;
+    const size_t numLSTMLayers = 3;
+    const size_t cellDim = 1024;
+    const size_t hiddenDim = 512;
+    const size_t numOutputClasses = 9304;
+
+    auto features = InputVariable({ inputDim }, AsDataType<float>(), L"features");
+    auto classifier = LSTMNet<float>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, DeviceDescriptor::CPUDevice(), L"classifierOutput");
+
+    auto output = classifier->Output();
+
+    // Save to use in C later.
+    const std::wstring tempModelPath = L"test.model";
+    if ((_wunlink(tempModelPath.c_str()) != 0) && (errno != ENOENT))
+        BOOST_ERROR("Error deleting temp model file 'test.model'");
+    classifier->Save(tempModelPath);
+
+    // Prepare input
+    std::mt19937_64 generator(13);
+    const int numberOfFrames = 3;
+    std::vector<float> inputData;
+    for (int i = 0; i < inputDim * numberOfFrames; ++i)
+        inputData.push_back((float)generator());
+
+
+    // Run C++ forward.
+    auto value = Value::CreateSequence(NDShape{ inputDim }, inputData, DeviceDescriptor::CPUDevice());
+    std::unordered_map<Variable, ValuePtr> outputs{ { output, nullptr } };
+    classifier->Evaluate({ {features, value} }, outputs,  DeviceDescriptor::CPUDevice());
+
+    const float* buf = outputs[output]->Data()->DataBuffer<float>();
+    std::vector<float> result(buf, buf + outputs[output]->Shape().TotalSize());
+
+    // Create the C model from the saved file.
+    CNTK_ModelHandle model;
+    auto rc = CNTK_LoadModel(L"test.model", L"cpu", &model);
+    BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+    if (_wunlink(tempModelPath.c_str()) != 0)
+        BOOST_ERROR("Error deleting temp model file 'tempModelPath'");
+
+    // Create a copy
+    CNTK_ModelHandle cloned;
+    rc = CNTK_CloneModel(model, CNTK_ModelParameterShare, false, &cloned);
+    BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+
+    // Run C original forward.
+    CNTK_Variable* outputInfos;
+    uint32_t numOutputs = 0;
+    rc = CNTK_GetModelOutputsInfo(model, &outputInfos, &numOutputs);
+    BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+    BOOST_CHECK_EQUAL(numOutputs, classifier->Outputs().size());
+
+    CNTK_Variable* argumentInfos;
+    uint32_t numArguments = 0;
+    rc = CNTK_GetModelArgumentsInfo(model, &argumentInfos, &numArguments);
+    BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+
+    auto s = std::vector<uint32_t>{ (uint32_t)inputDim, (uint32_t)numberOfFrames };
+    CNTK_Shape shape;
+    shape.size = 2;
+    shape.value = s.data();
+
+    CNTK_Value iv;
+    iv.data = inputData.data();
+    iv.dataSize = (uint32_t)inputData.size();
+    iv.shape = shape;
+
+    bool sequenceFlags[]{ true };
+
+    CNTK_Value* outputValues = nullptr;
+    rc = CNTK_EvaluateSequence(model, argumentInfos, &iv, sequenceFlags, numArguments,
+        outputInfos, numOutputs, &outputValues);
+    BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+
+    // Run C cloned forward.
+    CNTK_Value* clonedOutputValues = nullptr;
+    rc = CNTK_EvaluateSequence(cloned, argumentInfos, &iv, sequenceFlags, numArguments,
+        outputInfos, numOutputs, &clonedOutputValues);
+    BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+
+    // Check that C and C++ results match.
+    std::vector<float> c1(outputValues[0].data, outputValues[0].data + outputValues[0].dataSize);
+    std::vector<float> c2(clonedOutputValues[0].data, clonedOutputValues[0].data + clonedOutputValues[0].dataSize);
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(),
+        c1.begin(), c1.end());
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(c2.begin(), c2.end(),
+        c1.begin(), c1.end());
+
+    // Cleanup C code.
+    CNTK_ReleaseModel(model);
+    CNTK_ReleaseModel(cloned);
+
+    for (uint32_t i = 0; i < numOutputs; i++)
+        CNTK_CleanVariable(&outputInfos[i]);
+    CNTK_ReleaseArray(outputInfos);
+
+    for (uint32_t i = 0; i < numArguments; i++)
+        CNTK_CleanVariable(&argumentInfos[i]);
+    CNTK_ReleaseArray(argumentInfos);
+
+    for (uint32_t i = 0; i < numOutputs; i++)
+         CNTK_CleanValue(&outputValues[i]);
+    CNTK_ReleaseArray(outputValues);
+
+    for (uint32_t i = 0; i < numOutputs; i++)
+        CNTK_CleanValue(&clonedOutputValues[i]);
+    CNTK_ReleaseArray(clonedOutputValues);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

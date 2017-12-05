@@ -296,6 +296,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)  --TODO: call it item_rank?
                 transpose_weight=False,  # (must be False currently)
                 dilation=1,
+                groups = 1,
                 max_temp_mem_size_in_samples=0,
                 op_name='Convolution', name=''):
     '''
@@ -378,6 +379,10 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
       that is stored with tensor shape (H,W) instead of (1,H,W)
      transpose_weight (bool, defaults to `False`): When this is `True` this is convolution, otherwise this is correlation (which is common for most toolkits)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+      which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
+      divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
+      Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
      max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermediate convolution results.  A value of 0 means, memory is automatically managed.
      name (str, defaults to ''): the name of the function instance in the network
 
@@ -407,6 +412,8 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         raise NotImplementedError("Convolution: transpose_weight option currently not supported")
     if not sharing:
         raise NotImplementedError("Convolution: sharing option currently must be True")
+    if (groups <= 0):
+        raise ValueError("Convolution: groups must be strictly positive, i.e. groups > 0.")
     # The convolution() function currently requires exactly one input and one output depth axis.
     # So we emulate those dimensions on this level. TODO: Once this is suppored by the C++ code, remove the emulation here.
     emulating_output_depth = num_filters == ()
@@ -469,6 +476,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                          auto_padding=(False,) * reduction_rank  # convolution() currently has no reduction_rank parameter, so we must pass an explicit False for the reduction axis
                                       + tuple(p if i != sequential_emulated_axis else False for i, p in enumerate(pad)),
                          dilation=dilation,
+                         groups=groups,
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
         if sequential and not pad[-filter_rank]:
@@ -554,6 +562,7 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
                   init_bias=default_override_or(0),
                   reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
                   dilation=1,
+                  groups=1,
                   name=''):
     '''
     Convolution2D(filter_shape, num_filters=None, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, reduction_rank=1, name='')
@@ -577,6 +586,10 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+      which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
+      divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
+      Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -593,7 +606,9 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
     if len(_as_tuple(filter_shape)) > 2:
          raise ValueError('Convolution2D: filter_shape must be a scalar or a 2D tuple, e.g. 3 or (3,3)')
     filter_shape = _pad_to_shape((0,0), filter_shape, 'filter_shape')
-    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, dilation=dilation, op_name='Convolution2D', name=name)
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad,
+                       strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank,
+                       dilation=dilation, groups=groups, op_name='Convolution2D', name=name)
 
 
 def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Must be a 3-element tuple.
@@ -606,6 +621,7 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
                   init_bias=default_override_or(0),
                   reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
                   dilation=1,
+                  groups=1,
                   name=''):
     '''
     Convolution3D(filter_shape, num_filters=None, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, reduction_rank=1, name='')
@@ -629,6 +645,10 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+      which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
+      divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
+      Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -645,7 +665,9 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
     if len(_as_tuple(filter_shape)) > 3:
          raise ValueError('Convolution3D: filter_shape must be a scalar or a 3D tuple, e.g. 3 or (3,3,3)')
     filter_shape = _pad_to_shape((0,0,0), filter_shape, 'filter_shape')
-    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, dilation=dilation, op_name='Convolution3D', name=name)
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad,
+                       strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, 
+                       dilation=dilation, groups=groups, op_name='Convolution3D', name=name)
 
 
 # ConvolutionTranspose -- create a deconvolution layer with optional non-linearity
@@ -1178,9 +1200,10 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
                        init_scale=1,
                        normalization_time_constant=default_override_or(5000), blend_time_constant=0,
                        epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(False),
+                       disable_regularization=default_override_or(False),
                        name=''):
     '''
-    BatchNormalization(map_rank=None, init_scale=1, normalization_time_constant=5000, blend_time_constant=0, epsilon=0.00001, use_cntk_engine=False, name='')
+    BatchNormalization(map_rank=None, init_scale=1, normalization_time_constant=5000, blend_time_constant=0, epsilon=0.00001, use_cntk_engine=False, disable_regularization=False, name='')
 
     Layer factory function to create a batch-normalization layer.
 
@@ -1207,6 +1230,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
      normalization_time_constant (int, default 5000): time constant for smoothing the batch statistics in order to compute aggregate estimates for inference.
      epsilon (float, default 0.00001): epsilon added to the variance to avoid division by 0
      use_cntk_engine (bool, default ``False``): if ``True`` then use CNTK's own engine instead of NVidia's.
+     disable_regularization (bool, default ``False``): if ``True`` then disable regularization in BatchNormalization
      name (str, optional): the name of the function instance in the network
 
     Returns:
@@ -1221,6 +1245,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     normalization_time_constant = get_default_override(BatchNormalization, normalization_time_constant=normalization_time_constant)
     epsilon                     = get_default_override(BatchNormalization, epsilon=epsilon)
     use_cntk_engine             = get_default_override(BatchNormalization, use_cntk_engine=use_cntk_engine)
+    disable_regularization      = get_default_override(BatchNormalization, disable_regularization=disable_regularization)
 
     # parameters bound to this Function
     norm_shape  = _INFERRED
@@ -1237,7 +1262,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     def batch_normalize(x):
         return batch_normalization(x, scale, bias, run_mean, run_variance, running_count=run_count,
                                    spatial=map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                   use_cudnn_engine=not use_cntk_engine)
+                                   use_cudnn_engine=not use_cntk_engine, disable_regularization=disable_regularization)
 
     return batch_normalize
 
@@ -1249,7 +1274,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
 
     Layer normalization applies this formula to every input element (element-wise):
     ``y = (x - mean(x)) / (stddev(x) + epsilon) * scale + bias``
-    where ``scale`` and ``bias`` are learned scalar parameters.
+    where ``scale`` and ``bias`` are learned parameters of the same dimention as the input/output.
 
     Example:
      >>> f = LayerNormalization(initial_scale=2, initial_bias=1)
@@ -1273,8 +1298,8 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
     # parameters bound to this Function
-    scale = Parameter((), init=initial_scale, name='scale')  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?
-    bias  = Parameter((), init=initial_bias,  name='bias')
+    scale = Parameter(_INFERRED, init=initial_scale, name='scale')  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?
+    bias  = Parameter(_INFERRED, init=initial_bias,  name='bias')
 
     # expression
     @BlockFunction('LayerNormalization', name)
