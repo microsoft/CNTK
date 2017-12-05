@@ -47,12 +47,16 @@ class SimpleBMUFTrainer():
         self.err = cntk.classification_error(self.output, self.label)
     
     def create_trainer(self):
-        learner = cntk.block_momentum_distributed_learner(cntk.momentum_sgd(self.output.parameters, cntk.learning_parameter_schedule(0.0001), cntk.momentum_as_time_constant_schedule(1000)), 
-                                                          block_size=1000, block_learning_rate=0.01, block_momentum_as_time_constant=1000)
+        try:
+            learner = cntk.block_momentum_distributed_learner(cntk.momentum_sgd(self.output.parameters, cntk.learning_parameter_schedule(0.0001), cntk.momentum_as_time_constant_schedule(1000)), 
+                                                              block_size=1000, block_learning_rate=0.01, block_momentum_as_time_constant=1000)
+            
+            comm_rank = cntk.distributed.Communicator.rank()
+            self.trainer = cntk.Trainer(self.output, (self.ce, self.err), [learner], [cntk.logging.ProgressPrinter(freq=progress_freq, tag="Training", rank=comm_rank)])
+        except RuntimeError:
+            self.trainer = None
+        return
         
-        comm_rank = cntk.distributed.Communicator.rank()
-        self.trainer = cntk.Trainer(self.output, (self.ce, self.err), [learner], [cntk.logging.ProgressPrinter(freq=progress_freq, tag="Training", rank=comm_rank)])
-
 def get_minibatch(bmuf, working_dir, mb_source):
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
     
@@ -142,6 +146,11 @@ MB_SOURCES = ["numpy", "ctf_utterance", "ctf_frame", "ctf_bptt"]
 def test_bmuf_correct_metrics_averaging(tmpdir, device_id, mb_source):
     if platform.system() == 'Linux':
         pytest.skip('test only runs on Windows due to mpiexec -l option')
+    
+    # check whether trainer can be initialized or not
+    bmuf = SimpleBMUFTrainer()
+    if not bmuf.trainer:
+        pytest.skip('BMUF not available on this build')
         
     launch_args = []
     if device_id >= 0:

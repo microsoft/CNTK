@@ -3,13 +3,15 @@
 
 #include <functional>
 #include <unordered_map>
-
-#pragma warning(push)
-#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996)
-#include "proto/onnx/protobuf/graph.pb.h"
-#pragma warning(pop)
+#include <unordered_set>
 
 #include "utils.h"
+#pragma warning(push)
+#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996 4503)
+#include "proto/onnx/protobuf/onnx-ml.pb.h"
+#pragma warning(pop)
+
+using namespace onnx;
 
 namespace ONNXIR
 {
@@ -143,6 +145,8 @@ namespace ONNXIR
 
         // Get operator name.
         const std::string& GetName() const;
+        int SinceVersion() const;
+        const std::string& Domain() const;
 
         // Get operator description.
         const std::string& GetDescription() const;
@@ -162,10 +166,12 @@ namespace ONNXIR
     private:
 
         friend class OperatorSchemaSetter;
-        friend class OperatorSchemaRegistry;
+        friend class OpSchemaRegistry;
 
         // Operator name.
         std::string m_name;
+        int m_sinceVersion = 1;
+        std::string m_domain = "";
 
         // Operator description.
         std::string m_description;

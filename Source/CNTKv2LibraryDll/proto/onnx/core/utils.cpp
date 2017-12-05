@@ -5,6 +5,12 @@
 
 #include "constants.h"
 #include "utils.h"
+#pragma warning(push)
+#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996 4503)
+#include "proto/onnx/protobuf/onnx-ml.pb.h"
+#pragma warning(pop)
+
+using namespace onnx;
 
 namespace ONNXIR
 {
@@ -65,38 +71,12 @@ namespace ONNXIR
                     return left + "tensor(" + ToDataTypeString(p_type.tensor_type().elem_type()) + ")" + right;
                 }
             }
-            case TypeProto::ValueCase::kSparseTensorType:
-                return left + "sparse(" + ToDataTypeString(p_type.sparse_tensor_type().elem_type()) + ")" + right;
             case TypeProto::ValueCase::kSequenceType:
                 return ToString(p_type.sequence_type().elem_type(), left + "seq(", ")" + right);
             case TypeProto::ValueCase::kMapType:
             {
                 std::string map_str = "map(" + ToDataTypeString(p_type.map_type().key_type()) + ",";
                 return ToString(p_type.map_type().value_type(), left + map_str, ")" + right);
-            }
-            case TypeProto::ValueCase::kRecordType:
-            {
-                std::string record_str("record(");
-                int size = p_type.record_type().field_size();
-                for (int i = 0; i < size - 1; i++)
-                {
-                    record_str = ToString(p_type.record_type().field(i).type(),
-                        record_str + p_type.record_type().field(i).name() + ":" , ",");
-                }
-                record_str += p_type.record_type().field(size - 1).name() + ":";
-                return ToString(p_type.record_type().field(size - 1).type(), left + record_str, ")" + right);
-            }
-            case TypeProto::ValueCase::kUnionType:
-            {
-                std::string union_str("union(");
-                int size = p_type.union_type().choice_size();
-                for (int i = 0; i < size - 1; i++)
-                {
-                    union_str = ToString(p_type.union_type().choice(i).type(),
-                        union_str + p_type.union_type().choice(i).name() + ":", ",");
-                }
-                union_str += p_type.union_type().choice(size - 1).name() + ":";
-                return ToString(p_type.union_type().choice(size - 1).type(), left + union_str, ")" + right);
             }
             default:
                 assert(false);
@@ -145,93 +125,6 @@ namespace ONNXIR
             return "";
         }
 
-        std::string OpUtils::ToAttrTypeString(const ValueProto& p_value, const std::string& left, const std::string& right)
-        {
-            switch (p_value.value_case())
-            {
-            case ValueProto::ValueCase::kDenseTensor:
-            {
-                if (p_value.dense_tensor().dims_size() == 0)
-                {
-                    // Scalar case.
-                    return left + ToDataTypeString(p_value.dense_tensor().data_type()) + right;
-                }
-                else
-                {
-                    return left + "tensor(" + ToDataTypeString(p_value.dense_tensor().data_type()) + ")" + right;
-                }
-            }
-            case ValueProto::ValueCase::kSparseTensor:
-                return left + "sparse(" + ToDataTypeString(p_value.sparse_tensor().values().data_type()) + ")" + right;
-            case ValueProto::ValueCase::kSeq:
-            {
-                assert(p_value.seq().elems_size() > 0);
-                return ToAttrTypeString(p_value.seq().elems(0), left + "seq(", ")" + right);
-            }
-            case ValueProto::ValueCase::kScalarMap:
-            {
-                const int keys_size = p_value.scalar_map().keys_size();
-                const int values_size = p_value.scalar_map().values_size();
-                Ignore(keys_size, values_size);
-                assert(keys_size > 0);
-                assert(values_size > 0);
-                assert(keys_size == values_size);
-                std::string map_str = "map(" + ToDataTypeString(p_value.scalar_map().keys(0).data_type()) + ","
-                    + "tensor(" + ToDataTypeString(p_value.scalar_map().values(0).data_type()) + "))";
-                return map_str;
-            }
-            case ValueProto::ValueCase::kMap:
-            {
-                assert(p_value.map().key_value_pairs_size() > 0);
-                std::string map_str("map(");
-                std::string key_str;
-
-                TypesWrapper& t = TypesWrapper::GetTypesWrapper();
-                switch (p_value.map().key_value_pairs(0).key_case())
-                {
-                case ValueProto_KeyValuePairProto::KeyCase::kS:
-                    key_str = t.c_string;
-                    break;
-                case ValueProto_KeyValuePairProto::KeyCase::kI32:
-                    key_str = t.c_int32;
-                    break;
-                case ValueProto_KeyValuePairProto::KeyCase::kI64:
-                    key_str = t.c_int64;
-                    break;
-                case ValueProto_KeyValuePairProto::KeyCase::kUi64:
-                    key_str = t.c_uint64;
-                    break;
-                default:
-                    assert(false);
-                }
-                map_str += key_str + ",";
-                return ToAttrTypeString(p_value.map().key_value_pairs(0).value(), left + map_str, ")" + right);
-            }
-            case ValueProto::ValueCase::kRecord:
-            {
-                int fields_size = p_value.record().fields_size();
-                assert(fields_size > 0);
-                std::string record_str("record(");
-                for (int i = 0; i < fields_size - 1; i++)
-                {
-                    record_str = ToAttrTypeString(p_value.record().fields(i).value(),
-                        record_str + p_value.record().fields(i).key() + ":", ",");
-                }
-                record_str += p_value.record().fields(fields_size - 1).key() + ":";
-                return ToAttrTypeString(p_value.record().fields(fields_size - 1).value(), left + record_str, ")" + right);
-            }
-            case ValueProto::ValueCase::kUnion:
-            {
-                assert(p_value.union_().has_choice());
-                std::string union_str = "union(" + p_value.union_().choice().key() + ":";
-                return ToAttrTypeString(p_value.union_().choice().value(), left + union_str, ")" + right);
-            }
-            default:
-                assert(false);
-                return "";
-            }
-        }
-
         void OpUtils::FromString(const std::string& p_src, TypeProto& p_type)
         {
             StringRange s(p_src);
@@ -256,47 +149,6 @@ namespace ONNXIR
                 p_type.mutable_map_type()->set_key_type(key_type);
                 return FromString(std::string(v.Data(), v.Size()), *p_type.mutable_map_type()->mutable_value_type());
             }
-            else if (s.LStrip("record"))
-            {
-                s.ParensWhitespaceStrip();
-                std::vector<StringRange> fields;
-                SplitStringTokens(s, fields);
-                for (auto& f : fields)
-                {
-                    ValueInfoProto* valueinfo = p_type.mutable_record_type()->mutable_field()->Add();
-                    size_t name_size = f.Find(':');
-                    StringRange n(f.Data(), name_size);
-                    std::string name = std::string(n.Data(), n.Size());
-                    valueinfo->set_name(name);
-                    f.LStrip(name_size);
-                    f.LStrip(":");
-                    FromString(std::string(f.Data(), f.Size()), *valueinfo->mutable_type());
-                }
-            }
-            else if (s.LStrip("union"))
-            {
-                s.ParensWhitespaceStrip();
-                std::vector<StringRange> choices;
-                SplitStringTokens(s, choices);
-                for (auto& c : choices)
-                {
-                    ValueInfoProto* valueinfo = p_type.mutable_union_type()->mutable_choice()->Add();
-                    size_t name_size = c.Find(':');
-                    StringRange n(c.Data(), name_size);
-                    std::string name = std::string(n.Data(), n.Size());
-                    valueinfo->set_name(name);
-                    c.LStrip(name_size);
-                    c.LStrip(":");
-                    FromString(std::string(c.Data(), c.Size()), *valueinfo->mutable_type());
-                }
-            }
-            else if (s.LStrip("sparse"))
-            {
-                s.ParensWhitespaceStrip();
-                TensorProto::DataType e;
-                FromDataTypeString(std::string(s.Data(), s.Size()), e);
-                p_type.mutable_sparse_tensor_type()->set_elem_type(e);
-            }
             else if (s.LStrip("tensor"))
             {
                 s.ParensWhitespaceStrip();
@@ -309,7 +161,7 @@ namespace ONNXIR
                 // Scalar
                 TensorProto::DataType e;
                 FromDataTypeString(std::string(s.Data(), s.Size()), e);
-                TypeProto::TensorTypeProto* t = p_type.mutable_tensor_type();
+                TypeProto::Tensor* t = p_type.mutable_tensor_type();
                 t->set_elem_type(e);
                 // Call mutable_shape() to initialize a shape with no dimension.
                 t->mutable_shape();

@@ -88,28 +88,40 @@ namespace
 
 namespace ONNXIR
 {
-    Model::Model(const std::string& p_graphName, bool p_isONNX)
+    Model::Model(const std::string& p_graphName,
+        bool p_isONNX,
+        const ModelMetaData& p_modelMetaData)
     {
         m_graph.reset(new Graph(p_graphName, p_isONNX));
-    }
-
-    Model::Model(const std::string& p_graphName,
-        const std::string& p_graphDocString)
-    {
-        m_graph.reset(new Graph(p_graphName, p_graphDocString));
+        m_modelProto.set_ir_version(Version::IR_VERSION);
+        m_modelMetaData = p_modelMetaData;
+        for (auto& metaData : m_modelMetaData)
+        {
+            auto prop = m_modelProto.add_metadata_props();
+            prop->set_key(metaData.first);
+            prop->set_value(metaData.second);
+        }
     }
 
     Model::Model(const std::string& p_graphName,
         const std::string& p_graphDocString,
-        VERSION p_irVersion,
         const std::string& p_producerName,
         const std::string& p_producerVersion,
         const std::string& p_domain,
         VERSION p_modelVersion,
-        const std::string& p_docString)
+        const std::string& p_docString,
+        const ModelMetaData& p_modelMetaData)
     {
         m_graph.reset(new Graph(p_graphName, p_graphDocString));
-        m_modelProto.set_ir_version(p_irVersion);
+        m_modelProto.set_ir_version(Version::IR_VERSION);
+        m_modelMetaData = p_modelMetaData;
+        for (auto& metaData : m_modelMetaData)
+        {
+            auto prop = m_modelProto.add_metadata_props();
+            prop->set_key(metaData.first);
+            prop->set_value(metaData.second);
+        }
+
         m_modelProto.set_producer_name(p_producerName);
         m_modelProto.set_producer_version(p_producerVersion);
         m_modelProto.set_domain(p_domain);
@@ -124,6 +136,11 @@ namespace ONNXIR
         {
             m_graph.reset(new Graph(m_modelProto.graph()));
         }
+
+        for (auto& prop : m_modelProto.metadata_props())
+        {
+            m_modelMetaData[prop.key()] = prop.value();
+        }
     }
 
     VERSION Model::IrVersion() const
@@ -133,11 +150,6 @@ namespace ONNXIR
             return m_modelProto.ir_version();
         }
         return c_noVersion;
-    }
-
-    void Model::SetIrVersion(VERSION p_irVersion)
-    {
-        m_modelProto.set_ir_version(p_irVersion);
     }
 
     const std::string& Model::ProducerName() const
@@ -194,6 +206,11 @@ namespace ONNXIR
         m_modelProto.set_doc_string(p_docString);
     }
 
+    const ModelMetaData& Model::MetaData() const
+    {
+        return m_modelMetaData;
+    }
+
     Graph* Model::MainGraph()
     {
         return m_graph.get();
@@ -240,6 +257,21 @@ namespace ONNXIR
         return status;
     }
 
+    Status Model::LoadFromBytes(int count, void *pBytes, /*out*/ std::shared_ptr<Model>* p_model)
+    {
+        ModelProto modelProto;
+        bool result = modelProto.ParseFromArray(pBytes, count);
+        if (!result)
+        {
+            return Status(ONNX, INVALID_PROTOBUF, "Protobuf parsing failed.");
+        }
+
+        (*p_model).reset(new Model(modelProto));
+        RETURN_IF_ERROR((*p_model)->MainGraph()->Resolve());
+
+        return Status::OK();
+    }
+
     Status Model::Save(Model& p_model, const std::string& p_filePath)
     {
         int fd;
@@ -273,7 +305,6 @@ namespace ONNXIR
         {
             return Status(ONNX, INVALID_PROTOBUF, "Protobuf parsing failed.");
         }
-
         (*p_model).reset(new Model(modelProto));
         RETURN_IF_ERROR((*p_model)->MainGraph()->Resolve());
 
