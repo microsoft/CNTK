@@ -797,6 +797,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     unordered_map<Parameter, NDArrayViewPtr> gradients;
     for (let& p : parameters)
         gradients[p] = nullptr;
+    unordered_map<Parameter, NDArrayViewPtr> parameterNorms; // for in-place weight norm
 
     vector<vector<vector<Variable>>> args; // [subMinibatchIndex, streamIndex, sequenceIndex]
     size_t totalLabels = 0;
@@ -1002,6 +1003,36 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             }
 #endif
             learner->Update(gradients, info);
+#if 1       // weight normalization (hack for now, since I cannot configure it)
+            let EndsWith = [](const wstring& s, const wstring& what)
+            {
+                return s.size() >= what.size() && s.substr(s.size() - what.size()) == what;
+            };
+            // This filters by name. ".W" is from Dense/Linear, and we don't use weight norm for embed and projectState.
+            for (let& p : parameters) if (EndsWith(p.Name(), L".W") && !EndsWith(p.Name(), L"embed.W") && !EndsWith(p.Name(), L"projectState.W"))
+            {
+                if (parameterNorms.find(p) == parameterNorms.end())
+                    parameterNorms[p] = make_shared<NDArrayView>(0, CurrentDataType(), NDShape{ p.Shape()[0] }, CurrentDevice());
+                static NDArrayViewPtr minusHalf;
+                if (!minusHalf)
+                    minusHalf = make_shared<NDArrayView>(-0.5, CurrentDataType(), NDShape{ }, CurrentDevice());
+                //minusHalf->LogToFile(L"minusHalf");
+                let norm = parameterNorms[p];
+                let W = p.Value();
+                NDArrayView::NumericOperation({ W }, 1.0, L"Sqr", norm, 0, L"Sum");
+                //norm->LogToFile(L"sqrSum");
+                let eps = DEFAULT_EPSILON;
+                NDArrayView::NumericOperation({ }, eps*eps, L"ConstOne", norm, 1.0); // sqr += eps^2
+                //norm->LogToFile(L"sqrSum+eps^2");
+                NDArrayView::NumericOperation({ norm, minusHalf }, 1.0, L"Pow", norm);
+                //norm->LogToFile(L"1/sqrt(sqrSum+eps^2)");
+                //norm->LogToFile(L"sqrt(sqrSum)+eps");
+                //W->LogToFile(p.Name() + L" (before)");
+                NDArrayView::NumericOperation({ W, norm }, 1.0, L"ElementwiseProduct", W); // W /= norm
+                //W->LogToFile(p.Name() + L" (after)");
+                //fprintf(stderr, "in-place weight norm done for %S\n", p.Name().c_str());
+            }
+#endif
             //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
             let timePerUpdate = partTimer.Elapsed();
             //partTimer.Log("Update", numLabels);
