@@ -170,8 +170,8 @@ static UnaryModel BatchNormalization(const size_t axis, const wstring& name = ws
     return Identity;
 #else
     static const double normalizationTimeConstant = 2000*50; // 2000 sentences a ~50 words should provide a decent estimate; ~24 minibatches of 4096
-    //static const double blendTimeConstant = 100000; // want stats from 100000 samples
-    static const double blendTimeConstant = numeric_limits<double>::infinity(); // only use running stats
+    static const double blendTimeConstant = 0; // want stats from 100000 samples
+    //static const double blendTimeConstant = numeric_limits<double>::infinity(); // only use running stats
     static size_t id = 0; // unique id
     auto thisId = ++id;   // note: don't use 'id' in lambda below; it will access the static variable directly, not a captured value
     auto one  = Constant({ NDShape::InferredDimension }, CurrentDataType(), 1.0, CurrentDevice(), L"one");
@@ -258,7 +258,7 @@ static UnaryModel Dense(size_t outputDim, size_t inputDim, const UnaryModel& act
         parameters.push_back(b);
     if (hasScale)
         parameters.push_back(scale);
-    if (hasWeightNorm /*&& !(hasBatchNorm && !hasLengthNorm)*/)
+    if (hasWeightNorm && !(hasBatchNorm && !hasLengthNorm))
         parameters.push_back(weightNormRescale);
     map<wstring, ModelParametersPtr> nested{ { L"activation", activation } };
     //if (hasScale)
@@ -281,7 +281,7 @@ static UnaryModel Dense(size_t outputDim, size_t inputDim, const UnaryModel& act
         let invLen = Pow(rowNorm + epsSqr, weightNormMinusHalf);
         //if (hasBatchNorm && !hasLengthNorm) // batchNorm does element-wise rescaling, so no need to do it here as well
         //    return invLen;
-        let scale1 = /*(hasBatchNorm && !hasLengthNorm) ? invLen :*/ invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
+        let scale1 = (hasBatchNorm && !hasLengthNorm) ? invLen : invLen * weightNormRescale; // invLen normalizes the weight; weightNormRescale scales it back
         return scale1;
         //y = scale1 * y;
     }, Named("dense.normWeight"));

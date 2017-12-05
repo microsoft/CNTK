@@ -68,6 +68,7 @@ size_t saveEvery = 2000;
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
+size_t minibatchSize = 4096;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -760,7 +761,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     fprintf(stderr, "Total number of learnable parameters is %u in %d parameter tensors.\n", (unsigned int)numParameters, (int)parameters.size()), fflush(stderr);
     let epochSize = 8192 * 10000; // Frantic epoch
     let isDebugging = communicator->Workers().size() == 1;
-    let minibatchSize = 4096 / (isDebugging ? 6 : 1); // for debugging: smaller MB when running without MPI
+    minibatchSize = minibatchSize / (isDebugging ? 6 : 1); // for debugging: smaller MB when running without MPI
     AdditionalLearningOptions learnerOptions;
     learnerOptions.gradientClippingThresholdPerSample = 0.2 / 4096;
     LearnerPtr baseLearner;
@@ -1003,7 +1004,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             }
 #endif
             learner->Update(gradients, info);
-#if 1       // weight normalization (hack for now, since I cannot configure it)
+#if 0       // weight normalization (hack for now, since I cannot configure it)
             let EndsWith = [](const wstring& s, const wstring& what)
             {
                 return s.size() >= what.size() && s.substr(s.size() - what.size()) == what;
@@ -1290,6 +1291,7 @@ int mt_main(int argc, char *argv[])
                 // optional overrides of global stuff
                 "?workingDirectory", workingDirectory,
                 "?modelPath", modelPath,
+                "?minibatchSize", minibatchSize,
                 "?firstGpu", firstGpu,
                 "?numBits", numBits,
                 // these are optional to override the system settings
