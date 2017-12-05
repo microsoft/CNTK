@@ -48,7 +48,7 @@ public:
     // per-stream configuration
     // -----------------------------------------------------------------------
 
-    const struct PlainTextVocabularyConfiguration
+    struct PlainTextVocabularyConfiguration
     {
         const std::wstring fileName;
         const std::wstring insertAtStart;
@@ -152,12 +152,12 @@ public:
             if (NDShape{ m_vocabulary.size() } != m_sampleLayout)
                 // BUGBUG: AsString() cannot be called from outside--how to do that?
                 InvalidArgument("PlainTextDeserializer: Sample layout %S does not match vocabulary size %d for %S.",
-                                m_sampleLayout.AsString().c_str(), (int)m_vocabulary.size(), streamConfig.m_vocabularyConfig.fileName);
+                                m_sampleLayout.AsString().c_str(), (int)m_vocabulary.size(), streamConfig.m_vocabularyConfig.fileName.c_str());
 
             // make sure we don't overflow. Word ids must fit into SparseIndexType (==int).
             let maxId = m_vocabulary.size() - 1;
             if ((size_t)(SparseIndexType)maxId != maxId)
-                InvalidArgument("PlainTextDeserializer: Vocabulary size too large for SparseIndexType for %S.", streamConfig.m_vocabularyConfig.fileName);
+                InvalidArgument("PlainTextDeserializer: Vocabulary size too large for SparseIndexType for %S.", streamConfig.m_vocabularyConfig.fileName.c_str());
         }
 
         // initialization helpers
@@ -505,8 +505,8 @@ private:
                 m_totalNnzCount = (SparseIndexType)numWords;
             }
             ~PlainTextSequenceData() { }
-            virtual const NDShape& SparseSequenceData::GetSampleShape() override final { return m_sampleShape; } // BUGBUG (API): Shouldn't these be const?
-            virtual const void*    SparseSequenceData::GetDataBuffer()  override final { return m_dataPtr.get(); }
+            virtual const NDShape& /*SparseSequenceData::*/GetSampleShape() override final { return m_sampleShape; } // BUGBUG (API): Shouldn't these be const?
+            virtual const void*    /*SparseSequenceData::*/GetDataBuffer()  override final { return m_dataPtr.get(); }
         private:
             const NDShape& m_sampleShape;
             shared_ptr<const void> m_dataPtr; // points to the constant array of ones (float or double)

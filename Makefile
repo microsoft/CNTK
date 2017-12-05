@@ -910,6 +910,7 @@ CNTKTEXTFORMATREADER_SRC =\
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/Exports.cpp \
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextParser.cpp \
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/CNTKTextFormatReader.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/PlainTextDeserializer.cpp \
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextConfigHelper.cpp \
 
 CNTKTEXTFORMATREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKTEXTFORMATREADER_SRC))
