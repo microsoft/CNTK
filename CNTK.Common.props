@@ -30,7 +30,7 @@
     <HasJava>false</HasJava>
     <HasJava Condition="Exists('$(JAVA_HOME)\bin\javac.exe')">true</HasJava>
 
-    <CntkComponentVersion>2.3</CntkComponentVersion>
+    <CntkComponentVersion>2.3.1</CntkComponentVersion>
     <CntkComponentVersion Condition="$(DebugBuild)">$(CntkComponentVersion)d</CntkComponentVersion>
   </PropertyGroup>
   
