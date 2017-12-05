@@ -1318,13 +1318,13 @@ int mt_main(int argc, char *argv[])
         boost::filesystem::create_directories(boost::filesystem::path(logPath).parent_path());
         FILE* outStream =
             /*if*/ (communicator->CurrentWorker().IsMain()) ?
-            _wpopen((L"tee " + logPath).c_str(), L"wt")
+            _wpopen((L"tee " + logPath).c_str(), L"w")
             /*else*/ :
             _wfopen(logPath.c_str(), L"wt");
         if (!outStream)
             InvalidArgument("error %d opening log file '%S'", errno, logPath.c_str());
         fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
-        if (_dup2(_fileno(outStream), _fileno(stderr)))
+        if (_dup2(_fileno(outStream), _fileno(stderr)) == -1)
             InvalidArgument("error %d redirecting stderr to '%S'", errno, logPath.c_str());
         fprintf(stderr, "command line:");
         for (let* p : Span<char**>(argv, argv + argc))
