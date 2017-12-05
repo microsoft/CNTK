@@ -291,28 +291,25 @@ namespace ONNX
             { L"TransposeAxes", "Transpose" },
             { L"axisVec", "perm" },
         } } },
+        { L"Pad",{ {
+            { L"Pad", "Pad" },
+            { L"mode", "mode" },
+            { L"pattern", "pads" },
+            { L"constant_value", "value"},
+            } } },
         { L"Gather", { {
             { L"Gather", "Gather" },
         } } },
         // { L"", "Squeeze" },
     };
 
-    std::map<std::pair<string, int>, bool> Operators::_onnxOpInputIndexToHasBatchAxis = 
-    { 
-        {{"Abs", 0}, true}, 
-        {{"Conv", 1}, false},
-        {{"ConvTranspose", 1}, false},
-        {{"MatMul", 0}, false}, 
-        {{"MatMul", 1 }, false },
-    };
-
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
     // return a map from cntk attribute name to onnx attribute name. 
     const AttributesMapping& Operators::FindAttributeMap(const std::wstring &cntkOpName, const std::wstring& cntkAttributeOpName)
     {
-        std::unordered_multimap<std::wstring, AttributesMapping>::iterator itNodeFn = 
+        std::unordered_multimap<std::wstring, AttributesMapping>::iterator itNodeFn =
             std::find_if(_cntkToONNXOpName.begin(), _cntkToONNXOpName.end(),
-            [cntkOpName, cntkAttributeOpName](std::unordered_multimap<std::wstring, AttributesMapping>::value_type nodeFn)
+                [cntkOpName, cntkAttributeOpName](std::unordered_multimap<std::wstring, AttributesMapping>::value_type nodeFn)
         {return nodeFn.first == cntkOpName && nodeFn.second.map.find(cntkAttributeOpName) != nodeFn.second.map.end(); });
 
         if (itNodeFn == _cntkToONNXOpName.end())
@@ -324,32 +321,32 @@ namespace ONNX
         return itNodeFn->second;
     }
 
-    std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
-        { L"LeakyReLU", { 0, 1 } },
-        { L"SELU", { 0, 1, 2 } },
-        { L"PReLU", { 0 } },
-        { L"ElementMax", {} },
-        { L"ElementMin", {} },
-        { L"Softmax", {} },
-        { L"LocalResponseNormalization", { 0, 1, 2 } }
-    };
+        std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
+            { L"LeakyReLU",{ 0, 1 } },
+            { L"SELU",{ 0, 1, 2 } },
+            { L"PReLU",{ 0 } },
+            { L"ElementMax",{} },
+            { L"ElementMin",{} },
+            { L"Softmax",{} },
+            { L"LocalResponseNormalization",{ 0, 1, 2 } }
+        };
 
-    std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {
-        { L"Convolution", { 1, 0 } },
-        { L"ConvolutionTranspose", { 1, 0 } },
-        { L"BatchNormalization", { 0, 1, 2, 3, 4, -1 } },
-        { L"Times", { 1, 0 } },
-    };
+        std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {
+            { L"Convolution",{ 1, 0 } },
+            { L"ConvolutionTranspose",{ 1, 0 } },
+            { L"BatchNormalization",{ 0, 1, 2, 3, 4, -1 } },
+            { L"Times",{ 1, 0 } },
+        };
 
-    //
-    // CNTK Layer API needs to be treated specially.
-    //
-    std::set<std::wstring> Operators::_cntkLayerOPName = {
-        { L"Convolution" },
-        { L"ConvolutionTranspose" },
-        { L"BatchNormalization" },
-        { L"Dropout" },
-    };
+        //
+        // CNTK Layer API needs to be treated specially.
+        //
+        std::set<std::wstring> Operators::_cntkLayerOPName = {
+            { L"Convolution" },
+            { L"ConvolutionTranspose" },
+            { L"BatchNormalization" },
+            { L"Dropout" },
+        };
 
-}
+    }
 }
