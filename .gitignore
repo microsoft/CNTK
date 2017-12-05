@@ -234,6 +234,10 @@ bindings/python/doc/_build
 Source/CNTKv2LibraryDll/proto/CNTK.pb.cc
 Source/CNTKv2LibraryDll/proto/CNTK.pb.h
 
+# Auto-generated sources from ONNX proto
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.cc
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.h
+
 bindings/python/cntk/c_plus_c.mod
 bindings/python/cntk/i_plus_c_0.mod
 bindings/python/cntk/i_plus_i_0.mod

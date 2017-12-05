@@ -181,6 +181,7 @@ public:
     bool IsEmpty() const;
     size_t BufferSize() const;
     ElemType* Data() const;
+    bool IsView() const;
 
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
@@ -217,7 +218,8 @@ public:
 
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier, const bool initialized);
 
-    void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon);
+    void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp);
+    void AdaDeltaFlushState(size_t stride, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
     void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?
@@ -380,6 +382,9 @@ public:
     Matrix<ElemType>& InplaceTanh();
     Matrix<ElemType>& AssignTanhOf(const Matrix<ElemType>& a);
 
+    Matrix<ElemType>& InplaceAtanh();
+    Matrix<ElemType>& AssignAtanhOf(const Matrix<ElemType>& a);
+
     Matrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     Matrix<ElemType>& AssignLogSoftmaxOf(const Matrix<ElemType>& a, const bool isColWise);
 
@@ -420,6 +425,9 @@ public:
 
     Matrix<ElemType>& InplaceSinh();
     Matrix<ElemType>& AssignSinhOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceAsinh();
+    Matrix<ElemType>& AssignAsinhOf(const Matrix<ElemType>& a);
 
     Matrix<ElemType>& InplaceLog10();
     Matrix<ElemType>& AssignLog10Of(const Matrix<ElemType>& a);

@@ -190,12 +190,12 @@ def create_criterion(network):
 # return: learners: [sgd, adam, adagrad]
 def create_learner(model):
     '''Create the optimized method'''
-    lr_per_minibatch = C.learning_rate_schedule(opt.lr, C.UnitType.minibatch)
-    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
+    lr_per_minibatch = C.learning_parameter_schedule(opt.lr)
+    momentum_schedule = C.momentum_schedule_per_sample(0.9990913221888589)
     if opt.optim == 'sgd':
         return C.sgd(model.parameters, lr=lr_per_minibatch)
     elif opt.optim == 'adam':
-        return C.adam(model.parameters, lr=lr_per_minibatch, momentum=momentum_time_constant)
+        return C.adam(model.parameters, lr=lr_per_minibatch, momentum=momentum_schedule)
     elif opt.optim == 'adagrad':
         return C.adagrad(model.parameters, lr=lr_per_minibatch)
     else:

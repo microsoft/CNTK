@@ -6,6 +6,7 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CNTK
 {
@@ -30,7 +31,7 @@ namespace CNTK
         /// <summary>
         /// Property StorageFormat
         /// </summary>
-        public StorageFormat StorgeFormat
+        public StorageFormat StorageFormat
         {
             get { return _GetStorageFormat(); }
         }
@@ -102,15 +103,33 @@ namespace CNTK
         /// <returns>the value</returns>
         public static Value CreateBatch<T>(NDShape sampleShape, IEnumerable<T> batch, DeviceDescriptor device, bool readOnly = false)
         {
+            T[] batchAsArray = batch.ToArray();
+            return CreateBatch<T>(sampleShape, batchAsArray, 0, batchAsArray.Count(), device, readOnly);
+        }
+
+        /// <summary>
+        /// Create batch data as a Value object from a dense source buffer.
+        /// Batch data of the specified dataSize are copied from the source buffer
+        /// starting at the specified starting position
+        /// </summary>
+        /// <typeparam name="T">float or double</typeparam>
+        /// <param name="sampleShape">shape of the Value</param>
+        /// <param name="dataBuffer">source data buffer</param>
+        /// <param name="dataStart">index to the source data buffer where batch data start</param>
+        /// <param name="dataSize">size of the data</param>
+        /// <param name="device">device where data are allocated</param>
+        /// <param name="readOnly">whether data are mutable</param>
+        /// <returns>the batch data value</returns>
+        public static Value CreateBatch<T>(NDShape sampleShape, T[] dataBuffer, int dataStart, int dataSize,
+            DeviceDescriptor device, bool readOnly = false)
+        {
             if (typeof(T).Equals(typeof(float)))
             {
-                var inputVector = Helper.AsFloatVector(batch);
-                return Value._CreateBatchFloat(sampleShape, inputVector, device, readOnly);
+                return Value._CreateBatchFloat(sampleShape, dataBuffer as float[], dataStart, dataSize, device, readOnly);
             }
             else if (typeof(T).Equals(typeof(double)))
             {
-                var inputVector = Helper.AsDoubleVector(batch);
-                return Value._CreateBatchDouble(sampleShape, inputVector, device, readOnly);
+                return Value._CreateBatchDouble(sampleShape, dataBuffer as double[], dataStart, dataSize, device, readOnly);
             }
             else
             {
@@ -153,13 +172,13 @@ namespace CNTK
         {
             if (typeof(T).Equals(typeof(float)))
             {
-                var inputVector = Helper.AsFloatVector(sequence);
-                return Value._CreateSequenceFloat(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+                float[] sequenceBuffer = sequence.ToArray() as float[];
+                return Value._CreateSequenceFloat(sampleShape, sequenceBuffer, sequenceBuffer.Length, sequenceStartFlag, device, readOnly);
             }
             else if (typeof(T).Equals(typeof(double)))
             {
-                var inputVector = Helper.AsDoubleVector(sequence);
-                return Value._CreateSequenceDouble(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+                double[] sequenceBuffer = sequence.ToArray() as double[];
+                return Value._CreateSequenceDouble(sampleShape, sequenceBuffer, sequenceBuffer.Length, sequenceStartFlag, device, readOnly);
             }
             else
             {

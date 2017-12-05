@@ -924,18 +924,6 @@ namespace CNTK
         s_defaultUnitGainValue.store(value);
     }
 
-    static std::atomic<bool> s_defaultUseMeanGradient(false);
-
-    bool DefaultUseMeanGradientValue()
-    {
-        return s_defaultUseMeanGradient;
-    }
-
-    void SetDefaultUseMeanGradientValue(bool value)
-    {
-        s_defaultUseMeanGradient.store(value);
-    }
-
     template <class E>
     __declspec_noreturn void ThrowFormatted(const char* format, ...)
     {
