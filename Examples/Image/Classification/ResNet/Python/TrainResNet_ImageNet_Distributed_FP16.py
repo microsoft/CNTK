@@ -196,7 +196,7 @@ def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, 
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
-             data = train_source.next_minibatch(
+            data = train_source.next_minibatch(
                  min(minibatch_size, epoch_size-sample_count),
                  input_map=input_map,
                  num_data_partitions=C.Communicator.num_workers(),
@@ -211,8 +211,8 @@ def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, 
 
         trainer.summarize_training_progress()
 
-        if model_dir:
-            z.save(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        if model_path:
+            network['output'].save(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
         enable_profiler() # begin to collect profiler data after first epoch
 
     if profiling:
@@ -224,14 +224,14 @@ def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, 
     sample_count    = 0
 
     while True:
-        current_minibatch = 64
+        current_minibatch = 128
         # Fetch next test min batch.
         data = test_source.next_minibatch(current_minibatch, input_map=input_map)
         if not data or not (label32 in data) or data[label32].num_sequences == 0:
             break
         data16 = cast.eval(data, as_numpy=False)
         # minibatch data to be trained with
-        metric_numer += trainer.train_minibatch({network['feature']:data16[cast[0]], network['label']:data16[cast[1]]}) * current_minibatch
+        metric_numer += trainer.test_minibatch({network['feature']:data16[cast[0]], network['label']:data16[cast[1]]}) * current_minibatch
         metric_denom += current_minibatch
         # Keep track of the number of samples processed so far.
         sample_count += data[label_var].num_samples
@@ -274,7 +274,7 @@ if __name__=='__main__':
     if not os.path.isdir(data_path):
         raise RuntimeError("Directory %s does not exist" % data_path)
 
-    mean_data = os.path.join(abs_path, 'ImageNet1K_mean.xml')
+    mean_data = os.path.join(data_path, 'ImageNet1K_mean.xml')
     train_data = os.path.join(data_path, 'train_map.txt')
     test_data = os.path.join(data_path, 'val_map.txt')
 
