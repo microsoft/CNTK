@@ -94,8 +94,14 @@ namespace CNTK {
                 firstLine = false;
             }
             else {
+                auto seqSize = (uint32_t) (byteOffset - prevSequenceStartOffset);
+                if (seqSize % sizeof(float) == 0)
+                    seqSize = seqSize / sizeof(float);
+                else
+                    seqSize = seqSize / sizeof(float) + 1;
+
                 sequence.SetKey(prevId)
-                    .SetNumberOfSamples(1)
+                    .SetNumberOfSamples(seqSize)
                     .SetOffset(prevSequenceStartOffset)
                     .SetSize(byteOffset - prevSequenceStartOffset);
                 index->AddSequence(sequence);
