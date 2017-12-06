@@ -866,7 +866,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #if 1
         // dynamically adjust the MB size lower at the start to ramp up
         let fullMbSizeAt = 1000000;
-        let lowMbSize = (isDebugging || runProfiling || startMbCount > 0) ? minibatchSize : minibatchSize / (communicator->Workers().size() > 6 ? 8 : 16);
+        let lowMbSize = (isDebugging || runProfiling || startMbCount > 0) ? minibatchSize : 750;//minibatchSize / (communicator->Workers().size() > 6 ? 8 : 16);
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
         let actualMinibatchSize = clamp(lowMbSize + (minibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, minibatchSize);
 #else
