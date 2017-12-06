@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <time.h>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
 #define LOG_STATS     // if defined, log statistics (#operations)
@@ -640,10 +641,10 @@ namespace CNTK
 #ifdef DETAILED_STATS
 class PCTimer // roll our own; high_resolution_timer is reportedly not high-resolution (0.1 us)
 {
-    LARGE_INTEGER freq, start;
     double total;
-public:
 #ifdef _WIN32
+    LARGE_INTEGER freq, start;
+public:
     PCTimer() { if (!QueryPerformanceFrequency(&freq)) RuntimeError("PCTimer: QueryPerformanceFrequency failure"); } // count ticks per second
     void Start() { QueryPerformanceCounter(&start); }
     double Stop() // each read gives time elapsed since start, in seconds
@@ -654,13 +655,31 @@ public:
         total += elapsed;
         return elapsed;
     }
-#else
+#else // Linux
+    timespec start;
+public:
     // TODO: implement this for gcc/unix if needed
     PCTimer() { } // count ticks per second
-    void Start() { }
+    void Start() { clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start); }
     double Stop() // each read gives time elapsed since start, in seconds
     {
-        return 0;
+        timespec present;
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &present);
+	timespec temp;
+	if (present.tv_nsec < start.tv_nsec)
+        {
+	  temp.tv_sec  = present.tv_sec - start.tv_sec - 1;
+	  temp.tv_nsec = 1000000000 + present.tv_nsec - start.tv_nsec;
+	}
+        else
+        {
+	  temp.tv_sec  = present.tv_sec - start.tv_sec;
+	  temp.tv_nsec = present.tv_nsec - start.tv_nsec;
+	}
+	double elapsed = temp.tv_sec + temp.tv_nsec * 1e-9;
+        //fprintf(stderr, "TIMEDIFF: %d.%d - %d.%d = %.4f ms", (int)present.tv_sec, (int)present.tv_nsec, (int)start.tv_sec, (int)start.tv_nsec, elapsed * 1000.0);
+        total += elapsed;
+        return elapsed;
     }
 #endif
     double Total() const { return total; }
