@@ -69,8 +69,8 @@ def create_resnet_network(network_name):
         input_var = C.input_variable((num_channels, image_height, image_width))
         label_var = C.input_variable((num_classes))
 
-        stride1x1 = (1, 1)
-        stride3x3 = (2, 2)
+        stride1x1 = (2, 2)
+        stride3x3 = (1, 1)
 
         # create model, and configure learning parameters
         if network_name == 'resnet18':
@@ -165,7 +165,7 @@ def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, 
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
     # up. However, bigger minimatch size on the same number of samples means less updates,
     # thus leads to higher training error. This is a trade-off of speed and accuracy
-    minibatch_size = 64 * (Communicator.num_workers() if scale_up else 1)
+    minibatch_size = 128 * (Communicator.num_workers() if scale_up else 1)
 
     progress_printer = ProgressPrinter(
         freq=num_mbs_per_log,
