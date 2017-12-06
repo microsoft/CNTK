@@ -196,15 +196,23 @@ def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, 
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
-            data = train_source.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map) # fetch minibatch.
-            data16 = cast.eval(data, as_numpy=False)
-            trainer.train_minibatch({network['feature']:data16[cast[0]], network['label']:data16[cast[1]]}) # update model with it
+             data = train_source.next_minibatch(
+                 min(minibatch_size, epoch_size-sample_count),
+                 input_map=input_map,
+                 num_data_partitions=C.Communicator.num_workers(),
+                 partition_index=C.Communicator.rank())
+            if data:
+                data16 = cast.eval(data, as_numpy=False)
+                feed16 = {network['feature']:data16[cast[0]], network['label']:data16[cast[1]]}
+            else:
+                feed16 = {}
+            trainer.train_minibatch(feed16)
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
 
         trainer.summarize_training_progress()
 
         if model_dir:
-            z.save(os.path.join(model_dir, network_name + "_{}.dnn".format(epoch)))
+            z.save(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
         enable_profiler() # begin to collect profiler data after first epoch
 
     if profiling:
@@ -215,10 +223,12 @@ def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, 
     metric_denom    = 0
     sample_count    = 0
 
-    while sample_count < test_epoch_size:
-        current_minibatch = min(minibatch_size, test_epoch_size - sample_count)
+    while True:
+        current_minibatch = 64
         # Fetch next test min batch.
         data = test_source.next_minibatch(current_minibatch, input_map=input_map)
+        if not data or not (label32 in data) or data[label32].num_sequences == 0:
+            break
         data16 = cast.eval(data, as_numpy=False)
         # minibatch data to be trained with
         metric_numer += trainer.train_minibatch({network['feature']:data16[cast[0]], network['label']:data16[cast[1]]}) * current_minibatch
