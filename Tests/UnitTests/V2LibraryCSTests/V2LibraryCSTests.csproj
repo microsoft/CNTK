@@ -28,7 +28,7 @@
   <!-- Explicitly defines the version of the dependent assemblies to avoid build errors or stale binaries -->
   <!-- The change of CntkComponentVersion in CNTK.Common.props cannot be populated correctly without restarting VS and cleaning solution. -->
   <PropertyGroup>
-    <CntkCsAssemblyVersion>2.3</CntkCsAssemblyVersion>
+    <CntkCsAssemblyVersion>2.3.1</CntkCsAssemblyVersion>
     <CntkCsAssemblyVersion Condition="$(DebugBuild)">$(CntkCsAssemblyVersion)d</CntkCsAssemblyVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">

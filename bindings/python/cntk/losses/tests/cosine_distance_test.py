@@ -53,6 +53,13 @@ def test_cosine_distance_with_negative_samples():
   # The first value is exact match, second ony 1 element match and last one is 0 match
   np.allclose(result[0], np.tile([1, 0.5, 0.], (a.shape[0],1)))
 
+def test_cosine_distance_with_negative_samples_with_reduced_sequence():
+    a = C.sequence.input_variable((3,), sequence_axis=C.Axis("a"))
+    b = C.sequence.input_variable((3,), sequence_axis=C.Axis("b"))
+    cd = C.cosine_distance_with_negative_samples(C.sequence.first(a), C.sequence.first(b), 1, 2)
+    data = np.random.random((4,3)).astype(np.float32)
+    cd.eval({a:data, b:data})
+
 def test_rank0_output():
   x = C.sequence.input_variable(shape=(768,), sequence_axis=C.Axis("B"), needs_gradient=True)
   y = C.sequence.input_variable(shape=(768,), sequence_axis=C.Axis("B"), needs_gradient=True)

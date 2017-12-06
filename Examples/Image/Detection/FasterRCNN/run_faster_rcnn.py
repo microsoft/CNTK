@@ -28,7 +28,7 @@ def get_configuration():
 if __name__ == '__main__':
     cfg = get_configuration()
     prepare(cfg, False)
-    cntk.device.try_set_default_device(cntk.device.gpu(cfg.GPU_ID))
+#    cntk.device.try_set_default_device(cntk.device.gpu(cfg.GPU_ID))
 
     # train and test
     trained_model = train_faster_rcnn(cfg)

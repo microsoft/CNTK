@@ -70,6 +70,11 @@ __C.DRAW_UNREGRESSED_ROIS = False
 # only for plotting results: boxes with a score lower than this threshold will be considered background
 __C.RESULTS_BGR_PLOT_THRESHOLD = 0.1
 
+# Distributed Learning
+__C.DISTRIBUTED_FLG = False     # In case of distributed learning, set 'True'
+__C.NUM_QUANTIZATION_BITS = 32  # set for distributed learner
+__C.WARM_UP = 0                 # set for distributed learner
+
 #
 # Training parameters
 #
@@ -117,7 +122,6 @@ __C.TRAIN.BG_THRESH_LO = 0.0
 __C.BBOX_NORMALIZE_TARGETS = True
 __C.BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
 __C.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
-
 
 #
 # Testing parameters

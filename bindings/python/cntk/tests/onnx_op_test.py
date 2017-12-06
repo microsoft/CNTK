@@ -385,6 +385,19 @@ def test_Neg(tmpdir):
     model = C.negate(data0)
     verify_no_input(model, tmpdir, 'Neg_0')
 
+#Pad
+def test_Pad(tmpdir):
+    shape = (4, 5)
+    data = np.random.rand(*shape).astype(np.float32)
+
+    model = C.pad(data, pattern=[(1,1),(2,2)], mode=C.ops.CONSTANT_PAD, constant_value=1)
+    verify_no_input(model, tmpdir, 'Pad_0')
+
+    x = C.input_variable(shape)
+    model = C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.REFLECT_PAD)
+
+    verify_one_input(model, data, tmpdir, 'Pad_1')    
+
 #PRelu
 def test_PRelu(tmpdir):
     data = np.asarray([[-1, -0.5, 0, 1, 2]])
