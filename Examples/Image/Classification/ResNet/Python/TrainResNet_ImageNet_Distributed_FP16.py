@@ -234,7 +234,7 @@ def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, 
         metric_numer += trainer.test_minibatch({network['feature']:data16[cast[0]], network['label']:data16[cast[1]]}) * current_minibatch
         metric_denom += current_minibatch
         # Keep track of the number of samples processed so far.
-        sample_count += data[label_var].num_samples
+        sample_count += data[label32].num_samples
 
     print("")
     trainer.summarize_test_progress()
