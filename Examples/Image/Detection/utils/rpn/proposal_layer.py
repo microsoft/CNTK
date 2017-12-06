@@ -155,7 +155,7 @@ class ProposalLayer(UserFunction):
         # 6. apply nms (e.g. threshold = 0.7)
         # 7. take after_nms_topN (e.g. 300)
         # 8. return the top proposals (-> RoIs top)
-        keep = nms(np.hstack((proposals, scores)), nms_thresh)
+        keep = nms(np.hstack((proposals, scores)), nms_thresh, use_gpu_nms=False)
         if post_nms_topN > 0:
             keep = keep[:post_nms_topN]
         proposals = proposals[keep, :]

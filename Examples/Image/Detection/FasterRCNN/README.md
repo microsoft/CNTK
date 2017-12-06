@@ -135,3 +135,16 @@ Most of the code is in `FasterRCNN_train.py` and `FasterRCNN_eval.py` (and `Exam
 ### Algorithm 
 
 All details regarding the Faster R-CNN algorithm can be found in the original research paper: [https://arxiv.org/abs/1506.01497](https://arxiv.org/abs/1506.01497).
+
+### Running Faster R-CNN distributed training
+
+In case of distributed training, set `__C.DISTRIBUTED_FLG` to `True` in [FasterRCNN_config.py](./FasterRCNN_config.py).
+Simple aggregation with a 2-GPU machine:
+
+`mpiexec -n 2 python run_faster_rcnn.py`
+
+where `run_faster_rcnn.py` will call `FasterRCNN_train.py` for distributed learning with multi-GPU environment.
+Note: This example requires a multi-GPU machine to distribute.
+
+Please check 2 parameters `__C.NUM_QUANTIZATION_BITS`, `__C.WARM_UP` in [FasterRCNN_config.py](./FasterRCNN_config.py) for distributed learning.
+Here is a [quick reference](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#2-configuring-parallel-training-in-cntk-in-python) for distributed learning with python.
