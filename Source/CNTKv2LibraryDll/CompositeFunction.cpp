@@ -683,6 +683,12 @@ namespace CNTK
                 case PrimitiveOpType::Hardmax:
                     computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::TopK:
+                {
+                    auto k = functionConfig[PrimitiveFunction::AttributeNameNumItems].Value<size_t>();
+                    computationNodePtr = New<TopKNode<ElementType>>(network->GetDeviceId(), internalNodeName, k);
+                    break;
+                }
                 case PrimitiveOpType::StableSigmoid:
                     computationNodePtr = New<StableSigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;

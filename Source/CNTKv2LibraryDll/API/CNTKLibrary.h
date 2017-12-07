@@ -3826,6 +3826,18 @@ namespace CNTK
     CNTK_API FunctionPtr Hardmax(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in top k operation over the first static axis on a
+    /// specified tensor input operand
+    ///
+    CNTK_API FunctionPtr TopK(const Variable& operand, size_t k, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in top k operation over the specified axis on a
+    /// specified tensor input operand
+    ///
+    CNTK_API FunctionPtr TopK(const Variable& operand, size_t k, const Axis& axis, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in transpose dimensions operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name = L"");

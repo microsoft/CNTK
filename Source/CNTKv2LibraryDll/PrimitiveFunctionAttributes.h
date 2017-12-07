@@ -99,4 +99,5 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBias = L"bias";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDepthRadius = L"depthRadius";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomAttributes = L"customAttributes";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumItems = L"numItems";
 }

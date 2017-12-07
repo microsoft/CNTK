@@ -1725,6 +1725,39 @@ def hardmax(x, name=''):
 
 
 @typemap
+def top_k(x, k, axis=-1, name=''):
+    '''
+    Computes the ``k`` largest values of the input tensor and the corresponding indices
+    along the specified axis (default the last axis). The returned 
+    :class:`~cntk.ops.functions.Function` has two outputs. The first one 
+    contains the top ``k`` values in sorted order, and the second one contains 
+    the corresponding top ``k`` indices.
+
+    Example:
+        >>> x = C.input_variable(10)
+        >>> y = C.top_k(-x * C.log(x), 3)
+        >>> x0 = np.arange(10,dtype=np.float32)*0.1
+        >>> top = y.eval({x:x0})
+        >>> top_values = top[y.outputs[0]]
+        >>> top_indices = top[y.outputs[1]]
+        >>> top_indices
+        array([[ 4.,  3.,  5.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        k (int): number of top items to return
+        axis: axis along which to perform the operation (default: -1)
+        name (str): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import top_k
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return top_k(x, k, axis, name)
+
+
+@typemap
 def exp(x, name=''):
     '''
     Computes the element-wise exponential of ``x``:
