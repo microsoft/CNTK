@@ -18,7 +18,7 @@
 #include <set>
 #include <vector>
 
-//#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
+#define DISABLE_NORMALIZATIONS // #define this to disable all normalizations such as Batch norm, LengthNormalization, and Droppo scaling. Weight norm is kept enabled, since it is cheap.
 
 // use these to locally disable batch norm at places
 //#define ProjectionOptions_batchNormalize ProjectionOptions::lengthNormalize/*batchNormalize*/
@@ -59,7 +59,7 @@ static UnaryModel Barrier(size_t depthHint, const wstring& name = wstring())
 #if 1
             CountAPICalls();
             return BatchSync(x, depthHint, name);
-#else       // no barrier (for evaluation)
+#else       // no barrier (for benchmarking)
             depthHint; name;
             return x;
 #endif
@@ -216,13 +216,14 @@ enum ProjectionOptions
     stabilize       = 0x02,
     batchNormalize  = 0x04,
     lengthNormalize = 0x08,
+    weightNormalize = 0x10,
 #else
     stabilize       = 0,//x02,
     batchNormalize  = 0,//x04,
     lengthNormalize = 0,//x08,
+    weightNormalize = 0,
 #endif
-    isSparse = 0x20, /// flag that some ops are forbidden
-    weightNormalize = 0x10
+    isSparse = 0x20 /// flag that some ops are forbidden
 };
 static ProjectionOptions operator|(ProjectionOptions a, ProjectionOptions b) { return (ProjectionOptions)(((size_t)a) | ((size_t)b)); }
 
