@@ -611,7 +611,7 @@ BinaryFoldingModel/*auto*/ CreateCriterionFunction(const BinaryModel& model_fn)
         vector<Variable> lossSequences;
         batchModel(lossSequences, features, labels);             // batch-compute the criterion
         let collatedLosses = Splice(move(lossSequences), Axis(-1), Named("collatedLosses")); CountAPICalls(1);    // concatenate all seq lossSequences
-        DOLOG(collatedLosses);
+        //DOLOG(collatedLosses);
         //GetValueAsTensor(collatedLosses)->LogToFile(L"collatedLosses", stderr, 10000);
         let mbLoss = ReduceSum(collatedLosses, Axis_DropLastAxis, Named("batchLoss")); CountAPICalls(1); // aggregate over entire minibatch
         Function::SetDynamicProfiler(prevProfiler);
@@ -961,15 +961,20 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //partTimer.Log("criterion_fn", numLabels);
             // backprop and model update
             let numScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
-            partTimer.Restart();
             fprintf(stderr, "%5d:  ", (int)mbCount); // prefix for the log
             if (!runProfiling)
             { // use 0 to measure forward time only
 
-            mbLoss.Value()->AsScalar<float>(); // trigger computation
+            partTimer.Restart();
+            let lossVar = mbLoss.Value(); lossVar; // trigger computation
             let timeForward = partTimer.Elapsed();
             //fprintf(stderr, "%.7f\n", mbLoss.Value()->AsScalar<float>()), fflush(stderr);
             //exit(1);
+            partTimer.Restart();
+#if 1
+            lossVar->AsScalar<float>(); // wait for completion of computation  --don't do this unless we want time measurement
+#endif
+            let timeForwardGpu = partTimer.Elapsed();
             //partTimer.Log("ForwardProp", numLabels);
             // note: we must use numScoredLabels here
             //fprintf(stderr, "{%.2f, %d-%d}\n", mbLoss.Value()->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
@@ -981,10 +986,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             let timeBackward = partTimer.Elapsed();
             //partTimer.Log("BackProp", numLabels);
             MinibatchInfo info{ /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/numScoredLabels, mbLoss.Value(), mbLoss.Value() };
-            info.trainingLossValue->AsScalar<float>();
+            //info.trainingLossValue->AsScalar<float>();
             //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
-            partTimer.Restart();
-#if 1       // log the gradients
+#if 0       // log the gradients
             //for (let& p : parameters) if (p.Name() == L"project1.W")
             //{
             //    p.Value()->LogToFile(p.Name(), stderr, 800);
@@ -1003,7 +1007,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                     p.Value()->LogToFile(p.Name(), stderr, 10);
             }
 #endif
+            partTimer.Restart();
             learner->Update(gradients, info);
+            let timePerUpdate = partTimer.Elapsed();
 #if 0       // weight normalization (hack for now, since I cannot configure it)
             let EndsWith = [](const wstring& s, const wstring& what)
             {
@@ -1034,8 +1040,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 //fprintf(stderr, "in-place weight norm done for %S\n", p.Name().c_str());
             }
 #endif
-            //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
-            let timePerUpdate = partTimer.Elapsed();
             //partTimer.Log("Update", numLabels);
             let lossPerLabel = info.trainingLossValue->AsScalar<float>() / info.numberOfSamples; // note: this does the GPU sync, so better do that only every N
             totalLabels += info.numberOfSamples;
@@ -1045,10 +1049,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             mbLoss = Variable(); // this destructs the entire graph
             let timeDeleteGraph = partTimer.Elapsed();
             if (communicator->CurrentWorker().IsMain())
-                fprintf(stderr, "%5d:  loss, PPL = [smoothed] %4.2f, ### %8.2f ### [this] %9.7f * %d, %6.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
+                fprintf(stderr, "%5d:  loss, PPL = [smoothed] %4.2f, ### %8.2f ### [this] %9.7f * %d, %6.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f+%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
                                 (int)mbCount, smoothedLossVal, exp(smoothedLossVal), lossPerLabel, (int)info.numberOfSamples, exp(lossPerLabel), (int)totalLabels,
                                 info.numberOfSamples / elapsed, 1000.0/*ms*/ * elapsed / info.numberOfSamples,
-                                1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
+                                1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeForwardGpu, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
             // log
             // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
             if (mbCount < 400 || mbCount % 5 == 0)
