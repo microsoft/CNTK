@@ -750,4 +750,35 @@ inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second
     }
 }
 
+template<class T>
+void RequireClose(const std::vector<T>& v1, const std::vector<T>& v2, double fraction)
+{
+    BOOST_REQUIRE(v1.size() == v2.size());
+    for (size_t i = 0; i < v1.size(); ++i)
+    {
+        BOOST_REQUIRE_CLOSE_FRACTION(v1[i], v2[i], fraction);
+    }
+}
+
+template<class T>
+T GetL1Norm(const std::vector<T>& v1, const std::vector<T>& v2)
+{
+    BOOST_REQUIRE(v1.size() == v2.size());
+    T sumDiff = 0;
+    for (size_t i = 0; i < v1.size(); ++i)
+    {
+        sumDiff += abs(v1[i] - v2[i]);
+    }
+    return sumDiff;
+}
+
+template<class T>
+std::vector<T> CombineVectors(std::initializer_list<std::vector<T>> vs)
+{
+    std::vector<T> result;
+    for (const auto& v : vs)
+        result.insert(result.end(), v.begin(), v.end());
+    return result;
+}
+
 MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numOutputClasses, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true);
