@@ -1077,12 +1077,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //fflush(stderr);
             //if (mbCount >= startMbCount + 1)
             //    return;
+            if (mbCount == 11) // for benchmarking
+                return;
         }
-        if (mbCount == 200)
+        if (mbCount == 11)
         {
             let numAPICalls = CountAPICalls(0) - numAPICalls00;
             fprintf(stderr, "#API calls in last minibatch = %.1f * %d\n", numAPICalls / (float)subMinibatches, (int)subMinibatches), fflush(stderr);
-            if (runProfiling)
+            //if (runProfiling)
                 return;
         }
     }
@@ -1267,6 +1269,7 @@ public:
 int mt_main(int argc, char *argv[])
 {
     Internal::PrintBuiltInfo();
+    wstring logPath;
     try
     {
         wstring command;
@@ -1341,7 +1344,6 @@ int mt_main(int argc, char *argv[])
 
         // open log file. The path depends on the worker rank.
         // Log path = "$workingDirectory/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
-        wstring logPath;
         for (size_t retry = 0; ; retry++)
         {
             logPath = outputDirectory + L"/" + command +
@@ -1384,9 +1386,11 @@ int mt_main(int argc, char *argv[])
             Evaluate(modelPath, fromMbCount, srcTestFile, tgtTestFile, outPath);
         else
             InvalidArgument("Unknonw --command %S", command.c_str());
+        fprintf(stderr, "redirected stderr to %S\n", logPath.c_str());
     }
     catch (exception& e)
     {
+        fprintf(stderr, "redirected stderr to %S\n", logPath.c_str());
         fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
         fflush(stderr);
 #ifdef _MSC_VER

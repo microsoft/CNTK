@@ -27,11 +27,65 @@
 #include <string>
 #include <time.h>
 
-//#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
-//#define NO_BATCHED_FORWARD  // if defined, don't batch forward
+using namespace Microsoft::MSR::CNTK;
+using namespace std;
+
+//#define LOG_DETAILS     // if defined, log all forward and backward operations
+#define LOG_STATS         // if defined, log statistics (#operations)
+#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
+#define NUM_MBS_TO_LOG 10 // 4
+//#define LOG_GPU         // if defined, profile the GPU (warning: this will disturb the CPU measurements)
+
+// these options allow to turn features on or off, for benchmarking
+//#define NO_CSE              // disable CSE
+//#define NO_BATCHED_FORWARD  // disable auto0batching
+//if defined, don't batch forward
+//#define NO_BARRIER          // ignore Barrier
+//#define NO_BLOCK_INVOKE     // no static graph
+#define NO_LATE_INLINING    // no late inlining
+
 //#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
-#define DETAILED_STATS
+
+static const char* compilationOptionsAsString =
+    "AutoBatch compilation options:"
+#ifdef LOG_DETAILS
+    " LOG_DETAILS"
+#endif
+#ifdef LOG_STATS
+    " LOG_STATS"
+#endif
+#ifdef DETAILED_STATS
+    " DETAILED_STATS"
+#endif
+#ifdef LOG_GPU
+    " LOG_GPU"
+#endif
+    "\nAutoBatch feature-enabling options: "
+#ifdef NO_CSE
+    "NO_ "
+#endif
+    "CSE "
+#ifdef NO_BATCHED_FORWARD
+    "NO_"
+#endif
+    "BATCHED_FORWARD "
+#ifdef NO_BARRIER
+    "NO_"
+#endif
+    "BARRIER "
+#ifdef NO_BLOCK_INVOKE
+    "NO_"
+#endif
+    "BLOCK_INVOKE "
+#ifdef NO_LATE_INLINING
+    "NO_"
+#endif
+    "LATE_INLINING "
+#ifdef NO_BATCHED_BACKPROP
+    "NO_"
+#endif
+    "BATCHED_BACKPROP "
+    ;
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 500;
@@ -40,16 +94,17 @@ static size_t logMemoizeStatsCounter = logMemoizeStatsPeriod - 1; // counts up t
 static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
 #endif
-static bool ShouldLogMemoizeStats()     { return logMemoizeStatsCounter < 4; }
-static bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter & 1; }
+static bool ShouldLogMemoizeStats()     { return logMemoizeStatsCounter < NUM_MBS_TO_LOG; }
+//static bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter & 1; }
 //static bool ShouldLogMemoizeStatsCUDA() { return true;  }
-//static bool ShouldLogMemoizeStatsCUDA() { return false; }
+#ifdef LOG_GPU
+static bool ShouldLogMemoizeStatsCUDA() { return true; }
+#else
+static bool ShouldLogMemoizeStatsCUDA() { return false; }
+#endif
 
-using namespace Microsoft::MSR::CNTK;
-using namespace std;
 
 #define BarrierOp NoOp // for now, we use Alias() (=NoOp) to denote a Barrier(). Should become an op in its own right.
-
 #pragma warning (disable: 4456) // until I fixed the shadowing
 
 #define let const auto
@@ -781,6 +836,7 @@ struct CudaStatsGuard
 {
     template <typename ...CtorArgTypes>
     CudaStatsGuard(CtorArgTypes&& ...ctorArgs) { }
+    void Stop() { }
     ~CudaStatsGuard() { }
 };
 // and this at the end of when you want to dump the log
@@ -1573,8 +1629,10 @@ class InternalVariable::AutoBatch
                     if (aFields.m_isSparse != bFields.m_isSparse)
                         return false;
                     // depth hint must match
+#ifndef NO_BARRIER
                     if (aFields.m_redirection.m_depthHint != bFields.m_redirection.m_depthHint)
                         return false;
+#endif
 #if 0
                     // sparse cannot be batched beyond rank 1
                     if (aFields.m_isSparse && rank > 1)
@@ -1792,7 +1850,9 @@ class InternalVariable::AutoBatch
                 if (freeAxis == SIZE_MAX) // if basic block has no free dimension, then we won't batch in the first place' but formally, let's say we batch it
                     return{ StackingMode::BATCHING, maxRank, 1 };
                 else if (freeAxis == maxRank) // argument has no FreeDimension specified: stack, but dim on stacking axis is implied 1
-                    return{ StackingMode::STACKING_BUT_MAY_BATCH, freeAxis, 1 };
+                    return{ StackingMode::STACKING_BUT_MAY_BATCH, maxRank - 1, lastDim }; // BUGBUG: This seems to work, but I am not sure why.
+
+                    //return{ StackingMode::STACKING_BUT_MAY_BATCH, freeAxis, 1 };
                 else if (freeAxis + 1 == maxRank) // argument has a axis to fill the FreeDimension: use that
                     return{ StackingMode::STACKING_BUT_MAY_BATCH, freeAxis, lastDim };
                 InvalidArgument("DetermineBatchAxis: The rank of an argument to a basic block invocation exceeds the declared free-axis position.");
@@ -1988,8 +2048,10 @@ class InternalVariable::AutoBatch
                     // TODO: just say if IsBatchNormPending(iter) continue;
                     diff = -((int)AnyBatchNormPending(iter) - (int)AnyBatchNormPending(best)); // BatchNormalization with pending inputs always loses
                     if (diff) goto got_diff;
+#ifndef NO_BARRIER
                     diff = -((int)iter->front().m_autoBatchState.m_depthHint - (int)best->front().m_autoBatchState.m_depthHint); // barrier: higher depthHint gets batched last
                     if (diff) goto got_diff;
+#endif
                     diff = (int)iter->size() - (int)best->size();
                 got_diff:
                     if (diff > 0)
@@ -3765,6 +3827,14 @@ public:
     //     - in backprop, we further short-circuit these into one
     NDArrayViewPtr BatchedForward(const InternalVariable& v)
     {
+#if 1   // show compilation options
+        static bool compilationOptionsShown = false;
+        if (!compilationOptionsShown)
+        {
+            compilationOptionsShown = true;
+            fprintf(stderr, "\n\n%s\n\n", compilationOptionsAsString), fflush(stderr);
+        }
+#endif
         auto& fields = GetInputFields(v);
         // if value already there then just return it
         if (fields.m_value)
@@ -3773,6 +3843,7 @@ public:
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"r "); });
 #endif
         ResetCudaStats();
+        CudaStatsGuard cudaStatsGuardForward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched forward", 3);
         // phase 1 (all done in the same function call):
         //  - create our graph overlay, esp. short-circuit see-through ops
         //  - mark all nodes w.r.t. how many inputs they are waiting for before being computable
@@ -3813,13 +3884,13 @@ public:
                 }
             }
             // execute it, and also update all outputs' values and consumers, and the schedule
-            CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"forward execute", 3);
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
         CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
+        cudaStatsGuardForward.Stop();
         ShowCudaStats();
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d+%ds ops (%d inlined) on %d known values\n",
@@ -4726,20 +4797,16 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
 //        - none at all if not batchable
 //     - batchability per stacking condition: two ops are batchable if their inputs have matching dimensions except for the free axis
 
-bool forceImmediate = false; // for debugging: don't create a composite; instead, remember the lambda and execute that directly
 
 /*Internal::*/Invocable::Invocable(size_t arity, size_t freeAxis, bool isBasicBlock, const function<Variable(const vector<Variable>&)>& lambda, std::wstring name) :
     m_arity(arity), m_isBasicBlock(isBasicBlock)
 {
-#if 1 // for debugging, we can disable static invocation altogether
-    if (forceImmediate)
-    {
-        m_operands.resize(m_arity);
-        m_lambdaRememberedForDebugging = lambda; // just remember the lambda, and done
-        m_nameRememberedForDebugging = name;
-        return;
-    }
-#endif
+#ifdef NO_BLOCK_INVOKE // for debugging, we can disable static invocation altogether
+    m_operands.resize(m_arity);
+    m_lambdaRememberedForDebugging = lambda; // just remember the lambda, and done
+    m_nameRememberedForDebugging = name;
+    return;
+#else
 
     // -- create the composite
     // allocate m_argumentList/m_operands and populate the Placeholder section (later we will add Parameters)
@@ -4803,6 +4870,7 @@ bool forceImmediate = false; // for debugging: don't create a composite; instead
     }
 #endif
     m_stillNeedsToInferShapes = true;
+#endif // NO_BLOCK_INVOKE
 }
 
 // determine "the" free dimension of an invocation, using a hack (fixed axis := 1)
@@ -4878,10 +4946,9 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
 Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
 {
     auto& operands = m_operands; // TODO: pass as &, for clarity
-    if (forceImmediate)
-    {
-        return m_lambdaRememberedForDebugging(m_operands);
-    }
+#ifdef NO_BLOCK_INVOKE // for debugging, we can disable static invocation altogether
+    return m_lambdaRememberedForDebugging(m_operands);
+#else
 
     // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
     // We leave the Parameters in the m_argsMap array untouched (they are at the end).
@@ -4903,13 +4970,19 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
     // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands
     // TODO: Since we copy the operands, we could augment the Parameters here as well.
     let composite = static_pointer_cast<CompositeFunction>(m_composite); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
-    let f = MakeSharedObject<BlockFunction>(composite, m_argumentList, m_isBasicBlock,
+#ifndef NO_LATE_INLINING
+    let isBasicBlock = m_isBasicBlock;
+#else
+    let isBasicBlock = false;
+#endif
+    let f = MakeSharedObject<BlockFunction>(composite, m_argumentList, isBasicBlock,
                                             Function::InputsVectorType(/*move*/(operands)), determineShapesThisTime);
     let res = f->FinalizeInvoke(m_argumentList, /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
     // release references to the arguments
     for (size_t i = 0; i < m_arity; i++)
         SetOperand(i, m_noArg);
     return res;
+#endif // NO_BLOCK_INVOKE
 }
 
 // This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
