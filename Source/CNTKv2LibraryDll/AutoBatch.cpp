@@ -757,7 +757,8 @@ void ShowCudaStats()
                 totalExec += s.cudaElapsed;
             }
             if (prefix != L"batch ") // (batch ones are nested, so sum is meaningless)
-                fprintf(stderr, "=> %Stotal launch + exec time: %.4f s + %.4f s\n", prefix.c_str(), totalLaunch, totalExec);
+                fprintf(stderr, "=> %Stotal launch + exec time: %.4f ms + %.4f ms\n", prefix.c_str(), 1000.0 *
+                        totalLaunch, 1000.0 * totalExec);
             fflush(stderr);
         }
         cudaStats.clear();
