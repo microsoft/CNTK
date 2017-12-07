@@ -221,11 +221,16 @@ public:
     void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp);
     void AdaDeltaFlushState(size_t stride, ElemType rho, int* timestamps, int currentTimestamp);
 
-    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
+    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true, bool keepValue = false); // by default we only reallocate if need to grow
     void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?
     {
         Resize(other.GetNumRows(), other.GetNumCols());
     }
+    void Resize(const size_t numRows, const size_t numCols, bool keepValue)
+    {
+        Resize(numRows, numCols, 10000, true, keepValue);
+    }
+
     void VerifySize(size_t rows, size_t cols)
     {
         m_baseMatrix->VerifySize(rows, cols);

@@ -1716,11 +1716,11 @@ protected:
 protected:
 
     // set the size of the underlying Matrix object to match node dimensions
-    void UpdateDataSize(Matrix<ElemType>& m)
+    void UpdateDataSize(Matrix<ElemType>& m, bool keepValue = false)
     {
         size_t rows, cols;
         DetermineDataSize(rows, cols);
-        m.Resize(rows, cols);
+        m.Resize(rows, cols, keepValue);
     }
     // and verify the condition that UpdateDataSize() creates (used for sanity checking after loading parameters)
     void VerifyDataSize(Matrix<ElemType>& m)
