@@ -956,7 +956,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             let timeBuildGraph = partTimer.Elapsed();
             let numAPICalls = CountAPICalls(0) - numAPICalls0;
             numAPICalls;
-            //fprintf(stderr, "#API calls = %d\n", (int)numAPICalls), fflush(stderr);
+            fprintf(stderr, "#API calls = %d\n", (int)numAPICalls), fflush(stderr);
             //exit(1);
             //partTimer.Log("criterion_fn", numLabels);
             // backprop and model update

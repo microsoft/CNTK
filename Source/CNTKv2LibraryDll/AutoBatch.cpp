@@ -38,10 +38,10 @@ using namespace std;
 
 // these options allow to turn features on or off, for benchmarking
 //#define NO_CSE              // disable CSE
-//#define NO_BATCHED_FORWARD  // disable auto0batching
+//#define NO_BATCHED_FORWARD  // disable auto-batching
 //if defined, don't batch forward
-//#define NO_BARRIER          // ignore Barrier
-//#define NO_BLOCK_INVOKE     // no static graph
+#define NO_BARRIER          // ignore Barrier
+#define NO_BLOCK_INVOKE     // no static graph
 #define NO_LATE_INLINING    // no late inlining
 
 //#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
@@ -62,7 +62,7 @@ static const char* compilationOptionsAsString =
 #endif
     "\nAutoBatch feature-enabling options: "
 #ifdef NO_CSE
-    "NO_ "
+    "NO_"
 #endif
     "CSE "
 #ifdef NO_BATCHED_FORWARD
@@ -3318,19 +3318,23 @@ class InternalVariable::AutoBatch
                         outputShapeVec.insert(outputShapeVec.end() - 1, batchAxis - fromRank, 1);
                     else
                     {
-                        if (fromRank + 1 != batchAxis)
-#if 0                       // happens when disabling Barrier??
-                            // BUGBUG: Will crash later. Fix this.
-                            // Observed: [3072*11] -> [1 x 3072 x 11], with expected Placeholder [3072 x FreeDim]
-                            // op = Block
-                            // batchAxis==2 vs. [3027 x FreeDim] is already mismatching
-                            // --> batchAxis is not determined correctly for Block. Reshape?
-                            outputShapeVec.insert(outputShapeVec.begin() + fromRank, batchAxis - (fromRank + 1), 1);
-#else
-                            LogicError("batch axis not adjacent to stacking axis??"); // TODO: Can this legally happen? If yes, then we can just insert ones.
-#endif
+//                        if (batchAxis != fromRank + 1)    // batchAxis > fromRank
+//#if 0                       // happens when disabling Barrier??
+//                            // BUGBUG: Will crash later. Fix this.
+//                            // Observed: [3072*11] -> [1 x 3072 x 11], with expected Placeholder [3072 x FreeDim]
+//                            // op = Block
+//                            // batchAxis==2 vs. [3027 x FreeDim] is already mismatching
+//                            // --> batchAxis is not determined correctly for Block. Reshape?
+//                            outputShapeVec.insert(outputShapeVec.begin() + fromRank, batchAxis - (fromRank + 1), 1);
+//#else
+//                            LogicError("batch axis not adjacent to stacking axis??"); // TODO: Can this legally happen? If yes, then we can just insert ones.
+//#endif
                         fail_if(outputShapeVec.back() / batchDim * batchDim != outputShapeVec.back(), "stacking axis cannot be converted to batching axis??");
                         outputShapeVec.back() /= batchDim;
+                        if (outputShapeVec.size() < batchAxis)    // batchAxis > fromRank
+                            // Example: input is 10 512-dim vectors stacked -> [5120]
+                            //          but batchAxis == 2 --> [512 x 1 x 10]
+                            outputShapeVec.resize(batchAxis, 1);
                         outputShapeVec.push_back(batchDim);
                     }
                     // insert a Reshape() op
@@ -3454,9 +3458,11 @@ class InternalVariable::AutoBatch
         // Batch norm must be excluded  since we must count samples as often as they appear in the batch statistics.
         // TODO: Merge the pre-check, CSE, and getting the batched args into one big loop.
         // BUGBUG: This must consider Block functions' composites.
+#ifndef NO_CSE
         if (!isFree && op != PrimitiveOpType::BatchNormalization && ops.size() > 1 && IsShortCircuitingBatchedOpDuplicatesNeeded(ops))
             ops = ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(ops);
         else
+#endif
             for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
                 iter->m_autoBatchState.m_aliasList = nullptr;
         // TODO: ^^ if the CSE can directly redirect, then this loop ^^ is no longer needed
@@ -3601,15 +3607,19 @@ class InternalVariable::AutoBatch
         //if (batchAxis != commonInputBatchAxis)
         //    Break;
 #else
-        //if (f0.m_uniqueIdForDebugging == 77581)
+        //if (f0.m_uniqueIdForDebugging == 359496)
+        //{
+        //    for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
+        //        LogFunction(*iter, nullptr), fflush(stderr);
         //    Break;
+        //}
         // TODO: Make this work logically, then speed this up!
         // determine stacking vs. batching
         //  - we must batch if the operation does not allow stacking. AreBatchable takes this into account.
         //  - if the op allows stacking, we still want to back off to batching if the operation allows it. It will be more efficient.
         //  - we stack only if it is allowed and required
-        auto stackingMode = f0.m_autoBatchState.m_stacking; // we batch along this dimension
-        auto batchAxis    = f0.m_autoBatchState.m_batchAxis; // we batch along this dimension
+        auto stackingMode = f0.m_autoBatchState.m_stacking;  // we batch or stack?
+        auto batchAxis    = f0.m_autoBatchState.m_batchAxis; // we batch along this axis
         NDShapeDimension batchSize;
         //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
         //    Break;
@@ -4947,7 +4957,7 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
 {
     auto& operands = m_operands; // TODO: pass as &, for clarity
 #ifdef NO_BLOCK_INVOKE // for debugging, we can disable static invocation altogether
-    return m_lambdaRememberedForDebugging(m_operands);
+    return m_lambdaRememberedForDebugging(operands);
 #else
 
     // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
