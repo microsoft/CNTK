@@ -105,7 +105,7 @@ namespace CNTK
 
         static Variable GetNodeOperandWithPaddingResolved(std::vector<bool>& cntkConvAutoPadding,
             NDShape& strides, const Node *node, const std::vector<Variable>& inputs, const double padValue = 0.0);
-        static FunctionPtr CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs);
+        static FunctionPtr CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs, bool transpose = false);
         static FunctionPtr CreateCNTKFCNode(const std::wstring& nodeName, const std::vector<Variable>& inputs);
 
         static ConvAutoPadType ConvertStrToConvAutoPadType(const string& str);
@@ -961,34 +961,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "ConvTranspose")
     {
-        NDShape strides = GetNamedAttributeAsShape(node, "strides", false);
-        NDShape dilation = GetNamedAttributeAsShape(node, "dilations", false, { 1 });
-        std::vector<bool> autoPadding = GetAutoPaddingWithSymmetryConversion(node, strides.Rank(), "pads", { false });
-
-        NDShape outputShape = GetNamedAttributeAsShape(node, "output_shape", true);
-
-        // TODO: avoid hardcoded values
-        std::vector<bool> sharing({ true });
-        size_t reductionRank = 1;
-        size_t maxTempMemSizeInSamples = 0;
-
-        const Variable& convolutionMap = inputs[1];
-        const Variable& operand = inputs[0];
-        AdjustAutoPaddingAndStrideForCNTKSpecialCases(operand, autoPadding, strides);
-
-        // TODO: are we sure that convolutionMap and operand are in inputs[1], inputs[0] order?
-        FunctionPtr cntkFunction = ConvolutionTranspose(
-            convolutionMap,
-            operand,
-            strides,
-            sharing,
-            autoPadding,
-            outputShape,
-            dilation,
-            reductionRank,
-            maxTempMemSizeInSamples,
-            ToWString(node->Name()));
-        return cntkFunction;
+        return CreateCNTKConvNode(node, inputs, /* transpose = */true);
     }
     else if (onnxOpName == "BatchNormalization" || onnxOpName == "SpatialBN")
     {
@@ -1560,8 +1533,9 @@ Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool>& 
     return convOperand;
 }
 
-FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::vector<Variable>& inputs)
+FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::vector<Variable>& inputs, bool transpose /*= false*/)
 {
+    NDShape outputShape;
     NDShape strides = GetNamedAttributeAsShape(node, "strides", false);
     NDShape dilation = GetNamedAttributeAsShape(node, "dilations", false, { 1 });
     // TODO: avoid hardcoded values
@@ -1569,10 +1543,28 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
     size_t reductionRank = 1;
     size_t maxTempMemSizeInSamples = 0;
     size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
+    if (transpose)
+        outputShape = GetNamedAttributeAsShape(node, "output_shape", true);
+
     Variable convolutionMap = inputs[1];
     std::vector<bool> cntkConvAutoPadding;
 
     auto convOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkConvAutoPadding, strides, node, inputs);
+
+    if (transpose)
+    {
+        return ConvolutionTranspose(
+            convolutionMap,
+            convOperand,
+            strides,
+            sharing,
+            cntkConvAutoPadding,
+            outputShape,
+            dilation,
+            reductionRank,
+            maxTempMemSizeInSamples,
+            ToWString(node->Name()));
+    }
 
     return Convolution(
         convolutionMap,
