@@ -47,7 +47,7 @@ namespace CNTK
 
         auto dataType = gradientValues.begin()->first.GetDataType();
         if (dataType == DataType::Float16)
-            dataType = DataType::Float; // fp16 gradient would have criterion/loss accumulates in fp32
+            dataType = DataType::Float; // fp16 models would have criterion/loss accumulates in fp32
 
         info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::UseDefaultDevice());
         info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::UseDefaultDevice());

@@ -1149,7 +1149,7 @@ namespace CNTK
         else if(delta->GetDataType() == DataType::Double)
             Data()->GetWritableTensorView<double>()->AddCopyOf(*delta->Data()->GetTensorView<double>());
         else
-            Data()->GetWritableTensorView<half>()->AddCopyOf(*delta->Data()->GetTensorView<half>());
+            RuntimeError("Unexpected data type in accumulator");
 
         if (copied && m_numUpdates != 0)
             RuntimeError("Accumulation values are created when accumulated num updates not zero");
@@ -1173,7 +1173,7 @@ namespace CNTK
         else if (GetDataType() == DataType::Double)
             Data()->SetValue(0.0);
         else
-            Data()->SetValue((float16)0.0);
+            RuntimeError("Unsupported data type in Accumulator");
     }
 
     std::wstring DynamicAxesAsString(const std::vector<Axis>& axes, bool rowMajor)
