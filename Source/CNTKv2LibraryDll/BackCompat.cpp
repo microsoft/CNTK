@@ -498,6 +498,10 @@ namespace CNTK
 
                     opType = PrimitiveOpType::EditDistanceError;
                 }
+                else if (node->OperationName() == OperationNameOf(SequenceWithLatticeNode))
+                {
+                    opType = PrimitiveOpType::SequenceWithLattice;
+                }
                 else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
                 {
                     auto edNode = node->As<ForwardBackwardNode<ElementType>>();

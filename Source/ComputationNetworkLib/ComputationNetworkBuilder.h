@@ -182,6 +182,7 @@ public:
     ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"");
 #endif
     ComputationNodePtr SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName = L"");
+    ComputationNodePtr SequenceWithLattice(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const ComputationNodePtr lattice, const std::wstring nodeName = L"");
     ComputationNodePtr Sigmoid(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sin(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sinh(const ComputationNodePtr a, const std::wstring nodeName = L"");

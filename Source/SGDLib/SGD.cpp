@@ -295,17 +295,15 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
     
     bool isSequenceTrainingCriterion = false;
-    if (trainSetDataReader->IsLegacyReader()) {
-        // get hmm file for sequence training
-        isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax");
-        if (isSequenceTrainingCriterion)
-        {
-            // SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
-            auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
+    // get hmm file for sequence training
+    isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax");
+    if (isSequenceTrainingCriterion)
+    {
+        // SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+        auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
 
-            auto hmm = node->gethmm();
-            trainSetDataReader->GetHmmData(hmm);
-        }
+        auto hmm = node->gethmm();
+        trainSetDataReader->GetHmmData(hmm);
     }
 
     // used for KLD regularized adaptation. For all other adaptation techniques
