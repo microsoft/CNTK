@@ -2133,6 +2133,12 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr SequenceWithLattice(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { labels, prediction, scaledLogLikelihood, lattice };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::SequenceWithLattice, operands, Dictionary(), name), name);
+    }
+
     FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();

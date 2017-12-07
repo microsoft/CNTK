@@ -350,6 +350,7 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::TopK) == 87 &&
                   static_cast<size_t>(PrimitiveOpType::Squeeze) == 88 &&
                   static_cast<size_t>(PrimitiveOpType::ConstantOp) == 89,
+                  static_cast<size_t>(PrimitiveOpType::SequenceWithLattice) == 90,
                   "PrimitiveOpType enum value was modified.");
 }
 

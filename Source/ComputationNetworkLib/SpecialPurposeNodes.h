@@ -677,6 +677,223 @@ template class SequenceWithSoftmaxNode<float>;
 template class SequenceWithSoftmaxNode<double>;
 
 // -----------------------------------------------------------------------
+// SequenceWithLatticeNode (label, prediction, loglikelihood)
+// Similar to the SequenceWithSoftmaxNode, but is using the new deserializer.
+//
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"SequenceWithLattice";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(SequenceWithLatticeNode);
+    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_gammaCalcInitialized(false)
+    {
+    }
+
+    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        // auto t_start_time = Timer::MilliSecondElapsed();
+        // left Node must be a scalar
+        if (inputIndex == 0) // left derivative
+        {
+            BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->Gradient(), Gradient());
+        }
+        else if (inputIndex == 1)
+        {
+            FrameRange fr(Input(0)->GetMBLayout());
+            BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+                Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+            MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+
+#ifdef _DEBUG
+            Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
+#endif
+        }
+        else if (inputIndex == 2)
+        {
+#if 1         // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
+            ; // gradient does not flow here
+#else
+            Input(inputIndex)->SetLearningRateMultiplier(0);
+            Input(inputIndex)->Gradient().SetValue(0.0); // BUGBUG: Gradients must always be added, since nodes may have multiple parents.
+#endif
+        }
+        else
+            RuntimeError("SequenceWithLatticeNode criterion only takes with respect to label, DNN output and log likelihood.");
+    }
+
+    static void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+    {
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues /*1x1*/, logSoftmaxOfRight, 1.0f, inputGradientValues);
+    }
+
+    static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
+        Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+        const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+    {
+        inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
+        inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType)frameDropThresh);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    // -sum(left_i * log(softmax_i(right)))
+    virtual void ForwardPropNonLooping()
+    {
+        auto d = Input(3)->GetMBLayout();
+        // Initialize m_gammaCalculator
+        // TODO: Would this lend itself to a unique_ptr instead of the init flag?
+        if (!m_gammaCalcInitialized)
+        {
+            if (m_hmm.hmms.size() == 0)
+            {
+                LogicError("SequenceWithLatticeNode criterion evaluation requires HMM states to be set.");
+            }
+            m_gammaCalculator.init(m_hmm, m_deviceId);
+            m_gammaCalcInitialized = true;
+        }
+        // softmax
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value() /*prediction*/, true);
+        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+        m_softmaxOfRight->InplaceExp();
+
+        m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
+        m_gammaFromLattice->Resize(*m_softmaxOfRight);
+        m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
+            Input(0)->Value() /*labels*/, *m_gammaFromLattice,
+            m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
+            Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr; // no layout
+
+        if (Input(0)->OperationName() != L"InputValue" && Input(0)->OperationName() != L"SparseInputValue")
+            LogicError("SequenceWithLatticeNode criterion requires the first input to be the label.");
+
+        if (isFinalValidationPass)
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match size
+                Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
+                Input(0)->HasMBLayout() &&
+                Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
+                Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
+            {
+                LogicError("The Matrix dimension in the SequenceWithLatticeNode operation does not match.");
+            }
+
+        SetDims(TensorShape(1), false);
+
+        m_gammatime = 0;
+        m_partialtime = 0;
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<SequenceWithLatticeNode<ElemType>>(nodeP);
+
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+            node->m_gammaFromLattice->SetValue(*m_gammaFromLattice);
+            node->m_fsSmoothingWeight = m_fsSmoothingWeight;
+            node->m_frameDropThreshold = m_frameDropThreshold;
+            node->m_doReferenceAlignment = m_doReferenceAlignment;
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
+    }
+
+    // TODO: method names should be CamelCase
+    std::vector<shared_ptr<const msra::dbn::latticepair>>* getLatticePtr() { return &m_lattices; }
+    std::vector<size_t>* getuidprt() { return &m_uids; }
+    std::vector<size_t>* getboundaryprt() { return &m_boundaries; }
+    std::vector<size_t>* getextrauttmap() { return &m_extraUttMap; }
+    msra::asr::simplesenonehmm* gethmm() { return &m_hmm; }
+
+    void SetSmoothWeight(double fsSmoothingWeight) { m_fsSmoothingWeight = fsSmoothingWeight; }
+    void SetFrameDropThresh(double frameDropThresh) { m_frameDropThreshold = frameDropThresh; }
+    void SetReferenceAlign(const bool doreferencealign) { m_doReferenceAlignment = doreferencealign; }
+
+    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
+    {
+        msra::lattices::SeqGammarCalParam param;
+        param.amf = amf;
+        param.lmf = lmf;
+        param.wp = wp;
+        param.bMMIfactor = bMMIfactor;
+        param.sMBRmode = sMBR;
+        m_gammaCalculator.SetGammarCalculationParams(param);
+    }
+
+    void gettime(unsigned long long& gammatime, unsigned long long& partialtime)
+    {
+        gammatime = m_gammatime;
+        partialtime = m_partialtime;
+    }
+
+protected:
+    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
+    double m_frameDropThreshold;
+    double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
+    double m_seqGammarAMF;
+    double m_seqGammarLMF;
+    double m_seqGammarWP;
+    double m_seqGammarbMMIFactor;
+    double m_seqGammarUsesMBR;
+    bool m_doReferenceAlignment;
+    std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
+    msra::asr::simplesenonehmm m_hmm;
+    msra::lattices::GammaCalculation<ElemType> m_gammaCalculator;
+    bool m_gammaCalcInitialized;
+    std::vector<size_t> m_uids;
+    std::vector<size_t> m_boundaries;
+    std::vector<size_t> m_extraUttMap;
+
+    unsigned long long m_gammatime; // TODO: what are these? Not even the context can be guessed from these names.
+    unsigned long long m_partialtime;
+};
+
+template class SequenceWithLatticeNode<float>;
+template class SequenceWithLatticeNode<double>;
+
+// -----------------------------------------------------------------------
 // DummyCriterionNode (objectiveValues, userSuppliedGradient, prediction)
 // TODO: Rename to CustomCriterionNode?
 //

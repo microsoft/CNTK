@@ -502,6 +502,10 @@ namespace CNTK
                 {
                     opType = PrimitiveOpType::StopGradient;
                 }
+                else if (node->OperationName() == OperationNameOf(SequenceWithLatticeNode))
+                {
+                    opType = PrimitiveOpType::SequenceWithLattice;
+                }
                 else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
                 {
                     auto edNode = node->As<ForwardBackwardNode<ElementType>>();

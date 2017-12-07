@@ -1010,6 +1010,11 @@ namespace CNTK
                     computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
                     break;
                 }
+                case PrimitiveOpType::SequenceWithLattice:
+                {
+                    computationNodePtr = New<SequenceWithLatticeNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::ForwardBackward:
                 {
                     auto delayContraint = functionConfig[PrimitiveFunction::AttributeNameDelayConstraint].Value<int>();
