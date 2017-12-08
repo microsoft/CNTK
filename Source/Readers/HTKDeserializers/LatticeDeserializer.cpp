@@ -98,8 +98,9 @@ public:
     void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result)
     {
         const auto& sequence = m_descriptor.Sequences()[sequenceIndex];
+        
         // Deserialize the binary lattice graph and serialize it into a vector
-        SequenceDataPtr s = make_shared<LatticeFloatSequenceData>(m_buffer.data() + sequence.OffsetInChunk(), sequence.SizeInBytes(), m_ndShape);
+        SequenceDataPtr s = make_shared<LatticeFloatSequenceData>(m_buffer.data() + sequence.OffsetInChunk(), sequence.NumberOfSamples(), m_ndShape);
 
         result.push_back(s);
     }

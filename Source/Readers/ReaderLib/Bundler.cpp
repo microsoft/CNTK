@@ -232,6 +232,7 @@ class Bundler::BundlingChunk : public Chunk
     // deserializer (i % number of deserializers).
     std::vector<ChunkPtr> m_innerChunks;
     // A mapping between exposed sequence id and inner sequence id for each deserializer.
+    // Represents sequence index in chunk
     // Indices as above.
     std::vector<size_t> m_sequenceToSequence;
 
