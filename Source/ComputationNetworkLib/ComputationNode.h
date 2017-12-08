@@ -1874,24 +1874,54 @@ public:
 
     virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
     {
+        /* guoye: start */
+        // fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 0, m_inputs.size() = %d \n", int(m_inputs.size()));
+        
+        /* guoye: end */
+
         for (int i = 0; i < m_inputs.size(); i++)
         {
+            /* guoye: start */
+            // fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 1, i = %d \n", int(i));
+
+            /* guoye: end */
+
             if (m_inputs[i]->NeedsGradient())
                 m_inputs[i]->RequestMatricesBeforeBackprop(matrixPool);
+
+            // fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 2, i = %d \n", int(i));
         }
     }
 
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        size_t matrixSize = m_sampleLayout.GetNumElements();
-        RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout(), /*isWorkSpace*/false, ParentGradientReused() || IsGradientReused());
+        /* guoye: start */
+        // fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 1 \n");
+        /* guoye: end */
 
+        size_t matrixSize = m_sampleLayout.GetNumElements();
+        /* guoye: start */
+        // fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 2, matrixSize = %d, mbscale = %d \n", int(matrixSize), int(HasMBLayout()));
+        /* guoye: end */
+        RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout(), /*isWorkSpace*/false, ParentGradientReused() || IsGradientReused());
+        /* guoye: start */
+        // fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 3 \n");
+        /* guoye: end */
         auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+        /* guoye: start */
+        // fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 4 \n");
+        /* guoye: end */
         if (multiOutputNode)
         {
+            /* guoye: start */
+            // fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 5, multiOutputNode->m_numOutputs = %d \n", int(multiOutputNode->m_numOutputs));
+            /* guoye: end */
             for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+            {
+                // fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 6, i = %d \n", int(i));
                 RequestMatrixFromPool(multiOutputNode->m_outputsGradient[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
+            }
         }
     }
 
@@ -1957,6 +1987,11 @@ protected:
     template<typename ValueType>
     void TypedRequestMatrixFromPool(shared_ptr<Matrix<ValueType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
     {
+        /* guoye: start */
+        // fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 0 \n");
+        
+        // fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 1 \n");
+        /* guoye: end */
         if (matrixPtr == nullptr)
         {
             if (aliasing)

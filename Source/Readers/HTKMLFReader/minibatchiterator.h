@@ -34,34 +34,63 @@ public:
     //  - lattices are returned as a shared_ptr
     // Thus, getbatch() can be called in a thread-safe fashion, allowing for a 'minibatchsource' implementation that wraps another with a read-ahead thread.
     // Return value is 'true' if it did read anything from disk, and 'false' if data came only from RAM cache. This is used for controlling the read-ahead thread.
+    
     virtual bool getbatch(const size_t globalts,
                           const size_t framesrequested, msra::dbn::matrix &feat, std::vector<size_t> &uids,
                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
                           std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices) = 0;
     // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
+
+
+    // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
     virtual bool getbatch(const size_t globalts,
-                          const size_t framesrequested, std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
-                          std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                          std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
-                          std::vector<std::vector<size_t>> &phoneboundaries) = 0;
+        const size_t framesrequested, std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
+        std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
+        std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
+        std::vector<std::vector<size_t>> &phoneboundaries) = 0;
+
+    
+    
     // getbatch() overload to support subsetting of mini-batches for parallel training
     // Default implementation does not support subsetting and throws an exception on
     // calling this overload with a numsubsets value other than 1.
+
     virtual bool getbatch(const size_t globalts,
-                          const size_t framesrequested, const size_t subsetnum, const size_t numsubsets, size_t &framesadvanced,
-                          std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
-                          std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                          std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
-                          std::vector<std::vector<size_t>> &phoneboundaries)
+        const size_t framesrequested, const size_t subsetnum, const size_t numsubsets, size_t &framesadvanced,
+        std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
+        std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
+        std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
+        std::vector<std::vector<size_t>> &phoneboundaries)
     {
         assert((subsetnum == 0) && (numsubsets == 1) && !supportsbatchsubsetting());
         subsetnum;
         numsubsets;
+
         bool retVal = getbatch(globalts, framesrequested, feat, uids, transcripts, lattices, sentendmark, phoneboundaries);
         framesadvanced = feat[0].cols();
 
         return retVal;
     }
+
+    /* guoye: start */
+    virtual bool getbatch(const size_t globalts,
+        const size_t framesrequested, const size_t subsetnum, const size_t numsubsets, size_t &framesadvanced,
+         std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids, std::vector<std::vector<size_t>> &wids, std::vector<std::vector<short>> &nws,
+        std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
+        std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
+        std::vector<std::vector<size_t>> &phoneboundaries)
+    {
+        wids.resize(0);
+        nws.resize(0);
+
+        
+        bool retVal = getbatch(globalts, framesrequested, subsetnum, numsubsets, framesadvanced, feat, uids, transcripts, lattices, sentendmark, phoneboundaries);
+        
+        return retVal;
+    }
+
+    /* guoye: end */
+
 
     virtual bool supportsbatchsubsetting() const
     {
@@ -102,6 +131,10 @@ class minibatchiterator
 
     std::vector<msra::dbn::matrix> featbuf;                                                      // buffer for holding curernt minibatch's frames
     std::vector<std::vector<size_t>> uids;                                                       // buffer for storing current minibatch's frame-level label sequence
+    /* guoye: start */
+    std::vector<std::vector<size_t>> wids;                                                       // buffer for storing current minibatch's word-level label sequence
+    std::vector<std::vector<short>> nws;                                                       // buffer for storing current minibatch's number of words for each utterance
+    /* guoye: end */
     std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> transcripts; // buffer for storing current minibatch's word-level label sequences (if available and used; empty otherwise)
     std::vector<std::shared_ptr<const latticesource::latticepair>> lattices;                          // lattices of the utterances in current minibatch (empty in frame mode)
 
@@ -126,7 +159,13 @@ private:
 
             foreach_index (i, uids)
                 uids[i].clear();
+            /* guoye: start */
+            foreach_index(i, wids)
+                wids[i].clear();
 
+            foreach_index(i, nws)
+                nws[i].clear();
+            /* guoye: end */
             transcripts.clear();
             actualmbframes = 0;
             return;
@@ -135,7 +174,10 @@ private:
         assert(requestedmbframes > 0);
         const size_t requestedframes = std::min(requestedmbframes, epochendframe - mbstartframe); // (< mbsize at end)
         assert(requestedframes > 0);
-        source.getbatch(mbstartframe, requestedframes, subsetnum, numsubsets, mbframesadvanced, featbuf, uids, transcripts, lattices, sentendmark, phoneboundaries);
+        /* guoye: start */
+        // source.getbatch(mbstartframe, requestedframes, subsetnum, numsubsets, mbframesadvanced, featbuf, uids, transcripts, lattices, sentendmark, phoneboundaries);
+        source.getbatch(mbstartframe, requestedframes, subsetnum, numsubsets, mbframesadvanced, featbuf, uids, wids, nws, transcripts, lattices, sentendmark, phoneboundaries);
+        /* guoye: end */
         timegetbatch = source.gettimegetbatch();
         actualmbframes = featbuf[0].cols(); // for single i/o, there featbuf is length 1
         // note:
@@ -314,6 +356,26 @@ public:
         assert(uids.size() >= i + 1);
         return uids[i];
     }
+    /* guoye: start */
+    // return the reference transcript word labels (word labels) for current minibatch
+    /*const*/ std::vector<size_t> &wlabels()
+    {
+        checkhasdata();
+        assert(wids.size() == 1);
+
+        return wids[0];
+    }
+
+    // return the number of words for current minibatch
+    /*const*/ std::vector<short> &nwords()
+    {
+        checkhasdata();
+        assert(nws.size() == 1);
+
+        return nws[0];
+    }
+
+    /* guoye: end */
 
     std::vector<size_t> &sentends()
     {

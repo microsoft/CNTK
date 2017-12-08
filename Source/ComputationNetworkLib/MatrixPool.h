@@ -137,14 +137,52 @@ public:
     template <class ElemType>
     void RequestAllocate(DEVICEID_TYPE deviceId, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale, bool isWorkSpace)
     {
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 1 \n");
+        /* guoye: end */
         vector<MemRequestInfo<ElemType>>& memInfoVec = GetMemRequestInfoVec<ElemType>(); 
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 2 \n");
+        /* guoye: end */
         MemRequestInfo<ElemType> memInfo(deviceId, pMatrixPtr, matrixSize, mbScale, isWorkSpace, m_stepCounter);
-        memInfoVec.push_back(memInfo); 
+    
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 3,  memInfo.pMatrixPtrs.size() = %d,  memInfoVec.size() = %d, sizeof(meminfo) = %d,  \n", int(memInfo.pMatrixPtrs.size()), int(memInfoVec.size()), int(sizeof(memInfo)));
+        /*
+        if (memInfoVec.size() >= 256)
+        {
+            fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 3.5,   sizeof(meminfo) is equal or large than 256, do no push \n");
+            memInfoVec.resize(memInfoVec.size() + 1, memInfo);            
+        }
+        */
+        /* guoye: end */
+        /* guoye: start */
+        /*
+        else
+        */
+        {
+
+            memInfoVec.push_back(memInfo);
+        }
+        
+        /* guoye: end */
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 4 \n");
+        /* guoye: end */
         m_deviceIDSet.insert(deviceId); 
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 5 \n");
+        /* guoye: end */
         m_stepCounter++; 
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 6 \n");
+        /* guoye: end */
 
         // assign some temporary pointer, they will be replaced later unless the matrix is sparse
         *pMatrixPtr = make_shared<Matrix<ElemType>>(deviceId);
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 7 \n");
+        /* guoye: end */
     }
 
     void OptimizedMemoryAllocation()
@@ -207,24 +245,59 @@ public:
     template <class ElemType>
     void RequestAliasedAllocate(DEVICEID_TYPE deviceId, AliasNodePtr node, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale)
     {
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 1 \n");
+        /* guoye: end */
         const auto iter = m_aliasLookup.find(node);
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 2 \n");
+        /* guoye: end */
         if (iter == m_aliasLookup.end())
             LogicError("node not aliased");
-
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 3 \n");
+        /* guoye: end */
         auto parent = iter->second;
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 4 \n");
+        /* guoye: end */
         auto& aliasInfo = m_aliasGroups[parent];
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 5 \n");
+        /* guoye: end */
         if (aliasInfo.pMatrixPtr == nullptr)
         {
             // first allocation for the group
+            /* guoye: start */
+            // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 6 \n");
+            /* guoye: end */
             aliasInfo.pMatrixPtr = pMatrixPtr;
+            /* guoye: start */
+            // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 7 \n");
+            /* guoye: end */
             RequestAllocate(deviceId, pMatrixPtr, matrixSize, mbScale, false);
+            /* guoye: start */
+            // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 8 \n");
+            /* guoye: end */
         }
         else
         {
+            /* guoye: start */
+            // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 9 \n");
+            /* guoye: end */
             auto aliasRootMatrixPtr = (shared_ptr<Matrix<ElemType>>*)aliasInfo.pMatrixPtr;
+            /* guoye: start */
+            // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 10 \n");
+            /* guoye: end */
             *pMatrixPtr = *aliasRootMatrixPtr;
             GetMemInfo<ElemType>(aliasRootMatrixPtr)->pMatrixPtrs.push_back(pMatrixPtr);
+            /* guoye: start */
+            // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 11 \n");
+            /* guoye: end */
         }
+        /* guoye: start */
+        // fprintf(stderr, "\n matrixpool.h:RequestAliasedAllocate, debug 12 \n");
+        /* guoye: end */
     }
 
 private: 

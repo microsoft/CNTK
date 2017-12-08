@@ -323,6 +323,20 @@ protected:
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
     
+    /* guoye： start */
+    bool m_seqGammarCalcUseEMBR;
+    string m_EMBRUnit; //unit could be: word, phone, state (we all compute edit distance 
+    bool m_enforceValidPathEMBR;
+    string m_getPathMethodEMBR;
+    size_t m_numPathsEMBR; // number of sampled paths
+    string m_showWERMode; // number of sampled paths
+    bool m_excludeSpecialWords; 
+    bool m_wordNbest;
+    bool m_useAccInNbest;
+    float m_accWeightInNbest;
+    size_t m_numRawPathsEMBR;
+    /* guoye： end */
+    
     // decide whether should apply regularization into BatchNormalizationNode
     // true: disable Regularization
     // false: enable Regularization (default)

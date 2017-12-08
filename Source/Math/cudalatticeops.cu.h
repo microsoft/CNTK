@@ -226,7 +226,25 @@ __global__ void backwardlatticej(const size_t batchsize, const size_t startindex
                                                                   logEframescorrect, logaccbetas);
     }
 }
+/* guoye: start */
+__global__ void backwardlatticejEMBR(const size_t batchsize, const size_t startindex, const vectorref<float> edgeacscores,
+    vectorref<msra::lattices::edgeinfowithscores> edges, vectorref<msra::lattices::nodeinfo> nodes,
+    vectorref<double> edgelogbetas, vectorref<double> logbetas,
+    float lmf, float wp, float amf)
+{
+    const size_t tpb = blockDim.x * blockDim.y; // total #threads in a block
+    const size_t jinblock = threadIdx.x + threadIdx.y * blockDim.x;
+    size_t j = jinblock + blockIdx.x * tpb;
+    if (j < batchsize) // note: will cause issues if we ever use __synctreads()
+    {
+        msra::lattices::latticefunctionskernels::backwardlatticejEMBR(j + startindex, edgeacscores, 
+            edges, nodes, edgelogbetas, logbetas,
+            lmf, wp, amf);
 
+        
+    }
+}
+/* guoye: end */
 void latticefunctionsops::forwardbackwardlattice(const size_t *batchsizeforward, const size_t *batchsizebackward,
                                                  const size_t numlaunchforward, const size_t numlaunchbackward,
                                                  const size_t spalignunitid, const size_t silalignunitid,
@@ -326,6 +344,46 @@ void latticefunctionsops::forwardbackwardlattice(const size_t *batchsizeforward,
     }
 }
 
+/* guoye: start */
+void latticefunctionsops::backwardlatticeEMBR( const size_t *batchsizebackward, const size_t numlaunchbackward,
+    const vectorref<float> &edgeacscores,
+    const vectorref<msra::lattices::edgeinfowithscores> &edges,
+    const vectorref<msra::lattices::nodeinfo> &nodes, vectorref<double> &edgelogbetas, vectorref<double> &logbetas,
+    const float lmf, const float wp, const float amf, double &totalbwscore) const
+{
+    // initialize log{,acc}(alhas/betas)
+    dim3 t(32, 8);
+    const size_t tpb = t.x * t.y;
+    dim3 b((unsigned int)((logbetas.size() + tpb - 1) / tpb));
+
+    // TODO: is this really efficient? One thread per value?
+    setvaluej << <b, t, 0, GetCurrentStream() >> >(logbetas, LOGZERO, logbetas.size());
+    checklaunch("setvaluej");
+
+    // set initial tokens to probability 1 (0 in log)
+    double log1 = 0.0;
+    memcpy(logbetas.get(), nodes.size() - 1, &log1, 1);
+
+
+    // backward pass
+    size_t startindex = 0;
+    startindex = edges.size();
+    for (size_t i = 0; i < numlaunchbackward; i++)
+    {
+        dim3 b2((unsigned int)((batchsizebackward[i] + tpb - 1) / tpb));
+        backwardlatticejEMBR << <b2, t, 0, GetCurrentStream() >> >(batchsizebackward[i], startindex - batchsizebackward[i],
+            edgeacscores,  edges, nodes, edgelogbetas, logbetas,
+            lmf, wp, amf);
+
+
+        checklaunch("edgealignment");
+        startindex -= batchsizebackward[i];
+    }
+    memcpy<double>(&totalbwscore, logbetas.get(), 0, 1);
+    
+}
+
+/* guoye: end */
 // -----------------------------------------------------------------------
 // sMBRerrorsignal -- accumulate difference of logEframescorrect and logEframescorrecttotal into errorsignal
 // -----------------------------------------------------------------------
@@ -342,6 +400,22 @@ __global__ void sMBRerrorsignalj(const vectorref<unsigned short> alignstateids, 
         msra::lattices::latticefunctionskernels::sMBRerrorsignalj(j, alignstateids, alignoffsets, edges, nodes, logpps, amf, logEframescorrect, logEframescorrecttotal, errorsignal, errorsignalneg);
     }
 }
+/* guoye: start */
+
+__global__ void EMBRerrorsignalj(const vectorref<unsigned short> alignstateids, const vectorref<unsigned int> alignoffsets,
+    const vectorref<msra::lattices::edgeinfowithscores> edges, const vectorref<msra::lattices::nodeinfo> nodes,
+    vectorref<double> edgeweights,
+    matrixref<float> errorsignal)
+{
+    const size_t shufflemode = 1; // [v-hansu] this gives us about 100% speed up than shufflemode = 0 (no shuffle)
+    const size_t j = msra::lattices::latticefunctionskernels::shuffle(threadIdx.x, blockDim.x, threadIdx.y, blockDim.y, blockIdx.x, gridDim.x, shufflemode);
+    if (j < edges.size()) // note: will cause issues if we ever use __synctreads()
+    {
+        msra::lattices::latticefunctionskernels::EMBRerrorsignalj(j, alignstateids, alignoffsets, edges, nodes, edgeweights, errorsignal);
+    }
+}
+
+/* guoye: end */
 
 // -----------------------------------------------------------------------
 // stateposteriors --accumulate a per-edge quantity into the states that the edge is aligned with
@@ -433,6 +507,28 @@ void latticefunctionsops::sMBRerrorsignal(const vectorref<unsigned short> &align
 #endif
 }
 
+/* guoye: start */
+void latticefunctionsops::EMBRerrorsignal(const vectorref<unsigned short> &alignstateids, const vectorref<unsigned int> &alignoffsets,
+    const vectorref<msra::lattices::edgeinfowithscores> &edges, const vectorref<msra::lattices::nodeinfo> &nodes,
+    const vectorref<double> &edgeweights, 
+    matrixref<float> &errorsignal) const
+{
+    // Layout: each thread block takes 1024 threads; and we have #edges/1024 blocks.
+    // This limits us to 16 million edges. If you need more, please adjust to either use wider thread blocks or a second dimension for the grid. Don't forget to adjust the kernel as well.
+    const size_t numedges = edges.size();
+    dim3 t(32, 8);
+    const size_t tpb = t.x * t.y;
+    dim3 b((unsigned int)((numedges + tpb - 1) / tpb));
+
+    setvaluei << <dim3((((unsigned int)errorsignal.rows()) + 31) / 32), 32, 0, GetCurrentStream() >> >(errorsignal, 0);
+    checklaunch("setvaluei");
+    
+    EMBRerrorsignalj << <b, t, 0, GetCurrentStream() >> >(alignstateids, alignoffsets, edges, nodes, edgeweights, errorsignal);
+    checklaunch("EMBRerrorsignal");
+
+    
+}
+/* guoye: end */
 void latticefunctionsops::mmierrorsignal(const vectorref<unsigned short> &alignstateids, const vectorref<unsigned int> &alignoffsets,
                                          const vectorref<msra::lattices::edgeinfowithscores> &edges, const vectorref<msra::lattices::nodeinfo> &nodes,
                                          const vectorref<double> &logpps, matrixref<float> &errorsignal) const

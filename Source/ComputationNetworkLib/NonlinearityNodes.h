@@ -247,8 +247,17 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 7 \n");
+        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 8 \n");
+        /* guoye: end */
         RequestMatrixFromPool(m_gradientTemp, matrixPool);
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 9 \n");
+        /* guoye: end */
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -318,8 +327,17 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 4 \n");
+        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 5 \n");
+        /* guoye: end */
         RequestMatrixFromPool(m_diff, matrixPool);
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 6 \n");
+        /* guoye: end */
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -385,8 +403,17 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 1 \n");
+        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 2 \n");
+        /* guoye: end */
         RequestMatrixFromPool(m_softmax, matrixPool);
+        /* guoye: start */
+        // fprintf(stderr, "\n nonlinearitynodes.h: RequestMatricesBeforeBackprop: debug 3 \n");
+        /* guoye: end */
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.

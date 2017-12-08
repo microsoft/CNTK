@@ -4675,7 +4675,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& l
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label,
-                                                              const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha)
+    /* guoye: start */
+    // const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha)
+                                                              const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha, bool MBR)
+    /* guoye: end */
 {
     if (IsEmpty())
         LogicError("AssignSequenceError: Matrix is empty.");
@@ -4685,7 +4688,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
     SyncGuard syncGuard;
     long N = (LONG64) label.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    _AssignSequenceError<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(hsmoothingWeight, Data(), label.Data(), dnnoutput.Data(), gamma.Data(), alpha, N);
+    /* guoye: start */
+    //_AssignSequenceError<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(hsmoothingWeight, Data(), label.Data(), dnnoutput.Data(), gamma.Data(), alpha, N);
+    _AssignSequenceError << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(hsmoothingWeight, Data(), label.Data(), dnnoutput.Data(), gamma.Data(), alpha, N, MBR);
+    /* guoye: end */
     return *this;
 }
 
