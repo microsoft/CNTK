@@ -54,7 +54,7 @@ protected:
                                 double& logEframescorrecttotal, double& totalfwscore) const;
 
     /* guoye: start */
-    void latticefunctionsops::backwardlatticeEMBR(const size_t *batchsizebackward, const size_t numlaunchbackward,
+    void backwardlatticeEMBR(const size_t *batchsizebackward, const size_t numlaunchbackward,
         const vectorref<float> &edgeacscores,
         const vectorref<msra::lattices::edgeinfowithscores> &edges,
         const vectorref<msra::lattices::nodeinfo> &nodes, vectorref<double> &edgelogbetas, vectorref<double> &logbetas,
