@@ -683,7 +683,7 @@ template class SequenceWithSoftmaxNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<4>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;

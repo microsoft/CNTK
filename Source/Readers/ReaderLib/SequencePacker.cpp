@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include "SequencePacker.h"
 #include "ReaderUtil.h"
+#include "ProgressTracing.h"
 
 namespace CNTK {
 
@@ -60,6 +61,7 @@ Minibatch SequencePacker::ReadMinibatch()
         }
 
         const auto& type = m_outputStreamDescriptions[streamIndex].m_storageFormat;
+        LOGPRINTF(stderr, "-------------------------Packing streamIndex %u ", streamIndex);
         auto pMBLayout = (type == StorageFormat::Dense) ?
             PackDenseStream(streamBatch, streamIndex) : PackSparseStream(streamBatch, streamIndex);
 
@@ -136,6 +138,7 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
     size_t sampleSize = GetSampleSize(m_outputStreamDescriptions[streamIndex]);
     auto pMBLayout = CreateMBLayout(batch);
     size_t requiredSize = pMBLayout->GetNumCols() * sampleSize;
+    LOGPRINTF(stderr, "requiredSize %zu ", requiredSize);
     if (buffer.m_size < requiredSize)
     {
         buffer.Resize(requiredSize);
@@ -175,6 +178,7 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
             {
                 // verify that the offset (an invariant for dense).
                 assert(sampleOffset == sampleIndex * sampleSize);
+                //LOGPRINTF(stderr, "Reading sampleOffset %zu ", sampleOffset);
                 PackDenseSample(destination, sequence, sampleOffset, sampleSize);
                 sampleOffset += sampleSize;
             }
