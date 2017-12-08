@@ -1190,7 +1190,7 @@ void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
     size_t curnodeidx, edgeidx; 
 
     
-    if (nodes[0].wid != 0)    RuntimeError("The first node is not 0 (i.e.) !NULL, but is %s \n", nodes[0].wid);
+    if (nodes[0].wid != 0)    RuntimeError("The first node is not 0 (i.e.) !NULL, but is %d \n", int(nodes[0].wid));
 
     while (vt_paths.size() < numPathsEMBR)
     {
@@ -1240,7 +1240,7 @@ void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
                 if (nodes[curnodeidx].wid == 2 && nodes[curnodeidx].t == info.numframes)
                 {
                     if (curnodeidx != (nodes.size() - 1))
-                        RuntimeError("EMBRsamplepaths: the lattice end edge has outgoing node %d, which is not the last node %d", edges[edgeidx].E, nodes.size() - 1);
+                        RuntimeError("EMBRsamplepaths: the lattice end edge has outgoing node %d, which is not the last node %d", edges[edgeidx].E, int(nodes.size() - 1));
                     else
                     {
                         success = true;
