@@ -504,6 +504,21 @@ double lattice::forwardbackwardlattice(const std::vector<float> &edgeacscores, p
     {
         double totalfwscore = parallelforwardbackwardlattice(parallelstate, edgeacscores, thisedgealignments, lmf, wp, amf, boostingfactor, logpps, logalphas, logbetas, sMBRmode, uids, logEframescorrect, Eframescorrectbuf, logEframescorrecttotal);
 
+		/* guoye: start */
+		parallelstate.getlogbetas(logbetas);
+		if (nodes.size() != logbetas.size())
+		{
+			// it is possible if #define TWO_CHANNEL in parallelforwardbackward.cpp: in which case, logbetas will be doulbe the size of (nodes)
+			if (logbetas.size() != (nodes.size() * 2))
+			{
+				RuntimeError("forwardbackwardlattice: logbetas size is not equal or twice of node size, logbetas.size() = %d, nodes.size() = %d", int(logbetas.size()), int(nodes.size()));
+			}
+
+			//only taket the first half of the data
+			logbetas.erase(logbetas.begin() + nodes.size(), logbetas.begin() + logbetas.size());
+		}
+		
+		/* guoye: end */
         return totalfwscore;
     }
     // if we get here, we have no CUDA, and do it the good ol' way
@@ -646,6 +661,78 @@ double lattice::forwardbackwardlattice(const std::vector<float> &edgeacscores, p
 
     return totalfwscore;
 }
+
+/* guoye: start */
+
+// ---------------------------------------------------------------------------
+// backwardlatticeEMBR() -- lattice-level backward
+//
+// This computes per-node  betas for EMBR
+// ---------------------------------------------------------------------------
+
+double lattice::backwardlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<double> &edgelogbetas, std::vector<double> &logbetas,
+	const float lmf, const float wp, const float amf) const
+{ // ^^ TODO: remove this
+  // --- hand off to parallelized (CUDA) implementation if available
+	if (parallelstate.enabled())
+	{
+		double totalbwscore = parallelbackwardlatticeEMBR(parallelstate, edgeacscores, lmf, wp, amf, edgelogbetas, logbetas);
+		
+		parallelstate.getlogbetas(logbetas);
+		parallelstate.getedgelogbetas(edgelogbetas);
+		if (nodes.size() != logbetas.size())
+		{
+			// it is possible if #define TWO_CHANNEL in parallelforwardbackward.cpp: in which case, logbetas will be doulbe the size of (nodes)
+			if (logbetas.size() != (nodes.size() * 2))
+			{
+				RuntimeError("forwardbackwardlattice: logbetas size is not equal or twice of node size, logbetas.size() = %d, nodes.size() = %d", int(logbetas.size()), int(nodes.size()));
+			}
+
+			//only taket the first half of the data
+			logbetas.erase(logbetas.begin() + nodes.size(), logbetas.begin() + logbetas.size());
+		}
+
+		
+		return totalbwscore;
+	}
+	// if we get here, we have no CUDA, and do it the good ol' way
+
+	// allocate return values
+
+	logbetas.assign(nodes.size(), LOGZERO);
+	logbetas.back() = 0.0f;
+
+	edgelogbetas.assign(edges.size(), LOGZERO);
+
+	
+	// backward pass
+	// this also computes the word posteriors on the fly, since we are at it
+	for (size_t j = edges.size() - 1; j + 1 > 0; j--)
+	{
+		const auto &e = edges[j];
+		const double inscore = logbetas[e.E];
+		const double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf;
+		const double pathscore = inscore + edgescore;
+
+		edgelogbetas[j] = pathscore;
+
+		logadd(logbetas[e.S], pathscore);
+
+	}
+
+	const double totalbwscore = logbetas.front();
+
+	if (islogzero(totalbwscore))
+	{
+		fprintf(stderr, "backwardlatticeEMBR: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int)nodes.size(), (int)edges.size());
+		return LOGZERO; // failed, do not use resulting matrix
+	}
+
+	return totalbwscore;
+}
+
+/* guoye: end */
+
 
 // ---------------------------------------------------------------------------
 // forwardbackwardlatticesMBR() -- compute expected frame-accuracy counts,
@@ -997,6 +1084,14 @@ void lattice::forwardbackwardalign(parallelstate &parallelstate,
             }
         }
     }
+
+	/* guoye: start */
+	// make sure thisedgealignment has values for later CPU use
+	if (parallelstate.enabled())
+	{
+		parallelstate.copyalignments(thisedgealignments);
+	}
+	/* guoye: end */
 }
 
 // compute the error signal for sMBR mode
@@ -1042,6 +1137,369 @@ void lattice::sMBRerrorsignal(parallelstate &parallelstate,
         }
     }
 }
+
+// compute the error signal for sMBR mode
+
+
+
+
+/* guoye: start */
+// return the bin index
+
+size_t sample_from_cumulative_prob(const std::vector<double> &cumulative_prob)
+{
+	if (cumulative_prob.size() < 1)
+	{
+		RuntimeError("sample_from_cumulative_prob: the number of bins is 0 \n");
+	}
+	double rand_prob = (double)rand() / (double)RAND_MAX;
+
+	for (size_t i = 0; i < cumulative_prob.size() - 1; i++)
+	{
+		if (rand_prob <= cumulative_prob[i]) return i;
+	}
+	return cumulative_prob.size() - 1;
+}
+
+void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
+	const std::vector<double> &logbetas, const size_t numPathsEMBR, std::vector<vector<size_t>> & vt_paths) const
+{
+	// In mp_node_ocp, key is the node id, and value stores the outgoing cumulative locally normalized probability. e.g., if the outgoing probabilities of the node are 0.3 0.1 0.6, the ocp stores: 0.3 0.4 1.0. 
+	// This serves as a cache to avoid recomputation if sampling the same node twice
+	/*
+	FILE * fptr;
+	fptr = fopen("C:\\Users\\guoye.REDMOND\\Desktop\\sequence_training\\SmallDataDirNew\\lattice.txt", "w");
+	foreach_index(j, nodes)
+	{
+		fprintf(fptr, "I=%d, t = %d, wid = %d\n", j, int(nodes[j].t), int(nodes[j].wid));
+	}
+	foreach_index(j, edges)
+	{
+		fprintf(fptr, "J=%d, S = %d, E = %d\n", j, int(edges[j].S), int(edges[j].E));
+	}
+
+	fclose(fptr);
+	*/
+	std::map<size_t, vector<double>> mp_node_ocp; 
+	std::map<size_t, vector<double>>::iterator mp_itr;
+	std::vector<size_t> path; // stores the edges in the path
+	std::vector<double> ocp;
+
+	mp_node_ocp.clear();
+	vt_paths.clear();
+	size_t curnodeidx, edgeidx; 
+
+	
+	if (nodes[0].wid != 0)	RuntimeError("The first node is not 0 (i.e.) !NULL, but is %s \n", nodes[0].wid);
+
+	while (vt_paths.size() < numPathsEMBR)
+	{
+		path.clear(); 
+		curnodeidx = 0;
+		//start sampling from node 0
+		bool success = false;
+
+		while(true)
+		{
+			mp_itr = mp_node_ocp.find(curnodeidx);
+
+			
+
+			if (mp_itr == mp_node_ocp.end())
+			{
+				ocp.clear();
+				
+				for (size_t i = 0; i < vt_node_out_edge_indices[curnodeidx].size(); i++)
+				{
+					double prob = exp(edgelogbetas[vt_node_out_edge_indices[curnodeidx][i]] - logbetas[curnodeidx]);
+					if(i == 0)	ocp.push_back(prob);
+					else ocp.push_back(prob + ocp.back());
+				}
+				if (fabs(ocp.back() - 1) > 1e-4f)
+				{
+					fprintf(stderr, "EMBRsamplepaths: WARNING: local normalized prob does not sum to 1: %f\n", ocp.back());
+				}
+				mp_node_ocp.insert(pair<size_t, vector<double>>(curnodeidx, ocp));
+				edgeidx = vt_node_out_edge_indices[curnodeidx][sample_from_cumulative_prob(ocp)];
+
+			}
+			else
+			{
+				edgeidx = vt_node_out_edge_indices[curnodeidx][sample_from_cumulative_prob(mp_itr->second)];
+			}
+
+			path.push_back(edgeidx);
+			curnodeidx = edges[edgeidx].E;
+			// the end of lattice is not !NULL (the end of !NULL is deleted in dbn.exe when converting lattice of htk format to chunk)
+			// if (nodes[edges[edgeidx].E].t == nodes[edges[edgeidx].S].t)
+			// wid = 2 is for </s>, the lattice ends with </s>
+			
+			// the node has no outgoing arc
+			if (vt_node_out_edge_indices[curnodeidx].size() == 0)
+			{
+				if (nodes[curnodeidx].wid == 2 && nodes[curnodeidx].t == info.numframes)
+				{
+					if (curnodeidx != (nodes.size() - 1))
+						RuntimeError("EMBRsamplepaths: the lattice end edge has outgoing node %d, which is not the last node %d", edges[edgeidx].E, nodes.size() - 1);
+					else
+					{
+						success = true;
+						break;
+					}
+				}
+				else
+				{
+					fprintf(stderr, "EMBRsamplepaths: WARNING: the node with index = %d has no outgoing arc, but it is not the node </s> with timing ending with last frame \n", int(curnodeidx));
+					success = false;
+					break;
+				}
+			}
+				
+		}
+
+		if (success == true)	vt_paths.push_back(path);
+
+	}
+}
+/* guoye: end */
+/* guoye: start */
+float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
+{
+	short ** mat;
+	size_t i, j;
+
+	mat = new short*[rec.size() + 1];
+	for (i = 0; i <= rec.size(); i++) mat[i] = new short[ref.size() + 1];
+
+	for (i = 0; i <= rec.size(); i++) mat[i][0] = short(i);
+	for (j = 1; j <= ref.size(); j++) mat[0][j] = short(j);
+
+	for(i = 1; i <= rec.size(); i++)
+		for (j = 1; j <= ref.size(); j++)
+		{
+			mat[i][j] = mat[i - 1][j - 1];
+
+			if (rec[i - 1] != ref[j - 1])
+			{
+				
+				if ((mat[i - 1][j]) < mat[i][j]) mat[i][j] = mat[i - 1][j];
+				if ((mat[i][j-1]) < mat[i][j]) mat[i][j] = mat[i][j-1];
+				mat[i][j] ++;
+			}
+		}
+
+	
+	float wer = float(mat[rec.size()][ref.size()]) / ref.size();
+	for (i = 0; i < rec.size(); i++) delete[] mat[i];
+	delete[] mat;
+	return wer;
+}
+
+
+
+double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, const size_t numPathsEMBR, std::vector<double>& vt_edge_weights) const
+{
+	std::vector<double> vt_path_weights;
+	vt_path_weights.resize(vt_paths.size());
+
+	vector<size_t> path_ids;
+	double sum_wer, avg_wer;
+	sum_wer = 0;
+
+	for (size_t i = 0; i < vt_paths.size(); i++)
+	{
+		path_ids.clear();
+
+		for (size_t j = 0; j < vt_paths[i].size(); j++)
+		{
+			if (j == 0)
+			{
+				if (!is_special_words[edges[vt_paths[i][j]].S]) path_ids.push_back(nodes[edges[vt_paths[i][j]].S].wid);
+			}
+			if (!is_special_words[edges[vt_paths[i][j]].E]) path_ids.push_back(nodes[edges[vt_paths[i][j]].E].wid);
+		}
+		vt_path_weights[i] = compute_wer(wids, path_ids);
+		sum_wer += vt_path_weights[i];
+	}
+	avg_wer = sum_wer / vt_paths.size();
+
+
+	for (size_t i = 0; i < vt_path_weights.size(); i++)
+	{
+		// loss - mean_loss
+		vt_path_weights[i] -= avg_wer;
+		vt_path_weights[i] /= (numPathsEMBR - 1);
+	}
+
+	for (size_t i = 0; i < vt_paths.size(); i++)
+	{
+		for (size_t j = 0; j < vt_paths[i].size(); j++)
+		{
+			// vt_edge_weights[vt_paths[i][j]] += vt_path_weights[i];
+			// substraction instead of add, since we want to minimize the loss function, rather than maximize
+			vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
+		}
+	}
+
+	return avg_wer;
+}
+
+/* guoye: end */
+/* guoye: start */
+
+
+void lattice::EMBRerrorsignal(parallelstate &parallelstate,
+	const edgealignments &thisedgealignments, std::vector<double>& edge_weights, msra::math::ssematrixbase &errorsignal) const
+
+{
+	Microsoft::MSR::CNTK::Matrix<float> errorsignalcpu(-1);
+	/*
+	for (size_t i = 0; i < edge_weights.size(); i++)	edge_weights[i] = 0;
+	edge_weights[5000] = 2;
+	*/
+
+	if (parallelstate.enabled()) // parallel version
+	{
+		/*  time measurement for parallel sMBRerrorsignal
+		errorsignalcompute: 19.871935 ms (cuda) v.s. 448.711444 ms (emu) */
+		parallelstate.setedgeweights(edge_weights);
+		
+		std::vector<double> verify_edge_weights;
+		parallelstate.getedgeweights(verify_edge_weights);
+		
+		parallelEMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
+
+		parallelstate.getgamma(errorsignalcpu);
+		return; 
+		
+	}
+
+	//  linear mode
+	foreach_coord(i, j, errorsignal)
+		errorsignal(i, j) = 0.0f; // Note: we don't actually put anything into the numgammas
+
+	foreach_index(j, edges)
+	{
+
+		const auto &e = edges[j];
+		if (nodes[e.S].t == nodes[e.E].t) // this happens for dummy !NULL edge at end of file
+			continue;
+
+
+		size_t ts = nodes[e.S].t;
+		size_t te = nodes[e.E].t;
+
+		for (size_t t = ts; t < te; t++)
+		{
+			const size_t s = thisedgealignments[j][t - ts];
+			errorsignal(s, t) = errorsignal(s, t) + float(edge_weights[j]);
+		}
+
+	}
+	/*
+	foreach_coord(i, j, errorsignal)
+	{
+		if (fabs(0 - errorsignal(i, j)) >= 1e-9)
+		{
+			fprintf(stderr, "EMBRerrorsignal: i = %d, j = %d, errorsignal = %f \n", int(i), int(j), errorsignal(i, j));
+		}
+	}
+
+	foreach_coord(i, j, errorsignal)
+	{
+		if (fabs(0 - errorsignalcpu(i, j)) >= 1e-9)
+		{
+			fprintf(stderr, "EMBRerrorsignal: i = %d, j = %d, errorsignalcpu = %f \n", int(i), int(j), errorsignalcpu(i, j));
+		}
+	}
+	//verification
+	foreach_coord(i, j, errorsignal)
+	{
+		if (fabs(0 - errorsignalcpu(i, j)) >= 1e-6)
+		{
+			fprintf(stderr, "EMBRerrorsignal: i = %d, j = %d \n", int(i), int(j));
+		}
+		if (fabs(errorsignal(i, j) - errorsignalcpu(i, j)) >= 1e-6)
+		{
+			fprintf(stderr, "EMBRerrorsignal: i = %d, j = %d, errorsignal = %f, errorsignalcpu = %f, diff = %f \n", int(i), int(j), errorsignal(i, j), errorsignalcpu(i, j), fabs(errorsignal(i, j) - errorsignalcpu(i, j)));
+			exit(-1);
+		}
+	}
+	*/
+}
+
+
+// compute the error signal for EMBR mode
+/* guoye: start */
+/*
+void lattice::embrerrorsignal(parallelstate &parallelstate,
+	std::vector<msra::math::ssematrixbase *> &abcs, const bool softalignstates, const msra::asr::simplesenonehmm &hset,
+	const edgealignments &thisedgealignments, std::vector<std::vector<size_t>>& vt_paths, std::vector<float>& path_weights, msra::math::ssematrixbase &errorsignal) const
+{
+	if (parallelstate.enabled())
+	{
+
+		if (softalignstates)
+			LogicError("embrerrorsignal: parallel version for softalignstates mode is not supported yet");
+		// parallelmmierrorsignal(parallelstate, thisedgealignments, logpps, errorsignal);
+		thisedgealignments;
+		return;
+	}
+
+	for (size_t j = 0; j < (errorsignal).cols(); j++)
+		for (size_t i = 0; i < (errorsignal).rows(); i++)
+			errorsignal(i, j) = 0; // set to zero  --note: may be in-place with logLLs, which now get overwritten
+
+
+											   // size_t warnings = 0;   // [v-hansu] check code for mmi; search this comment to see all related codes
+	for (size_t pidx = 0; pidx < vt_paths.size(); pidx++)
+	{
+		for (size_t eidx = 0; eidx < vt_paths[pidx].size(); eidx++)
+		{
+			size_t j = vt_paths[pidx][eidx];
+			const auto &e = edges[j];
+			if (nodes[e.S].t == nodes[e.E].t) // this happens for dummy !NULL edge at end of file
+				continue;
+
+			const auto &aligntokens = getaligninfo(j); // get alignment tokens
+			auto &loggammas = *abcs[j];
+
+
+			// accumulate this edge's gamma matrix into target posteriors
+			const size_t tedge = nodes[e.S].t;
+			size_t ts = 0;                 // time index into gamma matrix
+			size_t js = 0;                 // state index into gamma matrix
+			foreach_index(k, aligntokens) // we exploit that units have fixed boundaries
+			{
+				const auto &unit = aligntokens[k];
+				const size_t te = ts + unit.frames;
+				const auto &hmm = hset.gethmm(unit.unit); // TODO: inline these expressions
+				const size_t n = hmm.getnumstates();
+				const size_t je = js + n;
+				// P(s) = P(s|e) * P(e)
+				for (size_t t = ts; t < te; t++)
+				{
+					const size_t tutt = t + tedge; // time index w.r.t. utterance
+											   // double logsum = LOGZERO;         // [v-hansu] check code for mmi; search this comment to see all related codes
+					for (size_t i = 0; i < n; i++)
+					{
+						const size_t j2 = js + i;             // state index for this unit in matrix
+						const size_t s = hmm.getsenoneid(i); // state class index
+						const float gammajt = expf(loggammas(j2, t));
+						const float stateP = path_weights[pidx] * gammajt;
+						errorsignal(s, tutt) += stateP;
+					}
+				}
+				ts = te;
+				js = je;
+			}
+			assert(ts + 2 == loggammas.cols() && js == loggammas.rows());
+		}
+	}
+	
+}
+
+/* guoye: end */
 
 // compute the error signal for MMI mode
 void lattice::mmierrorsignal(parallelstate &parallelstate, double minlogpp, const std::vector<double> &origlogpps,
@@ -1332,12 +1790,37 @@ void sMBRsuppressweirdstuff(msra::math::ssematrixbase &errorsignal, const_array_
 //  - returns expected frames-correct count (the sMBR objective)
 // ---------------------------------------------------------------------------
 
+/* guoye: start */
+/*
 double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::ssematrixbase &logLLs, const msra::asr::simplesenonehmm &hset,
                                 msra::math::ssematrixbase &result, msra::math::ssematrixbase &errorsignalbuf,
                                 const float lmf, const float wp, const float amf, const float boostingfactor,
                                 const bool sMBRmode, array_ref<size_t> uids, const_array_ref<size_t> bounds,
                                 const_array_ref<htkmlfwordsequence::word> transcript, const std::vector<float> &transcriptunigrams) const
+*/
+double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::ssematrixbase &logLLs, const msra::asr::simplesenonehmm &hset,
+                                msra::math::ssematrixbase &result, msra::math::ssematrixbase &errorsignalbuf,
+                                const float lmf, const float wp, const float amf, const float boostingfactor,
+                                const bool sMBRmode, const bool EMBR, const string  EMBRUnit, const size_t numPathsEMBR, array_ref<size_t> uids, vector<size_t> wids, const_array_ref<size_t> bounds,
+                                const_array_ref<htkmlfwordsequence::word> transcript, const std::vector<float> &transcriptunigrams) const
+								
+/* guoye: end*/
 {
+	/* guoye: start  */
+	if (wids.size() == 0) return 0;
+	
+	if (numPathsEMBR < 1)
+	{
+		fprintf(stderr, "forwardbackward: WARNING: numPathsEMBR = %d , which is smaller than 1\n", (int)numPathsEMBR);
+		return LOGZERO; // failed, do not use resulting matrix
+	}
+	if (EMBRUnit != "word")
+	{
+		fprintf(stderr, "forwardbackward: Error: Currently do not support EMBR unit other than word\n");
+		return LOGZERO; // failed, do not use resulting matrix
+	}
+	
+	/* guoye: end */
     bool softalign = true;
     bool softalignstates = false;      // true if soft alignment within edges, currently we only support soft within edge in cpu mode
     bool softalignlattice = softalign; // w.r.t. whole lattice
@@ -1370,7 +1853,14 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     std::vector<msra::math::ssematrixbase *> abcs;
     std::vector<float> edgeacscores; // [edge index] acoustic scores
     // funcation call for forwardbackward on edge level
-    forwardbackwardalign(parallelstate, hset, softalignstates, minlogpp, origlogpps, abcs, matrixheap, sMBRmode /*returnsenoneids*/, edgeacscores, logLLs, thisedgealignments, thisbackpointers, uids, bounds);
+	/* guoye: start */
+    // forwardbackwardalign(parallelstate, hset, softalignstates, minlogpp, origlogpps, abcs, matrixheap, sMBRmode /*returnsenoneids*/, edgeacscores, logLLs, thisedgealignments, thisbackpointers, uids, bounds);
+
+	// return senone id for EMBR or sMBR, but not for MMI
+	forwardbackwardalign(parallelstate, hset, softalignstates, minlogpp, origlogpps, abcs, matrixheap, (sMBRmode || EMBR) /*returnsenoneids*/, edgeacscores, logLLs, thisedgealignments, thisbackpointers, uids, bounds);
+
+
+	/* guoye: end */
 
 // PHASE 2: lattice-level forward backward
 
@@ -1385,16 +1875,32 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     std::vector<double> logEframescorrect; // this is the final output of PHASE 2
     std::vector<double> logalphas;
     std::vector<double> logbetas;
+
+	/* guoye: start */
+	std::vector<double> edgelogbetas; // the edge score plus the edge's outgoing node's beta scores
+	/* guoye: end */
     double totalfwscore = 0; // TODO: name no longer precise in sMBRmode
     double logEframescorrecttotal = LOGZERO;
+	double totalbwscore = 0;
 
     bool returnEframescorrect = sMBRmode;
-    if (softalignlattice)
-    {
-        totalfwscore = forwardbackwardlattice(edgeacscores, parallelstate, logpps, logalphas, logbetas, lmf, wp, amf, boostingfactor, returnEframescorrect, (const_array_ref<size_t> &) uids, thisedgealignments, logEframescorrect, Eframescorrectbuf, logEframescorrecttotal);
-        if (sMBRmode && !returnEframescorrect)
-            logEframescorrecttotal = forwardbackwardlatticesMBR(edgeacscores, hset, logalphas, logbetas, lmf, wp, amf, (const_array_ref<size_t> &) uids, thisedgealignments, Eframescorrectbuf);
-        // ^^ BUGBUG not tested
+	if (softalignlattice)
+	{
+		/* guoye: start */
+		if (EMBR)
+		{
+			//compute Beta only, 
+			totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetas, lmf, wp, amf);
+			totalfwscore = totalbwscore; // to make the existing code happy
+		}
+		else
+		/* guoye: end */
+		{
+			totalfwscore = forwardbackwardlattice(edgeacscores, parallelstate, logpps, logalphas, logbetas, lmf, wp, amf, boostingfactor, returnEframescorrect, (const_array_ref<size_t> &) uids, thisedgealignments, logEframescorrect, Eframescorrectbuf, logEframescorrecttotal);
+			if (sMBRmode && !returnEframescorrect)
+			logEframescorrecttotal = forwardbackwardlatticesMBR(edgeacscores, hset, logalphas, logbetas, lmf, wp, amf, (const_array_ref<size_t> &) uids, thisedgealignments, Eframescorrectbuf);
+			// ^^ BUGBUG not tested
+		}
     }
     else
         totalfwscore = bestpathlattice(edgeacscores, logpps, lmf, wp, amf);
@@ -1415,23 +1921,50 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     assert(numframes == info.numframes);
     // fprintf (stderr, "forwardbackward: total forward score %.6f (%d frames)\n", totalfwscore, (int) numframes);   // for now--while we are debugging the GPU port
 
-    // MMI mode
-    if (!sMBRmode)
-    {
-        // we first take the sum in log domain to avoid numerical issues
-        auto &dengammas = result; // result is denominator gammas
-        mmierrorsignal(parallelstate, minlogpp, origlogpps, abcs, softalignstates, logpps, hset, thisedgealignments, dengammas);
-        return totalfwscore / numframes; // return value is av. posterior
-    }
-    // sMBR mode
-    else
-    {
-        auto &errorsignal = result;
-        sMBRerrorsignal(parallelstate, errorsignal, errorsignalbuf, logpps, amf, minlogpp, origlogpps, logEframescorrect, logEframescorrecttotal, thisedgealignments);
+	/* guoye: start */
+	if (EMBR)
+	{
+		std::vector<vector<size_t>> vt_paths;
+		// Do path sampling
+		EMBRsamplepaths(edgelogbetas, logbetas, numPathsEMBR, vt_paths);
+		
+		vector<double> edge_weights(edges.size(), 0.0);
+		
+		double avg_wer = get_edge_weights(wids, vt_paths, numPathsEMBR, edge_weights);
 
-        static bool dummyvariable = (fprintf(stderr, "note: new version with kappa adjustment, kappa = %.2f\n", 1 / amf), true); // we only print once
-        return exp(logEframescorrecttotal) / numframes;                                                                          // return value is av. expected frame-correct count
-    }
+		auto &errorsignal = result;
+	
+		// embrerrorsignal(parallelstate, abcs, softalignstates, hset, thisedgealignments, vt_paths, path_weights, errorsignal);
+		EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
+
+		
+		// fprintf(stderr, "get_path_weight: average WER for an utterance is %f, #words = %d \n", avg_wer, int(wids.size()));
+
+		return avg_wer;
+	}
+	else
+	/* guoye: end */
+	{
+		// MMI mode
+		if (!sMBRmode)
+		{
+			// we first take the sum in log domain to avoid numerical issues
+			auto &dengammas = result; // result is denominator gammas
+			mmierrorsignal(parallelstate, minlogpp, origlogpps, abcs, softalignstates, logpps, hset, thisedgealignments, dengammas);
+
+
+			return totalfwscore / numframes; // return value is av. posterior
+		}
+		// sMBR mode
+		else
+		{
+			auto &errorsignal = result;
+			sMBRerrorsignal(parallelstate, errorsignal, errorsignalbuf, logpps, amf, minlogpp, origlogpps, logEframescorrect, logEframescorrecttotal, thisedgealignments);
+
+			static bool dummyvariable = (fprintf(stderr, "note: new version with kappa adjustment, kappa = %.2f\n", 1 / amf), true); // we only print once
+			return exp(logEframescorrecttotal) / numframes;                                                                          // return value is av. expected frame-correct count
+		}
+	}
 }
 };
 };

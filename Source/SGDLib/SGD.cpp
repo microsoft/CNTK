@@ -481,8 +481,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // likewise for sequence training parameters
     if (isSequenceTrainingCriterion)
     {
-        ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign,
+		/* guoye: start */
+        /* ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR);
+		*/
+		ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign,
+                                                  m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR,
+												  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR);		
+		/* guoye: end */
     }
 
     // Multiverso Warpper for ASGD logic init
@@ -659,8 +665,16 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       learnableNodes, smoothedGradients, smoothedCounts,
                                       epochCriterion, epochEvalErrors,
                                       "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch);
-        totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
+        
+		/* guoye: start */
+		// totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
+		if(!m_seqGammarCalcUseEMBR)
+			totalTrainingSamplesSeen += epochCriterion.second;
+		else
+			totalTrainingSamplesSeen += epochEvalErrors[0].second;
+
+		/* guoye: end */
         timer.Stop();
         double epochTime = timer.ElapsedSeconds();
 
@@ -1166,10 +1180,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
+		/* guoye_start */
+		size_t actualNumWords = 0;
 
         auto profGetMinibatch = ProfilerTimeBegin();
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
-                                                                                useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
+        //                                                                        useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
+																				useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi, actualNumWords);
+		/* guoye_end */
 
         if (maxNumSamplesExceeded) // Dropping data.
             wasDataRead = false;
@@ -1293,7 +1311,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-            localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+            // localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+			
+			/* guoye: start */
+			if(!m_seqGammarCalcUseEMBR)
+				localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+			else
+				localEpochCriterion.Add(0, actualNumWords);
+				
+			/* guoye: end */
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 localEpochEvalErrors.Add(i, numSamplesWithLabelOfNetwork);
         }
@@ -1325,14 +1351,29 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
             // hoist the criterion into CPU space for all-reduce
-            localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
+			/* guoye: start */
+			
+			if (!m_seqGammarCalcUseEMBR)
+				localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
+			else 
+				localEpochCriterion.Assign(0, actualNumWords);
+
+            // localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
+			/* guoye: end */
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 localEpochEvalErrors.Assign(i, numSamplesWithLabelOfNetwork);
 
             // copy all values to be aggregated into the header
             m_gradHeader->numSamples = aggregateNumSamples;
             m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
-            m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second; // same as aggregateNumSamplesWithLabel
+			/* guoye: start */
+            // m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second; // same as aggregateNumSamplesWithLabel
+
+			if (!m_seqGammarCalcUseEMBR)
+				m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second; // same as aggregateNumSamplesWithLabel
+			else
+				m_gradHeader->numSamplesWithLabel = numSamplesWithLabelOfNetwork;
+			/* guoye: end */
             assert(m_gradHeader->numSamplesWithLabel == aggregateNumSamplesWithLabel);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 m_gradHeader->evalErrors[i] = localEpochEvalErrors.GetCriterion(i);
@@ -1481,8 +1522,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
             EpochCriterion epochCriterionSinceLastLogged = epochCriterion - epochCriterionLastLogged;
             let trainLossSinceLastLogged    =      epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
-            let trainSamplesSinceLastLogged = (int)epochCriterionSinceLastLogged.second;
 
+			/* guoye: start */
+			// let trainSamplesSinceLastLogged = (int)epochCriterionSinceLastLogged.second;
+
+			// for EMBR, epochCriterionSinceLastLogged.second stores the #words rather than #frames
+            let trainSamplesSinceLastLogged = (m_seqGammarCalcUseEMBR? (int)(epochEvalErrors[0].second - epochEvalErrorsLastLogged[0].second) : (int)epochCriterionSinceLastLogged.second);
+
+			/* guoye: end */
             // determine progress in percent
             int mbProgNumPrecision = 2;
             double mbProg = 0.0;
@@ -1776,7 +1823,12 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     const size_t numIterationsBeforePrintingProgress = 100;
     size_t numItersSinceLastPrintOfProgress = 0;
     size_t actualMBSizeDummy;
-    while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy, m_mpi))
+	/* guoye: start */
+	size_t actualNumWordsDummy;
+
+    // while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy, m_mpi))
+	while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy, m_mpi, actualNumWordsDummy))
+	/* guoye: end */
     {
         // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
@@ -2980,6 +3032,14 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_frameDropThresh = configSGD(L"frameDropThresh", 1e-10);
     m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
     m_seqGammarCalcUsesMBR = configSGD(L"seqGammarUsesMBR", false);
+	
+	/* guoye： start */
+	m_seqGammarCalcUseEMBR = configSGD(L"seqGammarUseEMBR", false);
+	m_EMBRUnit =  configSGD(L"EMBRUnit", "word");
+	
+	m_numPathsEMBR = configSGD(L"numPathsEMBR", (size_t)100);
+	/* guoye： end */
+	
     m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);
     m_seqGammarCalcLMF = configSGD(L"seqGammarLMF", 14.0);
     m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0);
