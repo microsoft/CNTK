@@ -32,17 +32,16 @@ using namespace std;
 
 //#define LOG_DETAILS     // if defined, log all forward and backward operations
 #define LOG_STATS         // if defined, log statistics (#operations)
-#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
-#define NUM_MBS_TO_LOG 10 // 4
+//#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
 //#define LOG_GPU         // if defined, profile the GPU (warning: this will disturb the CPU measurements)
+#define NUM_MBS_TO_LOG 10 // 4
 
 // these options allow to turn features on or off, for benchmarking
-//#define NO_CSE              // disable CSE
-//#define NO_BATCHED_FORWARD  // disable auto-batching
-//if defined, don't batch forward
-#define NO_BARRIER          // ignore Barrier
-#define NO_BLOCK_INVOKE     // no static graph
-#define NO_LATE_INLINING    // no late inlining
+//#define NO_CSE              // if defined, disable CSE
+//#define NO_BATCHED_FORWARD  // ifdefined, disable auto-batching
+//#define NO_BARRIER          // ignore Barrier
+//#define NO_BLOCK_INVOKE     // no static graph
+//#define NO_LATE_INLINING    // no late inlining
 
 //#define NO_BATCHED_BACKPROP // if defined, don't do additional batching or any other extra optimization in backprop
 
