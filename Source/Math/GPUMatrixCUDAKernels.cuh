@@ -5256,15 +5256,16 @@ __global__ void _DropFrame(
 
 template <class ElemType>
 __global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType* error, const ElemType* label,
-                                     const ElemType* dnnoutput, const ElemType* gamma, ElemType alpha, const long N)
+    const ElemType* dnnoutput, const ElemType* gamma, ElemType alpha, const long N, bool MBR)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    error[id] = (comp_t)error[id] - (comp_t)alpha * ((comp_t)label[id] - (1.0 - (comp_t)hsmoothingWeight) * (comp_t)dnnoutput[id] - (comp_t)hsmoothingWeight * (comp_t)gamma[id]);
-    // change to ce
-    // error[id] -= alpha * (label[id] - dnnoutput[id] );
+    if(!MBR)
+        error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight) * dnnoutput[id] - hsmoothingWeight * gamma[id]);
+    else
+        error[id] -= alpha * ( (1.0 - hsmoothingWeight) * (label[id] - dnnoutput[id]) + hsmoothingWeight * gamma[id]);
 }
 
 template <class ElemType>

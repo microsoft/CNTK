@@ -405,8 +405,11 @@ void lattice::dedup()
 //  - empty ("") -> don't output, just check the format
 //  - dash ("-") -> dump lattice to stdout instead
 /*static*/ void archive::convert(const std::wstring &intocpath, const std::wstring &intocpath2, const std::wstring &outpath,
-                                 const msra::asr::simplesenonehmm &hset)
-{
+/* guoye: start */
+                                 // const msra::asr::simplesenonehmm &hset)
+                                 const msra::asr::simplesenonehmm &hset, std::set<int>& specialwordids)
+/* guoye: end */
+                                 {
     const auto &modelsymmap = hset.getsymmap();
 
     const std::wstring tocpath = outpath + L".toc";
@@ -457,8 +460,10 @@ void lattice::dedup()
 
         // fetch lattice  --this performs any necessary format conversions already
         lattice L;
-        archive.getlattice(key, L);
-
+        /* guoye: start */
+        // archive.getlattice(key, L);
+        archive.getlattice(key, L, specialwordids);
+        /* guoye: end */
         lattice L2;
         if (mergemode)
         {
@@ -468,8 +473,10 @@ void lattice::dedup()
                 skippedmerges++;
                 continue;
             }
-            archive2.getlattice(key, L2);
-
+            /* guoye: start */
+            // archive2.getlattice(key, L2);
+            archive2.getlattice(key, L2, specialwordids);
+            /* guoye: end */
             // merge it in
             // This will connect each node with matching 1-phone context conditions; aimed at merging numer lattices.
             L.removefinalnull(); // get rid of that final !NULL headache
@@ -563,6 +570,9 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
 
     assert(info.numnodes > 0);
     nodes.reserve(info.numnodes);
+    /* guoye: start */
+    vt_node_out_edge_indices.resize(info.numnodes);
+    /* guoye: end */
     // parse the nodes
     for (size_t i = 0; i < info.numnodes; i++, iter++)
     {
@@ -570,11 +580,24 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
             RuntimeError("lattice: not enough I lines in lattice");
         unsigned long itest;
         float t;
-        if (sscanf_s(*iter, "I=%lu t=%f%c", &itest, &t, &dummychar, (unsigned int)sizeof(dummychar)) < 2)
+        /* guoye:  start */
+        
+        char d[100];
+        // if (sscanf_s(*iter, "I=%lu t=%f%c", &itest, &t, &dummychar, (unsigned int)sizeof(dummychar)) < 2)
+        if (sscanf_s(*iter, "I=%lu t=%f W=%s", &itest, &t, &d, (unsigned int)sizeof(d)) < 3)
             RuntimeError("lattice: mal-formed node line in lattice: %s", *iter);
+
+        /* guoye: end */
+
         if (i != (size_t) itest)
             RuntimeError("lattice: out-of-sequence node line in lattice: %s", *iter);
-        nodes.push_back(nodeinfo((unsigned int) (t / info.frameduration + 0.5)));
+        /* guoye: start */
+        // nodes.push_back(nodeinfo((unsigned int) (t / info.frameduration + 0.5)));
+        // To do: we need to map the d to the wordid. It is P2 task. 
+        // For current speech production pipeline, we read from lattice archive rather than from the raw lattice.  So, this code is actually not used.
+
+        nodes.push_back(nodeinfo((unsigned int)(t / info.frameduration + 0.5), 0));
+        /* guoye: end */
         info.numframes = max(info.numframes, (size_t) nodes.back().t);
     }
     // parse the edges
@@ -600,6 +623,10 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
         if (j != (size_t) jtest)
             RuntimeError("lattice: out-of-sequence edge line in lattice: %s", *iter);
         edges.push_back(edgeinfowithscores(S, E, a, l, align.size()));
+
+        /* guoye: start */
+        vt_node_out_edge_indices[S].push_back(j);
+        /* guoye: end */
         // build align array
         size_t edgeframes = 0; // (for checking whether the alignment sums up right)
         const char *p = d;
@@ -731,5 +758,10 @@ void lattice::frommlf(const wstring &key2, const std::unordered_map<std::string,
 
     showstats();
 }
+
+
+
+
+
 };
 };

@@ -12,6 +12,9 @@
 #include <stdexcept>
 #include <stdint.h>
 #include <cstdio>
+/* guoye: start */
+#include <vector>
+/* guoye: end */
 
 #undef INITIAL_STRANGE // [v-hansu] initialize structs to strange values
 #define PARALLEL_SIL   // [v-hansu] process sil on CUDA, used in other files, please search this
@@ -30,11 +33,22 @@ struct nodeinfo
     // uint64_t firstinedge : 24;  // index of first incoming edge
     // uint64_t firstoutedge : 24; // index of first outgoing edge
     // uint64_t t : 16;            // time associated with this
+
+    /* guoye: start */
+    uint64_t  wid; // word ID associated with the node
+    /* guoye: end */
     unsigned short t; // time associated with this
-    nodeinfo(size_t pt)
-        : t((unsigned short) pt) // , firstinedge (NOEDGE), firstoutedge (NOEDGE)
+
+    nodeinfo(size_t pt, size_t pwid)
+        /* guoye: start */
+        // : t((unsigned short) pt) // , firstinedge (NOEDGE), firstoutedge (NOEDGE)
+        : t((unsigned short)pt), wid(pwid)
+        /* guoye: end */
     {
         checkoverflow(t, pt, "nodeinfo::t");
+        /* guoye: start */
+        checkoverflow(wid, pwid, "nodeinfo::wid");
+        /* guoye: end */
         // checkoverflow (firstinedge, NOEDGE, "nodeinfo::firstinedge");
         // checkoverflow (firstoutedge, NOEDGE, "nodeinfo::firstoutedge");
     }

@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #endif
@@ -58,8 +59,8 @@
 
 #include <errno.h>
 
-using namespace std;
-using namespace Microsoft::MSR::CNTK;
+//using namespace std;
+//using namespace Microsoft::MSR::CNTK;
 
 // All sizes are in bytes
 const int BUF_SIZE = 1000000;                       // Default buffer size 
@@ -241,6 +242,7 @@ static const wchar_t* strchr(const wchar_t* s, wchar_t v)
     return wcschr(s, v);
 }
 
+/* guoye: start */
 // move the definition before the usage in function fopenStdHandle
 // ----------------------------------------------------------------------------
 // set mode to binary or text (pass 'b' or 't')
@@ -263,6 +265,7 @@ void fsetmode(FILE* f, char type)
         RuntimeError("error changing file mode: %s", strerror(errno));
     }
 }
+/* guoye: end */
 
 // pathname is "-" -- open stdin or stdout. Changes bin mode if 'b' or 't' given.
 template <class _T>
@@ -273,11 +276,12 @@ FILE* fopenStdHandle(const _T* mode)
         fsetmode(f, strchr(mode, 'b') ? 'b' : 't');
     return f;
 }
-
+/* guoye: start */
 /*
 FILE* fopenOrDie(const string& pathname, const char* mode)
 */
 FILE* fopenOrDie(const std::string& pathname, const char* mode)
+/* guoye: end */
 {
     FILE* f = (pathname[0] == '-') ? fopenStdHandle(mode) : fopen(pathname.c_str(), mode);
     if (f == NULL)
@@ -291,9 +295,10 @@ FILE* fopenOrDie(const std::string& pathname, const char* mode)
     }
     return f;
 }
-
+/* guoye: start */
 // FILE* fopenOrDie(const wstring& pathname, const wchar_t* mode)
 FILE* fopenOrDie(const std::wstring& pathname, const wchar_t* mode)
+/* guoye: end */
 {
     FILE* f = (pathname[0] == '-') ? fopenStdHandle(mode) : _wfopen(pathname.c_str(), mode);
     if (f == NULL)
@@ -313,15 +318,20 @@ FILE* fopenOrDie(const std::wstring& pathname, const wchar_t* mode)
 // ----------------------------------------------------------------------------
 // freadOrDie(): like fread() but terminate with err msg in case of error
 // ----------------------------------------------------------------------------
+
 void freadOrDie(void* ptr, size_t size, size_t count, FILE* f)
 {
+    /* guoye: start */
     //size_t limit = max(READ_SIZE_LIMIT / size, (size_t)1);  // Normalize by size, as fread() expects units, not bytes
     size_t limit = std::max(READ_SIZE_LIMIT / size, (size_t)1);  // Normalize by size, as fread() expects units, not bytes
+    /* guoye: end */
                                                             // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
+        /* guoye: start */
         // size_t chunkn = min(count, limit);
         size_t chunkn = std::min(count, limit);
+        /* guoye: end */
         size_t n = fread(ptr, size, chunkn, f);
         if (n != chunkn)
             RuntimeError("error reading from file: %s", strerror(errno));
@@ -701,16 +711,23 @@ void renameOrDie(const std::wstring& from, const std::wstring& to)
 // ----------------------------------------------------------------------------
 // copyOrDie(): copy file with error handling.
 // ----------------------------------------------------------------------------
+/* guoye: start */
 // void copyOrDie(const string& from, const string& to)
 void copyOrDie(const std::string& from, const std::string& to)
+/* guoye: end */
 {
     // Call wide string implementation.
     copyOrDie(s2ws(from), s2ws(to));
 }
-
+/* guoye: start */
+//void copyOrDie(const wstring& from, const wstring& to)
 void copyOrDie(const std::wstring& from, const std::wstring& to)
+/* guoye: end */
 {
+    /* guoye: start */
+    // const wstring tempTo = to + L".tmp";
     const std::wstring tempTo = to + L".tmp";
+    /* guoye: end */
 #ifdef _WIN32
 #ifdef CNTK_UWP
     to;
@@ -868,21 +885,77 @@ static inline size_t strnlen(wchar_t* s, size_t n)
     return wcsnlen(s, n);
 }
 
+template <class CHAR>
+CHAR* fgetline(FILE* f, CHAR* buf, int size)
+{
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    /* guoye: start */
+    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
+    /* guoye: end */
+    CHAR* p = fgets(buf, size, f);
+    /* guoye: start */
+     // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
+    /* guoye: end */
+    if (p == NULL) // EOF reached: next time feof() = true
+    {
+        if (ferror(f))
+            RuntimeError("error reading line: %s", strerror(errno));
+        buf[0] = 0;
+        return buf;
+    }
+    size_t n = strnlen(p, size);
 
+    // check for buffer overflow
+
+    if (n >= (size_t)size - 1)
+    {
+        /* guoye: start */
+        // basic_string<CHAR> example(p, n < 100 ? n : 100);
+        std::basic_string<CHAR> example(p, n < 100 ? n : 100);
+        /* guoye: end */
+        uint64_t filepos = fgetpos(f); // (for error message only)
+        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int)filepos, (int)size - 1, msra::strfun::utf8(example).c_str());
+    }
+
+    // remove newline at end
+
+    if (n > 0 && p[n - 1] == '\n') // UNIX and Windows style
+    {
+        n--;
+        p[n] = 0;
+        if (n > 0 && p[n - 1] == '\r') // Windows style
+        {
+            n--;
+            p[n] = 0;
+        }
+    }
+    else if (n > 0 && p[n - 1] == '\r') // Mac style
+    {
+        n--;
+        p[n] = 0;
+    }
+
+    return buf;
+}
 
 // STL string version
 std::string fgetline(FILE* f)
 {
+    /* guoye: start */
+    // vector<char> buf(BUF_SIZE);
     std::vector<char> buf(BUF_SIZE);
+    /* guoye: end */
     return fgetline(f, &buf[0], (int)buf.size());
 }
 
 // STL string version
 std::wstring fgetlinew(FILE* f)
 {
+    /* guoye: start */
+    // vector<wchar_t> buf(BUF_SIZE);
     std::vector<wchar_t> buf(BUF_SIZE);
-    
-    return fgetlinew(f, &buf[0], (int)buf.size());
+    /* guoye: end */
+    return fgetline(f, &buf[0], (int)buf.size());
 }
 
 // STL string version avoiding most memory allocations
@@ -896,7 +969,7 @@ void fgetline(FILE* f, std::string& s, std::vector<char>& buf)
 void fgetline(FILE* f, std::wstring& s, std::vector<wchar_t>& buf)
 {
     buf.resize(BUF_SIZE);
-    const wchar_t* p = fgetlinew(f, &buf[0], (int)buf.size());
+    const wchar_t* p = fgetline(f, &buf[0], (int)buf.size());
     s.assign(p);
 }
 
@@ -911,7 +984,7 @@ void fgetline(FILE* f, std::vector<char>& buf)
 void fgetline(FILE* f, std::vector<wchar_t>& buf)
 {
     buf.resize(BUF_SIZE);
-    fgetlinew(f, &buf[0], (int)buf.size());
+    fgetline(f, &buf[0], (int)buf.size());
     buf.resize(wcsnlen(&buf[0], BUF_SIZE) + 1); // SECURITY NOTE: string use has been reviewed
 }
 
@@ -936,9 +1009,13 @@ const char* fgetstring(FILE* f, __out_z_cap(size) char* buf, int size)
 }
 
 // read a 0-terminated wstring
+/* guoye: start */
+// string fgetstring(FILE* f)
 std::string fgetstring(FILE* f)
 {
+    // string res;
     std::string res;
+    /* guoye: end */
     for (;;)
     {
         int c = fgetc(f);
@@ -976,10 +1053,16 @@ const wchar_t* fgetstring(FILE* f, __out_z_cap(size) wchar_t* buf, int size)
 
 #if (_MSC_VER < 1800)
 // read a 0-terminated wstring
+/* guoye: start */
+// wstring fgetwstring(FILE* f)
 std::wstring fgetwstring(FILE* f)
+/* guoye: end */
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    /* guoye: start */
+    // wstring res;
     std::wstring res;
+    /* guoye: end */
     for (;;)
     {
         //
@@ -1006,10 +1089,14 @@ std::wstring fgetwstring(FILE* f)
 
 #else
 // read a 0-terminated wstring
+/* guoye: start */
+// wstring fgetwstring(FILE* f)
 std::wstring fgetwstring(FILE* f)
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    // wstring res;
     std::wstring res;
+    /* guoye: end */
     for (;;)
     {
         wint_t c = fgetwc(f);
@@ -1136,8 +1223,10 @@ const char* fgettoken(FILE* f, __out_z_cap(size) char* buf, int size)
     buf[i] = 0;
     return buf;
 }
-
+/* guoye: start */
+// string fgettoken(FILE* f)
 std::string fgettoken(FILE* f)
+/* guoye: end */
 {
     char buf[80];
     return fgettoken(f, buf, sizeof(buf) / sizeof(*buf));
@@ -1205,9 +1294,9 @@ void fputText<bool>(FILE* f, bool v)
 
 std::string fgetTag(FILE* f)
 {
-    char tag[LATTICE_TAG_LENGTH +1];
-    freadOrDie(&tag[0], sizeof(tag[0]), LATTICE_TAG_LENGTH, f);
-    tag[LATTICE_TAG_LENGTH] = 0;
+    char tag[5];
+    freadOrDie(&tag[0], sizeof(tag[0]), 4, f);
+    tag[4] = 0;
     return std::string(tag);
 }
 
@@ -1219,8 +1308,10 @@ void fcheckTag(FILE* f, const char* expectedTag)
 {
     fcompareTag(fgetTag(f), expectedTag);
 }
-
+/* guoye: start */
+// void fcheckTag_ascii(FILE* f, const string& expectedTag)
 void fcheckTag_ascii(FILE* f, const std::string& expectedTag)
+/* guoye: end */
 {
     char buf[20]; // long enough for a tag
     fskipspace(f);
@@ -1234,7 +1325,10 @@ void fcheckTag_ascii(FILE* f, const std::string& expectedTag)
 // ----------------------------------------------------------------------------
 // fcompareTag(): compare two tags; terminate if wrong tag
 // ----------------------------------------------------------------------------
+/* guoye: start */
+// void fcompareTag(const string& readTag, const string& expectedTag)
 void fcompareTag(const std::string& readTag, const std::string& expectedTag)
+/* guoye: end */
 {
     if (readTag != expectedTag)
     {
@@ -1590,7 +1684,10 @@ void fputdouble(FILE* f, double v)
 // ----------------------------------------------------------------------------
 // fputfile(): write a binary block or a string as a file
 // ----------------------------------------------------------------------------
+/* guoye: start */
+// void fputfile(const wstring& pathname, const std::vector<char>& buffer)
 void fputfile(const std::wstring& pathname, const std::vector<char>& buffer)
+/* guoye: end */
 {
     FILE* f = fopenOrDie(pathname, L"wb");
     try
@@ -1608,7 +1705,10 @@ void fputfile(const std::wstring& pathname, const std::vector<char>& buffer)
     }
 }
 
+/* guoye: start */
+// void fputfile(const wstring& pathname, const std::wstring& string)
 void fputfile(const std::wstring& pathname, const std::wstring& string)
+/* guoye: end */
 {
     FILE* f = fopenOrDie(pathname, L"wb");
     try
@@ -1626,7 +1726,10 @@ void fputfile(const std::wstring& pathname, const std::wstring& string)
     }
 }
 
+/* guoye: start */
+// void fputfile(const wstring& pathname, const std::string& string)
 void fputfile(const std::wstring& pathname, const std::string& string)
+/* guoye: end */
 {
     FILE* f = fopenOrDie(pathname, L"wb");
     try
@@ -1647,7 +1750,10 @@ void fputfile(const std::wstring& pathname, const std::string& string)
 // ----------------------------------------------------------------------------
 // fgetfile(): load a file as a binary block
 // ----------------------------------------------------------------------------
+/* guoye: start */
+// void fgetfile(const wstring& pathname, std::vector<char>& buffer)
 void fgetfile(const std::wstring& pathname, std::vector<char>& buffer)
+/* guoye: end */
 {
     FILE* f = fopenOrDie(pathname, L"rb");
     size_t len = filesize(f);
@@ -1678,7 +1784,10 @@ void fgetfile(FILE* f, std::vector<char>& buffer)
 }
 
 // load it into RAM in one huge chunk
+/* guoye: start */
+// static size_t fgetfilechars(const std::wstring& path, vector<char>& buffer)
 static size_t fgetfilechars(const std::wstring& path, std::vector<char>& buffer)
+/* guoye: end */
 {
     auto_file_ptr f(fopenOrDie(path, L"rb"));
     size_t len = filesize(f);
@@ -1687,8 +1796,10 @@ static size_t fgetfilechars(const std::wstring& path, std::vector<char>& buffer)
     buffer.push_back(0); // this makes it a proper C string
     return len;
 }
-
+/* guoye: start */
+// static void fgetfilechars(const std::wstring& path, vector<char>& buffer, size_t& len)
 static void fgetfilechars(const std::wstring& path, std::vector<char>& buffer, size_t& len)
+/* guoye: end */
 {
     len = fgetfilechars(path, buffer);
 }
@@ -1699,8 +1810,10 @@ static void strtoklines(char* s, LINES& lines)
     for (char* p = strtok(s, "\r\n"); p; p = strtok(NULL, "\r\n"))
         lines.push_back(p);
 }
-
+/* guoye: start */
+// void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, std::vector<std::string>& lines, int numberOfTries)
 void msra::files::fgetfilelines(const std::wstring& path, std::vector<char>& buffer, std::vector<std::string>& lines, int numberOfTries)
+/* guoye: end */
 {
     size_t len = 0;
     msra::util::attempt(numberOfTries, [&]() // (can be reading from network)
@@ -1716,7 +1829,10 @@ void msra::files::fgetfilelines(const std::wstring& path, std::vector<char>& buf
 }
 
 // same as above but returning const char* (avoiding the memory allocation)
+/* guoye: start */
+// vector<char*> msra::files::fgetfilelines(const wstring& path, vector<char>& buffer, int numberOfTries)
 std::vector<char*> msra::files::fgetfilelines(const std::wstring& path, std::vector<char>& buffer, int numberOfTries)
+/* guoye: end */
 {
     size_t len = 0;
     msra::util::attempt(numberOfTries, [&]() // (can be reading from network)
@@ -1726,7 +1842,10 @@ std::vector<char*> msra::files::fgetfilelines(const std::wstring& path, std::vec
     });
 
     // parse into lines
+    /* guoye: start */
+    // vector<char*> lines;
     std::vector<char*> lines;
+    /* guoye: end */
     lines.reserve(len / 20);
     strtoklines(&buffer[0], lines);
     return lines;
@@ -1737,6 +1856,7 @@ std::vector<char*> msra::files::fgetfilelines(const std::wstring& path, std::vec
 // ----------------------------------------------------------------------------
 
 #ifndef _FILETIME_
+//typedef struct _FILETIME { DWORD dwLowDateTime; DWORD dwHighDateTime; };    // from minwindef.h
 typedef time_t FILETIME;
 #else
 bool operator>=(const FILETIME& targettime, const FILETIME& inputtime) // for use in fuptodate()
@@ -1775,7 +1895,10 @@ public:
     }
 };
 #endif
+/* guoye: start */
+// bool getfiletime(const wstring& path, FILETIME& time)
 bool getfiletime(const std::wstring& path, FILETIME& time)
+/* guoye: end */
 { // return file modification time, false if cannot be determined
 #ifdef _WIN32
     WIN32_FIND_DATAW findFileData;
@@ -1809,7 +1932,10 @@ bool getfiletime(const std::wstring& path, FILETIME& time)
 #ifdef _WIN32
 // Win32-style variant of this function (in case we want to use it some day)
 // Returns 0 in case of failure. May throw in case of bad_alloc.
+/* guoye: start */
+// static BOOL ExpandWildcards(wstring path, vector<wstring>& paths)
 static BOOL ExpandWildcards(std::wstring path, std::vector<std::wstring>& paths)
+/* guoye: end */
 {
     // convert root to DOS filename convention
     for (size_t k = 0; k < path.length(); k++)
@@ -1821,21 +1947,33 @@ static BOOL ExpandWildcards(std::wstring path, std::vector<std::wstring>& paths)
     if (last >= 0 && path[last] == '\\')
         path.erase(last);
 
+    // convert root to long filename convention
+    // if (path.find (L"\\\\?\\") != 0)
+    //    path = L"\\\\?\\" + root;
+
     // split off everything after first wildcard
     size_t wpos = path.find_first_of(L"*?");
     if (wpos == 2 && path[0] == '\\' && path[1] == '\\')
         wpos = path.find_first_of(L"*?", 4); // 4=skip "\\?\"
-
+    /* guoye: start */
+    // if (wpos == wstring::npos)
     if (wpos == std::wstring::npos)
+        /* guoye: end */
     { // no wildcard: just return it
         paths.push_back(path);
         return TRUE;
     }
 
     // split off everything afterwards if any
+    /* guoye: start */
+    // wstring rest; // remaining path after this directory
     std::wstring rest; // remaining path after this directory
+                  /* guoye: end */
     size_t spos = path.find_first_of(L"\\", wpos + 1);
+    /* guoye: start */
+    // if (spos != wstring::npos)
     if (spos != std::wstring::npos)
+        /* guoye: end */
     {
         rest = path.substr(spos + 1);
         path.erase(spos);
@@ -1852,10 +1990,15 @@ static BOOL ExpandWildcards(std::wstring path, std::vector<std::wstring>& paths)
         return FALSE;    // another error
     }
     size_t pos = path.find_last_of(L"\\");
+    /* guoye: start */
+    // if (pos == wstring::npos)
     if (pos == std::wstring::npos)
+        /* guoye: end */
         LogicError("unexpected missing \\ in path");
+    /* guoye: start */
+    // wstring parent = path.substr(0, pos);
     std::wstring parent = path.substr(0, pos);
-
+    /* guoye: end */
     do
     {
         // skip this and parent directory
@@ -1863,7 +2006,10 @@ static BOOL ExpandWildcards(std::wstring path, std::vector<std::wstring>& paths)
         if (isDir && ffdata.cFileName[0] == '.')
             continue;
 
+        /* guoye: start */
+        // wstring filename = parent + L"\\" + ffdata.cFileName;
         std::wstring filename = parent + L"\\" + ffdata.cFileName;
+        /* guoye: end */
         if (rest.empty())
         {
             paths.push_back(filename);
@@ -1877,8 +2023,10 @@ static BOOL ExpandWildcards(std::wstring path, std::vector<std::wstring>& paths)
     return TRUE;
 }
 #endif
-
+/* guoye: start */
+// void expand_wildcards(const wstring& path, vector<wstring>& paths)
 void expand_wildcards(const std::wstring& path, std::vector<std::wstring>& paths)
+/* guoye: end */
 {
 #ifdef _WIN32
     BOOL rc = ExpandWildcards(path, paths);
@@ -1903,7 +2051,10 @@ void expand_wildcards(const std::wstring& path, std::vector<std::wstring>& paths
 // ----------------------------------------------------------------------------
 // make_intermediate_dirs() -- make all intermediate dirs on a path
 // ----------------------------------------------------------------------------
-static void mkdir(const std::wstring& path)/* guoye: end */
+/* guoye: start */
+// static void mkdir(const wstring& path)
+static void mkdir(const std::wstring& path)
+/* guoye: end */
 {
     int rc = _wmkdir(path.c_str());
     if (rc >= 0 || errno == EEXIST)
@@ -1920,14 +2071,20 @@ static void mkdir(const std::wstring& path)/* guoye: end */
 }
 
 // make subdir of a file including parents
+/* guoye: start */
+// void msra::files::make_intermediate_dirs(const wstring& filepath)
 void msra::files::make_intermediate_dirs(const std::wstring& filepath)
 {
     // vector<wchar_t> buf;
     std::vector<wchar_t> buf;
 
+    /* guoye: end  */
     buf.resize(filepath.length() + 1, 0);
     wcscpy(&buf[0], filepath.c_str());
+    /* guoye: start */
+    // wstring subpath;
     std::wstring subpath;
+    /* guoye: end */
     int skip = 0;
 #ifdef _WIN32
     // On windows, if share (\\) then the first two levels (machine, share name) cannot be made.
@@ -2016,7 +2173,10 @@ std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::w
 // test if file 'target' is not older than 'input' --used for make mode
 // 'input' must exist if 'inputrequired'; otherweise if 'target' exists, it is considered up to date
 // 'target' may or may not exist
+/* guoye: start */
+// bool msra::files::fuptodate(const wstring& target, const wstring& input, bool inputrequired)
 bool msra::files::fuptodate(const std::wstring& target, const std::wstring& input, bool inputrequired)
+/* guoye: end */
 {
     FILETIME targettime;
     if (!getfiletime(target, targettime))
@@ -2028,25 +2188,72 @@ bool msra::files::fuptodate(const std::wstring& target, const std::wstring& inpu
     return targettime >= inputtime; // note: uses an overload for WIN32 FILETIME (in Linux, FILETIME=time_t=size_t)
 }
 
+// separate string by separator
+template<class String>
+/* guoye: start */
+// vector<String> SplitString(const String& str, const String& sep)
+std::vector<String> SplitString(const String& str, const String& sep)
+/* guoye: end */
+{
+    /* guoye: start */
+    // vector<String> vstr;
+    std::vector<String> vstr;
+    /* guoye: end */
+    String csub;
+    size_t ifound = 0;
+    size_t ifoundlast = ifound;
+    ifound = str.find_first_of(sep, ifound);
+    while (ifound != String::npos)
+    {
+        csub = str.substr(ifoundlast, ifound - ifoundlast);
+        if (!csub.empty())
+            vstr.push_back(csub);
 
+        ifoundlast = ifound + 1;
+        ifound = str.find_first_of(sep, ifoundlast);
+    }
+    ifound = str.length();
+    csub = str.substr(ifoundlast, ifound - ifoundlast);
+    if (!csub.empty())
+        vstr.push_back(csub);
+
+    return vstr;
+}
+/* guoye: start */
+// template vector<string>  SplitString(const  string& istr, const  string& sep);
+// template vector<wstring> SplitString(const wstring& istr, const wstring& sep);
+
+// template std::vector<std::string>  SplitString(const  std::string& istr, const  std::string& sep);
+// template std::vector<std::wstring> SplitString(const std::wstring& istr, const std::wstring& sep);
+/* guoye: end */
 static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
     size_t len = p.length();
-    vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    fill(buf.begin(), buf.end(), (char)0);
+    /* guoye: start */
+    // vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
+    std::vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
+    /* guoye: end */
+    fill(buf.begin(), buf.end(), 0);
     ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
     return std::string(&buf[0]);
 }
 static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
 {
     size_t len = p.length();
+    /* guoye:  start */
+    // vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
     std::vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
+    /* guoye: end */
     fill(buf.begin(), buf.end(), (wchar_t)0);
+    // OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
 }
 
+/* guoye: start */
+// wstring s2ws(const string& str)
 std::wstring s2ws(const std::string& str)
+/* guoye: end */
 {
 #ifdef __unix__
     return mbstowcs(str);
@@ -2057,7 +2264,10 @@ std::wstring s2ws(const std::string& str)
 
 #endif
 }
+/* guoye: start */
+// string ws2s(const wstring& wstr)
 std::string ws2s(const std::wstring& wstr)
+/* guoye: end */
 {
 #ifdef __unix__
     return wcstombs(wstr);

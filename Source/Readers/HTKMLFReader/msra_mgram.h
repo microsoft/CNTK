@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
@@ -9,11 +9,15 @@
 
 #include "Basics.h"
 #include "fileutil.h" // for opening/reading the ARPA file
+/* guoye: start */
+// #include "fileutil.cpp"
+/* guoye: end */
 #include <vector>
 #include <string>
 #include <unordered_map>
 #include <algorithm> // for various sort() calls
 #include <math.h>
+
 
 namespace msra { namespace lm {
 
@@ -92,15 +96,40 @@ static inline double invertlogprob(double logP)
 // compare function to allow char* as keys (without, unordered_map will correctly
 // compute a hash key from the actual strings, but then compare the pointers
 // -- duh!)
-struct less_strcmp : public std::binary_function<const char *, const char *, bool>
+/* guoye: start */
+// struct less_strcmp : public std::binary_function<const char *, const char *, bool>
+struct equal_strcmp : public std::binary_function<const char *, const char *, bool>
 { // this implements operator<
     bool operator()(const char *const &_Left, const char *const &_Right) const
     {
-        return strcmp(_Left, _Right) < 0;
+        // return strcmp(_Left, _Right) < 0;
+        return strcmp(_Left, _Right) == 0;
+    }
+};
+/* guoye: end */
+struct BKDRHash {
+    //BKDR hash algorithm
+    int operator()(const char * str)const
+    {
+        unsigned int seed = 131; //31  131 1313 13131131313 etc//
+        unsigned int hash = 0;
+        while (*str)
+        {
+            hash = (hash * seed) + (*str);
+            str++;
+        }
+
+        return hash & (0x7FFFFFFF);
     }
 };
 
-class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char *>, less_strcmp>
+
+/* guoye: start */
+/* bug fix: the customize function of compare should be written in the one commented below is not right. The generated behavior is very strange: it does not correctly make a map. So, fix it. */
+// class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char *>, less_strcmp>
+// class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char *>, equal_strcmp>
+class CSymbolSet : public std::unordered_map<const char *, int, BKDRHash, equal_strcmp>
+/* guoye: end */
 {
     std::vector<const char *> symbols; // the symbols
 
@@ -128,7 +157,9 @@ public:
     // get id for an existing word, returns -1 if not existing
     int operator[](const char *key) const
     {
-        unordered_map<const char *, int>::const_iterator iter = find(key);
+        /* guoye: start */
+        // unordered_map<const char *, int>::const_iterator iter = find(key);
+        unordered_map<const char *, int, BKDRHash, equal_strcmp>::const_iterator iter = find(key);
         return (iter != end()) ? iter->second : -1;
     }
 
@@ -136,7 +167,10 @@ public:
     // determine unique id for a word ('key')
     int operator[](const char *key)
     {
-        unordered_map<const char *, int>::const_iterator iter = find(key);
+        /* guoye: start */
+        // unordered_map<const char *, int>::const_iterator iter = find(key);
+        unordered_map<const char *, int, BKDRHash, equal_strcmp>::const_iterator iter = find(key);
+    
         if (iter != end())
             return iter->second;
 
@@ -149,7 +183,11 @@ public:
         {
             int id = (int) symbols.size();
             symbols.push_back(p); // we own the memory--remember to free it
-            insert(std::make_pair(p, id));
+            /* guoye: start */ 
+            // insert(std::make_pair(p, id));
+            if(!insert(std::make_pair(p, id)).second)
+                RuntimeError("Insertion key %s into map failed in msra_mgram.h", p);
+            /* guoye: end */
             return id;
         }
         catch (...)
@@ -1450,30 +1488,67 @@ public:
         int lineNo = 0;
         auto_file_ptr f(fopenOrDie(pathname, L"rbS"));
         fprintf(stderr, "read: reading %ls", pathname.c_str());
+        /* guoye: start */
+        //fprintf(stderr, "\n msra_mgram.h: read: debug 0\n");
+        /* guoye: end */
         filename = pathname; // (keep this info for debugging)
-
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 0.1\n");
+        /* guoye: end */
         // --- read header information
 
         // search for header line
         char buf[1024];
-        lineNo++, fgetline(f, buf);
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 0.2\n");
+        /* guoye: end */
+        /* guoye: start */
+        // lineNo++, fgetline(f, buf);
+        lineNo++;
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 0.25\n");
+        fgetline(f, buf);
+
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 0.3\n");
+        /* guoye: end */
         while (strcmp(buf, "\\data\\") != 0 && !feof(f))
-            lineNo++, fgetline(f, buf);
-        lineNo++, fgetline(f, buf);
+            /* guoye: start */
+        {
+            // lineNo++, fgetline(f, buf);
+            lineNo++;
+            fgetline(f, buf);
+        }
+        /* guoye: end */
+        /* guoye: start */
+
+        // lineNo++, fgetline(f, buf);
+        lineNo++;
+        fgetline(f, buf);
+
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 1\n");
+        /* guoye: end */
 
         // get the dimensions
         std::vector<int> dims;
         dims.reserve(4);
 
         while (buf[0] == 0 && !feof(f))
-            lineNo++, fgetline(f, buf);
-
+            /* guoye: start */
+        {
+          //  lineNo++, fgetline(f, buf);
+            lineNo++;
+            fgetline(f, buf);
+        }
+        /* guoye: end */
         int n, dim;
         dims.push_back(1); // dummy zerogram entry
         while (sscanf(buf, "ngram %d=%d", &n, &dim) == 2 && n == (int) dims.size())
         {
             dims.push_back(dim);
-            lineNo++, fgetline(f, buf);
+            /* guoye: start */
+            // lineNo++, fgetline(f, buf);
+            lineNo++;
+            fgetline(f, buf);
+            /* guoye: end */
         }
 
         M = (int) dims.size() - 1;
@@ -1483,6 +1558,9 @@ public:
         if (M > maxM)
             M = maxM;
 
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 2\n");
+        /* guoye: end */
         // allocate main storage
         map.init(M);
         logP.init(M);
@@ -1502,18 +1580,34 @@ public:
         std::vector<bool> skipWord; // true: skip entry containing this word
         skipWord.reserve(lmSymbols.capacity());
 
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 3\n");
+        /* guoye: end */
+
         // --- read main sections
 
         const double ln10xLMF = log(10.0);                // ARPA scores are strangely scaled
         msra::strfun::tokenizer tokens(" \t\n\r", M + 1); // used in tokenizing the input line
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 4\n");
+        /* guoye: end */
         for (int m = 1; m <= M; m++)
         {
             while (buf[0] == 0 && !feof(f))
-                lineNo++, fgetline(f, buf);
-
+            /* guoye: start */
+            {
+                // lineNo++, fgetline(f, buf);
+                lineNo++;
+                fgetline(f, buf);
+            }
+            /* guoye: end */
             if (sscanf(buf, "\\%d-grams:", &n) != 1 || n != m)
                 RuntimeError("read: mal-formed LM file, bad section header (%d): %ls", lineNo, pathname.c_str());
-            lineNo++, fgetline(f, buf);
+            /* guoye: start */
+            //lineNo++, fgetline(f, buf);
+            lineNo++;
+            fgetline(f, buf);
+            /* guoye: end */
 
             std::vector<int> mgram(m + 1, -1);     // current mgram being read ([0]=dummy)
             std::vector<int> prevmgram(m + 1, -1); // cache to speed up symbol lookup
@@ -1524,7 +1618,11 @@ public:
             {
                 if (buf[0] == 0)
                 {
-                    lineNo++, fgetline(f, buf);
+                    /* guoye: start */
+                    // lineNo++, fgetline(f, buf);
+                    lineNo++;
+                    fgetline(f, buf);
+                    /* guoye: end */
                     continue;
                 }
 
@@ -1576,8 +1674,11 @@ public:
                     double boVal = atof(tokens[m + 1]); // ... use sscanf() instead for error checking?
                     thisLogB = boVal * ln10xLMF;        // convert to natural log
                 }
-
-                lineNo++, fgetline(f, buf);
+                /* guoye: start */
+                // lineNo++, fgetline(f, buf);
+                lineNo++;
+                fgetline(f, buf);
+                /* guoye: end */
 
                 if (skipEntry) // word contained unknown vocabulary: skip entire entry
                     goto skipMGram;
@@ -1615,16 +1716,28 @@ public:
 
             fprintf(stderr, ", %d %d-grams", map.size(m), m);
         }
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 5\n");
+        /* guoye: end */
         fprintf(stderr, "\n");
 
         // check end tag
         if (M == fileM)
         { // only if caller did not restrict us to a lower order
             while (buf[0] == 0 && !feof(f))
-                lineNo++, fgetline(f, buf);
+/* guoye: start */
+            {
+                lineNo++;
+                fgetline(f, buf);
+             //   lineNo++, fgetline(f, buf);
+            }
             if (strcmp(buf, "\\end\\") != 0)
                 RuntimeError("read: mal-formed LM file, no \\end\\ tag (%d): %ls", lineNo, pathname.c_str());
         }
+
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 6 \n");
+        /* guoye: end */
 
         // update zerogram score by one appropriate for OOVs
         updateOOVScore();
@@ -1638,7 +1751,13 @@ public:
             int id = symbolToId(sym); // may be -1 if not found
             userToLMSymMap[i] = id;
         }
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 7 \n");
+        /* guoye: end */
         map.created(userToLMSymMap);
+        /* guoye: start */
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 8 \n");
+        /* guoye: end */
     }
 
 protected:
