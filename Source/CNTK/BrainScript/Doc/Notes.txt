@@ -246,7 +246,7 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
             //L3 = SBFF(L2,hiddenDim,hiddenDim)
             //CE = SMBFF(L3,labelDim,hiddenDim,myLabels,tag=Criteria)
             //Err = ClassificationError(myLabels,CE.BFF.FF.P,tag=Eval)
-            //logPrior = LogPrior(myLabels)	 
+            //logPrior = LogPrior(myLabels)     
             //ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
 
             // new:
@@ -282,7 +282,7 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
             Err = ClassificationError(myLabels, outZ)
 
             // define output node for decoding
-            logPrior = LogPrior(myLabels)	 
+            logPrior = LogPrior(myLabels)     
             ScaledLogLikelihood = outZ - logPrior   // before: Minus(CE.BFF.FF.P,logPrior,tag=Output)
         ]
     ]
@@ -395,6 +395,6 @@ network = new NDL [
     Err = ClassificationError(myLabels, outZ)
 
     // define output node for decoding
-    logPrior = LogPrior(myLabels)	 
+    logPrior = LogPrior(myLabels)     
     ScaledLogLikelihood = outZ - logPrior   // before: Minus(CE.BFF.FF.P,logPrior,tag=Output)
 ]

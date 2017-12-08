@@ -90,17 +90,17 @@ class lattice
     static const unsigned int NOEDGE = 0xffffff; // 24 bits
     // static_assert (sizeof (nodeinfo) == 8, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
     // ensure type size as these are expected to be of this size in the files we read
-	/* guoye: start */
-	static_assert(sizeof(nodeinfo) == 16, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
+    /* guoye: start */
+    static_assert(sizeof(nodeinfo) == 16, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
 
-	/* guoye: end */
+    /* guoye: end */
     static_assert(sizeof(edgeinfowithscores) == 16, "unexpected size of edgeinfowithscores");
     static_assert(sizeof(aligninfo) == 4, "unexpected size of aligninfo");
     std::vector<nodeinfo> nodes;
-	/* guoye: start */
-	std::vector<std::vector<uint64_t>> vt_node_out_edge_indices; // vt_node_out_edge_indices[i]: it stores the outgoing edge indices starting from node i
-	std::vector<bool> is_special_words; // true if it is special words that do not count to WER computation, false if it is not
-	/* guoye: end */
+    /* guoye: start */
+    std::vector<std::vector<uint64_t>> vt_node_out_edge_indices; // vt_node_out_edge_indices[i]: it stores the outgoing edge indices starting from node i
+    std::vector<bool> is_special_words; // true if it is special words that do not count to WER computation, false if it is not
+    /* guoye: end */
     std::vector<edgeinfowithscores> edges;
     std::vector<aligninfo> align;
     // V2 lattices  --for a while, we will store both in RAM, until all code is updated
@@ -708,7 +708,7 @@ private:
                                       const float lmf, const float wp, const float amf, const_array_ref<size_t>& uids,
                                       const edgealignments& thisedgealignments, std::vector<double>& Eframescorrect) const;
 
-	
+    
     void sMBRerrorsignal(parallelstate& parallelstate,
                          msra::math::ssematrixbase& errorsignal, msra::math::ssematrixbase& errorsignalneg,
                          const std::vector<double>& logpps, const float amf, double minlogpp,
@@ -744,8 +744,8 @@ private:
                                  const std::vector<double>& logpps, const float amf,
                                  const std::vector<double>& logEframescorrect, const double logEframescorrecttotal,
                                  msra::math::ssematrixbase& errorsignal, msra::math::ssematrixbase& errorsignalneg) const;
-	void parallelEMBRerrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
-		const std::vector<double>& edgeweights, msra::math::ssematrixbase& errorsignal) const;
+    void parallelEMBRerrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
+        const std::vector<double>& edgeweights, msra::math::ssematrixbase& errorsignal) const;
     void parallelmmierrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
                                 const std::vector<double>& logpps, msra::math::ssematrixbase& errorsignal) const;
 
@@ -756,17 +756,17 @@ private:
                                           const_array_ref<size_t>& uids, std::vector<double>& logEframescorrect,
                                           std::vector<double>& Eframescorrectbuf, double& logEframescorrecttotal) const;
 
-	/* guoye: start */
-	double parallelbackwardlatticeEMBR(parallelstate& parallelstate, const std::vector<float>& edgeacscores,
-		const float lmf, const float wp,
-		const float amf, std::vector<double>& edgelogbetas,
-		std::vector<double>& logbetas) const;
-	
-	void EMBRsamplepaths(const std::vector<double> &edgelogbetas,
-		const std::vector<double> &logbetas, const size_t numPathsEMBR, std::vector< std::vector<size_t> > & vt_paths) const;
+    /* guoye: start */
+    double parallelbackwardlatticeEMBR(parallelstate& parallelstate, const std::vector<float>& edgeacscores,
+        const float lmf, const float wp,
+        const float amf, std::vector<double>& edgelogbetas,
+        std::vector<double>& logbetas) const;
+    
+    void EMBRsamplepaths(const std::vector<double> &edgelogbetas,
+        const std::vector<double> &logbetas, const size_t numPathsEMBR, std::vector< std::vector<size_t> > & vt_paths) const;
 
-	double get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, const size_t numPathsEMBR, std::vector<double>& vt_edge_weights) const;
-	/* guoye: end */
+    double get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, const size_t numPathsEMBR, std::vector<double>& vt_edge_weights) const;
+    /* guoye: end */
 
     static double scoregroundtruth(const_array_ref<size_t> uids, const_array_ref<htkmlfwordsequence::word> transcript,
                                    const std::vector<float>& transcriptunigrams, const msra::math::ssematrixbase& logLLs,
@@ -783,11 +783,11 @@ private:
                                   std::vector<double>& logEframescorrect, std::vector<double>& Eframescorrectbuf,
                                   double& logEframescorrecttotal) const;
 
-	/* guoye: start */
-	double backwardlatticeEMBR(const std::vector<float>& edgeacscores, parallelstate& parallelstate, std::vector<double> &edgelogbetas,
+    /* guoye: start */
+    double backwardlatticeEMBR(const std::vector<float>& edgeacscores, parallelstate& parallelstate, std::vector<double> &edgelogbetas,
                                   std::vector<double>& logbetas,
                                   const float lmf, const float wp, const float amf) const;
-	/* guoye: end */
+    /* guoye: end */
 public:
     // construct from a HTK lattice file
     void fromhtklattice(const std::wstring& path, const std::unordered_map<std::string, size_t>& unitmap);
@@ -796,11 +796,11 @@ public:
     void frommlf(const std::wstring& key, const std::unordered_map<std::string, size_t>& unitmap, const msra::asr::htkmlfreader<msra::asr::htkmlfentry, lattice::htkmlfwordsequence>& labels,
                  const msra::lm::CMGramLM& lm, const msra::lm::CSymbolSet& unigramsymbols);
 
-	/* guoye: start */
-	template <class IDMAP>
-	void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids);
+    /* guoye: start */
+    template <class IDMAP>
+    void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids);
 
-	/* guoye: end */
+    /* guoye: end */
     // check consistency
     //  - only one end node
     //  - only forward edges
@@ -992,7 +992,7 @@ public:
 
  
 
-	
+    
     // parallel versions (defined in parallelforwardbackward.cpp)
     class parallelstate
     {
@@ -1020,14 +1020,14 @@ public:
         const size_t getsilunitid();
         void getedgeacscores(std::vector<float>& edgeacscores);
         void getedgealignments(std::vector<unsigned short>& edgealignments);
-		/* guoye: start */
-		void getlogbetas(std::vector<double>& logbetas);
-		void getedgelogbetas(std::vector<double>& edgelogbetas);
-		void getedgeweights(std::vector<double>& edgeweights);
-	
+        /* guoye: start */
+        void getlogbetas(std::vector<double>& logbetas);
+        void getedgelogbetas(std::vector<double>& edgelogbetas);
+        void getedgeweights(std::vector<double>& edgeweights);
+    
 
-		void setedgeweights(const std::vector<double>& edgeweights);
-		/* guoye: end */
+        void setedgeweights(const std::vector<double>& edgeweights);
+        /* guoye: end */
         // to work with CNTK's GPU memory
         void setdevice(size_t DeviceId);
         size_t getdevice();
@@ -1040,28 +1040,28 @@ public:
 
     // forward-backward function
     // Note: logLLs and posteriors may be the same matrix (aliased).
-	/* start: guoye */
-	
-	/*
+    /* start: guoye */
+    
+    /*
     double forwardbackward(parallelstate& parallelstate, const class msra::math::ssematrixbase& logLLs, const class msra::asr::simplesenonehmm& hmms,
                            class msra::math::ssematrixbase& result, class msra::math::ssematrixbase& errorsignalbuf,
                            const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, array_ref<size_t> uids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
                            const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float>& transcriptunigrams = std::vector<float>()) const;
-	
-	*/
-	double forwardbackward(parallelstate& parallelstate, const class msra::math::ssematrixbase& logLLs, const class msra::asr::simplesenonehmm& hmms,
+    
+    */
+    double forwardbackward(parallelstate& parallelstate, const class msra::math::ssematrixbase& logLLs, const class msra::asr::simplesenonehmm& hmms,
                            class msra::math::ssematrixbase& result, class msra::math::ssematrixbase& errorsignalbuf,
                            const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, const bool EMBR, const std::string EMBRUnit, const size_t numPathsEMBR, array_ref<size_t> uids, std::vector<size_t> wids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
                            const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float>& transcriptunigrams = std::vector<float>()) const;
-	
-	/*
-	void embrerrorsignal(parallelstate &parallelstate,
-		std::vector<msra::math::ssematrixbase *> &abcs, const bool softalignstates, const msra::asr::simplesenonehmm &hset,
-		const edgealignments &thisedgealignments, std::vector<std::vector<size_t>>& vt_paths, std::vector<float>& path_weight, msra::math::ssematrixbase &errorsignal) const;
-		*/
-	void EMBRerrorsignal(parallelstate &parallelstate,
-		const edgealignments &thisedgealignments, std::vector<double>& edge_weights, msra::math::ssematrixbase &errorsignal) const;
-		/* end: guoye */							
+    
+    /*
+    void embrerrorsignal(parallelstate &parallelstate,
+        std::vector<msra::math::ssematrixbase *> &abcs, const bool softalignstates, const msra::asr::simplesenonehmm &hset,
+        const edgealignments &thisedgealignments, std::vector<std::vector<size_t>>& vt_paths, std::vector<float>& path_weight, msra::math::ssematrixbase &errorsignal) const;
+        */
+    void EMBRerrorsignal(parallelstate &parallelstate,
+        const edgealignments &thisedgealignments, std::vector<double>& edge_weights, msra::math::ssematrixbase &errorsignal) const;
+        /* end: guoye */                            
     std::wstring key; // (keep our own name (key) so we can identify ourselves for diagnostics messages)
     const wchar_t* getkey() const
     {
@@ -1274,10 +1274,10 @@ public:
     // Lattices will have unit ids updated according to the modelsymmap.
     // V1 lattices will be converted. 'spsenoneid' is used in the conversion for optimizing storing 0-frame /sp/ aligns.
     void getlattice(const std::wstring& key, lattice& L,
-		/* guoye: start */
+        /* guoye: start */
                // size_t expectedframes = SIZE_MAX /*if unknown*/) const
-		std::set<int>& specialwordids, size_t expectedframes = SIZE_MAX) const
-		/* guoye: end */
+        std::set<int>& specialwordids, size_t expectedframes = SIZE_MAX) const
+        /* guoye: end */
     {
         auto iter = toc.find(key);
         if (iter == toc.end())
@@ -1305,10 +1305,10 @@ public:
             fsetpos(f, offset);
             // get it
             /* guoye: start */
-			// L.fread(f, idmap, spunit);
-			L.fread(f, idmap, spunit, specialwordids);
-			
-			/* guoye: end */
+            // L.fread(f, idmap, spunit);
+            L.fread(f, idmap, spunit, specialwordids);
+            
+            /* guoye: end */
             L.setverbosity(verbosity);
 #ifdef HACK_IN_SILENCE // hack to simulate DEL in the lattice
             const size_t silunit = getid(modelsymmap, "sil");
@@ -1340,11 +1340,11 @@ public:
     //  - check consistency (don't write out)
     //  - dump to stdout
     //  - merge two lattices (for merging numer into denom lattices)
-	static void convert(const std::wstring& intocpath, const std::wstring& intocpath2, const std::wstring& outpath,
-		/* guoye: start */
-						// const msra::asr::simplesenonehmm& hset);
-		const msra::asr::simplesenonehmm& hset, std::set<int>& specialwordids);
-	/* guoye: end */
+    static void convert(const std::wstring& intocpath, const std::wstring& intocpath2, const std::wstring& outpath,
+        /* guoye: start */
+                        // const msra::asr::simplesenonehmm& hset);
+        const msra::asr::simplesenonehmm& hset, std::set<int>& specialwordids);
+    /* guoye: end */
 };
 };
 };

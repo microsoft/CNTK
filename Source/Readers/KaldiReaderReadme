@@ -1,13 +1,13 @@
 
 == Authors of the Linux Building README ==
 
-   	Kaisheng Yao
+       Kaisheng Yao
         Microsoft Research
         email: kaisheny@microsoft.com
 
-	Wengong Jin,
-	Shanghai Jiao Tong University
-	email: acmgokun@gmail.com
+    Wengong Jin,
+    Shanghai Jiao Tong University
+    email: acmgokun@gmail.com
 
     Yu Zhang, Leo Liu, Scott Cyphers
     CSAIL, Massachusetts Institute of Technology
@@ -78,10 +78,10 @@ To clean
 
 == Run ==
 All executables are in bin directory:
-	cntk: The main executable for CNTK
-	*.so: shared library for corresponding reader, these readers will be linked and loaded dynamically at runtime.
+    cntk: The main executable for CNTK
+    *.so: shared library for corresponding reader, these readers will be linked and loaded dynamically at runtime.
 
-	./cntk configFile=${your cntk config file}
+    ./cntk configFile=${your cntk config file}
 
 == Kaldi Reader ==
 This is a HTKMLF reader and kaldi writer (for decode)

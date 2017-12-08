@@ -281,10 +281,10 @@ bool DataReader::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::lattice
 {
     bool bRet = true;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-		/* guoye: start */
+        /* guoye: start */
         // bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, boundaries, extrauttmap);
-		bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, wids, nws, boundaries, extrauttmap);
-	/* guoye: end */
+        bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, wids, nws, boundaries, extrauttmap);
+    /* guoye: end */
     return bRet;
 }
 

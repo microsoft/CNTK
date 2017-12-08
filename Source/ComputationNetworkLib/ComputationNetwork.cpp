@@ -622,39 +622,39 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
                                      const double& lmf /*= 14.0f*/,
                                      const double& wp /*= 0.0f*/,
                                      const double& bMMIfactor /*= 0.0f*/,
-									  /* guoye: start */
+                                      /* guoye: start */
                                      // const bool& sMBR /*= false*/
-									 const bool& sMBR  /*= false */,
-									 const bool& EMBR  /*= false */,
-									 const string& EMBRUnit /* = "word" */,
-									 const size_t& numPathsEMBR
-									/* guoye: end */
+                                     const bool& sMBR  /*= false */,
+                                     const bool& EMBR  /*= false */,
+                                     const string& EMBRUnit /* = "word" */,
+                                     const size_t& numPathsEMBR
+                                    /* guoye: end */
                                      )
 {
     fprintf(stderr, "Setting Hsmoothing weight to %.8g and frame-dropping threshhold to %.8g\n", hsmoothingWeight, frameDropThresh);
-	/* guoye: start */
-	
+    /* guoye: start */
+    
     /* 
-	fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, usesMBR=%s\n",
+    fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, usesMBR=%s\n",
             amf, lmf, wp, bMMIfactor, sMBR ? "true" : "false");
-	*/
-	
-	if(EMBR)
-	{
-		fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useEMBR=true, EMBRUnit=%s, numPathsEMBR=%d \n",
+    */
+    
+    if(EMBR)
+    {
+        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useEMBR=true, EMBRUnit=%s, numPathsEMBR=%d \n",
             amf, lmf, wp, bMMIfactor, EMBRUnit.c_str(), int(numPathsEMBR));
-	}
-	else if(sMBR)
-	{
-		fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, usesMBR=true \n",
+    }
+    else if(sMBR)
+    {
+        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, usesMBR=true \n",
             amf, lmf, wp, bMMIfactor);
-	}
-	else
-	{
-		fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useMMI=true \n",
+    }
+    else
+    {
+        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useMMI=true \n",
             amf, lmf, wp, bMMIfactor);
-	}
-	/* guoye: end */
+    }
+    /* guoye: end */
     list<ComputationNodeBasePtr> seqNodes = net->GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
     if (seqNodes.size() == 0)
     {
@@ -668,10 +668,10 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
             node->SetSmoothWeight(hsmoothingWeight);
             node->SetFrameDropThresh(frameDropThresh);
             node->SetReferenceAlign(doreferencealign);
-			/* guoye: start */
+            /* guoye: start */
             // node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR);
-			node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR);
-			/* guoye: end */
+            node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR);
+            /* guoye: end */
         }
     }
 }
@@ -1577,7 +1577,7 @@ template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net,
 */
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR);
-												  
+                                                  
 /* guoye: end */
 
 template void ComputationNetwork::SaveToDbnFile<double>(ComputationNetworkPtr net, const std::wstring& fileName) const;

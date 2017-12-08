@@ -488,11 +488,11 @@ ndlMacroUseCNNAuto=[
 ]
 
 ndlRnnNetwork=[
-	#define basic i/o
-	featDim=1845
-	labelDim=183
-	hiddenDim=2048
-	features=Input(featDim, tag=feature)
+    #define basic i/o
+    featDim=1845
+    labelDim=183
+    hiddenDim=2048
+    features=Input(featDim, tag=feature)
     labels=Input(labelDim, tag=label)
 
     MeanVarNorm(x)=[
@@ -502,9 +502,9 @@ ndlRnnNetwork=[
     ]
                                    
      # define network
-	 featNorm = MeanVarNorm(features)
+     featNorm = MeanVarNorm(features)
      W0 = Parameter(hiddenDim, featDim)
-	 L1 = Times(W0,featNorm)
+     L1 = Times(W0,featNorm)
 
      W = Parameter(hiddenDim, hiddenDim)
      
@@ -515,8 +515,8 @@ ndlRnnNetwork=[
      Output = Times(W2, Dout)
      criterion = CrossEntropyWithSoftmax(labels, Output, tag=Criteria)
 
-	 #CE = SMBFF(Dout,labelDim,hiddenDim,labels,tag=Criteria)
-	 #Err = ErrorPrediction(labels,CE.BFF.FF.P,tag=Eval)
+     #CE = SMBFF(Dout,labelDim,hiddenDim,labels,tag=Criteria)
+     #Err = ErrorPrediction(labels,CE.BFF.FF.P,tag=Eval)
 
     LogPrior(labels)
     {
@@ -525,8 +525,8 @@ ndlRnnNetwork=[
     }
 
      # define output (scaled loglikelihood)
-         logPrior = LogPrior(labels)	 
-	 #ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
+         logPrior = LogPrior(labels)     
+     #ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
     # rootNodes defined here temporarily so we pass
     OutputNodes=(criterion)
     EvalNodes=(criterion)

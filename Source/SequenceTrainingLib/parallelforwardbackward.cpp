@@ -137,20 +137,20 @@ void backwardlatticej(const size_t batchsize, const size_t startindex, const std
 
 
 void backwardlatticejEMBR(const size_t batchsize, const size_t startindex, const std::vector<float>& edgeacscores,
-	const std::vector<msra::lattices::edgeinfowithscores>& edges,
-	const std::vector<msra::lattices::nodeinfo>& nodes,
-	std::vector<double>& edgelogbetas, std::vector<double>& logbetas,
-	float lmf, float wp, float amf)
+    const std::vector<msra::lattices::edgeinfowithscores>& edges,
+    const std::vector<msra::lattices::nodeinfo>& nodes,
+    std::vector<double>& edgelogbetas, std::vector<double>& logbetas,
+    float lmf, float wp, float amf)
 {
-	const size_t tpb = blockDim.x * blockDim.y; // total #threads in a block
-	const size_t jinblock = threadIdx.x + threadIdx.y * blockDim.x;
-	const size_t j = jinblock + blockIdx.x * tpb;
-	if (j < batchsize) // note: will cause issues if we ever use __synctreads() in backwardlatticej
-	{
-		msra::lattices::latticefunctionskernels::backwardlatticejEMBR(j + startindex, edgeacscores, 
-			edges, nodes, edgelogbetas,
-			logbetas, lmf, wp, amf);
-	}
+    const size_t tpb = blockDim.x * blockDim.y; // total #threads in a block
+    const size_t jinblock = threadIdx.x + threadIdx.y * blockDim.x;
+    const size_t j = jinblock + blockIdx.x * tpb;
+    if (j < batchsize) // note: will cause issues if we ever use __synctreads() in backwardlatticej
+    {
+        msra::lattices::latticefunctionskernels::backwardlatticejEMBR(j + startindex, edgeacscores, 
+            edges, nodes, edgelogbetas,
+            logbetas, lmf, wp, amf);
+    }
 }
 
 /* guoye: end */
@@ -170,15 +170,15 @@ void sMBRerrorsignalj(const std::vector<unsigned short>& alignstateids, const st
 
 /* guoye: start */
 void EMBRerrorsignalj(const std::vector<unsigned short>& alignstateids, const std::vector<unsigned int>& alignoffsets,
-	const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
-	const std::vector<double>& edgeweights, msra::math::ssematrixbase& errorsignal)
+    const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
+    const std::vector<double>& edgeweights, msra::math::ssematrixbase& errorsignal)
 {
-	const size_t shufflemode = 3;
-	const size_t j = msra::lattices::latticefunctionskernels::shuffle(threadIdx.x, blockDim.x, threadIdx.y, blockDim.y, blockIdx.x, gridDim.x, shufflemode);
-	if (j < edges.size()) // note: will cause issues if we ever use __synctreads()
-	{
-		msra::lattices::latticefunctionskernels::EMBRerrorsignalj(j, alignstateids, alignoffsets, edges, nodes, edgeweights, errorsignal);
-	}
+    const size_t shufflemode = 3;
+    const size_t j = msra::lattices::latticefunctionskernels::shuffle(threadIdx.x, blockDim.x, threadIdx.y, blockDim.y, blockIdx.x, gridDim.x, shufflemode);
+    if (j < edges.size()) // note: will cause issues if we ever use __synctreads()
+    {
+        msra::lattices::latticefunctionskernels::EMBRerrorsignalj(j, alignstateids, alignoffsets, edges, nodes, edgeweights, errorsignal);
+    }
 }
 /* guoye: end */
 void stateposteriorsj(const std::vector<unsigned short>& alignstateids, const std::vector<unsigned int>& alignoffsets,
@@ -335,44 +335,44 @@ static double emulateforwardbackwardlattice(const size_t* batchsizeforward, cons
 /* guoye: start */
 
 static double emulatebackwardlatticeEMBR(const size_t* batchsizebackward, const size_t numlaunchbackward,
-	const std::vector<float>& edgeacscores,
-	const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
-	std::vector<double>& edgelogbetas, std::vector<double>& logbetas,
-	const float lmf, const float wp, const float amf)
+    const std::vector<float>& edgeacscores,
+    const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
+    std::vector<double>& edgelogbetas, std::vector<double>& logbetas,
+    const float lmf, const float wp, const float amf)
 {
-	dim3 t(32, 8);
-	const size_t tpb = t.x * t.y;
-	dim3 b((unsigned int)((logbetas.size() + tpb - 1) / tpb));
-	
-	emulatecuda(b, t, [&]()
-	{
-		setvaluej(logbetas, LOGZERO, logbetas.size());
-	});
-	
-	
-	logbetas[nodes.size() - 1] = 0;
+    dim3 t(32, 8);
+    const size_t tpb = t.x * t.y;
+    dim3 b((unsigned int)((logbetas.size() + tpb - 1) / tpb));
+    
+    emulatecuda(b, t, [&]()
+    {
+        setvaluej(logbetas, LOGZERO, logbetas.size());
+    });
+    
+    
+    logbetas[nodes.size() - 1] = 0;
 
-	// forward pass
+    // forward pass
 
-	
-	// backward pass
-	size_t startindex = edges.size();
-	for (size_t i = 0; i < numlaunchbackward; i++)
-	{
-		dim3 b3((unsigned int)((batchsizebackward[i] + tpb - 1) / tpb));
-		emulatecuda(b3, t, [&]()
-		{
-			backwardlatticejEMBR(batchsizebackward[i], startindex - batchsizebackward[i], edgeacscores,
-				edges, nodes, edgelogbetas, logbetas, lmf, wp, amf);
+    
+    // backward pass
+    size_t startindex = edges.size();
+    for (size_t i = 0; i < numlaunchbackward; i++)
+    {
+        dim3 b3((unsigned int)((batchsizebackward[i] + tpb - 1) / tpb));
+        emulatecuda(b3, t, [&]()
+        {
+            backwardlatticejEMBR(batchsizebackward[i], startindex - batchsizebackward[i], edgeacscores,
+                edges, nodes, edgelogbetas, logbetas, lmf, wp, amf);
 
 
-		});
-		startindex -= batchsizebackward[i];
-	}
-	double totalbwscore = logbetas.front();
-	
+        });
+        startindex -= batchsizebackward[i];
+    }
+    double totalbwscore = logbetas.front();
+    
 
-	return totalbwscore;
+    return totalbwscore;
 }
 /* guoye: end */
 
@@ -407,22 +407,22 @@ static void emulatesMBRerrorsignal(const std::vector<unsigned short>& alignstate
 // this function behaves as its CUDA conterparts, except that it takes CPU-side std::vectors for everything
 // this must be identical to CUDA kernel-launch function in -ops class (except for the input data types: vectorref -> std::vector)
 static void emulateEMBRerrorsignal(const std::vector<unsigned short>& alignstateids, const std::vector<unsigned int>& alignoffsets,
-	const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
-	const std::vector<double>& edgeweights, 
-	msra::math::ssematrixbase& errorsignal)
+    const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
+    const std::vector<double>& edgeweights, 
+    msra::math::ssematrixbase& errorsignal)
 {
 
-	const size_t numedges = edges.size();
-	dim3 t(32, 8);
-	const size_t tpb = t.x * t.y;
-	foreach_coord(i, j, errorsignal)
-		errorsignal(i, j) =  0;
-	dim3 b((unsigned int)((numedges + tpb - 1) / tpb));
-	emulatecuda(b, t, [&]()
-	{
-		EMBRerrorsignalj(alignstateids, alignoffsets, edges, nodes, edgeweights, errorsignal);
-	});
-	dim3 b1((((unsigned int)errorsignal.rows()) + 31) / 32);
+    const size_t numedges = edges.size();
+    dim3 t(32, 8);
+    const size_t tpb = t.x * t.y;
+    foreach_coord(i, j, errorsignal)
+        errorsignal(i, j) =  0;
+    dim3 b((unsigned int)((numedges + tpb - 1) / tpb));
+    emulatecuda(b, t, [&]()
+    {
+        EMBRerrorsignalj(alignstateids, alignoffsets, edges, nodes, edgeweights, errorsignal);
+    });
+    dim3 b1((((unsigned int)errorsignal.rows()) + 31) / 32);
 }
 /* guoye: end */
 // this function behaves as its CUDA conterparts, except that it takes CPU-side std::vectors for everything
@@ -489,11 +489,11 @@ struct parallelstateimpl
           logppsgpu(msra::cuda::newdoublevector(deviceid)),
           logalphasgpu(msra::cuda::newdoublevector(deviceid)),
           logbetasgpu(msra::cuda::newdoublevector(deviceid)),
-		  /* guoye: start */
-		  edgelogbetasgpu(msra::cuda::newdoublevector(deviceid)),
-		  edgeweightsgpu(msra::cuda::newdoublevector(deviceid)),
-		/* guoye: end */
-		
+          /* guoye: start */
+          edgelogbetasgpu(msra::cuda::newdoublevector(deviceid)),
+          edgeweightsgpu(msra::cuda::newdoublevector(deviceid)),
+        /* guoye: end */
+        
           logaccalphasgpu(msra::cuda::newdoublevector(deviceid)),
           logaccbetasgpu(msra::cuda::newdoublevector(deviceid)),
           logframescorrectedgegpu(msra::cuda::newdoublevector(deviceid)),
@@ -632,10 +632,10 @@ struct parallelstateimpl
 
     std::unique_ptr<doublevector> logppsgpu;
     std::unique_ptr<doublevector> logalphasgpu;
-	/* guoye: start */
-	std::unique_ptr<doublevector> edgelogbetasgpu;
-	std::unique_ptr<doublevector> edgeweightsgpu;
-	/* guoye: end */
+    /* guoye: start */
+    std::unique_ptr<doublevector> edgelogbetasgpu;
+    std::unique_ptr<doublevector> edgeweightsgpu;
+    /* guoye: end */
     std::unique_ptr<doublevector> logbetasgpu;
     std::unique_ptr<doublevector> logaccalphasgpu;
     std::unique_ptr<doublevector> logaccbetasgpu;
@@ -729,20 +729,20 @@ struct parallelstateimpl
             logEframescorrectgpu->allocate(edges.size());
         }
     }
-	/* guoye: start */
-	template <class edgestype, class nodestype>
-	void allocbwvectorsEMBR(const edgestype& edges, const nodestype& nodes)
-	{
+    /* guoye: start */
+    template <class edgestype, class nodestype>
+    void allocbwvectorsEMBR(const edgestype& edges, const nodestype& nodes)
+    {
 #ifndef TWO_CHANNEL
-		const size_t alphabetanoderatio = 1;
+        const size_t alphabetanoderatio = 1;
 #else
-		const size_t alphabetanoderatio = 2;
+        const size_t alphabetanoderatio = 2;
 #endif
-		logbetasgpu->allocate(alphabetanoderatio * nodes.size());
-		edgelogbetasgpu->allocate(edges.size());
+        logbetasgpu->allocate(alphabetanoderatio * nodes.size());
+        edgelogbetasgpu->allocate(edges.size());
 
-	}
-	/* guoye: end */
+    }
+    /* guoye: end */
 
     // check if gpumatrixstorage supports size of cpumatrix, if not allocate. set gpumatrix to part of gpumatrixstorage
     // This function checks the size of errorsignalgpustorage, and then sets errorsignalgpu to a columnslice of the
@@ -788,35 +788,35 @@ struct parallelstateimpl
         edgealignments.resize(alignresult->size());
         alignresult->fetch(edgealignments, true);
     }
-	/* guoye: start */
+    /* guoye: start */
 
-	void getlogbetas(std::vector<double>& logbetas)
-	{
-		logbetas.resize(logbetasgpu->size());
-		logbetasgpu->fetch(logbetas, true);
-	}
+    void getlogbetas(std::vector<double>& logbetas)
+    {
+        logbetas.resize(logbetasgpu->size());
+        logbetasgpu->fetch(logbetas, true);
+    }
 
-	void getedgelogbetas(std::vector<double>& edgelogbetas)
-	{
-		edgelogbetas.resize(edgelogbetasgpu->size());
-		edgelogbetasgpu->fetch(edgelogbetas, true);
-	}
+    void getedgelogbetas(std::vector<double>& edgelogbetas)
+    {
+        edgelogbetas.resize(edgelogbetasgpu->size());
+        edgelogbetasgpu->fetch(edgelogbetas, true);
+    }
 
-	void getedgeweights(std::vector<double>& edgeweights)
-	{
-		edgeweights.resize(edgeweightsgpu->size());
-		edgeweightsgpu->fetch(edgeweights, true);
-	}
-
-
-
-	void setedgeweights(const std::vector<double>& edgeweights)
-	{
-		edgeweightsgpu->assign(edgeweights, false);
-	}
+    void getedgeweights(std::vector<double>& edgeweights)
+    {
+        edgeweights.resize(edgeweightsgpu->size());
+        edgeweightsgpu->fetch(edgeweights, true);
+    }
 
 
-	/* guoye: end */
+
+    void setedgeweights(const std::vector<double>& edgeweights)
+    {
+        edgeweightsgpu->assign(edgeweights, false);
+    }
+
+
+    /* guoye: end */
 };
 
 void lattice::parallelstate::setdevice(size_t deviceid)
@@ -881,19 +881,19 @@ void lattice::parallelstate::getedgealignments(std::vector<unsigned short>& edge
 /* guoye: start */
 void lattice::parallelstate::getlogbetas(std::vector<double>& logbetas)
 {
-	pimpl->getlogbetas(logbetas);
+    pimpl->getlogbetas(logbetas);
 }
 void lattice::parallelstate::getedgelogbetas(std::vector<double>& edgelogbetas)
 {
-	pimpl->getedgelogbetas(edgelogbetas);
+    pimpl->getedgelogbetas(edgelogbetas);
 }
 void lattice::parallelstate::getedgeweights(std::vector<double>& edgeweights)
 {
-	pimpl->getedgeweights(edgeweights);
+    pimpl->getedgeweights(edgeweights);
 }
 void lattice::parallelstate::setedgeweights(const std::vector<double>& edgeweights)
 {
-	pimpl->setedgeweights(edgeweights);
+    pimpl->setedgeweights(edgeweights);
 }
 
 
@@ -1132,10 +1132,10 @@ double lattice::parallelbackwardlatticeEMBR(parallelstate& parallelstate, const 
         const size_t alphabetanoderatio = 2;
 #endif
         logbetas.resize(alphabetanoderatio * nodes.size());
-		edgelogbetas.resize(edges.size());
+        edgelogbetas.resize(edges.size());
      
 
-		totalbwscore = emulatebackwardlatticeEMBR(&batchsizebackward[0], batchsizebackward.size(),
+        totalbwscore = emulatebackwardlatticeEMBR(&batchsizebackward[0], batchsizebackward.size(),
                                                      edgeacscores, edges, nodes,
                                                      edgelogbetas, logbetas, lmf, wp, amf);
     }
@@ -1184,30 +1184,30 @@ void lattice::parallelsMBRerrorsignal(parallelstate& parallelstate, const edgeal
 /* guoye: start */
 // ------------------------------------------------------------------------
 void lattice::parallelEMBRerrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
-	const std::vector<double>& edgeweights, 
+    const std::vector<double>& edgeweights, 
    msra::math::ssematrixbase& errorsignal) const
 {
-	
-	if (!parallelstate->emulation)
-	{
-		// no need negative buffer for EMBR
-		const bool cacheerrorsignalneg = false;
-		parallelstate->cacheerrorsignal(errorsignal, cacheerrorsignalneg);
+    
+    if (!parallelstate->emulation)
+    {
+        // no need negative buffer for EMBR
+        const bool cacheerrorsignalneg = false;
+        parallelstate->cacheerrorsignal(errorsignal, cacheerrorsignalneg);
 
-		std::unique_ptr<latticefunctions> latticefunctions(msra::cuda::newlatticefunctions(parallelstate.getdevice()));
-		latticefunctions->EMBRerrorsignal(*parallelstate->alignresult.get(), *parallelstate->alignoffsetsgpu.get(), *parallelstate->edgesgpu.get(),
-			*parallelstate->nodesgpu.get(), *parallelstate->edgeweightsgpu.get(), 
-			*parallelstate->errorsignalgpu.get());
+        std::unique_ptr<latticefunctions> latticefunctions(msra::cuda::newlatticefunctions(parallelstate.getdevice()));
+        latticefunctions->EMBRerrorsignal(*parallelstate->alignresult.get(), *parallelstate->alignoffsetsgpu.get(), *parallelstate->edgesgpu.get(),
+            *parallelstate->nodesgpu.get(), *parallelstate->edgeweightsgpu.get(), 
+            *parallelstate->errorsignalgpu.get());
 
-		if (errorsignal.rows() > 0 && errorsignal.cols() > 0)
-		{
-			parallelstate->errorsignalgpu->CopySection(errorsignal.rows(), errorsignal.cols(), &errorsignal(0, 0), errorsignal.getcolstride());
-		}
-	}
-	else
-	{
-		emulateEMBRerrorsignal(thisedgealignments.getalignmentsbuffer(), thisedgealignments.getalignoffsets(), edges, nodes, edgeweights, errorsignal);
-	}
+        if (errorsignal.rows() > 0 && errorsignal.cols() > 0)
+        {
+            parallelstate->errorsignalgpu->CopySection(errorsignal.rows(), errorsignal.cols(), &errorsignal(0, 0), errorsignal.getcolstride());
+        }
+    }
+    else
+    {
+        emulateEMBRerrorsignal(thisedgealignments.getalignmentsbuffer(), thisedgealignments.getalignoffsets(), edges, nodes, edgeweights, errorsignal);
+    }
 }
 /* guoye: end */
 

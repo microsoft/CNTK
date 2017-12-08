@@ -99,24 +99,24 @@ struct equal_strcmp : public std::binary_function<const char *, const char *, bo
     bool operator()(const char *const &_Left, const char *const &_Right) const
     {
         // return strcmp(_Left, _Right) < 0;
-		return strcmp(_Left, _Right) == 0;
-	}
+        return strcmp(_Left, _Right) == 0;
+    }
 };
 /* guoye: end */
 struct BKDRHash {
-	//BKDR hash algorithm
-	int operator()(const char * str)const
-	{
-		unsigned int seed = 131; //31  131 1313 13131131313 etc//
-		unsigned int hash = 0;
-		while (*str)
-		{
-			hash = (hash * seed) + (*str);
-			str++;
-		}
+    //BKDR hash algorithm
+    int operator()(const char * str)const
+    {
+        unsigned int seed = 131; //31  131 1313 13131131313 etc//
+        unsigned int hash = 0;
+        while (*str)
+        {
+            hash = (hash * seed) + (*str);
+            str++;
+        }
 
-		return hash & (0x7FFFFFFF);
-	}
+        return hash & (0x7FFFFFFF);
+    }
 };
 
 
@@ -153,20 +153,20 @@ public:
     // get id for an existing word, returns -1 if not existing
     int operator[](const char *key) const
     {
-		/* guoye: start */
+        /* guoye: start */
         // unordered_map<const char *, int>::const_iterator iter = find(key);
-		unordered_map<const char *, int, BKDRHash, equal_strcmp>::const_iterator iter = find(key);
-		return (iter != end()) ? iter->second : -1;
+        unordered_map<const char *, int, BKDRHash, equal_strcmp>::const_iterator iter = find(key);
+        return (iter != end()) ? iter->second : -1;
     }
 
     // operator[key] on a non-'const' object
     // determine unique id for a word ('key')
     int operator[](const char *key)
     {
-		/* guoye: start */
+        /* guoye: start */
         // unordered_map<const char *, int>::const_iterator iter = find(key);
-		unordered_map<const char *, int, BKDRHash, equal_strcmp>::const_iterator iter = find(key);
-	
+        unordered_map<const char *, int, BKDRHash, equal_strcmp>::const_iterator iter = find(key);
+    
         if (iter != end())
             return iter->second;
 
@@ -180,10 +180,10 @@ public:
             int id = (int) symbols.size();
             symbols.push_back(p); // we own the memory--remember to free it
             /* guoye: start */ 
-			// insert(std::make_pair(p, id));
-			if(!insert(std::make_pair(p, id)).second)
-				RuntimeError("Insertion key %s into map failed in msra_mgram.h", p);
-			/* guoye: end */
+            // insert(std::make_pair(p, id));
+            if(!insert(std::make_pair(p, id)).second)
+                RuntimeError("Insertion key %s into map failed in msra_mgram.h", p);
+            /* guoye: end */
             return id;
         }
         catch (...)

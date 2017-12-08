@@ -978,45 +978,45 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                 if (toks.size() > 6 /*word entry are in this column*/)
                 {
                     const char* w = toks[6]; // the word name
-					/* guoye: start */
-					// For some alignment MLF the sentence start and end are both represented by <s>, we change sentence end <s> to be </s>
-					if (i > s && strcmp(w, "<s>") == 0)
-					{
-						w = "</s>";
-					}
-					/* guoye: end */
-					/*guoye: start */
-					/* skip the words that are not used in WER computation */
-					/* ugly hard code, will improve later */
-					if (strcmp(w, "<s>") != 0 
-						&& strcmp(w, "</s>") != 0
-						&& strcmp(w, "!NULL") != 0
-						&& strcmp(w, "!sent_start") != 0
-						&& strcmp(w, "!sent_end") != 0
-						&& strcmp(w, "!silence") != 0
-						&& strcmp(w, "[/CNON]") != 0
-						&& strcmp(w, "[/CSPN]") != 0
-						&& strcmp(w, "[/NPS]") != 0
-						&& strcmp(w, "[CNON/]") != 0
-						&& strcmp(w, "[CNON]") != 0
-						&& strcmp(w, "[CSPN]") != 0
-						&& strcmp(w, "[FILL/]") != 0
-						&& strcmp(w, "[NON/]") != 0
-						&& strcmp(w, "[NONNATIVE/]") != 0
-						&& strcmp(w, "[NPS]") != 0
-						&& strcmp(w, "[SB/]") != 0
-						&& strcmp(w, "[SBP/]") != 0
-						&& strcmp(w, "[SN/]") != 0
-						&& strcmp(w, "[SPN/]") != 0
-						&& strcmp(w, "[UNKNOWN/]") != 0
-						&& strcmp(w, ".]") != 0	
-					)
-					{
-						int wid = (*wordmap)[w]; // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
-						size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t)wid;
-						wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
-					}
-					/*guoye: end */
+                    /* guoye: start */
+                    // For some alignment MLF the sentence start and end are both represented by <s>, we change sentence end <s> to be </s>
+                    if (i > s && strcmp(w, "<s>") == 0)
+                    {
+                        w = "</s>";
+                    }
+                    /* guoye: end */
+                    /*guoye: start */
+                    /* skip the words that are not used in WER computation */
+                    /* ugly hard code, will improve later */
+                    if (strcmp(w, "<s>") != 0 
+                        && strcmp(w, "</s>") != 0
+                        && strcmp(w, "!NULL") != 0
+                        && strcmp(w, "!sent_start") != 0
+                        && strcmp(w, "!sent_end") != 0
+                        && strcmp(w, "!silence") != 0
+                        && strcmp(w, "[/CNON]") != 0
+                        && strcmp(w, "[/CSPN]") != 0
+                        && strcmp(w, "[/NPS]") != 0
+                        && strcmp(w, "[CNON/]") != 0
+                        && strcmp(w, "[CNON]") != 0
+                        && strcmp(w, "[CSPN]") != 0
+                        && strcmp(w, "[FILL/]") != 0
+                        && strcmp(w, "[NON/]") != 0
+                        && strcmp(w, "[NONNATIVE/]") != 0
+                        && strcmp(w, "[NPS]") != 0
+                        && strcmp(w, "[SB/]") != 0
+                        && strcmp(w, "[SBP/]") != 0
+                        && strcmp(w, "[SN/]") != 0
+                        && strcmp(w, "[SPN/]") != 0
+                        && strcmp(w, "[UNKNOWN/]") != 0
+                        && strcmp(w, ".]") != 0    
+                    )
+                    {
+                        int wid = (*wordmap)[w]; // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
+                        size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t)wid;
+                        wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
+                    }
+                    /*guoye: end */
                 }
                 if (unitmap)
                 {
@@ -1069,12 +1069,12 @@ public:
         return (statename.size() > 3 && statename.at(0) == 's' && statename.at(1) == 'i' && statename.at(2) == 'l');
     }
 
-	/* guoye: start */
-	map<wstring, WORDSEQUENCE>  get_wordlabels()
-	{
-		return wordsequences;
-	}
-	/* guoye: end */
+    /* guoye: start */
+    map<wstring, WORDSEQUENCE>  get_wordlabels()
+    {
+        return wordsequences;
+    }
+    /* guoye: end */
     vector<bool> issilstatetable; // [state index] => true if is sil state (cached)
 
     // return if input stateid represent sil state (by table lookup)

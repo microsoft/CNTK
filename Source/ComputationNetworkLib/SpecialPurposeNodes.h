@@ -551,10 +551,10 @@ public:
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
         m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
                                         Input(0)->Value() /*labels*/, *m_gammaFromLattice,
-			/* guoye: start */
+            /* guoye: start */
                          //               m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
-										m_uids, m_wids, m_nws, m_boundaries, Input(1)->GetNumParallelSequences(),
-			/* guoye: end */
+                                        m_uids, m_wids, m_nws, m_boundaries, Input(1)->GetNumParallelSequences(),
+            /* guoye: end */
                                         Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
 
 #if NANCHECK
@@ -627,12 +627,12 @@ public:
     // TODO: method names should be CamelCase
     std::vector<shared_ptr<const msra::dbn::latticepair>>* getLatticePtr() { return &m_lattices; }
     std::vector<size_t>* getuidprt() { return &m_uids; }
-	/* guoye: start */
-	std::vector<size_t>* getwidprt() { return &m_wids; }
+    /* guoye: start */
+    std::vector<size_t>* getwidprt() { return &m_wids; }
 
-	std::vector<short>* getnwprt() { return &m_nws; }
-	
-	/* guoye: end */
+    std::vector<short>* getnwprt() { return &m_nws; }
+    
+    /* guoye: end */
     std::vector<size_t>* getboundaryprt() { return &m_boundaries; }
     std::vector<size_t>* getextrauttmap() { return &m_extraUttMap; }
     msra::asr::simplesenonehmm* gethmm() { return &m_hmm; }
@@ -650,11 +650,11 @@ public:
         param.bMMIfactor = bMMIfactor;
         param.sMBRmode = sMBR;
 
-		/* guoye: start */
-		param.EMBR = EMBR;
-		param.EMBRUnit = EMBRUnit;
-		param.numPathsEMBR = numPathsEMBR;
-		/* guoye: end */
+        /* guoye: start */
+        param.EMBR = EMBR;
+        param.EMBRUnit = EMBRUnit;
+        param.numPathsEMBR = numPathsEMBR;
+        /* guoye: end */
         m_gammaCalculator.SetGammarCalculationParams(param);
     }
 
@@ -681,11 +681,11 @@ protected:
     msra::lattices::GammaCalculation<ElemType> m_gammaCalculator;
     bool m_gammaCalcInitialized;
     std::vector<size_t> m_uids;
-	/* guoye: start */
-	std::vector<size_t> m_wids;
+    /* guoye: start */
+    std::vector<size_t> m_wids;
 
-	std::vector<short> m_nws;
-	/* guoye: end */
+    std::vector<short> m_nws;
+    /* guoye: end */
     std::vector<size_t> m_boundaries;
     std::vector<size_t> m_extraUttMap;
 

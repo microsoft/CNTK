@@ -449,10 +449,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
     // load a unigram if needed (this is used for MMI training)
     msra::lm::CSymbolSet unigramsymbols;
-	/* guoye: start */
-	std::set<int> specialwordids;
-	/* guoye: end */
-	
+    /* guoye: start */
+    std::set<int> specialwordids;
+    /* guoye: end */
+    
     std::unique_ptr<msra::lm::CMGramLM> unigram;
     size_t silencewordid = SIZE_MAX;
     size_t startwordid = SIZE_MAX;
@@ -460,49 +460,49 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (unigrampath != L"")
     {
         unigram.reset(new msra::lm::CMGramLM());
-		/* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
+        /* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
 
-		unigramsymbols["!NULL"];
-		unigramsymbols["<s>"];
-		unigramsymbols["</s>"];
-		unigramsymbols["!sent_start"];
-		unigramsymbols["!sent_end"];
-		unigramsymbols["!silence"];
-		/* guoye: end */
-		unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
+        unigramsymbols["!NULL"];
+        unigramsymbols["<s>"];
+        unigramsymbols["</s>"];
+        unigramsymbols["!sent_start"];
+        unigramsymbols["!sent_end"];
+        unigramsymbols["!silence"];
+        /* guoye: end */
+        unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
 
         silencewordid = unigramsymbols["!silence"]; // give this an id (even if not in the LM vocabulary)
         startwordid = unigramsymbols["<s>"];
         endwordid = unigramsymbols["</s>"];
 
-		/* guoye: start */
-		specialwordids.clear();
-		specialwordids.insert(unigramsymbols["<s>"]);
-		specialwordids.insert(unigramsymbols["</s>"]);
-		specialwordids.insert(unigramsymbols["!NULL"]);
-		specialwordids.insert(unigramsymbols["!sent_start"]);
-		specialwordids.insert(unigramsymbols["!sent_end"]);
-		specialwordids.insert(unigramsymbols["!silence"]);
-		specialwordids.insert(unigramsymbols["[/CNON]"]);
-		specialwordids.insert(unigramsymbols["[/CSPN]"]);
-		specialwordids.insert(unigramsymbols["[/NPS]"]);
-		specialwordids.insert(unigramsymbols["[CNON/]"]);
-		specialwordids.insert(unigramsymbols["[CNON]"]);
-		specialwordids.insert(unigramsymbols["[CSPN]"]);
-		specialwordids.insert(unigramsymbols["[FILL/]"]);
-		specialwordids.insert(unigramsymbols["[NON/]"]);
-		specialwordids.insert(unigramsymbols["[NONNATIVE/]"]);
-		specialwordids.insert(unigramsymbols["[NPS]"]);
+        /* guoye: start */
+        specialwordids.clear();
+        specialwordids.insert(unigramsymbols["<s>"]);
+        specialwordids.insert(unigramsymbols["</s>"]);
+        specialwordids.insert(unigramsymbols["!NULL"]);
+        specialwordids.insert(unigramsymbols["!sent_start"]);
+        specialwordids.insert(unigramsymbols["!sent_end"]);
+        specialwordids.insert(unigramsymbols["!silence"]);
+        specialwordids.insert(unigramsymbols["[/CNON]"]);
+        specialwordids.insert(unigramsymbols["[/CSPN]"]);
+        specialwordids.insert(unigramsymbols["[/NPS]"]);
+        specialwordids.insert(unigramsymbols["[CNON/]"]);
+        specialwordids.insert(unigramsymbols["[CNON]"]);
+        specialwordids.insert(unigramsymbols["[CSPN]"]);
+        specialwordids.insert(unigramsymbols["[FILL/]"]);
+        specialwordids.insert(unigramsymbols["[NON/]"]);
+        specialwordids.insert(unigramsymbols["[NONNATIVE/]"]);
+        specialwordids.insert(unigramsymbols["[NPS]"]);
 
-		specialwordids.insert(unigramsymbols["[SB/]"]);
-		specialwordids.insert(unigramsymbols["[SBP/]"]);
-		specialwordids.insert(unigramsymbols["[SN/]"]);
-		specialwordids.insert(unigramsymbols["[SPN/]"]);
-		specialwordids.insert(unigramsymbols["[UNKNOWN/]"]);
-		specialwordids.insert(unigramsymbols[".]"]);
+        specialwordids.insert(unigramsymbols["[SB/]"]);
+        specialwordids.insert(unigramsymbols["[SBP/]"]);
+        specialwordids.insert(unigramsymbols["[SN/]"]);
+        specialwordids.insert(unigramsymbols["[SPN/]"]);
+        specialwordids.insert(unigramsymbols["[UNKNOWN/]"]);
+        specialwordids.insert(unigramsymbols[".]"]);
 
-		/* guoye: end */
-		
+        /* guoye: end */
+        
     }
 
     if (!unigram && latticetocs.second.size() > 0)
@@ -545,9 +545,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     double htktimetoframe = 100000.0; // default is 10ms
     // std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
     std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> labelsmulti;
-	/* guoye: start */
-	std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>> wordlabelsmulti;
-	/* guoye: end */
+    /* guoye: start */
+    std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>> wordlabelsmulti;
+    /* guoye: end */
     // std::vector<std::wstring> pagepath;
     foreach_index (i, mlfpathsmulti)
     {
@@ -560,10 +560,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         static_assert(std::is_move_constructible<msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>>::value,
                       "Type 'msra::asr::htkmlfreader' should be move constructible!");
 
-		/* guoye: start */
-		map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
-		wordlabelsmulti.push_back(std::move(wordlabels));
-		/* guoye: end */
+        /* guoye: start */
+        map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
+        wordlabelsmulti.push_back(std::move(wordlabels));
+        /* guoye: end */
         labelsmulti.push_back(std::move(labels));
     }
 
@@ -577,9 +577,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         // now get the frame source. This has better randomization and doesn't create temp files
         bool useMersenneTwisterRand = readerConfig(L"useMersenneTwisterRand", false);
         /* guoye: start */
-		// m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
-		m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, wordlabelsmulti, specialwordids, m_featDims, m_labelDims,
-		/* guoye: end */
+        // m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
+        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, wordlabelsmulti, specialwordids, m_featDims, m_labelDims,
+        /* guoye: end */
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
                                                                          m_expandToUtt, m_maxUtteranceLength, m_truncated));
@@ -813,10 +813,10 @@ void HTKMLFReader<ElemType>::StartDistributedMinibatchLoop(size_t requestedMBSiz
         // for the multi-utterance process for lattice and phone boundary
         m_latticeBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
         m_labelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
-		/* guoye: start */
-		m_wlabelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
-		m_nwsBufferMultiUtt.resize(m_numSeqsPerMB);
-		/* guoye: end */
+        /* guoye: start */
+        m_wlabelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
+        m_nwsBufferMultiUtt.resize(m_numSeqsPerMB);
+        /* guoye: end */
         m_phoneboundaryIDBufferMultiUtt.resize(m_numSeqsPerMB);
 
         if (m_frameMode && (m_numSeqsPerMB > 1))
@@ -955,17 +955,17 @@ void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t /*e
 
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput,
-	/* guoye: start */
-	vector<size_t>& uids, vector<size_t>& wids, vector<short>& nws, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
+    /* guoye: start */
+    vector<size_t>& uids, vector<size_t>& wids, vector<short>& nws, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
                                              // vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
-	/* guoye: end */
+    /* guoye: end */
 {
     if (m_trainOrTest)
     {
-		/* guoye: start */
+        /* guoye: start */
         // return GetMinibatch4SEToTrainOrTest(latticeinput, uids, boundaries, extrauttmap);
-		return GetMinibatch4SEToTrainOrTest(latticeinput, uids, wids, nws, boundaries, extrauttmap);
-		/* guoye: end */
+        return GetMinibatch4SEToTrainOrTest(latticeinput, uids, wids, nws, boundaries, extrauttmap);
+        /* guoye: end */
     }
     else
     {
@@ -974,31 +974,31 @@ bool HTKMLFReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::
 }
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput,
-	
-	/* guoye: start */
-	std::vector<size_t>& uids, std::vector<size_t>& wids, std::vector<short>& nws, std::vector<size_t>& boundaries, std::vector<size_t>& extrauttmap)
+    
+    /* guoye: start */
+    std::vector<size_t>& uids, std::vector<size_t>& wids, std::vector<short>& nws, std::vector<size_t>& boundaries, std::vector<size_t>& extrauttmap)
                   //                                        std::vector<size_t>& uids, std::vector<size_t>& boundaries, std::vector<size_t>& extrauttmap)
 
-	/* guoye: end */
+    /* guoye: end */
 {
     latticeinput.clear();
     uids.clear();
-	/* guoye: start */
-	wids.clear();
-	nws.clear();
-	/* guoye: end */
+    /* guoye: start */
+    wids.clear();
+    nws.clear();
+    /* guoye: end */
     boundaries.clear();
     extrauttmap.clear();
     for (size_t i = 0; i < m_extraSeqsPerMB.size(); i++)
     {
         latticeinput.push_back(m_extraLatticeBufferMultiUtt[i]);
         uids.insert(uids.end(), m_extraLabelsIDBufferMultiUtt[i].begin(), m_extraLabelsIDBufferMultiUtt[i].end());
-		/* guoye: start */
-		wids.insert(wids.end(), m_extraWLabelsIDBufferMultiUtt[i].begin(), m_extraWLabelsIDBufferMultiUtt[i].end());
+        /* guoye: start */
+        wids.insert(wids.end(), m_extraWLabelsIDBufferMultiUtt[i].begin(), m_extraWLabelsIDBufferMultiUtt[i].end());
 
-		nws.insert(nws.end(), m_extraNWsBufferMultiUtt[i].begin(), m_extraNWsBufferMultiUtt[i].end());
+        nws.insert(nws.end(), m_extraNWsBufferMultiUtt[i].begin(), m_extraNWsBufferMultiUtt[i].end());
 
-		/* guoye: end */
+        /* guoye: end */
         boundaries.insert(boundaries.end(), m_extraPhoneboundaryIDBufferMultiUtt[i].begin(), m_extraPhoneboundaryIDBufferMultiUtt[i].end());
     }
 
@@ -1066,11 +1066,11 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
             m_extraLabelsIDBufferMultiUtt.clear();
             m_extraPhoneboundaryIDBufferMultiUtt.clear();
             m_extraSeqsPerMB.clear();
-			/* guoye: start */
-			m_extraWLabelsIDBufferMultiUtt.clear();
+            /* guoye: start */
+            m_extraWLabelsIDBufferMultiUtt.clear();
 
-			m_extraNWsBufferMultiUtt.clear();
-			/* guoye: end */
+            m_extraNWsBufferMultiUtt.clear();
+            /* guoye: end */
             if (m_noData && m_numFramesToProcess[0] == 0) // no data left for the first channel of this minibatch,
             {
                 return false;
@@ -1151,11 +1151,11 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         {
                             m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                             m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-							/* guoye: start */
-							m_extraWLabelsIDBufferMultiUtt.push_back(m_wlabelsIDBufferMultiUtt[i]);
+                            /* guoye: start */
+                            m_extraWLabelsIDBufferMultiUtt.push_back(m_wlabelsIDBufferMultiUtt[i]);
 
-							m_extraNWsBufferMultiUtt.push_back(m_nwsBufferMultiUtt[i]);
-							/* guoye: end */
+                            m_extraNWsBufferMultiUtt.push_back(m_nwsBufferMultiUtt[i]);
+                            /* guoye: end */
                             m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                         }
                     }
@@ -1198,12 +1198,12 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                 {
                                     m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[src]);
                                     m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[src]);
-									/* guoye: start */
-									m_extraWLabelsIDBufferMultiUtt.push_back(m_wlabelsIDBufferMultiUtt[src]);
+                                    /* guoye: start */
+                                    m_extraWLabelsIDBufferMultiUtt.push_back(m_wlabelsIDBufferMultiUtt[src]);
 
-									m_extraNWsBufferMultiUtt.push_back(m_nwsBufferMultiUtt[src]);
+                                    m_extraNWsBufferMultiUtt.push_back(m_nwsBufferMultiUtt[src]);
 
-									/* guoye: end */
+                                    /* guoye: end */
                                     m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[src]);
                                 }
 
@@ -1909,14 +1909,14 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
         m_phoneboundaryIDBufferMultiUtt[i] = m_mbiter->bounds();
         m_labelsIDBufferMultiUtt[i].clear();
         m_labelsIDBufferMultiUtt[i] = m_mbiter->labels();
-		/* guoye: start */
-		m_wlabelsIDBufferMultiUtt[i].clear();
-		m_wlabelsIDBufferMultiUtt[i] = m_mbiter->wlabels();
+        /* guoye: start */
+        m_wlabelsIDBufferMultiUtt[i].clear();
+        m_wlabelsIDBufferMultiUtt[i] = m_mbiter->wlabels();
 
-		m_nwsBufferMultiUtt[i].clear();
-		m_nwsBufferMultiUtt[i] = m_mbiter->nwords();
+        m_nwsBufferMultiUtt[i].clear();
+        m_nwsBufferMultiUtt[i] = m_mbiter->nwords();
 
-		/* guoye: end */
+        /* guoye: end */
 
     }
 

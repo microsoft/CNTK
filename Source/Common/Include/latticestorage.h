@@ -34,21 +34,21 @@ struct nodeinfo
     // uint64_t firstoutedge : 24; // index of first outgoing edge
     // uint64_t t : 16;            // time associated with this
 
-	/* guoye: start */
-	uint64_t  wid; // word ID associated with the node
-	/* guoye: end */
+    /* guoye: start */
+    uint64_t  wid; // word ID associated with the node
+    /* guoye: end */
     unsigned short t; // time associated with this
 
     nodeinfo(size_t pt, size_t pwid)
-		/* guoye: start */
+        /* guoye: start */
         // : t((unsigned short) pt) // , firstinedge (NOEDGE), firstoutedge (NOEDGE)
-		: t((unsigned short)pt), wid(pwid)
-		/* guoye: end */
+        : t((unsigned short)pt), wid(pwid)
+        /* guoye: end */
     {
         checkoverflow(t, pt, "nodeinfo::t");
-		/* guoye: start */
-		checkoverflow(wid, pwid, "nodeinfo::wid");
-		/* guoye: end */
+        /* guoye: start */
+        checkoverflow(wid, pwid, "nodeinfo::wid");
+        /* guoye: end */
         // checkoverflow (firstinedge, NOEDGE, "nodeinfo::firstinedge");
         // checkoverflow (firstoutedge, NOEDGE, "nodeinfo::firstoutedge");
     }
