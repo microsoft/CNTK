@@ -94,12 +94,12 @@ static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
 #endif
 static bool ShouldLogMemoizeStats()     { return logMemoizeStatsCounter < NUM_MBS_TO_LOG; }
-//static bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter & 1; }
-//static bool ShouldLogMemoizeStatsCUDA() { return true;  }
+//static inline bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter & 1; }
+//static inline bool ShouldLogMemoizeStatsCUDA() { return true;  }
 #ifdef LOG_GPU
-static bool ShouldLogMemoizeStatsCUDA() { return true; }
+static inline bool ShouldLogMemoizeStatsCUDA() { return true; }
 #else
-static bool ShouldLogMemoizeStatsCUDA() { return false; }
+static inline bool ShouldLogMemoizeStatsCUDA() { return false; }
 #endif
 
 
@@ -2774,6 +2774,7 @@ class InternalVariable::AutoBatch
         }
     }
 
+#if 0 // note: This will not work after moving CUDA launching to background thread
     static uintptr_t GetValueAddrForHash(const NDArrayViewPtr& value)
     {
         return
@@ -2784,6 +2785,7 @@ class InternalVariable::AutoBatch
             /*else*/:
                 (uintptr_t)value->DataBuffer<double>() / sizeof(double);
     }
+#endif
 
     // get an offsettable address of m_value for hashing purposes
     static uintptr_t CacheAndGetValueAddrForHash(/*const*/ VariableFields& fields)
