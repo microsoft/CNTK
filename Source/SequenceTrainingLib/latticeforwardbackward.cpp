@@ -1240,7 +1240,7 @@ void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
                 if (nodes[curnodeidx].wid == 2 && nodes[curnodeidx].t == info.numframes)
                 {
                     if (curnodeidx != (nodes.size() - 1))
-                        RuntimeError("EMBRsamplepaths: the lattice end edge has outgoing node %d, which is not the last node %d", edges[edgeidx].E, int(nodes.size() - 1));
+                        RuntimeError("EMBRsamplepaths: the lattice end edge has outgoing node %d, which is not the last node %d", int(edges[edgeidx].E), int(nodes.size() - 1));
                     else
                     {
                         success = true;
