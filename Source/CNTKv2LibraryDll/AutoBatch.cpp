@@ -1144,20 +1144,21 @@ public:
 // VisitorTag -- helper for graph traversal
 //  - call VisitorTag::Begin()
 //  - in traversal: if (VisitorTag::Visited(node.m_visitedTag)) return;
-// If you want this to nest, then remember the return value from Begin() and call End() with it.
+// //If you want this to nest, then remember the return value from Begin() and call End() with it.
+// If you want this to nest, then create one on the stack, and pass it around by value (it is small enough).
 // ---------------------------------------------------------------------------
 
 class VisitorTag
 {
-    static size_t s_nextVisitTag; // unique id for a single non-nested visiting process
+    static std::atomic_size_t s_nextVisitTag; // unique id for a single non-nested visiting process
     size_t m_visitTag;
 public:
-    size_t Begin() // call this at start
+    VisitorTag() { Begin(); } // constructor used when creating a VisitorTag on the stack
+    void/*size_t*/ Begin() // call this at start when using existing objects
     {
-        let prevVisitTag = m_visitTag;
-        // TODO: to make this thread-safe, use atomic increment
-        m_visitTag = s_nextVisitTag++;
-        return prevVisitTag;
+        //let prevVisitTag = m_visitTag; // note: End() no longer supported
+        m_visitTag = s_nextVisitTag++; // note: atomic = thread-safe
+        //return prevVisitTag;
     }
     bool Visited(size_t& tag) const // first time this is applied to 'tag', it will return false; and true otherwise
     {
@@ -1166,10 +1167,10 @@ public:
         tag = m_visitTag;
         return false;
     }
-    // for nesting
-    void End(size_t tag) { m_visitTag = tag; } // restore state before Begin() that returned 'tag'
+    // for nesting --not used; remove
+    //void End(size_t tag) { m_visitTag = tag; } // restore state before Begin() that returned 'tag'
 };
-/*static*/ size_t VisitorTag::s_nextVisitTag = 1;
+/*static*/ std::atomic_size_t VisitorTag::s_nextVisitTag{ 1 };
 
 
 // ===========================================================================
@@ -1327,12 +1328,13 @@ class InternalVariable::AutoBatch
     // This function checks whether all substituted Placeholders have the same batch dimension (FreeDimension).
     //  - At the root of a composite, pass invocationArgsFreeDim=0; inside here, pass the value as is.
     //  - Upon return, it will contain the one batch dim value that is shared across all substituted placeholders.
-    VisitorTag m_compositeVisitorTag; // helper for managing tree traversal through composite (not nested)
     template<class F>
-    PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& clonee, const Function::InputsVectorType& invocationArgs, /*in/out*/NDShapeDimension& invocationArgsFreeDim, /*out*/ NDShapeDimension& inlinedFreeDim, const F& cloneFn) const
+    static PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& clonee, const Function::InputsVectorType& invocationArgs,
+                                          /*in/out*/NDShapeDimension& invocationArgsFreeDim, /*out*/ NDShapeDimension& inlinedFreeDim,
+                                          const F& cloneFn, VisitorTag compositeVisitorTag) //const
     {
         // if we already cloned this one then just return the clone
-        if (m_compositeVisitorTag.Visited(clonee.m_autoBatchState.m_visitedTag))
+        if (compositeVisitorTag.Visited(clonee.m_autoBatchState.m_visitedTag))
         {
             let fInlined = clonee.m_autoBatchState.m_link; // we remembered the clone here
             if (!fInlined) // if we get here before this was filled in then we have discovered a cycle
@@ -1403,7 +1405,7 @@ class InternalVariable::AutoBatch
             else
             {
                 fail_if(cloneeInputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*cloneeInputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsFreeDim, /*out*/ thisFreeDim, cloneFn);
+                let fInlinedPtr = RInlineComposite(*cloneeInputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsFreeDim, /*out*/ thisFreeDim, cloneFn, compositeVisitorTag);
                 inlinedInputs[i] = Variable(fInlinedPtr->m_outputs.front(), ConstFunctionPtr(), fInlinedPtr);
                 //inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
@@ -2127,11 +2129,11 @@ class InternalVariable::AutoBatch
             //  - the Block node, like a NoOp, gets its m_redirection set to point to the Block's copy.
             // Upon first call, the original Block function gets its dimensions inferred. I.e. it cannot be called twice with mismatching dimensions.
             // Besides that, the original Block function will remain unmodified.
-            m_compositeVisitorTag.Begin();
             NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
             NDShapeDimension inputsBatchDimDummy;
             auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*f.BlockRoot()),
-                                                   f.m_inputs, invocationArgsFreeDim, inputsBatchDimDummy, /*cloneFn=*/ClonePrimitiveFunction);
+                                                   f.m_inputs, invocationArgsFreeDim, inputsBatchDimDummy,
+                                                   /*cloneFn=*/ClonePrimitiveFunction, VisitorTag());
             // This returns a shared_ptr to the deep copy of the root.
             // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
             // prepare graph that we just unrolled
@@ -2447,9 +2449,11 @@ class InternalVariable::AutoBatch
 
         NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
         NDShapeDimension compositeBatchDim;
-        let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
-        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs, invocationArgsFreeDim, compositeBatchDim, cloneFn);
-        m_compositeVisitorTag.End(prevVisitorTag); // (restore)
+        //let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
+        let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs,
+                                           invocationArgsFreeDim, compositeBatchDim,
+                                           cloneFn, VisitorTag());
+        //m_compositeVisitorTag.End(prevVisitorTag); // (restore)
         return fInlinedPtr;
     }
 
