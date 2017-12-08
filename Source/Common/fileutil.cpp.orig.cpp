@@ -59,8 +59,8 @@
 
 #include <errno.h>
 
-using namespace std;
-using namespace Microsoft::MSR::CNTK;
+//using namespace std;
+//using namespace Microsoft::MSR::CNTK;
 
 // All sizes are in bytes
 const int BUF_SIZE = 1000000;                       // Default buffer size 
@@ -885,7 +885,58 @@ static inline size_t strnlen(wchar_t* s, size_t n)
     return wcsnlen(s, n);
 }
 
+template <class CHAR>
+CHAR* fgetline(FILE* f, CHAR* buf, int size)
+{
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    /* guoye: start */
+    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
+    /* guoye: end */
+    CHAR* p = fgets(buf, size, f);
+    /* guoye: start */
+     // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
+    /* guoye: end */
+    if (p == NULL) // EOF reached: next time feof() = true
+    {
+        if (ferror(f))
+            RuntimeError("error reading line: %s", strerror(errno));
+        buf[0] = 0;
+        return buf;
+    }
+    size_t n = strnlen(p, size);
 
+    // check for buffer overflow
+
+    if (n >= (size_t)size - 1)
+    {
+        /* guoye: start */
+        // basic_string<CHAR> example(p, n < 100 ? n : 100);
+        std::basic_string<CHAR> example(p, n < 100 ? n : 100);
+        /* guoye: end */
+        uint64_t filepos = fgetpos(f); // (for error message only)
+        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int)filepos, (int)size - 1, msra::strfun::utf8(example).c_str());
+    }
+
+    // remove newline at end
+
+    if (n > 0 && p[n - 1] == '\n') // UNIX and Windows style
+    {
+        n--;
+        p[n] = 0;
+        if (n > 0 && p[n - 1] == '\r') // Windows style
+        {
+            n--;
+            p[n] = 0;
+        }
+    }
+    else if (n > 0 && p[n - 1] == '\r') // Mac style
+    {
+        n--;
+        p[n] = 0;
+    }
+
+    return buf;
+}
 
 // STL string version
 std::string fgetline(FILE* f)
@@ -903,10 +954,8 @@ std::wstring fgetlinew(FILE* f)
     /* guoye: start */
     // vector<wchar_t> buf(BUF_SIZE);
     std::vector<wchar_t> buf(BUF_SIZE);
-    
-    // return fgetline(f, &buf[0], (int)buf.size());
-    return fgetlinew(f, &buf[0], (int)buf.size());
     /* guoye: end */
+    return fgetline(f, &buf[0], (int)buf.size());
 }
 
 // STL string version avoiding most memory allocations
@@ -920,10 +969,7 @@ void fgetline(FILE* f, std::string& s, std::vector<char>& buf)
 void fgetline(FILE* f, std::wstring& s, std::vector<wchar_t>& buf)
 {
     buf.resize(BUF_SIZE);
-    /* guoye: start */
-    // const wchar_t* p = fgetline(f, &buf[0], (int)buf.size());
-    const wchar_t* p = fgetlinew(f, &buf[0], (int)buf.size());
-    /* guoye: end */
+    const wchar_t* p = fgetline(f, &buf[0], (int)buf.size());
     s.assign(p);
 }
 
@@ -938,10 +984,7 @@ void fgetline(FILE* f, std::vector<char>& buf)
 void fgetline(FILE* f, std::vector<wchar_t>& buf)
 {
     buf.resize(BUF_SIZE);
-    /* guoye: start */
-    // fgetline(f, &buf[0], (int)buf.size());
-    fgetlinew(f, &buf[0], (int)buf.size());
-    /* guoye: end */
+    fgetline(f, &buf[0], (int)buf.size());
     buf.resize(wcsnlen(&buf[0], BUF_SIZE) + 1); // SECURITY NOTE: string use has been reviewed
 }
 
@@ -2145,7 +2188,37 @@ bool msra::files::fuptodate(const std::wstring& target, const std::wstring& inpu
     return targettime >= inputtime; // note: uses an overload for WIN32 FILETIME (in Linux, FILETIME=time_t=size_t)
 }
 
+// separate string by separator
+template<class String>
+/* guoye: start */
+// vector<String> SplitString(const String& str, const String& sep)
+std::vector<String> SplitString(const String& str, const String& sep)
+/* guoye: end */
+{
+    /* guoye: start */
+    // vector<String> vstr;
+    std::vector<String> vstr;
+    /* guoye: end */
+    String csub;
+    size_t ifound = 0;
+    size_t ifoundlast = ifound;
+    ifound = str.find_first_of(sep, ifound);
+    while (ifound != String::npos)
+    {
+        csub = str.substr(ifoundlast, ifound - ifoundlast);
+        if (!csub.empty())
+            vstr.push_back(csub);
 
+        ifoundlast = ifound + 1;
+        ifound = str.find_first_of(sep, ifoundlast);
+    }
+    ifound = str.length();
+    csub = str.substr(ifoundlast, ifound - ifoundlast);
+    if (!csub.empty())
+        vstr.push_back(csub);
+
+    return vstr;
+}
 /* guoye: start */
 // template vector<string>  SplitString(const  string& istr, const  string& sep);
 // template vector<wstring> SplitString(const wstring& istr, const wstring& sep);

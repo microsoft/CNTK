@@ -93,7 +93,6 @@ void freadOrDie(_T& data, size_t num, FILE* f) // template for std::vector<>
         freadOrDie(&data[0], sizeof(data[0]), data.size(), f);
 }
 
-
 #ifdef _WIN32
 template <class _T>
 void freadOrDie(_T& data, int num, const HANDLE f) // template for std::vector<>
@@ -246,122 +245,7 @@ void fputstring(FILE* f, const wchar_t*);
 void fputstring(FILE* f, const std::wstring&);
 
 template <class CHAR>
-CHAR* fgetline(FILE* f, CHAR* buf, int size)
-{
-    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
-    /* guoye: end */
-    CHAR* p = fgets(buf, size, f);
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
-    /* guoye: end */
-    if (p == NULL) // EOF reached: next time feof() = true
-    {
-        if (ferror(f))
-            RuntimeError("error reading line: %s", strerror(errno));
-        buf[0] = 0;
-        return buf;
-    }
-    size_t n = strnlen(p, size);
-
-    // check for buffer overflow
-
-    if (n >= (size_t)size - 1)
-    {
-        /* guoye: start */
-        // basic_string<CHAR> example(p, n < 100 ? n : 100);
-        std::basic_string<CHAR> example(p, n < 100 ? n : 100);
-        /* guoye: end */
-        uint64_t filepos = fgetpos(f); // (for error message only)
-        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int)filepos, (int)size - 1, msra::strfun::utf8(example).c_str());
-    }
-
-    // remove newline at end
-
-    if (n > 0 && p[n - 1] == '\n') // UNIX and Windows style
-    {
-        n--;
-        p[n] = 0;
-        if (n > 0 && p[n - 1] == '\r') // Windows style
-        {
-            n--;
-            p[n] = 0;
-        }
-    }
-    else if (n > 0 && p[n - 1] == '\r') // Mac style
-    {
-        n--;
-        p[n] = 0;
-    }
-
-    return buf;
-}
-
-// this is add to fix the code bug, without this, the code does not support wchar
-template <class CHAR>
-CHAR* fgetlinew(FILE* f, CHAR* buf, int size)
-{
-    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
-    /* guoye: end */
-    CHAR* p = fgets(buf, size, f);
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
-    /* guoye: end */
-    if (p == NULL) // EOF reached: next time feof() = true
-    {
-        if (ferror(f))
-            RuntimeError("error reading line: %s", strerror(errno));
-        buf[0] = L'\0';
-        return buf;
-    }
-    size_t n = wcsnlen(p, size);
-
-    // check for buffer overflow
-
-    if (n >= (size_t)size - 1)
-    {
-        /* guoye: start */
-        // basic_string<CHAR> example(p, n < 100 ? n : 100);
-        std::basic_string<CHAR> example(p, n < 100 ? n : 100);
-        /* guoye: end */
-        uint64_t filepos = fgetpos(f); // (for error message only)
-        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int)filepos, (int)size - 1, msra::strfun::utf8(example).c_str());
-    }
-
-    // remove newline at end
-
-    if (n > 0 && p[n - 1] == L'\n') // UNIX and Windows style
-    {
-        n--;
-        p[n] = L'\0';
-        if (n > 0 && p[n - 1] == L'\r') // Windows style
-        {
-            n--;
-            p[n] = L'\0';
-        }
-    }
-    else if (n > 0 && p[n - 1] == L'\r') // Mac style
-    {
-        n--;
-        p[n] = L'\0';
-    }
-
-    return buf;
-}
-
-template <class CHAR, size_t n>
-CHAR* fgetlinew(FILE* f, CHAR(&buf)[n])
-{
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
-    return fgetlinew(f, buf, n);
-    /* guoye: end */
-}
-
-/* guoye: end */
+CHAR* fgetline(FILE* f, CHAR* buf, int size);
 template <class CHAR, size_t n>
 CHAR* fgetline(FILE* f, CHAR(&buf)[n])
 {
@@ -1037,40 +921,9 @@ static inline String& trim(String& s)
 {
     return ltrim(rtrim(s));
 }
-/* guoye: start */
 
 template<class String>
-// move from fileutil.h, the definition and declartion should be at the same file.
-
-// vector<String> SplitString(const String& str, const String& sep)
-std::vector<String> SplitString(const String& str, const String& sep)
-/* guoye: end */
-{
-    /* guoye: start */
-    // vector<String> vstr;
-    std::vector<String> vstr;
-    /* guoye: end */
-    String csub;
-    size_t ifound = 0;
-    size_t ifoundlast = ifound;
-    ifound = str.find_first_of(sep, ifound);
-    while (ifound != String::npos)
-    {
-        csub = str.substr(ifoundlast, ifound - ifoundlast);
-        if (!csub.empty())
-            vstr.push_back(csub);
-
-        ifoundlast = ifound + 1;
-        ifound = str.find_first_of(sep, ifoundlast);
-    }
-    ifound = str.length();
-    csub = str.substr(ifoundlast, ifound - ifoundlast);
-    if (!csub.empty())
-        vstr.push_back(csub);
-
-    return vstr;
-}
-/* guoye: end */
+std::vector<String> SplitString(const String& str, const String& sep);
 template<class String, class Char>
 std::vector<String> SplitString(const String& str, const Char* sep) { return SplitString(str, String(sep)); }
 
@@ -1080,6 +933,6 @@ std::string ws2s(const std::wstring& wstr);
 
 
 /* guoye: start */
-// #include "../fileutil.cpp"
+#include "../fileutil.cpp"
 /* guoye: end */
 #endif // _FILEUTIL_

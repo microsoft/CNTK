@@ -35,6 +35,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CNTKv2LibraryDll</RootNamespace>
     <ProjectName>CNTKv2LibraryDll</ProjectName>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

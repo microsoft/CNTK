@@ -91,6 +91,8 @@ PROTOC = $(PROTOBUF_PATH)/bin/protoc
 #SSE_FLAGS =
 
 SOURCEDIR:= Source
+#INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
+# add common in includepath
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
@@ -749,6 +751,9 @@ HTKMLFREADER_SRC =\
 	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFReader.cpp \
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
+#	$(SOURCEDIR)/Common/File.cpp \
+#	$(SOURCEDIR)/Common/fileutil.cpp \
+#	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
 
 HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 

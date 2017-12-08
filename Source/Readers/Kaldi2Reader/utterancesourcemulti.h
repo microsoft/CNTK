@@ -36,6 +36,8 @@ class minibatchutterancesourcemulti : public minibatchsource
     // const std::vector<std::unique_ptr<latticesource>> &lattices;
     const latticesource &lattices;
 
+
+
     // std::vector<latticesource> lattices;
     // word-level transcripts (for MMI mode when adding best path to lattices)
     const std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts; // (used for getting word-level transcripts)
@@ -158,7 +160,15 @@ class minibatchutterancesourcemulti : public minibatchsource
                     reader.readNoAlloc(utteranceset[i].parsedpath, (const string &) featkind, sampperiod, uttframes); // note: file info here used for checkuing only
                     // page in lattice data
                     if (!latticesource.empty())
-                        latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
+                        /* guoye: start */
+                        // we currently don't care about kaldi format, so, just to make the compiler happy
+                        // latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
+                    {
+                        std::set<int> specialwordids;
+                        specialwordids.clear();
+                        latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols(), specialwordids);
+                    }
+                    /* guoye: end */
                 }
                 // fprintf (stderr, "\n");
                 if (verbosity)

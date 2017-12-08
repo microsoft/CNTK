@@ -471,7 +471,10 @@ public:
         {
             FrameRange fr(Input(0)->GetMBLayout());
             BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+                /* guoye: start */
+                          //  Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+                    Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold, m_MBR);
+            /* guoye: end */
             MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
 
 #ifdef _DEBUG
@@ -507,7 +510,10 @@ public:
 
     static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
                                        Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-                                       const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+        /* guoye: start */
+                                       //const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+                                        const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh, bool MBR)
+        /* guoye: end */
     {
 #if DUMPOUTPUT
         softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -515,8 +521,10 @@ public:
         gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif
-
-        inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
+        /* guoye: start */
+        // inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
+        inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element(), MBR);
+        /* guoye: end */
         inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
@@ -549,9 +557,20 @@ public:
 
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
+        // guoye: start 
+        // fprintf(stderr, "guoye debug: calgammaformb, m_m_nws.size() = %d \n", int(m_nws.size()));
+        for (size_t i = 0; i < m_nws.size(); i++)
+        {
+            // fprintf(stderr, "guoye debug: calgammaformb, i = %d, m_nws[i] = %d \n", int(i), int(m_nws[i]));
+        }
+        // guoye: end
+
         m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
                                         Input(0)->Value() /*labels*/, *m_gammaFromLattice,
-                                        m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
+            /* guoye: start */
+                         //               m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
+                                        m_uids, m_wids, m_nws, m_boundaries, Input(1)->GetNumParallelSequences(),
+            /* guoye: end */
                                         Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
 
 #if NANCHECK
@@ -624,15 +643,25 @@ public:
     // TODO: method names should be CamelCase
     std::vector<shared_ptr<const msra::dbn::latticepair>>* getLatticePtr() { return &m_lattices; }
     std::vector<size_t>* getuidprt() { return &m_uids; }
+    /* guoye: start */
+    std::vector<size_t>* getwidprt() { return &m_wids; }
+
+    std::vector<short>* getnwprt() { return &m_nws; }
+    
+    /* guoye: end */
     std::vector<size_t>* getboundaryprt() { return &m_boundaries; }
     std::vector<size_t>* getextrauttmap() { return &m_extraUttMap; }
     msra::asr::simplesenonehmm* gethmm() { return &m_hmm; }
 
     void SetSmoothWeight(double fsSmoothingWeight) { m_fsSmoothingWeight = fsSmoothingWeight; }
+    /* guoye : start */
+    void SetMBR(bool MBR) { m_MBR = MBR; }
+    /* guoye : end */
     void SetFrameDropThresh(double frameDropThresh) { m_frameDropThreshold = frameDropThresh; }
     void SetReferenceAlign(const bool doreferencealign) { m_doReferenceAlignment = doreferencealign; }
 
-    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
+    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR,
+        const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords, const bool& wordNbest, const bool& useAccInNbest, const float& accWeightInNbest, const size_t& numRawPathsEMBR)
     {
         msra::lattices::SeqGammarCalParam param;
         param.amf = amf;
@@ -640,6 +669,20 @@ public:
         param.wp = wp;
         param.bMMIfactor = bMMIfactor;
         param.sMBRmode = sMBR;
+
+        /* guoye: start */
+        param.EMBR = EMBR;
+        param.EMBRUnit = EMBRUnit;
+        param.numPathsEMBR = numPathsEMBR;
+        param.enforceValidPathEMBR = enforceValidPathEMBR;
+        param.getPathMethodEMBR = getPathMethodEMBR;
+        param.showWERMode = showWERMode;
+        param.excludeSpecialWords = excludeSpecialWords;
+        param.wordNbest = wordNbest;
+        param.useAccInNbest = useAccInNbest;
+        param.accWeightInNbest = accWeightInNbest;
+        param.numRawPathsEMBR = numRawPathsEMBR;
+        /* guoye: end */
         m_gammaCalculator.SetGammarCalculationParams(param);
     }
 
@@ -655,6 +698,9 @@ protected:
     shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
     double m_frameDropThreshold;
     double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
+    /* guoye: start */
+    bool m_MBR;
+    /* guoye: end */
     double m_seqGammarAMF;
     double m_seqGammarLMF;
     double m_seqGammarWP;
@@ -666,6 +712,11 @@ protected:
     msra::lattices::GammaCalculation<ElemType> m_gammaCalculator;
     bool m_gammaCalcInitialized;
     std::vector<size_t> m_uids;
+    /* guoye: start */
+    std::vector<size_t> m_wids;
+
+    std::vector<short> m_nws;
+    /* guoye: end */
     std::vector<size_t> m_boundaries;
     std::vector<size_t> m_extraUttMap;
 

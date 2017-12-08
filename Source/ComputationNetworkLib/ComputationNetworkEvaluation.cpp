@@ -353,9 +353,21 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
 /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::AllocateGradientMatricesForInputs(MatrixPool& matrixPool) /*override*/
 {
     // TODO: should we deallocate in opposite order?
+    /* guoye: start */
+    // fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 0, m_nestedNodes.size() = %d \n", int(m_nestedNodes.size()));
+    int count = 0;
+    /* guoye: end */
+
     for (auto nodeIter = m_nestedNodes.rbegin(); nodeIter != m_nestedNodes.rend(); ++nodeIter)
     {
+        /* guoye: start */
+        // fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 1, count = %d \n", int(count));
+        /* guoye: end */
+
+        
         (*nodeIter)->AllocateGradientMatricesForInputs(matrixPool);
+        count++;
+        // fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 2, count = %d \n", int(count));
     }
 }
 /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::RequestMatricesBeforeBackprop(MatrixPool& matrixPool) /*override*/
@@ -1043,36 +1055,53 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode)
 {
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 1\n");
+    /* guoye: end */
     if (AreMatricesAllocated())
         return;
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 2\n");
+    /* guoye: end */
 
     // Allocate memory for forward/backward computation
     if (TraceLevel() > 0)
         fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
     VerifyIsCompiled("AllocateAllMatrices");
-
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 3\n");
+    /* guoye: end */
     std::vector<ComputationNodeBasePtr> forwardPropRoots;
     forwardPropRoots.insert(forwardPropRoots.end(), evalRootNodes.begin(), evalRootNodes.end());
     forwardPropRoots.insert(forwardPropRoots.end(), outValueRootNodes.begin(), outValueRootNodes.end());
     if (trainRootNode != nullptr)
         forwardPropRoots.push_back(trainRootNode);
-
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 4\n");
+    /* guoye: end */
     // Mark all the eval, output and criterion roots as non-shareable
     for (auto& rootNode : forwardPropRoots)
         rootNode->MarkValueNonSharable();
-
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 5\n");
+    /* guoye: end */
     // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
     MarkValueNonSharableNodes();
 
     bool performingBackPropagation = (trainRootNode != nullptr);
-
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 6\n");
+    /* guoye: end */
     // Create a composite Eval order with the specified nodes as roots
     // For each node determine parents and whether the output of the
     // node is needed during back propagation
     std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
     std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
     std::unordered_set<ComputationNodeBasePtr> uniqueForwardPropEvalNodes;
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 7\n");
+    /* guoye: end */
     for (auto& rootNode : forwardPropRoots)
     {
         for (const auto& node : GetEvalOrder(rootNode))
@@ -1097,7 +1126,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             }
         }
     }
-
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 8\n");
+    /* guoye: end */
     // gradient reuse maps
     std::unordered_map<MatrixPool::AliasNodePtr, std::unordered_set<MatrixPool::AliasNodePtr>> gradientReuseChildrenMap;
     std::unordered_map<MatrixPool::AliasNodePtr, MatrixPool::AliasNodePtr> gradientReuseParentMap;
@@ -1133,6 +1164,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             }
         }
     }
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 9\n");
+    /* guoye: end */
 
     m_matrixPool.Reset();
 
@@ -1157,7 +1191,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             ReleaseMatricesAfterEvalForChildren(node, parentsMap);
         }
     });
-
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 10\n");
+    /* guoye: end */
     if (trainRootNode != nullptr)
     {
         const std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
@@ -1166,10 +1202,11 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
         std::unordered_map<MatrixPool::AliasNodePtr, std::unordered_set<MatrixPool::AliasNodePtr>> compactGradientAliasMap;
         std::unordered_map<MatrixPool::AliasNodePtr, MatrixPool::AliasNodePtr> compactGradientAliasRootMap;
+        // fprintf(stderr, "\nAllocateAllMatrices: debug 10.1\n");
         for (const auto& gradientReuseKeyValue : gradientReuseChildrenMap)
         {
             // keep searching parent until reaching root
-
+            // fprintf(stderr, "\nAllocateAllMatrices: debug 10.2\n");
             auto parent = gradientReuseKeyValue.first;
             auto parentIter = gradientReuseParentMap.find(parent);
             while (parentIter != gradientReuseParentMap.end())
@@ -1196,20 +1233,22 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             compactGradientAliasMap[parent].insert(parent);
             compactGradientAliasRootMap[parent] = parent;
         }
-
+        // fprintf(stderr, "\nAllocateAllMatrices: debug 10.3\n");
         // print the memory aliasing info
         if (TraceLevel() > 0 && compactGradientAliasRootMap.size() > 0)
         {
+            // fprintf(stderr, "\nAllocateAllMatrices: debug 10.4\n");
             fprintf(stderr, "\nGradient Memory Aliasing: %d are aliased.\n", (int)compactGradientAliasRootMap.size());
             for (const auto pair : compactGradientAliasRootMap)
             {
+                // fprintf(stderr, "\nAllocateAllMatrices: debug 10.5\n");
                 auto child = (const ComputationNodeBase*)pair.first;
                 auto parent = (const ComputationNodeBase*)pair.second;
                 if (child != parent)
                     fprintf(stderr, "\t%S (gradient) reuses %S (gradient)\n", child->GetName().c_str(), parent->GetName().c_str());
             }
         }
-
+        // fprintf(stderr, "\nAllocateAllMatrices: debug 10.6\n");
         m_matrixPool.SetAliasInfo(compactGradientAliasMap, compactGradientAliasRootMap);
 
         // now, simulate the gradient computation order to determine how to allocate matrices
@@ -1217,38 +1256,55 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
         // we need to call it here since we always compute gradients for children and root node is not children of other node
         trainRootNode->RequestMatricesBeforeBackprop(m_matrixPool);
-
+        // fprintf(stderr, "\nAllocateAllMatrices: debug 10.7\n");
         for (auto iter = backPropNodes.rbegin(); iter != backPropNodes.rend(); iter++) // for gradient computation, traverse in reverse order
         {
+            // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8\n");
             auto n = *iter;
+            // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.1\n");
             if (n->IsPartOfLoop())
             {
+            // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.2\n");
                 std::vector<ComputationNodeBasePtr> recurrentNodes;
                 shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, n);
+                // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.3\n");
                 if (completedGradient.insert(recInfo).second)
                 {
                     // SEQ mode: allocate all in loop first, then deallocate again
                     // TODO: next step: use PARTraversalFlowControlNode::AllocateGradientMatricesForInputs() and ReleaseMatricesAfterBackprop()...
                     // BUGBUG: naw, ^^ would not work! Wrong order! Need to rethink this. Need to make AllocateEvalMatrices() and AllocateGradientMatrices() the virtual functions.
+                    
+                    // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.4\n");
                     recInfo->AllocateGradientMatricesForInputs(m_matrixPool);
+                    // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.5\n");
                     // Loops are computed sample by sample so we have to allocate them all
                     recInfo->ReleaseMatricesAfterBackprop(m_matrixPool);
+                    // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.6\n");
                 }
             }
             else
             {
                 // PAR mode: we can allocate and immediately deallocate one by one
+                // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.7\n");
                 n->AllocateGradientMatricesForInputs(m_matrixPool);
+                // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.8\n");
                 // Root node's information will be used and should not be shared with others, also it's small (1x1)
                 if ((n != trainRootNode) && n->NeedsGradient())
                     n->ReleaseMatricesAfterBackprop(m_matrixPool);
+                // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.9\n");    
             }
+            // fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.10\n");
         }
+        // fprintf(stderr, "\nAllocateAllMatrices: debug 10.9\n");
     }
-
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 11\n");
+    /* guoye: end */
     m_matrixPool.OptimizedMemoryAllocation(); 
     m_areMatricesAllocated = true;
-
+    /* guoye: start */
+    // fprintf(stderr, "\nAllocateAllMatrices: debug 12\n");
+    /* guoye: end */
     // TO DO: At the time of AllocateAllMatrices we don't know the minibatch size. In theory one may allocate memory again once we start to receive
     // data from the reader (and the minibatch size is known). For some problems, minibatch size can change constantly, and there needs to be a 
     // tradeoff in deciding how frequent to run optimized memory allocation. For now, we do it only once at the very beginning for speed concerns. 

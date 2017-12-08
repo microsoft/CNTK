@@ -23,7 +23,9 @@
 #include <algorithm> // for find()
 #include "simplesenonehmm.h"
 #include "Matrix.h"
-
+/* guoye: start */
+#include <set>
+/* guoye: end */
 namespace msra { namespace math {
 
 class ssematrixbase;
@@ -68,6 +70,32 @@ enum mbrclassdefinition // used to identify definition of class in minimum bayes
 class lattice
 {
     mutable int verbosity;
+
+    /* guoye: start */
+
+    // definie structure for nbest EMBR
+    struct TokenInfo
+    {
+        double score; // the score of the token
+        size_t prev_edge_index; // edge ending with this token, edge start points to the previous node
+        size_t prev_token_index; // the token index in the previous node
+    };
+    struct PrevTokenInfo
+    {
+        size_t prev_edge_index;
+        size_t prev_token_index;
+        double path_score; // use pure to indicatethe path score does not consider the WER of the path
+    };
+
+    struct NBestToken
+    {
+        // for sorting purpose
+        // make sure the map is stored with keys in descending order
+        std::map<double, std::vector<PrevTokenInfo>, std::greater <double>> mp_score_token_infos; // for sorting the tokens in map
+        std::vector<TokenInfo> vt_nbest_tokens; // stores the nbest tokens in the node
+    };
+
+    /* guoye: end */
     struct header_v1_v2
     {
         size_t numnodes : 32;
@@ -88,12 +116,22 @@ class lattice
     static const unsigned int NOEDGE = 0xffffff; // 24 bits
     // static_assert (sizeof (nodeinfo) == 8, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
     // ensure type size as these are expected to be of this size in the files we read
-    static_assert(sizeof(nodeinfo) == 2, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
+    /* guoye: start */
+    static_assert(sizeof(nodeinfo) == 16, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
+
+    /* guoye: end */
     static_assert(sizeof(edgeinfowithscores) == 16, "unexpected size of edgeinfowithscores");
     static_assert(sizeof(aligninfo) == 4, "unexpected size of aligninfo");
     std::vector<nodeinfo> nodes;
+    /* guoye: start */
+    mutable std::vector<std::vector<uint64_t>> vt_node_out_edge_indices; // vt_node_out_edge_indices[i]: it stores the outgoing edge indices starting from node i
+    std::vector<bool> is_special_words; // true if it is special words that do not count to WER computation, false if it is not
+
+
+    /* guoye: end */
     std::vector<edgeinfowithscores> edges;
     std::vector<aligninfo> align;
+   
     // V2 lattices  --for a while, we will store both in RAM, until all code is updated
     static int fsgn(float f)
     {
@@ -215,6 +253,12 @@ class lattice
 public: // TODO: make private again once
     // construct from edges/align
     // This is also used for merging, where the edges[] array is not correctly sorted. So don't assume this here.
+    /* guoye: start */ 
+    void erase_node_out_edges(size_t nodeidx, size_t edgeidx_start, size_t edgeidx_end) const
+    {
+        vt_node_out_edge_indices[nodeidx].erase(vt_node_out_edge_indices[nodeidx].begin() + edgeidx_start, vt_node_out_edge_indices[nodeidx].begin() + edgeidx_end);
+    }
+    /* guoye: end */
     void builduniquealignments(size_t spunit = SIZE_MAX /*fix this later*/)
     {
         // infer /sp/ unit if not given
@@ -699,6 +743,7 @@ private:
                                       const float lmf, const float wp, const float amf, const_array_ref<size_t>& uids,
                                       const edgealignments& thisedgealignments, std::vector<double>& Eframescorrect) const;
 
+    
     void sMBRerrorsignal(parallelstate& parallelstate,
                          msra::math::ssematrixbase& errorsignal, msra::math::ssematrixbase& errorsignalneg,
                          const std::vector<double>& logpps, const float amf, double minlogpp,
@@ -734,7 +779,8 @@ private:
                                  const std::vector<double>& logpps, const float amf,
                                  const std::vector<double>& logEframescorrect, const double logEframescorrecttotal,
                                  msra::math::ssematrixbase& errorsignal, msra::math::ssematrixbase& errorsignalneg) const;
-
+    void parallelEMBRerrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
+        const std::vector<double>& edgeweights, msra::math::ssematrixbase& errorsignal) const;
     void parallelmmierrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
                                 const std::vector<double>& logpps, msra::math::ssematrixbase& errorsignal) const;
 
@@ -744,6 +790,20 @@ private:
                                           std::vector<double>& logbetas, const bool returnEframescorrect,
                                           const_array_ref<size_t>& uids, std::vector<double>& logEframescorrect,
                                           std::vector<double>& Eframescorrectbuf, double& logEframescorrecttotal) const;
+
+    /* guoye: start */
+    double parallelbackwardlatticeEMBR(parallelstate& parallelstate, const std::vector<float>& edgeacscores,
+        const float lmf, const float wp,
+        const float amf, std::vector<double>& edgelogbetas,
+        std::vector<double>& logbetas) const;
+    
+    void EMBRsamplepaths(const std::vector<double> &edgelogbetas,
+        const std::vector<double> &logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR,  const bool excludeSpecialWords, std::vector< std::vector<size_t> > & vt_paths) const;
+
+    void EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<std::vector<size_t>> & vt_paths, std::vector<double>& path_posterior_probs) const;
+
+    double get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs, std::string getPathMethodEMBR, double& onebestwer) const;
+    /* guoye: end */
 
     static double scoregroundtruth(const_array_ref<size_t> uids, const_array_ref<htkmlfwordsequence::word> transcript,
                                    const std::vector<float>& transcriptunigrams, const msra::math::ssematrixbase& logLLs,
@@ -760,6 +820,16 @@ private:
                                   std::vector<double>& logEframescorrect, std::vector<double>& Eframescorrectbuf,
                                   double& logEframescorrecttotal) const;
 
+    /* guoye: start */
+    double backwardlatticeEMBR(const std::vector<float>& edgeacscores, parallelstate& parallelstate, std::vector<double> &edgelogbetas,
+                                  std::vector<double>& logbetas,
+                                  const float lmf, const float wp, const float amf) const;
+
+    void constructnodenbestoken(std::vector<NBestToken> &tokenlattice, const bool wordNbest, size_t numtokens2keep, size_t nidx) const;
+
+    double nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &vt_nbesttokens, const size_t numtokens, const bool enforceValidPathEMBR,  const bool excludeSpecialWords,
+        const float lmf, const float wp, const float amf,  const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numPathsEMBR, std::vector<size_t> wids) const;
+    /* guoye: end */
 public:
     // construct from a HTK lattice file
     void fromhtklattice(const std::wstring& path, const std::unordered_map<std::string, size_t>& unitmap);
@@ -768,6 +838,156 @@ public:
     void frommlf(const std::wstring& key, const std::unordered_map<std::string, size_t>& unitmap, const msra::asr::htkmlfreader<msra::asr::htkmlfentry, lattice::htkmlfwordsequence>& labels,
                  const msra::lm::CMGramLM& lm, const msra::lm::CSymbolSet& unigramsymbols);
 
+    /* guoye: start */
+    // template <class IDMAP>
+    // void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids);
+    // move from latticearchive.cpp to .h, it requires template definition and delcaration are both in .h file
+    template <class IDMAP>
+    void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids)
+    /* guoye: end */
+    {
+
+
+
+        size_t version = freadtag(f, "LAT ");
+        if (version == 1)
+        {
+            freadOrDie(&info, sizeof(info), 1, f);
+            freadvector(f, "NODE", nodes, info.numnodes);
+            if (nodes.back().t != info.numframes)
+                /* guoye: start */
+            {
+                // RuntimeError("fread: mismatch between info.numframes and last node's time"); 
+                // sometimes, the data is corrputed, let's try to live with it
+                fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", int(nodes.back().t), int(info.numframes));
+            }
+            /* guoye: end */
+            freadvector(f, "EDGE", edges, info.numedges);
+            freadvector(f, "ALIG", align);
+            fcheckTag(f, "END ");
+            // map align ids to user's symmap  --the lattice gets updated in place here
+            foreach_index(k, align)
+                align[k].updateunit(idmap); // updates itself
+        }
+        else if (version == 2)
+        {
+            freadOrDie(&info, sizeof(info), 1, f);
+            freadvector(f, "NODS", nodes, info.numnodes);
+            if (nodes.back().t != info.numframes)
+            {
+                /* guoye: start */
+                {
+                    // RuntimeError("fread: mismatch between info.numframes and last node's time");
+                    // sometimes, the data is corrputed, let's try to live with it
+                    fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", int(nodes.back().t), int(info.numframes));
+                }
+                /* guoye: end */
+            }
+            freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
+            freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
+            fcheckTag(f, "END ");
+
+            /* guoye: start */
+            vt_node_out_edge_indices.resize(info.numnodes);
+            for (size_t j = 0; j < info.numedges; j++)
+            {
+                // an edge with !NULL pointing to not <s>
+                // this code make sure if you always start from <s> in the sampled path. 
+                // mask here: we delay the processing in EMBRsamplepaths controlled by flag: enforceValidPathEMBR
+                // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
+
+                vt_node_out_edge_indices[edges2[j].S].push_back(j);
+
+            }
+
+            is_special_words.resize(info.numnodes);
+            for (size_t i = 0; i < info.numnodes; i++)
+            {
+                /*
+                if (nodes[i].wid == 0xfffff)
+                {
+                    nodes[i].wid;
+                }
+                */
+                if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
+                else is_special_words[i] = false;
+            }
+
+            /* guoye: end */
+            // check if we need to map
+    #if 1                                                                                     // post-bugfix for incorrect inference of spunit
+            if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
+            {
+                fprintf(stderr, "fread: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int)info.impliedspunitid, (int)idmap.size());
+                RuntimeError("fread: out of bounds spunitid");
+            }
+    #endif
+            // This is critical--we have a buggy lattice set that requires no mapping where mapping would fail
+            bool needsmapping = false;
+            foreach_index(k, idmap)
+            {
+                if (idmap[k] != (size_t)k
+    #if 1
+                    && (k != (int)idmap.size() - 1 || idmap[k] != spunit) // that HACK that we add one more /sp/ entry at the end...
+    #endif
+                    )
+                {
+                    needsmapping = true;
+                    break;
+                }
+            }
+            // map align ids to user's symmap  --the lattice gets updated in place here
+            if (needsmapping)
+            {
+                if (info.impliedspunitid != SIZE_MAX)
+                    info.impliedspunitid = idmap[info.impliedspunitid];
+
+                // deal with broken (zero-token) edges
+                std::vector<bool> isendworkaround;
+                if (info.impliedspunitid != spunit)
+                {
+                    fprintf(stderr, "fread: lattice with broken spunit, using workaround to handle potentially broken zero-token edges\n");
+                    inferends(isendworkaround);
+                }
+
+                size_t uniquealignments = 1;
+                const size_t skipscoretokens = info.hasacscores ? 2 : 1;
+                for (size_t k = skipscoretokens; k < uniquededgedatatokens.size(); k++)
+                {
+                    if (!isendworkaround.empty() && isendworkaround[k]) // secondary criterion to detect ends in broken lattices
+                    {
+                        k--; // don't advance, since nothing to advance over
+                    }
+                    else
+                    {
+                        // this is a regular token: update it in-place
+                        auto& ai = uniquededgedatatokens[k];
+                        if (ai.unit >= idmap.size())
+                            RuntimeError("fread: broken-file heuristics failed");
+                        ai.updateunit(idmap); // updates itself
+                        if (!ai.last)
+                            continue;
+                    }
+                    // if last then skip over the lm and ac scores
+                    k += skipscoretokens;
+                    uniquealignments++;
+                }
+                fprintf(stderr, "fread: mapped %d unique alignments\n", (int)uniquealignments);
+            }
+            if (info.impliedspunitid != spunit)
+            {
+                // fprintf (stderr, "fread: inconsistent spunit id in file %d vs. expected %d; due to erroneous heuristic\n", info.impliedspunitid, spunit);    // [v-hansu] comment out becaues it takes up most of the log
+                // it's actually OK, we can live with this, since we only decompress and then move on without any assumptions
+                // RuntimeError("fread: mismatching /sp/ units");
+            }
+            // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
+            rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
+        }
+        else
+            RuntimeError("fread: unsupported lattice format version");
+    }
+
+    /* guoye: end */
     // check consistency
     //  - only one end node
     //  - only forward edges
@@ -957,112 +1177,9 @@ public:
         freadOrDie(v, sz, f);
     }
 
-    // read from a stream
-    // This can be used on an existing structure and will replace its content. May be useful to avoid memory allocations (resize() will not shrink memory).
-    // For efficiency, we will not check the inner consistency of the file here, but rather when we further process it.
-    // (We already use the tag mechanism to check the rough structure.)
-    // If this fails, the lattice is in unusable state, but it is OK to call fread() again to regain a usable object. I.e. this is safe to be used in retry loops.
-    // This will also map the aligninfo entries to the new symbol table, through idmap.
-    // V1 lattices will be converted. 'spsenoneid' is used in that process.
-    template <class IDMAP>
-    void fread(FILE* f, const IDMAP& idmap, size_t spunit)
-    {
-        size_t version = freadtag(f, "LAT ");
-        if (version == 1)
-        {
-            freadOrDie(&info, sizeof(info), 1, f);
-            freadvector(f, "NODE", nodes, info.numnodes);
-            if (nodes.back().t != info.numframes)
-                RuntimeError("fread: mismatch between info.numframes and last node's time");
-            freadvector(f, "EDGE", edges, info.numedges);
-            freadvector(f, "ALIG", align);
-            fcheckTag(f, "END ");
-            // map align ids to user's symmap  --the lattice gets updated in place here
-            foreach_index (k, align)
-                align[k].updateunit(idmap); // updates itself
-        }
-        else if (version == 2)
-        {
-            freadOrDie(&info, sizeof(info), 1, f);
-            freadvector(f, "NODS", nodes, info.numnodes);
-            if (nodes.back().t != info.numframes)
-                RuntimeError("fread: mismatch between info.numframes and last node's time");
-            freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
-            freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
-            fcheckTag(f, "END ");
-// check if we need to map
-#if 1                                                                                     // post-bugfix for incorrect inference of spunit
-            if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
-            {
-                fprintf(stderr, "fread: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int) info.impliedspunitid, (int) idmap.size());
-                RuntimeError("fread: out of bounds spunitid");
-            }
-#endif
-            // This is critical--we have a buggy lattice set that requires no mapping where mapping would fail
-            bool needsmapping = false;
-            foreach_index (k, idmap)
-            {
-                if (idmap[k] != (size_t) k
-#if 1
-                    && (k != (int) idmap.size() - 1 || idmap[k] != spunit) // that HACK that we add one more /sp/ entry at the end...
-#endif
-                    )
-                {
-                    needsmapping = true;
-                    break;
-                }
-            }
-            // map align ids to user's symmap  --the lattice gets updated in place here
-            if (needsmapping)
-            {
-                if (info.impliedspunitid != SIZE_MAX)
-                    info.impliedspunitid = idmap[info.impliedspunitid];
+ 
 
-                // deal with broken (zero-token) edges
-                std::vector<bool> isendworkaround;
-                if (info.impliedspunitid != spunit)
-                {
-                    fprintf(stderr, "fread: lattice with broken spunit, using workaround to handle potentially broken zero-token edges\n");
-                    inferends(isendworkaround);
-                }
-
-                size_t uniquealignments = 1;
-                const size_t skipscoretokens = info.hasacscores ? 2 : 1;
-                for (size_t k = skipscoretokens; k < uniquededgedatatokens.size(); k++)
-                {
-                    if (!isendworkaround.empty() && isendworkaround[k]) // secondary criterion to detect ends in broken lattices
-                    {
-                        k--; // don't advance, since nothing to advance over
-                    }
-                    else
-                    {
-                        // this is a regular token: update it in-place
-                        auto& ai = uniquededgedatatokens[k];
-                        if (ai.unit >= idmap.size())
-                            RuntimeError("fread: broken-file heuristics failed");
-                        ai.updateunit(idmap); // updates itself
-                        if (!ai.last)
-                            continue;
-                    }
-                    // if last then skip over the lm and ac scores
-                    k += skipscoretokens;
-                    uniquealignments++;
-                }
-                fprintf(stderr, "fread: mapped %d unique alignments\n", (int) uniquealignments);
-            }
-            if (info.impliedspunitid != spunit)
-            {
-                // fprintf (stderr, "fread: inconsistent spunit id in file %d vs. expected %d; due to erroneous heuristic\n", info.impliedspunitid, spunit);    // [v-hansu] comment out becaues it takes up most of the log
-                // it's actually OK, we can live with this, since we only decompress and then move on without any assumptions
-                // RuntimeError("fread: mismatching /sp/ units");
-            }
-            // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
-            rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
-        }
-        else
-            RuntimeError("fread: unsupported lattice format version");
-    }
-
+    
     // parallel versions (defined in parallelforwardbackward.cpp)
     class parallelstate
     {
@@ -1090,6 +1207,14 @@ public:
         const size_t getsilunitid();
         void getedgeacscores(std::vector<float>& edgeacscores);
         void getedgealignments(std::vector<unsigned short>& edgealignments);
+        /* guoye: start */
+        void getlogbetas(std::vector<double>& logbetas);
+        void getedgelogbetas(std::vector<double>& edgelogbetas);
+        void getedgeweights(std::vector<double>& edgeweights);
+    
+
+        void setedgeweights(const std::vector<double>& edgeweights);
+        /* guoye: end */
         // to work with CNTK's GPU memory
         void setdevice(size_t DeviceId);
         size_t getdevice();
@@ -1102,11 +1227,30 @@ public:
 
     // forward-backward function
     // Note: logLLs and posteriors may be the same matrix (aliased).
+    /* start: guoye */
+    
+    /*
     double forwardbackward(parallelstate& parallelstate, const class msra::math::ssematrixbase& logLLs, const class msra::asr::simplesenonehmm& hmms,
                            class msra::math::ssematrixbase& result, class msra::math::ssematrixbase& errorsignalbuf,
                            const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, array_ref<size_t> uids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
                            const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float>& transcriptunigrams = std::vector<float>()) const;
-
+    
+    */
+    double forwardbackward(parallelstate& parallelstate, const class msra::math::ssematrixbase& logLLs, const class msra::asr::simplesenonehmm& hmms,
+                           class msra::math::ssematrixbase& result, class msra::math::ssematrixbase& errorsignalbuf,
+                           const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, const bool EMBR, const std::string EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR,  const std::string getPathMethodEMBR, const std::string showWERMode,
+                           const bool excludeSpecialWords, const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numRawPathsEMBR,
+                            array_ref<size_t> uids, std::vector<size_t> wids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
+                           const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float>& transcriptunigrams = std::vector<float>()) const;
+    
+    /*
+    void embrerrorsignal(parallelstate &parallelstate,
+        std::vector<msra::math::ssematrixbase *> &abcs, const bool softalignstates, const msra::asr::simplesenonehmm &hset,
+        const edgealignments &thisedgealignments, std::vector<std::vector<size_t>>& vt_paths, std::vector<float>& path_weight, msra::math::ssematrixbase &errorsignal) const;
+        */
+    void EMBRerrorsignal(parallelstate &parallelstate,
+        const edgealignments &thisedgealignments, std::vector<double>& edge_weights, msra::math::ssematrixbase &errorsignal) const;
+        /* end: guoye */                            
     std::wstring key; // (keep our own name (key) so we can identify ourselves for diagnostics messages)
     const wchar_t* getkey() const
     {
@@ -1287,8 +1431,14 @@ public:
             if (sscanf(q, "[%" PRIu64 "]%c", &offset, &c) != 1)
 #endif
                 RuntimeError("open: invalid TOC line (bad [] expression): %s", line);
+
             if (!toc.insert(make_pair(key, latticeref(offset, archiveindex))).second)
-                RuntimeError("open: TOC entry leads to duplicate key: %s", line);
+                /* guoye: start */
+                // sometimes, the training will report this error. I believe it is due to some small data corruption, and fine to go on, so change the error to warning
+                // RuntimeError("open: TOC entry leads to duplicate key: %s", line);
+
+                fprintf(stderr, " open: TOC entry leads to duplicate key: %s\n", line);
+            /* guoye: end */
         }
 
         // initialize symmaps  --alloc the array, but actually read the symmap on demand
@@ -1319,7 +1469,10 @@ public:
     // Lattices will have unit ids updated according to the modelsymmap.
     // V1 lattices will be converted. 'spsenoneid' is used in the conversion for optimizing storing 0-frame /sp/ aligns.
     void getlattice(const std::wstring& key, lattice& L,
-                    size_t expectedframes = SIZE_MAX /*if unknown*/) const
+        /* guoye: start */
+               // size_t expectedframes = SIZE_MAX /*if unknown*/) const
+        std::set<int>& specialwordids, size_t expectedframes = SIZE_MAX) const
+        /* guoye: end */
     {
         auto iter = toc.find(key);
         if (iter == toc.end())
@@ -1346,7 +1499,11 @@ public:
             // seek to start
             fsetpos(f, offset);
             // get it
-            L.fread(f, idmap, spunit);
+            /* guoye: start */
+            // L.fread(f, idmap, spunit);
+            L.fread(f, idmap, spunit, specialwordids);
+            
+            /* guoye: end */
             L.setverbosity(verbosity);
 #ifdef HACK_IN_SILENCE // hack to simulate DEL in the lattice
             const size_t silunit = getid(modelsymmap, "sil");
@@ -1379,7 +1536,11 @@ public:
     //  - dump to stdout
     //  - merge two lattices (for merging numer into denom lattices)
     static void convert(const std::wstring& intocpath, const std::wstring& intocpath2, const std::wstring& outpath,
-                        const msra::asr::simplesenonehmm& hset);
+        /* guoye: start */
+                        // const msra::asr::simplesenonehmm& hset);
+        const msra::asr::simplesenonehmm& hset, std::set<int>& specialwordids);
+    /* guoye: end */
 };
 };
 };
+

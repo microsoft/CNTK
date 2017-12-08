@@ -5238,12 +5238,22 @@ __global__ void _DropFrame(
 
 template <class ElemType>
 __global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType* error, const ElemType* label,
-                                     const ElemType* dnnoutput, const ElemType* gamma, ElemType alpha, const long N)
+    /* guoye: start */
+                 //                    const ElemType* dnnoutput, const ElemType* gamma, ElemType alpha, const long N)
+    const ElemType* dnnoutput, const ElemType* gamma, ElemType alpha, const long N, bool MBR)
+    /* guoye: end */
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight) * dnnoutput[id] - hsmoothingWeight * gamma[id]);
+    /* guoye: start */
+    // error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight) * dnnoutput[id] - hsmoothingWeight * gamma[id]);
+    if(!MBR)
+        error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight) * dnnoutput[id] - hsmoothingWeight * gamma[id]);
+    else
+        error[id] -= alpha * ( (1.0 - hsmoothingWeight) * (label[id] - dnnoutput[id]) + hsmoothingWeight * gamma[id]);
+
+    /* guoye: end */
     // change to ce
     // error[id] -= alpha * (label[id] - dnnoutput[id] );
 }
