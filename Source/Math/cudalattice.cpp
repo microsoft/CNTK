@@ -162,6 +162,20 @@ private:
                                                     dynamic_cast<vectorbaseimpl<doublevector, vectorref<double>> &>(Eframescorrectbuf),
                                                     logEframescorrecttotal, totalfwscore);
     }
+    void backwardlatticeEMBR(const size_t *batchsizebackward, const size_t numlaunchbackward,
+        const floatvector &edgeacscores, const edgeinfowithscoresvector &edges,
+        const nodeinfovector &nodes, doublevector &edgelogbetas, doublevector &logbetas,
+        const float lmf, const float wp, const float amf, double &totalbwscore)
+    {
+        ondevice no(deviceid);
+        latticefunctionsops::backwardlatticeEMBR(batchsizebackward, numlaunchbackward,
+            dynamic_cast<const vectorbaseimpl<floatvector, vectorref<float>> &>(edgeacscores),
+            dynamic_cast<const vectorbaseimpl<edgeinfowithscoresvector, vectorref<msra::lattices::edgeinfowithscores>> &>(edges),
+            dynamic_cast<const vectorbaseimpl<nodeinfovector, vectorref<msra::lattices::nodeinfo>> &>(nodes),
+            dynamic_cast<vectorbaseimpl<doublevector, vectorref<double>> &>(edgelogbetas),
+            dynamic_cast<vectorbaseimpl<doublevector, vectorref<double>> &>(logbetas),
+            lmf, wp, amf, totalbwscore);
+    }
 
     void sMBRerrorsignal(const ushortvector &alignstateids,
                          const uintvector &alignoffsets,
@@ -183,6 +197,23 @@ private:
                                              logEframescorrecttotal, dengammasMatrixRef, dengammasbufMatrixRef);
     }
 
+    void EMBRerrorsignal(const ushortvector &alignstateids,
+        const uintvector &alignoffsets,
+        const edgeinfowithscoresvector &edges, const nodeinfovector &nodes,
+        const doublevector &edgeweights, 
+        Microsoft::MSR::CNTK::Matrix<float> &dengammas)
+    {
+        ondevice no(deviceid);
+
+        matrixref<float> dengammasMatrixRef = tomatrixref(dengammas);
+        
+        latticefunctionsops::EMBRerrorsignal(dynamic_cast<const vectorbaseimpl<ushortvector, vectorref<unsigned short>> &>(alignstateids),
+            dynamic_cast<const vectorbaseimpl<uintvector, vectorref<unsigned int>> &>(alignoffsets),
+            dynamic_cast<const vectorbaseimpl<edgeinfowithscoresvector, vectorref<msra::lattices::edgeinfowithscores>> &>(edges),
+            dynamic_cast<const vectorbaseimpl<nodeinfovector, vectorref<msra::lattices::nodeinfo>> &>(nodes),
+            dynamic_cast<const vectorbaseimpl<doublevector, vectorref<double>> &>(edgeweights),
+            dengammasMatrixRef);
+    }
     void mmierrorsignal(const ushortvector &alignstateids, const uintvector &alignoffsets,
                         const edgeinfowithscoresvector &edges, const nodeinfovector &nodes,
                         const doublevector &logpps, Microsoft::MSR::CNTK::Matrix<float> &dengammas)

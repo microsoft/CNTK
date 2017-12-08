@@ -302,6 +302,22 @@ struct latticefunctionskernels
         // note: critically, ^^ this comparison must copare the bits ('int') instead of the converted float values, since this will fail for NaNs (NaN != NaN is true always)
         return bitsasfloat(old);
     }
+    template <typename FLOAT>                                       // adapted from [http://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#ixzz32EuzZjxV]
+    static __device__ FLOAT atomicAdd(FLOAT *address, FLOAT val) // direct adaptation from NVidia source code
+    {
+        typedef decltype(floatasbits(val)) bitstype;
+        bitstype *address_as_ull = (bitstype *)address;
+        bitstype old = *address_as_ull, assumed;
+        do
+        {
+            assumed = old;
+            FLOAT sum = bitsasfloat(assumed);
+            sum = sum + val;
+            old = atomicCAS(address_as_ull, assumed, floatasbits(sum));
+        } while (assumed != old);
+        // note: critically, ^^ this comparison must copare the bits ('int') instead of the converted float values, since this will fail for NaNs (NaN != NaN is true always)
+        return bitsasfloat(old);
+    }
 #else // this code does not work because (assumed != old) will not compare correctly in case of NaNs
     // same pattern as atomicAdd(), but performing the log-add operation instead
     template <typename FLOAT>
@@ -888,6 +904,61 @@ struct latticefunctionskernels
         if (returnEframescorrect)
             logEframescorrect[j] = logEframescorrectj;
     }
+    template <typename edgeinforvector, typename nodeinfovector, typename floatvector, typename doublevector>
+    static inline __device__ void backwardlatticejEMBR(size_t j, const floatvector &edgeacscores,
+        const edgeinforvector &edges, const nodeinfovector &nodes, doublevector & edgelogbetas,
+        doublevector &logbetas, float lmf, float wp, float amf)
+    {
+        
+        // edge info
+        const edgeinfowithscores &e = edges[j];
+        double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf;
+        // zhaorui to deal with the abnormal score for sent start.
+        if (e.l < -200.0f)
+            edgescore = (0.0 * lmf + wp + edgeacscores[j]) / amf;
+        
+
+
+#ifdef FORBID_INVALID_SIL_PATHS
+        // original mode
+        const bool forbidinvalidsilpath = (logbetas.size() > nodes.size()); // we prune sil to sil path if alphabetablowup != 1
+        const bool isaddedsil = forbidinvalidsilpath && (e.unused == 1);     // HACK: 'unused' indicates artificially added sil/sp edge
+
+        if (!isaddedsil) // original mode
+#endif
+        {
+            const size_t S = e.S;
+            const size_t E = e.E;
+
+            // backward pass
+            const double inscore = logbetas[E];
+            const double pathscore = inscore + edgescore;
+            edgelogbetas[j] = pathscore;
+            atomicLogAdd(&logbetas[S], pathscore);
+        }
+
+#ifdef FORBID_INVALID_SIL_PATHS
+        
+        // silence edge or second speech edge
+        if ((isaddedsil && e.E != nodes.size() - 1) || (forbidinvalidsilpath && e.S != 0))
+        {
+            const size_t S = (size_t)(!isaddedsil ? e.S + nodes.size() : e.S); // second speech edge comes from special 'silence state' node
+            const size_t E = (size_t)(isaddedsil ? e.E + nodes.size() : e.E);  // silence edge goes into special 'silence state' node
+                                                                               // remaining lines here are code dup from above, with two changes: logadd2/logEframescorrectj2 instead of logadd/logEframescorrectj
+
+                                                                               // backward pass
+            const double inscore = logbetas[E];
+            const double pathscore = inscore + edgescore;
+            edgelogbetas[j] = pathscore;
+            atomicLogAdd(&logbetas[S], pathscore);
+
+        }
+#else
+        nodes;
+#endif
+        
+
+    }
 
     template <typename ushortvector, typename uintvector, typename edgeinfowithscoresvector, typename nodeinfovector, typename doublevector, typename matrix>
     static inline __device__ void sMBRerrorsignalj(size_t j, const ushortvector &alignstateids, const uintvector &alignoffsets,
@@ -930,6 +1001,29 @@ struct latticefunctionskernels
         }
     }
 
+    template <typename ushortvector, typename uintvector, typename edgeinfowithscoresvector, typename nodeinfovector, typename doublevector, typename matrix>
+    static inline __device__ void EMBRerrorsignalj(size_t j, const ushortvector &alignstateids, const uintvector &alignoffsets,
+        const edgeinfowithscoresvector &edges,
+        const nodeinfovector &nodes, const doublevector &edgeweights, 
+        matrix &errorsignal)
+    {
+        size_t ts = nodes[edges[j].S].t;
+        size_t te = nodes[edges[j].E].t;
+        if (ts != te)
+        {
+
+
+            const float weight = (float)(edgeweights[j]);
+            size_t offset = alignoffsets[j];
+            for (size_t t = ts; t < te; t++)
+            {
+                const size_t s = (size_t)alignstateids[t - ts + offset];
+
+                // use atomic function for lock the value
+                atomicAdd(&errorsignal(s, t), weight); 
+            }
+        }
+    }
     // accumulate a per-edge quantity into the states that the edge is aligned with
     // Use this for MMI passing the edge posteriors logpps[] as logq, or for sMBR passing logEframescorrect[].
     // j=edge index, alignment in (alignstateids, alignoffsets)

@@ -11,6 +11,7 @@
 #include <memory>
 #include <vector>
 
+#include <string>
 #pragma warning(disable : 4127) // conditional expression is constant
 
 namespace msra { namespace lattices {
@@ -22,6 +23,17 @@ struct SeqGammarCalParam
     double wp;
     double bMMIfactor;
     bool sMBRmode;
+    bool EMBR;
+    std::string EMBRUnit;
+    size_t numPathsEMBR;
+    bool enforceValidPathEMBR;
+    std::string getPathMethodEMBR;
+    std::string showWERMode;
+    bool excludeSpecialWords;
+    bool wordNbest;
+    bool useAccInNbest;
+    float accWeightInNbest;
+    size_t numRawPathsEMBR;
     SeqGammarCalParam()
     {
         amf = 14.0;
@@ -29,6 +41,17 @@ struct SeqGammarCalParam
         wp = 0.0;
         bMMIfactor = 0.0;
         sMBRmode = false;
+        EMBR = false;
+        EMBRUnit = "word";
+        numPathsEMBR = 100;
+        enforceValidPathEMBR = false;
+        getPathMethodEMBR = "sampling";
+        showWERMode = "average";
+        excludeSpecialWords = false;
+        wordNbest = false;
+        useAccInNbest = false;
+        accWeightInNbest = 1.0;
+        numRawPathsEMBR = 100;
     }
 };
 
@@ -81,6 +104,17 @@ public:
         wp = (float) gammarParam.wp;
         seqsMBRmode = gammarParam.sMBRmode;
         boostmmifactor = (float) gammarParam.bMMIfactor;
+        EMBR = gammarParam.EMBR;
+        EMBRUnit = gammarParam.EMBRUnit;
+        numPathsEMBR = gammarParam.numPathsEMBR;
+        enforceValidPathEMBR = gammarParam.enforceValidPathEMBR;
+        getPathMethodEMBR = gammarParam.getPathMethodEMBR;
+        showWERMode = gammarParam.showWERMode;
+        excludeSpecialWords = gammarParam.excludeSpecialWords;
+        wordNbest = gammarParam.wordNbest;
+        useAccInNbest = gammarParam.useAccInNbest;
+        accWeightInNbest = gammarParam.accWeightInNbest;
+        numRawPathsEMBR = gammarParam.numRawPathsEMBR;
     }
 
     // ========================================
@@ -91,7 +125,7 @@ public:
                        const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,
                        Microsoft::MSR::CNTK::Matrix<ElemType>& labels,
                        Microsoft::MSR::CNTK::Matrix<ElemType>& gammafromlattice,
-                       std::vector<size_t>& uids, std::vector<size_t>& boundaries,
+                        std::vector<size_t>& uids, std::vector<size_t>& wids, std::vector<short>& nws, std::vector<size_t>& boundaries,
                        size_t samplesInRecurrentStep, /* numParallelUtterance ? */
                        std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
                        std::vector<size_t>& extrauttmap,
@@ -128,9 +162,11 @@ public:
         size_t mapi = 0; // parallel-sequence index for utterance [i]
         // cal gamma for each utterance
         size_t ts = 0;
+        size_t ws = 0;
         for (size_t i = 0; i < lattices.size(); i++)
         {
             const size_t numframes = lattices[i]->getnumframes();
+            const short numwords = nws[i];
 
             msra::dbn::matrixstripe predstripe(pred, ts, numframes);           // logLLs for this utterance
             msra::dbn::matrixstripe dengammasstripe(dengammas, ts, numframes); // denominator gammas
@@ -186,6 +222,7 @@ public:
             }
 
             array_ref<size_t> uidsstripe(&uids[ts], numframes);
+            std::vector<size_t> widsstripe(wids.begin() + ws, wids.begin() + ws + numwords);
 
             if (doreferencealign)
             {
@@ -204,13 +241,12 @@ public:
             numavlogp /= numframes;
 
             // auto_timer dengammatimer;
+            
             double denavlogp = lattices[i]->second.forwardbackward(parallellattice,
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
-                                                                   lmf, wp, amf, boostmmifactor, seqsMBRmode, uidsstripe, boundariesstripe);
-
-            objectValue += (ElemType)((numavlogp - denavlogp) * numframes);
-
+                                                                   lmf, wp, amf, boostmmifactor, seqsMBRmode, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode, excludeSpecialWords, wordNbest, useAccInNbest, accWeightInNbest, numRawPathsEMBR, uidsstripe, widsstripe, boundariesstripe);
+            objectValue += (ElemType)(denavlogp*numwords);
             if (samplesInRecurrentStep == 1)
             {
                 tempmatrix = gammafromlattice.ColumnSlice(ts, numframes);
@@ -244,8 +280,8 @@ public:
             }
             if (samplesInRecurrentStep > 1)
                 validframes[mapi] += numframes; // advance the cursor within the parallel sequence
-            fprintf(stderr, "dengamma value %f\n", denavlogp);
             ts += numframes;
+            ws += numwords;
         }
         functionValues.SetValue(objectValue);
     }
@@ -509,6 +545,18 @@ protected:
     std::vector<size_t> boundary;
     float boostmmifactor;
     bool seqsMBRmode;
+
+    bool EMBR;
+    std::string EMBRUnit;
+    size_t numPathsEMBR;
+    bool enforceValidPathEMBR;
+    std::string getPathMethodEMBR;
+    std::string showWERMode;
+    bool excludeSpecialWords;
+    bool wordNbest;
+    bool useAccInNbest;
+    float accWeightInNbest;
+    size_t numRawPathsEMBR;
 
 private:
     std::unique_ptr<Microsoft::MSR::CNTK::CUDAPageLockedMemAllocator> m_cudaAllocator;

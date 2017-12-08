@@ -120,7 +120,8 @@ public:
         for (;;)
         {
             size_t actualMBSize = 0;
-            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
+            size_t actualNumWords = 0;
+            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi, actualNumWords);
             // in case of distributed reading, we do a few more loops until all ranks have completed
             // end of epoch
             if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) 

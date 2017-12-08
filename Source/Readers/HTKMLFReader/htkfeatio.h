@@ -864,13 +864,14 @@ public:
         setdata(ts, te, uid);
     }
 };
-
 template <class ENTRY, class WORDSEQUENCE>
-class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
+
+class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigned int>>> // [key][i] the data
 {
     wstring curpath;                                 // for error messages
     unordered_map<std::string, size_t> statelistmap; // for state <=> index
     map<wstring, WORDSEQUENCE> wordsequences;        // [key] word sequences (if we are building word entries as well, for MMI)
+    std::unordered_map<std::string, size_t> symmap;
 
     void strtok(char* s, const char* delim, vector<char*>& toks)
     {
@@ -900,10 +901,9 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         return lines;
     }
 
-    template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
+    template <typename WORDSYMBOLTABLE>
     void parseentry(const vector<std::string>& lines, size_t line, const set<wstring>& restricttokeys,
-                    const WORDSYMBOLTABLE* wordmap, const UNITSYMBOLTABLE* unitmap,
-                    vector<typename WORDSEQUENCE::word>& wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo>& alignseqbuffer,
+                    const WORDSYMBOLTABLE* wordmap, /* const UNITSYMBOLTABLE* unitmap, */
                     const double htkTimeToFrame)
     {
         size_t idx = 0;
@@ -936,13 +936,15 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         // don't parse unused entries (this is supposed to be used for very small debugging setups with huge MLFs)
         if (!restricttokeys.empty() && restricttokeys.find(key) == restricttokeys.end())
             return;
-
-        vector<ENTRY>& entries = (*this)[key]; // this creates a new entry
+        vector<ENTRY>& entries = (*this)[key].first; // this creates a new entry
         if (!entries.empty())
-            malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
+            // do not want to die immediately
+		    fprintf(stderr,
+            "Warning: duplicate entry: %ls \n",
+            key.c_str());
         entries.resize(e - s);
-        wordseqbuffer.resize(0);
-        alignseqbuffer.resize(0);
+        vector<size_t>& wordids = (*this)[key].second;
+        wordids.resize(0);
         vector<char*> toks;
         for (size_t i = s; i < e; i++)
         {
@@ -957,55 +959,241 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
             {
                 if (toks.size() > 6 /*word entry are in this column*/)
                 {
-                    const char* w = toks[6]; // the word name
-                    int wid = (*wordmap)[w]; // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
-                    size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t) wid;
-                    wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
-                }
-                if (unitmap)
-                {
-                    if (toks.size() > 4)
+                    // convert letter to uppercase
+                    if (strcmp(toks[6], "<s>") != 0 
+                        && strcmp(toks[6], "</s>") != 0
+                        && strcmp(toks[6], "!sent_start") != 0
+                        && strcmp(toks[6], "!sent_end") != 0
+                       && strcmp(toks[6], "!silence") != 0)
                     {
-                        const char* u = toks[4];      // the triphone name
-                        auto iter = unitmap->find(u); // map to unit id
-                        if (iter == unitmap->end())
-                            RuntimeError("parseentry: unknown unit %s in utterance %ls", u, key.c_str());
-                        const size_t uid = iter->second;
-                        alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/));
+                        for(size_t j = 0; j < strlen(toks[6]); j++)
+                        {
+						    if(toks[6][j] >= 'a' && toks[6][j] <= 'z')      
+                                toks[6][j] = toks[6][j] + 'A' - 'a';
+                        }
                     }
-                    if (alignseqbuffer.empty())
-                        RuntimeError("parseentry: lonely senone entry at start without phone/word entry found, for utterance %ls", key.c_str());
-                    alignseqbuffer.back().frames += entries[i - s].numframes; // (we do not have an overflow check here, but should...)
+                    const char* w = toks[6]; // the word name
+                    // For some alignment MLF the sentence start and end are both represented by <s>, we change sentence end <s> to be </s>
+                    if (i > s && strcmp(w, "<s>") == 0)
+                        w = "</s>";
+                    }
+                    /* skip the words that are not used in WER computation */
+                    /* ugly hard code, will improve later */
+                    if (strcmp(w, "<s>") != 0 
+                        && strcmp(w, "</s>") != 0
+                        && strcmp(w, "!NULL") != 0
+                        && strcmp(w, "!sent_start") != 0
+                        && strcmp(w, "!sent_end") != 0
+                        && strcmp(w, "!silence") != 0
+                        && strcmp(w, "[/CNON]") != 0
+                        && strcmp(w, "[/CSPN]") != 0
+                        && strcmp(w, "[/NPS]") != 0
+                        && strcmp(w, "[CNON/]") != 0
+                        && strcmp(w, "[CNON]") != 0
+                        && strcmp(w, "[CSPN]") != 0
+                        && strcmp(w, "[FILL/]") != 0
+                        && strcmp(w, "[NON/]") != 0
+                        && strcmp(w, "[NONNATIVE/]") != 0
+                        && strcmp(w, "[NPS]") != 0
+                        && strcmp(w, "[SB/]") != 0
+                        && strcmp(w, "[SBP/]") != 0
+                        && strcmp(w, "[SN/]") != 0
+                        && strcmp(w, "[SPN/]") != 0
+                        && strcmp(w, "[UNKNOWN/]") != 0
+                        && strcmp(w, ".]") != 0    
+                    )
+                    {
+                        int wid = (*wordmap)[w]; // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
+                        static const unsigned int unknownwordindex = 0xfffff;
+                        size_t wordindex = (wid == -1) ? unknownwordindex : (size_t)wid;
+                        wordids.push_back(wordindex);
+                    }
                 }
             }
         }
         if (wordmap) // if reading word sequences as well (for MMI), then record it (in a separate map)
         {
-            if (!entries.empty() && wordseqbuffer.empty())
-                RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance %ls", key.c_str());
+            if (!entries.empty() && wordids.empty())
+            {
+                fprintf(stderr,
+                "Warning: parseentry: got state alignment but no word-level info, although being requested, for utterance %ls \n",
+                key.c_str());
+            }                
             // post-process silence
             //  - first !silence -> !sent_start
             //  - last !silence -> !sent_end
-            int silence = (*wordmap)["!silence"];
-            if (silence >= 0)
+            else
             {
-                int sentstart = (*wordmap)["!sent_start"]; // these must have been created
-                int sentend = (*wordmap)["!sent_end"];
-                // map first and last !silence to !sent_start and !sent_end, respectively
-                if (sentstart >= 0 && wordseqbuffer.front().wordindex == (size_t) silence)
-                    wordseqbuffer.front().wordindex = sentstart;
-                if (sentend >= 0 && wordseqbuffer.back().wordindex == (size_t) silence)
-                    wordseqbuffer.back().wordindex = sentend;
+                int silence = (*wordmap)["!silence"];
+                if (silence >= 0)
+                {
+                    int sentstart = (*wordmap)["!sent_start"]; // these must have been created
+                    int sentend = (*wordmap)["!sent_end"];
+                    // map first and last !silence to !sent_start and !sent_end, respectively
+                    if (sentstart >= 0 && wordids.front() == (size_t)silence)
+                        wordids.front() = sentstart;
+                    if (sentend >= 0 && wordids.back() == (size_t)silence)
+                        wordids.back() = sentend;
+                }
             }
             // if (sentstart < 0 || sentend < 0 || silence < 0)
             //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent_end");
             // implant
-            auto& wordsequence = wordsequences[key]; // this creates the map entry
-            wordsequence.words = wordseqbuffer;      // makes a copy
-            wordsequence.align = alignseqbuffer;
         }
     }
+    
+    void parseentry(const vector<std::string>& lines, size_t line, const set<wstring>& restricttokeys,
+        const std::unordered_map<std::string, int>& wordidmap, 
+        const double htkTimeToFrame)
+    {
+        
+        std::unordered_map<std::string, int>::const_iterator mp_itr;
 
+        size_t idx = 0;
+        string filename = lines[idx++];
+        while (filename == "#!MLF!#") // skip embedded duplicate MLF headers (so user can 'cat' MLFs)
+            filename = lines[idx++];
+
+        // some mlf file have write errors, so skip malformed entry
+        if (filename.length() < 3 || filename[0] != '"' || filename[filename.length() - 1] != '"')
+        {
+            fprintf(stderr, "warning: filename entry (%s)\n", filename.c_str());
+            fprintf(stderr, "skip current mlf entry from line (%lu) until line (%lu).\n", (unsigned long)(line + idx), (unsigned long)(line + lines.size()));
+            return;
+        }
+
+        filename = filename.substr(1, filename.length() - 2); // strip quotes
+        if (filename.find("*/") == 0)
+            filename = filename.substr(2);
+#ifdef _MSC_VER
+        wstring key = msra::strfun::utf16(regex_replace(filename, regex("\\.[^\\.\\\\/:]*$"), string())); // delete extension (or not if none)
+#else
+        wstring key = msra::strfun::utf16(msra::dbn::removeExtension(filename)); // note that c++ 4.8 is incomplete for supporting regex
+#endif
+
+                                                                                 // determine lines range
+        size_t s = idx;
+        size_t e = lines.size() - 1;
+        // lines range: [s,e)
+        // don't parse unused entries (this is supposed to be used for very small debugging setups with huge MLFs)
+        if (!restricttokeys.empty() && restricttokeys.find(key) == restricttokeys.end())
+            return;
+        vector<ENTRY>& entries = (*this)[key].first;
+        if (!entries.empty())
+            // do not want to die immediately
+            fprintf(stderr,
+                "Warning: duplicate entry : %ls \n",
+                key.c_str());
+            
+        entries.resize(e - s);
+
+        vector<unsigned int>& wordids = (*this)[key].second;
+        wordids.resize(0);
+        vector<char*> toks;
+        for (size_t i = s; i < e; i++)
+        {
+            // We can mutate the original string as it is no longer needed after tokenization
+            strtok(const_cast<char*>(lines[i].c_str()), " \t", toks);
+            if (statelistmap.size() == 0)
+                entries[i - s].parse(toks, htkTimeToFrame);
+            else
+                entries[i - s].parsewithstatelist(toks, statelistmap, htkTimeToFrame, symmap);
+            // if we also read word entries, do it here
+            if (wordidmap.size() != 0)
+            {
+                if (toks.size() > 6 /*word entry are in this column*/)
+                {
+                        // convert word to uppercase
+                    if (strcmp(toks[6], "<s>") != 0 
+                        && strcmp(toks[6], "</s>") != 0
+                        && strcmp(toks[6], "!sent_start") != 0
+                        && strcmp(toks[6], "!sent_end") != 0
+                       && strcmp(toks[6], "!silence") != 0)
+                    {
+                        for(size_t j = 0; j < strlen(toks[6]); j++)
+                        {
+                            if(toks[6][j] >= 'a' && toks[6][j] <= 'z')
+                                toks[6][j] = toks[6][j] + 'A' - 'a';
+                        }
+                    }
+                    const char* w = toks[6]; // the word name
+                                             // For some alignment MLF the sentence start and end are both represented by <s>, we change sentence end <s> to be </s>
+                    if (i > s && strcmp(w, "<s>") == 0)
+                        w = "</s>";
+                    /* skip the words that are not used in WER computation */
+                    /* ugly hard code, will improve later */
+                    if (strcmp(w, "<s>") != 0
+                        && strcmp(w, "</s>") != 0
+                        && strcmp(w, "!NULL") != 0
+                        && strcmp(w, "!sent_start") != 0
+                        && strcmp(w, "!sent_end") != 0
+                        && strcmp(w, "!silence") != 0
+                        && strcmp(w, "[/CNON]") != 0
+                        && strcmp(w, "[/CSPN]") != 0
+                        && strcmp(w, "[/NPS]") != 0
+                        && strcmp(w, "[CNON/]") != 0
+                        && strcmp(w, "[CNON]") != 0
+                        && strcmp(w, "[CSPN]") != 0
+                        && strcmp(w, "[FILL/]") != 0
+                        && strcmp(w, "[NON/]") != 0
+                        && strcmp(w, "[NONNATIVE/]") != 0
+                        && strcmp(w, "[NPS]") != 0
+                        && strcmp(w, "[SB/]") != 0
+                        && strcmp(w, "[SBP/]") != 0
+                        && strcmp(w, "[SN/]") != 0
+                        && strcmp(w, "[SPN/]") != 0
+                        && strcmp(w, "[UNKNOWN/]") != 0
+                        && strcmp(w, ".]") != 0
+                        )
+                    {
+                        mp_itr = wordidmap.find(std::string(w));
+                        int wid = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
+                        static const unsigned int unknownwordindex = 0xfffff;
+                        unsigned int wordindex = (wid == -1) ? unknownwordindex : (unsigned int)wid;
+                        wordids.push_back(wordindex);
+                    }
+                }
+            }
+        }
+        if (wordidmap.size() != 0) // if reading word sequences as well (for MMI), then record it (in a separate map)
+        {
+            if (!entries.empty() && wordids.empty())
+            {
+                
+                fprintf(stderr,
+                    "Warning: parseentry: got state alignment but no word-level info, although being requested, for utterance %ls. Ignoring this utterance for EMBR \n",
+                    key.c_str());
+                // delete this item
+                (*this).erase(key);
+                return;
+                
+            }
+
+            // post-process silence
+            //  - first !silence -> !sent_start
+            //  - last !silence -> !sent_end
+            else
+            {
+                
+                mp_itr = wordidmap.find("!silence");
+                int silence = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
+                if (silence >= 0)
+                {
+                    mp_itr = wordidmap.find("!sent_start");
+                    int sentstart = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
+
+                    mp_itr = wordidmap.find("!sent_end");
+                    int sentend = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
+
+                    // map first and last !silence to !sent_start and !sent_end, respectively
+                    if (sentstart >= 0 && wordids.front() == (size_t)silence)
+                        wordids.front() = sentstart;
+                    if (sentend >= 0 && wordids.back() == (size_t)silence)
+                        wordids.back() = sentend;
+                }
+            }
+        }
+    }
 public:
     // return if input statename is sil state (hard code to compared first 3 chars with "sil")
     bool issilstate(const string& statename) const // (later use some configuration table)
@@ -1044,9 +1232,32 @@ public:
             read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
     }
 
-    // note: this function is not designed to be pretty but to be fast
+
+    htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const std::unordered_map<std::string, int>& wordidmap, const double htkTimeToFrame)
+    {
+        // read state list
+        if (stateListPath != L"")
+            readstatelist(stateListPath);
+
+        // read MLF(s) --note: there can be multiple, so this is a loop
+        foreach_index(i, paths)
+            read(paths[i], restricttokeys, wordidmap, htkTimeToFrame);
+    }
+
+    // phone boundary
     template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
-    void read(const wstring& path, const set<wstring>& restricttokeys, const WORDSYMBOLTABLE* wordmap, const UNITSYMBOLTABLE* unitmap, const double htkTimeToFrame)
+    htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const WORDSYMBOLTABLE* wordmap, const UNITSYMBOLTABLE* unitmap,
+                 const double htkTimeToFrame, const msra::asr::simplesenonehmm& hset)
+    {
+        if (stateListPath != L"")
+            readstatelist(stateListPath);
+        symmap = hset.symmap;
+        foreach_index (i, paths)
+            read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
+    }
+    // note: this function is not designed to be pretty but to be fast
+    template <typename WORDSYMBOLTABLE>
+    void read(const wstring& path, const set<wstring>& restricttokeys, const WORDSYMBOLTABLE* wordmap,  const double htkTimeToFrame)
     {
         if (!restricttokeys.empty() && this->size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
             return;
@@ -1060,8 +1271,6 @@ public:
             malformed("header missing");
 
         // Read the file in blocks and parse MLF entries
-        std::vector<typename WORDSEQUENCE::word> wordsequencebuffer;
-        std::vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
         size_t readBlockSize = 1000000;
         std::vector<char> currBlockBuf(readBlockSize + 1);
         size_t currLineNum = 1;
@@ -1091,7 +1300,7 @@ public:
                 {
                     if (restricttokeys.empty() || (this->size() < restricttokeys.size()))
                     {
-                        parseentry(currMLFLines, currLineNum - currMLFLines.size(), restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
+                        parseentry(currMLFLines, currLineNum - currMLFLines.size(), restricttokeys, wordmap, htkTimeToFrame);
                     }
 
                     currMLFLines.clear();
@@ -1134,6 +1343,93 @@ public:
         fprintf(stderr, " total %lu entries\n", (unsigned long)this->size());
     }
 
+    // note: this function is not designed to be pretty but to be fast
+    void read(const wstring& path, const set<wstring>& restricttokeys, const std::unordered_map<std::string, int>& wordidmap,  const double htkTimeToFrame)
+    {
+        if (!restricttokeys.empty() && this->size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
+            return;
+
+        fprintf(stderr, "htkmlfreader: reading MLF file %ls ...", path.c_str());
+        curpath = path; // for error messages only
+
+        auto_file_ptr f(fopenOrDie(path, L"rb"));
+        std::string headerLine = fgetline(f);
+        if (headerLine != "#!MLF!#")
+            malformed("header missing");
+
+        // Read the file in blocks and parse MLF entries
+        size_t readBlockSize = 1000000;
+        std::vector<char> currBlockBuf(readBlockSize + 1);
+        size_t currLineNum = 1;
+        std::vector<string> currMLFLines;
+        bool reachedEOF = (feof(f) != 0);
+        char* nextReadPtr = currBlockBuf.data();
+        size_t nextReadSize = readBlockSize;
+        while (!reachedEOF)
+        {
+            size_t numBytesRead = fread(nextReadPtr, sizeof(char), nextReadSize, f);
+            reachedEOF = (numBytesRead != nextReadSize);
+            if (ferror(f))
+                RuntimeError("error reading from file: %s", strerror(errno));
+
+            // Add 0 at the end to make it a proper C string
+            nextReadPtr[numBytesRead] = 0;
+
+            // Now extract lines from the currBlockBuf and parse MLF entries
+            char* context = nullptr;
+            const char* delim = "\r\n";
+
+            auto consumeMLFLine = [&](const char* mlfLine)
+            {
+                currLineNum++;
+                currMLFLines.push_back(mlfLine);
+                if ((mlfLine[0] == '.') && (mlfLine[1] == 0)) // utterance end delimiter: a single dot on a line
+                {
+                    if (restricttokeys.empty() || (this->size() < restricttokeys.size()))
+                    {
+                        // parseentry(currMLFLines, currLineNum - currMLFLines.size(), restricttokeys, wordidmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
+                        parseentry(currMLFLines, currLineNum - currMLFLines.size(), restricttokeys, wordidmap, htkTimeToFrame);
+                    }
+
+                    currMLFLines.clear();
+                }
+            };
+
+            char* prevLine = strtok_s(currBlockBuf.data(), delim, &context);
+            for (char* currLine = strtok_s(NULL, delim, &context); currLine; currLine = strtok_s(NULL, delim, &context))
+            {
+                consumeMLFLine(prevLine);
+                prevLine = currLine;
+            }
+
+            // The last line read from the block may be a full line or part of a line
+            // We can tell by whether the terminating NULL for this line is the NULL
+            // we inserted after reading from the file
+            size_t prevLineLen = strlen(prevLine);
+            if ((prevLine + prevLineLen) == (nextReadPtr + numBytesRead))
+            {
+                // This is not a full line, but just a truncated part of a line.
+                // Lets copy this to the start of the currBlockBuf and read new data
+                // from there on
+                strcpy_s(currBlockBuf.data(), currBlockBuf.size(), prevLine);
+                nextReadPtr = currBlockBuf.data() + prevLineLen;
+                nextReadSize = readBlockSize - prevLineLen;
+            }
+            else
+            {
+                // A full line
+                consumeMLFLine(prevLine);
+                nextReadPtr = currBlockBuf.data();
+                nextReadSize = readBlockSize;
+            }
+        }
+
+        if (!currMLFLines.empty())
+            malformed("unexpected end in mid-utterance");
+
+        curpath.clear();
+        fprintf(stderr, " total %lu entries\n", (unsigned long)this->size());
+    }
     // read state list, index is from 0
     void readstatelist(const wstring& stateListPath = L"")
     {
