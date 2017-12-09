@@ -507,10 +507,11 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Seque
     return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, loglikelihood });
 }
 
+// const ComputationNodePtr a, const ComputationNodePtr b, float subPen, float delPen, float insPen, bool squashInputs, vector<size_t> tokensToIgnore, const std::wstring nodeName
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceWithLattice(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const ComputationNodePtr lattice, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceWithLattice(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const ComputationNodePtr lattice, const std::wstring& cdphonetyingpath, const std::wstring& statelistpath, const std::wstring& transPspath, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SequenceWithLatticeNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, loglikelihood, lattice });
+    return net.AddNodeToNetAndAttachInputs(New<SequenceWithLatticeNode<ElemType>>(net.GetDeviceId(), nodeName, cdphonetyingpath, statelistpath, transPspath), { label, prediction, loglikelihood, lattice });
 }
 
 template <class ElemType>

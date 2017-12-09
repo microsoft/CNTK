@@ -677,7 +677,7 @@ template class SequenceWithSoftmaxNode<float>;
 template class SequenceWithSoftmaxNode<double>;
 
 // -----------------------------------------------------------------------
-// SequenceWithLatticeNode (label, prediction, loglikelihood)
+// SequenceWithLatticeNode (label, prediction, loglikelihood, lattice)
 // Similar to the SequenceWithSoftmaxNode, but is using the new deserializer.
 //
 // -----------------------------------------------------------------------
@@ -694,7 +694,15 @@ class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, publ
 
 public:
     DeclareConstructorFromConfigWithNumInputs(SequenceWithLatticeNode);
-    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const wstring& name)
+    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& cdPhoneTyingPath, const std::wstring& stateListPath, const std::wstring& transPsPath)
+        : Base(deviceId, name), m_gammaCalcInitialized(false)
+    {
+        fprintf(stderr, "%ls %ls %ls", cdPhoneTyingPath.c_str(), stateListPath.c_str(), transPsPath.c_str());
+        if (sizeof(ElemType) != sizeof(float))
+            LogicError("SequenceWithLatticeNode currently only supports floats."); // due to the binary reader restrictions 
+    }
+
+    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
         : Base(deviceId, name), m_gammaCalcInitialized(false)
     {
     }
@@ -753,7 +761,8 @@ public:
     // -sum(left_i * log(softmax_i(right)))
     virtual void ForwardPropNonLooping()
     {
-        auto d = Input(3)->GetMBLayout();
+        FrameRange fr(Input(3)->GetMBLayout());
+        auto m_latticeInput = InputRef(3).ValueFor(fr);
         // Initialize m_gammaCalculator
         // TODO: Would this lend itself to a unique_ptr instead of the init flag?
         if (!m_gammaCalcInitialized)

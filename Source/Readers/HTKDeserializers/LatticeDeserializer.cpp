@@ -60,9 +60,11 @@ protected:
         auto f = FileWrapper::OpenOrDie(fileName, L"rbS");
         size_t sizeInBytes = descriptor.SizeInBytes();
 
-        // Make sure we always have 0 at the end for buffer overrun.
-        m_buffer.resize(sizeInBytes + 1);
-        m_buffer[sizeInBytes] = 0;
+        // Make sure we always have 3 at the end for buffer overrun, i.e. 4 byte alignment
+        m_buffer.resize(sizeInBytes + sizeof(float) - 1);
+        for (int fl = 0; fl < sizeof(float)-1; fl++) {
+            m_buffer[sizeInBytes + fl] = 0;
+        }
 
         // Seek and read chunk into memory.
         f.SeekOrDie(descriptor.StartOffset(), SEEK_SET);
