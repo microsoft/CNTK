@@ -1012,7 +1012,10 @@ namespace CNTK
                 }
                 case PrimitiveOpType::SequenceWithLattice:
                 {
-                    computationNodePtr = New<SequenceWithLatticeNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    auto cdPhoneTyingPath = functionConfig[PrimitiveFunction::AttributeNameCdPhoneTyingPath].Value<wstring>();
+                    auto stateListPath = functionConfig[PrimitiveFunction::AttributeNameStateListPath].Value<wstring>();
+                    auto transPsPath =  functionConfig[PrimitiveFunction::AttributeNameTransPsPath].Value<wstring>();
+                    computationNodePtr = New<SequenceWithLatticeNode<ElementType>>(network->GetDeviceId(), internalNodeName, cdPhoneTyingPath, stateListPath, transPsPath);
                     break;
                 }
                 case PrimitiveOpType::ForwardBackward:
