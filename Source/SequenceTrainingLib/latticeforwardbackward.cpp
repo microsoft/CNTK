@@ -1152,7 +1152,9 @@ size_t sample_from_cumulative_prob(const std::vector<double> &cumulative_prob)
     {
         RuntimeError("sample_from_cumulative_prob: the number of bins is 0 \n");
     }
-    double rand_prob = (double)rand() / (double)RAND_MAX;
+    // double rand_prob = (double)rand() / (double)RAND_MAX;
+    // for the case that we force the sampling path to have <s> at the start, some paths are pruned, and the sum prob is not 1.
+    double rand_prob = (double)rand() / (double)RAND_MAX * cumulative_prob.back();
 
     for (size_t i = 0; i < cumulative_prob.size() - 1; i++)
     {
@@ -1214,11 +1216,13 @@ void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
                     double prob = exp(edgelogbetas[vt_node_out_edge_indices[curnodeidx][i]] - logbetas[curnodeidx]);
                     if(i == 0)    ocp.push_back(prob);
                     else ocp.push_back(prob + ocp.back());
-                }
+                } 
+                /* for the case we force the path starting with <s>, it is possible that some paths get pruned, and the summation is not 1 at all 
                 if (fabs(ocp.back() - 1) > 1e-4f)
                 {
                     fprintf(stderr, "EMBRsamplepaths: WARNING: local normalized prob does not sum to 1: %f\n", ocp.back());
                 }
+                */
                 mp_node_ocp.insert(pair<size_t, vector<double>>(curnodeidx, ocp));
                 edgeidx = vt_node_out_edge_indices[curnodeidx][sample_from_cumulative_prob(ocp)];
 
