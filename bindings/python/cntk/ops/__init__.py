@@ -2924,12 +2924,12 @@ def random_sample_inclusion_frequency(
 @typemap
 def dropout(x, dropout_rate=0.0, seed = SentinelValueForAutoSelectRandomSeed, name=''):
     '''
-    Each element of the input is independently set to 0 with probabily ``dropout_rate``
+    Each element of the input is independently set to 0 with probability ``dropout_rate``
     or to 1 / (1 - ``dropout_rate``) times its original value (with probability 1-``dropout_rate``).
     Dropout is a good way to reduce overfitting.
 
     This behavior only happens during training. During inference dropout is a no-op.
-    In the paper that introduced dropout it was suggested to scale the weights during inference
+    In the paper that introduced dropout it was suggested to scale the weights during inference.
     In CNTK's implementation, because the values that are not set to 0 are multiplied
     with (1 / (1 - ``dropout_rate``)), this is not necessary.
 
@@ -3133,7 +3133,7 @@ def parameter(shape=None, init=None, dtype=None, device=None, name=''):
 @typemap
 def constant(value=None, shape=None, dtype=None, device=None, name=''):
     '''
-    It creates a constant tensor initialized from a numpy array
+    It creates a constant tensor initialized from a numpy array.
 
     Example:
         >>> constant_data = C.constant([[1., 2.], [3., 4.], [5., 6.]])
@@ -3340,3 +3340,93 @@ def crop_automatic_with_ancestors(node_input, node_referent, ancestor_input, anc
     arg_ancestor_input = sanitize_input(ancestor_input, get_data_type(ancestor_input))
     arg_ancestor_ref = sanitize_input(ancestor_referent,  get_data_type(ancestor_referent))
     return crop(arg_node_input, arg_node_ref, arg_ancestor_input, arg_ancestor_ref, name)
+
+@typemap
+def depth_to_space(operand, block_size, name=''):
+    '''
+    Rearranges elements in the input tensor from the depth dimension into spatial blocks.
+
+    This operation is useful for implementing sub-pixel convolution that is part of models  
+    for image super-resolution (see [1]). It rearranges elements of an input tensor of shape 
+    (Cxbxb, H, W) to a tensor of shape (C, bxH, bxW), where b is the `block_size`.
+    
+    Example:
+        >>> x = np.array(np.reshape(range(8), (8, 1, 1)), dtype=np.float32)
+        >>> x = np.tile(x, (1, 2, 3))
+        >>> a = C.input_variable((8, 2, 3))
+        >>> d2s_op = C.depth_to_space(a, block_size=2)
+        >>> d2s_op.eval({a:x})
+        array([[[[ 0.,  1.,  0.,  1.,  0.,  1.],
+                 [ 2.,  3.,  2.,  3.,  2.,  3.],
+                 [ 0.,  1.,  0.,  1.,  0.,  1.],
+                 [ 2.,  3.,  2.,  3.,  2.,  3.]],
+        <BLANKLINE>
+                [[ 4.,  5.,  4.,  5.,  4.,  5.],
+                 [ 6.,  7.,  6.,  7.,  6.,  7.],
+                 [ 4.,  5.,  4.,  5.,  4.,  5.],
+                 [ 6.,  7.,  6.,  7.,  6.,  7.]]]], dtype=float32)
+
+    Args:
+        operand: Input tensor, with dimensions :math:`[C \\times H \\times W]`.
+        block_size (int): Integer value. This defines the size of the spatial block where the 
+         depth elements move to. Number of channels, C, in the input tensor must be divisible 
+         by math:`(block_size \\times block_size)`
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+
+    See also:
+        [1] W. Shi et. al. `: Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_.
+    '''
+    from cntk.cntk_py import depth_to_space
+    operand = sanitize_input(operand, get_data_type(operand))
+    if not float(block_size).is_integer():
+        raise ValueError('block_size must be an integer.')
+    return depth_to_space(operand, block_size, name)
+
+@typemap
+def space_to_depth(operand, block_size, name=''):
+    '''
+    Rearranges elements in the input tensor from the spatial dimensions to the depth dimension.
+
+    This is the reverse transformation of depth_to_space. This operation is useful for implementing 
+    and testing sub-pixel convolution that is part of models for image super-resolution (see [1]).
+    It rearranges elements of an input tensor of shape (C, H, W) to a tensor of shape (C*b*b, H/b, W/b),
+    where b is the `block_size`, by rearranging non-overlapping spatial blocks of size `block_size` x `block_size`
+    into the depth/channel dimension at each location.
+    
+    Example:
+        >>> np.random.seed(3)
+        >>> x = np.random.randint(low=0, high=100, size=(1, 4, 6)).astype(np.float32)
+        >>> a = C.input_variable((1, 4, 6))
+        >>> s2d_op = C.space_to_depth(a, block_size=2)
+        >>> s2d_op.eval({a:x})
+        array([[[[ 24.,  56.,   0.],
+                 [ 96.,  44.,  39.]],
+        <BLANKLINE>
+                [[  3.,  72.,  21.],
+                 [ 20.,  93.,  14.]],
+        <BLANKLINE>
+                [[ 19.,  41.,  21.],
+                 [ 26.,  90.,  66.]],
+        <BLANKLINE>
+                [[ 74.,  10.,  38.],
+                 [ 81.,  22.,   2.]]]], dtype=float32)
+
+    Args:
+        operand: Input tensor, with dimensions :math:`[C \\times H \\times W]`.
+        block_size (int): Integer value. This defines the size of the spatial block whose elements
+         are moved to the depth dimension. Size of spatial dimensions (H, W) in the input tensor
+         must be divisible by math:`block_size`
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+
+    See also:
+        [1] W. Shi et. al. `: Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_.
+    '''
+    from cntk.cntk_py import space_to_depth
+    operand = sanitize_input(operand, get_data_type(operand))
+    if not float(block_size).is_integer():
+        raise ValueError('block_size must be an integer.')
+    return space_to_depth(operand, block_size, name)

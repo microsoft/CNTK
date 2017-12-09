@@ -921,6 +921,11 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             if (mode == 0)
                 node->AddAttribute("value", value);
         }
+        else if (src->OpName() == L"DepthToSpace" || src->OpName() == L"SpaceToDepth")
+        {
+            size_t blockSize = src->Attributes()[L"blockSize"].Value<size_t>();
+            node->AddAttribute("blocksize", static_cast<int64_t>(blockSize));
+        }
         else if (src->OpName() == L"Softmax")
         {
             Axis axis = Axis(0);

@@ -219,6 +219,19 @@ def test_Concat(tmpdir):
 
     verify_one_input(model, data1, tmpdir, 'Concat__1')
 
+# DepthToSpace
+def test_DepthToSpace(tmpdir):
+    num_channels = 9
+    block_size = 3
+    image_shape = (4, 5)
+    input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=np.float32)
+    input_val = np.tile(input_val, (1,) + image_shape)
+    input_val.shape = (1,) + input_val.shape
+    img = C.input_variable((num_channels,) + image_shape, dtype=np.float32)
+    model = C.depth_to_space(img, block_size)
+
+    verify_one_input(model, input_val, tmpdir, 'DepthToSpace')
+
 #Div
 def test_Div(tmpdir):
     data0 = np.asarray([1., 1., 1., 1.], dtype=np.float32)
@@ -491,6 +504,19 @@ def test_Softmax(tmpdir):
 def test_Softplus(tmpdir):
     model = C.softplus([[-1, -0.5, 0, 1, 2]])
     verify_no_input(model, tmpdir, 'Softplus_0')
+
+# SpaceToDepth
+def test_SpaceToDepth(tmpdir):
+    num_channels = 3
+    block_size = 3
+    image_shape = (12, 15)
+    input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=np.float32)
+    input_val = np.tile(input_val, (1,) + image_shape)
+    input_val.shape = (1,) + input_val.shape
+    img = C.input_variable((num_channels,) + image_shape, dtype=np.float32)
+    model = C.space_to_depth(img, block_size)
+
+    verify_one_input(model, input_val, tmpdir, 'SpaceToDepth')
 
 #Sqrt
 def test_Sqrt(tmpdir):

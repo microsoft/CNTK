@@ -4171,13 +4171,22 @@ namespace CNTK
         return ClassificationError(prediction, labels, Axis(0), name);
     }
 
-
     ///
     /// Create an instance of the CNTK built-in noise contrastive estimation loss for specified operands. 
     ///
     CNTK_API FunctionPtr NCELoss(const Variable& weights, const Variable& biases, const Variable& inputs, const Variable& labels, 
         const Constant& noiseWeights, size_t numSamples, bool allowDuplicates=true, unsigned long seed = SentinelValueForAutoSelectRandomSeed,
         const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Depth-to-Space operation for an operand and specified blockSize.
+    ///
+    CNTK_API FunctionPtr DepthToSpace(const Variable& operand, size_t blockSize, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Space-To-Depth operation for an operand and specified blockSize.
+    ///
+    CNTK_API FunctionPtr SpaceToDepth(const Variable& operand, size_t blockSize, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in LambdaRank loss an effective proxy for optimizing the NDCG metric

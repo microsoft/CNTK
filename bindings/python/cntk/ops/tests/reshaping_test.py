@@ -779,3 +779,63 @@ def test_topk_backward(device_id, precision):
     cg = y.backward(dy, {y.outputs[0]:root}, set([q]))[q]
     for i in range(2):
         check_grad_last_axis(q0[i], root[i], indices[i], cg[i])
+
+DEPTH_TO_SPACE_TEST_CASES = [
+    ((2, 3),    8,    2,              #(image_shape, num_channels, block_size)
+    [[[[ 0.,  1.,  0.,  1.,  0.,  1.],# output
+    [ 2.,  3.,  2.,  3.,  2.,  3.],
+    [ 0.,  1.,  0.,  1.,  0.,  1.],
+    [ 2.,  3.,  2.,  3.,  2.,  3.]],
+    [[ 4.,  5.,  4.,  5.,  4.,  5.],
+    [ 6.,  7.,  6.,  7.,  6.,  7.],
+    [ 4.,  5.,  4.,  5.,  4.,  5.],
+    [ 6.,  7.,  6., 7.,  6.,  7.]]]]),
+
+    ((4, 5),    9,    3,  #(image_shape, num_channels, block_size)
+    [[[[ 0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.], # output
+    [ 3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.],
+    [ 6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.],
+    [ 0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.],
+    [ 3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.],
+    [ 6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.],
+    [ 0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.],
+    [ 3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.],
+    [ 6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.],
+    [ 0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.,  0.,  1.,  2.],
+    [ 3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.,  3.,  4.,  5.],
+    [ 6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.,  6.,  7.,  8.]]]]),
+]
+@pytest.mark.parametrize("image_shape, num_channels, block_size, output_ref", DEPTH_TO_SPACE_TEST_CASES)
+def test_depth_to_space(image_shape, num_channels, block_size, output_ref, device_id, precision):
+    dev = cntk_device(device_id)
+    from cntk.internal import sanitize_dtype_cntk    
+
+    input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=PRECISION_TO_TYPE[precision])
+    input_val = np.tile(input_val, (1,) + image_shape)
+    img = C.input_variable((num_channels,) + image_shape, dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]))
+    depth_to_space_op = C.depth_to_space(img, block_size)
+    output_test = depth_to_space_op.eval({ img : input_val })
+
+    assert np.array_equal(output_test, output_ref)
+
+# space_to_depth is tested as a roundtrip, i.e. first a tensor is shuffled using depth_to_space 
+# and its output is provided as the input to space_to_depth. The output os space_to_depth is 
+# checked against the original input tensor for equality.
+SPACE_TO_DEPTH_TEST_CASES = [
+    #(image_shape, num_channels, block_size)
+    ((2, 3),    8,    2),
+    ((4, 5),    9,    3),
+]
+@pytest.mark.parametrize("image_shape, num_channels, block_size", SPACE_TO_DEPTH_TEST_CASES)
+def test_space_to_depth(image_shape, num_channels, block_size, device_id, precision):
+    dev = cntk_device(device_id)
+    from cntk.internal import sanitize_dtype_cntk    
+
+    input_val = np.random.randint(low=0, high=100, size=(num_channels,) + image_shape).astype(PRECISION_TO_TYPE[precision])
+    img = C.input_variable((num_channels,) + image_shape, dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]))
+    depth_to_space_op = C.depth_to_space(img, block_size)
+    space_to_depth_op = C.space_to_depth(depth_to_space_op, block_size)
+    output_val = np.squeeze(space_to_depth_op.eval({ img : input_val }), 0)
+
+    assert np.array_equal(output_val, input_val)
+    
