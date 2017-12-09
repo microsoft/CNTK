@@ -4980,7 +4980,8 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
     }
     else
         determineShapesThisTime = false;
-    // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands
+
+    // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands  --TODO: <-- what does this comment refer to??
     // TODO: Since we copy the operands, we could augment the Parameters here as well.
     let composite = static_pointer_cast<CompositeFunction>(m_composite); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #ifndef NO_LATE_INLINING
@@ -4993,19 +4994,27 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
     {
         // basic block: we generate a Block operation that is batched as a whole
         f = MakeSharedObject<BlockFunction>(composite, m_argumentList, isBasicBlock,
-                                                Function::InputsVectorType(/*move*/(m_operands)), determineShapesThisTime);
+                                            Function::InputsVectorType(m_operands), determineShapesThisTime);
         static_pointer_cast<BlockFunction>(f)->FinalizeInvoke(m_argumentList, /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
     }
-    //else
-    //{
-    //    // not a basic block: we inline the static graph right here
-    //    // The difference to having user code unroll explicitly is that cloning is cheaper due to short-circuiting.
-    //    NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
-    //    NDShapeDimension inputsBatchDimDummy;
-    //    auto f = InternalVariable::AutoBatch::RInlineComposite(static_cast<PrimitiveFunction&>(*composite->RootFunction()),
-    //                                                           Function::InputsVectorType(/*move*/(m_operands)), invocationArgsFreeDim, inputsBatchDimDummy,
-    //                                                           /*cloneFn=*/InternalVariable::AutoBatch::ClonePrimitiveFunction, VisitorTag());
-    //}
+#if 0   // ... CONTINUE HERE
+    else
+    {
+        // not a basic block: we inline the static graph right here
+        // The difference to having user code unroll explicitly is that cloning is cheaper due to short-circuiting.
+        // BUGBUG: this fails if we are inside RInlineComposite() at "case 0: a Variable"
+        //         when invoked as part of building a static graph, where m_operands still has unknown dimensions.
+        //         Solution: In RInline, do not try to initialize Parameters if m_stillNeedsToInferShapes.
+        //         ...and: If determineShapesThisTime, we must do that. Currently this is done inside BlockFunction().
+        //                 That should be moved out, and called from here, or actually done here.
+        NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
+        NDShapeDimension inputsBatchDimDummy;
+        f = InternalVariable::AutoBatch::RInlineComposite(static_cast<PrimitiveFunction&>(*composite->RootFunction()),
+                                                          Function::InputsVectorType(m_operands), invocationArgsFreeDim, inputsBatchDimDummy,
+                                                          /*cloneFn=*/InternalVariable::AutoBatch::ClonePrimitiveFunction,
+                                                          VisitorTag());
+    }
+#endif
     // release references to the arguments in m_operands
     for (size_t i = 0; i < m_arity; i++)
         SetOperand(i, m_noArg);
@@ -5034,6 +5043,8 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, /*mutable*/std:
     PrimitiveFunction(PrimitiveOpType::Block, move(operands)),
     m_composite(callee), m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
 {
+    // TODO: Do this inside DoInvoke(), before constructing the object. Remove determineShapes parameter.
+
     // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
     // The caller must pass in this flag. --TODO: encapsulate this in the Invocable class.
     if (!determineShapes) // note: This is only ever 'true' for one time during the life of an Invocation; so this is the fast path.
