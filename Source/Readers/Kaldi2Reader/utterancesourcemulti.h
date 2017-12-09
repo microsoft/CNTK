@@ -161,13 +161,13 @@ class minibatchutterancesourcemulti : public minibatchsource
                     // page in lattice data
                     if (!latticesource.empty())
                         /* guoye: start */
-						// we currently don't care about kaldi format, so, just to make the compiler happy
-						// latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
-						
-						std::set<int> specialwordids;
-						specialwordids.clear();
-						latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols(), specialwordids);
-					/* guoye: end */
+                        // we currently don't care about kaldi format, so, just to make the compiler happy
+                        // latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
+                        
+                        std::set<int> specialwordids;
+                        specialwordids.clear();
+                        latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols(), specialwordids);
+                    /* guoye: end */
                 }
                 // fprintf (stderr, "\n");
                 if (verbosity)
