@@ -2133,12 +2133,12 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
-    FunctionPtr SequenceWithLattice(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& cdPhoneTyingPath, const std::wstring& stateListPath, const std::wstring& transPsPath, const std::wstring& name)
+    FunctionPtr SequenceWithLattice(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameSubstitutionPenalty] = cdPhoneTyingPath;
-        additionalProperties[PrimitiveFunction::AttributeNameDeletionPenalty] = stateListPath;
-        additionalProperties[PrimitiveFunction::AttributeNameInsertionPenalty] = transPsPath;
+        additionalProperties[PrimitiveFunction::AttributeNamePhonePath] = phonePath;
+        additionalProperties[PrimitiveFunction::AttributeNameStateListPath] = stateListPath;
+        additionalProperties[PrimitiveFunction::AttributeNameTransProbPath] = transProbPath;
         std::vector<Variable> operands = { labels, prediction, scaledLogLikelihood, lattice };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::SequenceWithLattice, operands, std::move(additionalProperties), name), name);
     }
