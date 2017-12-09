@@ -693,7 +693,6 @@ class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, publ
     }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(SequenceWithLatticeNode);
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath)
         : Base(deviceId, name), m_gammaCalcInitialized(false)
     {
@@ -705,6 +704,12 @@ public:
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
         : Base(deviceId, name), m_gammaCalcInitialized(false)
     {
+    }
+
+    SequenceWithLatticeNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : SequenceWithLatticeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
