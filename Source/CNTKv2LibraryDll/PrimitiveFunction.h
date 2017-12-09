@@ -273,9 +273,9 @@ namespace CNTK
         static const std::wstring AttributeNameTokensToIgnore;
         static const std::wstring AttributeNameDelayConstraint;
         static const std::wstring AttributeNameBlankTokenId;
-        static const std::wstring AttributeNameCdPhoneTyingPath;
+        static const std::wstring AttributeNamePhonePath;
         static const std::wstring AttributeNameStateListPath;
-        static const std::wstring AttributeNameTransPsPath;
+        static const std::wstring AttributeNameTransProbPath;
         static const std::wstring AttributeNameNumClass;
         static const std::wstring AttributeNameOneHotOutputSparse;
         static const std::wstring AttributeNameOneHotAxis;

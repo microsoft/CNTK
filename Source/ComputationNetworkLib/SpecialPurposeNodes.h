@@ -694,10 +694,10 @@ class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, publ
 
 public:
     DeclareConstructorFromConfigWithNumInputs(SequenceWithLatticeNode);
-    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& cdPhoneTyingPath, const std::wstring& stateListPath, const std::wstring& transPsPath)
+    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath)
         : Base(deviceId, name), m_gammaCalcInitialized(false)
     {
-        fprintf(stderr, "%ls %ls %ls", cdPhoneTyingPath.c_str(), stateListPath.c_str(), transPsPath.c_str());
+        fprintf(stderr, "%ls %ls %ls", phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
         if (sizeof(ElemType) != sizeof(float))
             LogicError("SequenceWithLatticeNode currently only supports floats."); // due to the binary reader restrictions 
     }
