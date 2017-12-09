@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "PrimitiveFunction.h"
+#include "CompositeFunction.h"
 #include "Utils.h"
 #include "Variable.h"
 
@@ -26,15 +27,17 @@ namespace CNTK
         }
 
         // special version for InvokeGraph(). Defined in AutoBatch.cpp for now.
-        BlockFunction(const std::shared_ptr<CompositeFunction>& composite, /*mutable*/std::vector<Variable>& argumentList, bool isBasicBlock,
-                      InputsVectorType&& operands, bool determineShapes);
+        BlockFunction(const std::shared_ptr<CompositeFunction>& composite, InputsVectorType&& operands, bool isBasicBlock) :
+            PrimitiveFunction(PrimitiveOpType::Block, std::move(operands)), m_composite(composite), m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
+        {
+        }
         void FinalizeInvoke(const std::vector<Variable>& argumentList, bool shapeIsKnown);
 
         // special short-circuited constructor private to auto-batcher
         // This must not be used for anything else.
         BlockFunction(const FunctionPtr& composite, std::vector<Variable>&& inputs, bool isBasicBlock, std::wstring&& blockOpName, std::wstring&& name) :
             PrimitiveFunction(PrimitiveOpType::Block, std::move(inputs), Dictionary(), std::move(name)),
-            m_composite(composite), m_blockOpName(move(blockOpName)), m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
+            m_composite(composite), m_blockOpName(std::move(blockOpName)), m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
         {
         }
 

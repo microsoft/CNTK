@@ -4892,7 +4892,8 @@ void PrimitiveFunction::InitOutput(InternalVariable&& output)
 // The result is either the dim (if all inputs have a batch dim) or ABSENT_FREE_DIMENSION (if no input has a batch dim), or an error.
 // BUGBUG: This constraint is no longer needed. Also, tis should use the correct axes.
 // This function has the heuristics built in that the batch axis is hard-coded as 1.
-static NDShapeDimension DetermineInvokeFreeDim(const Function::InputsVectorType& inputs)
+template<typename InputsVectorType>
+static NDShapeDimension DetermineInvokeFreeDim(const InputsVectorType& inputs)
 {
     let freeAxis = 1; // TODO: this must be parameterized somehow
     NDShapeDimension invocationArgsFreeDim = 0; // 0 means no input at all
@@ -4957,53 +4958,50 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
 
 // called to invoke a static function inside a dynamic graph, or as part of building another static graph
 // The operands must have been implanted in m_operands before calling this, and will be cleared at the end.
+
+// For Dynamite only, we are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
+// It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
+// TODO: Prevent the static machinery from tripping over this.
+// It is a light-weight representation of 'callee' being called with 'operands.'
+// 'Callee' is a BlockFunction holds a composite that represents its expression, where m_inputs consists of placeholders representing its inputs in right order, and m_outputs[0] holds the resulting shape/type.
+// The resulting object is also a BlockFunction that points to the same composite, but m_inputs represents the invocation operands, and m_outputs[0] the result.
+// Unlike a normal BlockFunction, however, it shares the composite (for Dynamite speed) with the callee, which makes it an invalid object for static CNTK.
+// BUGBUG: This is really quite horrible, as it does not work with static graphs. We need a better implementation of this.
+//         The main difference is that invoked blocks physically share their composites, to avoid duplicating them
+//         (since the point of using Invoke() is speed). Also, we have quite a bit code dup in this function.
+// A correct implementation could allow BlockFunction to lazily clone the composite (which is what Dynamite does).
+// Special case: Invoke() may also be called while building a composite (static graph) that uses another.
+// In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
+// is inferred. This is controlled by the determineShapes flag.
 Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
 {
 #ifdef NO_BLOCK_INVOKE // for debugging, we can disable static invocation altogether
     return m_lambdaRememberedForDebugging(m_operands);
 #else
-
     // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
     // We leave the Parameters in the m_argsMap array untouched (they are at the end).
     // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
     //  m_argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
     //  m_operands     = what the arguments should prerent to be
 
-    // this leaves 'm_stillNeedsToInferShapes' true until called for the first time with fully known shapes
-    // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
-    // (but multiple times for initial invocations during construction of static graphs).
-    bool determineShapesThisTime;
-    if (m_stillNeedsToInferShapes && all_of(m_operands.begin(), m_operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
-    {
-        m_stillNeedsToInferShapes = false;
-        determineShapesThisTime = true;
-    }
-    else
-        determineShapesThisTime = false;
-
     // BUGBUG: Do we need this? m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy())); for the operands  --TODO: <-- what does this comment refer to??
     // TODO: Since we copy the operands, we could augment the Parameters here as well.
-    let composite = static_pointer_cast<CompositeFunction>(m_composite); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
+    let callee = static_pointer_cast<CompositeFunction>(m_composite); // (static cast since caller must have called InitCompositeForInvoke() before, which checked the type)
 #ifndef NO_LATE_INLINING
     let isBasicBlock = m_isBasicBlock;
 #else
     let isBasicBlock = false;
 #endif
 
-    // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
-    // The caller must pass in this flag. --TODO: encapsulate this in the Invocable class.
-    if (determineShapesThisTime) // note: This is only ever 'true' for one time during the life of an Invocation; so this is the fast path.
+    // this leaves 'm_stillNeedsToInferShapes' true until called for the first time with fully known shapes
+    // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
+    // (but multiple times for initial invocations during construction of static graphs).
+    if (m_stillNeedsToInferShapes && all_of(m_operands.begin(), m_operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
     {
-        // TODO: remove these 3 variables
-        let callee = composite;
-        let m_inputs = Function::InputsVectorType(vector<Variable>(m_operands)); // TODO: simplify this
-        auto& argumentList = m_argumentList;
-
-        //BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, /*mutable*/std::vector<Variable>& argumentList, bool isBasicBlock,
-        //    InputsVectorType&& operands, bool determineShapes) :
-        //    f = MakeSharedObject<BlockFunction>(composite, m_argumentList, isBasicBlock,
-        //        Function::InputsVectorType(m_operands), determineShapesThisTime);
-
+        m_stillNeedsToInferShapes = false;
+        // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
+        // The caller must pass in this flag.
+        // Note: We only ever get here once during the life of an Invocation; so this is the fast path.
 
         let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to something is shape IsUnknown, though.
         if (compositeOutputs.size() != 1)
@@ -5024,14 +5022,14 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
         // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
 
         // determine the batch dimension
-        let batchDim = DetermineInvokeFreeDim(m_inputs);
+        let batchDim = DetermineInvokeFreeDim(m_operands);
 
         // BUGBUG: Must verify that all Parameters are covered here.
         unordered_map<Variable, Variable> replacementMap;
-        for (size_t i = 0; i < m_inputs.size(); i++)
+        for (size_t i = 0; i < m_operands.size(); i++)
         {
-            let& compositeLeaf = argumentList[i]; // Placeholder or Parameter in composite
-            let& operand = m_inputs[i];             // what they should pretend to be
+            let& compositeLeaf = m_argumentList[i]; // Placeholder or Parameter in composite
+            let& operand = m_operands[i];           // what they should pretend to be
             if (compositeLeaf.IsParameter())
             {
                 // for Parameters, supply an empty Variable
@@ -5058,7 +5056,7 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
                 updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
                 replacementMap.insert({ compositeLeaf, updatedCompositePlaceholder }); // replace with new Placeholder, which has a block mapping implanted
                 // TODO: fix the interface. This should become a private method to Invocable
-                argumentList[i] = updatedCompositePlaceholder;
+                m_argumentList[i] = updatedCompositePlaceholder;
             }
             else
                 InvalidArgument("Invoke: argumentList can only contain Placeholders and Parameters.");
@@ -5073,22 +5071,19 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
         if (compositeOutputs.front().Shape().IsUnknown()) // or not?
             LogicError("Invoke with determineShapes=true must not be called with inputs with Placeholder dimensions.");
 
-    #if 0
+#if 0
         fprintf(stderr, "BlockFunction('%S') : %S\n", callee->Name().c_str(), compositeOutputs.front().Shape().AsString().c_str());
         for (let& p : Parameters())
             fprintf(stderr, "    %S : %S\n", p.Name().c_str(), p.Shape().AsString().c_str());
-    #endif
+#endif
         // Now the composite is fully type-inferred; ready for consumption by Dynamite.
-        determineShapesThisTime = false;  // TODO: no longer pass this flag once it works here
     }
-
 
     FunctionPtr f;
     //if (isBasicBlock)
     {
         // basic block: we generate a Block operation that is batched as a whole
-        f = MakeSharedObject<BlockFunction>(composite, m_argumentList, isBasicBlock,
-                                            Function::InputsVectorType(m_operands), determineShapesThisTime);
+        f = MakeSharedObject<BlockFunction>(callee, Function::InputsVectorType(m_operands), isBasicBlock);
         static_pointer_cast<BlockFunction>(f)->FinalizeInvoke(m_argumentList, /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
     }
 #if 0   // ... CONTINUE HERE
@@ -5103,7 +5098,7 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
         //                 That should be moved out, and called from here, or actually done here.
         NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
         NDShapeDimension inputsBatchDimDummy;
-        f = InternalVariable::AutoBatch::RInlineComposite(static_cast<PrimitiveFunction&>(*composite->RootFunction()),
+        f = InternalVariable::AutoBatch::RInlineComposite(static_cast<PrimitiveFunction&>(*callee->RootFunction()),
                                                           Function::InputsVectorType(m_operands), invocationArgsFreeDim, inputsBatchDimDummy,
                                                           /*cloneFn=*/InternalVariable::AutoBatch::ClonePrimitiveFunction,
                                                           VisitorTag());
@@ -5115,109 +5110,6 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
     // behave as if this was returning a Composite: implant a ref count to ourselves. This will be taken over by the next consumer.
     return f->Output(/*init=*/ false);
 #endif // NO_BLOCK_INVOKE
-}
-
-// This is for Dynamite only. We are (mis-)using the BlockFunction to represent a PrimitiveFunction that Dynamite can interpret.
-// It is a valid PrimitiveFunction, but it shares the composite instead of owning it, and therefore not a valid BlockFunction for the static-graph machinery.
-// TODO: Prevent the static machinery from tripping over this.
-// It is a light-weight representation of 'callee' being called with 'operands.'
-// 'Callee' is a BlockFunction holds a composite that represents its expression, where m_inputs consists of placeholders representing its inputs in right order, and m_outputs[0] holds the resulting shape/type.
-// The resulting object is also a BlockFunction that points to the same composite, but m_inputs represents the invocation operands, and m_outputs[0] the result.
-// Unlike a normal BlockFunction, however, it shares the composite (for Dynamite speed) with the callee, which makes it an invalid object for static CNTK.
-// BUGBUG: This is really quite horrible, as it does not work with static graphs. We need a better implementation of this.
-//         The main difference is that invoked blocks physically share their composites, to avoid duplicating them
-//         (since the point of using Invoke() is speed). Also, we have quite a bit code dup in this function.
-// A correct implementation could allow BlockFunction to lazily clone the composite (which is what Dynamite does).
-// Special case: Invoke() may also be called while building a composite (static graph) that uses another.
-// In that case, we cannot infer shapes yet. Instead, this will happen automatically when the outer composite
-// is inferred. This is controlled by the determineShapes flag.
-// PERF BUGBUG: Can we change operands to InputsVectorType?
-BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, /*mutable*/std::vector<Variable>& argumentList, bool isBasicBlock,
-                             InputsVectorType&& operands, bool determineShapes) :
-    PrimitiveFunction(PrimitiveOpType::Block, move(operands)),
-    m_composite(callee), m_compositeIsShared(true), m_isBasicBlock(isBasicBlock)
-{
-    // TODO: Do this inside DoInvoke(), before constructing the object. Remove determineShapes parameter.
-
-    // The very first time we pass the composite, we must set up its Placeholder m_compositeArgumentIndex fields.
-    // The caller must pass in this flag. --TODO: encapsulate this in the Invocable class.
-    if (!determineShapes) // note: This is only ever 'true' for one time during the life of an Invocation; so this is the fast path.
-        return;
-
-    let& compositeOutputs = callee->RawOutputs(); // RawOutputs() forces callee.m_compositeOutputs to be initialized if not yet. It would initialize it to something is shape IsUnknown, though.
-    if (compositeOutputs.size() != 1)
-        InvalidArgument("Invoke can only be used with BlockFunctions that have a single output (this one has %d).", (int)compositeOutputs.size());
-
-    // If this is the first call, then we are not done yet. We must:
-    //  - initialize (reset) Dynamite-specific fields in the callee
-    //  - enumerate all Placeholders and number them
-    //  - infer the shapes, given the first actually supplied arguments
-    // if the composite has no validated shape yet, then do this now
-    // This updates the composite in-place, by replacing its Placeholders with new ones with shapes matching our operands.
-    // Any subsequent invocation of this must have matching dimensions. It will otherwise fail inside Dynamite execution.
-    // This is slow, but that's OK since it is done only once.
-
-    // We determine the compositeOutputs by replacing the arguments of the composite with new placeholders with updated 
-    // shape etc. information matching the corresponding mapped input
-
-    // BUGBUG: Must handle the map here now that we pass it. Also must verify that the Placeholders are actually in the composite.
-
-    // determine the batch dimension
-    let batchDim = DetermineInvokeFreeDim(m_inputs);
-
-    // BUGBUG: Must verify that all Parameters are covered here.
-    unordered_map<Variable, Variable> replacementMap;
-    for (size_t i = 0; i < m_inputs.size(); i++)
-    {
-        let& compositeLeaf = argumentList[i]; // Placeholder or Parameter in composite
-        let& operand = m_inputs[i];             // what they should pretend to be
-        if (compositeLeaf.IsParameter())
-        {
-            // for Parameters, supply an empty Variable
-            if (operand != compositeLeaf)
-                LogicError("Invoke: Parameters should have passed as themselves.");
-            // That's it. We just keep it in the list so that auto-batch can find them.
-        }
-        else if (compositeLeaf.IsPlaceholder())
-        {
-            // verify the mappings have been implanted
-            fail_if(compositeLeaf.m_dataFields->m_compositeArgumentIndex != i, "m_compositeArgumentIndex not set up??"); // when dynamically expanding this, we match up this Placeholder with the respective operand [i]
-            // TODO: rethink the logic. If the operand's shape IsUnknown, then why not directly return? Why even replace?
-            if (operand.IsInput())
-                InvalidArgument("Invoke cannot work on Input variables, it is for dynamic networks only.");
-            fail_if(operand.Shape().IsUnknown(), "unknown operand shapes at this point??");
-            // we replace with a placeholder of the same type. This gives the composite the shape.
-            // to allow for varying sequence axis, we replace the last axis with FreeDimension, and infer with that
-            // If the operand does not have that axis, then we create it.
-            fail_if(batchDim == 0, "no batchDim determined??");
-            // TODO: check against the current Placeholder
-            auto updatedCompositePlaceholder = PlaceholderVariable(ReplaceWithFreeDim(operand.Shape().Dimensions()),
-                operand.GetDataType(), operand.Name(), operand.DynamicAxes(), operand.NeedsGradient(), operand.IsSparse());
-            //auto updatedCompositePlaceholder = PlaceholderLike(operand);
-            updatedCompositePlaceholder.m_dataFields->m_compositeArgumentIndex = compositeLeaf.m_dataFields->m_compositeArgumentIndex;
-            replacementMap.insert({ compositeLeaf, updatedCompositePlaceholder }); // replace with new Placeholder, which has a block mapping implanted
-            // TODO: fix the interface. This should become a private method to Invocable
-            argumentList[i] = updatedCompositePlaceholder;
-        }
-        else
-            InvalidArgument("Invoke: argumentList can only contain Placeholders and Parameters.");
-    }
-
-    if (!replacementMap.empty())
-        callee->ReplacePlaceholders(replacementMap); // This gives the composite the shape.
-    // OUTDATED --The composite args' Placeholders now have a block mapping to the actual inputs.
-    // BUGBUG: That's bad, since they are gone after this. There should be no block mapping.
-
-    // if batchDim != ABSENT_FREE_DIMENSION, the resulting composite output likely has a batch axis as well, which is also FreeDimension
-    if (compositeOutputs.front().Shape().IsUnknown()) // or not?
-        LogicError("Invoke with determineShapes=true must not be called with inputs with Placeholder dimensions.");
-
-#if 0
-    fprintf(stderr, "BlockFunction('%S') : %S\n", callee->Name().c_str(), compositeOutputs.front().Shape().AsString().c_str());
-    for (let& p : Parameters())
-        fprintf(stderr, "    %S : %S\n", p.Name().c_str(), p.Shape().AsString().c_str());
-#endif
-    // Now the composite is fully type-inferred; ready for consumption by Dynamite.
 }
 
 // call this after construction from Invoke()
