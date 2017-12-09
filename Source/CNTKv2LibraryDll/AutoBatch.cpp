@@ -4957,25 +4957,23 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& inShape,
 
 // called to invoke a static function inside a dynamic graph, or as part of building another static graph
 // The operands must have been implanted in m_operands before calling this, and will be cleared at the end.
-// ...TODO: pass m_operands as a &
 Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call SetOperand() first to set the operands
 {
-    auto& operands = m_operands; // TODO: pass as &, for clarity
 #ifdef NO_BLOCK_INVOKE // for debugging, we can disable static invocation altogether
-    return m_lambdaRememberedForDebugging(operands);
+    return m_lambdaRememberedForDebugging(m_operands);
 #else
 
     // To invoke it, we place the arguments into the m_argsMap array next to the corresponding Placeholder.
     // We leave the Parameters in the m_argsMap array untouched (they are at the end).
     // After the call, we destruct the argument as to not accidentally keep a reference to the argument around.
     //  m_argumentList = composite->Arguments() in a given order; Placeholders first, then all Parameters. Get updated upon determining shapes.
-    //  operands     = what the arguments should prerent to be
+    //  m_operands     = what the arguments should prerent to be
 
     // this leaves 'm_stillNeedsToInferShapes' true until called for the first time with fully known shapes
     // This returns 'true' only once, and evaluates the IsUnknown test only once for a dynamic invocation
     // (but multiple times for initial invocations during construction of static graphs).
     bool determineShapesThisTime;
-    if (m_stillNeedsToInferShapes && all_of(operands.begin(), operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
+    if (m_stillNeedsToInferShapes && all_of(m_operands.begin(), m_operands.end(), [](const Variable& arg) { return !arg.Shape().IsUnknown(); }))
     {
         m_stillNeedsToInferShapes = false;
         determineShapesThisTime = true;
@@ -4990,13 +4988,29 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
 #else
     let isBasicBlock = false;
 #endif
-    let f = MakeSharedObject<BlockFunction>(composite, m_argumentList, isBasicBlock,
-                                            Function::InputsVectorType(/*move*/(operands)), determineShapesThisTime);
-    let res = f->FinalizeInvoke(m_argumentList, /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
-    // release references to the arguments
+    FunctionPtr f;
+    //if (isBasicBlock)
+    {
+        // basic block: we generate a Block operation that is batched as a whole
+        f = MakeSharedObject<BlockFunction>(composite, m_argumentList, isBasicBlock,
+                                                Function::InputsVectorType(/*move*/(m_operands)), determineShapesThisTime);
+        static_pointer_cast<BlockFunction>(f)->FinalizeInvoke(m_argumentList, /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
+    }
+    //else
+    //{
+    //    // not a basic block: we inline the static graph right here
+    //    // The difference to having user code unroll explicitly is that cloning is cheaper due to short-circuiting.
+    //    NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
+    //    NDShapeDimension inputsBatchDimDummy;
+    //    auto f = InternalVariable::AutoBatch::RInlineComposite(static_cast<PrimitiveFunction&>(*composite->RootFunction()),
+    //                                                           Function::InputsVectorType(/*move*/(m_operands)), invocationArgsFreeDim, inputsBatchDimDummy,
+    //                                                           /*cloneFn=*/InternalVariable::AutoBatch::ClonePrimitiveFunction, VisitorTag());
+    //}
+    // release references to the arguments in m_operands
     for (size_t i = 0; i < m_arity; i++)
         SetOperand(i, m_noArg);
-    return res;
+    // behave as if this was returning a Composite: implant a ref count to ourselves. This will be taken over by the next consumer.
+    return f->Output(/*init=*/ false);
 #endif // NO_BLOCK_INVOKE
 }
 
@@ -5102,7 +5116,7 @@ BlockFunction::BlockFunction(const CompositeFunctionPtr& callee, /*mutable*/std:
 }
 
 // call this after construction from Invoke()
-Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, bool shapeIsKnown)
+void BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, bool shapeIsKnown)
 {
     // now set up the output variable. Clone the composite's one output Variable, then inject the mapping pointer. This following the pattern of InferOutputs().
     // ...EXCEPT we do not implant a Variable mapping, since the composite is shared. The composite does not know that it is part of a BlockFunction.
@@ -5157,10 +5171,12 @@ Variable BlockFunction::FinalizeInvoke(const vector<Variable>& argumentList, boo
             OutputVariable(outputShape.empty() ? compositeOutput.Shape() : NDShape(outputShape), compositeOutput.GetDataType(), vector<Axis>(), compositeOutput.NeedsGradient() && !isVolatile, compositeOutput.IsSparse(), isVolatile, Name());
     fail_if(blockOutput.Shape().HasFreeDimension(), "Invoke: still has FreeDimension??");
     InitOutput(move(blockOutput));
-    // behave as if this was returning a Composite: implant a ref count. This will be taken over by the next consumer.
-    return Variable(m_outputs.front(), static_pointer_cast<PrimitiveFunction>(shared_from_this()), ConstPrimitiveFunctionPtr());
-    // TODO: Maybe this can instead keep the primitive directly?
-    //return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
+    // DELETE THIS after this commit
+    //// behave as if this was returning a Composite: implant a ref count to ourselves. This will be taken over by the next consumer.
+    //// TODO: do not create this, instead do it at call site (there is only one)
+    //return Variable(m_outputs.front(), static_pointer_cast<PrimitiveFunction>(shared_from_this()), ConstPrimitiveFunctionPtr());
+    //// TODO: Maybe this can instead keep the primitive directly?
+    ////return m_outputs.front().CompositePreservingCopy(static_pointer_cast<PrimitiveFunction>(shared_from_this()));
 }
 
 // helpers to make Variables behave like indexable arrays

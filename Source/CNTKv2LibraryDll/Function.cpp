@@ -166,12 +166,13 @@ namespace CNTK
         : Function(inputs, std::move(functionConfig), nullptr, name, uid)
     {}
 
-    Variable Function::Output() const // optimized version of OutputsImpl()[0]
+    Variable Function::Output(bool init /*= true*/) const // optimized version of OutputsImpl()[0]
     {
 #ifdef DYNAMITE_ONLY
         // It's OK if user-held Variables are no outputs of composites as long as the graph is acyclic. That is always true in Dynamite.
-        const auto& outputs = RawOutputs(); // = InitOutputs(), m_outputs
-        return Variable(outputs.front(), shared_from_this(), PrimitiveFunctionPtr()); // this implants a ref count
+        if (init)
+            const_cast<Function*>(this)->InitOutputs();
+        return Variable(m_outputs.front(), shared_from_this(), PrimitiveFunctionPtr()); // this implants a ref count
         //return outputs.front().CompositePreservingCopy(shared_from_this()); // this implants a ref count
 #else
         const auto& outputs = RawOutputs();

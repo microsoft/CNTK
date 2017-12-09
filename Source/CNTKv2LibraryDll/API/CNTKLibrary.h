@@ -3922,7 +3922,7 @@ namespace CNTK
         ///
         /// Returns the Output variable of 'this' Function. Throws an exception of 'this' Function has more that one output.
         ///
-        CNTK_API Variable Output() const;
+        CNTK_API Variable Output(bool init = true) const;
 
         ///
         /// Returns a vector consisting of all Output variables of 'this' Function.
@@ -4157,14 +4157,14 @@ namespace CNTK
         // Returns a outputs without ref-counting the owner.
         friend class Variable;
 #ifndef SWIG
-        CNTK_API const Span<InternalVariable*>/*auto*/ RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
+        CNTK_API const Span<InternalVariable*>/*auto*/ RawOutputs() const { const_cast<Function*>(this)->InitOutputs(); return MakeSpan(m_outputs); }
         //CNTK_API const auto RawOutputs() const { const auto& outputs = const_cast<Function*>(this)->InitOutputs(); return MakeSpan(outputs); }
 #endif
 
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
 
-        // Lazily initialize the Function's outputs on first invocation
+        // Lazily initialize the Function's outputs on first invocation. Returns m_outputs.
         CNTK_API OutputsVectorType& InitOutputs();
 
         template <typename VariableType, typename FilterFunction>
