@@ -541,7 +541,7 @@ namespace CNTK
             return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
         default:
             //should not be here; whenever a new data unit is defined, there should be a new case in this function.
-            LogicError("Unsupported data unit: %d", unit);
+            LogicError("Unsupported data unit: %d", (int ) unit);
         }
     }
 
