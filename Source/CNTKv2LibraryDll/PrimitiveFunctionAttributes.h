@@ -78,6 +78,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDelayConstraint = L"DelayConstraint";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlankTokenId = L"BlankTokenId";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePhonePath = L"PhonePath";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSymListPath = L"SymListPath";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameStateListPath = L"StateListPath";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTransProbPath = L"TransProbPath";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumClass = L"numClass";

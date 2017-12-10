@@ -694,22 +694,25 @@ class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, publ
     }
 
 public:
-    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath)
+    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath)
         : Base(deviceId, name), m_gammaCalcInitialized(false)
     {
         if (sizeof(ElemType) != sizeof(float))
             LogicError("SequenceWithLatticeNode currently only supports floats.\n"); // due to the binary reader restrictions 
 
-        fprintf(stderr, "Reading files\n %ls \n %ls \n %ls \n", phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
+        fprintf(stderr, "Reading files\n %ls \n %ls \n %ls \n %ls \n", symListPath.c_str(), phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
 
-        if (phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
-            LogicError("Ensure that phonePath, stateListPath and transProbPath parameters are specified.\n");
+        if (symListPath.size() == 0 || phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
+            LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
             
         m_hset.loadfromfile(phonePath, stateListPath, transProbPath);
         auto symmap = m_hset.getsymmap(); //const SYMMAP&
         msra::lattices::archive::symbolidmapping idmap;
-        const std::wstring symlistpath = L"";
-         msra::lattices::archive::getSymList(idmap, symlistpath, symmap);
+        msra::lattices::archive::getSymList(idmap, symListPath, symmap);
+
+        const size_t spunit = idmap.back();                      // ugh--getcachedidmap() just appends it to the end
+
+        
     }
 
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
@@ -718,7 +721,7 @@ public:
     }
 
     SequenceWithLatticeNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : SequenceWithLatticeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"))
+        : SequenceWithLatticeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -778,6 +781,9 @@ public:
     virtual void ForwardPropNonLooping()
     {
         FrameRange fr(Input(3)->GetMBLayout());
+        //char* buffer = reinterpret_cast<char*>(InputRef(3).ValueFor(fr).Data());
+
+        
         auto m_latticeInput = InputRef(3).ValueFor(fr);
         // Initialize m_gammaCalculator
         // TODO: Would this lend itself to a unique_ptr instead of the init flag?
