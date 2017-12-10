@@ -2133,9 +2133,10 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
-    FunctionPtr SequenceWithLattice(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& name)
+    FunctionPtr SequenceWithLattice(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameSymListPath] = symListPath;
         additionalProperties[PrimitiveFunction::AttributeNamePhonePath] = phonePath;
         additionalProperties[PrimitiveFunction::AttributeNameStateListPath] = stateListPath;
         additionalProperties[PrimitiveFunction::AttributeNameTransProbPath] = transProbPath;
