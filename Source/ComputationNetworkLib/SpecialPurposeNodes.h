@@ -8,6 +8,7 @@
 #include "ComputationNode.h"
 #include "gammacalculation.h"
 #include "NonlinearityNodes.h"
+#include "latticearchive.h"
 
 #include <map>
 #include <string>
@@ -696,9 +697,19 @@ public:
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath)
         : Base(deviceId, name), m_gammaCalcInitialized(false)
     {
-        fprintf(stderr, "%ls %ls %ls", phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
         if (sizeof(ElemType) != sizeof(float))
-            LogicError("SequenceWithLatticeNode currently only supports floats."); // due to the binary reader restrictions 
+            LogicError("SequenceWithLatticeNode currently only supports floats.\n"); // due to the binary reader restrictions 
+
+        fprintf(stderr, "Reading files\n %ls \n %ls \n %ls \n", phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
+
+        if (phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
+            LogicError("Ensure that phonePath, stateListPath and transProbPath parameters are specified.\n");
+            
+        m_hset.loadfromfile(phonePath, stateListPath, transProbPath);
+        auto symmap = m_hset.getsymmap(); //const SYMMAP&
+        msra::lattices::archive::symbolidmapping idmap;
+        const std::wstring symlistpath = L"";
+         msra::lattices::archive::getSymList(idmap, symlistpath, symmap);
     }
 
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
@@ -881,6 +892,7 @@ public:
     }
 
 protected:
+    msra::asr::simplesenonehmm m_hset;
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
