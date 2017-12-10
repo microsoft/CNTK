@@ -1127,6 +1127,47 @@ public:
 
 class archive
 {
+public:
+    // set of phoneme mappings
+    typedef std::vector<unsigned int> symbolidmapping;
+    template <class SYMMAP>
+    static void getSymList(symbolidmapping& idmap, const std::wstring& symlistpath, const SYMMAP& symmap) {
+
+        std::vector<char> textbuffer;
+        auto lines = msra::files::fgetfilelines(symlistpath, textbuffer);
+        // establish mapping of each entry to the corresponding id in 'symmap'; this should fail if the symbol is not found
+        idmap.reserve(lines.size() + 1); // last entry is a fake entry to return the /sp/ unit
+        std::string symstring, tosymstring;
+        symstring.reserve(100);
+        tosymstring.reserve(100);
+        foreach_index(i, lines)
+        {
+            char* line = lines[i];
+            char* sym = line;
+            // parse out a mapping  (log SPC phys)
+            char* p = strchr(sym, ' ');
+            if (p != NULL) // mapping: just verify that the supplied symmap has the same mapping
+            {
+                *p = 0;
+                const char* tosym = p + 1;
+                symstring = sym; // (reusing existing object to avoid malloc)
+                tosymstring = tosym;
+                if (getid(symmap, symstring) != getid(symmap, tosymstring))
+                    RuntimeError("getcachedidmap: mismatching symbol id for %s vs. %s", sym, tosym);
+            }
+            else
+            {
+                if ((size_t)i != idmap.size()) // non-mappings must come first (this is to ensure compatibility with pre-mapping files)
+                    RuntimeError("getcachedidmap: mixed up symlist file");
+                symstring = sym; // (reusing existing object to avoid malloc)
+                idmap.push_back((unsigned int)getid(symmap, symstring));
+            }
+        }
+        // append a fixed-position entry: last entry means /sp/
+        idmap.push_back((unsigned int)getid(symmap, "sp"));
+    }
+
+private:
     const std::unordered_map<std::string, size_t>& modelsymmap; // [triphone name] -> index used in model
     // set of lattice archive files referenced
     // Note that .toc files can be concatenated, i.e. one .toc file can reference multiple archive files.
@@ -1141,9 +1182,7 @@ class archive
             archivepaths.push_back(path);
         return i;
     }
-    // set of phoneme mappings
-    // Each archive file has its associated .symlist that defines the symbol mappings
-    typedef std::vector<unsigned int> symbolidmapping;
+    
     mutable std::vector<symbolidmapping> symmaps; // [archiveindex][unit] -> global unit map
     template <class SYMMAP>
     static size_t getid(const SYMMAP& symmap, const std::string& key)
@@ -1153,6 +1192,7 @@ class archive
             RuntimeError("getcachedidmap: symbol not found in user-supplied symbol map: %s", key.c_str());
         return iter->second;
     }
+
     template <class SYMMAP>
     const symbolidmapping& getcachedidmap(size_t archiveindex, const SYMMAP& symmap /*[string] -> numeric id*/) const
     {
@@ -1163,38 +1203,8 @@ class archive
             const std::wstring symlistpath = archivepaths[archiveindex] + L".symlist";
             if (verbosity > 0)
                 fprintf(stderr, "getcachedidmap: reading '%S'\n", symlistpath.c_str());
-            std::vector<char> textbuffer;
-            auto lines = msra::files::fgetfilelines(symlistpath, textbuffer);
-            // establish mapping of each entry to the corresponding id in 'symmap'; this should fail if the symbol is not found
-            idmap.reserve(lines.size() + 1); // last entry is a fake entry to return the /sp/ unit
-            std::string symstring, tosymstring;
-            symstring.reserve(100);
-            tosymstring.reserve(100);
-            foreach_index (i, lines)
-            {
-                char* line = lines[i];
-                char* sym = line;
-                // parse out a mapping  (log SPC phys)
-                char* p = strchr(sym, ' ');
-                if (p != NULL) // mapping: just verify that the supplied symmap has the same mapping
-                {
-                    *p = 0;
-                    const char* tosym = p + 1;
-                    symstring = sym; // (reusing existing object to avoid malloc)
-                    tosymstring = tosym;
-                    if (getid(symmap, symstring) != getid(symmap, tosymstring))
-                        RuntimeError("getcachedidmap: mismatching symbol id for %s vs. %s", sym, tosym);
-                }
-                else
-                {
-                    if ((size_t) i != idmap.size()) // non-mappings must come first (this is to ensure compatibility with pre-mapping files)
-                        RuntimeError("getcachedidmap: mixed up symlist file");
-                    symstring = sym; // (reusing existing object to avoid malloc)
-                    idmap.push_back((unsigned int) getid(symmap, symstring));
-                }
-            }
-            // append a fixed-position entry: last entry means /sp/
-            idmap.push_back((unsigned int) getid(symmap, "sp"));
+            archive::getSymList(idmap, symlistpath, symmap);
+
         }
         return idmap;
     }
