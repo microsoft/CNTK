@@ -1969,11 +1969,13 @@ class InternalVariable::AutoBatch
             }
             // we manage two ready sets, since two common kinds are very simple
             //fail_if (IsBarrier(f), "m_barrierOps.push_back(f) should no longer be done"); // BUGBUG: We never get here since we now see through barriers for efficiency...
+            // TODO: Do we even need to route view ops through the scheduler?
             if (IsViewOp(op))  // note: this is, with possibly a few exceptions, Slice()
                 m_viewOps.push_back(&f); // (linked list)
             else
             {
                 // determine stacking vs. batching, and corresponding m_batchAxis
+                // TODO: Can this be done during graph construction? (multi-threadable)
                 let batchAxisAndDim = DetermineBatchAxisAndDim(f);
                 f.m_autoBatchState.m_stacking  = batchAxisAndDim.stacking;
                 f.m_autoBatchState.m_batchAxis = batchAxisAndDim.batchAxis;
@@ -2088,7 +2090,7 @@ class InternalVariable::AutoBatch
     // TODO: What to do with multi-valued functions? Which ones are there? What is Combine(), a barrier?
     // Caller must call m_visitorTag.Begin() first.
     // 'var' is an input; that is, what m_inputs[] points to, not undergone any redirect.
-    void RBuildForwardGraphAndSchedule(const InternalVariable& var, size_t depth)
+    void RPrepareForwardGraphAndSchedule(const InternalVariable& var, size_t depth)
     {
         auto& fields = GetInputFields(var);
         // return if this node was already visited
@@ -2100,7 +2102,8 @@ class InternalVariable::AutoBatch
         // if not visited yet then m_redirection is invalid and must be set up
         //fail_if(fields.m_redirection, "redirection set up here twice??"); // OK since ClonePrimitiveFunction initializes m_function to itself
         // BUGBUG: ^^ This logic is twisted. ClonePrimitiveFunction already "visits" the node. It should do it right and set the visitor flag.
-        //         We should call RBuildForwardGraphAndSchedule() from inside the scheduler. But for that, we must separate out the schedule bit.
+        //         We should call RPrepareForwardGraphAndSchedule() from inside the scheduler. But for that, we must separate out the schedule bit.
+        // TODO: Move towards long-lived m_redirection, so that we can short-circuit things during graph building.
 
         // handle leaves
         // Leaves are Parameters, Constants, and also nodes that already have a value.
@@ -2118,7 +2121,9 @@ class InternalVariable::AutoBatch
             m_stats.numLeafNodes++;
             return;
         }
-        if (fields.m_value) // this is a function that has been computed before
+        // above code deals with Constand and Parameter variables, below with Output variables
+
+        if (fields.m_value) // this is a Variable that has been computed before
             return;
 
         // see through ops that do nothing
@@ -2149,7 +2154,7 @@ class InternalVariable::AutoBatch
             // prepare graph that we just unrolled
             // Note: We may just have pointed to yet another nested block, or a see-through op, which must be eliminated right here
             let& output = inlinedRootPtr->m_outputs.front();
-            RBuildForwardGraphAndSchedule(output, depth + 1);
+            RPrepareForwardGraphAndSchedule(output, depth + 1);
             // set up linkage in our overlaid structure
             let& redirectedFields = GetInputFields(output);
             fields.m_redirection = redirectedFields.m_redirection; // we redirect to whatever the inlined one redirects to
@@ -2176,7 +2181,7 @@ class InternalVariable::AutoBatch
             // TODO: what if input is non-continuous? Then Reshape should become a copy. Does this need to be addressed here?
             m_stats.numShortCircuitedNodes++;
             let& input = f.m_inputs.front();
-            RBuildForwardGraphAndSchedule(input, depth + 1);
+            RPrepareForwardGraphAndSchedule(input, depth + 1);
             let &redirectedFields = GetInputFields(input);
             //fail_if(fields.m_redirection, "redirection set up here twice??");
             fields.m_redirection = redirectedFields.m_redirection; // we redirect to whatever the input redirects to
@@ -2191,7 +2196,7 @@ class InternalVariable::AutoBatch
             return;
         }
 
-        // this op is not getting redirected
+        // above code deals with redirected ops; below with non-redirected ones
         if (f.m_outputs.size() > 1)
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
 
@@ -2230,14 +2235,14 @@ class InternalVariable::AutoBatch
         {
             let& input = inputs[i];
             // recursively traverse
-            RBuildForwardGraphAndSchedule(input, depth + 1);
+            RPrepareForwardGraphAndSchedule(input, depth + 1);
             auto& inputFields = GetInputFields(input);
             auto& outputFields = inputFields.m_redirection.empty() ? inputFields : GetOutputFields(*inputFields.m_redirection.m_function);
             if (!outputFields.m_value) // (if input is a leaf, or the result of a prior invocation, it has a value)
             {
                 pendingInputs++;
                 // record ourselves as a consumer of the input
-                // Note that RBuildForwardGraphAndSchedule() will have reset this upon first visit of 'input'.
+                // Note that RPrepareForwardGraphAndSchedule() will have reset this upon first visit of 'input'.
                 // The recorded consumer is the function that physically produces things, not the redirect.
                 outputFields.m_consumers.push_back({ &f, i });
                 maxDepthHint = max(maxDepthHint, inputFields.m_redirection.m_depthHint);
@@ -3695,7 +3700,7 @@ class InternalVariable::AutoBatch
             // This is sort of a hack for now. It is not, however, an efficiency problem since there are relatively few batched BatchNorm nodes in the graph.
             let device = GetValueObject(m_batchedInputs[0])->Device();
             let dataType = m_batchedInputs[0].GetDataType();
-            let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RBuildForwardGraphAndSchedule()
+            let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RPrepareForwardGraphAndSchedule()
             {
                 return Parameter(m_arena.NewNDArrayView(shape, dataType, StorageFormat::Dense, device));
             };
@@ -3876,7 +3881,7 @@ public:
         //  - prepare and schedule first set
         auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::LabelsToGraph/*misusing this for graph initializing*/, L"forward init", 3);
         m_visitorTag.Begin();
-        RBuildForwardGraphAndSchedule(v, 0);
+        RPrepareForwardGraphAndSchedule(v, 0);
         EndCudaStats(cudaStatsPtr);
         // phase 2:
         //  - compute the entire graph
@@ -4040,11 +4045,11 @@ public:
     //
     // Each iteration updates the m_consumer fields of the inputs leading to this var.
     // Precondition: Call this only once per redirection target and once per leaf.
-    void RBuildBackwardGraph(VariableFields& gradFields, bool userOwnsGradients = false)
+    void RPrepareBackwardGraph(VariableFields& gradFields, bool userOwnsGradients = false)
     {
         fail_if(gradFields.m_varKind == VariableKind::Input || gradFields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??"); // (should have been caught in forward)
         fail_if(!gradFields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
-        //fail_if(m_visitorTag.Visited(gradFields.m_visitedTag), "RBuildBackwardGraph called multiple times on the same node??"); // naw, can't test it this way
+        //fail_if(m_visitorTag.Visited(gradFields.m_visitedTag), "RPrepareBackwardGraph called multiple times on the same node??"); // naw, can't test it this way
 
         // initialize the upwards graph links. These form the graph structure.
         gradFields.m_consumers.clear();
@@ -4086,10 +4091,10 @@ public:
         //if (f.m_uniqueIdForDebugging == 368869)
         //    Break;
 
-        fail_if(&GetOutputFields(f) != &gradFields, "RBuildBackwardGraph called on a redirection??");
+        fail_if(&GetOutputFields(f) != &gradFields, "RPrepareBackwardGraph called on a redirection??");
         fail_if(!gradFields.m_value, "variable has no value yet??");
 
-        fail_if(m_visitorTag.Visited(f.m_autoBatchState.m_visitedTag), "RBuildBackwardGraph: registering the same function twice??"); // should have been caught by gradFields' visitedTag
+        fail_if(m_visitorTag.Visited(f.m_autoBatchState.m_visitedTag), "RPrepareBackwardGraph: registering the same function twice??"); // should have been caught by gradFields' visitedTag
 
         fail_if(f.m_op == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards"); // TODO: needsGradient handling
 
@@ -4104,7 +4109,7 @@ public:
                 continue; // skip inputs that receive no gradients
             // process recursively the inputs
             if (!m_visitorTag.Visited(inputGradFields.m_visitedTag))
-                RBuildBackwardGraph(inputGradFields);
+                RPrepareBackwardGraph(inputGradFields);
             // record ourselves as a consumer of the arg
             //if (inputGradFields.m_uniqueIdForDebugging == 243)
             //    Break;
@@ -4665,13 +4670,13 @@ public:
             auto& gradFields = GetGradientFieldsForBackprop(ResetInputGradient(kv.first), /*firstTimes=*/true);
             if (m_visitorTag.Visited(gradFields.m_visitedTag)) // (note that the code does not require this; this is only to point out a likely user error)
                 InvalidArgument("BatchedBackward: a Parameter was included more than once in gradients[]");
-            RBuildBackwardGraph(gradFields, /*userOwnsGradients=*/true);
+            RPrepareBackwardGraph(gradFields, /*userOwnsGradients=*/true);
             // BUGBUG: ^^ userOwnsGradients won't work correctly if one Var in gradients[] is an input to another
         }
         // now build the graph. We use visited information for the gradients to infer our own needsGradient flag  --TODO: No, not done yet.
         auto& rootGradFields = GetGradientFieldsForBackprop(ResetInputGradient(root), /*firstTimes=*/true);
         if (!m_visitorTag.Visited(rootGradFields.m_visitedTag)) // (A crazy user may have passed root itself in gradients[]. That is OK.)
-            RBuildBackwardGraph(rootGradFields);
+            RPrepareBackwardGraph(rootGradFields);
         // sanity check
         for (auto& kv : gradients)
         {
