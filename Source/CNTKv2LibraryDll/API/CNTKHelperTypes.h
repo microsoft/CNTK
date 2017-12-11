@@ -19,6 +19,7 @@
 #include <memory>  // std::shared_ptr
 #include <utility> // std::forward
 #include <atomic>
+#include <mutex>
 
 #ifndef _MSC_VER
 #ifndef __forceinline
@@ -515,6 +516,8 @@ class FixedSizePoolStorage
             *flagPtr = false;
         }
     };
+    // mutex
+    std::mutex m_mutex; // all operations are guarded by this
     // state of allocation
     Block* firstBlock;              // all blocks we have currently allocated
     Block** tail;                   // next block's address gets recorded here
@@ -552,6 +555,7 @@ public:
     }
     ~FixedSizePoolStorage()
     {
+        std::lock_guard<std::mutex> guard(m_mutex);
         while (firstBlock)
         {
             auto* next = firstBlock->next;
@@ -562,6 +566,7 @@ public:
     template<typename T>
     __forceinline T* Allocate()
     {
+        std::lock_guard<std::mutex> guard(m_mutex);
         //if (sizeof(FixedSizePoolItem<T>) != itemByteSize)
         //    LogicError("FixedSizePoolAllocator: Called for an object of the wrong size.");
         //Assert(totalItemsReserved >= totalItemsAllocated);
@@ -602,6 +607,7 @@ public:
     template<typename T>
     __forceinline void Deallocate(T* p)
     {
+        std::lock_guard<std::mutex> guard(m_mutex);
         //fprintf(stderr, "deallocate<%s>()  --> %d bytes (%d incl. index)\n", typeid(T).name(), (int)sizeof T, (int)itemByteSize);
         const auto* pItem = reinterpret_cast<FixedSizePoolItem<T>*>(const_cast<typename std::remove_const<T>::type*>(p));
         auto* flagPtr = pItem->flagPtr;
