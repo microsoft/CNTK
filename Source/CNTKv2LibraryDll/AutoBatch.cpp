@@ -1070,6 +1070,7 @@ static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& shape, N
 
 // ===========================================================================
 // Memoizer -- this performs all actual computations
+// This uses a parallel thread in order to mask CUDA launch overhead.
 // All actual operations that create/update Variable::m_value and m_gradient
 // are routed through this class, by calling SubmitForward()
 // ...and the respective backward function once we are there
@@ -1232,13 +1233,7 @@ private:
     deque<WorkItem> m_queue;
     // methods that run on worker thread
     vector<NDArrayViewPtr> m_inputValuesBuffer; // buffer for extracted NDArrayViews of inputs
-    void ProcessNextItem()
-    {
-    }
-public:
-    ~Memoizer() { Join(); }
-    // submit a Function evaluation
-    void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
+    void Forward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
@@ -1315,22 +1310,58 @@ public:
                 input.Reset();
         }
 #endif
+    }
+    void ProcessNextItem()
+    {
         // UNDER_LOCK
-        //m_queue.emplace_back(WorkItem
-        //{
-        //    /*isForward=*/ true,
-        //    static_pointer_cast<PrimitiveFunction>(f.shared_from_this()),
-        //    isFree,
-        //    logSpliceAsGather
-        //});
+        auto item = move(m_queue.front());
+        m_queue.pop_front();
+        if (item.isForward)
+            Forward(*item.fPtr, item.isFree, item.logSpliceAsGather);
+        else
+            LogicError("ProcessNextItem: backprop not yet implemented");
+    }
+    // methods to run under main thread
+    void NotifyWorkerOfStateChange() // tell the worker that state has (may have) changed by main thread
+    {
+        // non-threaded version: flush all
+        while (!m_queue.empty())
+            ProcessNextItem();
+    }
+    void WaitForWorkerStateChange() // wait for worker to change the state
+    {
+    }
+
+public:
+    ~Memoizer() { Join(); }
+    // submit a Function evaluation
+    void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
+    {
+        // UNDER_LOCK
+        m_queue.emplace_back(WorkItem
+        {
+            /*isForward=*/ true,
+            static_pointer_cast<PrimitiveFunction>(f.shared_from_this()),
+            isFree,
+            logSpliceAsGather
+        });
+        NotifyWorkerOfStateChange();
     }
     void Join()
     {
         // non-threaded version
-        while (!m_queue.empty())
-            ProcessNextItem();
+        for (;;)
+        {
+            {
+                // UNDER_LOCK
+                if (m_queue.empty() /* || exception */)
+                    break;
+            }
+            WaitForWorkerStateChange();
+        }
     }
     // temporarily, the arena is also used from outside
+    // Once we go fully multi-threaded, then this should no longer be exposed.
     NDArrayViewArena& Arena() { return m_arena; }
 
     // profiling-related
@@ -1421,7 +1452,6 @@ public:
     {
         LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
     }
-
 };
 
 // ---------------------------------------------------------------------------
@@ -3972,6 +4002,7 @@ public:
             // execute it, and also update all outputs' values and consumers, and the schedule
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
+        m_memoizer.Join(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
         CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
