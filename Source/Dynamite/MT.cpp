@@ -1077,16 +1077,16 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //fflush(stderr);
             //if (mbCount >= startMbCount + 1)
             //    return;
-            if (mbCount == 11) // for benchmarking
-                return;
+            //if (mbCount == 11) // for benchmarking
+            //    return;
         }
-        if (mbCount == 11)
-        {
-            let numAPICalls = CountAPICalls(0) - numAPICalls00;
-            fprintf(stderr, "#API calls in last minibatch = %.1f * %d\n", numAPICalls / (float)subMinibatches, (int)subMinibatches), fflush(stderr);
-            //if (runProfiling)
-                return;
-        }
+        //if (mbCount == 11)
+        //{
+        //    let numAPICalls = CountAPICalls(0) - numAPICalls00;
+        //    fprintf(stderr, "#API calls in last minibatch = %.1f * %d\n", numAPICalls / (float)subMinibatches, (int)subMinibatches), fflush(stderr);
+        //    //if (runProfiling)
+        //        return;
+        //}
     }
 }
 
@@ -1116,8 +1116,6 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount,
     if (!fOut)
         InvalidArgument("Evaluate: Failed to create output file %S", outputHypFile.c_str());
 
-    let minibatchSize = 1;//700; // this fits
-
     size_t totalLabels = 0; // total scored labels (excluding the <s>)
     double totalLoss = 0;   // corresponding total aggregate loss
 
@@ -1127,7 +1125,7 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount,
     for (mbCount = 0; ; mbCount++)
     {
         // get next minibatch
-        bool gotData = Dynamite::GetSubBatches(args, { L"src", L"tgt" }, /*subMinibatches=*/1, /*shuffleSeed=*/0, minibatchSource, minibatchSize,
+        bool gotData = Dynamite::GetSubBatches(args, { L"src", L"tgt" }, /*subMinibatches=*/1, /*shuffleSeed=*/0, minibatchSource, /*minibatchSize=*/1,
                                                /*numWorkers=*/1, /*currentWorker=*/0,
                                                /*inferenceOnly=*/true, CurrentDataType(), CurrentDevice());
         if (!gotData)
