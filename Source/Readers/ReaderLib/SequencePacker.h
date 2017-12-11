@@ -32,15 +32,18 @@ public:
 
 protected:
     virtual MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
-
     virtual MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
+    virtual MBLayoutPtr PackBinaryStream(const StreamBatch& batch, size_t streamIndex);
 
     // Given a number of sequences, creates an MB layout that is used to guide
     // the actual packing.
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch);
+    virtual MBLayoutPtr CreateBinaryMBLayout(const StreamBatch& batch);
 
     // Helper function to check and refresh the sample shape of input samples.
     void RefreshSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamInformation& outputStream);
+
+    std::pair<vector<MBLayout::SequenceInfo>,size_t> CreateSequenceInfos(const StreamBatch& batch);
 
     // A flag indicating whether to use local timeline for data.
     bool m_useLocalTimeline;

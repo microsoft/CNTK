@@ -246,6 +246,7 @@ void LatticeDeserializer::InitializeStreams(const wstring& featureName)
     stream.m_sampleLayout = NDShape({ 1 });
     stream.m_storageFormat = StorageFormat::Dense;
     stream.m_elementType = DataType::Float;
+    stream.m_isBinary = true;
     m_streams.push_back(stream);
 }
 
