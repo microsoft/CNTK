@@ -1328,10 +1328,13 @@ class InternalVariable::AutoBatch
     // This function checks whether all substituted Placeholders have the same batch dimension (FreeDimension).
     //  - At the root of a composite, pass invocationArgsFreeDim=0; inside here, pass the value as is.
     //  - Upon return, it will contain the one batch dim value that is shared across all substituted placeholders.
+    // Any not-yet-initialized constants or parameters are initialized here,
+    // unless isShapeIsKnown == false. This is the case when inlining during construction
+    // of a static graph.
     template<class F>
     static PrimitiveFunctionPtr RInlineComposite(PrimitiveFunction& clonee, const Function::InputsVectorType& invocationArgs,
                                           /*in/out*/NDShapeDimension& invocationArgsFreeDim, /*out*/ NDShapeDimension& inlinedFreeDim,
-                                          const F& cloneFn, VisitorTag compositeVisitorTag) //const
+                                          const F& cloneFn, VisitorTag compositeVisitorTag, bool shapeIsKnown)
     {
         // if we already cloned this one then just return the clone
         if (compositeVisitorTag.Visited(clonee.m_autoBatchState.m_visitedTag))
@@ -1359,8 +1362,9 @@ class InternalVariable::AutoBatch
             // --- case 0: a Variable that already has a value; that is, a Constant, Parameter, or any result of another Dynamite invocation
             if (cloneeInputFields.m_varKind == VariableKind::Constant || cloneeInputFields.m_varKind == VariableKind::Parameter || cloneeInputFields.m_value)
             {
-                if (!cloneeInputFields.m_value)
+                if (!cloneeInputFields.m_value && shapeIsKnown)
                 {
+                    // TODO: why is this needed? Is this the right place to do it?
                     cloneeInput.Value(); // this is a Parameter for which we still need to run the initializer. This does that.
                     fail_if(!cloneeInputFields.m_value, "Parameter/Constant has no Value()??");
                 }
@@ -1405,7 +1409,7 @@ class InternalVariable::AutoBatch
             else
             {
                 fail_if(cloneeInputFields.m_varKind != VariableKind::Output, "RInlineComposite encountered a non-output unexpectedly");
-                let fInlinedPtr = RInlineComposite(*cloneeInputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsFreeDim, /*out*/ thisFreeDim, cloneFn, compositeVisitorTag);
+                let fInlinedPtr = RInlineComposite(*cloneeInputFields.Owner(), invocationArgs, /*in/out*/ invocationArgsFreeDim, /*out*/ thisFreeDim, cloneFn, compositeVisitorTag, shapeIsKnown);
                 inlinedInputs[i] = Variable(fInlinedPtr->m_outputs.front(), ConstFunctionPtr(), fInlinedPtr);
                 //inlinedInputs[i].m_acyclicOutputPrimitiveReference = fInlinedPtr;
                 // ^^ the inlined input now holds a ref count to the function that generated it. This will move into and therefore be held by the newly inlined function below.
@@ -2120,9 +2124,14 @@ class InternalVariable::AutoBatch
         // see through ops that do nothing
         auto& f = *fields.m_ownerFunction.lock().get(); // this is the only place we ever call lock(); after this, we just use the raw pointer (relying on immutability)
         let op = f.m_op;
-        // unroll non-basic BlockFunctions (unless it is a basic block; then it is unrolled during execution)
+        // unroll non-basic BlockFunctions (if it is a basic block, then it is unrolled during execution later)
         if (op == PrimitiveOpType::Block && !static_cast<BlockFunction&>(f).IsBasicBlock())
         {
+#if 1
+            // inlining is now done during graph construction
+            fail_if(true, "non-basic-block inlining not done during invocation??");
+#else
+            // TODO: this is done outside now, so we can remove this code
             // make a deep copy of the block's root (PrimitiveFunction graph)
             // The Block is treated like a see-through op:
             //  - a deep copy of the Block is made (inlined), which connects to the Block node's inputs
@@ -2133,7 +2142,8 @@ class InternalVariable::AutoBatch
             NDShapeDimension inputsBatchDimDummy;
             auto inlinedRootPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*f.BlockRoot()),
                                                    f.m_inputs, invocationArgsFreeDim, inputsBatchDimDummy,
-                                                   /*cloneFn=*/ClonePrimitiveFunction, VisitorTag());
+                                                   /*cloneFn=*/ClonePrimitiveFunction,
+                                                   VisitorTag(), /*shapeIsKnown=*/true);
             // This returns a shared_ptr to the deep copy of the root.
             // ^^ This currently does not inline nested blocks. Instead of cloning the BlockFunction, we should just unroll any nested non-basic-block right there.
             // prepare graph that we just unrolled
@@ -2157,6 +2167,7 @@ class InternalVariable::AutoBatch
             // not referenced anymore (anything of interest has been copied in the inlining process).
             m_stats.numInlinedBlocks++;
             return;
+#endif
         }
 
         // short-circuit see-through ops
@@ -2452,7 +2463,7 @@ class InternalVariable::AutoBatch
         //let prevVisitorTag = m_compositeVisitorTag.Begin(); // (for detecting which of the composite's PrimitiveFunctions have already been expanded)
         let fInlinedPtr = RInlineComposite(static_cast<PrimitiveFunction&>(*block.BlockRoot()), invocationArgs,
                                            invocationArgsFreeDim, compositeBatchDim,
-                                           cloneFn, VisitorTag());
+                                           cloneFn, VisitorTag(), /*shapeIsKnown=*/true);
         //m_compositeVisitorTag.End(prevVisitorTag); // (restore)
         return fInlinedPtr;
     }
@@ -5080,30 +5091,24 @@ Variable /*Internal::*/Invocable::DoInvoke() const // note: caller must call Set
     }
 
     FunctionPtr f;
-    //if (isBasicBlock)
+    if (isBasicBlock)
     {
         // basic block: we generate a Block operation that is batched as a whole
         f = MakeSharedObject<BlockFunction>(callee, Function::InputsVectorType(m_operands), isBasicBlock);
         static_pointer_cast<BlockFunction>(f)->FinalizeInvoke(m_argumentList, /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
     }
-#if 0   // ... CONTINUE HERE
     else
     {
+        //fprintf(stderr, "EARLY UNROLLED\n");
         // not a basic block: we inline the static graph right here
-        // The difference to having user code unroll explicitly is that cloning is cheaper due to short-circuiting.
-        // BUGBUG: this fails if we are inside RInlineComposite() at "case 0: a Variable"
-        //         when invoked as part of building a static graph, where m_operands still has unknown dimensions.
-        //         Solution: In RInline, do not try to initialize Parameters if m_stillNeedsToInferShapes.
-        //         ...and: If determineShapesThisTime, we must do that. Currently this is done inside BlockFunction().
-        //                 That should be moved out, and called from here, or actually done here.
+        // The difference to having user code unroll explicitly is that cloning is much cheaper due to short-circuiting.
         NDShapeDimension invocationArgsFreeDim = ABSENT_FREE_DIMENSION;
         NDShapeDimension inputsBatchDimDummy;
         f = InternalVariable::AutoBatch::RInlineComposite(static_cast<PrimitiveFunction&>(*callee->RootFunction()),
                                                           Function::InputsVectorType(m_operands), invocationArgsFreeDim, inputsBatchDimDummy,
                                                           /*cloneFn=*/InternalVariable::AutoBatch::ClonePrimitiveFunction,
-                                                          VisitorTag());
+                                                          VisitorTag(), /*shapeIsKnown=*/!m_stillNeedsToInferShapes);
     }
-#endif
     // release references to the arguments in m_operands
     for (size_t i = 0; i < m_arity; i++)
         SetOperand(i, m_noArg);
