@@ -1240,6 +1240,81 @@ public:
     // submit a Function evaluation
     void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
     {
+        // fetch the NDArrayViewPtrs for all inputs
+        let& inputs = f.m_inputs;
+        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
+        auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            // special treatment for BatchNorm which needs additional temp buffers, which we keep track of as additional inputs
+            // TODO: disentangle xHat (remove scale/bias and keep xHat as the main output) from the temp buffers
+            if (f.m_op == PrimitiveOpType::BatchNormalization && i >= 6)
+                GetInputFields(inputs[i]).m_value = m_arena.NewNDArrayView(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
+            // fetch the m_value from the input
+            inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
+        }
+        // allocate the output NDArrayViewPtr in the arena
+        let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
+        let& outputShape = output.Shape();
+        auto outValue =
+            /*if*/ (isFree) ?
+                NDArrayViewPtr()
+            /*else*/:
+                m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
+        cudaStatsGuardPrepare.Stop();
+        // logging
+        if (ShouldProfile(f))
+            LogFunction(f, f.m_profiler);
+        //if (f.m_op == PrimitiveOpType::ElementTimes)
+        //    LogFunction(f, L"bf  ");
+        CudaStats* cudaStatsPtr = nullptr;
+        if (ShouldLogMemoizeStats())
+        {
+            let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
+            let logAsOp = (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
+            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false), inputValues.front()->Device());
+        }
+        //if (f.m_op == PrimitiveOpType::Slice && !any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); }))
+        //    Break;
+        // execute it
+        //if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
+        //    Break;
+        auto res = PrimitiveFunction::Forward(f.m_op, f.Attributes(), output.IsVolatile(), inputValues, outputShape, move(outValue), f);
+#if 0
+        if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
+        {
+            for (size_t i = 0; i < inputs.size(); i++)
+                inputValues[i]->LogToFile(L"###" + std::to_wstring(i), stderr, 800);
+            res->LogToFile(L"###->", stderr, 800);
+            fflush(stderr);
+        }
+#endif
+        EndCudaStats(cudaStatsPtr, inputValues.front()->Device());
+        // special case: a Slice op is non-contiguous. We must copy.
+        if (f.m_op == PrimitiveOpType::Slice && !res->IsContiguous())
+        {
+            let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
+            CudaStatsGuard cudaStatsGuard(f.m_op, nullptr, hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false));
+            res = move(NDArrayView::NumericOperation({ move(res) }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
+                                                     m_arena.NewNDArrayView(outputShape, output.GetDataType(),
+                                                                            output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense,
+                                                                            inputValues.front()->Device())));
+        }
+#if 0
+        LogFunction(f, f.m_profiler);
+        res->LogToFile(f.Name());
+#endif
+        GetOutputFields(f).m_value = move(res);
+        // we can free the inputs if they are no longer needed
+        // TODO: For now this only helps for inference. For training, we need a more elaborate check.
+#if 0
+        // BUGBUG: (1) still has an ElementTimes with isVolatile; (2) crashes in CUDA
+        for (auto& input : f.m_inputs)
+        {
+            if (!input.NeedsGradient())
+                input.Reset();
+        }
+#endif
         // UNDER_LOCK
         //m_queue.emplace_back(WorkItem
         //{
@@ -2630,85 +2705,7 @@ class InternalVariable::AutoBatch
     // Note: This breaks the immutability principle, in that it frees inputs that are known to be no longer needed.
     const void MemoizeInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
     {
-#if 0
-#else
-        auto& m_arena = m_memoizer.Arena();
-        // fetch the NDArrayViewPtrs for all inputs
-        let& inputs = f.m_inputs;
-        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
-        auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            // special treatment for BatchNorm which needs additional temp buffers, which we keep track of as additional inputs
-            // TODO: disentangle xHat (remove scale/bias and keep xHat as the main output) from the temp buffers
-            if (f.m_op == PrimitiveOpType::BatchNormalization && i >= 6)
-                GetInputFields(inputs[i]).m_value = m_arena.NewNDArrayView(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
-            // fetch the m_value from the input
-            inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
-        }
-        // allocate the output NDArrayViewPtr in the arena
-        let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
-        let& outputShape = output.Shape();
-        auto outValue =
-            /*if*/ (isFree) ?
-                NDArrayViewPtr()
-            /*else*/:
-                m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
-        cudaStatsGuardPrepare.Stop();
-        // logging
-        if (m_memoizer.ShouldProfile(f))
-            m_memoizer.LogFunction(f, f.m_profiler);
-        //if (f.m_op == PrimitiveOpType::ElementTimes)
-        //    LogFunction(f, L"bf  ");
-        CudaStats* cudaStatsPtr = nullptr;
-        if (ShouldLogMemoizeStats())
-        {
-            let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
-            let logAsOp = (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
-            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false), inputValues.front()->Device());
-        }
-        //if (f.m_op == PrimitiveOpType::Slice && !any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); }))
-        //    Break;
-        // execute it
-        //if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
-        //    Break;
-        auto res = PrimitiveFunction::Forward(f.m_op, f.Attributes(), output.IsVolatile(), inputValues, outputShape, move(outValue), f);
-#if 0
-        if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
-        {
-            for (size_t i = 0; i < inputs.size(); i++)
-                inputValues[i]->LogToFile(L"###" + std::to_wstring(i), stderr, 800);
-            res->LogToFile(L"###->", stderr, 800);
-            fflush(stderr);
-        }
-#endif
-        EndCudaStats(cudaStatsPtr, inputValues.front()->Device());
-        // special case: a Slice op is non-contiguous. We must copy.
-        if (f.m_op == PrimitiveOpType::Slice && !res->IsContiguous())
-        {
-            let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
-            CudaStatsGuard cudaStatsGuard(f.m_op, nullptr, hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false));
-            res = move(NDArrayView::NumericOperation({ move(res) }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
-                                                     m_arena.NewNDArrayView(outputShape, output.GetDataType(),
-                                                                            output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense,
-                                                                            inputValues.front()->Device())));
-        }
-#if 0
-        LogFunction(f, f.m_profiler);
-        res->LogToFile(f.Name());
-#endif
-        GetOutputFields(f).m_value = move(res);
-        // we can free the inputs if they are no longer needed
-        // TODO: For now this only helps for inference. For training, we need a more elaborate check.
-#if 0
-        // BUGBUG: (1) still has an ElementTimes with isVolatile; (2) crashes in CUDA
-        for (auto& input : f.m_inputs)
-        {
-            if (!input.NeedsGradient())
-                input.Reset();
-        }
-#endif
-#endif
+        m_memoizer.SubmitForward(f, isFree, logSpliceAsGather);
         // stats
         if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work
             m_stats.numDoneFreeOps++;
