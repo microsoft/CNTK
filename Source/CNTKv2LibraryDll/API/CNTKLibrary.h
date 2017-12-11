@@ -2294,6 +2294,7 @@ namespace CNTK
         CNTK_API void Backward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
     protected:
         class AutoBatch;
+        class Memoizer;
     protected:
 #ifdef SWIGPYTHON
     public:

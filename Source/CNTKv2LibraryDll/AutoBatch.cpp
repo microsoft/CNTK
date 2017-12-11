@@ -1105,7 +1105,7 @@ static const NDArrayView* GetValueObject(const InternalVariable& v)
     return GetValueObject(output);
 }
 #endif
-class Memoizer
+class InternalVariable::Memoizer
 {
     NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
     struct WorkItem
@@ -1117,6 +1117,7 @@ class Memoizer
     };
     deque<WorkItem> m_queue;
     // methods that run on worker thread
+    vector<NDArrayViewPtr> m_inputValuesBuffer; // buffer for extracted NDArrayViews of inputs
     void ProcessNextItem()
     {
     }
@@ -2621,6 +2622,8 @@ class InternalVariable::AutoBatch
     // Note: This breaks the immutability principle, in that it frees inputs that are known to be no longer needed.
     const void MemoizeInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
     {
+#if 0
+#else
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
         CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
@@ -2693,6 +2696,7 @@ class InternalVariable::AutoBatch
             if (!input.NeedsGradient())
                 input.Reset();
         }
+#endif
 #endif
         // stats
         if (isFree) // means we did not pass a data buffer for the result; any one we pass a buffer does actual work

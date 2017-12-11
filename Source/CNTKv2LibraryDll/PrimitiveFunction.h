@@ -197,7 +197,8 @@ namespace CNTK
         friend class Function;
         friend class CompositeFunction;
         friend class Utils;
-        friend class Variable::AutoBatch;
+        friend class InternalVariable::AutoBatch;
+        friend class InternalVariable::Memoizer;
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
