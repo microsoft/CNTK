@@ -1028,13 +1028,53 @@ public:
 /*static*/ array<size_t                        , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaUseds;
 /*static*/ array<vector<unique_ptr<MatrixBase>>, NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledArenass;
 
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// DynamicProfiler -- helper for profiling dynamic batching of functions
+// ===========================================================================
+
+class DynamicProfiler : public enable_shared_from_this<DynamicProfiler>
+{
+public:
+    DynamicProfiler(int verbosity, const wstring& name) :
+        m_verbosity(verbosity), m_name(name)
+    {
+    }
+
+    int Verbosity() const { return m_verbosity; }
+    const wchar_t* Name() const { return m_name.c_str(); }
+
+private:
+    const int m_verbosity;
+    const wstring m_name;
+};
+
+// TODO: make this thread local??  vvv
+static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost active profiler, or empty
+
+/*static*/ DynamicProfilerPtr Function::CreateDynamicProfiler(int verbosity, const wstring& name) { return MakeSharedObject<DynamicProfiler>(verbosity, name); }
+// if 'outer' then enter a section that is profiled.
+// When outside such a section, any call with 'outer'=false will have no effect.
+// When inside, the effect is to change the name associated in the profiling output.
+/*static*/ DynamicProfilerPtr Function::SetDynamicProfiler(const DynamicProfilerPtr& p, bool outer)
+{
+    auto prev = m_currentProfiler;
+    if (outer || prev) // only set if verbosity>0 or there is already a profiler set (this is for inner lib functions)
+        m_currentProfiler = p;
+    return prev;
+}
+/*static*/ const DynamicProfilerPtr& PrimitiveFunction::CurrentDynamicProfiler() { return m_currentProfiler; }
+
+// a few helper functions--sort these
+static const NDShapeDimension ABSENT_FREE_DIMENSION = (NDShapeDimension)(-1);
+static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& shape, NDShapeDimension batchDimValue);
+
+// ===========================================================================
 // Memoizer -- this performs all actual computations
 // All actual operations that create/update Variable::m_value and m_gradient
 // are routed through this class, by calling SubmitForward()
 // ...and the respective backward function once we are there
 // Before accessing an actual m_value field, call Join().
-// ---------------------------------------------------------------------------
+// ===========================================================================
 
 inline VariableFields& PrimitiveFunction::GetOutputFields() const { return VariableFields::FromVariable(m_outputs.front()); }
 
@@ -1135,6 +1175,7 @@ static bool IsAliasOp(PrimitiveOpType op)
         op == PrimitiveOpType::BarrierOp;
 }
 
+#if 0
 // predicate whether an op's gradient is a no-op (just copies the output gradient)
 // These are short-circuited in backprop.
 static bool IsGradientCopyingOp(PrimitiveOpType op, size_t inputIndex)
@@ -1150,6 +1191,7 @@ static bool IsGradientCopyingOp(PrimitiveOpType op, size_t inputIndex)
         (op == PrimitiveOpType::Minus && inputIndex == 0);
         //(op == PrimitiveOpType::Plus && inputIndex == 0);
 }
+#endif
 
 template<class B> // B=vector<NDArrayViewPtr>
 B& BorrowBuffer(B& buffer, size_t batchSize)
@@ -1163,6 +1205,23 @@ B& BorrowBuffer(B& buffer, size_t batchSize)
 class InternalVariable::Memoizer
 {
     NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
+    // helper to check whether we should profile this function execution
+    set<DynamicProfilerPtr> m_profilersUsed; // all used profilers will be registered for a given batched execution
+public:
+    bool ShouldProfile(const PrimitiveFunction& f)
+    {
+#ifdef LOG_DETAILS
+        f;
+        let should = true;
+#else
+        let should = f.m_profiler && f.m_profiler->Verbosity() > 0;
+#endif
+        if (should)
+            m_profilersUsed.insert(f.m_profiler); // this is slow but only used if any profiling output is printed, which is even slower
+        return should;
+    }
+private:
+
     struct WorkItem
     {
         bool isForward; // is forward prop
@@ -1198,6 +1257,96 @@ public:
     }
     // temporarily, the arena is also used from outside
     NDArrayViewArena& Arena() { return m_arena; }
+
+    // profiling-related
+    static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
+    {
+        let& inputs = f.m_inputs;
+        let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
+        let& outputShape = output.Shape();
+        auto uid = f.Uid();
+        let& name = f.Name();
+        if (!name.empty())
+            uid = name + L":" + uid;
+        if (prefix && *prefix)
+            fprintf(stderr, "[%S] ", prefix);
+        fprintf(stderr, "%S^%d%S = %S (", uid.c_str(), (int)GetInputFields(output).m_uniqueIdForDebugging, outputShape.AsString().c_str(), f.OpName().c_str());
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            let& input = inputs[i];
+            let& fields = GetInputFields(input); // (the fields that describe input as an input, e.g. its shape after potential see-through ops)
+            // little helper function to fix up variable names by removing _Output_0
+            // TODO: Once we support >1 output, this needs a bit more code.
+            let GetVarName = [](const InternalVariable& input) -> wstring
+            {
+                auto uid = input.Uid();
+                if (uid.size() > 9 && wcscmp(uid.c_str() + uid.size() - 9, L"_Output_0") == 0)
+                    uid.resize(uid.size() - 9);
+                let& inputFields = GetInputFields(input);
+                let& name = !inputFields.m_redirection.empty() ? inputFields.m_redirection.m_function->Name() : input.Name();
+                if (!name.empty())
+                    uid = name + L":" + uid;
+                let uidForDebugging = !inputFields.m_redirection.empty() ? GetOutputFields(*inputFields.m_redirection.m_function).m_uniqueIdForDebugging : GetInputFields(input).m_uniqueIdForDebugging;
+                uid += L"^" + to_wstring(uidForDebugging);
+                return uid;
+            };
+            if (!fields.m_redirection.empty())
+            {
+                let& input1 = fields.m_redirection.m_function->m_outputs.front();
+                fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str());
+                let slice = fields.m_redirection.m_sliceRange;
+                if (!slice.empty())
+                {
+                    if (slice.IsIndex())
+                        fprintf(stderr, "[%d]", (int)fields.m_redirection.m_sliceRange.Index());
+                    else
+                        fprintf(stderr, "[%d:%d]", (int)fields.m_redirection.m_sliceRange.BeginIndex(), (int)(fields.m_redirection.m_sliceRange.EndIndex()));
+                }
+            }
+            else
+                fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input).c_str(), input.Shape().AsString().c_str());
+            if (i == 4 && inputs.size() > 6) // skip the middle ones
+            {
+                fprintf(stderr, ", ...+%d", (int)(inputs.size() - 6));
+                i = inputs.size() - 2;
+            }
+        }
+        let& attributes = f.m_attributes;
+        if (attributes.Size() > 0)
+        {
+            for (let& kv : attributes)
+            {
+                fprintf(stderr, ", %S=", kv.first.c_str());
+                let& val = kv.second;
+                if (val.HasValue())
+                {
+                    switch (val.ValueType())
+                    {
+                    case DictionaryValue::Type::Bool:    fprintf(stderr, "%s",     val.Value<bool  >() ? "true" : "false"); break;
+                    case DictionaryValue::Type::Int:     fprintf(stderr, "%d",     val.Value<int   >()); break;
+                    case DictionaryValue::Type::SizeT:   fprintf(stderr, "%d",     (int)val.Value<size_t>()); break;
+                    case DictionaryValue::Type::Float:   fprintf(stderr, "%f",     val.Value<float >()); break;
+                    case DictionaryValue::Type::Double:  fprintf(stderr, "%f",     val.Value<double>()); break;
+                    case DictionaryValue::Type::String:  fprintf(stderr, "\"%S\"", val.Value<wstring>().c_str()); break;
+                    case DictionaryValue::Type::NDShape: fprintf(stderr, "%S",     val.Value<NDShape>().AsString().c_str()); break;
+                    case DictionaryValue::Type::Axis:    fprintf(stderr, "%S",     val.Value<Axis   >().AsString().c_str()); break;
+                    default: fprintf(stderr, "(type%d)", (int)val.ValueType()); break;
+                    }
+                }
+                else
+                    fprintf(stderr, "(empty)");
+            }
+        }
+        if (!f.m_name.empty())
+            fprintf(stderr, ", Name=\"%S\"", f.m_name.c_str());
+        fprintf(stderr, ")\n");
+    }
+    // same but takes the prefix from the profiler if given
+    static void LogFunction(const PrimitiveFunction& f, const DynamicProfilerPtr& profiler, size_t markIndex = SIZE_MAX)
+    {
+        LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
+    }
+
 };
 
 // ---------------------------------------------------------------------------
@@ -1346,46 +1495,6 @@ public:
 
 
 // ===========================================================================
-// DynamicProfiler -- helper for profiling dynamic batching of functions
-// ===========================================================================
-
-class DynamicProfiler : public enable_shared_from_this<DynamicProfiler>
-{
-public:
-    DynamicProfiler(int verbosity, const wstring& name) :
-        m_verbosity(verbosity), m_name(name)
-    {
-    }
-
-    int Verbosity() const { return m_verbosity; }
-    const wchar_t* Name() const { return m_name.c_str(); }
-
-private:
-    const int m_verbosity;
-    const wstring m_name;
-};
-
-// TODO: make this thread local??  vvv
-static shared_ptr<DynamicProfiler> m_currentProfiler; // current innermost active profiler, or empty
-
-/*static*/ DynamicProfilerPtr Function::CreateDynamicProfiler(int verbosity, const wstring& name) { return MakeSharedObject<DynamicProfiler>(verbosity, name); }
-// if 'outer' then enter a section that is profiled.
-// When outside such a section, any call with 'outer'=false will have no effect.
-// When inside, the effect is to change the name associated in the profiling output.
-/*static*/ DynamicProfilerPtr Function::SetDynamicProfiler(const DynamicProfilerPtr& p, bool outer)
-{
-    auto prev = m_currentProfiler;
-    if (outer || prev) // only set if verbosity>0 or there is already a profiler set (this is for inner lib functions)
-        m_currentProfiler = p;
-    return prev;
-}
-/*static*/ const DynamicProfilerPtr& PrimitiveFunction::CurrentDynamicProfiler() { return m_currentProfiler; }
-
-// a few helper functions--sort these
-static const NDShapeDimension ABSENT_FREE_DIMENSION = (NDShapeDimension)(-1);
-static inline NDShapeDimensions ReplaceFreeDim(const NDShapeDimensions& shape, NDShapeDimension batchDimValue);
-
-// ===========================================================================
 // AutoBatch -- autobatching happening inside here
 // The auto-batching related functions are grouped inside a class, since they
 // share quite a bit of state.
@@ -1423,21 +1532,6 @@ class InternalVariable::AutoBatch
     static bool IsMatrixProduct(PrimitiveOpType op)
     {
         return g_oscTable[op] == OpSpecificConditionKind::MatrixProduct;
-    }
-
-    // helper to check whether we should profile this function execution
-    set<DynamicProfilerPtr> m_profilersUsed; // all used profilers will be registered for a given batched execution
-    bool ShouldProfile(const PrimitiveFunction& f)
-    {
-#ifdef LOG_DETAILS
-        f;
-        let should = true;
-#else
-        let should = f.m_profiler && f.m_profiler->Verbosity() > 0;
-#endif
-        if (should)
-            m_profilersUsed.insert(f.m_profiler); // this is slow but only used if any profiling output is printed, which is even slower
-        return should;
     }
 
     // inlining of a composite 
@@ -2381,94 +2475,6 @@ class InternalVariable::AutoBatch
         m_stats.numOpNodes++;
     }
 
-    static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
-    {
-        let& inputs = f.m_inputs;
-        let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
-        let& outputShape = output.Shape();
-        auto uid = f.Uid();
-        let& name = f.Name();
-        if (!name.empty())
-            uid = name + L":" + uid;
-        if (prefix && *prefix)
-            fprintf(stderr, "[%S] ", prefix);
-        fprintf(stderr, "%S^%d%S = %S (", uid.c_str(), (int)GetInputFields(output).m_uniqueIdForDebugging, outputShape.AsString().c_str(), f.OpName().c_str());
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            let& input = inputs[i];
-            let& fields = GetInputFields(input); // (the fields that describe input as an input, e.g. its shape after potential see-through ops)
-            // little helper function to fix up variable names by removing _Output_0
-            // TODO: Once we support >1 output, this needs a bit more code.
-            let GetVarName = [](const InternalVariable& input) -> wstring
-            {
-                auto uid = input.Uid();
-                if (uid.size() > 9 && wcscmp(uid.c_str() + uid.size() - 9, L"_Output_0") == 0)
-                    uid.resize(uid.size() - 9);
-                let& inputFields = GetInputFields(input);
-                let& name = !inputFields.m_redirection.empty() ? inputFields.m_redirection.m_function->Name() : input.Name();
-                if (!name.empty())
-                    uid = name + L":" + uid;
-                let uidForDebugging = !inputFields.m_redirection.empty() ? GetOutputFields(*inputFields.m_redirection.m_function).m_uniqueIdForDebugging : GetInputFields(input).m_uniqueIdForDebugging;
-                uid += L"^" + to_wstring(uidForDebugging);
-                return uid;
-            };
-            if (!fields.m_redirection.empty())
-            {
-                let& input1 = fields.m_redirection.m_function->m_outputs.front();
-                fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str());
-                let slice = fields.m_redirection.m_sliceRange;
-                if (!slice.empty())
-                {
-                    if (slice.IsIndex())
-                        fprintf(stderr, "[%d]", (int)fields.m_redirection.m_sliceRange.Index());
-                    else
-                        fprintf(stderr, "[%d:%d]", (int)fields.m_redirection.m_sliceRange.BeginIndex(), (int)(fields.m_redirection.m_sliceRange.EndIndex()));
-                }
-            }
-            else
-                fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input).c_str(), input.Shape().AsString().c_str());
-            if (i == 4 && inputs.size() > 6) // skip the middle ones
-            {
-                fprintf(stderr, ", ...+%d", (int)(inputs.size() - 6));
-                i = inputs.size() - 2;
-            }
-        }
-        let& attributes = f.m_attributes;
-        if (attributes.Size() > 0)
-        {
-            for (let& kv : attributes)
-            {
-                fprintf(stderr, ", %S=", kv.first.c_str());
-                let& val = kv.second;
-                if (val.HasValue())
-                {
-                    switch (val.ValueType())
-                    {
-                    case DictionaryValue::Type::Bool:    fprintf(stderr, "%s",     val.Value<bool  >() ? "true" : "false"); break;
-                    case DictionaryValue::Type::Int:     fprintf(stderr, "%d",     val.Value<int   >()); break;
-                    case DictionaryValue::Type::SizeT:   fprintf(stderr, "%d",     (int)val.Value<size_t>()); break;
-                    case DictionaryValue::Type::Float:   fprintf(stderr, "%f",     val.Value<float >()); break;
-                    case DictionaryValue::Type::Double:  fprintf(stderr, "%f",     val.Value<double>()); break;
-                    case DictionaryValue::Type::String:  fprintf(stderr, "\"%S\"", val.Value<wstring>().c_str()); break;
-                    case DictionaryValue::Type::NDShape: fprintf(stderr, "%S",     val.Value<NDShape>().AsString().c_str()); break;
-                    case DictionaryValue::Type::Axis:    fprintf(stderr, "%S",     val.Value<Axis   >().AsString().c_str()); break;
-                    default: fprintf(stderr, "(type%d)", (int)val.ValueType()); break;
-                    }
-                }
-                else
-                    fprintf(stderr, "(empty)");
-            }
-        }
-        if (!f.m_name.empty())
-            fprintf(stderr, ", Name=\"%S\"", f.m_name.c_str());
-        fprintf(stderr, ")\n");
-    }
-    // same but takes the prefix from the profiler if given
-    static void LogFunction(const PrimitiveFunction& f, const DynamicProfilerPtr& profiler, size_t markIndex = SIZE_MAX)
-    {
-        LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
-    }
-
     // execute a basic block.
     // This clones a block's composite graph of PrimitiveFunctions, and evaluates it as it goes along.
     // Called only by InlineAndMemoizeBatchedBasicBlock() and the equivalent non-batched case in ExecuteBatchedOpAndUpdateSchedule().
@@ -2650,8 +2656,8 @@ class InternalVariable::AutoBatch
                 m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
         cudaStatsGuardPrepare.Stop();
         // logging
-        if (ShouldProfile(f))
-            LogFunction(f, f.m_profiler);
+        if (m_memoizer.ShouldProfile(f))
+            m_memoizer.LogFunction(f, f.m_profiler);
         //if (f.m_op == PrimitiveOpType::ElementTimes)
         //    LogFunction(f, L"bf  ");
         CudaStats* cudaStatsPtr = nullptr;
@@ -3945,7 +3951,7 @@ public:
             auto opBatch = m_schedule.pop_best();
             // log (if barrier crossed)
             let& f0 = opBatch.front();
-            if (ShouldProfile(f0)) // profiling diagnostics
+            if (m_memoizer.ShouldProfile(f0)) // profiling diagnostics
             {
                 let& inputs = f0.m_inputs;
                 for (size_t i = 0; i < inputs.size(); i++)
