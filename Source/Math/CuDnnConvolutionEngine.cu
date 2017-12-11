@@ -1,4 +1,3 @@
-
 //
 // Copyright (c) Microsoft. All rights reserved.
 // Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
@@ -317,6 +316,8 @@ protected:
             return err;
         };
         FindBestAlgo(batchSize, m_fwdAlgo, workspaceSizeFinder, deterministicFinder, finder, staticFinder, workspace);
+        if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_fwdAlgo.AlgoMathType));
+        else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));
         // Perform forward convolution operation.
         CUDNN_CALL(cudnnConvolutionForward(*m_cudnn, &C::One, m_inT, ptr(in), *m_kernelT, ptr(kernel), *m_conv, m_fwdAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), &C::Zero, m_outT, ptr(out)));
     }
@@ -380,6 +381,8 @@ protected:
         };
         FindBestAlgo(batchSize, m_backDataAlgo, workspaceSizeFinder, deterministicFinder, finder, staticFinder, workspace);
         // Compute gradients with respect to the output tensor (data).
+        if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_backDataAlgo.AlgoMathType));
+        else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));
         CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
     }
 
@@ -451,6 +454,8 @@ protected:
         };
         FindBestAlgo(batchSize, m_backFiltAlgo, workspaceSizeFinder, deterministicFinder, finder, staticFinder, workspace);
         // Compute gradients with respect to the output tensor (data).
+        if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_backFiltAlgo.AlgoMathType));
+        else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));
         CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, *m_kernelT, ptr(kernelGrad)));
     }
 
@@ -576,6 +581,7 @@ private:
                 assert(calgo > 0);
                 auto res = algoPerf;        // first returned algorithm is the fastest
                 algo.RecordAlgoBatchSizeWorkspaceSize(true, (*res).algo, batchSize, (*res).memory);
+                algo.AlgoMathType = (*res).mathType;
                 algo.autotuningState = AutotuningState::Running;
                 if (algo.MaxAlgoWorkspaceSize < curSize)   // need to shrink the workspace
                     workspace.Resize((curSize + sizeof(ElemType) - 1) / sizeof(ElemType), 1, 0, false);
@@ -593,6 +599,7 @@ private:
                     assert(calgo > 0);
                     auto res = algoPerf;    // first returned algorithm is the fastest
                     algo.RecordAlgoBatchSizeWorkspaceSize(true, (*res).algo, batchSize, (*res).memory);
+                    algo.AlgoMathType = (*res).mathType;
                     algo.autotuningState = AutotuningState::Running;
                 }
                 catch (...)
@@ -633,7 +640,7 @@ private:
     {
         typedef T typeT;
         ConvAlgoInfo()
-            : LastBatchAlgoMBSize(0), MaxAlgoMBSize(0), maxMBSizeSeen(0), autotuningState(AutotuningState::Init), MaxAlgoWorkspaceSize(0), LastBatchAlgoWorkspaceSize(0)
+            : LastBatchAlgoMBSize(0), MaxAlgoMBSize(0), maxMBSizeSeen(0), autotuningState(AutotuningState::Init), MaxAlgoWorkspaceSize(0), LastBatchAlgoWorkspaceSize(0), AlgoMathType(CUDNN_TENSOR_OP_MATH)
         {
         }
         // Variables to stores states
@@ -650,6 +657,8 @@ private:
         AutotuningState autotuningState;    // state of auto-tuning: Init, PendingTuning and Running
         decltype(T::algo) selectedAlgo;     // currently selected algorithm
         decltype(T::algo) maxAlgo;          // algorithm that was selected when the current workspace is allocated
+
+        cudnnMathType_t AlgoMathType;
 
         bool NeedAutotuning(size_t batchSize, size_t workspaceSize)
         {

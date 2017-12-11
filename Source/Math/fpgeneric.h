@@ -151,6 +151,7 @@ inline cublasStatus_t cublasgemmHelper(cublasHandle_t handle, cublasOperation_t 
     // This does pseudo FP16 computation (input/output in fp16, computation in fp32)
     float h_a = *alpha;
     float h_b = *beta;
+    cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH);
     return cublasGemmEx(handle, transa, transb, m, n, k, &h_a, A, CUDA_R_16F, lda, B, CUDA_R_16F, ldb, &h_b, C, CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT);
 }
 
