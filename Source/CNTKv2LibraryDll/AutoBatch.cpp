@@ -7,7 +7,6 @@
 
 // BUGBUG: The redirection approach causes consistency problems, since redirects can end up being Outputs with no m_ownerFunction.
 //         Alternative, less brittle approach: Introduce a new VariableKind::Redirect?
-// BUGBUG: One gradient test sometimes fails. I think there is a SetValue(0) missing.
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -1095,7 +1094,7 @@ static void ReplaceWithReshapedViewIfNeeded(NDArrayViewPtr& view, const NDShape&
 // This will realize any lazy ops (slice, reshape).
 // A Variable's value is defined by its m_redirection.m_function->m_outputs.front(), followed by slice and/or reshape.
 // Thread-safety: Currently called by Memoizer::Forward(), BatchedForward() after Join()
-//                 BAD: Also by CSE. Need to eliminate that one.
+//                 TODO: CSE still uses this in a validation check. Remove once confirmed.
 static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
 {
     if (!fields.m_value) // value is not available: create and cache it
@@ -2894,6 +2893,25 @@ class InternalVariable::AutoBatch
     }
 #endif
 
+    // given fields, determine the base fields and slice range
+    static inline pair<const VariableFields*, SliceRange> DetermineSliceAndBase(VariableFields& fields)
+    {
+        pair<const VariableFields*, SliceRange> res;
+        auto& pfields    = res.first;
+        auto& sliceRange = res.second;
+        pfields = &fields;
+        while (!pfields->m_redirection.empty())
+        {
+            let& outFields = GetOutputFields(*pfields->m_redirection.m_function);
+            if (&outFields == pfields)
+                break;
+            if (sliceRange.empty())
+                sliceRange = pfields->m_redirection.m_sliceRange; // note: it is guaranteed that there is only one index in the chain
+            pfields = &outFields;
+        }
+        return res;
+    }
+
     // get a hash for a Variable
     // This is based on object identity (physical fields ptr, slice range).
     // Note: An earlier version compared actual GPU address. Was 6 x slower and did not hash better.
@@ -2904,17 +2922,9 @@ class InternalVariable::AutoBatch
         if (!hash)
         {
             // determine the Fields of the physical object and the slice
-            SliceRange sliceRange;
-            let* pfields = &fields;
-            while (!pfields->m_redirection.empty())
-            {
-                let& outFields = GetOutputFields(*pfields->m_redirection.m_function);
-                if (&outFields == pfields)
-                    break;
-                if (sliceRange.empty())
-                    sliceRange = pfields->m_redirection.m_sliceRange; // note: it is guaranteed that there is only one index in the chain
-                pfields = &outFields;
-            }
+            let res = DetermineSliceAndBase(fields);
+            let* pfields    = res.first;
+            let& sliceRange = res.second;
             hash = 0;
             IncorporateFieldsId(*pfields);
             if (!sliceRange.empty())
@@ -3027,8 +3037,13 @@ class InternalVariable::AutoBatch
                     auto& aliasFields = GetInputFields(alias->m_inputs[k]);
                     if (&fields == &aliasFields)
                         continue;
-                    // PERF BUGBUG: This vv is suboptimal as we force-realize the m_value, which is a slice. Alleviated by the hash though.
-                    if (!CacheAndGetValue(fields)->IsAliasOf(CacheAndGetValue(aliasFields)))
+#if 1               // old version that calls CacheAndGetValue(), which is now forbidden (owned by memoize thread)
+                    bool d1 = DetermineSliceAndBase(fields) != DetermineSliceAndBase(aliasFields);
+                    bool d2 = !CacheAndGetValue(fields)->IsAliasOf(CacheAndGetValue(aliasFields));
+                    fail_if(d1 != d2, "cse wrong detection");
+#endif
+                    // check object identity by what slice it occupies into the main storage arena (the shape is already known to be the same)
+                    if (DetermineSliceAndBase(fields) != DetermineSliceAndBase(aliasFields))
                         goto try_next;
                 }
                 // all inputs are the same: f is a dup of 'alias'
