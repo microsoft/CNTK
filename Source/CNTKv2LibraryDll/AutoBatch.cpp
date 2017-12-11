@@ -2042,7 +2042,7 @@ class InternalVariable::AutoBatch
             //    if (iter->front()->Name() == L"vecSoftmaxMinus")
             //        fprintf(stderr, "### %S pending\n", iter->front()->Name().c_str()), fflush(stderr);
 
-            // try all three queues, in priority order
+            // try both queues, in priority order
             if (!m_viewOps.empty()) // view ops always go first, since they are free
                 return move(m_viewOps);
             else //if (!m_regularOps.empty()) // regular ops
@@ -2055,7 +2055,7 @@ class InternalVariable::AutoBatch
                     // TODO: just say if IsBatchNormPending(iter) continue;
                     diff = -((int)AnyBatchNormPending(iter) - (int)AnyBatchNormPending(best)); // BatchNormalization with pending inputs always loses
                     if (diff) goto got_diff;
-#ifndef NO_BARRIER
+#ifndef NO_BARRIER  // TODO: the existence of the Barrier op may already influence this
                     diff = -((int)iter->front().m_autoBatchState.m_depthHint - (int)best->front().m_autoBatchState.m_depthHint); // barrier: higher depthHint gets batched last
                     if (diff) goto got_diff;
 #endif
@@ -2074,7 +2074,10 @@ class InternalVariable::AutoBatch
                 }
                 // and remove this one from the list
                 NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
-                m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem. Priority queue?
+                auto last = m_regularOps.end() - 1;
+                if (best != last)
+                    *best = move(*last);
+                m_regularOps.pop_back();
                 return out;
             }
             //else
