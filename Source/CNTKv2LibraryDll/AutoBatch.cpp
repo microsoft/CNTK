@@ -1035,7 +1035,76 @@ public:
 // ...and the respective backward function once we are there
 // Before accessing an actual m_value field, call Join().
 // ---------------------------------------------------------------------------
+
 inline VariableFields& PrimitiveFunction::GetOutputFields() const { return VariableFields::FromVariable(m_outputs.front()); }
+
+// this gets the non-redirected data fields, which describe v's properties as an input
+// This returns the fields of a potentially virtual value that does not produce its own output but merely views another.
+static inline VariableFields& GetInputFields(const InternalVariable& v) { return VariableFields::FromVariable(v); }
+
+// this gets the fields of the output of 'f', which describe where f's output goes, without redirection
+// It is *not* following a redirect.
+// If f's result is the result of a batched result, then this function returns
+// the slice (or potentially where the slice would go), not the original place.
+static inline VariableFields& GetOutputFields(const PrimitiveFunction& f) { return f.GetOutputFields(); }
+
+// get the value of an input Variable, with full redirection
+// This will realize any lazy ops (slice, reshape).
+// A Variable's value is defined by its m_redirection.m_function->m_outputs.front(), followed by slice and/or reshape.
+static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
+{
+    if (!fields.m_value) // value is not available: create and cache it
+    {
+        fail_if(fields.m_redirection.empty(), "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
+        // get the actual value from the function that computed it
+        auto& functionFields = GetOutputFields(*fields.m_redirection.m_function);
+        fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
+                                                                                       // function itself may be a redirect (a slice into a batched op)
+        CacheAndGetValue(functionFields); // (calling ourselves on the source in case of re-redirection)
+                                          // realize the lazy redirected value; that is, do the slice and reshape
+                                          // This sets fields.m_value. inputFields must have m_value already set.
+        fail_if(!functionFields.m_value, "Variable's input unexpectedly has no value yet");
+        // optional implicit index and reshape
+        let sliceRange = fields.m_redirection.m_sliceRange;
+        if (!sliceRange.empty())
+            fields.m_value = move(functionFields.m_value->SliceViewAsShape(sliceRange.BeginIndex(), sliceRange.EndIndex(), fields.m_shape));
+        else // no slice
+        {
+            fields.m_value = functionFields.m_value;
+            ReplaceWithReshapedViewIfNeeded(fields.m_value, fields.m_shape);
+        }
+    }
+    return fields.m_value; // return the (now) cached value
+}
+static const NDArrayViewPtr& CacheAndGetValue(const Variable& v)
+{
+    return CacheAndGetValue(GetInputFields(v));
+}
+#if 0
+// get the value that must already have been cached
+static const NDArrayViewPtr& GetCachedValue(const Variable& v)
+{
+    let& value = GetInputFields(v).m_value;
+    //fail_if(!value, "GetCachedValue: Variable unexpectedly has no value yet");
+    return value;
+}
+// this gets the underlying NDArrayView that contains v's value, without realizing the value
+// The real value may be a view into this object that has not been realized yet.
+// Use this to find out properties, such as the device, type, and storage format.
+// Currently only used for batched BatchNorm.
+static const NDArrayView* GetValueObject(const InternalVariable& v)
+{
+    auto& fields = GetInputFields(v);
+    if (fields.m_value)
+        return fields.m_value.get();
+    if (fields.m_redirection.empty()) // redirect to output of function that produces this value
+        LogicError("GetValueObject() called where no value object exists (hit a leaf)??");
+    let& output = fields.m_redirection.m_function->m_outputs.front(); // note: may be recursive
+    if (&GetInputFields(output) == &fields)
+        LogicError("GetValueObject() called where no value object exists (hit a self-ref)??");
+    return GetValueObject(output);
+}
+#endif
 class Memoizer
 {
     NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
@@ -2307,78 +2376,6 @@ class InternalVariable::AutoBatch
         if (pendingInputs == 0)
             m_schedule.Schedule(f); // add to ready set
         m_stats.numOpNodes++;
-    }
-
-    // get the value of an input Variable, with full redirection
-    // This will realize any lazy ops (slice, reshape).
-    // A Variable's value is defined by its m_redirection.m_function->m_outputs.front(), followed by slice and/or reshape.
-    static const NDArrayViewPtr& CacheAndGetValue(const Variable& v)
-    {
-        return CacheAndGetValue(GetInputFields(v));
-    }
-    static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
-    {
-        if (!fields.m_value) // value is not available: create and cache it
-        {
-            fail_if(fields.m_redirection.empty(), "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
-            // get the actual value from the function that computed it
-            auto& functionFields = GetOutputFields(*fields.m_redirection.m_function);
-            fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
-            // function itself may be a redirect (a slice into a batched op)
-            CacheAndGetValue(functionFields); // (calling ourselves on the source in case of re-redirection)
-            // realize the lazy redirected value; that is, do the slice and reshape
-            // This sets fields.m_value. inputFields must have m_value already set.
-            fail_if(!functionFields.m_value, "Variable's input unexpectedly has no value yet");
-            // optional implicit index and reshape
-            let sliceRange = fields.m_redirection.m_sliceRange;
-            if (!sliceRange.empty())
-                fields.m_value = move(functionFields.m_value->SliceViewAsShape(sliceRange.BeginIndex(), sliceRange.EndIndex(), fields.m_shape));
-            else // no slice
-            {
-                fields.m_value = functionFields.m_value;
-                ReplaceWithReshapedViewIfNeeded(fields.m_value, fields.m_shape);
-            }
-        }
-        return fields.m_value; // return the (now) cached value
-    }
-#if 0
-    // get the value that must already have been cached
-    static const NDArrayViewPtr& GetCachedValue(const Variable& v)
-    {
-        let& value = GetInputFields(v).m_value;
-        //fail_if(!value, "GetCachedValue: Variable unexpectedly has no value yet");
-        return value;
-    }
-    // this gets the underlying NDArrayView that contains v's value, without realizing the value
-    // The real value may be a view into this object that has not been realized yet.
-    // Use this to find out properties, such as the device, type, and storage format.
-    // Currently only used for batched BatchNorm.
-    static const NDArrayView* GetValueObject(const InternalVariable& v)
-    {
-        auto& fields = GetInputFields(v);
-        if (fields.m_value)
-            return fields.m_value.get();
-        if (fields.m_redirection.empty()) // redirect to output of function that produces this value
-            LogicError("GetValueObject() called where no value object exists (hit a leaf)??");
-        let& output = fields.m_redirection.m_function->m_outputs.front(); // note: may be recursive
-        if (&GetInputFields(output) == &fields)
-            LogicError("GetValueObject() called where no value object exists (hit a self-ref)??");
-        return GetValueObject(output);
-    }
-#endif
-    // this gets the non-redirected data fields, which describe v's properties as an input
-    // This returns the fields of a potentially virtual value that does not produce its own output but merely views another.
-    static inline VariableFields& GetInputFields(const InternalVariable& v)
-    {
-        return VariableFields::FromVariable(v);
-    }
-    // this gets the fields of the output of 'f', which describe where f's output goes, without redirection
-    // It is *not* following a redirect.
-    // If f's result is the result of a batched result, then this function returns
-    // the slice (or potentially where the slice would go), not the original place.
-    static inline VariableFields& GetOutputFields(const PrimitiveFunction& f)
-    {
-        return f.GetOutputFields();
     }
 
     static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
