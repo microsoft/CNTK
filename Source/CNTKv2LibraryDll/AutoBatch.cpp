@@ -1095,7 +1095,6 @@ static void ReplaceWithReshapedViewIfNeeded(NDArrayViewPtr& view, const NDShape&
 // This will realize any lazy ops (slice, reshape).
 // A Variable's value is defined by its m_redirection.m_function->m_outputs.front(), followed by slice and/or reshape.
 // Thread-safety: Currently called by Memoizer::Forward(), BatchedForward() after Join()
-//                 BAD: Also by CreatedBatchedInputFor() -- is that needed?? Why not use shape?
 //                 BAD: Also by CSE. Need to eliminate that one.
 static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
 {
@@ -2895,10 +2894,11 @@ class InternalVariable::AutoBatch
     }
 #endif
 
-    // get an offsettable address of m_value for hashing purposes
-    static uintptr_t CacheAndGetValueAddrForHash(/*const*/ VariableFields& fields)
+    // get a hash for a Variable
+    // This is based on object identity (physical fields ptr, slice range).
+    // Note: An earlier version compared actual GPU address. Was 6 x slower and did not hash better.
+    static uintptr_t CacheAndGetCSEVariableHash(/*const*/ VariableFields& fields)
     {
-#if 1   // This version compares object identity (physical fields, index). It is 6+ x faster, and seems to detect CSEs just the same.
         // we hash on object identity of the physical fields plus slice index
         uintptr_t hash = fields.m_valueAddrForHash;
         if (!hash)
@@ -2928,58 +2928,24 @@ class InternalVariable::AutoBatch
             fields.m_valueAddrForHash = hash;
         }
         return hash;
-#else   // This version compares the starting address in GPU memory, and can therefore detect aliases coming through different routes.
-        fail_if(true, "this must be updated to correctly use m_sliceRange width"); // we must compare the length as well
-        auto addrForHash = fields.m_valueAddrForHash;
-        if (!addrForHash)
-        {
-            if (fields.m_value) // if we have a m_value then get it from there
-                addrForHash = GetValueAddrForHash(fields.m_value);
-            else // we don't: get it from the redirect
-            {
-                fail_if(!fields.m_redirection, "CacheAndGetValueAddrForHash called for Variable with no value yet??");
-                // get it from the redirect
-                auto& outFields = GetOutputFields(*fields.m_redirection.m_function);
-                fail_if(&fields == &outFields, "CacheAndGetValueAddrForHash called for Function with no value yet??");
-                addrForHash = CacheAndGetValueAddrForHash(outFields); // recurse (result may be see-through into a batched slice)
-                if (fields.m_redirection.m_index != SIZE_MAX && fields.m_redirection.m_index != 0 && !fields.m_isSparse) // correct for slice
-                {
-                    // (BUGBUG: We skip this for sparse, which will prevent CSE discovery. Needs a solution.)
-                    // determine stride
-                    let& shape = outFields.m_shape;
-                    let stride = shape.TotalSize(/*check=*/false) / shape.Dimensions().back(); // BUGBUG: This must use the actual stride from the TensorView; this is a hack.
-                    addrForHash += fields.m_redirection.m_index * stride;
-                }
-            }
-            fields.m_valueAddrForHash = addrForHash;
-            // WARNING: Expensive! Disable once it seems to work.
-            //fail_if(!fields.m_isSparse && addrForHash != GetValueAddrForHash(CacheAndGetValue(fields)), "CacheAndGetValueAddrForHash computed wrong hash value");
-            // Note: ^^ broken for sparse. May miss CSE.
-        }
-        return addrForHash;
-#endif
     }
 
     // compute a hash value for f
     // This is called for nearly every unbatched PrimitiveFunction, and must therefore be blazingly fast.
-    // TODO: instead of doing this lazily, should it be done in Schedule()?
-    // TODO: ^^ no need to do this lazily actually. Only called once.
-    static size_t ComputeAliasHash(PrimitiveFunction& f)
+    // Note: This is only called once. Done here because this is for CSE, which is not always fully evaluated.
+    static size_t ComputeCSEAliasHash(PrimitiveFunction& f)
     {
-        //if (f.m_autoBatchState.m_aliasHash != SIZE_MAX) // lazy  --TODO: no need; we don't need to even save this
-        //    LogicError("ComputeAliasHash should never be called twice on the same object");
-        //    //return;
         size_t hash = 0;
         // we only hash the argument identities; that is, their base pointer
         // We already know that opcode and shapes are identical.
         // If we really allow strides in the future, we may include them in the hash.
         let& inputs = f.m_inputs;
         let numInputs = inputs.size();
-        //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeAliasHash()", 3, numInputs);
+        //CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ElementTimes, L"ComputeCSEAliasHash()", 3, numInputs);
         for (size_t k = 0; k < numInputs; k++)
         {
             // TODO: just use object identity (follow redirects through !m_sliceRange) plus index
-            let addrForHash = CacheAndGetValueAddrForHash(GetInputFields(inputs[k]));
+            let addrForHash = CacheAndGetCSEVariableHash(GetInputFields(inputs[k]));
             hash += (size_t)addrForHash;
             hash += (size_t)(addrForHash >> 8); // also hash the page number, in case allocation is page-aligned
             hash *= hashMultiplier;
@@ -2988,17 +2954,17 @@ class InternalVariable::AutoBatch
         return hash;
     }
 
-    // class to help deduplicating
-    class DedupSet
+    // class to help deduplicating for CSE
+    class CSEDedupSet
     {
         static const size_t numBuckets = 65536;
-        class Bucket
+        class HashBucket
         {
-            Bucket* m_nextBucket = nullptr;
+            HashBucket* m_nextBucket = nullptr;
             PrimitiveFunction* m_bucketList = nullptr; // list of items in this bucket, linked via m_bucketList
         public:
             // iterate over buckets themselves (note: not over the bucket *list*). This is used during cleanup.
-            Bucket* ClearAndNext()
+            HashBucket* ClearAndNext()
             {
                 auto* next = m_nextBucket;
                 m_nextBucket = nullptr;
@@ -3007,10 +2973,10 @@ class InternalVariable::AutoBatch
             }
             void CheckClean() const
             {
-                fail_if(m_nextBucket || m_bucketList, "DedupSet bucket was not cleaned up upon last use");
+                fail_if(m_nextBucket || m_bucketList, "CSEDedupSet bucket was not cleaned up upon last use");
             }
             // add an entry to the bucket list
-            void PushFront(PrimitiveFunction* f, Bucket* &cleanupList)
+            void PushFront(PrimitiveFunction* f, HashBucket* &cleanupList)
             {
                 if (!m_bucketList) // first time (bucket just became active): register the bucket for cleanup
                 {
@@ -3026,8 +2992,8 @@ class InternalVariable::AutoBatch
             PrimitiveFunction* End() const { return nullptr; }
             void Next(PrimitiveFunction* &f) const { f = f->m_autoBatchState.m_bucketList; }
         };
-        vector<Bucket> m_buckets = vector<Bucket>(numBuckets);
-        Bucket* m_firstBucketInUse = nullptr; // for cleanup at the end: all active buckets are registered here
+        vector<HashBucket> m_buckets = vector<HashBucket>(numBuckets);
+        HashBucket* m_firstBucketInUse = nullptr; // for cleanup at the end: all active buckets are registered here
     public:
         // prepare for next use (clear out all entries)
         void Reset()
@@ -3040,14 +3006,14 @@ class InternalVariable::AutoBatch
         // check that we are clean
         void CheckClean() const
         {
-            fail_if(m_firstBucketInUse, "DedupSet was not cleaned up upon last use");
+            fail_if(m_firstBucketInUse, "CSEDedupSet was not cleaned up upon last use");
             //for (let& bucket : m_buckets) // expensive thorough check
             //    bucket.CheckClean();
         }
         // add to set and return nullptr, unless f is an alias of something that's already in the set; then return that
         PrimitiveFunction* FindDuplicateOrAddToSet(PrimitiveFunction* f)
         {
-            let fHash = ComputeAliasHash(*f);
+            let fHash = ComputeCSEAliasHash(*f);
             let fIndex = fHash % numBuckets;
             auto* bucket = &m_buckets[fIndex]; // bucket for f
             // search for an alias in the list. Most of the same this will be a match, but we must confirm.
@@ -3074,7 +3040,7 @@ class InternalVariable::AutoBatch
             return nullptr; // it was a new one
         }
     };
-    DedupSet m_dedupSet; // TODO: make this a static thread local, to avoid reallocating the bucket list
+    CSEDedupSet m_cseDedupSet; // TODO: make this a static thread local, to avoid reallocating the bucket list
     VisitorTag m_cseVisitorTag; // helper for CSE pre-check
 
     // pre-check whether the more expensive hash-table based CSE check is needed
@@ -3105,7 +3071,7 @@ class InternalVariable::AutoBatch
     NonOwningFunctionList ShortCircuitBatchedOpDuplicatesAndUpdateSchedule(NonOwningFunctionList ops)
     {
         CudaStatsGuard cudaStatsGuard(PrimitiveOpType::ReconcileDynamicAxis, L"CSE", 3, ops.size());
-        m_dedupSet.CheckClean(); // verify that we have cleaned up correctly
+        m_cseDedupSet.CheckClean(); // verify that we have cleaned up correctly
         NonOwningFunctionListBuilder filteredOps;
         for (auto iter = ops.begin(); iter != ops.end(); ) // create the batched tensors
         {
@@ -3113,7 +3079,7 @@ class InternalVariable::AutoBatch
             ++iter; // advance here, since we will reuse the m_link field
             // f has been taken out of the list, its m_link field is unused. If it is not a dup, then m_link will live in the filteredOps list instead.
 #if 1
-            auto* duplicate = m_dedupSet.FindDuplicateOrAddToSet(&f); // this is now O(1) in most cases
+            auto* duplicate = m_cseDedupSet.FindDuplicateOrAddToSet(&f); // this is now O(1) in most cases
             if (!duplicate) // no matching one was found: start a new list, and return in filteredOps
             {
                 // note that the above call has added f to the dedup table. It will be returned in the future for any alias we find.
@@ -3134,7 +3100,7 @@ class InternalVariable::AutoBatch
 #else
             // PERF BUGBUG: This gives O(N^2) complexity. Fix this once I get correct behavior.
             //              For now, it seems using the hash with a linear search gets it fast enough, but we should use a proper hash table of course.
-            let fHash = ComputeAliasHash(*f);
+            let fHash = ComputeCSEAliasHash(*f);
             f->m_autoBatchState.m_aliasHash = fHash;
             // PERF BUGBUG: no need to cache the hash, as it is only ever used on this very list
             //let fHash = f->m_autoBatchState.m_aliasHash;
@@ -3173,7 +3139,7 @@ class InternalVariable::AutoBatch
         break_iter:;
 #endif
         }
-        m_dedupSet.Reset(); // clean up after ourselves
+        m_cseDedupSet.Reset(); // clean up after ourselves
         return filteredOps;
     }
 
