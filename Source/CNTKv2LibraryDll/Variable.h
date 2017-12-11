@@ -141,6 +141,8 @@ namespace CNTK
 
         CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 
+        static inline VariableFields& FromVariable(const InternalVariable& v) { return *v.m_dataFields; }
+
     private:
         // Disallow copy and move construction and assignment
         VariableFields(const VariableFields&) = delete; VariableFields& operator=(const VariableFields& other) = delete; VariableFields(VariableFields&&) = delete; VariableFields& operator=(VariableFields&&) = delete;

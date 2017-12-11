@@ -1035,6 +1035,7 @@ public:
 // ...and the respective backward function once we are there
 // Before accessing an actual m_value field, call Join().
 // ---------------------------------------------------------------------------
+inline VariableFields& PrimitiveFunction::GetOutputFields() const { return VariableFields::FromVariable(m_outputs.front()); }
 class Memoizer
 {
     NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
@@ -2367,19 +2368,17 @@ class InternalVariable::AutoBatch
 #endif
     // this gets the non-redirected data fields, which describe v's properties as an input
     // This returns the fields of a potentially virtual value that does not produce its own output but merely views another.
-    static VariableFields& GetInputFields(const InternalVariable& v)
+    static inline VariableFields& GetInputFields(const InternalVariable& v)
     {
-        return *v.m_dataFields;
+        return VariableFields::FromVariable(v);
     }
-    // this the fields of the output of 'f', which describe where f's output goes, without redirection
-    // This returns the fields where stuff is actually produced ("physical value").
-    // ^^ BUGBUG: No, this may be a slice of a batched result.
-    // This can only be used with functions that are not redirected.
-    static VariableFields& GetOutputFields(const PrimitiveFunction& f)
+    // this gets the fields of the output of 'f', which describe where f's output goes, without redirection
+    // It is *not* following a redirect.
+    // If f's result is the result of a batched result, then this function returns
+    // the slice (or potentially where the slice would go), not the original place.
+    static inline VariableFields& GetOutputFields(const PrimitiveFunction& f)
     {
-        auto& fields = *f.m_outputs.front().m_dataFields;
-        //fail_if(!fields.m_redirection, "GetOutputFields() called on a function that is see-through or leaf??");
-        return fields;
+        return f.GetOutputFields();
     }
 
     static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
@@ -2819,21 +2818,9 @@ class InternalVariable::AutoBatch
         //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
         // we remember where we came from for backprop in this case
         auto& fields = GetOutputFields(f);
-#if 1
         fields.m_redirection.reset(batchedOp, sliceRange);
         // note: This overwrites depthHint. That's fine since depthHint is only used for scheduling. But this function just got a value, hence will never be scheduled.
-#else
-        fields.m_redirection.m_function = batchedOp.get(); // this is the actual pointer used to traverse
-        fields.m_redirection.m_functionHolder = batchedOp; // and also keep a ref count, since this may be a new object not referenced anywhere else yet
-        // If m_functionHolder already contains a pointer, then overwriting it may free the object.
-        // That is fine, since the -Holder is only concerned with holdinf a ref count for m_function
-        // in case is it was a new function. Since m_function also gets overwritten, the object it used
-        // to point to is no longer referenced.
-        fields.m_redirection.m_sliceRange = sliceRange;
-        // ^^ TODO: use reset() here. But how about depthHint?
-#endif
-        // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
-        // but it gets deferred to save effort
+        // Semantically, this will compute as fields.m_value = out[sliceRange]; but it gets deferred to save effort.
         // update all ops' consumers and schedule them when possible
         NotifyOpsConsumersInputsAvailable(f);
     }
