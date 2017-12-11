@@ -166,16 +166,22 @@ namespace CNTK
         : Function(inputs, std::move(functionConfig), nullptr, name, uid)
     {}
 
-#ifndef DYNAMITE_ONLY
     Variable Function::Output(bool init /*= true*/) const // optimized version of OutputsImpl()[0]
     {
+#ifdef DYNAMITE_ONLY
+        // It's OK if user-held Variables are no outputs of composites as long as the graph is acyclic. That is always true in Dynamite.
+        if (init)
+            const_cast<Function*>(this)->InitOutputs();
+        return Variable(m_outputs.front(), shared_from_this(), PrimitiveFunctionPtr()); // this implants a ref count
+        //return outputs.front().CompositePreservingCopy(shared_from_this()); // this implants a ref count
+#else
         const auto& outputs = RawOutputs();
         if (outputs.size() != 1)
             RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
         std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
         return outputs.front().CompositePreservingCopy(composite);
-    }
 #endif
+    }
 
     std::shared_ptr<std::vector<Variable>> Function::OutputsImpl() const
     {

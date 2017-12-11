@@ -2474,7 +2474,7 @@ namespace CNTK
 
     protected:
         Variable(const InternalVariable& other, const ConstFunctionPtr& composite, const ConstPrimitiveFunctionPtr& primitive);
-        CNTK_API Variable(const InternalVariable& other, ConstFunctionPtr&& composite, const ConstPrimitiveFunctionPtr& primitive);
+        Variable(const InternalVariable& other, ConstFunctionPtr&& composite, const ConstPrimitiveFunctionPtr& primitive);
 
         //Variable CompositePreservingCopy(const ConstFunctionPtr& composite) const;
         //Variable CompositePreservingCopy(ConstFunctionPtr&& composite) const;
@@ -3922,17 +3922,7 @@ namespace CNTK
         ///
         /// Returns the Output variable of 'this' Function. Throws an exception of 'this' Function has more that one output.
         ///
-#ifdef DYNAMITE_ONLY
-        Variable Function::Output(bool init = true) const
-        {
-            // It's OK if user-held Variables are no outputs of composites as long as the graph is acyclic. That is always true in Dynamite.
-            if (init)
-                const_cast<Function*>(this)->InitOutputs();
-            return Variable(m_outputs.front(), shared_from_this(), PrimitiveFunctionPtr()); // this implants a ref count
-        }
-#else
         CNTK_API Variable Output(bool init = true) const;
-#endif
 
         ///
         /// Returns a vector consisting of all Output variables of 'this' Function.
