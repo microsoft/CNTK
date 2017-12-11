@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <mutex>
 #include <time.h>
 
 using namespace Microsoft::MSR::CNTK;
@@ -873,14 +874,6 @@ public:
 // NDArrayViewArena -- helper class that implements efficient arena allocation for NDArrayView objects
 // ---------------------------------------------------------------------------
 
-// helper that is needed at a few places
-// Reshape an NDArrayViewPtr in-place (replace by a new one) if its shape does not match.
-static void ReplaceWithReshapedViewIfNeeded(NDArrayViewPtr& view, const NDShape& shape)
-{
-    if (view->Shape() != shape)
-        view = view->AsShape(shape);
-}
-
 class NDArrayViewArena
 {
     // allocate a new tensor in a large arena
@@ -1089,9 +1082,21 @@ static inline VariableFields& GetInputFields(const InternalVariable& v) { return
 // the slice (or potentially where the slice would go), not the original place.
 static inline VariableFields& GetOutputFields(const PrimitiveFunction& f) { return f.GetOutputFields(); }
 
+// helper that is needed at a few places
+// Reshape an NDArrayViewPtr in-place (replace by a new one) if its shape does not match.
+// Thread-safety: This is called by CacheAndGetValue() and backprop. Eventually this should move inside the background thread.
+static void ReplaceWithReshapedViewIfNeeded(NDArrayViewPtr& view, const NDShape& shape)
+{
+    if (view->Shape() != shape)
+        view = view->AsShape(shape);
+}
+
 // get the value of an input Variable, with full redirection
 // This will realize any lazy ops (slice, reshape).
 // A Variable's value is defined by its m_redirection.m_function->m_outputs.front(), followed by slice and/or reshape.
+// Thread-safety: Currently called by Memoizer::Forward(), BatchedForward() after Join()
+//                 BAD: Also by CreatedBatchedInputFor() -- is that needed?? Why not use shape?
+//                 BAD: Also by CSE. Need to eliminate that one.
 static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
 {
     if (!fields.m_value) // value is not available: create and cache it
@@ -3487,7 +3492,11 @@ class InternalVariable::AutoBatch
             };
             Function::InputsVectorType gatherInputs(Transform(ops, createArgumentFn));
             CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
-            let& input0Shape = CacheAndGetValue(gatherInputs[0])->Shape();
+            let& input0Shape = gatherInputs[0].Shape();
+#if 0       // TODO: remove this. I used this earlier. Not sure why.
+            let& input0Shape1 = CacheAndGetValue(gatherInputs[0])->Shape();
+            fail_if(input0Shape != input0Shape1, "shape not set?");
+#endif
             // create a new PrimitiveFunction Splice()
             vector<NDShapeDimension> outputShape; // determine output shape   --TODO: use a vector<NDShapeDimension> in this class
             outputShape.reserve(batchAxis + 1);
