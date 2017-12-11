@@ -2317,30 +2317,30 @@ class InternalVariable::AutoBatch
     }
     static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
     {
-        if (fields.m_value) // value is available (including cached values): use it
-            return fields.m_value;
-        fail_if(fields.m_redirection.empty(), "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
-        // get the actual value from the function that computed it
-        auto& functionFields = GetOutputFields(*fields.m_redirection.m_function);
-        fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
-        // function itself may be a redirect (a slice into a batched op)
-        CacheAndGetValue(functionFields); // (calling ourselves on the source in case of re-redirection)
-        RealizeVariableAsView(fields, functionFields.m_value);
-        return fields.m_value;
+        if (!fields.m_value) // value is not available: create and cache it
+        {
+            fail_if(fields.m_redirection.empty(), "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
+            // get the actual value from the function that computed it
+            auto& functionFields = GetOutputFields(*fields.m_redirection.m_function);
+            fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
+            // function itself may be a redirect (a slice into a batched op)
+            CacheAndGetValue(functionFields); // (calling ourselves on the source in case of re-redirection)
+            // realize the lazy redirected value; that is, do the slice and reshape
+            // This sets fields.m_value. inputFields must have m_value already set.
+            fail_if(!functionFields.m_value, "Variable's input unexpectedly has no value yet");
+            // optional implicit index and reshape
+            let sliceRange = fields.m_redirection.m_sliceRange;
+            if (!sliceRange.empty())
+                fields.m_value = move(functionFields.m_value->SliceViewAsShape(sliceRange.BeginIndex(), sliceRange.EndIndex(), fields.m_shape));
+            else // no slice
+            {
+                fields.m_value = functionFields.m_value;
+                ReplaceWithReshapedViewIfNeeded(fields.m_value, fields.m_shape);
+            }
+        }
+        return fields.m_value; // return the (now) cached value
     }
-    // realize the lazy redirected value; that is, do the slice and reshape
-    // This sets outputFields.m_value. inputFields must have m_value already set.
-    static void RealizeVariableAsView(VariableFields& outputFields, NDArrayViewPtr from)
-    {
-        fail_if(!from, "Variable's input unexpectedly has no value yet");
-        // optional implicit index and reshape
-        let sliceRange = outputFields.m_redirection.m_sliceRange;
-        if (!sliceRange.empty())
-            from = from->SliceViewAsShape(sliceRange.BeginIndex(), sliceRange.EndIndex(), outputFields.m_shape);
-        else // no slice
-            ReplaceWithReshapedViewIfNeeded(from, outputFields.m_shape);
-        outputFields.m_value = move(from);
-    }
+#if 0
     // get the value that must already have been cached
     static const NDArrayViewPtr& GetCachedValue(const Variable& v)
     {
@@ -2364,6 +2364,7 @@ class InternalVariable::AutoBatch
             LogicError("GetValueObject() called where no value object exists (hit a self-ref)??");
         return GetValueObject(output);
     }
+#endif
     // this gets the non-redirected data fields, which describe v's properties as an input
     // This returns the fields of a potentially virtual value that does not produce its own output but merely views another.
     static VariableFields& GetInputFields(const InternalVariable& v)
@@ -4293,7 +4294,7 @@ public:
         let numInputs = inputs.size();
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
         for (size_t i = 0; i < numInputs; i++)
-            inputValues[i] = GetCachedValue(inputs[i]).get();
+            inputValues[i] = GetInputFields(inputs[i]).m_value.get();
 
         // get the gradient view for the input whose gradient we desire
         // If it was newly created, then gradient.beta will be 0
