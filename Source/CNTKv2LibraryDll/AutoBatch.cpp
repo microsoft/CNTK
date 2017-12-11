@@ -2626,13 +2626,20 @@ class InternalVariable::AutoBatch
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
+        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
+        {
+            // special treatment for BatchNorm which needs additional temp buffers, which we keep track of as additional inputs
+            // TODO: disentangle xHat (remove scale/bias and keep xHat as the main output) from the temp buffers
+            if (f.m_op == PrimitiveOpType::BatchNormalization && i >= 6)
+                GetInputFields(inputs[i]).m_value = m_memoizer.Arena().NewNDArrayView(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
+            // fetch the m_value from the input
             inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
+        }
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
-        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
         auto outValue =
             /*if*/ (isFree) ?
                 NDArrayViewPtr()
@@ -3747,11 +3754,13 @@ class InternalVariable::AutoBatch
         {
             // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
             // This is sort of a hack for now. It is not, however, an efficiency problem since there are relatively few batched BatchNorm nodes in the graph.
-            let device = GetValueObject(m_batchedInputs[0])->Device();
+            // Note that we cannot just move creation of these outside because one depends on the actual size.
             let dataType = m_batchedInputs[0].GetDataType();
             let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RPrepareForwardGraphAndSchedule()
             {
-                return Parameter(m_memoizer.Arena().NewNDArrayView(shape, dataType, StorageFormat::Dense, device));
+                // BUGBUG: We construct a Parameter object as an InternalVariable. Better construct a true Parameter, in case Parameter ever becomes a distinct type with extra members.
+                let p = InternalVariable(shape, VariableKind::Parameter, dataType, /*value=*/nullptr, /*needsGradient=*/false, /*dynamicAxes=*/{}, /*name=*/wstring(), /*uid=*/wstring());
+                return Variable(p, nullptr, nullptr);
             };
             let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
             m_batchedInputs.push_back(createParameter(               statShape  ));
