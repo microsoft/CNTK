@@ -3677,6 +3677,7 @@ namespace CNTK
         friend class UDFUtils;
         friend class Trainer;
         friend class InternalVariable::AutoBatch;
+        friend class InternalVariable::Memoizer;
 
         friend Variable GetCorrespondingOutputVariableFromClone(const Variable&, const FunctionPtr&, const FunctionPtr&);
         friend bool Internal::IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);

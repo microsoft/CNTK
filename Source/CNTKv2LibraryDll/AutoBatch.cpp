@@ -1105,6 +1105,61 @@ static const NDArrayView* GetValueObject(const InternalVariable& v)
     return GetValueObject(output);
 }
 #endif
+
+// predicate whether an op is only taking a view on its input
+// These are considered zero-cost, always batched whole-sale, and always done first.
+static bool IsViewOp(PrimitiveOpType op)
+{
+    // if really needed, this can be done as a bit-test
+    // TODO: The NoOps should never be tested here, right?
+    //fail_if(IsAliasOp(op), "IsViewOp should never be asked about a no-op, should be short-circuited before");
+    // ^^ Yes, they can be tested here while inlining of basic block during execution  --TODO: fix this, those should get short-circuited as well
+    return
+        op == PrimitiveOpType::StopGradient ||
+        op == PrimitiveOpType::Pass         ||
+        op == PrimitiveOpType::NoOp         ||
+        op == PrimitiveOpType::BarrierOp    ||
+        op == PrimitiveOpType::Reshape      ||
+        op == PrimitiveOpType::Slice;
+}
+
+// predicate whether an op just passes through its input
+// This is used to decide whether we can short-circuit it in m_redirection.
+static bool IsAliasOp(PrimitiveOpType op)
+{
+    // if really needed, this can be done as a bit-test
+    return
+        op == PrimitiveOpType::StopGradient ||
+        op == PrimitiveOpType::Pass ||
+        op == PrimitiveOpType::NoOp ||
+        op == PrimitiveOpType::BarrierOp;
+}
+
+// predicate whether an op's gradient is a no-op (just copies the output gradient)
+// These are short-circuited in backprop.
+static bool IsGradientCopyingOp(PrimitiveOpType op, size_t inputIndex)
+{
+    // if really needed, this can be done as a bit-test
+    return
+        op == PrimitiveOpType::StopGradient ||
+        op == PrimitiveOpType::Pass         ||
+        op == PrimitiveOpType::NoOp         ||
+        op == PrimitiveOpType::BarrierOp    ||
+        //op == PrimitiveOpType::Reshape      ||
+        op == PrimitiveOpType::Plus         ||
+        (op == PrimitiveOpType::Minus && inputIndex == 0);
+        //(op == PrimitiveOpType::Plus && inputIndex == 0);
+}
+
+template<class B> // B=vector<NDArrayViewPtr>
+B& BorrowBuffer(B& buffer, size_t batchSize)
+{
+    if (buffer.capacity() < batchSize)
+        buffer.reserve(batchSize * 2);
+    buffer.resize(batchSize);
+    return buffer;
+}
+
 class InternalVariable::Memoizer
 {
     NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
@@ -1127,13 +1182,13 @@ public:
     void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
     {
         // UNDER_LOCK
-        m_queue.emplace_back(WorkItem
-        {
-            /*isForward=*/ true,
-            static_pointer_cast<PrimitiveFunction>(f.shared_from_this()),
-            isFree,
-            logSpliceAsGather
-        });
+        //m_queue.emplace_back(WorkItem
+        //{
+        //    /*isForward=*/ true,
+        //    static_pointer_cast<PrimitiveFunction>(f.shared_from_this()),
+        //    isFree,
+        //    logSpliceAsGather
+        //});
     }
     void Join()
     {
@@ -1351,63 +1406,10 @@ class InternalVariable::AutoBatch
     vector<NDArrayViewPtr>     m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBufferRaw;
     vector<size_t>             m_dimsBuffer;
-    template<class B> // B=vector<NDArrayViewPtr>
-    B& BorrowBuffer(B& buffer, size_t batchSize)
-    {
-        if (buffer.capacity() < batchSize)
-            buffer.reserve(batchSize * 2);
-        buffer.resize(batchSize);
-        return buffer;
-    }
 
     // =======================================================================
     // forward-related functions
     // =======================================================================
-
-    // predicate whether an op is only taking a view on its input
-    // These are considered zero-cost, always batched whole-sale, and always done first.
-    static bool IsViewOp(PrimitiveOpType op)
-    {
-        // if really needed, this can be done as a bit-test
-        // TODO: The NoOps should never be tested here, right?
-        //fail_if(IsAliasOp(op), "IsViewOp should never be asked about a no-op, should be short-circuited before");
-        // ^^ Yes, they can be tested here while inlining of basic block during execution  --TODO: fix this, those should get short-circuited as well
-        return
-            op == PrimitiveOpType::StopGradient ||
-            op == PrimitiveOpType::Pass         ||
-            op == PrimitiveOpType::NoOp         ||
-            op == PrimitiveOpType::BarrierOp    ||
-            op == PrimitiveOpType::Reshape      ||
-            op == PrimitiveOpType::Slice;
-    }
-
-    // predicate whether an op just passes through its input
-    // This is used to decide whether we can short-circuit it in m_redirection.
-    static bool IsAliasOp(PrimitiveOpType op)
-    {
-        // if really needed, this can be done as a bit-test
-        return
-            op == PrimitiveOpType::StopGradient ||
-            op == PrimitiveOpType::Pass ||
-            op == PrimitiveOpType::NoOp ||
-            op == PrimitiveOpType::BarrierOp;
-    }
-
-    // predicate whether an op's gradient is a no-op (just copies the output gradient)
-    // These are short-circuited in backprop.
-    static bool IsGradientCopyingOp(PrimitiveOpType op, size_t inputIndex)
-    {
-        // if really needed, this can be done as a bit-test
-        return
-            op == PrimitiveOpType::StopGradient ||
-            op == PrimitiveOpType::Pass         ||
-            op == PrimitiveOpType::NoOp         ||
-            op == PrimitiveOpType::BarrierOp    ||
-            //op == PrimitiveOpType::Reshape      ||
-            op == PrimitiveOpType::Plus         ||
-            (op == PrimitiveOpType::Minus && inputIndex == 0);
-            //(op == PrimitiveOpType::Plus && inputIndex == 0);
-    }
 
     // helper to test whether a PrimitiveFunction is a barrier operation
     friend class Invocable;
@@ -2624,6 +2626,7 @@ class InternalVariable::AutoBatch
     {
 #if 0
 #else
+        auto& m_arena = m_memoizer.Arena();
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
         CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
@@ -2633,7 +2636,7 @@ class InternalVariable::AutoBatch
             // special treatment for BatchNorm which needs additional temp buffers, which we keep track of as additional inputs
             // TODO: disentangle xHat (remove scale/bias and keep xHat as the main output) from the temp buffers
             if (f.m_op == PrimitiveOpType::BatchNormalization && i >= 6)
-                GetInputFields(inputs[i]).m_value = m_memoizer.Arena().NewNDArrayView(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
+                GetInputFields(inputs[i]).m_value = m_arena.NewNDArrayView(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
             // fetch the m_value from the input
             inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
         }
@@ -2644,7 +2647,7 @@ class InternalVariable::AutoBatch
             /*if*/ (isFree) ?
                 NDArrayViewPtr()
             /*else*/:
-                m_memoizer.Arena().NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
+                m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
         cudaStatsGuardPrepare.Stop();
         // logging
         if (ShouldProfile(f))
@@ -2680,7 +2683,9 @@ class InternalVariable::AutoBatch
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             CudaStatsGuard cudaStatsGuard(f.m_op, nullptr, hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false));
             res = move(NDArrayView::NumericOperation({ move(res) }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
-                        m_memoizer.Arena().NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device())));
+                                                     m_arena.NewNDArrayView(outputShape, output.GetDataType(),
+                                                                            output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense,
+                                                                            inputValues.front()->Device())));
         }
 #if 0
         LogFunction(f, f.m_profiler);
