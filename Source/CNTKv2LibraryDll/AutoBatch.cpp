@@ -1029,6 +1029,52 @@ public:
 /*static*/ array<vector<unique_ptr<MatrixBase>>, NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledArenass;
 
 // ---------------------------------------------------------------------------
+// Memoizer -- this performs all actual computations
+// All actual operations that create/update Variable::m_value and m_gradient
+// are routed through this class, by calling SubmitForward()
+// ...and the respective backward function once we are there
+// Before accessing an actual m_value field, call Join().
+// ---------------------------------------------------------------------------
+class Memoizer
+{
+    NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
+    struct WorkItem
+    {
+        bool isForward; // is forward prop
+        PrimitiveFunctionPtr fPtr; // the function to execute
+        bool isFree;
+        bool logSpliceAsGather;
+    };
+    deque<WorkItem> m_queue;
+    // methods that run on worker thread
+    void ProcessNextItem()
+    {
+    }
+public:
+    ~Memoizer() { Join(); }
+    // submit a Function evaluation
+    void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
+    {
+        // UNDER_LOCK
+        m_queue.emplace_back(WorkItem
+        {
+            /*isForward=*/ true,
+            static_pointer_cast<PrimitiveFunction>(f.shared_from_this()),
+            isFree,
+            logSpliceAsGather
+        });
+    }
+    void Join()
+    {
+        // non-threaded version
+        while (!m_queue.empty())
+            ProcessNextItem();
+    }
+    // temporarily, the arena is also used from outside
+    NDArrayViewArena& Arena() { return m_arena; }
+};
+
+// ---------------------------------------------------------------------------
 // RuntimeStatistics -- helper class for collecting runtime statistics, for
 // diagnostics and debugging purposes
 // ---------------------------------------------------------------------------
@@ -1224,7 +1270,7 @@ class InternalVariable::AutoBatch
     using SliceRange = Internal::AutoBatchRedirection::SliceRange;
     using StackingMode = PrimitiveFunction::StackingMode;
 
-    NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
+    Memoizer m_memoizer;
     RuntimeStatistics m_stats;
     VisitorTag m_visitorTag; // helper for managing tree traversal (non-nested)
 
@@ -2591,7 +2637,7 @@ class InternalVariable::AutoBatch
             /*if*/ (isFree) ?
                 NDArrayViewPtr()
             /*else*/:
-                m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
+                m_memoizer.Arena().NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
         cudaStatsGuardPrepare.Stop();
         // logging
         if (ShouldProfile(f))
@@ -2627,7 +2673,7 @@ class InternalVariable::AutoBatch
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             CudaStatsGuard cudaStatsGuard(f.m_op, nullptr, hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false));
             res = move(NDArrayView::NumericOperation({ move(res) }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
-                        m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device())));
+                        m_memoizer.Arena().NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device())));
         }
 #if 0
         LogFunction(f, f.m_profiler);
@@ -3705,7 +3751,7 @@ class InternalVariable::AutoBatch
             let dataType = m_batchedInputs[0].GetDataType();
             let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RPrepareForwardGraphAndSchedule()
             {
-                return Parameter(m_arena.NewNDArrayView(shape, dataType, StorageFormat::Dense, device));
+                return Parameter(m_memoizer.Arena().NewNDArrayView(shape, dataType, StorageFormat::Dense, device));
             };
             let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
             m_batchedInputs.push_back(createParameter(               statShape  ));
@@ -3986,7 +4032,7 @@ public:
         {
             // create a new one
             // TODO: allocate parameters as separate objects; and allow user to pass buffers in
-            gradFields.m_gradient = m_arena.NewNDArrayView(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
+            gradFields.m_gradient = m_memoizer.Arena().NewNDArrayView(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
             beta = 0.0; // has not been initialized (random section in arena)
             // if there is no redirect, then writing to the physical one is the same as writing to the cached one. Then we are done.
             if (inputFields.m_gradient)
@@ -4188,7 +4234,7 @@ public:
             gatherBatchResultDims.push_back(inputValues.size()); // batching
         else
             gatherBatchResultDims[axis] = batchDim; // stacking
-        auto out = m_arena.NewNDArrayView(gatherBatchResultDims, inputValue0.GetDataType(), inputValue0.GetStorageFormat(), inputValue0.Device());
+        auto out = m_memoizer.Arena().NewNDArrayView(gatherBatchResultDims, inputValue0.GetDataType(), inputValue0.GetStorageFormat(), inputValue0.Device());
         m_stats.numBackpropGathers++;
         return move(NDArrayView::GatherBatch(inputValues, (int)axis, move(out)));
     }
@@ -4697,7 +4743,7 @@ public:
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
         //if (root.Value()->Shape() != NDShape{})
         //    LogicError("BatchedBackward: root must be a scalar, or root gradient must have been implanted already");
-        rootGradFields.m_gradient = m_arena.NewNDArrayView(root.Shape(), root.GetDataType(), StorageFormat::Dense, root.Value()->Device());
+        rootGradFields.m_gradient = m_memoizer.Arena().NewNDArrayView(root.Shape(), root.GetDataType(), StorageFormat::Dense, root.Value()->Device());
         rootGradFields.m_gradient->SetValue(1.0f);
         m_visitorTag.Visited(rootGradFields.m_visitedTag); // done with this
         // perform backprop
