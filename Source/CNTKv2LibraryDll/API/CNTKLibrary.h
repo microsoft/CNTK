@@ -372,6 +372,7 @@ namespace CNTK
         DataType m_elementType;        // Element type of the stream
         NDShape m_sampleLayout;        // Layout of the sample for the stream
         bool m_definesMbSize = false;  // Flag indicating whether this stream defines minibatch size.
+        bool m_isBinary = false;       // Whether this is an opaque binary stream. Currently in use only for lattices.
 
         std::wstring AsString() const
         {
