@@ -876,6 +876,7 @@ public:
 class NDArrayViewArena
 {
     // allocate a new tensor in a large arena
+    static recursive_mutex s_mutex;
     static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
     static array<MatrixBasePtr                 , numStorageFormats> s_currentArenas;          // currently active arena (for the given storage format)
     static array<DataType                      , numStorageFormats> s_currentArenaDataTypes;  // == s_currentArena's dataType
@@ -903,6 +904,7 @@ public:
     // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
     NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
+        lock_guard<recursive_mutex> guard(s_mutex);
         let isSparse = IsSparseStorageFormat(storageFormat);
         let formatAsIndex = (size_t)storageFormat;
         fail_if(formatAsIndex >= s_currentArenas.size(), "unexpected storageFormat int value??");
@@ -982,6 +984,7 @@ public:
             s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
                 [&s_recycledArenas](MatrixBase* matrixPtr)
                 {
+                    lock_guard<recursive_mutex> guard(s_mutex);
                     //fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
                     // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
                     if (matrixPtr->GetNumViews() == 1)
@@ -1013,6 +1016,7 @@ public:
     }
 };
 
+/*static*/ recursive_mutex NDArrayViewArena::s_mutex;
 /*static*/ array<MatrixBasePtr                 , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenas;
 /*static*/ array<DataType                      , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaDataTypes;// = { DataType::Unknown, DataType::Unknown };
 /*static*/ array<DeviceDescriptor              , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaDevices = { DeviceDescriptor::CPUDevice(), DeviceDescriptor::CPUDevice(), DeviceDescriptor::CPUDevice() };
@@ -1242,7 +1246,7 @@ private:
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
-        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: prepare", 3, inputs.size());
+        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: MT prepare", 3, inputs.size());
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -1352,7 +1356,7 @@ public:
             isFree,
             logSpliceAsGather
         });
-        //NotifyWorkerOfStateChange();
+        NotifyWorkerOfStateChange();
     }
     void Join()
     {
@@ -1588,11 +1592,9 @@ class VisitorTag
     size_t m_visitTag;
 public:
     VisitorTag() { Begin(); } // constructor used when creating a VisitorTag on the stack
-    void/*size_t*/ Begin() // call this at start when using existing objects
+    void Begin() // call this at start when using existing objects
     {
-        //let prevVisitTag = m_visitTag; // note: End() no longer supported
         m_visitTag = s_nextVisitTag++; // note: atomic = thread-safe
-        //return prevVisitTag;
     }
     bool Visited(size_t& tag) const // first time this is applied to 'tag', it will return false; and true otherwise
     {
@@ -1601,8 +1603,6 @@ public:
         tag = m_visitTag;
         return false;
     }
-    // for nesting --not used; remove
-    //void End(size_t tag) { m_visitTag = tag; } // restore state before Begin() that returned 'tag'
 };
 /*static*/ std::atomic_size_t VisitorTag::s_nextVisitTag{ 1 };
 
