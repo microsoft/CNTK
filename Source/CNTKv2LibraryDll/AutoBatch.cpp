@@ -1215,10 +1215,10 @@ public: // for call in BatchedForward()  --TODO: clean this up
             // get the actual value from the function that computed it
             auto& functionFields = GetOutputFields(*fields.m_redirection.m_function);
             fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
-                                                                                           // function itself may be a redirect (a slice into a batched op)
+            // function itself may be a redirect (a slice into a batched op)
             MTCacheAndGetValue(functionFields); // (calling ourselves on the source in case of re-redirection)
-                                              // realize the lazy redirected value; that is, do the slice and reshape
-                                              // This sets fields.m_value. inputFields must have m_value already set.
+            // realize the lazy redirected value; that is, do the slice and reshape
+            // This sets fields.m_value. inputFields must have m_value already set.
             fail_if(!functionFields.m_value, "Variable's input unexpectedly has no value yet");
             // optional implicit index and reshape
             let sliceRange = fields.m_redirection.m_sliceRange;
@@ -1335,6 +1335,8 @@ private:
     }
     void WaitForWorkerStateChange() // wait for worker to change the state
     {
+        if (!m_queue.empty())
+            ProcessNextItem();
     }
 
 public:
@@ -2736,7 +2738,7 @@ class InternalVariable::AutoBatch
     }
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
-    // The result is stored in f.m_outputs.front()'s m_value.
+    // This is submitted into the background Memoizer thread, which will eventually store the result in f.m_outputs.front()'s m_value.
     // Note: This breaks the immutability principle, in that it frees inputs that are known to be no longer needed.
     const void MemoizeInArena(PrimitiveFunction& f, bool isFree = false, bool logSpliceAsGather = false)
     {
@@ -2846,7 +2848,6 @@ class InternalVariable::AutoBatch
     {
         // notify consumers
         auto& fields = GetOutputFields(f);
-        //fail_if(!fields.m_value && !fields.m_redirection, "NotifyOpsConsumersInputsAvailable: operation unexpectedly reveived no value");
 #if 0   // this test is useful but fails for the root; enable for debugging where helpful
         if (!fields.m_consumers.size())
             LogicError("executed a function that shouldn't be executed");
@@ -2872,13 +2873,13 @@ class InternalVariable::AutoBatch
     }
 
     // clone a result into all its aliases (which were determined by ShortCircuitBatchedOpDuplicatesAndUpdateSchedule())
-    // TODO: We either duplicate m_value or m_redirection, and we know that upon call time; so split this function.
     void UpdateDuplicatesAndUpdateSchedule(PrimitiveFunction& f)
     {
         for (auto* dup = f.m_autoBatchState.m_aliasList; dup; dup = dup->m_autoBatchState.m_aliasList)
         {
             //CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"implant", 3);
-            GetOutputFields(*dup).m_value       = GetOutputFields(f).m_value;
+            //GetOutputFields(*dup).m_value       = GetOutputFields(f).m_value;
+            fail_if(GetOutputFields(f).m_redirection.empty(), "CSE-redistributing non-function output??");
             GetOutputFields(*dup).m_redirection = GetOutputFields(f).m_redirection;
             NotifyOpsConsumersInputsAvailable(*dup);
         }
@@ -3041,7 +3042,7 @@ class InternalVariable::AutoBatch
                     auto& aliasFields = GetInputFields(alias->m_inputs[k]);
                     if (&fields == &aliasFields)
                         continue;
-#if 1               // old version that calls MTCacheAndGetValue(), which is now forbidden (owned by memoize thread)
+#if 0               // old version that calls MTCacheAndGetValue(), which is now forbidden (owned by memoize thread)
                     bool d1 = DetermineSliceAndBase(fields) != DetermineSliceAndBase(aliasFields);
                     bool d2 = !Memoizer::MTCacheAndGetValue(fields)->IsAliasOf(Memoizer::MTCacheAndGetValue(aliasFields));
                     fail_if(d1 != d2, "cse wrong detection");
@@ -3352,7 +3353,7 @@ class InternalVariable::AutoBatch
             let endIndex   = prevSliceEndIndex;
             let& from = redirectionPair0.originatingFunction; // and this is the function that we take this consecutive slice into
             let& fromOutput = from->m_outputs.front();        // and its output...
-            fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
+            //fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
             let& fromDims = fromOutput.Shape().Dimensions();  // ...and its shape dimensions
             fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
             let fromRank = fromDims.size() - 1;          // the slice of from is taken along this axis
