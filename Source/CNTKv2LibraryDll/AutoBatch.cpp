@@ -1177,33 +1177,62 @@ B& BorrowBuffer(B& buffer, size_t batchSize)
     return buffer;
 }
 
+// a Win32-like Event type
+class Event
+{
+    mutex m_mutex;
+    condition_variable m_condition;
+    bool m_state;
+public:
+    Event() : m_state(true) {}
+    void Set()
+    {
+        lock_guard<mutex> guard(m_mutex);
+        if (!m_state)
+        {
+            m_state = true; // remember that Event is in flagged state, for consumer that may be waiting in the futur
+            m_condition.notify_all(); // notify consumer that may be waiting *right now*
+        }
+    }
+    void Wait()
+    {
+        unique_lock<mutex> lk(m_mutex);
+        m_condition.wait(lk, [this]() { return m_state; }); // releases the lock while waiting
+        m_state = false;
+    }
+};
+
 // simple helper class for running a worker thread
 // Once the run function throws an exception, the instance must be destructed.
 class WorkerThread
 {
-    bool m_enableThreading = false;
+    bool m_enableThreading = true;
     thread m_thread;
     volatile bool m_terminateRequest; // set by ~WorkerThread()
     volatile bool m_hasException; // set by MTThreadProc() in case of exception
     exception_ptr m_exception; // if any  --TODO: does this need to be volatile?
-    condition_variable m_consumerStateChange, m_workerStateChange;
-    mutex m_consumerStateChangeMutex, m_workerStateChangeMutex; // somehow wait() requires a mutex
+    Event m_consumerStateChanged, m_workerStateChanged;
     void MTNotifyConsumerOfStateChange()
     {
-        m_workerStateChange.notify_all(); // my state has changed
+        //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
+        m_workerStateChanged.Set(); // my state has changed
+        //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
     }
     void MTWaitForConsumerStateChange()
     {
-        unique_lock<mutex> lk(m_consumerStateChangeMutex);
-        m_consumerStateChange.wait(lk);
+        //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
+        m_consumerStateChanged.Wait();
+        //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
     }
     void MTThreadProc()
     {
+        MTNotifyConsumerOfStateChange();
         try
         {
             while (!m_terminateRequest)
             {
                 let hasWorkPending = MTDoWork(); // may throw
+                MTNotifyConsumerOfStateChange();
                 if (!hasWorkPending)
                     MTWaitForConsumerStateChange();
             }
@@ -1214,10 +1243,8 @@ class WorkerThread
             m_exception = current_exception();
             m_hasException = true; // not sure if exception_ptr can be assigned atomically, so use this as a guard
             MTNotifyConsumerOfStateChange();
-            // wait for consumer to tell us to terminate. Won't do any more work.
-            // Terminate request comes from our own destructor. If this is static, then this runs last.
-            while (!m_terminateRequest)
-                MTWaitForConsumerStateChange();
+            fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
+            // and finish the thread
         }
     }
     void NonThreadedProc() // emulation if threading not enabled
@@ -1228,37 +1255,54 @@ class WorkerThread
     void ThrowIfException()
     {
         if (m_hasException)
+        {
+            FinishThread();
             rethrow_exception(m_exception);
+        }
+    }
+    void FinishThread()
+    {
+        if (m_thread.joinable())
+            m_thread.join();
+        // note: any potential exception goes unnoticed since we may not throw in destructor
     }
 public:
     WorkerThread() :
         m_terminateRequest(false), m_hasException(false)
     {
-        if (m_enableThreading)
+    }
+    void WakeUp()
+    {
+        if (m_enableThreading && !m_thread.joinable())
+        {
+            m_exception = nullptr;
             m_thread = thread([this]() { MTThreadProc(); });
+        }
     }
     ~WorkerThread()
     {
         m_terminateRequest = true;
-        if (m_thread.joinable())
-            m_thread.join();
-        // note: any potential exception goes unnoticed since we may not throw in destructor
+        FinishThread();
     }
     virtual bool MTDoWork() = 0; // override this. Do one limited package of work
     void NotifyWorkerOfStateChange() // tell the worker that state has (may have) changed by main thread
     {
         if (!m_enableThreading)
             return NonThreadedProc();
-        ThrowIfException();
-        m_consumerStateChange.notify_all();
+        //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
+        m_consumerStateChanged.Set();
+        //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
     }
     void WaitForWorkerStateChange() // wait for worker to change the state. Rethrows exception if the thread died
     {
         if (!m_enableThreading)
             return NonThreadedProc();
+        {
+            //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
+            m_workerStateChanged.Wait();
+            //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
+        }
         ThrowIfException();
-        unique_lock<mutex> lk(m_workerStateChangeMutex);
-        m_workerStateChange.wait(lk);
     }
 };
 
@@ -1314,6 +1358,13 @@ class InternalVariable::Memoizer
             NotifyWorkerOfStateChange();
         }
         size_t Pending() const { return m_queue.Size(); }
+        void Join()
+        {
+            //fprintf(stderr, "### QUEUE SIZE=%d\n", (int)s_workerThread.Pending());
+            // wait until all done
+            while (Pending() > 0)
+                WaitForWorkerStateChange(); // note: This will re-throw any exception from the worker
+        }
     };
     // methods that run on worker thread
     // get the value of an input Variable, with full redirection
@@ -1439,9 +1490,18 @@ private:
             LogicError("MTProcessNextItem: backprop not yet implemented");
     }
 public:
+    Memoizer()
+    {
+        s_workerThread.WakeUp(); // start thread if presently none
+        // BUGBUG: The bg thread can theoretically be used from multiple consuming threads.
+        //         But they share the queue. Hence, if an exception is thrown, it is not clear
+        //         how the queue should be cleaned up, and how all consumers receive the exception.
+        //         In particular if one receives the exception, anmd while another is not looking,
+        //         restarts the thread. The queue will be in inconsistent state.
+    }
     ~Memoizer()
     {
-        Join(); // wait for bg thread to complete all pending work
+        s_workerThread.Join(); // wait for bg thread to complete all pending work
         // Note: The queue is expected to be empty. We could try to clear the queue just in case.
     }
     // submit a Function evaluation
@@ -1455,13 +1515,14 @@ public:
             isFree,
             logSpliceAsGather
         });
+#if 1   // for testing: simulate sync operation via the bg thread
+        WaitForCompletion();
+#endif
     }
-    void Join()
+    // wait for all submitted work to be completed
+    void WaitForCompletion()
     {
-        fprintf(stderr, "### QUEUE SIZE=%d\n", (int)s_workerThread.Pending());
-        // wait until all done
-        while (s_workerThread.Pending() > 0)
-            s_workerThread.WaitForWorkerStateChange(); // note: This will re-throw any exception from the worker
+        s_workerThread.Join();
     }
     // temporarily, the arena is also used from outside
     // Once we go fully multi-threaded, then this should no longer be exposed.
@@ -4114,7 +4175,7 @@ public:
         }
         cudaStatsGuardForward.Stop();
         CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward calc", 3);
-        m_memoizer.Join(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
+        m_memoizer.WaitForCompletion(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
         Memoizer::MTCacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
         cudaStatsGuardCalc.Stop();
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
