@@ -67,7 +67,7 @@ enum mbrclassdefinition // used to identify definition of class in minimum bayes
 // ===========================================================================
 class lattice
 {
-    mutable int verbosity;
+public: 
     struct header_v1_v2
     {
         size_t numnodes : 32;
@@ -84,6 +84,10 @@ class lattice
         {
         }
     };
+
+private:
+    mutable int verbosity;
+    
     header_v1_v2 info;                           // information about the lattice
     static const unsigned int NOEDGE = 0xffffff; // 24 bits
     // static_assert (sizeof (nodeinfo) == 8, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
