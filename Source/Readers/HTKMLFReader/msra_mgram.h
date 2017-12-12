@@ -1494,6 +1494,9 @@ public:
         while (strcmp(buf, "\\data\\") != 0 && !feof(f))
             lineNo++, fgetline(f, buf);
         lineNo++, fgetline(f, buf);
+		/* guoye: start */
+		fprintf(stderr, "\n msra_mgram.h: read: debug 1\n");
+		/* guoye: end */
 
         // get the dimensions
         std::vector<int> dims;
@@ -1517,6 +1520,9 @@ public:
         if (M > maxM)
             M = maxM;
 
+		/* guoye: start */
+		fprintf(stderr, "\n msra_mgram.h: read: debug 2\n");
+		/* guoye: end */
         // allocate main storage
         map.init(M);
         logP.init(M);
@@ -1536,10 +1542,17 @@ public:
         std::vector<bool> skipWord; // true: skip entry containing this word
         skipWord.reserve(lmSymbols.capacity());
 
+		/* guoye: start */
+		fprintf(stderr, "\n msra_mgram.h: read: debug 3\n");
+		/* guoye: end */
+
         // --- read main sections
 
         const double ln10xLMF = log(10.0);                // ARPA scores are strangely scaled
         msra::strfun::tokenizer tokens(" \t\n\r", M + 1); // used in tokenizing the input line
+		/* guoye: start */
+		fprintf(stderr, "\n msra_mgram.h: read: debug 4\n");
+		/* guoye: end */
         for (int m = 1; m <= M; m++)
         {
             while (buf[0] == 0 && !feof(f))
@@ -1649,6 +1662,9 @@ public:
 
             fprintf(stderr, ", %d %d-grams", map.size(m), m);
         }
+		/* guoye: start */
+		fprintf(stderr, "\n msra_mgram.h: read: debug 5\n");
+		/* guoye: end */
         fprintf(stderr, "\n");
 
         // check end tag
@@ -1659,6 +1675,10 @@ public:
             if (strcmp(buf, "\\end\\") != 0)
                 RuntimeError("read: mal-formed LM file, no \\end\\ tag (%d): %ls", lineNo, pathname.c_str());
         }
+
+		/* guoye: start */
+		fprintf(stderr, "\n msra_mgram.h: read: debug 6 \n");
+		/* guoye: end */
 
         // update zerogram score by one appropriate for OOVs
         updateOOVScore();
@@ -1672,7 +1692,13 @@ public:
             int id = symbolToId(sym); // may be -1 if not found
             userToLMSymMap[i] = id;
         }
+		/* guoye: start */
+		fprintf(stderr, "\n msra_mgram.h: read: debug 7 \n");
+		/* guoye: end */
         map.created(userToLMSymMap);
+		/* guoye: start */
+		fprintf(stderr, "\n msra_mgram.h: read: debug 8 \n");
+		/* guoye: end */
     }
 
 protected:

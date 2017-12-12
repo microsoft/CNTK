@@ -99,7 +99,7 @@ xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClCompile>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/d2Zi+ /FS </AdditionalOptions>
     </ClCompile>
     <CudaCompile>
       <HostDebugInfo>false</HostDebugInfo>
