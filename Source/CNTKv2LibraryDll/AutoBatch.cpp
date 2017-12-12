@@ -32,7 +32,7 @@ using namespace std;
 
 //#define LOG_DETAILS     // if defined, log all forward and backward operations
 #define LOG_STATS         // if defined, log statistics (#operations)
-//#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
+#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
 //#define LOG_GPU         // if defined, profile the GPU (warning: this will disturb the CPU measurements)
 #define NUM_MBS_TO_LOG 10 // 4
 
@@ -1263,8 +1263,8 @@ private:
                 m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
         cudaStatsGuardPrepare.Stop();
         // logging
-        if (ShouldProfile(f))
-            LogFunction(f, f.m_profiler);
+        if (Memoizer::ShouldProfile(f))
+            Memoizer::LogFunction(f, f.m_profiler);
         //if (f.m_op == PrimitiveOpType::ElementTimes)
         //    LogFunction(f, L"bf  ");
         CudaStats* cudaStatsPtr = nullptr;
@@ -1352,11 +1352,12 @@ public:
             isFree,
             logSpliceAsGather
         });
-        NotifyWorkerOfStateChange();
+        //NotifyWorkerOfStateChange();
     }
     void Join()
     {
         // non-threaded version
+        fprintf(stderr, "### QUEUE SIZE=%d\n", (int)m_queue.size());
         for (;;)
         {
             {
@@ -3953,7 +3954,7 @@ public:
         if (fields.m_value)
             return fields.m_value;
 #ifdef LOG_DETAILS
-        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"r "); });
+        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { Memoizer::LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"r "); });
 #endif
         ResetCudaStats();
         CudaStatsGuard cudaStatsGuardForward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched forward", 3);
@@ -3999,12 +4000,14 @@ public:
             // execute it, and also update all outputs' values and consumers, and the schedule
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
+        cudaStatsGuardForward.Stop();
+        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward calc", 3);
         m_memoizer.Join(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
         Memoizer::MTCacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
+        cudaStatsGuardCalc.Stop();
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
-        cudaStatsGuardForward.Stop();
         ShowCudaStats();
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d+%ds ops (%d inlined) on %d known values\n",
@@ -4305,7 +4308,7 @@ public:
         let& f = *fi.first;
         let index = fi.second;
 #ifdef LOG_DETAILS
-        LogFunction(*f, L"bb ", index);
+        Memoizer::LogFunction(*f, L"bb ", index);
 #endif
         // function's forward output and received gradient from top live here
         let& outputFields = GetOutputFields(f); // result of f lives here; hence also the gradient we back-propagate
@@ -4407,7 +4410,7 @@ public:
         }
 #else
 #ifdef LOG_DETAILS
-        LogFunction(*f, L"bb# ", SIZE_MAX);
+        Memoizer::LogFunction(*f, L"bb# ", SIZE_MAX);
 #endif
         // function's forward output and received gradient from top live here
         let& outputFields = GetOutputFields(f); // result of f lives here; hence also the gradient we back-propagate
@@ -4478,7 +4481,7 @@ public:
         auto& timesDataRightInputs = BorrowBuffer(m_inputValuesBuffer2, numBatchItems);
         let& f0 = *consumers.front().first;
 #ifdef LOG_DETAILS
-        LogFunction(f0, L"bb* ", 0);
+        Memoizer::LogFunction(f0, L"bb* ", 0);
 #endif
         let& input0 = f0.m_inputs.front(); // all consumers share this weight, so it's OK to just get it from f0
         size_t batchDim = 0;
