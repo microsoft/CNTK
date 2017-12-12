@@ -1484,17 +1484,41 @@ public:
         int lineNo = 0;
         auto_file_ptr f(fopenOrDie(pathname, L"rbS"));
         fprintf(stderr, "read: reading %ls", pathname.c_str());
+        /* guoye: start */
+        fprintf(stderr, "\n msra_mgram.h: read: debug 0\n");
+        /* guoye: end */
         filename = pathname; // (keep this info for debugging)
-
+        /* guoye: start */
+        fprintf(stderr, "\n msra_mgram.h: read: debug 0.1\n");
+        /* guoye: end */
         // --- read header information
 
         // search for header line
         char buf[1024];
-        lineNo++, fgetline(f, buf);
-        while (strcmp(buf, "\\data\\") != 0 && !feof(f))
-            lineNo++, fgetline(f, buf);
-        lineNo++, fgetline(f, buf);
         /* guoye: start */
+        fprintf(stderr, "\n msra_mgram.h: read: debug 0.2\n");
+        /* guoye: end */
+        /* guoye: start */
+        // lineNo++, fgetline(f, buf);
+        lineNo++;
+        fgetline(f, buf);
+
+        fprintf(stderr, "\n msra_mgram.h: read: debug 0.3\n");
+        /* guoye: end */
+        while (strcmp(buf, "\\data\\") != 0 && !feof(f))
+            /* guoye: start */
+        {
+            // lineNo++, fgetline(f, buf);
+            lineNo++;
+            fgetline(f, buf);
+        }
+        /* guoye: end */
+        /* guoye: start */
+
+        // lineNo++, fgetline(f, buf);
+        lineNo++;
+        fgetline(f, buf);
+
         fprintf(stderr, "\n msra_mgram.h: read: debug 1\n");
         /* guoye: end */
 
@@ -1503,14 +1527,23 @@ public:
         dims.reserve(4);
 
         while (buf[0] == 0 && !feof(f))
-            lineNo++, fgetline(f, buf);
-
+            /* guoye: start */
+        {
+          //  lineNo++, fgetline(f, buf);
+            lineNo++;
+            fgetline(f, buf);
+        }
+        /* guoye: end */
         int n, dim;
         dims.push_back(1); // dummy zerogram entry
         while (sscanf(buf, "ngram %d=%d", &n, &dim) == 2 && n == (int) dims.size())
         {
             dims.push_back(dim);
-            lineNo++, fgetline(f, buf);
+            /* guoye: start */
+            // lineNo++, fgetline(f, buf);
+            lineNo++;
+            fgetline(f, buf);
+            /* guoye: end */
         }
 
         M = (int) dims.size() - 1;
@@ -1556,11 +1589,20 @@ public:
         for (int m = 1; m <= M; m++)
         {
             while (buf[0] == 0 && !feof(f))
-                lineNo++, fgetline(f, buf);
-
+            /* guoye: start */
+            {
+                // lineNo++, fgetline(f, buf);
+                lineNo++;
+                fgetline(f, buf);
+            }
+            /* guoye: end */
             if (sscanf(buf, "\\%d-grams:", &n) != 1 || n != m)
                 RuntimeError("read: mal-formed LM file, bad section header (%d): %ls", lineNo, pathname.c_str());
-            lineNo++, fgetline(f, buf);
+            /* guoye: start */
+            //lineNo++, fgetline(f, buf);
+            lineNo++;
+            fgetline(f, buf);
+            /* guoye: end */
 
             std::vector<int> mgram(m + 1, -1);     // current mgram being read ([0]=dummy)
             std::vector<int> prevmgram(m + 1, -1); // cache to speed up symbol lookup
@@ -1571,7 +1613,11 @@ public:
             {
                 if (buf[0] == 0)
                 {
-                    lineNo++, fgetline(f, buf);
+                    /* guoye: start */
+                    // lineNo++, fgetline(f, buf);
+                    lineNo++;
+                    fgetline(f, buf);
+                    /* guoye: end */
                     continue;
                 }
 
@@ -1623,8 +1669,11 @@ public:
                     double boVal = atof(tokens[m + 1]); // ... use sscanf() instead for error checking?
                     thisLogB = boVal * ln10xLMF;        // convert to natural log
                 }
-
-                lineNo++, fgetline(f, buf);
+                /* guoye: start */
+                // lineNo++, fgetline(f, buf);
+                lineNo++;
+                fgetline(f, buf);
+                /* guoye: end */
 
                 if (skipEntry) // word contained unknown vocabulary: skip entire entry
                     goto skipMGram;
@@ -1671,7 +1720,12 @@ public:
         if (M == fileM)
         { // only if caller did not restrict us to a lower order
             while (buf[0] == 0 && !feof(f))
-                lineNo++, fgetline(f, buf);
+/* guoye: start */
+            {
+                lineNo++;
+                fgetline(f, buf);
+             //   lineNo++, fgetline(f, buf);
+            }
             if (strcmp(buf, "\\end\\") != 0)
                 RuntimeError("read: mal-formed LM file, no \\end\\ tag (%d): %ls", lineNo, pathname.c_str());
         }
