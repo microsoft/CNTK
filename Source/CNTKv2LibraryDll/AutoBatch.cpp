@@ -1206,11 +1206,11 @@ public:
 // Once the run function throws an exception, the instance must be destructed.
 class WorkerThread
 {
-    bool m_enableThreading = true;
+    bool m_enableThreading = true; // set to false for emulating behavior via in-thread immediate computaton
     thread m_thread;
     volatile bool m_terminateRequest; // set by ~WorkerThread()
-    volatile bool m_hasException; // set by MTThreadProc() in case of exception
-    exception_ptr m_exception; // if any  --TODO: does this need to be volatile?
+    volatile bool m_hasException;     // set by MTThreadProc() in case of exception
+    exception_ptr m_exception;        // if any  --TODO: does this need to be volatile?
     Event m_consumerStateChanged, m_workerStateChanged;
     void MTNotifyConsumerOfStateChange()
     {
@@ -1316,15 +1316,14 @@ public:
     size_t Size() const { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.size(); }
     bool Empty() const { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.empty(); }
     void EmplaceBack(T&& item) { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.emplace_back(move(item)); }
-    bool TryPopFront(T& item)
+    const T* Front() const // returns null if empty. Once done, use PopFront() to complete the operation.
     {
         lock_guard<recursive_mutex> guard(m_mutex);
         if (m_queue.empty())
-            return false;
-        item = move(m_queue.front());
-        m_queue.pop_front();
-        return true;
+            return nullptr;
+        return &m_queue.front();
     }
+    void PopFront() { lock_guard<recursive_mutex> guard(m_mutex); m_queue.pop_front(); }
 };
 
 class InternalVariable::Memoizer
@@ -1345,10 +1344,11 @@ class InternalVariable::Memoizer
         // callback. Process one work item in each call.
         bool MTDoWork() override
         {
-            WorkItem item;
-            if (!m_queue.TryPopFront(item))
+            let* item = m_queue.Front();
+            if (!item)
                 return false;
-            item.us->MTProcessNextItem(item);
+            item->us->MTProcessNextItem(*item);
+            m_queue.PopFront(); // only now remove it, so that consumer sees it disappear once done
             return true;
         }
     public:
@@ -1502,7 +1502,7 @@ public:
     ~Memoizer()
     {
         s_workerThread.Join(); // wait for bg thread to complete all pending work
-        // Note: The queue is expected to be empty. We could try to clear the queue just in case.
+        // Note: The queue is expected to be empty when destructing, except in case of an exception. We could try to clear the queue just in case.
     }
     // submit a Function evaluation
     void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
@@ -1515,7 +1515,7 @@ public:
             isFree,
             logSpliceAsGather
         });
-#if 1   // for testing: simulate sync operation via the bg thread
+#if 0   // for testing: simulate sync operation via the bg thread
         WaitForCompletion();
 #endif
     }
