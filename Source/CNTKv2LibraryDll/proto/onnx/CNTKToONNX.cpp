@@ -926,7 +926,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             size_t blockSize = src->Attributes()[L"blockSize"].Value<size_t>();
             node->AddAttribute("blocksize", static_cast<int64_t>(blockSize));
         }
-        else if (src->OpName() == L"Softmax")
+        else if (src->OpName() == L"Softmax" || src->OpName() == L"LogSoftmax")
         {
             Axis axis = Axis(0);
             if (src->Attributes().Contains(L"axis"))
@@ -966,6 +966,21 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
 
             node->AddAttribute("pooled_shape", pooled_shape);
             node->AddAttribute("spatial_scale", spatialScale);
+        }
+        else if (src->OpName() == L"HardSigmoid")
+        {
+            float alpha = (float)src->Attributes()[L"alpha"].Value<float>();
+            float beta = (float)src->Attributes()[L"beta"].Value<float>();
+            node->AddAttribute("alpha", alpha);
+            node->AddAttribute("beta", beta);
+        }
+        else if (src->OpName() == L"Flatten")
+        {
+            Axis axis(0);
+            if (src->Attributes().Contains(L"axis"))
+                axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+
+            node->AddAttribute(attributesMap[L"axis"], (int64_t)ToIndex(axis));
         }
     }
     else

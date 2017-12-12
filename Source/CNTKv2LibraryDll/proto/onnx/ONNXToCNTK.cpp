@@ -883,8 +883,9 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             LogicError("Flatten op should have one axis.");
         }
 
-        size_t dim0 = inputs[0].Shape().SubShape(0, axes[0].StaticAxisIndex() - 1).TotalSize();
-        size_t dim1 = inputs[0].Shape().SubShape(axes[0].StaticAxisIndex()).TotalSize();
+        int cntk_index = inputs[0].Shape().Rank() - axes[0].StaticAxisIndex() + 1;
+        size_t dim0 = cntk_index == 0 ? 1 : inputs[0].Shape().SubShape(0, cntk_index).TotalSize();
+        size_t dim1 = cntk_index == inputs[0].Shape().Rank() ? 1 : inputs[0].Shape().SubShape(cntk_index).TotalSize();
         NDShape newShape({ dim0 , dim1 });
         FunctionPtr cntkFunction = Reshape(inputs[0], newShape, ToWString(node->Name()));
         return cntkFunction;
@@ -902,6 +903,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "Less")
     {
         FunctionPtr cntkFunction = Less(inputs[0], inputs[1], ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Mean")
+    {
+        FunctionPtr cntkFunction = Mean(inputs, ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Clip")
@@ -923,6 +929,13 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             cntkFunction = Plus(cntkFunction, inputs[i]);
         }
         cntkFunction->SetName(ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "HardSigmoid")
+    {
+        float alpha = GetNamedAttributeAsFloat(node, "alpha");
+        float beta = GetNamedAttributeAsFloat(node, "beta");
+        FunctionPtr cntkFunction = HardSigmoid(inputs[0], alpha, beta, ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "LRN")
@@ -1252,7 +1265,34 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Softmax")
     {
-        FunctionPtr cntkFunction = Softmax(inputs[0], ToWString(node->Name()));
+        if (!HasNamedAttribute(node, "axis"))
+        {
+            FunctionPtr cntkFunction = Softmax(inputs[0], ToWString(node->Name()));
+            return cntkFunction;
+        }
+        else
+        {
+            int index = static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0));
+            Axis axis(index - 1);
+            FunctionPtr cntkFunction = Softmax(inputs[0], axis, ToWString(node->Name()));
+            return cntkFunction;
+        }
+    }
+    else if (onnxOpName == "LogSoftmax")
+    {
+        int index = static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0));
+
+        Axis axis;
+        if (index == 0)
+        {
+            axis = Axis::DefaultBatchAxis();
+        }
+        else
+        {
+            axis = Axis(index - 1);
+        }
+
+        FunctionPtr cntkFunction = LogSoftmax(inputs[0], axis, ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Softplus")

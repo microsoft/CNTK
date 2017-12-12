@@ -1282,9 +1282,50 @@ namespace CNTK
         }
     }
 
+    FunctionPtr LogSoftmax(const Variable& operand, const std::wstring& name)
+    {
+        return LogSoftmax(operand, Axis(0), name);
+    }
+
+    FunctionPtr LogSoftmax(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        if (!axis.IsStaticAxis() && !axis.IsBatchAxis())
+            LogicError("Softmax: only batch and static axes are supported.");
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+
+        auto operandPlaceholder = PlaceholderVariable();
+
+        auto result = operandPlaceholder - Log(ReduceSum(Exp(operandPlaceholder), axis));
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"LogSoftmax", name);
+    }
+
     FunctionPtr Hardmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
+    }
+
+    FunctionPtr HardSigmoid(const Variable& operand, float alpha, float beta, const std::wstring& name)
+    {
+        // f(x) = max(0,min(alpha*x+beta,1))
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+        additionalProperties[PrimitiveFunction::AttributeNameBeta] = beta;
+
+        auto alphaConstant = Constant::Scalar(operand.GetDataType(), alpha);
+        auto betaConstant = Constant::Scalar(operand.GetDataType(), beta);
+        auto one = Constant::Scalar(operand.GetDataType(), 1.0);
+        auto zero = Constant::Scalar(operand.GetDataType(), 0.0);
+        auto operandPlaceholder = PlaceholderVariable();
+
+        auto result = Plus(ElementTimes(operandPlaceholder, alphaConstant), betaConstant);
+
+        result = ElementSelect(Less(result, one), result, one);
+        result = ElementSelect(Greater(result, zero), result, zero);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"HardSigmoid", name);
     }
 
     FunctionPtr TopK(const Variable& operand, size_t k, const std::wstring& name)
@@ -1520,6 +1561,77 @@ namespace CNTK
             LogicError("BernoulliRandomLike: mean (%g) must be between 0 and 1", mean);
         Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed);
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr Flatten(const Variable& operand, const std::wstring& name)
+    {
+        // sanitize_axis applies Axis(-axis - 1), thus 0 -> -1: which means the last one of operand.Shape().
+        Axis axis(-1);
+        return Flatten(operand, axis, name);
+    }
+
+    FunctionPtr Flatten(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        int cntk_index;
+        int onnx_axis;
+
+        // We need to express in onnx axis system to help ONNX conversion.
+        if (axis.IsStaticAxis())
+        {
+            if (axis.StaticAxisIndex() < 0)
+            {
+                // python shape [2,3,4,5], cntk_py_index = 1 (point at 3). 
+                // in python, sanitize_axis applies Axis(-cntk_py_index - 1) so axis = -2
+                // in cpp shape becomes [5,4,3,2], axis(-2) is still pointing to 3 (from the last)
+                // With ONNX Flatten op, result shall be: [#][[2], [3,4,5]]. thus onnx_axis = cntk_py_index + 1 = 2 (point to 3)
+                // for CNTK reshape, cntk_index shall point to the one after 3 (2): cntk_index = axis + 1
+                // cntk_index (-1) needs to be converted to positive by rank + cntk_index = 3
+                int cntk_py_index = -axis.StaticAxisIndex() - 1;
+                onnx_axis = cntk_py_index + 1;
+                cntk_index = axis.StaticAxisIndex() + 1;
+                cntk_index += operand.Shape().Rank();
+            }
+            else
+            {
+                // in this case shape is the same as in python: [2,3,4,5]
+                // that is: cntk_py_index = 1, points to 3
+                // onnx_axis = 2, points to 3 in [#][[2], [3,4,5]]
+                // cntk_index = 1, points to 3 in [2,3,4,5]
+                int cntk_py_index = axis.StaticAxisIndex();
+                onnx_axis = cntk_py_index + 1;
+                cntk_index = axis.StaticAxisIndex();
+            }
+        }
+        else if (axis.IsBatchAxis())
+        {
+            // expected result: [[batch],[flatten sample]]([[#][2,3,4,5]])
+            cntk_index = 0;
+            onnx_axis = 1;
+        }
+        else
+        {
+            LogicError("Flatten: accept only static and batch axes.");
+        }
+
+        if (cntk_index > operand.Shape().Rank())
+        {
+            LogicError("Flatten: unsupported axis (operand.Shape().Rank() = %d, axis = %s).",
+                (int)operand.Shape().Rank(), ToString(axis.AsString()).c_str());
+        }
+
+        size_t dim0 = cntk_index == 0 ? 1 : operand.Shape().SubShape(0, cntk_index).TotalSize();
+        size_t dim1 = cntk_index == operand.Shape().Rank() ? 1 : operand.Shape().SubShape(cntk_index).TotalSize();
+
+        NDShape newShape({ dim0, dim1 });
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis(onnx_axis);
+
+        auto operandPlaceholder = PlaceholderVariable();
+
+        auto result = Reshape(operandPlaceholder, newShape, name);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"Flatten", name);
     }
 
     FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
@@ -2277,6 +2389,31 @@ namespace CNTK
     FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name)
     {
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
+    }
+
+    FunctionPtr Mean(const std::vector<Variable>& operands, const std::wstring& name)
+    {
+        int count = operands.size();
+        if (count == 0)
+        {
+            LogicError("Mean: none operand provided.");
+        }
+
+        std::vector<std::pair<Variable, Variable>> argumentsMap;
+        auto planceholder = PlaceholderVariable();
+        argumentsMap.push_back(std::pair<Variable, Variable>(planceholder, operands[0]));
+        FunctionPtr result = planceholder;
+        for (int i = 1; i < count; i++)
+        {
+            planceholder = PlaceholderVariable();
+            argumentsMap.push_back(std::pair<Variable, Variable>(planceholder, operands[i]));
+            result = Plus(result, planceholder);
+        }
+
+        Constant divider = Constant::Scalar(operands[0].GetDataType(), static_cast<double>(operands.size()));
+        result = ElementDivide(result, divider);
+
+        return AsBlock(std::move(result), argumentsMap, L"Mean", name);
     }
 
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)

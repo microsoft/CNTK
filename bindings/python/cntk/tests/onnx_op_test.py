@@ -280,6 +280,17 @@ def test_Exp(tmpdir):
     model = C.exp(x)
     verify_one_input(model, data, tmpdir, 'Exp_1')
 
+#Flatten
+def test_Flatten(tmpdir):
+    shape = (2, 3, 4, 5)
+    data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
+    model = C.flatten(data, 1)
+    verify_no_input(model, tmpdir, 'Flatten_0')
+
+    x = C.input_variable(data.shape)
+    model = C.flatten(x, 1)
+    verify_one_input(model, data, tmpdir, 'Flatten_1')
+
 #Floor
 def test_Floor(tmpdir):
     data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype=np.float32)
@@ -301,6 +312,17 @@ def test_Hardmax(tmpdir):
     model = C.hardmax(data)
     verify_no_input(model, tmpdir, 'Hardmax_0')
 
+#HardSigmiod
+def test_HardSigmiod(tmpdir):
+    shape = (2,3)
+    x = C.input_variable(shape=shape, dtype=np.float32)
+    alpha = 1.2
+    beta = 2.5
+    model = C.hard_sigmoid(x, alpha, beta, 'hardSigmoid')
+
+    data = np.random.rand(*shape).astype(np.float32)
+    verify_one_input(model, data, tmpdir, 'HardSigmoid_1')
+
 #LeakyRelu
 def test_LeakyRelu(tmpdir):
     data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=np.float32)
@@ -320,6 +342,12 @@ def test_Log(tmpdir):
     data = np.asarray([1., 2.], dtype=np.float32)
     model = C.log(data)
     verify_no_input(model, tmpdir, 'Log_0')
+
+#LogSoftmax
+def test_LogSoftmax(tmpdir):
+    model = C.log_softmax([[1, 1, 2, 3]])
+    verify_no_input(model, tmpdir, 'LogSoftmax_0')
+
 
 #LRN
 def test_LRN(tmpdir):
@@ -378,6 +406,17 @@ def test_MaxRoiPool(tmpdir):
 
     verify_two_input(model, conv_input, roi_input, tmpdir, 'MaxRoiPool_1')
 
+#Mean
+def test_Mean(tmpdir):
+    in1 = C.input_variable((4,))
+    in2 = C.input_variable((4,))
+    model = C.mean([in1, in2])
+
+    in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+    in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+
+    verify_two_input(model, in1_data, in2_data, tmpdir, 'Mean_2')
+    
 #Min
 def test_Min(tmpdir):
     data0 = np.asarray([1., 1., 1., 1.], dtype=np.float32)

@@ -3821,9 +3821,25 @@ namespace CNTK
     CNTK_API FunctionPtr Softmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in log softmax operation on a specified tensor input operand
+    ///
+    CNTK_API FunctionPtr LogSoftmax(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in log softmax operation on specified axis
+    /// on a specified tensor input operand
+    ///
+    CNTK_API FunctionPtr LogSoftmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in hardmax operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Hardmax(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of hard sigmoid operation: f(x) = max(0,min(alpha*x+beta,1))
+    ///
+    CNTK_API FunctionPtr HardSigmoid(const Variable& operand, float alpha, float beta, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in top k operation over the first static axis on a
@@ -3936,6 +3952,18 @@ namespace CNTK
     /// Create an instance of a Bernoulli random operation. This produces random numbers with the shape and dynamic axes specified by the operand, distributed according to the Bernoulli distribution with the specified success probability
     ///
     CNTK_API FunctionPtr BernoulliRandomLike(const Variable& operand, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a flatten operation that reshape the specified tensor into 2D tensor.
+    /// If input tensor has shape (d_0, d_1, ... d_n) then the output will have shape (d_0 X d_1 ... d_(axis-1), d_axis X d_(axis+1) ... X dn).
+    ///
+    CNTK_API FunctionPtr Flatten(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a flatten operation that reshape the specified tensor into 2D tensor.
+    /// The output tensor will have shape (d_0 X d_1 ...X d_n-1, d_n)
+    ///
+    CNTK_API FunctionPtr Flatten(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the reshape operation on specified tensor input operand
@@ -4441,6 +4469,11 @@ namespace CNTK
     /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
     ///
     CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in element-wise mean operation
+    ///
+    CNTK_API FunctionPtr Mean(const std::vector<Variable>& operands, const std::wstring& name = L"");
 
     ///
     /// Creates a new Function instance which is just an alias of the specified operand.
