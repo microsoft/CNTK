@@ -1083,47 +1083,13 @@ static inline VariableFields& GetOutputFields(const PrimitiveFunction& f) { retu
 
 // helper that is needed at a few places
 // Reshape an NDArrayViewPtr in-place (replace by a new one) if its shape does not match.
-// Thread-safety: This is called by CacheAndGetValue() and backprop. Eventually this should move inside the background thread.
+// Thread-safety: This is called by MTCacheAndGetValue() and backprop. Eventually this should move inside the background thread.
 static void ReplaceWithReshapedViewIfNeeded(NDArrayViewPtr& view, const NDShape& shape)
 {
     if (view->Shape() != shape)
         view = view->AsShape(shape);
 }
 
-// get the value of an input Variable, with full redirection
-// This will realize any lazy ops (slice, reshape).
-// A Variable's value is defined by its m_redirection.m_function->m_outputs.front(), followed by slice and/or reshape.
-// Thread-safety: Currently called by Memoizer::Forward(), BatchedForward() after Join()
-//                 TODO: CSE still uses this in a validation check. Remove once confirmed.
-static const NDArrayViewPtr& CacheAndGetValue(VariableFields& fields)
-{
-    if (!fields.m_value) // value is not available: create and cache it
-    {
-        fail_if(fields.m_redirection.empty(), "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
-        // get the actual value from the function that computed it
-        auto& functionFields = GetOutputFields(*fields.m_redirection.m_function);
-        fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
-                                                                                       // function itself may be a redirect (a slice into a batched op)
-        CacheAndGetValue(functionFields); // (calling ourselves on the source in case of re-redirection)
-                                          // realize the lazy redirected value; that is, do the slice and reshape
-                                          // This sets fields.m_value. inputFields must have m_value already set.
-        fail_if(!functionFields.m_value, "Variable's input unexpectedly has no value yet");
-        // optional implicit index and reshape
-        let sliceRange = fields.m_redirection.m_sliceRange;
-        if (!sliceRange.empty())
-            fields.m_value = move(functionFields.m_value->SliceViewAsShape(sliceRange.BeginIndex(), sliceRange.EndIndex(), fields.m_shape));
-        else // no slice
-        {
-            fields.m_value = functionFields.m_value;
-            ReplaceWithReshapedViewIfNeeded(fields.m_value, fields.m_shape);
-        }
-    }
-    return fields.m_value; // return the (now) cached value
-}
-static const NDArrayViewPtr& CacheAndGetValue(const Variable& v)
-{
-    return CacheAndGetValue(GetInputFields(v));
-}
 #if 0
 // get the value that must already have been cached
 static const NDArrayViewPtr& GetCachedValue(const Variable& v)
@@ -1235,8 +1201,44 @@ private:
     };
     deque<WorkItem> m_queue;
     // methods that run on worker thread
+    // get the value of an input Variable, with full redirection
+    // This will realize any lazy ops (slice, reshape).
+    // A Variable's value is defined by its m_redirection.m_function->m_outputs.front(), followed by slice and/or reshape.
+    // Thread-safety: Currently called by Memoizer::Forward(), BatchedForward() after Join()
+    //                 TODO: CSE still uses this in a validation check. Remove once confirmed.
+public: // for call in BatchedForward()  --TODO: clean this up
+    static const NDArrayViewPtr& MTCacheAndGetValue(VariableFields& fields)
+    {
+        if (!fields.m_value) // value is not available: create and cache it
+        {
+            fail_if(fields.m_redirection.empty(), "Variable unexpectedly has no value yet, nor is it a slice view into a batched op");
+            // get the actual value from the function that computed it
+            auto& functionFields = GetOutputFields(*fields.m_redirection.m_function);
+            fail_if(&fields == &functionFields, "Variable unexpectedly has no value yet"); // avoid infinite recursion
+                                                                                           // function itself may be a redirect (a slice into a batched op)
+            MTCacheAndGetValue(functionFields); // (calling ourselves on the source in case of re-redirection)
+                                              // realize the lazy redirected value; that is, do the slice and reshape
+                                              // This sets fields.m_value. inputFields must have m_value already set.
+            fail_if(!functionFields.m_value, "Variable's input unexpectedly has no value yet");
+            // optional implicit index and reshape
+            let sliceRange = fields.m_redirection.m_sliceRange;
+            if (!sliceRange.empty())
+                fields.m_value = move(functionFields.m_value->SliceViewAsShape(sliceRange.BeginIndex(), sliceRange.EndIndex(), fields.m_shape));
+            else // no slice
+            {
+                fields.m_value = functionFields.m_value;
+                ReplaceWithReshapedViewIfNeeded(fields.m_value, fields.m_shape);
+            }
+        }
+        return fields.m_value; // return the (now) cached value
+    }
+private:
+    static const NDArrayViewPtr& MTCacheAndGetValue(const Variable& v)
+    {
+        return MTCacheAndGetValue(GetInputFields(v));
+    }
     vector<NDArrayViewPtr> m_inputValuesBuffer; // buffer for extracted NDArrayViews of inputs
-    void Forward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
+    void MTForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
@@ -1249,7 +1251,7 @@ private:
             if (f.m_op == PrimitiveOpType::BatchNormalization && i >= 6)
                 GetInputFields(inputs[i]).m_value = m_arena.NewNDArrayView(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
             // fetch the m_value from the input
-            inputValues[i] = CacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
+            inputValues[i] = MTCacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
         }
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
@@ -1320,7 +1322,7 @@ private:
         auto item = move(m_queue.front());
         m_queue.pop_front();
         if (item.isForward)
-            Forward(*item.fPtr, item.isFree, item.logSpliceAsGather);
+            MTForward(*item.fPtr, item.isFree, item.logSpliceAsGather);
         else
             LogicError("ProcessNextItem: backprop not yet implemented");
     }
@@ -2813,9 +2815,12 @@ class InternalVariable::AutoBatch
         //if (outputs.size() != 1)
             InvalidArgument("Dynamic operations cannot have multiple outputs.");
         let& output = outputs.front();
+        let shapeIsKnown = !output.Shape().IsUnknown();
+        //if (!shapeIsKnown)
+        //    Break;
         // if output has a FreeDimension (which represents the batch axis) then replace (or drop) it
         let& outputDims = output.Shape().Dimensions();
-        let mustReplaceFreeDimension = (!outputDims.empty() && outputDims.back() == NDShape::FreeDimension);
+        let mustReplaceFreeDimension = shapeIsKnown && !outputDims.empty() && outputDims.back() == NDShape::FreeDimension;
         fail_if(mustReplaceFreeDimension && newInputsFreeDim == 0, "composite has batch dim but operands do not, and it passed typecheck??");
 #if 0
         // check that we got it right
@@ -2824,8 +2829,7 @@ class InternalVariable::AutoBatch
 #endif
         // initialize the output
         //let dataType = fCloned->m_inputs.front().GetDataType();
-        fail_if(output.GetDataType() == DataType::Unknown, "ClonePrimitiveFunction: output has no determined data type yet??");
-        // BUGBUG: Must propagate isVolatile
+        fail_if(shapeIsKnown && output.GetDataType() == DataType::Unknown, "ClonePrimitiveFunction: output has no determined data type yet??");
         let isVolatile = any_of(fCloned->m_inputs.begin(), fCloned->m_inputs.end(), [](const Variable& input) { return input.IsVolatile(); });
         if (mustReplaceFreeDimension)
             fCloned->InitOutput(InternalVariable(NDShape(ReplaceFreeDim(outputDims, newInputsFreeDim)), VariableKind::Output, output.GetDataType(), output.NeedsGradient() && !isVolatile, output.IsSparse(), isVolatile));
@@ -3026,7 +3030,7 @@ class InternalVariable::AutoBatch
             let fHash = ComputeCSEAliasHash(*f);
             let fIndex = fHash % numBuckets;
             auto* bucket = &m_buckets[fIndex]; // bucket for f
-            // search for an alias in the list. Most of the same this will be a match, but we must confirm.
+            // search for an alias in the list. Most of the time this will be a match, but we must confirm.
             let& inputs = f->m_inputs;
             let arity = inputs.size();
             for (auto* alias = bucket->Begin(); alias != bucket->End(); bucket->Next(alias)) // iterate over all entries with the same hash value
@@ -3037,14 +3041,16 @@ class InternalVariable::AutoBatch
                     auto& aliasFields = GetInputFields(alias->m_inputs[k]);
                     if (&fields == &aliasFields)
                         continue;
-#if 1               // old version that calls CacheAndGetValue(), which is now forbidden (owned by memoize thread)
+#if 1               // old version that calls MTCacheAndGetValue(), which is now forbidden (owned by memoize thread)
                     bool d1 = DetermineSliceAndBase(fields) != DetermineSliceAndBase(aliasFields);
-                    bool d2 = !CacheAndGetValue(fields)->IsAliasOf(CacheAndGetValue(aliasFields));
+                    bool d2 = !Memoizer::MTCacheAndGetValue(fields)->IsAliasOf(Memoizer::MTCacheAndGetValue(aliasFields));
                     fail_if(d1 != d2, "cse wrong detection");
 #endif
                     // check object identity by what slice it occupies into the main storage arena (the shape is already known to be the same)
                     if (DetermineSliceAndBase(fields) != DetermineSliceAndBase(aliasFields))
                         goto try_next;
+                    //if (!DetermineSliceAndBase(fields).second.empty())
+                    //    Break;
                 }
                 // all inputs are the same: f is a dup of 'alias'
                 return alias; // was indeed an alias
@@ -3133,7 +3139,7 @@ class InternalVariable::AutoBatch
                     if (&fields == &fjelds)
                         continue;
                     // PERF BUGBUG: This vv is suboptimal as we force-realize the m_value, which is a slice. Alleviated by the hash though.
-                    if (!CacheAndGetValue(fields)->IsAliasOf(CacheAndGetValue(fjelds)))
+                    if (!MTCacheAndGetValue(fields)->IsAliasOf(MTCacheAndGetValue(fjelds)))
                         goto next_jter;
                 }
                 // all inputs are the same: f is a dup of 'jter'
@@ -3475,7 +3481,7 @@ class InternalVariable::AutoBatch
             CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
             let& input0Shape = gatherInputs[0].Shape();
 #if 0       // TODO: remove this. I used this earlier. Not sure why.
-            let& input0Shape1 = CacheAndGetValue(gatherInputs[0])->Shape();
+            let& input0Shape1 = MTCacheAndGetValue(gatherInputs[0])->Shape();
             fail_if(input0Shape != input0Shape1, "shape not set?");
 #endif
             // create a new PrimitiveFunction Splice()
@@ -3993,7 +3999,7 @@ public:
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
         m_memoizer.Join(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
-        CacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
+        Memoizer::MTCacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
