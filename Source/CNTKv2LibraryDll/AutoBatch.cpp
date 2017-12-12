@@ -25,6 +25,7 @@
 #include <vector>
 #include <string>
 #include <mutex>
+#include <thread>
 #include <time.h>
 
 using namespace Microsoft::MSR::CNTK;
@@ -1176,34 +1177,144 @@ B& BorrowBuffer(B& buffer, size_t batchSize)
     return buffer;
 }
 
+// simple helper class for running a worker thread
+// Once the run function throws an exception, the instance must be destructed.
+class WorkerThread
+{
+    bool m_enableThreading = false;
+    thread m_thread;
+    volatile bool m_terminateRequest; // set by ~WorkerThread()
+    volatile bool m_hasException; // set by MTThreadProc() in case of exception
+    exception_ptr m_exception; // if any  --TODO: does this need to be volatile?
+    condition_variable m_consumerStateChange, m_workerStateChange;
+    mutex m_consumerStateChangeMutex, m_workerStateChangeMutex; // somehow wait() requires a mutex
+    void MTNotifyConsumerOfStateChange()
+    {
+        m_workerStateChange.notify_all(); // my state has changed
+    }
+    void MTWaitForConsumerStateChange()
+    {
+        unique_lock<mutex> lk(m_consumerStateChangeMutex);
+        m_consumerStateChange.wait(lk);
+    }
+    void MTThreadProc()
+    {
+        try
+        {
+            while (!m_terminateRequest)
+            {
+                let hasWorkPending = MTDoWork(); // may throw
+                if (!hasWorkPending)
+                    MTWaitForConsumerStateChange();
+            }
+        }
+        catch (...)
+        {
+            // save exception
+            m_exception = current_exception();
+            m_hasException = true; // not sure if exception_ptr can be assigned atomically, so use this as a guard
+            MTNotifyConsumerOfStateChange();
+            // wait for consumer to tell us to terminate. Won't do any more work.
+            // Terminate request comes from our own destructor. If this is static, then this runs last.
+            while (!m_terminateRequest)
+                MTWaitForConsumerStateChange();
+        }
+    }
+    void NonThreadedProc() // emulation if threading not enabled
+    {
+        while (MTDoWork()) // run all pending tasks
+            ;
+    }
+    void ThrowIfException()
+    {
+        if (m_hasException)
+            rethrow_exception(m_exception);
+    }
+public:
+    WorkerThread() :
+        m_terminateRequest(false), m_hasException(false)
+    {
+        if (m_enableThreading)
+            m_thread = thread([this]() { MTThreadProc(); });
+    }
+    ~WorkerThread()
+    {
+        m_terminateRequest = true;
+        if (m_thread.joinable())
+            m_thread.join();
+        // note: any potential exception goes unnoticed since we may not throw in destructor
+    }
+    virtual bool MTDoWork() = 0; // override this. Do one limited package of work
+    void NotifyWorkerOfStateChange() // tell the worker that state has (may have) changed by main thread
+    {
+        if (!m_enableThreading)
+            return NonThreadedProc();
+        ThrowIfException();
+        m_consumerStateChange.notify_all();
+    }
+    void WaitForWorkerStateChange() // wait for worker to change the state. Rethrows exception if the thread died
+    {
+        if (!m_enableThreading)
+            return NonThreadedProc();
+        ThrowIfException();
+        unique_lock<mutex> lk(m_workerStateChangeMutex);
+        m_workerStateChange.wait(lk);
+    }
+};
+
+// helper class like std::deque but thread-safe
+template<typename T>
+class ConcurrentQueue
+{
+    mutable recursive_mutex m_mutex; // guards m_queue
+    deque<T> m_queue;
+public:
+    size_t Size() const { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.size(); }
+    bool Empty() const { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.empty(); }
+    void EmplaceBack(T&& item) { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.emplace_back(move(item)); }
+    bool TryPopFront(T& item)
+    {
+        lock_guard<recursive_mutex> guard(m_mutex);
+        if (m_queue.empty())
+            return false;
+        item = move(m_queue.front());
+        m_queue.pop_front();
+        return true;
+    }
+};
+
 class InternalVariable::Memoizer
 {
-    NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
-    // helper to check whether we should profile this function execution
-    set<DynamicProfilerPtr> m_profilersUsed; // all used profilers will be registered for a given batched execution
-public:
-    bool ShouldProfile(const PrimitiveFunction& f)
-    {
-#ifdef LOG_DETAILS
-        f;
-        let should = true;
-#else
-        let should = f.m_profiler && f.m_profiler->Verbosity() > 0;
-#endif
-        if (should)
-            m_profilersUsed.insert(f.m_profiler); // this is slow but only used if any profiling output is printed, which is even slower
-        return should;
-    }
-private:
-
+    // one work item as queued
     struct WorkItem
     {
+        Memoizer* us;
         bool isForward; // is forward prop
         PrimitiveFunctionPtr fPtr; // the function to execute
         bool isFree;
         bool logSpliceAsGather;
     };
-    deque<WorkItem> m_queue;
+    // worker thread with callback and queue
+    class MemoizeWorkerThread : public WorkerThread
+    {
+        ConcurrentQueue<WorkItem> m_queue;
+        // callback. Process one work item in each call.
+        bool MTDoWork() override
+        {
+            WorkItem item;
+            if (!m_queue.TryPopFront(item))
+                return false;
+            item.us->MTProcessNextItem(item);
+            return true;
+        }
+    public:
+        void Submit(WorkItem&& item)
+        {
+            m_queue.EmplaceBack(move(item));
+            NotifyWorkerOfStateChange();
+        }
+        size_t Pending() const { return m_queue.Size(); }
+    };
     // methods that run on worker thread
     // get the value of an input Variable, with full redirection
     // This will realize any lazy ops (slice, reshape).
@@ -1320,61 +1431,56 @@ private:
         }
 #endif
     }
-    void ProcessNextItem()
+    void MTProcessNextItem(const WorkItem& item)
     {
-        // UNDER_LOCK
-        auto item = move(m_queue.front());
-        m_queue.pop_front();
         if (item.isForward)
             MTForward(*item.fPtr, item.isFree, item.logSpliceAsGather);
         else
-            LogicError("ProcessNextItem: backprop not yet implemented");
+            LogicError("MTProcessNextItem: backprop not yet implemented");
     }
-    // methods to run under main thread
-    void NotifyWorkerOfStateChange() // tell the worker that state has (may have) changed by main thread
-    {
-        // non-threaded version: flush all
-        while (!m_queue.empty())
-            ProcessNextItem();
-    }
-    void WaitForWorkerStateChange() // wait for worker to change the state
-    {
-        if (!m_queue.empty())
-            ProcessNextItem();
-    }
-
 public:
-    ~Memoizer() { Join(); }
+    ~Memoizer()
+    {
+        Join(); // wait for bg thread to complete all pending work
+        // Note: The queue is expected to be empty. We could try to clear the queue just in case.
+    }
     // submit a Function evaluation
     void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
     {
-        // UNDER_LOCK
-        m_queue.emplace_back(WorkItem
+        s_workerThread.Submit(WorkItem
         {
+            this,
             /*isForward=*/ true,
             static_pointer_cast<PrimitiveFunction>(f.shared_from_this()),
             isFree,
             logSpliceAsGather
         });
-        NotifyWorkerOfStateChange();
     }
     void Join()
     {
-        // non-threaded version
-        fprintf(stderr, "### QUEUE SIZE=%d\n", (int)m_queue.size());
-        for (;;)
-        {
-            {
-                // UNDER_LOCK
-                if (m_queue.empty() /* || exception */)
-                    break;
-            }
-            WaitForWorkerStateChange();
-        }
+        fprintf(stderr, "### QUEUE SIZE=%d\n", (int)s_workerThread.Pending());
+        // wait until all done
+        while (s_workerThread.Pending() > 0)
+            s_workerThread.WaitForWorkerStateChange(); // note: This will re-throw any exception from the worker
     }
     // temporarily, the arena is also used from outside
     // Once we go fully multi-threaded, then this should no longer be exposed.
     NDArrayViewArena& Arena() { return m_arena; }
+
+    // helper to check whether we should profile this function execution
+public:
+    bool ShouldProfile(const PrimitiveFunction& f)
+    {
+#ifdef LOG_DETAILS
+        f;
+        let should = true;
+#else
+        let should = f.m_profiler && f.m_profiler->Verbosity() > 0;
+#endif
+        if (should)
+            m_profilersUsed.insert(f.m_profiler); // this is slow but only used if any profiling output is printed, which is even slower
+        return should;
+    }
 
     // profiling-related
     static void LogFunction(const PrimitiveFunction& f, const wchar_t* prefix = L"", size_t markIndex = SIZE_MAX)
@@ -1464,7 +1570,13 @@ public:
     {
         LogFunction(f, profiler ? profiler->Name() : L"-", markIndex);
     }
+private:
+    static MemoizeWorkerThread s_workerThread;
+    NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
+    // TODO: arena is all-static; change to s_arena, and make Arena class itself not static?
+    set<DynamicProfilerPtr> m_profilersUsed; // all used profilers will be registered for a given batched execution
 };
+/*static*/ InternalVariable::Memoizer::MemoizeWorkerThread InternalVariable::Memoizer::s_workerThread;
 
 // ---------------------------------------------------------------------------
 // RuntimeStatistics -- helper class for collecting runtime statistics, for
