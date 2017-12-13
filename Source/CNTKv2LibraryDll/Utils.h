@@ -357,6 +357,8 @@ namespace CNTK
         return{ paddedOutputMapCount, kernelShape };
     }
 
+
+
     template <typename SourceElementType, typename TargetElementType>
     inline TargetElementType* Copy(const SourceElementType* src, size_t srcSize)
     {
@@ -607,6 +609,8 @@ namespace CNTK
 
         return fullyDefinedVarShape;
     }
+
+    NDShape GetSqueezedShape(const NDShape& inputShape, const Dictionary& squeezeConfig);
 
     NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags = {}, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
 

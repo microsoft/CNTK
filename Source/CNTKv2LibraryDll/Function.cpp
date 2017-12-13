@@ -1647,6 +1647,41 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Reshape, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr Squeeze(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Squeeze, operand, {}, name);
+    }
+
+    FunctionPtr Squeeze(const Variable& operand, const std::vector<Axis>& axes, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+        return UnaryOp(PrimitiveOpType::Squeeze, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr ExpandDims(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = Reshape(operandPlaceholder, NDShape({ 1 }), axis, axis);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand }}, L"ExpandDims", name);
+    }
+
+    FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameFillValue] = 0.0;
+
+        return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr OnesLike(const Variable& operand, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameFillValue] = 1.0;
+
+        return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
+    }
+
     std::vector<Variable> AutoBroadcastSequence(PrimitiveOpType op, const Variable& left, const Variable& right, bool autoBroadcast)
     {
         auto left_axis = left.DynamicAxes();

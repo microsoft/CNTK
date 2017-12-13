@@ -101,4 +101,5 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlockSize = L"blockSize";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomAttributes = L"customAttributes";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumItems = L"numItems";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameFillValue = L"fillValue";
 }

@@ -489,7 +489,7 @@ def test_op_reshape_multiple_free_dimensions(input_shape, replacement_shape, exp
     input_tensor = np.arange(
         num_tensor_elements, dtype=PRECISION_TO_TYPE[precision]).reshape(input_shape)
     input_reshaped = input_tensor.reshape(expected_output_shape)
-    
+
     a = C.input_variable(shape=tuple([C.FreeDimension]*len(input_tensor.shape)),
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
@@ -525,7 +525,7 @@ def test_gather_op(device_id, precision):
     grads = C.gather(r, a).grad({a:a_data}, [r])
     expectd_grad = np.asarray([[1,1],[1,1],[0,0],[1,1],[1,1],[0,0]], dtype=np.float32)
     assert np.array_equal(grads, expectd_grad)
-    
+
     b_data = [AA([[0,2],[1,3]], dtype=PRECISION_TO_TYPE[precision]),
               AA([[2,4],[3,5]], dtype=PRECISION_TO_TYPE[precision])]
     b = C.input_variable((2,2))
@@ -809,7 +809,7 @@ DEPTH_TO_SPACE_TEST_CASES = [
 @pytest.mark.parametrize("image_shape, num_channels, block_size, output_ref", DEPTH_TO_SPACE_TEST_CASES)
 def test_depth_to_space(image_shape, num_channels, block_size, output_ref, device_id, precision):
     dev = cntk_device(device_id)
-    from cntk.internal import sanitize_dtype_cntk    
+    from cntk.internal import sanitize_dtype_cntk
 
     input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=PRECISION_TO_TYPE[precision])
     input_val = np.tile(input_val, (1,) + image_shape)
@@ -819,8 +819,8 @@ def test_depth_to_space(image_shape, num_channels, block_size, output_ref, devic
 
     assert np.array_equal(output_test, output_ref)
 
-# space_to_depth is tested as a roundtrip, i.e. first a tensor is shuffled using depth_to_space 
-# and its output is provided as the input to space_to_depth. The output os space_to_depth is 
+# space_to_depth is tested as a roundtrip, i.e. first a tensor is shuffled using depth_to_space
+# and its output is provided as the input to space_to_depth. The output os space_to_depth is
 # checked against the original input tensor for equality.
 SPACE_TO_DEPTH_TEST_CASES = [
     #(image_shape, num_channels, block_size)
@@ -830,7 +830,7 @@ SPACE_TO_DEPTH_TEST_CASES = [
 @pytest.mark.parametrize("image_shape, num_channels, block_size", SPACE_TO_DEPTH_TEST_CASES)
 def test_space_to_depth(image_shape, num_channels, block_size, device_id, precision):
     dev = cntk_device(device_id)
-    from cntk.internal import sanitize_dtype_cntk    
+    from cntk.internal import sanitize_dtype_cntk
 
     input_val = np.random.randint(low=0, high=100, size=(num_channels,) + image_shape).astype(PRECISION_TO_TYPE[precision])
     img = C.input_variable((num_channels,) + image_shape, dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]))
@@ -839,7 +839,7 @@ def test_space_to_depth(image_shape, num_channels, block_size, device_id, precis
     output_val = np.squeeze(space_to_depth_op.eval({ img : input_val }), 0)
 
     assert np.array_equal(output_val, input_val)
-    
+
 
 def test_data_resize():
     batch_size = 8
@@ -857,3 +857,42 @@ def test_data_resize():
 
     features = np.random.randn(batch_size, 3)
     trainer.train_minibatch({x: features})
+
+
+SQUEEZE_TEST_CASES = [((1,1,1), ax) for ax in [-3,-2,-1,0,1,2,None]] + [((1,3), ax) for ax in [0,-2,None]] + [((1,2,1), ax) for ax in [-3,-1,(0,2),None]]
+
+
+@pytest.mark.parametrize("operand_shape, axis", SQUEEZE_TEST_CASES)
+def test_squeeze(operand_shape, axis, device_id, precision):
+    operand = np.arange(np.prod(operand_shape)).reshape(operand_shape).astype('f')
+    expected = np.squeeze(operand, axis)
+
+    expected_forward = [expected]
+    expected_backward = {
+        'arg': [np.ones_like(operand)],
+    }
+
+    from .. import squeeze, placeholder
+    p = C.placeholder()
+    squeeze_with_axis = C.squeeze(p, axis)
+    _test_unary_op(precision, device_id, squeeze_with_axis, operand,
+                   expected_forward, expected_backward)
+
+
+@pytest.mark.parametrize("operand_shape, axis", SQUEEZE_TEST_CASES)
+def test_expand_dims(operand_shape, axis, device_id, precision):
+    if axis is None or isinstance(axis, tuple):
+        return
+    operand = np.arange(np.prod(operand_shape)).reshape(operand_shape).astype('f')
+    expected = np.expand_dims(operand, axis)
+
+    expected_forward = [expected]
+    expected_backward = {
+        'arg': [np.ones_like(operand)],
+    }
+
+    from .. import expand_dims, placeholder
+    p = C.placeholder()
+    expand_dims_with_axis = C.expand_dims(p, axis)
+    _test_unary_op(precision, device_id, expand_dims_with_axis, operand,
+                   expected_forward, expected_backward)

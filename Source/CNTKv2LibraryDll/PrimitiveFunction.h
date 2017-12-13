@@ -113,6 +113,8 @@ namespace CNTK
         {PrimitiveOpType::Pad, L"Pad"},
         {PrimitiveOpType::Crop, L"Crop"},
         {PrimitiveOpType::TopK, L"TopK"},
+        {PrimitiveOpType::ConstantOp, L"ConstantOp"},
+        {PrimitiveOpType::Squeeze, L"Squeeze"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -294,6 +296,7 @@ namespace CNTK
         static const std::wstring AttributeNameBlockSize;
         static const std::wstring AttributeNameCustomAttributes;
         static const std::wstring AttributeNameNumItems;
+        static const std::wstring AttributeNameFillValue;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -808,7 +811,8 @@ namespace CNTK
         // Version 17: Add Pad.
         // Version 18: Add Crop node.
         // Version 19: Add TopK
-        static const size_t s_serializationVersion = 19;
+        // Version 20: Add squeeze, expand dims, zeros like, ones like
+        static const size_t s_serializationVersion = 20;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

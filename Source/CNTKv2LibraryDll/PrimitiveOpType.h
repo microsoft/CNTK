@@ -97,6 +97,8 @@ namespace CNTK
         Atanh = 85,
         Asinh = 86,
         TopK = 87,
+        Squeeze = 88,
+        ConstantOp = 89,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.
