@@ -968,7 +968,7 @@ public:
         buffer += LATTICE_TAG_LENGTH;
     }
     
-    void ReadTagFromBuffer(char*& buffer, const std::string& expectedTag, size_t expectedSize = SIZE_MAX)
+    int ReadTagFromBuffer(char*& buffer, const std::string& expectedTag, size_t expectedSize = SIZE_MAX)
     {
         CheckTag(buffer, expectedTag);
         int* sz = (int*)buffer;
@@ -976,16 +976,17 @@ public:
             RuntimeError("ReadVectorFromBuffer: malformed file, number of vector elements differs from head, for tag %s", expectedSize);
 
         buffer += 4;
+        return *sz;
     }
 
     template <class T>
     void ReadVectorFromBuffer(char*& buffer, const std::string& expectedTag, std::vector<T>& v, size_t expectedsize = SIZE_MAX)
     {
-        ReadTagFromBuffer(buffer, expectedTag, expectedsize);
-        v.resize(expectedsize);
-        for (size_t i = 0;i < expectedsize;i++) {
+        int sz = ReadTagFromBuffer(buffer, expectedTag, expectedsize);
+        v.resize(sz);
+        for (size_t i = 0;i < sz;i++) {
             T* element = reinterpret_cast<T*>(buffer);
-            v.push_back(*element);
+            v[i] = *element;
             buffer += sizeof(T);
         }
     }
