@@ -2046,19 +2046,28 @@ public:
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         FrameRange fr(InputRef(0).GetMBLayout());
+        const Matrix<ElemType>& classOneLabels = InputRef(0).ValueFor(fr);
+        const Matrix<ElemType>& classOneProbabilities = InputRef(1).ValueFor(fr);
+        const Matrix<ElemType>& ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
+
         if (inputIndex != 1)
             InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
 
-        // BackpropToRight(m_temp, InputRef(0).Value(), InputRef(2).Value(), InputRef(inputIndex).Gradient(), Gradient(), m_classZeroLabels, m_result);
-        // Create vector with 1 for class 1, and -1 for class 0
-        m_temp->AssignDifferenceOf(InputRef(0).ValueFor(fr), *m_classZeroLabels); // TODO: need a slice for m_classZeroLabels?
+        // y - p
+        m_temp->AssignDifferenceOf(classOneLabels, classOneProbabilities);
 
         // Multiply the vector by the InputRef(2).Value()
         if (m_inputs.size() == 3)                                            // with weight
             m_temp->AssignElementProductOf(*m_temp, InputRef(2).ValueFor(fr)); // TODO: is Input(2) minibatch data? Confirm
 
-        // divide class by p (class 1) or (1-p) (class 0)
-        m_temp->AssignElementDivisionOf(*m_temp, *m_result); // TODO: this is in-place--does this function allow that?
+        // 1 - p
+        m_result->AssignDifferenceOf(ones, classOneProbabilities);
+
+        // p * (1 - p)
+        m_result->AssignElementProductOf(*m_result, classOneProbabilities);
+
+        // w * (y - p) / (p * (1 - p))
+        m_temp->AssignElementDivisionOf(*m_temp, *m_result);
 
         auto gradient = InputRef(inputIndex).GradientFor(fr);
         Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient() /*1x1*/, *m_temp, 1.0f, gradient);
@@ -2089,25 +2098,25 @@ public:
         const Matrix<ElemType>& ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
 
         // compute the indices for the class 0 indices
+        // 1 - y
         classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
 
-        /* We're computing result = weight*(y*p + (1-y)*(1-p) = 2*y*p + (1-y) - p) */
+        // right 
+        // 1 - p
+        m_result->AssignDifferenceOf(ones, classOneProbabilities);
+        // ln(1 - p)
+        m_result->AssignLogOf(*m_result);
+        // (1 - y)*ln(1 - p)
+        m_result->AssignElementProductOf(*m_result, classZeroLabels);
 
-        /* First compute result = y*p */
-        m_result->AssignElementProductOf(classOneLabels, classOneProbabilities);
+        // left
+        // ln(p)
+        m_temp->AssignLogOf(classOneProbabilities);
+        // y*ln(p)
+        m_temp->AssignElementProductOf(*m_temp, classOneLabels);
 
-        // TODO: verify that all these operations on m_result really can do in-place (or use different methods instead)
-        /* Now compute result = 2*y*p */
-        m_result->AssignProductOf((ElemType) 2.0, *m_result);
-
-        /* Now compute result = 2*y*p + (1-y) */
-        m_result->AssignSumOf(*m_result, classZeroLabels);
-
-        /* Finally compute result = 2*y*p + (1-y) - p */
-        m_result->AssignDifferenceOf(*m_result, classOneProbabilities);
-
-        // compute the log, resulting in y*log(p) + (1-y)*log(1-p)
-        m_temp->AssignLogOf(*m_result);
+        // y*ln(p)+(1 - y)*ln(1 - p)
+        m_temp->AssignSumOf(*m_result, *m_temp);
 
         // The error is the negative of the sum of the result
         if (m_inputs.size() == 2)
