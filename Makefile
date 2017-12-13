@@ -751,7 +751,7 @@ HTKMLFREADER_SRC =\
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
 	$(SOURCEDIR)/Common/File.cpp \
 	$(SOURCEDIR)/Common/fileutil.cpp \
-	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \  
+	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
 
 HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 
