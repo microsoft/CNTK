@@ -57,10 +57,10 @@ static NDArrayViewPtr TestTensor(const NDShape& shape, double scale, const char*
         res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
         res += constT(1.0);
     }
-    else if (strcmp(opName, "Reciprocal") == 0) // Reciprocal should not use too small a number -> use abs(x) + 0.1
+    else if (strcmp(opName, "Reciprocal") == 0) // Reciprocal should not use too small a number -> use abs(x) + 0.2
     {
         res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
-        res += constT(0.1);
+        res += constT(0.2);
     }
     else if (strcmp(opName, "Cond") == 0 && argIndex == 0) // Cond requires a flag as the condition
     {
@@ -199,9 +199,8 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42       } } },
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9, 3 } } },
         // ternary
-        // BUGBUG: opClip has different operand order; this will fail next time this test is run
-        { ValOp(Clip), VarExpr(CNTK::Clip         (args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
-        { ValOp(Cond), VarExpr(CNTK::ElementSelect(args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13, 1 } } },
+        { ValOp(Clip), VarExpr(CNTK::Clip         (args[2], args[0], args[1])), { { 13,  1 }, { 13, 1 }, { 13, 42 } } },
+        { ValOp(Cond), VarExpr(CNTK::ElementSelect(args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13,  1 } } },
         // binary
         { ValOp(Sum               ), VarExpr(CNTK::Plus         (args[0], args[1])), { { 13, 42     }, { 13, 42 } } },
         { ValOp(Difference        ), VarExpr(CNTK::Minus        (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
@@ -366,7 +365,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         // Dynamite computation. Result is sum with alternating sign over all batch items in this test.
         let functionUnderRest = [&](const vector<vector<Variable>>& testArgs) -> Variable
         {
-            let prevProfiler = Function::SetDynamicProfiler(profiler, true); // set to true to see the detailed log
+            let prevProfiler = Function::SetDynamicProfiler(profiler, false); // set to true to see the detailed log
             Variable res;
             for (size_t n = 0; n < N; n++) // aggregate over all samples in the MB
             {
@@ -409,7 +408,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
             for (size_t argIndexUnderTest = 0; argIndexUnderTest < aryness; argIndexUnderTest++)
             {
                 // some args are not differentiable: skip those
-                if (strstr(test.op.second, "Clip") && argIndexUnderTest > 0)
+                if (strstr(test.op.second, "Clip") && argIndexUnderTest < 2) // note: arg order different for CNTK::Clip(). Here defined by opClip.
                     continue;
                 if (strstr(test.op.second, "Cond") && argIndexUnderTest == 0)
                     continue;

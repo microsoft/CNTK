@@ -782,6 +782,7 @@ namespace CNTK
 
                 // add first term to gradient. This is the main path.
                 // outGradVal * (scale / sigma) == gradient through scale. This gives us the "gradient from top" of lengthNorm.
+                //gradient->LogToFile(L"gradient at start, must be 0 for checks below to be correct");
                 NDArrayView::NumericOperation({ outGradVal, scale, sigma }, 1.0, opElementwiseProductWithQuotient, gradient, beta);
                 // add second term, that is, the path through the std dev estimator, which is
                 // -(xHat * scaleGradient/N) * (scale / sigma)
@@ -803,24 +804,37 @@ namespace CNTK
                 //// note: scaleGradientAv and biasGradientAv both share a buffer with mu, since they are not needed at the same time
                 //if (rawMBStatsWeight != 0)
                 //{
-                    let scaleGradient = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1 / sqrt(N), opElementwiseProduct, redBuf);
-#if 0               // check that xHat is really unit-length
-                    let xHatL2 = NDArrayView::MatrixProduct(false, xHat, false, xHat, true, 1.0, 1, nullptr);
-                    xHatL2->LogToFile(L"xHatL2");
+                    // xHat has length sqrt(N)
+#if 0               // check that xHat has length sqrt(N)
+                    let xHatL2 = NDArrayView::MatrixProduct(false, xHat, false, xHat, true, /*alpha=*/1 / N, 1, nullptr);
+                    xHatL2->LogToFile(L"xHatL2/sqrt(N)"); // diagonal should be all ones
 #endif
+                    //xHat->LogToFile(L"xHat", stderr, 10000);
+                    //outGradVal->LogToFile(L"outGradVal", stderr, 10000);
+                    //scale->LogToFile(L"scale", stderr, 10000);
+                    //sigma->LogToFile(L"sigma", stderr, 10000);
+                    //let projectionCoefficients1 = NDArrayView::NumericOperation({ outGradVal, xHat }, /*alpha=*/1 / sqrt(N), opElementwiseProduct, redBuf);
+                    //projectionCoefficients1->LogToFile(L"projectionCoefficients1 of outGradVal on xHat");
+                    // any use of xHat below must multiply with 1/sqrt(N) to make it unit-length
+                    let projectionCoefficients = NDArrayView::NumericOperation({ outGradVal, xHat, scale, sigma }, /*alpha=*/1 / sqrt(N), opAxBxCoverD, redBuf);
+                    //projectionCoefficients->LogToFile(L"projectionCoefficients of outGradVal on xHat");
                     // This gets the projection coefficients for projecting outGradVal onto (x-mu).
                     // Now multiply it with xHat, to get the projection of outGradVal onto (x-mu),
                     // and then subtract it from outGradVal. If rawMBStatsWeight==1 then that will leave only the contribution
                     // that is perpendicular to (x-mu).
                     // Note that xHat has norm sqrt(N), not 1. Hence we must divide by sqrt(N).
-                    NDArrayView::NumericOperation({ xHat, scaleGradient, scale, sigma }, /*alpha=*/-rawMBStatsWeight / sqrt(N), opAxBxCoverD, gradient, /*beta=*/1.0);
+                    //NDArrayView::NumericOperation({ xHat, projectionCoefficients, scale, sigma }, /*alpha=*/-rawMBStatsWeight / sqrt(N), opAxBxCoverD, gradient, /*beta=*/1.0);
+                    NDArrayView::NumericOperation({ xHat, projectionCoefficients }, /*alpha=*/-rawMBStatsWeight / sqrt(N), opElementwiseProduct, gradient, /*beta=*/1.0);
+                    //gradient->LogToFile(L"gradient at input of var norm");
 #if 0               // check whether gradient is indeed orthogonal
-                    let mu = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(inputValues[0])->shared_from_this() }, 1/ N   , Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, redBuf);
+                    let x = const_cast<NDArrayView*>(inputValues[0])->shared_from_this();
+                    x->LogToFile(L"x");
+                    let mu = NDArrayView::NumericOperation({ x }, 1/ N   , Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, redBuf);
                     mu->LogToFile(L"mu");
-                    let xm = NDArrayView::NumericOperation({ const_cast<NDArrayView*>(inputValues[0])->shared_from_this(), mu }, /*alpha=*/1 / N, opDifference);
+                    let xm = x - mu;
                     xm->LogToFile(L"xm");
                     let dotProds = NDArrayView::MatrixProduct(false, gradient, false, xm, true, 1.0, 1, nullptr);
-                    dotProds->LogToFile(L"dotProds");
+                    dotProds->LogToFile(L"dotProds"); // diagonal should be all zeroes
 #endif
                     // add third term, that is, the path through std dev and mean estimator, which is
                     // (scale / sigma) * -1/N * biasGradient
