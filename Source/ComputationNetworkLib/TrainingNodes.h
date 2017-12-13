@@ -2048,8 +2048,7 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         const Matrix<ElemType>& classOneLabels = InputRef(0).ValueFor(fr);
         const Matrix<ElemType>& classOneProbabilities = InputRef(1).ValueFor(fr);
-        const Matrix<ElemType>& ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
-
+        
         if (inputIndex != 1)
             InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
 
@@ -2060,11 +2059,8 @@ public:
         if (m_inputs.size() == 3)                                            // with weight
             m_temp->AssignElementProductOf(*m_temp, InputRef(2).ValueFor(fr)); // TODO: is Input(2) minibatch data? Confirm
 
-        // 1 - p
-        m_result->AssignDifferenceOf(ones, classOneProbabilities);
-
         // p * (1 - p)
-        m_result->AssignElementProductOf(*m_result, classOneProbabilities);
+        m_result->AssignElementProductOf(*m_classZeroProbabilities, classOneProbabilities);
 
         // w * (y - p) / (p * (1 - p))
         m_temp->AssignElementDivisionOf(*m_temp, *m_result);
@@ -2083,6 +2079,7 @@ public:
         m_classZeroLabels->Resize(InputRef(0).Value());
         m_result->Resize(InputRef(0).Value());
         m_temp->Resize(InputRef(0).Value());
+        m_classZeroProbabilities->Resize(InputRef(0).Value());
         m_sumOfWeights->Resize(Value());
     }
 
@@ -2103,9 +2100,9 @@ public:
 
         // right 
         // 1 - p
-        m_result->AssignDifferenceOf(ones, classOneProbabilities);
+        m_classZeroProbabilities->AssignDifferenceOf(ones, classOneProbabilities);
         // ln(1 - p)
-        m_result->AssignLogOf(*m_result);
+        m_result->AssignLogOf(*m_classZeroProbabilities);
         // (1 - y)*ln(1 - p)
         m_result->AssignElementProductOf(*m_result, classZeroLabels);
 
@@ -2167,6 +2164,7 @@ public:
         RequestMatrixFromPool(m_classZeroLabels, matrixPool);
         RequestMatrixFromPool(m_result, matrixPool);
         RequestMatrixFromPool(m_temp, matrixPool);
+        RequestMatrixFromPool(m_classZeroProbabilities, matrixPool);
         RequestMatrixFromPool(m_sumOfWeights, matrixPool);
     }
 
@@ -2177,6 +2175,7 @@ public:
         ReleaseMatrixToPool(m_classZeroLabels, matrixPool);
         ReleaseMatrixToPool(m_result, matrixPool);
         ReleaseMatrixToPool(m_temp, matrixPool);
+        ReleaseMatrixToPool(m_classZeroProbabilities, matrixPool);
         ReleaseMatrixToPool(m_sumOfWeights, matrixPool);
     }
 
@@ -2189,6 +2188,7 @@ public:
             node->m_classZeroLabels->SetValue(*m_classZeroLabels);
             node->m_result->SetValue(*m_result);
             node->m_temp->SetValue(*m_temp);
+            node->m_classZeroProbabilities->SetValue(*m_classZeroProbabilities);
             node->m_sumOfWeights->SetValue(*m_sumOfWeights);
         }
     }
@@ -2197,6 +2197,8 @@ private:
     shared_ptr<Matrix<ElemType>> m_classZeroLabels;
     shared_ptr<Matrix<ElemType>> m_result;
     shared_ptr<Matrix<ElemType>> m_temp;
+
+    shared_ptr<Matrix<ElemType>> m_classZeroProbabilities;
 
     // for weighted log-loss
     shared_ptr<Matrix<ElemType>> m_sumOfWeights;
