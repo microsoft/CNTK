@@ -870,7 +870,7 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size)
     /* guoye: end */
     CHAR* p = fgets(buf, size, f);
     /* guoye: start */
-	fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
+    fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
     /* guoye: end */
     if (p == NULL) // EOF reached: next time feof() = true
     {
