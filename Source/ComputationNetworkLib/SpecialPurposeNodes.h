@@ -686,7 +686,7 @@ template class SequenceWithSoftmaxNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<4>
+class SequenceWithLatticeNode : public SequenceWithSoftmaxNode<ElemType>, public NumInputs<4>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -697,7 +697,7 @@ class SequenceWithLatticeNode : public ComputationNodeNonLooping<ElemType>, publ
 
 public:
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath)
-        : Base(deviceId, name), m_gammaCalcInitialized(false)
+        : SequenceWithSoftmaxNode(deviceId, name)
     {
         if (sizeof(ElemType) != sizeof(float))
             LogicError("SequenceWithLatticeNode currently only supports floats.\n"); // due to the binary reader restrictions 
@@ -709,80 +709,37 @@ public:
             
         m_hset.loadfromfile(phonePath, stateListPath, transProbPath);
         auto symmap = m_hset.getsymmap(); //const SYMMAP&
-        msra::lattices::archive::symbolidmapping idmap;
-        msra::lattices::archive::getSymList(idmap, symListPath, symmap);
-
-        const size_t spunit = idmap.back();                      // ugh--getcachedidmap() just appends it to the end
-
-        
+        msra::lattices::archive::getSymList(m_idmap, symListPath, symmap);
     }
 
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
-        : Base(deviceId, name), m_gammaCalcInitialized(false)
+        : SequenceWithSoftmaxNode(deviceId, name)
     {
     }
 
     SequenceWithLatticeNode(const ScriptableObjects::IConfigRecordPtr configp)
         : SequenceWithLatticeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"))
     {
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        AttachInputsFromConfig(configp, 4);
     }
 
     // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        // auto t_start_time = Timer::MilliSecondElapsed();
-        // left Node must be a scalar
-        if (inputIndex == 0) // left derivative
-        {
-            BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->Gradient(), Gradient());
-        }
-        else if (inputIndex == 1)
-        {
-            FrameRange fr(Input(0)->GetMBLayout());
-            BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
-            MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
-
-#ifdef _DEBUG
-            Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
-#endif
-        }
-        else if (inputIndex == 2)
-        {
-#if 1         // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
-            ; // gradient does not flow here
-#else
-            Input(inputIndex)->SetLearningRateMultiplier(0);
-            Input(inputIndex)->Gradient().SetValue(0.0); // BUGBUG: Gradients must always be added, since nodes may have multiple parents.
-#endif
-        }
-        else
-            RuntimeError("SequenceWithLatticeNode criterion only takes with respect to label, DNN output and log likelihood.");
-    }
-
-    static void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
-    {
-        Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues /*1x1*/, logSoftmaxOfRight, 1.0f, inputGradientValues);
-    }
-
-    static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
-        Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-        const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
-    {
-        inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
-        inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType)frameDropThresh);
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
+        SequenceWithSoftmaxNode::BackpropToNonLooping(inputIndex);
     }
 
     // -sum(left_i * log(softmax_i(right)))
     virtual void ForwardPropNonLooping()
     {
-         char* buffer = reinterpret_cast<char*>(Input(3)->Value().CopyToArray());
+        char* buffer = reinterpret_cast<char*>(Input(3)->Value().CopyToArray());
+
+        msra::lattices::lattice l;
+        l.freadFromBuffer(buffer, m_idmap, m_idmap.back());
+         
+
+        // msra::lattices::lattice::ReadTagFromBuffer(buffer, "LAT ", 2);
+        // msra::lattices::lattice::ReadFromBuffer(buffer, info
          char* bufCopy = buffer;
          // Ensure the buffer starts with "LAT v"
          std::string tag(buffer, 4);
@@ -791,8 +748,10 @@ public:
          if (tag != "LAT " || *vp != 2)
              LogicError("Lattice archice is expected to be of version 2.");
 
-         
-
+         buffer += 4;
+        
+         msra::lattices::lattice::header_v1_v2* info = reinterpret_cast<msra::lattices::lattice::header_v1_v2*>(buffer);
+         buffer += sizeof(msra::lattices::lattice::header_v1_v2);
 
         //buffer = reinterpret_cast<char*>(InputRef(3).ValueFor(fr).Data());
         std::ofstream outfile;
@@ -804,145 +763,51 @@ public:
         }
         outfile.close();
 
-        msra::lattices::lattice::header_v1_v2* info = reinterpret_cast<msra::lattices::lattice::header_v1_v2*>(bufCopy);
+        //msra::lattices::lattice::header_v1_v2* info = reinterpret_cast<msra::lattices::lattice::header_v1_v2*>(bufCopy);
         bufCopy += sizeof(msra::lattices::lattice::header_v1_v2);
         fprintf(stderr, "buffer pointer %p\n", bufCopy);
         fprintf(stderr, "info pointer %p\n", info);
-        // Initialize m_gammaCalculator
-        // TODO: Would this lend itself to a unique_ptr instead of the init flag?
-        if (!m_gammaCalcInitialized)
-        {
-            if (m_hmm.hmms.size() == 0)
-            {
-                LogicError("SequenceWithLatticeNode criterion evaluation requires HMM states to be set.");
-            }
-            m_gammaCalculator.init(m_hmm, m_deviceId);
-            m_gammaCalcInitialized = true;
-        }
-        // softmax
-        m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value() /*prediction*/, true);
-        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
-        m_softmaxOfRight->InplaceExp();
+    }
 
-        m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
-        m_gammaFromLattice->Resize(*m_softmaxOfRight);
-        m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
-            Input(0)->Value() /*labels*/, *m_gammaFromLattice,
-            m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
-            Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_idmap;
+    }
 
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_idmap;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr; // no layout
-
-        if (Input(0)->OperationName() != L"InputValue" && Input(0)->OperationName() != L"SparseInputValue")
-            LogicError("SequenceWithLatticeNode criterion requires the first input to be the label.");
-
-        if (isFinalValidationPass)
-            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match size
-                Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
-                Input(0)->HasMBLayout() &&
-                Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
-                Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
-            {
-                LogicError("The Matrix dimension in the SequenceWithLatticeNode operation does not match.");
-            }
-
-        SetDims(TensorShape(1), false);
-
-        m_gammatime = 0;
-        m_partialtime = 0;
+        SequenceWithSoftmaxNode::Validate(isFinalValidationPass);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
-        Base::CopyTo(nodeP, newName, flags);
+        SequenceWithSoftmaxNode::CopyTo(nodeP, newName, flags);
 
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<SequenceWithLatticeNode<ElemType>>(nodeP);
 
-            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
-            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
-            node->m_gammaFromLattice->SetValue(*m_gammaFromLattice);
-            node->m_fsSmoothingWeight = m_fsSmoothingWeight;
-            node->m_frameDropThreshold = m_frameDropThreshold;
-            node->m_doReferenceAlignment = m_doReferenceAlignment;
+            node->m_idmap = m_idmap;
         }
     }
 
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
-        Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
-        RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
-        RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
+        SequenceWithSoftmaxNode::RequestMatricesBeforeForwardProp(matrixPool);
+        Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
     }
 
-    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
-        ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
-        ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
-    }
-
-    // TODO: method names should be CamelCase
-    std::vector<shared_ptr<const msra::dbn::latticepair>>* getLatticePtr() { return &m_lattices; }
-    std::vector<size_t>* getuidprt() { return &m_uids; }
-    std::vector<size_t>* getboundaryprt() { return &m_boundaries; }
-    std::vector<size_t>* getextrauttmap() { return &m_extraUttMap; }
-    msra::asr::simplesenonehmm* gethmm() { return &m_hmm; }
-
-    void SetSmoothWeight(double fsSmoothingWeight) { m_fsSmoothingWeight = fsSmoothingWeight; }
-    void SetFrameDropThresh(double frameDropThresh) { m_frameDropThreshold = frameDropThresh; }
-    void SetReferenceAlign(const bool doreferencealign) { m_doReferenceAlignment = doreferencealign; }
-
-    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
-    {
-        msra::lattices::SeqGammarCalParam param;
-        param.amf = amf;
-        param.lmf = lmf;
-        param.wp = wp;
-        param.bMMIfactor = bMMIfactor;
-        param.sMBRmode = sMBR;
-        m_gammaCalculator.SetGammarCalculationParams(param);
-    }
-
-    void gettime(unsigned long long& gammatime, unsigned long long& partialtime)
-    {
-        gammatime = m_gammatime;
-        partialtime = m_partialtime;
-    }
-
-protected:
+private: 
+    msra::lattices::archive::symbolidmapping m_idmap;
     msra::asr::simplesenonehmm m_hset;
-    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
-    shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
-    shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
-    double m_frameDropThreshold;
-    double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
-    double m_seqGammarAMF;
-    double m_seqGammarLMF;
-    double m_seqGammarWP;
-    double m_seqGammarbMMIFactor;
-    double m_seqGammarUsesMBR;
-    bool m_doReferenceAlignment;
-    std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
-    msra::asr::simplesenonehmm m_hmm;
-    msra::lattices::GammaCalculation<ElemType> m_gammaCalculator;
-    bool m_gammaCalcInitialized;
-    std::vector<size_t> m_uids;
-    std::vector<size_t> m_boundaries;
-    std::vector<size_t> m_extraUttMap;
-
-    unsigned long long m_gammatime; // TODO: what are these? Not even the context can be guessed from these names.
-    unsigned long long m_partialtime;
 };
 
 template class SequenceWithLatticeNode<float>;

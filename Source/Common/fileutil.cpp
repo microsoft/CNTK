@@ -1237,9 +1237,9 @@ void fputText<bool>(FILE* f, bool v)
 
 std::string fgetTag(FILE* f)
 {
-    char tag[5];
-    freadOrDie(&tag[0], sizeof(tag[0]), 4, f);
-    tag[4] = 0;
+    char tag[LATTICE_TAG_LENGTH +1];
+    freadOrDie(&tag[0], sizeof(tag[0]), LATTICE_TAG_LENGTH, f);
+    tag[LATTICE_TAG_LENGTH] = 0;
     return std::string(tag);
 }
 

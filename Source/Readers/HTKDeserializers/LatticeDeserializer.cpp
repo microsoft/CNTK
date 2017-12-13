@@ -22,9 +22,10 @@ struct LatticeFloatSequenceData : DenseSequenceData
     LatticeFloatSequenceData(void* data, unsigned int bufferSize, const NDShape& frameShape) :DenseSequenceData(bufferSize,true),
         m_buffer(data), m_frameShape(frameShape)
     {
-        char* buffer = reinterpret_cast<char*>(m_buffer);
+        //char* buffer = reinterpret_cast<char*>(m_buffer);
         //buffer = reinterpret_cast<char*>(InputRef(3).ValueFor(fr).Data());
 
+        /*
         std::ofstream outfile;
         outfile.open("D:\\users\\vadimma\\musor\\test1.txt", std::ios_base::app);
         outfile << buffer;
@@ -34,6 +35,7 @@ struct LatticeFloatSequenceData : DenseSequenceData
             buffer++;
         }
         outfile.close();
+        */
     }
 
     const void* GetDataBuffer() override
