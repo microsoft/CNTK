@@ -736,37 +736,7 @@ public:
 
         msra::lattices::lattice l;
         l.freadFromBuffer(buffer, m_idmap, m_idmap.back());
-         
-
-        // msra::lattices::lattice::ReadTagFromBuffer(buffer, "LAT ", 2);
-        // msra::lattices::lattice::ReadFromBuffer(buffer, info
-         char* bufCopy = buffer;
-         // Ensure the buffer starts with "LAT v"
-         std::string tag(buffer, 4);
-         buffer += 4;
-         int* vp = (int*)buffer;
-         if (tag != "LAT " || *vp != 2)
-             LogicError("Lattice archice is expected to be of version 2.");
-
-         buffer += 4;
-        
-         msra::lattices::lattice::header_v1_v2* info = reinterpret_cast<msra::lattices::lattice::header_v1_v2*>(buffer);
-         buffer += sizeof(msra::lattices::lattice::header_v1_v2);
-
-        //buffer = reinterpret_cast<char*>(InputRef(3).ValueFor(fr).Data());
-        std::ofstream outfile;
-        outfile.open("D:\\users\\vadimma\\musor\\test31.txt", std::ios_base::app);
-        outfile << buffer;
-        for (int i = 0;i < 100;i++) {
-            outfile << *buffer;
-            buffer++;
-        }
-        outfile.close();
-
-        //msra::lattices::lattice::header_v1_v2* info = reinterpret_cast<msra::lattices::lattice::header_v1_v2*>(bufCopy);
-        bufCopy += sizeof(msra::lattices::lattice::header_v1_v2);
-        fprintf(stderr, "buffer pointer %p\n", bufCopy);
-        fprintf(stderr, "info pointer %p\n", info);
+        SequenceWithSoftmaxNode::ForwardPropNonLooping();
     }
 
     virtual void Save(File& fstream) const override
