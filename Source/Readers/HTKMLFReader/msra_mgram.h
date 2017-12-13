@@ -1501,6 +1501,7 @@ public:
         /* guoye: start */
         // lineNo++, fgetline(f, buf);
         lineNo++;
+        fprintf(stderr, "\n msra_mgram.h: read: debug 0.25\n");
         fgetline(f, buf);
 
         fprintf(stderr, "\n msra_mgram.h: read: debug 0.3\n");

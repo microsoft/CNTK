@@ -865,7 +865,13 @@ template <class CHAR>
 CHAR* fgetline(FILE* f, CHAR* buf, int size)
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    /* guoye: start */
+    fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
+    /* guoye: end */
     CHAR* p = fgets(buf, size, f);
+    /* guoye: start */
+	fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
+    /* guoye: end */
     if (p == NULL) // EOF reached: next time feof() = true
     {
         if (ferror(f))
