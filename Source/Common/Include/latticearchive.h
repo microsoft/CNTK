@@ -960,6 +960,35 @@ public:
             RuntimeError("freadvector: malformed file, number of vector elements differs from head, for tag %s", tag);
         freadOrDie(v, sz, f);
     }
+    
+    void CheckTag(char*& buffer, const std::string& expectedTag) {
+        std::string tag(buffer, LATTICE_TAG_LENGTH);
+        if (tag != expectedTag)
+            RuntimeError("invalid tag '%s' found; expected '%s'", tag.c_str(), expectedTag.c_str());
+        buffer += LATTICE_TAG_LENGTH;
+    }
+    
+    void ReadTagFromBuffer(char*& buffer, const std::string& expectedTag, size_t expectedSize = SIZE_MAX)
+    {
+        CheckTag(buffer, expectedTag);
+        int* sz = (int*)buffer;
+        if (expectedSize != SIZE_MAX && *sz != expectedSize)
+            RuntimeError("ReadVectorFromBuffer: malformed file, number of vector elements differs from head, for tag %s", expectedSize);
+
+        buffer += 4;
+    }
+
+    template <class T>
+    void ReadVectorFromBuffer(char*& buffer, const std::string& expectedTag, std::vector<T>& v, size_t expectedsize = SIZE_MAX)
+    {
+        ReadTagFromBuffer(buffer, expectedTag, expectedsize);
+        v.resize(expectedsize);
+        for (size_t i = 0;i < expectedsize;i++) {
+            T* element = reinterpret_cast<T*>(buffer);
+            v.push_back(*element);
+            buffer += sizeof(T);
+        }
+    }
 
     // read from a stream
     // This can be used on an existing structure and will replace its content. May be useful to avoid memory allocations (resize() will not shrink memory).
@@ -994,77 +1023,102 @@ public:
             freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
             freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
             fcheckTag(f, "END ");
-// check if we need to map
-#if 1                                                                                     // post-bugfix for incorrect inference of spunit
-            if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
-            {
-                fprintf(stderr, "fread: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int) info.impliedspunitid, (int) idmap.size());
-                RuntimeError("fread: out of bounds spunitid");
-            }
-#endif
-            // This is critical--we have a buggy lattice set that requires no mapping where mapping would fail
-            bool needsmapping = false;
-            foreach_index (k, idmap)
-            {
-                if (idmap[k] != (size_t) k
-#if 1
-                    && (k != (int) idmap.size() - 1 || idmap[k] != spunit) // that HACK that we add one more /sp/ entry at the end...
-#endif
-                    )
-                {
-                    needsmapping = true;
-                    break;
-                }
-            }
-            // map align ids to user's symmap  --the lattice gets updated in place here
-            if (needsmapping)
-            {
-                if (info.impliedspunitid != SIZE_MAX)
-                    info.impliedspunitid = idmap[info.impliedspunitid];
-
-                // deal with broken (zero-token) edges
-                std::vector<bool> isendworkaround;
-                if (info.impliedspunitid != spunit)
-                {
-                    fprintf(stderr, "fread: lattice with broken spunit, using workaround to handle potentially broken zero-token edges\n");
-                    inferends(isendworkaround);
-                }
-
-                size_t uniquealignments = 1;
-                const size_t skipscoretokens = info.hasacscores ? 2 : 1;
-                for (size_t k = skipscoretokens; k < uniquededgedatatokens.size(); k++)
-                {
-                    if (!isendworkaround.empty() && isendworkaround[k]) // secondary criterion to detect ends in broken lattices
-                    {
-                        k--; // don't advance, since nothing to advance over
-                    }
-                    else
-                    {
-                        // this is a regular token: update it in-place
-                        auto& ai = uniquededgedatatokens[k];
-                        if (ai.unit >= idmap.size())
-                            RuntimeError("fread: broken-file heuristics failed");
-                        ai.updateunit(idmap); // updates itself
-                        if (!ai.last)
-                            continue;
-                    }
-                    // if last then skip over the lm and ac scores
-                    k += skipscoretokens;
-                    uniquealignments++;
-                }
-                fprintf(stderr, "fread: mapped %d unique alignments\n", (int) uniquealignments);
-            }
-            if (info.impliedspunitid != spunit)
-            {
-                // fprintf (stderr, "fread: inconsistent spunit id in file %d vs. expected %d; due to erroneous heuristic\n", info.impliedspunitid, spunit);    // [v-hansu] comment out becaues it takes up most of the log
-                // it's actually OK, we can live with this, since we only decompress and then move on without any assumptions
-                // RuntimeError("fread: mismatching /sp/ units");
-            }
-            // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
-            rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
+            ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap);
         }
         else
             RuntimeError("fread: unsupported lattice format version");
+    }
+
+    // The same as fread above, but for buffer and only supporting lattice version 2.
+    void freadFromBuffer(char* buffer, const std::vector<unsigned int>& idmap, size_t spunit)
+    {
+        ReadTagFromBuffer(buffer, "LAT ", 2);
+
+        header_v1_v2* pInfo = reinterpret_cast<header_v1_v2*>(buffer);
+        info = *pInfo;
+        buffer += sizeof(header_v1_v2);
+
+        ReadVectorFromBuffer(buffer, "NODS", nodes, info.numnodes);
+        if (nodes.back().t != info.numframes)
+            RuntimeError("freadFromBuffer: mismatch between info.numframes and last node's time");
+        ReadVectorFromBuffer(buffer, "EDGS", edges2, info.numedges); // uniqued edges
+        ReadVectorFromBuffer(buffer, "ALNS", uniquededgedatatokens); // uniqued alignments
+        //fcheckTag(f, "END ");
+        ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap);
+    }
+
+    // Helper method to process v2 Lattice format
+    template <class IDMAP>
+    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap) {
+        // check if we need to map
+#if 1                                                                                     // post-bugfix for incorrect inference of spunit
+        if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
+        {
+            fprintf(stderr, "fread: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int)info.impliedspunitid, (int)idmap.size());
+            RuntimeError("fread: out of bounds spunitid");
+        }
+#endif
+        // This is critical--we have a buggy lattice set that requires no mapping where mapping would fail
+        bool needsmapping = false;
+        foreach_index(k, idmap)
+        {
+            if (idmap[k] != (size_t)k
+#if 1
+                && (k != (int)idmap.size() - 1 || idmap[k] != spunit) // that HACK that we add one more /sp/ entry at the end...
+#endif
+                )
+            {
+                needsmapping = true;
+                break;
+            }
+        }
+        // map align ids to user's symmap  --the lattice gets updated in place here
+        if (needsmapping)
+        {
+            if (info.impliedspunitid != SIZE_MAX)
+                info.impliedspunitid = idmap[info.impliedspunitid];
+
+            // deal with broken (zero-token) edges
+            std::vector<bool> isendworkaround;
+            if (info.impliedspunitid != spunit)
+            {
+                fprintf(stderr, "fread: lattice with broken spunit, using workaround to handle potentially broken zero-token edges\n");
+                inferends(isendworkaround);
+            }
+
+            size_t uniquealignments = 1;
+            const size_t skipscoretokens = info.hasacscores ? 2 : 1;
+            for (size_t k = skipscoretokens; k < uniquededgedatatokens.size(); k++)
+            {
+                if (!isendworkaround.empty() && isendworkaround[k]) // secondary criterion to detect ends in broken lattices
+                {
+                    k--; // don't advance, since nothing to advance over
+                }
+                else
+                {
+                    // this is a regular token: update it in-place
+                    auto& ai = uniquededgedatatokens[k];
+                    if (ai.unit >= idmap.size())
+                        RuntimeError("fread: broken-file heuristics failed");
+                    ai.updateunit(idmap); // updates itself
+                    if (!ai.last)
+                        continue;
+                }
+                // if last then skip over the lm and ac scores
+                k += skipscoretokens;
+                uniquealignments++;
+            }
+            fprintf(stderr, "fread: mapped %d unique alignments\n", (int)uniquealignments);
+        }
+        if (info.impliedspunitid != spunit)
+        {
+            // fprintf (stderr, "fread: inconsistent spunit id in file %d vs. expected %d; due to erroneous heuristic\n", info.impliedspunitid, spunit);    // [v-hansu] comment out becaues it takes up most of the log
+            // it's actually OK, we can live with this, since we only decompress and then move on without any assumptions
+            // RuntimeError("fread: mismatching /sp/ units");
+        }
+        // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
+        rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
+
     }
 
     // parallel versions (defined in parallelforwardbackward.cpp)
