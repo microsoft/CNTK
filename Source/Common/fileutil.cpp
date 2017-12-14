@@ -250,20 +250,20 @@ static const wchar_t* strchr(const wchar_t* s, wchar_t v)
 
 void fsetmode(FILE* f, char type)
 {
-	if (type != 'b' && type != 't')
-	{
-		RuntimeError("fsetmode: invalid type '%c'", type);
-	}
+    if (type != 'b' && type != 't')
+    {
+        RuntimeError("fsetmode: invalid type '%c'", type);
+    }
 #ifdef UNDER_CE           // winCE and win32 have different return types for _fileno
-	FILE* fd = fileno(f); // note: no error check possible
+    FILE* fd = fileno(f); // note: no error check possible
 #else
-	int fd = fileno(f); // note: no error check possible
+    int fd = fileno(f); // note: no error check possible
 #endif
-	int rc = (type == 'b' ? SET_BINARY_MODE(fd) : SET_TEXT_MODE(fd));
-	if (rc == -1)
-	{
-		RuntimeError("error changing file mode: %s", strerror(errno));
-	}
+    int rc = (type == 'b' ? SET_BINARY_MODE(fd) : SET_TEXT_MODE(fd));
+    if (rc == -1)
+    {
+        RuntimeError("error changing file mode: %s", strerror(errno));
+    }
 }
 /* guoye: end */
 
