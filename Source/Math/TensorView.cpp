@@ -252,13 +252,6 @@ static void CheckDifferentObjects(const array<reference_wrapper<TensorView<ElemT
 
 template<typename IteratorType>
 using Span = ::CNTK::Span<IteratorType>;
-// TODO: complete this after the TensorOp transition
-template <class ElemType>
-void TensorView<ElemType>::DoNaryOpOf(size_t arity, Span<TensorView*> args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta)
-{
-    arity; args; op; reductionOp; alpha; beta;
-}
-
 template<typename T, size_t N>
 static inline Span<T*> MakeArgSpan(array<T, N>& args)
 {
@@ -268,11 +261,6 @@ template<typename ElemType> // remove/inline
 reference_wrapper<Matrix<ElemType>> SOBRef(const TensorView<ElemType>& arg) // helper to convert a const& into a non-const* for passing it on
 {
     return ref(const_cast<TensorView<ElemType>&>(arg).GetSOB());
-}
-template<typename ElemType>
-reference_wrapper<TensorView<ElemType>> ViewRef(const TensorView<ElemType>& arg) // helper to convert a const& into a non-const reference_wrapper for passing it on
-{
-    return ref(const_cast<TensorView<ElemType>&>(arg));
 }
 // convert args to SOB array. C++ cannot initialize std::array from iterators, so we need to do this manually with macros. Not nice.
 #define AS(i) ((TensorView<ElemType>&)args[i]).GetSOB()
@@ -287,6 +275,36 @@ DefineMakeSOBRefs(2, ({ AS(0), AS(1) }))
 DefineMakeSOBRefs(3, ({ AS(0), AS(1), AS(2) }))
 DefineMakeSOBRefs(4, ({ AS(0), AS(1), AS(2), AS(3) }))
 DefineMakeSOBRefs(5, ({ AS(0), AS(1), AS(2), AS(3), AS(4) }))
+template<typename ElemType>
+template<size_t N>
+void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<TensorView<ElemType>>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta)
+{
+    if (arity != N - 1)
+        InvalidArgument("DoNaryOpOf: Operations with >1 output are presently not supported.");
+
+    // prepare all tensor descriptor information as needed for execution
+    array<size_t, N> offsets;
+    array<SmallVector<ptrdiff_t>, N> regularStrides, reducingStrides;
+    SmallVector<size_t> regularOpDims, reducingOpDims;
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // now perform the operation
+    auto sobs = MakeSOBRefs(args);
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
+}
+template void TensorView<float>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<float>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<float>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<float>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<float>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<double>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template void TensorView<double>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template void TensorView<double>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template void TensorView<double>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template void TensorView<double>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+
+#if 0
 template <class ElemType>
 void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
@@ -305,6 +323,7 @@ void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementW
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
+#endif
 
 template <class ElemType>
 void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
