@@ -658,7 +658,7 @@ public:
 
     template<typename IteratorType>
     using Span = ::CNTK::Span<IteratorType>;
-    static void TensorOp(size_t arity, const Span<Matrix**>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
+    static void TensorOp(size_t arity, const Span<reference_wrapper<Matrix>*>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
                          const Span<size_t*>& offsets,
                          const SmallVector<size_t>& regularOpDims,  const Span<SmallVector<ptrdiff_t>*>& regularStrides,
                          const SmallVector<size_t>& reducingOpDims, const Span<SmallVector<ptrdiff_t>*>& reducingStrides);
