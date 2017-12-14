@@ -277,7 +277,7 @@ DefineMakeSOBRefs(4, ({ AS(0), AS(1), AS(2), AS(3) }))
 DefineMakeSOBRefs(5, ({ AS(0), AS(1), AS(2), AS(3), AS(4) }))
 template<typename ElemType>
 template<size_t N>
-void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<TensorView<ElemType>>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta)
+/*static*/ void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<TensorView<ElemType>>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta)
 {
     if (arity != N - 1)
         InvalidArgument("DoNaryOpOf: Operations with >1 output are presently not supported.");
@@ -293,10 +293,10 @@ void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<Tensor
         CheckDifferentObjects(args);
 
     // use macros for now during code transformation, so that we can diff
-#define a ((const TensorView<ElemType>&)args[0]))
-#define b ((const TensorView<ElemType>&)args[1]))
-#define c ((const TensorView<ElemType>&)args[2]))
-#define d ((const TensorView<ElemType>&)args[3]))
+#define a ((const TensorView<ElemType>&)args[0])
+#define b ((const TensorView<ElemType>&)args[1])
+#define c ((const TensorView<ElemType>&)args[2])
+#define d ((const TensorView<ElemType>&)args[3])
     TensorView<ElemType>& y = args.back();
 
     // special cases
@@ -304,93 +304,18 @@ void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<Tensor
     //  - sparse support for some operations. We intercept here (Matrix::TensorOp() does not support sparse)
     switch (arity)
     {
-    }
-#undef a
-#undef b
-#undef c
-#undef d
-
-    // now perform the operation
-    auto sobs = MakeSOBRefs(args);
-    Matrix<ElemType>::TensorOp(arity, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
-                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
-}
-#if 0
-template <class ElemType>
-void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
-{
-    array<reference_wrapper<TensorView<ElemType>>, 1> args{ ViewRef(*this) };
-
-    // A nullary op cannot reduce, but we keep it regular anyways.
-    // prepare all tensor descriptor information as needed for execution
-    array<size_t, 1> offsets;
-    array<SmallVector<ptrdiff_t>, 1> regularStrides, reducingStrides;
-    SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-
-    // now perform the operation
-    auto sobs = MakeSOBRefs(args);
-    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
-                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
-    //GetSOB().TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-}
-
-template <class ElemType>
-void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
-{
-    array<reference_wrapper<TensorView<ElemType>>, 2> args{ ViewRef(a), ViewRef(*this) };
-
-    // static int cc = 0; if (cc++ == 0)
-    //    fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
-
-    // prepare all tensor descriptor information as needed for execution
-    array<size_t, 2> offsets;
-    array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
-    SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-
-    // output cannot be input when reducing
-    if (reducingOpDims.size() > 0)
-        CheckDifferentObjects(args);
-
-    // now perform the operation
+    case 1:
     if (a.GetSOB().GetMatrixType() == MatrixType::SPARSE) // special handling of sparse op
     {
         // argmax reduction over sparse columns
         if (op == opCopy && reductionOp == opArgmax &&
             reducingOpDims.size() == 1 && reducingOpDims[0]/*.front()*/ == a.GetSOB().GetNumRows())
         {
-            GetSOB().AssignColumnwiseArgmaxOf(*a.GetSOBViewPtr());
+            y.GetSOB().AssignColumnwiseArgmaxOf(*a.GetSOBViewPtr());
             return;
         }
     }
-
-    // regular op
-    auto sobs = MakeSOBRefs(args);
-    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
-                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
-    //GetSOB().TensorOp(beta, aSob, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-}
-
-template <class ElemType>
-void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
-{
-    array<reference_wrapper<TensorView<ElemType>>, 3> args{ ViewRef(a), ViewRef(b), ViewRef(*this) };
-
-    // static int cc = 0; if (cc++ == 0)
-    //    fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
-
-    // TODO: route matrix product (and convolution later) through this API as well.
-
-    array<size_t, 3> offsets;                                         // [argIndex] (where result goes into last arg)
-    array<SmallVector<ptrdiff_t>, 3> regularStrides, reducingStrides; // [argIndex][axisIndex] (axisIndex after flattening; same dims as regular/reducingOpDims)
-    SmallVector<size_t> regularOpDims, reducingOpDims;                // [axisIndex]
-    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-
-    // output cannot be input when reducing
-    if (reducingOpDims.size() > 0)
-        CheckDifferentObjects(args);
-
+    case 2:
     // special support for sparse data: ReduceSum(ElementWiseProduct(x,y)) (same as batched Times(x,y)) and gradient.
     // This is used for batched cross-entropy computation.
     if (op == ElementWiseOperator::opElementwiseProduct && reductionOp == ElementWiseOperator::opSum &&
@@ -412,13 +337,13 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
         }
         // dot product
         {
-            let remainingElements =   GetShape().GetNumElements();                     // keeping this many elements
+            let remainingElements = y.GetShape().GetNumElements();                     // keeping this many elements
             let reducedElements   = a.GetShape().GetNumElements() / remainingElements; // summing up this many elements per result
             let inShape  = TensorShape(reducedElements, remainingElements);
             let outShape = TensorShape(1,               remainingElements);
             let  A = a.Reshaped(inShape).AsMatrix();
             let  B = b.Reshaped(inShape).AsMatrix();
-            auto C =   Reshaped(outShape).AsMatrix();
+            auto C = y.Reshaped(outShape).AsMatrix();
             return Matrix<ElemType>::InnerProduct(*A, *B, *C, true/*isColWise*/);
         }
     isNotDotProduct:
@@ -454,61 +379,21 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
             let weightShape = TensorShape(1,      width);
             let  A =   data.Reshaped(  dataShape).AsMatrix();
             let  B = weight.Reshaped(weightShape).AsMatrix(); // the weight is the second argument to ColumnwiseScaleAndWeightedAdd()
-            auto C =        Reshaped(  dataShape).AsMatrix();
+            auto C =      y.Reshaped(  dataShape).AsMatrix();
             return Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd((ElemType)1.0, *A, *B, beta, *C);
         }
     isNotDotProductGradient:;
     }
+    }
+#undef a
+#undef b
+#undef c
+#undef d
 
-    // regular case
+    // now perform the operation
     auto sobs = MakeSOBRefs(args);
-    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+    Matrix<ElemType>::TensorOp(arity, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
-    //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-}
-#endif
-
-template <class ElemType>
-void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
-{
-    array<reference_wrapper<TensorView<ElemType>>, 4> args{ ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(*this) };
-
-    // static int cc = 0; if (cc++ == 0)
-    //    fprintf(stderr, "Tensor Op: Op %d: %s, %s, %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(c.GetShape()).c_str(), string(GetShape()).c_str());
-
-    array<size_t, 4> offsets;
-    array<SmallVector<ptrdiff_t>, 4> regularStrides, reducingStrides;
-    SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-
-    // output cannot be input when reducing
-    if (reducingOpDims.size() > 0)
-        CheckDifferentObjects(args);
-
-    auto sobs = MakeSOBRefs(args);
-    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
-                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
-    //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-}
-
-template <class ElemType>
-void TensorView<ElemType>::DoQuaternaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
-{
-    array<reference_wrapper<TensorView<ElemType>>, 5> args{ ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(d), ViewRef(*this) };
-
-    array<size_t, 5> offsets;
-    array<SmallVector<ptrdiff_t>, 5> regularStrides, reducingStrides;
-    SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-
-    // output cannot be input when reducing
-    if (reducingOpDims.size() > 0)
-        CheckDifferentObjects(args);
-
-    auto sobs = MakeSOBRefs(args);
-    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
-                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
-    //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), d.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 template <class ElemType>
@@ -973,3 +858,199 @@ template class TensorView<float>;
 template class TensorView<double>;
 
 }}}
+
+#if 0
+template <class ElemType>
+void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
+{
+    array<reference_wrapper<TensorView<ElemType>>, 1> args{ ViewRef(*this) };
+
+    // A nullary op cannot reduce, but we keep it regular anyways.
+    // prepare all tensor descriptor information as needed for execution
+    array<size_t, 1> offsets;
+    array<SmallVector<ptrdiff_t>, 1> regularStrides, reducingStrides;
+    SmallVector<size_t> regularOpDims, reducingOpDims;
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // now perform the operation
+    auto sobs = MakeSOBRefs(args);
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
+    //GetSOB().TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
+template <class ElemType>
+void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
+{
+    array<reference_wrapper<TensorView<ElemType>>, 2> args{ ViewRef(a), ViewRef(*this) };
+
+    // static int cc = 0; if (cc++ == 0)
+    //    fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
+
+    // prepare all tensor descriptor information as needed for execution
+    array<size_t, 2> offsets;
+    array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
+    SmallVector<size_t> regularOpDims, reducingOpDims;
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // output cannot be input when reducing
+    if (reducingOpDims.size() > 0)
+        CheckDifferentObjects(args);
+
+    // now perform the operation
+    if (a.GetSOB().GetMatrixType() == MatrixType::SPARSE) // special handling of sparse op
+    {
+        // argmax reduction over sparse columns
+        if (op == opCopy && reductionOp == opArgmax &&
+            reducingOpDims.size() == 1 && reducingOpDims[0]/*.front()*/ == a.GetSOB().GetNumRows())
+        {
+            GetSOB().AssignColumnwiseArgmaxOf(*a.GetSOBViewPtr());
+            return;
+        }
+    }
+
+    // regular op
+    auto sobs = MakeSOBRefs(args);
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
+    //GetSOB().TensorOp(beta, aSob, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
+template <class ElemType>
+void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
+{
+    array<reference_wrapper<TensorView<ElemType>>, 3> args{ ViewRef(a), ViewRef(b), ViewRef(*this) };
+
+    // static int cc = 0; if (cc++ == 0)
+    //    fprintf(stderr, "Tensor Op: Op %d: %s op %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(GetShape()).c_str());
+
+    // TODO: route matrix product (and convolution later) through this API as well.
+
+    array<size_t, 3> offsets;                                         // [argIndex] (where result goes into last arg)
+    array<SmallVector<ptrdiff_t>, 3> regularStrides, reducingStrides; // [argIndex][axisIndex] (axisIndex after flattening; same dims as regular/reducingOpDims)
+    SmallVector<size_t> regularOpDims, reducingOpDims;                // [axisIndex]
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // output cannot be input when reducing
+    if (reducingOpDims.size() > 0)
+        CheckDifferentObjects(args);
+
+    // special support for sparse data: ReduceSum(ElementWiseProduct(x,y)) (same as batched Times(x,y)) and gradient.
+    // This is used for batched cross-entropy computation.
+    if (op == ElementWiseOperator::opElementwiseProduct && reductionOp == ElementWiseOperator::opSum &&
+        (a.GetSOB().GetMatrixType() == MatrixType::SPARSE || b.GetSOB().GetMatrixType() == MatrixType::SPARSE))
+    {
+        // special case 1: dot product
+        // Note: Because CNTK API does not allow ElementTimes with ReduceSum in one op, user writes Times() instead, and Dynamite will map it to this instead.
+        // must be reducing consecutive input values into one result value
+        // regularXX represents the map dimension; e.g. [13 x 3  x  42 x 5] * [13 x 3  x  42 x 5] --> [1 x 1  x  42 x 5]
+        // gets a reduction over 13*3 consecutive values, with result being consecutive in memory arranged in a 42 x 5 grid
+        if (reducingOpDims.size() != 1 || reducingStrides[0][0] != 1 || reducingStrides[1][0] != 1 || reducingStrides[2][0] != 0)
+            goto isNotDotProduct;
+        // inputs must be consecutive in memory also for the non-reduced axes (which gets flattened into one if condition is true)
+        if (regularOpDims.size() != 0) // (only if there are non-reduced axes)
+        {
+            let reducedElements = (int)reducingOpDims[0];
+            if (regularOpDims.size() != 1 || regularStrides[0][0] != reducedElements || regularStrides[1][0] != reducedElements || regularStrides[2][0] != 1)
+                goto isNotDotProduct;
+        }
+        // dot product
+        {
+            let remainingElements =   GetShape().GetNumElements();                     // keeping this many elements
+            let reducedElements   = a.GetShape().GetNumElements() / remainingElements; // summing up this many elements per result
+            let inShape  = TensorShape(reducedElements, remainingElements);
+            let outShape = TensorShape(1,               remainingElements);
+            let  A = a.Reshaped(inShape).AsMatrix();
+            let  B = b.Reshaped(inShape).AsMatrix();
+            auto C =   Reshaped(outShape).AsMatrix();
+            return Matrix<ElemType>::InnerProduct(*A, *B, *C, true/*isColWise*/);
+        }
+    isNotDotProduct:
+        // special case 2: gradient of dot product: scalar * vector -> vector
+        // there must be no reduction
+        if (reducingOpDims.size() != 0)
+            goto isNotDotProductGradient;
+        // at least one input must be broadcasting in the first flattened dimension, and must have at most one additional flattened dimension without broadcasting
+        if (regularOpDims.size() > 2) // input has too many non-flattened axes, not representable as a matrix
+            goto isNotDotProductGradient;
+        if (regularOpDims.size() > 0) // check the broadcasting dimension (may be missing to cater for degenerate case of all inputs being scalars)
+        {
+            if (regularStrides[0][0] != 0 && regularStrides[1][0] != 0) // one of them must broadcast
+                goto isNotDotProductGradient;
+            if (regularStrides[0][0] > 1 || regularStrides[1][0] > 1) // broadcasting dimension must be consecutive
+                goto isNotDotProductGradient;
+        }
+        if (regularOpDims.size() > 1) // check the "batch" dimension
+        {
+            let aHeight = regularStrides[0][0] == 0 ? 1 : (int)regularOpDims[0];
+            let bHeight = regularStrides[1][0] == 0 ? 1 : (int)regularOpDims[0];
+            if (regularStrides[0][1] != aHeight || regularStrides[1][1] != bHeight) // batch dimension must be consecutive in memory
+                goto isNotDotProductGradient;
+        }
+        // gradient of dot product
+        {
+            let aIsWeight = regularOpDims.size() == 0 || regularStrides[0][0] == 0; // which of the two inputs is the weight? We allow both ways.
+            let&   data = !aIsWeight ? a : b;
+            let& weight =  aIsWeight ? a : b;
+            let width  = weight.GetShape().GetNumElements();         // number of scalar weights =  "batch dim"
+            let height =   data.GetShape().GetNumElements() / width; // broadcasting into this many elements per result
+            let   dataShape = TensorShape(height, width);
+            let weightShape = TensorShape(1,      width);
+            let  A =   data.Reshaped(  dataShape).AsMatrix();
+            let  B = weight.Reshaped(weightShape).AsMatrix(); // the weight is the second argument to ColumnwiseScaleAndWeightedAdd()
+            auto C =        Reshaped(  dataShape).AsMatrix();
+            return Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd((ElemType)1.0, *A, *B, beta, *C);
+        }
+    isNotDotProductGradient:;
+    }
+
+    // regular case
+    auto sobs = MakeSOBRefs(args);
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
+    //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
+template <class ElemType>
+void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
+{
+    array<reference_wrapper<TensorView<ElemType>>, 4> args{ ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(*this) };
+
+    // static int cc = 0; if (cc++ == 0)
+    //    fprintf(stderr, "Tensor Op: Op %d: %s, %s, %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(b.GetShape()).c_str(), string(c.GetShape()).c_str(), string(GetShape()).c_str());
+
+    array<size_t, 4> offsets;
+    array<SmallVector<ptrdiff_t>, 4> regularStrides, reducingStrides;
+    SmallVector<size_t> regularOpDims, reducingOpDims;
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // output cannot be input when reducing
+    if (reducingOpDims.size() > 0)
+        CheckDifferentObjects(args);
+
+    auto sobs = MakeSOBRefs(args);
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
+    //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
+template <class ElemType>
+void TensorView<ElemType>::DoQuaternaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
+{
+    array<reference_wrapper<TensorView<ElemType>>, 5> args{ ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(d), ViewRef(*this) };
+
+    array<size_t, 5> offsets;
+    array<SmallVector<ptrdiff_t>, 5> regularStrides, reducingStrides;
+    SmallVector<size_t> regularOpDims, reducingOpDims;
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // output cannot be input when reducing
+    if (reducingOpDims.size() > 0)
+        CheckDifferentObjects(args);
+
+    auto sobs = MakeSOBRefs(args);
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
+    //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), d.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+#endif
