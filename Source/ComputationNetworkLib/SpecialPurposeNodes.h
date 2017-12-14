@@ -662,7 +662,7 @@ protected:
     double m_seqGammarLMF;
     double m_seqGammarWP;
     double m_seqGammarbMMIFactor;
-    double m_seqGammarUsesMBR;
+    bool m_seqGammarUsesMBR;
     bool m_doReferenceAlignment;
     std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
     msra::asr::simplesenonehmm m_hmm;
@@ -696,7 +696,8 @@ class SequenceWithLatticeNode : public SequenceWithSoftmaxNode<ElemType>, public
     }
 
 public:
-    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath)
+    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath,
+        float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen)
         : SequenceWithSoftmaxNode(deviceId, name)
     {
         if (sizeof(ElemType) != sizeof(float))
@@ -706,10 +707,20 @@ public:
 
         if (symListPath.size() == 0 || phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
-            
-        m_hset.loadfromfile(phonePath, stateListPath, transProbPath);
-        auto symmap = m_hset.getsymmap(); //const SYMMAP&
+        
+        m_fsSmoothingWeight = hSmoothingWeight;
+        m_frameDropThreshold = frameDropThresh;
+        m_doReferenceAlignment = doReferenceAlign;
+        m_seqGammarUsesMBR = seqGammarUsesMBR;
+        m_seqGammarAMF = seqGammarAMF;
+        m_seqGammarLMF = seqGammarLMF;
+        m_seqGammarbMMIFactor = seqGammarBMMIFactor;
+        m_seqGammarWP = seqGammarWordPen;
+
+        m_hmm.loadfromfile(phonePath, stateListPath, transProbPath);
+        auto symmap = m_hmm.getsymmap(); //const SYMMAP&
         msra::lattices::archive::getSymList(m_idmap, symListPath, symmap);
+        SetGammarCalculationParam(m_seqGammarAMF, m_seqGammarLMF, m_seqGammarWP, m_seqGammarbMMIFactor, m_seqGammarUsesMBR);
     }
 
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
@@ -718,7 +729,9 @@ public:
     }
 
     SequenceWithLatticeNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : SequenceWithLatticeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"))
+        : SequenceWithLatticeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"),
+            configp->Get(L"hSmoothingWeight"), configp->Get(L"frameDropThresh"), configp->Get(L"doReferenceAlign"), configp->Get(L"seqGammarUsesMBR"), configp->Get(L"seqGammarAMF"), configp->Get(L"seqGammarLMF"), configp->Get(L"seqGammarBMMIFactor"), configp->Get(L"seqGammarWordPen")
+        )
     {
         AttachInputsFromConfig(configp, 4);
     }
@@ -743,12 +756,31 @@ public:
     {
         Base::Save(fstream);
         fstream << m_idmap;
+        fstream << m_hmm;
+        fstream << m_frameDropThreshold;
+        fstream << m_fsSmoothingWeight;
+        fstream << m_seqGammarAMF;
+        fstream << m_seqGammarLMF;
+        fstream << m_seqGammarWP;
+        fstream << m_seqGammarbMMIFactor;
+        fstream << m_seqGammarUsesMBR;
+        fstream << m_doReferenceAlignment;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
         fstream >> m_idmap;
+        fstream >> m_hmm;
+        fstream >> m_frameDropThreshold;
+        fstream >> m_fsSmoothingWeight;
+        fstream >> m_seqGammarAMF;
+        fstream >> m_seqGammarLMF;
+        fstream >> m_seqGammarWP;
+        fstream >> m_seqGammarbMMIFactor;
+        fstream >> m_seqGammarUsesMBR;
+        fstream >> m_doReferenceAlignment;
+        SetGammarCalculationParam(m_seqGammarAMF, m_seqGammarLMF, m_seqGammarWP, m_seqGammarbMMIFactor, m_seqGammarUsesMBR);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -777,7 +809,6 @@ public:
 
 private: 
     msra::lattices::archive::symbolidmapping m_idmap;
-    msra::asr::simplesenonehmm m_hset;
 };
 
 template class SequenceWithLatticeNode<float>;
