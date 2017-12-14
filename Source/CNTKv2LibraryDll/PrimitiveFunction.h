@@ -277,6 +277,14 @@ namespace CNTK
         static const std::wstring AttributeNameSymListPath;
         static const std::wstring AttributeNameStateListPath;
         static const std::wstring AttributeNameTransProbPath;
+        static const std::wstring AttributeNameHSmoothingWeight;
+        static const std::wstring AttributeNameFrameDropThresh;
+        static const std::wstring AttributeNameDoReferenceAlign;
+        static const std::wstring AttributeNameSeqGammarUsesMBR;
+        static const std::wstring AttributeNameSeqGammarAMF;
+        static const std::wstring AttributeNameSeqGammarLMF;
+        static const std::wstring AttributeNameSeqGammarBMMIFactor;
+        static const std::wstring AttributeNameSeqGammarWordPen;
         static const std::wstring AttributeNameNumClass;
         static const std::wstring AttributeNameOneHotOutputSparse;
         static const std::wstring AttributeNameOneHotAxis;
