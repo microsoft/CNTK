@@ -74,7 +74,7 @@ static bool Matches(size_t d1, size_t d2) // do two dimensions match?
 }
 
 template <class ElemType, size_t N>
-static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>& offsets,
+static void PrepareTensorOperands(const array<reference_wrapper<TensorView<ElemType>>, N>& args, array<size_t, N>& offsets,
                                   SmallVector<size_t>& regularOpDims,
                                   array<SmallVector<ptrdiff_t>, N>& regularStrides,
                                   SmallVector<size_t>& reducingOpDims,
@@ -88,10 +88,15 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
     // E.g. A(J) vs. B(J x T) will broadcast A(:) to all T columns.
     // To broadcast an A(T) to all J rows of B, use TensorShape editing to insert a dimension to get A(1,T).
     // We require a minimum rank of 1 (rank 0 is a scalar), as some code may rely on it.
+    array<TensorShape, N> shapes; // we modify the shapes in-place, so make a copy
     size_t dims = 1;
     for (size_t i = 0; i < N; i++)
+    {
+        const TensorView<ElemType>& arg = args[i];
+        shapes[i] = arg.GetShape(); // make a copy
         if (dims < shapes[i].GetRank())
             dims = shapes[i].GetRank();
+    }
     for (size_t i = 0; i < N; i++)
         if (shapes[i].GetRank() < dims)
             shapes[i].PadRankInPlace(dims);
@@ -292,7 +297,7 @@ void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementW
     array<size_t, 1> offsets;
     array<SmallVector<ptrdiff_t>, 1> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands<ElemType, 1>(array<TensorShape, 1>{GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // now perform the operation
     auto sobs = MakeSOBRefs(args);
@@ -313,7 +318,7 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
     array<size_t, 2> offsets;
     array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands<ElemType, 2>(array<TensorShape, 2>{a.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
     if (reducingOpDims.size() > 0)
@@ -351,7 +356,7 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     array<size_t, 3> offsets;                                         // [argIndex] (where result goes into last arg)
     array<SmallVector<ptrdiff_t>, 3> regularStrides, reducingStrides; // [argIndex][axisIndex] (axisIndex after flattening; same dims as regular/reducingOpDims)
     SmallVector<size_t> regularOpDims, reducingOpDims;                // [axisIndex]
-    PrepareTensorOperands<ElemType, 3>(array<TensorShape, 3>{a.GetShape(), b.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
     if (reducingOpDims.size() > 0)
@@ -444,7 +449,7 @@ void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, con
     array<size_t, 4> offsets;
     array<SmallVector<ptrdiff_t>, 4> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands<ElemType, 4>(array<TensorShape, 4>{a.GetShape(), b.GetShape(), c.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
     if (reducingOpDims.size() > 0)
@@ -464,7 +469,7 @@ void TensorView<ElemType>::DoQuaternaryOpOf(ElemType beta, const TensorView& a, 
     array<size_t, 5> offsets;
     array<SmallVector<ptrdiff_t>, 5> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands<ElemType, 5>(array<TensorShape, 5>{a.GetShape(), b.GetShape(), c.GetShape(), d.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
     if (reducingOpDims.size() > 0)
@@ -485,7 +490,7 @@ void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOp
     array<size_t, 2> offsets;
     array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    PrepareTensorOperands<ElemType, 2>(array<TensorShape, 2>{a.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
     if (reducingOpDims.size() > 0)
