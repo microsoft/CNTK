@@ -35,6 +35,7 @@
 
 #define FCLOSE_SUCCESS 0
 /* guoye: start */
+/*
 #include "basetypes.h" //for attemp()
 #include "ProgressTracing.h"
 #include <unistd.h>
@@ -46,6 +47,7 @@
 #include <limits.h>
 #include <memory>
 #include <cwctype>
+*/
 // using namespace Microsoft::MSR::CNTK;
 /* guoye: end */
 
@@ -931,6 +933,6 @@ std::string ws2s(const std::wstring& wstr);
 
 
 /* guoye: start */
-// #include "../fileutil.cpp"
+#include "../fileutil.cpp"
 /* guoye: end */
 #endif // _FILEUTIL_

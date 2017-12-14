@@ -60,7 +60,7 @@
 #include <errno.h>
 
 // using namespace std;
-using namespace Microsoft::MSR::CNTK;
+// using namespace Microsoft::MSR::CNTK;
 
 // All sizes are in bytes
 const int BUF_SIZE = 1000000;                       // Default buffer size 
