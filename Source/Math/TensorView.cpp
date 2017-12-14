@@ -255,11 +255,29 @@ static inline Span<T*> MakeArgSpan(array<T, N>& args)
 {
     return Span<T*>(args.data(), args.size());
 }
-template<typename ElemType>
+template<typename ElemType> // remove/inline
 reference_wrapper<Matrix<ElemType>> SOBRef(const TensorView<ElemType>& arg) // helper to convert a const& into a non-const* for passing it on
 {
     return ref(const_cast<TensorView<ElemType>&>(arg).GetSOB());
 }
+template<typename ElemType>
+reference_wrapper<TensorView<ElemType>> ViewRef(const TensorView<ElemType>& arg) // helper to convert a const& into a non-const reference_wrapper for passing it on
+{
+    return ref(const_cast<TensorView<ElemType>&>(arg));
+}
+// convert args to SOB array. C++ cannot initialize std::array from iterators, so we need to do this manually with macros. Not nice.
+#define AS(i) ((TensorView<ElemType>&)args[i]).GetSOB()
+#define DefineMakeSOBRefs(N, LIST) \
+template<typename ElemType> \
+array<reference_wrapper<Matrix<ElemType>>, N> MakeSOBRefs(const array<reference_wrapper<TensorView<ElemType>>, N>& args) \
+{ \
+    return array<reference_wrapper<Matrix<ElemType>>, N> LIST; \
+}
+DefineMakeSOBRefs(1, ({ AS(0) }))
+DefineMakeSOBRefs(2, ({ AS(0), AS(1) }))
+DefineMakeSOBRefs(3, ({ AS(0), AS(1), AS(2) }))
+DefineMakeSOBRefs(4, ({ AS(0), AS(1), AS(2), AS(3) }))
+DefineMakeSOBRefs(5, ({ AS(0), AS(1), AS(2), AS(3), AS(4) }))
 template <class ElemType>
 void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {
@@ -268,7 +286,8 @@ void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementW
     array<size_t, 1> offsets;
     array<SmallVector<ptrdiff_t>, 1> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    array<reference_wrapper<Matrix<ElemType>>, 1> sobs{ SOBRef(*this) };
+    array<reference_wrapper<TensorView<ElemType>>, 1> args{ ViewRef(*this) };
+    auto sobs = MakeSOBRefs(args);
     PrepareTensorOperands<ElemType, 1>(array<TensorShape, 1>{GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // now perform the operation
@@ -440,7 +459,7 @@ void TensorView<ElemType>::DoQuaternaryOpOf(ElemType beta, const TensorView& a, 
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this) && CheckDifferentObject(c, *this) && CheckDifferentObject(d, *this);
 
     array<reference_wrapper<Matrix<ElemType>>, 5> sobs{ SOBRef(a), SOBRef(b), SOBRef(c), SOBRef(d), SOBRef(*this) };
-    Matrix<ElemType>::TensorOp(sobs.size()-1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), d.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
