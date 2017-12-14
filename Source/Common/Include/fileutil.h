@@ -46,7 +46,7 @@
 #include <limits.h>
 #include <memory>
 #include <cwctype>
-using namespace Microsoft::MSR::CNTK;
+// using namespace Microsoft::MSR::CNTK;
 /* guoye: end */
 
 // ----------------------------------------------------------------------------
