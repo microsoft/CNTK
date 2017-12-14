@@ -242,6 +242,31 @@ static const wchar_t* strchr(const wchar_t* s, wchar_t v)
     return wcschr(s, v);
 }
 
+/* guoye: start */
+// move the definition before the usage in function fopenStdHandle
+// ----------------------------------------------------------------------------
+// set mode to binary or text (pass 'b' or 't')
+// ----------------------------------------------------------------------------
+
+void fsetmode(FILE* f, char type)
+{
+	if (type != 'b' && type != 't')
+	{
+		RuntimeError("fsetmode: invalid type '%c'", type);
+	}
+#ifdef UNDER_CE           // winCE and win32 have different return types for _fileno
+	FILE* fd = fileno(f); // note: no error check possible
+#else
+	int fd = fileno(f); // note: no error check possible
+#endif
+	int rc = (type == 'b' ? SET_BINARY_MODE(fd) : SET_TEXT_MODE(fd));
+	if (rc == -1)
+	{
+		RuntimeError("error changing file mode: %s", strerror(errno));
+	}
+}
+/* guoye: end */
+
 // pathname is "-" -- open stdin or stdout. Changes bin mode if 'b' or 't' given.
 template <class _T>
 FILE* fopenStdHandle(const _T* mode)
@@ -282,27 +307,7 @@ FILE* fopenOrDie(const wstring& pathname, const wchar_t* mode)
     return f;
 }
 
-// ----------------------------------------------------------------------------
-// set mode to binary or text (pass 'b' or 't')
-// ----------------------------------------------------------------------------
 
-void fsetmode(FILE* f, char type)
-{
-    if (type != 'b' && type != 't')
-    {
-        RuntimeError("fsetmode: invalid type '%c'", type);
-    }
-#ifdef UNDER_CE           // winCE and win32 have different return types for _fileno
-    FILE* fd = fileno(f); // note: no error check possible
-#else
-    int fd = fileno(f); // note: no error check possible
-#endif
-    int rc = (type == 'b' ? SET_BINARY_MODE(fd) : SET_TEXT_MODE(fd));
-    if (rc == -1)
-    {
-        RuntimeError("error changing file mode: %s", strerror(errno));
-    }
-}
 
 // ----------------------------------------------------------------------------
 // freadOrDie(): like fread() but terminate with err msg in case of error
