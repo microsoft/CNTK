@@ -656,6 +656,13 @@ public:
 
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c);
 
+    template<typename IteratorType>
+    using Span = ::CNTK::Span<IteratorType>;
+    static void TensorOp(size_t arity, const Span<Matrix**>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
+                         const Span<size_t*>& offsets,
+                         const SmallVector<size_t>& regularOpDims,  const Span<SmallVector<ptrdiff_t>*>& regularStrides,
+                         const SmallVector<size_t>& reducingOpDims, const Span<SmallVector<ptrdiff_t>*>& reducingStrides);
+private:
     void TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 1>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& regularStrides,
@@ -676,6 +683,7 @@ public:
                   const std::array<size_t, 5>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
+public:
 
     void TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
                      const std::array<size_t, 2>& offsets,

@@ -187,6 +187,9 @@ public:
     ForAllQuaternaryOps(DeclareQuaternaryTensorOp);
 #pragma pop_macro("DeclareQuaternaryTensorOp")
 
+    template<typename IteratorType>
+    using Span = ::CNTK::Span<IteratorType>;
+    void DoNaryOpOf(size_t arity, Span<TensorView*> args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta);
     void DoNullaryOpOf   (ElemType beta,                                                                                     ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
     void DoUnaryOpOf     (ElemType beta, const TensorView& a,                                                                ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
     void DoBinaryOpOf    (ElemType beta, const TensorView& a, const TensorView& b,                                           ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
