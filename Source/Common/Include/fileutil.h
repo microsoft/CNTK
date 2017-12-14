@@ -917,6 +917,6 @@ std::string ws2s(const std::wstring& wstr);
 
 
 /* guoye: start */
-// #include "Source/Common/fileutil.cpp"
+#include "../fileutil.cpp"
 /* guoye: end */
 #endif // _FILEUTIL_
