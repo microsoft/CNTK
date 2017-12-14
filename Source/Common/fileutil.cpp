@@ -276,8 +276,12 @@ FILE* fopenStdHandle(const _T* mode)
         fsetmode(f, strchr(mode, 'b') ? 'b' : 't');
     return f;
 }
-
+/* guoye: start */
+/*
 FILE* fopenOrDie(const string& pathname, const char* mode)
+*/
+FILE* fopenOrDie(const std::string& pathname, const char* mode)
+/* guoye: end */
 {
     FILE* f = (pathname[0] == '-') ? fopenStdHandle(mode) : fopen(pathname.c_str(), mode);
     if (f == NULL)
