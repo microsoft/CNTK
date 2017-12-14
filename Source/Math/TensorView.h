@@ -190,7 +190,7 @@ public:
 private:
     // all different arities are routed through a single function template
     template<size_t N> static void Do(size_t arity, const std::array<std::reference_wrapper<TensorView<ElemType>>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta);
-    std::reference_wrapper<TensorView> ViewRef(const TensorView& arg) { return std::ref(const_cast<TensorView&>(arg)); } // helper for calling Do()
+    static std::reference_wrapper<TensorView> ViewRef(const TensorView& arg) { return std::ref(const_cast<TensorView&>(arg)); } // helper for calling Do()
 public:
     inline void DoNullaryOpOf   (ElemType beta,                                                                                     ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do(0, std::array<std::reference_wrapper<TensorView<ElemType>>, 1>{                                                 ViewRef(*this) }, op, reductionOp, alpha, beta); }
     inline void DoUnaryOpOf     (ElemType beta, const TensorView& a,                                                                ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do(1, std::array<std::reference_wrapper<TensorView<ElemType>>, 2>{ ViewRef(a),                                     ViewRef(*this) }, op, reductionOp, alpha, beta); }

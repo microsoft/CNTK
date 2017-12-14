@@ -257,24 +257,20 @@ static inline Span<T*> MakeArgSpan(array<T, N>& args)
 {
     return Span<T*>(args.data(), args.size());
 }
-template<typename ElemType> // remove/inline
-reference_wrapper<Matrix<ElemType>> SOBRef(const TensorView<ElemType>& arg) // helper to convert a const& into a non-const* for passing it on
+
+// thanks to STL for helping with template magic
+template <typename T, typename F, size_t N, size_t... Indices>
+array<reference_wrapper<typename remove_reference<typename result_of<F(T&)>::type>::type>, N> static MapRefArrayHelper(const array<reference_wrapper<T>, N>& args, const F& f, index_sequence<Indices...>)
 {
-    return ref(const_cast<TensorView<ElemType>&>(arg).GetSOB());
+    return{ { ref(f(args[Indices]))... } };
 }
-// convert args to SOB array. C++ cannot initialize std::array from iterators, so we need to do this manually with macros. Not nice.
-#define AS(i) ((TensorView<ElemType>&)args[i]).GetSOB()
-#define DefineMakeSOBRefs(N, LIST) \
-template<typename ElemType> \
-array<reference_wrapper<Matrix<ElemType>>, N> MakeSOBRefs(const array<reference_wrapper<TensorView<ElemType>>, N>& args) \
-{ \
-    return array<reference_wrapper<Matrix<ElemType>>, N> LIST; \
+template <typename T, typename F, size_t N>
+array<reference_wrapper<typename remove_reference<typename result_of<F(T&)>::type>::type>, N> static MapRefArray(const array<reference_wrapper<T>, N>& args, const F& f)
+{
+    return MapRefArrayHelper(args, f, make_index_sequence<N>{});
 }
-DefineMakeSOBRefs(1, ({ AS(0) }))
-DefineMakeSOBRefs(2, ({ AS(0), AS(1) }))
-DefineMakeSOBRefs(3, ({ AS(0), AS(1), AS(2) }))
-DefineMakeSOBRefs(4, ({ AS(0), AS(1), AS(2), AS(3) }))
-DefineMakeSOBRefs(5, ({ AS(0), AS(1), AS(2), AS(3), AS(4) }))
+
+// single entry point for TensorView execution
 template<typename ElemType>
 template<size_t N>
 /*static*/ void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<TensorView<ElemType>>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta)
@@ -392,11 +388,12 @@ template<size_t N>
 //#undef d
 
     // now perform the operation
-    auto sobs = MakeSOBRefs(args);
+    auto sobs = MapRefArray(args, [](TensorView<ElemType>& arg) -> Matrix<ElemType>& { return arg.GetSOB(); }); // get all storage objects
     Matrix<ElemType>::TensorOp(arity, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
 }
 
+// TODO: can we unify this interface as well and go through Do()? It seems internally, TensorArgOp() already does that.
 template <class ElemType>
 void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOperator reductionOp)
 {
