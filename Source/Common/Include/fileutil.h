@@ -35,21 +35,6 @@
 
 #define FCLOSE_SUCCESS 0
 
-/* guoye: start */
-#include "basetypes.h" //for attemp()
-#include "ProgressTracing.h"
-#include <unistd.h>
-#include <glob.h>
-#include <dirent.h>
-#include <sys/sendfile.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <limits.h>
-#include <memory>
-#include <cwctype>
-// using namespace std;
-using namespace Microsoft::MSR::CNTK;
-/* guoye: end */
 // ----------------------------------------------------------------------------
 // fopenOrDie(): like fopen() but terminate with err msg in case of error.
 // A pathname of "-" returns stdout or stdin, depending on mode, and it will
@@ -932,6 +917,6 @@ std::string ws2s(const std::wstring& wstr);
 
 
 /* guoye: start */
-// #include "../fileutil.cpp"
+#include "../fileutil.cpp"
 /* guoye: end */
 #endif // _FILEUTIL_

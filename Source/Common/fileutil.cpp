@@ -59,7 +59,7 @@
 
 #include <errno.h>
 
-//using namespace std;
+// using namespace std;
 using namespace Microsoft::MSR::CNTK;
 
 // All sizes are in bytes
