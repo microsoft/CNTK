@@ -9,7 +9,9 @@
 
 #include "Basics.h"
 #include "fileutil.h" // for opening/reading the ARPA file
-#include "fileutil.cpp"
+/* guoye: start */
+// #include "fileutil.cpp"
+/* guoye: end */
 #include <vector>
 #include <string>
 #include <unordered_map>
