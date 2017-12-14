@@ -268,11 +268,11 @@ void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementW
     array<size_t, 1> offsets;
     array<SmallVector<ptrdiff_t>, 1> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    array<reference_wrapper<Matrix<ElemType>>, 1> args{ SOBRef(*this) };
+    array<reference_wrapper<Matrix<ElemType>>, 1> sobs{ SOBRef(*this) };
     PrepareTensorOperands<ElemType, 1>(array<TensorShape, 1>{GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // now perform the operation
-    Matrix<ElemType>::TensorOp(args.size() - 1, MakeArgSpan(args), op, reductionOp, alpha, beta,
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
@@ -287,7 +287,7 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
     array<size_t, 2> offsets;
     array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    array<reference_wrapper<Matrix<ElemType>>, 2> args{ SOBRef(a), SOBRef(*this) };
+    array<reference_wrapper<Matrix<ElemType>>, 2> sobs{ SOBRef(a), SOBRef(*this) };
     PrepareTensorOperands<ElemType, 2>(array<TensorShape, 2>{a.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
@@ -295,7 +295,7 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
         CheckDifferentObject(a, *this);
 
     // now perform the operation
-    Matrix<ElemType>& aSob = args[0];
+    Matrix<ElemType>& aSob = sobs[0];
     if (aSob.GetMatrixType() == MatrixType::SPARSE) // special handling of sparse op
     {
         // argmax reduction over sparse columns
@@ -308,7 +308,7 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
     }
 
     // regular op
-    Matrix<ElemType>::TensorOp(args.size() - 1, MakeArgSpan(args), op, reductionOp, alpha, beta,
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, aSob, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
@@ -324,7 +324,7 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     array<size_t, 3> offsets;                                         // [argIndex] (where result goes into last arg)
     array<SmallVector<ptrdiff_t>, 3> regularStrides, reducingStrides; // [argIndex][axisIndex] (axisIndex after flattening; same dims as regular/reducingOpDims)
     SmallVector<size_t> regularOpDims, reducingOpDims;                // [axisIndex]
-    array<reference_wrapper<Matrix<ElemType>>, 3> args{ SOBRef(a), SOBRef(b), SOBRef(*this) };
+    array<reference_wrapper<Matrix<ElemType>>, 3> sobs{ SOBRef(a), SOBRef(b), SOBRef(*this) };
     PrepareTensorOperands<ElemType, 3>(array<TensorShape, 3>{a.GetShape(), b.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
@@ -401,7 +401,7 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
     }
 
     // regular case
-    Matrix<ElemType>::TensorOp(args.size() - 1, MakeArgSpan(args), op, reductionOp, alpha, beta,
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
@@ -415,14 +415,14 @@ void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, con
     array<size_t, 4> offsets;
     array<SmallVector<ptrdiff_t>, 4> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    array<reference_wrapper<Matrix<ElemType>>, 4> args{ SOBRef(a), SOBRef(b), SOBRef(c), SOBRef(*this) };
+    array<reference_wrapper<Matrix<ElemType>>, 4> sobs{ SOBRef(a), SOBRef(b), SOBRef(c), SOBRef(*this) };
     PrepareTensorOperands<ElemType, 4>(array<TensorShape, 4>{a.GetShape(), b.GetShape(), c.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this) && CheckDifferentObject(c, *this);
 
-    Matrix<ElemType>::TensorOp(args.size() - 1, MakeArgSpan(args), op, reductionOp, alpha, beta,
+    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
@@ -439,8 +439,8 @@ void TensorView<ElemType>::DoQuaternaryOpOf(ElemType beta, const TensorView& a, 
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this) && CheckDifferentObject(b, *this) && CheckDifferentObject(c, *this) && CheckDifferentObject(d, *this);
 
-    array<reference_wrapper<Matrix<ElemType>>, 5> args{ SOBRef(a), SOBRef(b), SOBRef(c), SOBRef(d), SOBRef(*this) };
-    Matrix<ElemType>::TensorOp(args.size()-1, MakeArgSpan(args), op, reductionOp, alpha, beta,
+    array<reference_wrapper<Matrix<ElemType>>, 5> sobs{ SOBRef(a), SOBRef(b), SOBRef(c), SOBRef(d), SOBRef(*this) };
+    Matrix<ElemType>::TensorOp(sobs.size()-1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), c.GetSOB(), d.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
@@ -452,7 +452,7 @@ void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOp
     array<size_t, 2> offsets;
     array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
     SmallVector<size_t> regularOpDims, reducingOpDims;
-    array<reference_wrapper<Matrix<ElemType>>, 2> args{ SOBRef(a), SOBRef(*this) };
+    array<reference_wrapper<Matrix<ElemType>>, 2> sobs{ SOBRef(a), SOBRef(*this) };
     PrepareTensorOperands<ElemType, 2>(array<TensorShape, 2>{a.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
     // output cannot be input when reducing
