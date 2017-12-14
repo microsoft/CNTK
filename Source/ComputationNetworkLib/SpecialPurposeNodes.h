@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
+#include "ProgressTracing.h"
 
 #include <fstream>
 
@@ -698,16 +699,16 @@ class SequenceWithLatticeNode : public SequenceWithSoftmaxNode<ElemType>, public
 public:
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath,
         float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen)
-        : SequenceWithSoftmaxNode(deviceId, name)
+        : SequenceWithSoftmaxNode(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath)
     {
         if (sizeof(ElemType) != sizeof(float))
             LogicError("SequenceWithLatticeNode currently only supports floats.\n"); // due to the binary reader restrictions 
 
-        fprintf(stderr, "Reading files\n %ls \n %ls \n %ls \n %ls \n", symListPath.c_str(), phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
-
         if (symListPath.size() == 0 || phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
         
+        InitSEParams(symListPath, phonePath, stateListPath, transProbPath);
+
         m_fsSmoothingWeight = hSmoothingWeight;
         m_frameDropThreshold = frameDropThresh;
         m_doReferenceAlignment = doReferenceAlign;
@@ -717,9 +718,6 @@ public:
         m_seqGammarbMMIFactor = seqGammarBMMIFactor;
         m_seqGammarWP = seqGammarWordPen;
 
-        m_hmm.loadfromfile(phonePath, stateListPath, transProbPath);
-        auto symmap = m_hmm.getsymmap(); //const SYMMAP&
-        msra::lattices::archive::getSymList(m_idmap, symListPath, symmap);
         SetGammarCalculationParam(m_seqGammarAMF, m_seqGammarLMF, m_seqGammarWP, m_seqGammarbMMIFactor, m_seqGammarUsesMBR);
     }
 
@@ -755,8 +753,10 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_idmap;
-        fstream << m_hmm;
+        fstream << m_symListPath;
+        fstream << m_phonePath;
+        fstream << m_stateListPath;
+        fstream << m_transProbPath;
         fstream << m_frameDropThreshold;
         fstream << m_fsSmoothingWeight;
         fstream << m_seqGammarAMF;
@@ -770,8 +770,10 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_idmap;
-        fstream >> m_hmm;
+        fstream >> m_symListPath;
+        fstream >> m_phonePath;
+        fstream >> m_stateListPath;
+        fstream >> m_transProbPath;
         fstream >> m_frameDropThreshold;
         fstream >> m_fsSmoothingWeight;
         fstream >> m_seqGammarAMF;
@@ -780,6 +782,7 @@ public:
         fstream >> m_seqGammarbMMIFactor;
         fstream >> m_seqGammarUsesMBR;
         fstream >> m_doReferenceAlignment;
+        InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
         SetGammarCalculationParam(m_seqGammarAMF, m_seqGammarLMF, m_seqGammarWP, m_seqGammarbMMIFactor, m_seqGammarUsesMBR);
     }
 
@@ -804,11 +807,22 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         SequenceWithSoftmaxNode::RequestMatricesBeforeForwardProp(matrixPool);
-        Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
+        //Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
     }
 
 private: 
     msra::lattices::archive::symbolidmapping m_idmap;
+    std::wstring m_symListPath;
+    std::wstring m_phonePath;
+    std::wstring m_stateListPath;
+    std::wstring m_transProbPath;
+
+    void InitSEParams(const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath) {
+        LOGPRINTF(stderr, "Reading files\n %ls \n %ls \n %ls \n %ls \n", symListPath.c_str(), phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
+        m_hmm.loadfromfile(phonePath, stateListPath, transProbPath);
+        auto symmap = m_hmm.getsymmap(); 
+        msra::lattices::archive::getSymList(m_idmap, symListPath, symmap);
+    }
 };
 
 template class SequenceWithLatticeNode<float>;
