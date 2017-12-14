@@ -48,7 +48,7 @@
 #include <memory>
 #include <cwctype>
 // using namespace std;
-// using namespace Microsoft::MSR::CNTK;
+using namespace Microsoft::MSR::CNTK;
 /* guoye: end */
 // ----------------------------------------------------------------------------
 // fopenOrDie(): like fopen() but terminate with err msg in case of error.
