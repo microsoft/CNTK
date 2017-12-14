@@ -288,22 +288,33 @@ void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<Tensor
     SmallVector<size_t> regularOpDims, reducingOpDims;
     PrepareTensorOperands(args, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 
+    // output cannot be input when reducing
+    if (reducingOpDims.size() > 0 && arity > 0)
+        CheckDifferentObjects(args);
+
+    // use macros for now during code transformation, so that we can diff
+#define a ((const TensorView<ElemType>&)args[0]))
+#define b ((const TensorView<ElemType>&)args[1]))
+#define c ((const TensorView<ElemType>&)args[2]))
+#define d ((const TensorView<ElemType>&)args[3]))
+    TensorView<ElemType>& y = args.back();
+
+    // special cases
+    //  - short-circuit operations for which a CUDA implementation exists, assuming it will be faster
+    //  - sparse support for some operations. We intercept here (Matrix::TensorOp() does not support sparse)
+    switch (arity)
+    {
+    }
+#undef a
+#undef b
+#undef c
+#undef d
+
     // now perform the operation
     auto sobs = MakeSOBRefs(args);
-    Matrix<ElemType>::TensorOp(sobs.size() - 1, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
+    Matrix<ElemType>::TensorOp(arity, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
 }
-template void TensorView<float>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<float>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<float>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<float>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<float>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<double>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-template void TensorView<double>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-template void TensorView<double>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-template void TensorView<double>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-template void TensorView<double>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-
 #if 0
 template <class ElemType>
 void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
@@ -323,7 +334,6 @@ void TensorView<ElemType>::DoNullaryOpOf(ElemType beta, ElemType alpha, ElementW
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
-#endif
 
 template <class ElemType>
 void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
@@ -456,6 +466,7 @@ void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, cons
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
     //GetSOB().TensorOp(beta, a.GetSOB(), b.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
+#endif
 
 template <class ElemType>
 void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
@@ -518,6 +529,17 @@ void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOp
     // now perform the operation
     GetSOB().TensorArgOp(a.GetSOB(), reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
+
+template void TensorView<float>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<float>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<float>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<float>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<float>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template void TensorView<double>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template void TensorView<double>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template void TensorView<double>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template void TensorView<double>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template void TensorView<double>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
 
 // -------------------------------------------------------------------
 // matrix product -- GEMM for flattened tensors
