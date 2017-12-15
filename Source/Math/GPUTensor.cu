@@ -476,11 +476,11 @@ struct TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*m=*/-1>
 };
 
 // -----------------------------------------------------------------------
-// perform loop over regular index k for NUM_ARGS-nary operations (NUM_ARGS counting the output)
+// perform loop over regular index k for (NUM_ARGS-1)-ary operations
 // -----------------------------------------------------------------------
 
 // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
-template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE, C_int k>
+template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE, C_int REGULAR_AXIS>
 struct TensorOpElement
 {
     // template-recursive version loops over indices
@@ -492,32 +492,32 @@ struct TensorOpElement
                                    CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
                                    FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
     {
-        // map id (location on grid) to index[k]
+        // map id (location on grid) to index[REGULAR_AXIS]
 #ifndef USE_FAST_DIVMOD
-        C_size_t stride = regularOpStrides[(C_size_t) k];
+        C_size_t stride = regularOpStrides[(C_size_t) REGULAR_AXIS];
         C_size_t index = id / stride; // this dimension
         // id = id % stride;             // remaining dimensions inside this
         id = id - stride*index;             // remaining dimensions inside this
 #else
         C_size_t index;
-        regularOpStrideDivmod[k].divmod(id, index, id);
+        regularOpStrideDivmod[REGULAR_AXIS].divmod(id, index, id);
 #endif
         // apply this index to the pointers
         #pragma unroll
         for (C_size_t i = 0; i < NUM_ARGS; i++) {
-            pointers[i] += index * regularStrides(i, (C_size_t) k); // now this dimension is taken care of
+            pointers[i] += index * regularStrides(i, (C_size_t) REGULAR_AXIS); // now this dimension is taken care of
         }
         // process the previous index
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, k - 1>::Compute(
+        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, REGULAR_AXIS - 1>::Compute(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
     }
 };
 
-// specialization for k=0 where op stride is guaranteed to be 1
+// specialization for REGULAR_AXIS=0 where op stride is guaranteed to be 1
 template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
-struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, /*k=*/0>
+struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, /*REGULAR_AXIS=*/0>
 {
     // template-recursive version loops over indices
     template<class ElemType>
@@ -528,7 +528,7 @@ struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, 
                                    CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
                                    FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
     {
-        // map id (location on grid) to index[k]
+        // map id (location on grid) to index[REGULAR_AXIS]
         C_size_t index = id; // this dimension
         // apply this index to the pointers
         #pragma unroll
@@ -544,9 +544,9 @@ struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, 
     }
 };
 
-// specialization for k = -1 terminates the template recursion, and computes reductions in a for loop
+// specialization for REGULAR_AXIS=-1 terminates the template recursion, and computes reductions in a for loop
 template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK>
-struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/false, /*k=*/-1>
+struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/false, /*REGULAR_AXIS=*/-1>
 {
     // template-recursion-teminating version computes the actual value for this output location
     // now the output pointers point to the right element (input pointers may still iterate for reduction)
@@ -576,9 +576,9 @@ struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE
 
 #undef ALLOW_ATOMIC_REDUCTION // undefine to disable use of atomicAdd() below, for testing it
 
-// specialization for k = -1 terminates the template recursion, and computes reductions in parallel
+// specialization for REGULAR_AXIS=-1 terminates the template recursion, and computes reductions in parallel
 template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK>
-struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/true, /*k=*/-1>
+struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/true, /*REGULAR_AXIS=*/-1>
 {
     // template-recursion-teminating version computes the actual value for this output location
     // now the output pointers point to the right element (input pointers may still iterate for reduction)
@@ -658,12 +658,12 @@ struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE
 };
 
 // -----------------------------------------------------------------------
-// perform loop over regular index k for NUM_ARGS-nary operations (NUM_ARGS counting the output)
+// perform loop over regular index REGULAR_AXIS for NUM_ARGS-nary operations (NUM_ARGS counting the output)
 // keep track of the indices.
 // -----------------------------------------------------------------------
 
 // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
-template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, C_int k>
+template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, C_int REGULAR_AXIS>
 struct TensorArgOpElement
 {
     // template-recursive version loops over indices
@@ -674,30 +674,30 @@ struct TensorArgOpElement
                                    CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
                                    FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
     {
-        // map id (location on grid) to index[k]
+        // map id (location on grid) to index[REGULAR_AXIS]
 #ifndef USE_FAST_DIVMOD
-        C_size_t stride = regularOpStrides[(C_size_t)k];
+        C_size_t stride = regularOpStrides[(C_size_t)REGULAR_AXIS];
         C_size_t index = id / stride; // this dimension
                                       // id = id % stride;             // remaining dimensions inside this
         id = id - stride*index;             // remaining dimensions inside this
 #else
         C_size_t index;
-        regularOpStrideDivmod[k].divmod(id, index, id);
+        regularOpStrideDivmod[REGULAR_AXIS].divmod(id, index, id);
 #endif
         // apply this index to the pointers
 #pragma unroll
         for (C_size_t i = 0; i < NUM_ARGS; i++) {
-            pointers[i] += index * regularStrides(i, (C_size_t)k); // now this dimension is taken care of
+            pointers[i] += index * regularStrides(i, (C_size_t)REGULAR_AXIS); // now this dimension is taken care of
         }
         // process the previous index
-        TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, k - 1>::Compute(id, pointers, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
+        TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, REGULAR_AXIS - 1>::Compute(id, pointers, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
     }
 };
 
-// specialization for k = -1 terminates the template recursion, and computes reductions in a for loop
+// specialization for REGULAR_AXIS=-1 terminates the template recursion, and computes reductions in a for loop
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK>
-struct TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*k=*/-1>
+struct TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*REGULAR_AXIS=*/-1>
 {
     // template-recursion-teminating version computes the actual value for this output location
     // now the output pointers point to the right element (input pointers may still iterate for reduction)
@@ -737,7 +737,7 @@ __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, NUM_ARGS> p
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements) // note: there are no __syncthread() calls inside
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, false, REGULAR_RANK - 1>::Compute(
+        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, false, /*REGULAR_AXIS=*/REGULAR_RANK - 1>::Compute(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, 0, 0,
             regularOpStrideDivmod, reducingOpDimDivmod);
@@ -752,7 +752,7 @@ __global__ void _launchTensorArgOp(FixedArray<ElemType*, NUM_ARGS> pointers,
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements) // note: there are no __syncthread() calls inside
-        TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, REGULAR_RANK - 1>::Compute(
+        TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*REGULAR_AXIS=*/REGULAR_RANK - 1>::Compute(
             id, pointers,
             reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, 0, 0,
             regularOpStrideDivmod, reducingOpDimDivmod);
@@ -769,12 +769,12 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, NUM_ARGS> pointerVect
     C_size_t numElements = 1;
     // input divisors
     SmallVector<fast_divmod> regularOpStrideDivmodVector;
-    for (C_size_t k = 0; k < regularOpDims.size(); k++)
+    for (C_size_t regularAxis = 0; regularAxis < regularOpDims.size(); regularAxis++)
     {
         regularOpStrideVector.push_back(numElements);
         // create fast division objects
         regularOpStrideDivmodVector.push_back(fast_divmod(numElements));
-        numElements *= (C_size_t) regularOpDims[k];
+        numElements *= (C_size_t) regularOpDims[regularAxis];
     }
 
     SmallVector<fast_divmod> reducingOpDimDivmodVector;
@@ -883,19 +883,19 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, NUM_ARGS
     C_size_t numElements = 1;
     // input divisors
     SmallVector<fast_divmod> regularOpStrideDivmodVector;
-    for (C_size_t k = 0; k < regularOpDims.size(); k++)
+    for (C_size_t regularAxis = 0; regularAxis < regularOpDims.size(); regularAxis++)
     {
         regularOpStrideVector.push_back(numElements); // stride for dense representation of our output elements (if they were flattened)
         regularOpStrideDivmodVector.push_back(fast_divmod((unsigned int)numElements));
-        numElements *= (C_size_t) regularOpDims[k];
+        numElements *= (C_size_t) regularOpDims[regularAxis];
     }
     // output divisors
     SmallVector<fast_divmod> reducingOpDimDivmodVector;
     C_size_t stride = 1;
-    for (C_size_t k = 0; k < reducingOpDimVector.size(); ++k)
+    for (C_size_t regularAxis = 0; regularAxis < reducingOpDimVector.size(); ++regularAxis)
     {
         reducingOpDimDivmodVector.push_back(fast_divmod(stride));
-        stride *= (C_size_t)reducingOpDimVector[k];
+        stride *= (C_size_t)reducingOpDimVector[regularAxis];
     }
 
     FixedArray<C_unsigned_int,           REGULAR_RANK>   regularOpStrides(regularOpStrideVector);
@@ -923,8 +923,8 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, NUM_ARGS
     //     - softmax in seq-2-seq attention model: reduce over length of attention window (e.g. 20)
     //     - summation of criterion value: scalar reduction over a few hundred or thousand samples in the minibatch
     C_size_t reductionDim = 1; // number of elements to reduce over
-    for (C_size_t k = 0; k < reducingOpDimVector.size(); k++)
-        reductionDim *= (C_size_t) reducingOpDimVector[k];
+    for (C_size_t regularAxis = 0; regularAxis < reducingOpDimVector.size(); regularAxis++)
+        reductionDim *= (C_size_t) reducingOpDimVector[regularAxis];
     GridDim grid(NN);
     let& props = GridDim::GetDeviceProps();
     bool disableParallelReduction = false;                       // (for debugging)
@@ -1034,8 +1034,8 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, NUM_ARGS
             FixedArray<ElemType*, NUM_ARGS> pointers1 = pointers;
             pointers1[NUM_ARGS - 1] = reductionBuffer.get();
             auto regularStrideVectors1 = regularStrideVectors;
-            for (size_t k = 0; k < regularOpStrides.size(); k++)
-                regularStrideVectors1[NUM_ARGS - 1][k] = (ptrdiff_t)regularOpStrideVector[k];
+            for (size_t regularAxis = 0; regularAxis < regularOpStrides.size(); regularAxis++)
+                regularStrideVectors1[NUM_ARGS - 1][regularAxis] = (ptrdiff_t)regularOpStrideVector[regularAxis];
             FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK> regularStrides1(regularStrideVectors1);
             ElemType beta1  = 0;
             ElemType alpha1 = 1;
@@ -1150,6 +1150,7 @@ __global__ void _launchUnaryTensorOp(const ElemType* pa, ElemType* pb, CUDA_LONG
     pb[id] = val;
 }
 
+// ENTRY POINT
 // special case of linear unary operation
 template <class ElemType>
 void UnaryGPUTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim)
@@ -1178,7 +1179,7 @@ void UnaryGPUTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemType 
 // map runtime parameters NUM_ARGS to template parameters
 // -----------------------------------------------------------------------
 
-// tensor operation with k+1 dimensions (-1 means scalar)
+// tensor operation with REGULAR_RANK regular dimensions (0 means scalar)
 template <class ElemType, C_size_t NUM_ARGS, C_int REGULAR_RANK>
 static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, NUM_ARGS>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                     const SmallVector<size_t>& regularOpDims,  const array<SmallVector<ptrdiff_t>, NUM_ARGS>& regularStrides,
@@ -1195,8 +1196,9 @@ static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, NUM_AR
     }
 }
 
+// ENTRY POINT
 // tensor operation, generalized in number of arguments
-// This function now expands into different k. It also eliminates the offsets by adding them to the pointers.
+// This function expands into different REGULAR_RANK template parameters. It also eliminates the offsets by adding them to the pointers.
 template <class ElemType, C_size_t NUM_ARGS>
 void GPUTensorOp(ElemType beta, array<ElemType*, NUM_ARGS> pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                const array<size_t, NUM_ARGS>& offsets,
