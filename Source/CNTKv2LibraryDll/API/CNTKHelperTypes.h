@@ -792,6 +792,22 @@ template <typename T, typename ...CtorArgTypes /*WHERE_IS_NOT_BASE_OF(enable_str
 }
 
 ///
+/// Maps a std::array to another, where the array(s) may hold elements of type
+/// std::reference_wrapper or any other type that has no default constructor.
+/// Thanks to STL for helping with template magic.
+///
+template <typename T, typename F, size_t N, size_t... Indices>
+std::array<typename std::result_of<F(T&)>::type, N> static inline MapArrayHelper(const std::array<T, N>& args, const F& f, std::index_sequence<Indices...>)
+{
+    return{ { f(args[Indices])... } };
+}
+template <typename T, typename F, size_t N>
+std::array<typename std::result_of<F(T&)>::type, N> static inline MapArray(const std::array<T, N>& args, const F& f)
+{
+    return MapArrayHelper(args, f, std::make_index_sequence<N>{});
+}
+
+///
 /// Class that stores an immutable std::wstring. Assumes it is most of the time is empty, so that it is cheaper to have one extra redirection.
 /// Also uses a shared pointer, i.e. the string is not copied but shared if assigned.
 ///

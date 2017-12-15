@@ -258,18 +258,6 @@ static inline Span<T*> MakeArgSpan(array<T, N>& args)
     return Span<T*>(args.data(), args.size());
 }
 
-// thanks to STL for helping with template magic
-template <typename T, typename F, size_t N, size_t... Indices>
-array<reference_wrapper<typename remove_reference<typename result_of<F(T&)>::type>::type>, N> static MapRefArrayHelper(const array<reference_wrapper<T>, N>& args, const F& f, index_sequence<Indices...>)
-{
-    return{ { ref(f(args[Indices]))... } };
-}
-template <typename T, typename F, size_t N>
-array<reference_wrapper<typename remove_reference<typename result_of<F(T&)>::type>::type>, N> static MapRefArray(const array<reference_wrapper<T>, N>& args, const F& f)
-{
-    return MapRefArrayHelper(args, f, make_index_sequence<N>{});
-}
-
 // single entry point for TensorView execution
 template<typename ElemType>
 template<size_t N>
@@ -388,12 +376,13 @@ template<size_t N>
 //#undef d
 
     // now perform the operation
-    auto sobs = MapRefArray(args, [](TensorView<ElemType>& arg) -> Matrix<ElemType>& { return arg.GetSOB(); }); // get all storage objects
+    auto sobs = ::CNTK::MapArray(args, [](TensorView<ElemType>& arg) { return ref(arg.GetSOB()); }); // get all storage objects
     Matrix<ElemType>::TensorOp(arity, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
                                MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
 }
 
-// TODO: can we unify this interface as well and go through Do()? It seems internally, TensorArgOp() already does that.
+// TODO: Can we unify this interface as well and go through Do()? It seems internally, TensorArgOp() already does that.
+//       This is only called from one place, so once we can run Python tests again, it should be safe to eliminate this.
 template <class ElemType>
 void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOperator reductionOp)
 {
