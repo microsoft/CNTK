@@ -5190,16 +5190,16 @@ static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE dev
 
 // perform N-ary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 template <class ElemType>
-template <size_t N>
-/*static*/ void GPUMatrix<ElemType>::TensorOp(size_t arity, const array<reference_wrapper<GPUMatrix<ElemType>>, N>& args,
+template <size_t NUM_ARGS>
+/*static*/ void GPUMatrix<ElemType>::TensorOp(size_t arity, const array<reference_wrapper<GPUMatrix<ElemType>>, NUM_ARGS>& args,
                                               ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
-                                              const array<size_t, N>& offsets,
-                                              const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
-                                              const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
+                                              const array<size_t, NUM_ARGS>& offsets,
+                                              const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, NUM_ARGS>& regularStrides,
+                                              const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, NUM_ARGS>& reducingStrides)
 {
     if (args.size() != arity + 1)
         NOT_IMPLEMENTED; // so far we only support single output operations
-    //const size_t arity = N - 1; // (we don't support any other for now)
+    //const size_t arity = NUM_ARGS - 1; // (we don't support any other for now)
 
     if (reductionOp != ElementWiseOperator::opSum                &&
         reductionOp != ElementWiseOperator::opLogSum             &&
@@ -5261,7 +5261,7 @@ template <size_t N>
     }
 
     // regular case
-    return TensorOpN<ElemType, N>(beta, MapArray(args, [](GPUMatrix<ElemType>& m) -> ElemType* { return m.Data(); }), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return TensorOpN<ElemType, NUM_ARGS>(beta, MapArray(args, [](GPUMatrix<ElemType>& m) -> ElemType* { return m.Data(); }), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 template /*static*/ void GPUMatrix<float>::TensorOp<1>(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<float>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta, const std::array<size_t, 1>& offsets, const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& regularStrides, const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& reducingStrides);
 template /*static*/ void GPUMatrix<float>::TensorOp<2>(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<float>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta, const std::array<size_t, 2>& offsets, const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides, const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
