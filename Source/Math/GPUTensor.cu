@@ -480,7 +480,7 @@ struct TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*m=*/-1>
 // -----------------------------------------------------------------------
 
 // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
-template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool parallelReduce, C_int k>
+template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE, C_int k>
 struct TensorOpElement
 {
     // template-recursive version loops over indices
@@ -508,7 +508,7 @@ struct TensorOpElement
             pointers[i] += index * regularStrides(i, (C_size_t) k); // now this dimension is taken care of
         }
         // process the previous index
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, parallelReduce, k - 1>::Compute(
+        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, k - 1>::Compute(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
@@ -516,8 +516,8 @@ struct TensorOpElement
 };
 
 // specialization for k=0 where op stride is guaranteed to be 1
-template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool parallelReduce>
-struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, parallelReduce, /*k=*/0>
+template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
+struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, /*k=*/0>
 {
     // template-recursive version loops over indices
     template<class ElemType>
@@ -537,7 +537,7 @@ struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, parallelReduce, /
             pointers[i] += index * regularStrides(i, 0); // now this dimension is taken care of
         }
         // process the previous index
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, parallelReduce, -1>::Compute(
+        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, -1>::Compute(
             /*id*/ 0, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
@@ -546,7 +546,7 @@ struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, parallelReduce, /
 
 // specialization for k = -1 terminates the template recursion, and computes reductions in a for loop
 template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK>
-struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*parallelReduce=*/false, /*k=*/-1>
+struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/false, /*k=*/-1>
 {
     // template-recursion-teminating version computes the actual value for this output location
     // now the output pointers point to the right element (input pointers may still iterate for reduction)
@@ -578,7 +578,7 @@ struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*parallelReduce=
 
 // specialization for k = -1 terminates the template recursion, and computes reductions in parallel
 template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK>
-struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*parallelReduce=*/true, /*k=*/-1>
+struct TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/true, /*k=*/-1>
 {
     // template-recursion-teminating version computes the actual value for this output location
     // now the output pointers point to the right element (input pointers may still iterate for reduction)
