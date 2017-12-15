@@ -6347,8 +6347,6 @@ void Matrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOperat
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides)
 {
-    VerifyIsDense(*this);
-
     DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             (GPUMatrix<ElemType>::TensorOp((size_t)0, array<reference_wrapper<GPUMatrix<ElemType>>, 1>{ ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
@@ -6363,8 +6361,6 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemTy
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-    VerifyIsDense(*this) && VerifyIsDense(a);
-
     DecideAndMoveToRightDevice(*this, a);
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
@@ -6381,8 +6377,6 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
 {
-    VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b);
-
     DecideAndMoveToRightDevice(*this, a, b);
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
@@ -6399,8 +6393,6 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
 {
-    VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b) && VerifyIsDense(c);
-
     DecideAndMoveToRightDevice(*this, a, b, c);
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
@@ -6418,8 +6410,6 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 5>& regularStrides,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 5>& reducingStrides)
 {
-    VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b) && VerifyIsDense(c) && VerifyIsDense(d);
-
     DecideAndMoveToRightDevice(*this, a, b, c, d);
 
     DISPATCH_MATRIX_ON_FLAG(this, this,

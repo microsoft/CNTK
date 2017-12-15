@@ -574,6 +574,7 @@ public:
                          const std::array<size_t, N>& offsets,
                          const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, N>& regularStrides,
                          const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, N>& reducingStrides);
+#if 0
     void TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 1>& offsets,
                   const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 1>& regularStrides,
@@ -594,7 +595,7 @@ public:
                   const std::array<size_t, 5>& offsets,
                   const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 5>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
-
+#endif
     void TensorArgOp(const GPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
                      const std::array<size_t, 2>& offsets,
                      const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,

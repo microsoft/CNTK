@@ -5274,7 +5274,7 @@ template /*static*/ void GPUMatrix<double>::TensorOp<3>(size_t arity, const std:
 template /*static*/ void GPUMatrix<double>::TensorOp<4>(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<double>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta, const std::array<size_t, 4>& offsets, const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides, const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
 template /*static*/ void GPUMatrix<double>::TensorOp<5>(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<double>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta, const std::array<size_t, 5>& offsets, const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& regularStrides, const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
 
-
+#if 0
 // perform nullary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
 template <class ElemType>
@@ -5403,6 +5403,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
         InvalidArgument("All matrices must be on the same GPU");
     return TensorOpN<ElemType, 5>(beta, array<ElemType*, 5>{a.Data(), b.Data(), c.Data(), d.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
+#endif
 
 template <class ElemType>
 void GPUMatrix<ElemType>::TensorArgOp(const GPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
