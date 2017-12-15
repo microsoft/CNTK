@@ -34,6 +34,22 @@
 #include <fcntl.h>
 
 #define FCLOSE_SUCCESS 0
+/* guoye: start */
+/*
+#include "basetypes.h" //for attemp()
+#include "ProgressTracing.h"
+#include <unistd.h>
+#include <glob.h>
+#include <dirent.h>
+#include <sys/sendfile.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <limits.h>
+#include <memory>
+#include <cwctype>
+*/
+// using namespace Microsoft::MSR::CNTK;
+/* guoye: end */
 
 // ----------------------------------------------------------------------------
 // fopenOrDie(): like fopen() but terminate with err msg in case of error.
@@ -915,4 +931,8 @@ std::wstring s2ws(const std::string& str);
 
 std::string ws2s(const std::wstring& wstr);
 
+
+/* guoye: start */
+#include "../fileutil.cpp"
+/* guoye: end */
 #endif // _FILEUTIL_
