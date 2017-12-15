@@ -801,7 +801,7 @@ public:
     // void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids);
     // move from latticearchive.cpp to .h, it requires template definition and delcaration are both in .h file
     template <class IDMAP>
-    void  lattice::fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids)
+    void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids)
     /* guoye: end */
     {
 
