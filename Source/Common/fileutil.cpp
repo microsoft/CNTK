@@ -938,10 +938,10 @@ void fgetline(FILE* f, std::vector<char>& buf)
 void fgetline(FILE* f, std::vector<wchar_t>& buf)
 {
     buf.resize(BUF_SIZE);
-	/* guoye: start */
+    /* guoye: start */
     // fgetline(f, &buf[0], (int)buf.size());
-	fgetlinew(f, &buf[0], (int)buf.size());
-	/* guoye: end */
+    fgetlinew(f, &buf[0], (int)buf.size());
+    /* guoye: end */
     buf.resize(wcsnlen(&buf[0], BUF_SIZE) + 1); // SECURITY NOTE: string use has been reviewed
 }
 
