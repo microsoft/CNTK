@@ -903,8 +903,10 @@ std::wstring fgetlinew(FILE* f)
     /* guoye: start */
     // vector<wchar_t> buf(BUF_SIZE);
     std::vector<wchar_t> buf(BUF_SIZE);
+    
+    // return fgetline(f, &buf[0], (int)buf.size());
+    return fgetlinew(f, &buf[0], (int)buf.size());
     /* guoye: end */
-    return fgetline(f, &buf[0], (int)buf.size());
 }
 
 // STL string version avoiding most memory allocations
@@ -918,7 +920,10 @@ void fgetline(FILE* f, std::string& s, std::vector<char>& buf)
 void fgetline(FILE* f, std::wstring& s, std::vector<wchar_t>& buf)
 {
     buf.resize(BUF_SIZE);
-    const wchar_t* p = fgetline(f, &buf[0], (int)buf.size());
+    /* guoye: start */
+    // const wchar_t* p = fgetline(f, &buf[0], (int)buf.size());
+    const wchar_t* p = fgetlinew(f, &buf[0], (int)buf.size());
+    /* guoye: end */
     s.assign(p);
 }
 
