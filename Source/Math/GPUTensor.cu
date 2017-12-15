@@ -172,9 +172,10 @@ struct FixedMatrix<T, N, 0>
 // function to actually compute a function of (N-1) inputs based on the opcode
 // -----------------------------------------------------------------------
 
-template <class ElemType>
+//template <class ElemType>
 struct TensorOps
 {
+    template <class ElemType>
     static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/1>& pointers, ElementWiseOperator op)
     {
 #define CaseNullaryTensorOp(oper)       \
@@ -187,6 +188,7 @@ struct TensorOps
             return OpConstOne<ElemType>(); // (failure--we only have one nullary op, so use the same, maybe it will eliminate the switch altogether)
         }
     }
+    template <class ElemType>
     static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/2>& pointers, ElementWiseOperator op)
     {
         ElemType a = *(pointers[0]);
@@ -200,6 +202,7 @@ struct TensorOps
             return 0; // (failure)
         }
     }
+    template <class ElemType>
     static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/3>& pointers, ElementWiseOperator op)
     {
         // const ElemType & a = *(pointers[0]);    // const & for opIndex--costs quite some code bloat
@@ -215,6 +218,7 @@ struct TensorOps
             return 0; // (failure)
         }
     }
+    template <class ElemType>
     static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/4>& pointers, ElementWiseOperator op)
     {
 #define CaseTernaryTensorOp(oper)       \
@@ -227,6 +231,7 @@ struct TensorOps
             return 0; // (failure)
         }
     }
+    template <class ElemType>
     static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/5>& pointers, ElementWiseOperator op)
     {
 #define CaseQuaternaryTensorOp(oper)       \
@@ -338,7 +343,7 @@ struct TensorOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*m=*/-1>
                                        ElementWiseOperator op, ElementWiseOperator reductionOp,
                                        const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/)
     {
-        return TensorOps<ElemType>::Compute(pointers, op); // finally computing something!
+        return TensorOps::Compute(pointers, op); // finally computing something!
     }
 };
 
@@ -466,7 +471,7 @@ struct TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*m=*/-1>
                                        const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/,
                                        FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
     {
-        return TensorOps<ElemType>::Compute(pointers, op); // finally computing something!
+        return TensorOps::Compute(pointers, op); // finally computing something!
     }
 };
 
