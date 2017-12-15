@@ -6364,7 +6364,8 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemTy
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            (GPUMatrix<ElemType>::TensorOp<2>((size_t)1, array<reference_wrapper<GPUMatrix<ElemType>>, 2>{ ref(*a.m_GPUMatrix), ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
+                            //m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
