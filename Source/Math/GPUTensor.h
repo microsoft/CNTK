@@ -18,12 +18,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define C_unsigned_int CUDA_LONG
 
 template <class ElemType, C_size_t NUM_ARGS>
-void TensorOpN(ElemType beta, array<ElemType*, NUM_ARGS> pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+void GPUTensorOp(ElemType beta, array<ElemType*, NUM_ARGS> pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                const array<size_t, NUM_ARGS>& offsets,
                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, NUM_ARGS>& regularStrides,
                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, NUM_ARGS>& reducingStrides);
 
 template <class ElemType>
-void LaunchUnaryTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim);
+void UnaryGPUTensorOp(ElemType beta, const ElemType* pa, ElemType* pb, ElemType alpha, ElementWiseOperator op, size_t regularOpDim);
 
 }}}

@@ -5234,7 +5234,7 @@ template <size_t NUM_ARGS>
             else if (op == ElementWiseOperator::opCopy && beta == 1)
                 return CUBLAS_CALL(cublas_axpy(GetCublasHandle(out.GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data() + offsets[0], 1, out.Data() + offsets[1], 1));
             else
-                return LaunchUnaryTensorOp<ElemType>(beta, a.Data() + offsets[0], out.Data() + offsets[1], alpha, op, regularOpDims[0]);
+                return UnaryGPUTensorOp<ElemType>(beta, a.Data() + offsets[0], out.Data() + offsets[1], alpha, op, regularOpDims[0]);
         }
     
         // special case: sum-reducing a matrix onto a column vector; can be done with SGEMM
@@ -5261,7 +5261,7 @@ template <size_t NUM_ARGS>
     }
 
     // regular case
-    return TensorOpN<ElemType, NUM_ARGS>(beta, MapArray(args, [](GPUMatrix<ElemType>& m) -> ElemType* { return m.Data(); }), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return GPUTensorOp<ElemType, NUM_ARGS>(beta, MapArray(args, [](GPUMatrix<ElemType>& m) -> ElemType* { return m.Data(); }), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 template /*static*/ void GPUMatrix<float>::TensorOp<1>(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<float>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta, const std::array<size_t, 1>& offsets, const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& regularStrides, const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& reducingStrides);
 template /*static*/ void GPUMatrix<float>::TensorOp<2>(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<float>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta, const std::array<size_t, 2>& offsets, const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides, const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
@@ -5284,7 +5284,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOpe
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides)
 {
     // perform the op
-    return TensorOpN<ElemType, 1>(beta, array<ElemType*, 1>{Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return GPUTensorOp<ElemType, 1>(beta, array<ElemType*, 1>{Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
@@ -5323,7 +5323,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
             else if (op == ElementWiseOperator::opCopy && beta == 1)
                 return CUBLAS_CALL(cublas_axpy(GetCublasHandle(GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data()+ offsets[0], 1, Data()+ offsets[1], 1));
             else
-                return LaunchUnaryTensorOp<ElemType>(beta, a.Data()+ offsets[0], Data()+ offsets[1], alpha, op, regularOpDims[0]);
+                return UnaryGPUTensorOp<ElemType>(beta, a.Data()+ offsets[0], Data()+ offsets[1], alpha, op, regularOpDims[0]);
         }
     
         // special case: sum-reducing a matrix onto a column vector; can be done with SGEMM
@@ -5352,7 +5352,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
     // TODO: Add a special case for tensor bias reduction. cudnn is ~7% faster on Image/QuickE2E.
 
     // regular case
-    return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return GPUTensorOp<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
@@ -5369,7 +5369,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
     if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
 
-    return TensorOpN<ElemType, 3>(beta, array<ElemType*, 3>{a.Data(), b.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return GPUTensorOp<ElemType, 3>(beta, array<ElemType*, 3>{a.Data(), b.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
@@ -5385,7 +5385,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
     a.PrepareDevice();
     if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId() || c.GetComputeDeviceId() != GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
-    return TensorOpN<ElemType, 4>(beta, array<ElemType*, 4>{a.Data(), b.Data(), c.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return GPUTensorOp<ElemType, 4>(beta, array<ElemType*, 4>{a.Data(), b.Data(), c.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // perform quaternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
@@ -5401,7 +5401,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
     a.PrepareDevice();
     if (a.GetComputeDeviceId() != GetComputeDeviceId() || b.GetComputeDeviceId() != GetComputeDeviceId() || c.GetComputeDeviceId() != GetComputeDeviceId() || d.GetComputeDeviceId() != GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
-    return TensorOpN<ElemType, 5>(beta, array<ElemType*, 5>{a.Data(), b.Data(), c.Data(), d.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return GPUTensorOp<ElemType, 5>(beta, array<ElemType*, 5>{a.Data(), b.Data(), c.Data(), d.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 #endif
 
@@ -5418,7 +5418,7 @@ void GPUMatrix<ElemType>::TensorArgOp(const GPUMatrix<ElemType>& a, ElementWiseO
     a.PrepareDevice();
     if (a.GetComputeDeviceId() != GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
-    return TensorOpN<ElemType, 2>((ElemType) 0, array<ElemType*, 2>{a.Data(), Data()}, (ElemType) 1, ElementWiseOperator::opCopy, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    return GPUTensorOp<ElemType, 2>((ElemType) 0, array<ElemType*, 2>{a.Data(), Data()}, (ElemType) 1, ElementWiseOperator::opCopy, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // =======================================================================
