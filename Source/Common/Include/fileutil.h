@@ -246,15 +246,15 @@ void fputstring(FILE* f, const wchar_t*);
 void fputstring(FILE* f, const std::wstring&);
 
 template <class CHAR>
-CHAR* fgetline(FILE* f, CHAR* buf, int size);
+CHAR* fgetline(FILE* f, CHAR* buf, int size)
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     /* guoye: start */
-    fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
+    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
     /* guoye: end */
     CHAR* p = fgets(buf, size, f);
     /* guoye: start */
-    fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
+    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
     /* guoye: end */
     if (p == NULL) // EOF reached: next time feof() = true
     {
@@ -300,15 +300,15 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size);
 
 // this is add to fix the code bug, without this, the code does not support wchar
 template <class CHAR>
-CHAR* fgetlinew(FILE* f, CHAR* buf, int size);
+CHAR* fgetlinew(FILE* f, CHAR* buf, int size)
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     /* guoye: start */
-    fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
+    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
     /* guoye: end */
     CHAR* p = fgets(buf, size, f);
     /* guoye: start */
-    fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
+    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
     /* guoye: end */
     if (p == NULL) // EOF reached: next time feof() = true
     {
@@ -356,7 +356,7 @@ template <class CHAR, size_t n>
 CHAR* fgetlinew(FILE* f, CHAR(&buf)[n])
 {
     /* guoye: start */
-    fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
+    // fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
     return fgetlinew(f, buf, n);
     /* guoye: end */
 }
@@ -366,7 +366,7 @@ template <class CHAR, size_t n>
 CHAR* fgetline(FILE* f, CHAR(&buf)[n])
 {
     /* guoye: start */
-    fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
+    // fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
     return fgetline(f, buf, n);
     /* guoye: end */
 }

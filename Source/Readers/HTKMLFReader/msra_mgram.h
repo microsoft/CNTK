@@ -1489,26 +1489,26 @@ public:
         auto_file_ptr f(fopenOrDie(pathname, L"rbS"));
         fprintf(stderr, "read: reading %ls", pathname.c_str());
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 0\n");
+        //fprintf(stderr, "\n msra_mgram.h: read: debug 0\n");
         /* guoye: end */
         filename = pathname; // (keep this info for debugging)
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 0.1\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 0.1\n");
         /* guoye: end */
         // --- read header information
 
         // search for header line
         char buf[1024];
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 0.2\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 0.2\n");
         /* guoye: end */
         /* guoye: start */
         // lineNo++, fgetline(f, buf);
         lineNo++;
-        fprintf(stderr, "\n msra_mgram.h: read: debug 0.25\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 0.25\n");
         fgetline(f, buf);
 
-        fprintf(stderr, "\n msra_mgram.h: read: debug 0.3\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 0.3\n");
         /* guoye: end */
         while (strcmp(buf, "\\data\\") != 0 && !feof(f))
             /* guoye: start */
@@ -1524,7 +1524,7 @@ public:
         lineNo++;
         fgetline(f, buf);
 
-        fprintf(stderr, "\n msra_mgram.h: read: debug 1\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 1\n");
         /* guoye: end */
 
         // get the dimensions
@@ -1559,7 +1559,7 @@ public:
             M = maxM;
 
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 2\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 2\n");
         /* guoye: end */
         // allocate main storage
         map.init(M);
@@ -1581,7 +1581,7 @@ public:
         skipWord.reserve(lmSymbols.capacity());
 
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 3\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 3\n");
         /* guoye: end */
 
         // --- read main sections
@@ -1589,7 +1589,7 @@ public:
         const double ln10xLMF = log(10.0);                // ARPA scores are strangely scaled
         msra::strfun::tokenizer tokens(" \t\n\r", M + 1); // used in tokenizing the input line
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 4\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 4\n");
         /* guoye: end */
         for (int m = 1; m <= M; m++)
         {
@@ -1717,7 +1717,7 @@ public:
             fprintf(stderr, ", %d %d-grams", map.size(m), m);
         }
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 5\n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 5\n");
         /* guoye: end */
         fprintf(stderr, "\n");
 
@@ -1736,7 +1736,7 @@ public:
         }
 
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 6 \n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 6 \n");
         /* guoye: end */
 
         // update zerogram score by one appropriate for OOVs
@@ -1752,11 +1752,11 @@ public:
             userToLMSymMap[i] = id;
         }
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 7 \n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 7 \n");
         /* guoye: end */
         map.created(userToLMSymMap);
         /* guoye: start */
-        fprintf(stderr, "\n msra_mgram.h: read: debug 8 \n");
+        // fprintf(stderr, "\n msra_mgram.h: read: debug 8 \n");
         /* guoye: end */
     }
 
