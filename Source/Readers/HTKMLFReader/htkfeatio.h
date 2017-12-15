@@ -1037,22 +1037,34 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         }
         if (wordmap) // if reading word sequences as well (for MMI), then record it (in a separate map)
         {
+            
             if (!entries.empty() && wordseqbuffer.empty())
-                RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance %ls", key.c_str());
+            /* guoye: start  */
+                // RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance %ls", key.c_str());
+            {
+                fprintf(stderr,
+                "Warning: parseentry: got state alignment but no word-level info, although being requested, for utterance %ls \n",
+                key.c_str());
+            }
+                
             // post-process silence
             //  - first !silence -> !sent_start
             //  - last !silence -> !sent_end
-            int silence = (*wordmap)["!silence"];
-            if (silence >= 0)
+            else
             {
-                int sentstart = (*wordmap)["!sent_start"]; // these must have been created
-                int sentend = (*wordmap)["!sent_end"];
-                // map first and last !silence to !sent_start and !sent_end, respectively
-                if (sentstart >= 0 && wordseqbuffer.front().wordindex == (size_t) silence)
-                    wordseqbuffer.front().wordindex = sentstart;
-                if (sentend >= 0 && wordseqbuffer.back().wordindex == (size_t) silence)
-                    wordseqbuffer.back().wordindex = sentend;
+                int silence = (*wordmap)["!silence"];
+                if (silence >= 0)
+                {
+                    int sentstart = (*wordmap)["!sent_start"]; // these must have been created
+                    int sentend = (*wordmap)["!sent_end"];
+                    // map first and last !silence to !sent_start and !sent_end, respectively
+                    if (sentstart >= 0 && wordseqbuffer.front().wordindex == (size_t) silence)
+                        wordseqbuffer.front().wordindex = sentstart;
+                    if (sentend >= 0 && wordseqbuffer.back().wordindex == (size_t) silence)
+                        wordseqbuffer.back().wordindex = sentend;
+                }
             }
+            /* guoye: end */
             // if (sentstart < 0 || sentend < 0 || silence < 0)
             //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent_end");
             // implant
