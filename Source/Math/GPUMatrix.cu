@@ -5165,6 +5165,7 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
 
 // helper to provide a vector of ones of at least the given number of elements
 // TODO: Use this to implement ComputationNode::ConstOnes? Or do we even need that anymore?
+// This function is thread-safe.
 template <class ElemType>
 static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE deviceId)
 {
@@ -5190,12 +5191,75 @@ static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE dev
 // perform N-ary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 template <class ElemType>
 template <size_t N>
-/*static*/ void GPUMatrix<ElemType>::TensorOp(size_t /*arity*/, const array<reference_wrapper<GPUMatrix<ElemType>>, N>& args,
+/*static*/ void GPUMatrix<ElemType>::TensorOp(size_t arity, const array<reference_wrapper<GPUMatrix<ElemType>>, N>& args,
                                               ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
                                               const array<size_t, N>& offsets,
                                               const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
                                               const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 {
+    if (args.size() != arity + 1)
+        NOT_IMPLEMENTED; // so far we only support single output operations
+    //const size_t arity = N - 1; // (we don't support any other for now)
+
+    if (reductionOp != ElementWiseOperator::opSum                &&
+        reductionOp != ElementWiseOperator::opLogSum             &&
+        reductionOp != ElementWiseOperator::opMin                &&
+        reductionOp != ElementWiseOperator::opMax                &&
+        reductionOp != ElementWiseOperator::opElementwiseProduct &&
+        (arity != 1 || (reductionOp != ElementWiseOperator::opArgmin && reductionOp != ElementWiseOperator::opArgmax)))
+        InvalidArgument("TensorOp: Reduction operations other than opSum, opLogSum, opMax, opMin, opArgmax, or opArgmin are not implemented.");
+    // TODO: This check ^^ belongs into the kernel itself. At this point, we should not know what the kernel supports.
+
+    GPUMatrix<ElemType>& out = args.back();
+    out.PrepareDevice();
+    for (size_t i = 0; i < arity; i++)
+        if (((GPUMatrix<ElemType>&)args[i]).GetComputeDeviceId() != out.GetComputeDeviceId())
+            InvalidArgument("All matrices must be on the same GPU");
+
+    // special cases
+    // for unary ops, we fall back to NVidia libraries where possible
+    if (arity == 1 &&
+        regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1) // we are processing a column (after flattening)
+    {
+        GPUMatrix<ElemType>& a = args[0];
+        // special case: linear processing
+        // The case statement has measurable impact for unary ops (but not for binary ops it seems, due to double mem access).
+        // Linear gap-free unary ops happen so regularly that we will eliminate the case statement from the CUDA kernel, and instead expand all.
+        if (reducingOpDims.size() == 0) // no reduction
+        {
+            // special case: for copy, use cudaMemcpy() instead, or cublas_axpy()
+            // TODO: We should observe if these actually make a speed difference, and if not, remove these special cases.
+            if (op == ElementWiseOperator::opCopy && beta == 0 && alpha == 1)
+                return CUDA_CALL(cudaMemcpy(out.Data() + offsets[1], a.Data() + offsets[0], sizeof(ElemType) * regularOpDims[0], cudaMemcpyDeviceToDevice));
+            else if (op == ElementWiseOperator::opCopy && beta == 1)
+                return CUBLAS_CALL(cublas_axpy(GetCublasHandle(out.GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data() + offsets[0], 1, out.Data() + offsets[1], 1));
+            else
+                return LaunchUnaryTensorOp<ElemType>(beta, a.Data() + offsets[0], out.Data() + offsets[1], alpha, op, regularOpDims[0]);
+        }
+    
+        // special case: sum-reducing a matrix onto a column vector; can be done with SGEMM
+        // Note: A minor risk is that with this, our own reduction function will rarely be used.
+        // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
+        else if (reductionOp == ElementWiseOperator::opSum && op == ElementWiseOperator::opCopy && // we are just adding to target without any further operation
+#ifdef _DEBUG
+                 sizeof(ElemType) == sizeof(float) && // in debug don't shortcut 'double' so we have some test of our own codepath
+#endif
+                 reducingOpDims.size() == 1 && reducingStrides[0][0] >= (ptrdiff_t) regularOpDims[0])   // reducing across columns and no overlap
+        {
+            assert(reducingStrides[1][0] == 0);
+            auto ARows = regularOpDims[0];    // vertical steps
+            auto ACols = reducingOpDims[0];   // horizontal steps (reduction)
+            auto ALd = reducingStrides[0][0]; // horizontal step width through matrix
+            cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+            SyncGuard syncGuard;
+            CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
+                                    /*A00=*/a.Data() + offsets[0], (int) ALd,
+                                    /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->Data(), (int) /*BRows=*/ACols, &beta,
+                                    /*C00=*/out.Data() + offsets[1], (int) /*CRows=*/ARows));
+            return;
+        }
+    }
+
     // regular case
     return TensorOpN<ElemType, N>(beta, MapArray(args, [](GPUMatrix<ElemType>& m) -> ElemType* { return m.Data(); }), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
@@ -5219,14 +5283,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOpe
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides)
 {
-    if (reductionOp != ElementWiseOperator::opSum    &&
-        reductionOp != ElementWiseOperator::opLogSum &&
-        reductionOp != ElementWiseOperator::opMin    &&
-        reductionOp != ElementWiseOperator::opMax    &&
-        reductionOp != ElementWiseOperator::opElementwiseProduct)
-        InvalidArgument("TensorOp: Nullary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
-
-    // regular case
+    // perform the op
     return TensorOpN<ElemType, 1>(beta, array<ElemType*, 1>{Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 

@@ -6307,8 +6307,12 @@ template <class ElemType>
                                            const SmallVector<size_t>& regularOpDims,  const Span<SmallVector<ptrdiff_t>*>& regularStrides,
                                            const SmallVector<size_t>& reducingOpDims, const Span<SmallVector<ptrdiff_t>*>& reducingStrides)
 {
+    // checks
     if (args.size() != arity + 1)
         NOT_IMPLEMENTED; // so far we only support single output operations
+    for (Matrix& arg : args)
+        VerifyIsDense(arg);
+
     Matrix& out = args.back();
     // stop-gap implementation until this as been pushed all the way down
     switch (arity)
@@ -6347,7 +6351,8 @@ void Matrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOperat
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            m_GPUMatrix->TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            (GPUMatrix<ElemType>::TensorOp((size_t)0, array<reference_wrapper<GPUMatrix<ElemType>>, 1>{ ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
+                            //m_GPUMatrix->TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -6382,7 +6387,8 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            (GPUMatrix<ElemType>::TensorOp((size_t)2, array<reference_wrapper<GPUMatrix<ElemType>>, 3>{ ref(*a.m_GPUMatrix), ref(*b.m_GPUMatrix), ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
+                            //m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -6399,7 +6405,8 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            (GPUMatrix<ElemType>::TensorOp((size_t)3, array<reference_wrapper<GPUMatrix<ElemType>>, 4>{ ref(*a.m_GPUMatrix), ref(*b.m_GPUMatrix), ref(*c.m_GPUMatrix), ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
+                            //m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -6417,7 +6424,8 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
                             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, *d.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, *d.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            (GPUMatrix<ElemType>::TensorOp((size_t)4, array<reference_wrapper<GPUMatrix<ElemType>>, 5>{ ref(*a.m_GPUMatrix), ref(*b.m_GPUMatrix), ref(*c.m_GPUMatrix), ref(*d.m_GPUMatrix), ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
+                            //m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, *d.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
