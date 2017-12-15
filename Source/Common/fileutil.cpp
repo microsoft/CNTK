@@ -1060,9 +1060,9 @@ std::wstring fgetwstring(FILE* f)
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     /* guoye: start */
-	// wstring res;
-	std::wstring res;
-	/* guoye: end */
+    // wstring res;
+    std::wstring res;
+    /* guoye: end */
     for (;;)
     {
         //
