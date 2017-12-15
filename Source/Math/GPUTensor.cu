@@ -965,10 +965,10 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, NUM_ARGS
         //        - 2 blocks work together on a single output element
         //  (b2) NN=1    (NN < #multiprocs, e.g. NN < 30)
         //        - multiple blocks work together on a single output element
-        //        - only this case requires memory, and only REGULAR_RANK * NN
-        //          where REGULAR_RANK = blocks that work together,
-        //          both REGULAR_RANK and NN < #multiprocs,
-        //          and REGULAR_RANK * NN = on the order of NN, but generally a bit larger due to rounding.
+        //        - only this case requires memory, and only K * NN
+        //          where K = blocks that work together,
+        //          both K and NN < #multiprocs,
+        //          and K * NN = on the order of NN, but generally a bit larger due to rounding.
 
         // By how much do we underutilize?
         // We increase #blocks by that factor by breaking reduction into that many chunks.
