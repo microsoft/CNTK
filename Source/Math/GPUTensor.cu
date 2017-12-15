@@ -173,10 +173,10 @@ struct FixedMatrix<T, N, 0>
 // -----------------------------------------------------------------------
 
 //template <class ElemType>
-struct TensorOps
-{
+//struct TensorOps
+//{
     template <class ElemType>
-    static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/1>& pointers, ElementWiseOperator op)
+    static __device__ ElemType Op(const FixedArray<ElemType*, /*NUM_ARGS=*/1>& pointers, ElementWiseOperator op)
     {
 #define CaseNullaryTensorOp(oper)       \
     case ElementWiseOperator::op##oper: \
@@ -189,7 +189,7 @@ struct TensorOps
         }
     }
     template <class ElemType>
-    static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/2>& pointers, ElementWiseOperator op)
+    static __device__ ElemType Op(const FixedArray<ElemType*, /*NUM_ARGS=*/2>& pointers, ElementWiseOperator op)
     {
         ElemType a = *(pointers[0]);
 #define CaseUnaryTensorOp(oper)         \
@@ -203,7 +203,7 @@ struct TensorOps
         }
     }
     template <class ElemType>
-    static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/3>& pointers, ElementWiseOperator op)
+    static __device__ ElemType Op(const FixedArray<ElemType*, /*NUM_ARGS=*/3>& pointers, ElementWiseOperator op)
     {
         // const ElemType & a = *(pointers[0]);    // const & for opIndex--costs quite some code bloat
         ElemType a = *(pointers[0]);
@@ -219,7 +219,7 @@ struct TensorOps
         }
     }
     template <class ElemType>
-    static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/4>& pointers, ElementWiseOperator op)
+    static __device__ ElemType Op(const FixedArray<ElemType*, /*NUM_ARGS=*/4>& pointers, ElementWiseOperator op)
     {
 #define CaseTernaryTensorOp(oper)       \
     case ElementWiseOperator::op##oper: \
@@ -232,7 +232,7 @@ struct TensorOps
         }
     }
     template <class ElemType>
-    static __device__ ElemType Compute(const FixedArray<ElemType*, /*NUM_ARGS=*/5>& pointers, ElementWiseOperator op)
+    static __device__ ElemType Op(const FixedArray<ElemType*, /*NUM_ARGS=*/5>& pointers, ElementWiseOperator op)
     {
 #define CaseQuaternaryTensorOp(oper)       \
     case ElementWiseOperator::op##oper: \
@@ -244,7 +244,7 @@ struct TensorOps
             return 0; // (failure)
         }
     }
-};
+//};
 
 // ----------------------------------------------------------------------------
 // Function to update an aggregate value for the specified reduction operation
@@ -343,7 +343,7 @@ struct TensorOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*m=*/-1>
                                        ElementWiseOperator op, ElementWiseOperator reductionOp,
                                        const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/)
     {
-        return TensorOps::Compute(pointers, op); // finally computing something!
+        return Op(pointers, op); // finally computing something!
     }
 };
 
@@ -471,7 +471,7 @@ struct TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*m=*/-1>
                                        const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/,
                                        FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
     {
-        return TensorOps::Compute(pointers, op); // finally computing something!
+        return Op(pointers, op); // finally computing something!
     }
 };
 
