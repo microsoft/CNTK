@@ -1053,10 +1053,16 @@ const wchar_t* fgetstring(FILE* f, __out_z_cap(size) wchar_t* buf, int size)
 
 #if (_MSC_VER < 1800)
 // read a 0-terminated wstring
-wstring fgetwstring(FILE* f)
+/* guoye: start */
+// wstring fgetwstring(FILE* f)
+std::wstring fgetwstring(FILE* f)
+/* guoye: end */
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    wstring res;
+    /* guoye: start */
+	// wstring res;
+	std::wstring res;
+	/* guoye: end */
     for (;;)
     {
         //
@@ -2184,7 +2190,10 @@ bool msra::files::fuptodate(const std::wstring& target, const std::wstring& inpu
 
 // separate string by separator
 template<class String>
-vector<String> SplitString(const String& str, const String& sep)
+/* guoye: start */
+// vector<String> SplitString(const String& str, const String& sep)
+std::vector<String> SplitString(const String& str, const String& sep)
+/* guoye: end */
 {
     /* guoye: start */
     // vector<String> vstr;
@@ -2214,8 +2223,8 @@ vector<String> SplitString(const String& str, const String& sep)
 // template vector<string>  SplitString(const  string& istr, const  string& sep);
 // template vector<wstring> SplitString(const wstring& istr, const wstring& sep);
 
-template std::vector<std::string>  SplitString(const  std::string& istr, const  std::string& sep);
-template std::vector<std::wstring> SplitString(const std::wstring& istr, const std::wstring& sep);
+// template std::vector<std::string>  SplitString(const  std::string& istr, const  std::string& sep);
+// template std::vector<std::wstring> SplitString(const std::wstring& istr, const std::wstring& sep);
 /* guoye: end */
 static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
