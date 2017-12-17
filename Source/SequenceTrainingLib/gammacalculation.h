@@ -11,8 +11,6 @@
 #include <memory>
 #include <vector>
 
-#include <fstream>
-
 #pragma warning(disable : 4127) // conditional expression is constant
 
 namespace msra { namespace lattices {
@@ -60,25 +58,16 @@ public:
     void init(const msra::asr::simplesenonehmm& hset, int DeviceId)
     {
         m_deviceid = DeviceId;
-        std::ofstream outfile;
-
-        outfile.open("D:\\users\\vadimma\\musor\\test_output.txt", std::ios_base::app);
-        outfile << "\nStep 1";
 
         if (!initialmark)
         {
-            outfile << "\nStep 2";
             m_hset = hset;
-            outfile << "\nStep 3";
             m_maxframenum = 0;
-
 
             // prep for parallel implementation (CUDA)
             parallellattice.setdevice(DeviceId);
-            outfile << "\nStep 4";
             if (parallellattice.enabled())                             // send hmm set to GPU if GPU computation enabled
                 parallellattice.entercomputation(m_hset, mbrclassdef); // cache senone2classmap if mpemode
-            outfile << "\nStep 5";
             initialmark = true;
         }
     }

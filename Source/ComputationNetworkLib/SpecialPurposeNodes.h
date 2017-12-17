@@ -708,7 +708,6 @@ public:
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
         
         InitSEParams(symListPath, phonePath, stateListPath, transProbPath);
-
         m_fsSmoothingWeight = hSmoothingWeight;
         m_frameDropThreshold = frameDropThresh;
         m_doReferenceAlignment = doReferenceAlign;
@@ -743,10 +742,50 @@ public:
     // -sum(left_i * log(softmax_i(right)))
     virtual void ForwardPropNonLooping()
     {
-        char* buffer = reinterpret_cast<char*>(Input(3)->Value().CopyToArray());
+        m_lattices.clear();
+        m_uids.clear();
+        m_boundaries.clear();
+        m_extraUttMap.clear();
 
-        msra::lattices::lattice l;
-        l.freadFromBuffer(buffer, m_idmap, m_idmap.back());
+        char* buffer = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->CopyToArray());
+
+        let& labelMBLayout = InputRef(0).GetMBLayout();
+        const auto& labelSequences = labelMBLayout->GetAllSequences();
+
+        let& latticeMBLayout = InputRef(3).GetMBLayout();
+        const auto& latticeSequences = latticeMBLayout->GetAllSequences();
+
+        assert(labelSequences.size() == latticeSequences.size());
+        size_t uttId = 0;
+        
+        /*
+        FrameRange frameRange(InputRef(0).GetMBLayout());
+        InputRef(0).ValueFor(frameRange).VectorMax(*m_maxIndexes, *m_maxValues, true);
+        */
+
+        InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
+
+        for (size_t i = 0;i<labelSequences.size();i++)
+        {
+            if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            auto& currentSeq = labelSequences[i];
+            auto columnIndices = labelMBLayout->GetColumnIndices(currentSeq);
+            
+            for (size_t ci = 0; ci < columnIndices.size(); ci++)
+            {
+                size_t refId = (int)(*m_maxIndexes)(0, columnIndices[ci]);
+                m_uids.push_back(refId);
+            }
+
+            m_extraUttMap.push_back(uttId++);
+            std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
+            latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
+            m_lattices.push_back(latticePair);
+        }
+        m_boundaries.resize(m_uids.size());
+        std::fill(m_boundaries.begin(), m_boundaries.end(), 0);
+
         SequenceWithSoftmaxNode::ForwardPropNonLooping();
     }
 
@@ -807,7 +846,9 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         SequenceWithSoftmaxNode::RequestMatricesBeforeForwardProp(matrixPool);
-        //Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
+        RequestMatrixFromPool(m_maxIndexes, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+        Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
     }
 
 private: 
@@ -816,6 +857,7 @@ private:
     std::wstring m_phonePath;
     std::wstring m_stateListPath;
     std::wstring m_transProbPath;
+    shared_ptr<Matrix<ElemType>> m_maxIndexes, m_maxValues;
 
     void InitSEParams(const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath) {
         LOGPRINTF(stderr, "Reading files\n %ls \n %ls \n %ls \n %ls \n", symListPath.c_str(), phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
