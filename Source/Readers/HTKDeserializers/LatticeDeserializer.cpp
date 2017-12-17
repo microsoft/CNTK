@@ -204,7 +204,6 @@ static inline bool LessByFirstItem(const std::tuple<size_t, size_t, size_t>& a, 
 // Initializes chunks based on the configuration and utterance descriptions.
 void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, ConfigHelper& config)
 {
-    std::string symListPath = config.GetSymListFilePath();
     std::string latticeIndexPath = config.GetLatticeIndexFilePath();
 
     fprintf(stderr, "Reading lattice index file %s ...", latticeIndexPath.c_str());

@@ -749,13 +749,14 @@ public:
 
         char* buffer = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->CopyToArray());
 
+        size_t numrows = InputRef(3).ValuePtrRef()->GetNumRows();
+        size_t numcows = InputRef(3).ValuePtrRef()->GetNumCols();
+        LOGPRINTF(stderr, " %d ", (int)(numrows + numcows));
         let& labelMBLayout = InputRef(0).GetMBLayout();
         const auto& labelSequences = labelMBLayout->GetAllSequences();
 
         let& latticeMBLayout = InputRef(3).GetMBLayout();
-        const auto& latticeSequences = latticeMBLayout->GetAllSequences();
 
-        assert(labelSequences.size() == latticeSequences.size());
         size_t uttId = 0;
         
         /*
@@ -779,8 +780,14 @@ public:
             }
 
             m_extraUttMap.push_back(uttId++);
+
+            auto& latticeSeqInfo = latticeMBLayout->FindSequence(currentSeq.seqId);
+            auto latColumnIndices = latticeMBLayout->GetColumnIndices(latticeSeqInfo);
+            LOGPRINTF(stderr, " %d ", (int)latColumnIndices[0]);
+
             std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
             latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
+            buffer += sizeof(float) * latticeSeqInfo.tEnd;
             m_lattices.push_back(latticePair);
         }
         m_boundaries.resize(m_uids.size());
