@@ -51,9 +51,6 @@ public:
     // Returns the chunk size
     std::string GetChunkSize();
 
-    // Returns lattice sym list file path
-    std::string GetSymListFilePath();
-
     // Returns scp file dir.
     std::string GetScpDir();
 

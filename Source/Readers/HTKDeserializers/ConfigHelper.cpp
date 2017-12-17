@@ -248,11 +248,6 @@ std::string ConfigHelper::GetScpFilePath()
     return m_config(L"scpFile");
 }
 
-std::string ConfigHelper::GetSymListFilePath()
-{
-    return m_config(L"symListFile");
-}
-
 std::string ConfigHelper::GetLatticeIndexFilePath()
 {
     return m_config(L"latticeIndexFile");
