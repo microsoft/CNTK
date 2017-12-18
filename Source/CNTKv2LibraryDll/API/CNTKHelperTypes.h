@@ -796,6 +796,7 @@ template <typename T, typename ...CtorArgTypes /*WHERE_IS_NOT_BASE_OF(enable_str
 /// std::reference_wrapper or any other type that has no default constructor.
 /// Thanks to STL for helping with template magic.
 ///
+#ifdef _MSC_VER // these are needed by the gcc conversion functions
 template <typename T, typename F, size_t N, size_t... Indices>
 std::array<typename std::result_of<F(T&)>::type, N> static inline MapArrayHelper(const std::array<T, N>& args, const F& f, std::index_sequence<Indices...>)
 {
@@ -806,6 +807,14 @@ std::array<typename std::result_of<F(T&)>::type, N> static inline MapArray(const
 {
     return MapArrayHelper(args, f, std::make_index_sequence<N>{});
 }
+#else // CUDA 8 nvcc does not support C++14 and therefore has no index-sequence. For this, we manually define the overloads.
+// TODO: remove this once we switch to CUDA 9 and C++14
+template <typename T, typename F> std::array<typename std::result_of<F(T&)>::type, 1> static inline MapArray(const std::array<T, 1>& args, const F& f) { return{ f(args[0]) }; }
+template <typename T, typename F> std::array<typename std::result_of<F(T&)>::type, 2> static inline MapArray(const std::array<T, 2>& args, const F& f) { return{ f(args[0]), f(args[1]) }; }
+template <typename T, typename F> std::array<typename std::result_of<F(T&)>::type, 3> static inline MapArray(const std::array<T, 3>& args, const F& f) { return{ f(args[0]), f(args[1]), f(args[2]),  }; }
+template <typename T, typename F> std::array<typename std::result_of<F(T&)>::type, 4> static inline MapArray(const std::array<T, 4>& args, const F& f) { return{ f(args[0]), f(args[1]), f(args[2]), f(args[3]) }; }
+template <typename T, typename F> std::array<typename std::result_of<F(T&)>::type, 5> static inline MapArray(const std::array<T, 5>& args, const F& f) { return{ f(args[0]), f(args[1]), f(args[2]), f(args[3]), f(args[4]) }; }
+#endif
 
 ///
 /// Class that stores an immutable std::wstring. Assumes it is most of the time is empty, so that it is cheaper to have one extra redirection.
