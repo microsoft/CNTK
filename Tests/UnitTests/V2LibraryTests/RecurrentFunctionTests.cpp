@@ -444,19 +444,64 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
 
     // Prepare input
     std::mt19937_64 generator(13);
-    const int numberOfFrames = 3;
+    const size_t numberOfFrames = 3;
     std::vector<float> inputData;
     for (int i = 0; i < inputDim * numberOfFrames; ++i)
         inputData.push_back((float)generator());
-
 
     // Run C++ forward.
     auto value = Value::CreateSequence(NDShape{ inputDim }, inputData, DeviceDescriptor::CPUDevice());
     std::unordered_map<Variable, ValuePtr> outputs{ { output, nullptr } };
     classifier->Evaluate({ {features, value} }, outputs,  DeviceDescriptor::CPUDevice());
 
-    const float* buf = outputs[output]->Data()->DataBuffer<float>();
-    std::vector<float> result(buf, buf + outputs[output]->Shape().TotalSize());
+    auto outputAsVector = [&output](std::unordered_map<Variable, ValuePtr>& outputs)
+    {
+        const float* buf = outputs[output]->Data()->DataBuffer<float>();
+        return std::vector<float>(buf, buf + outputs[output]->Shape().TotalSize());
+    };
+
+    auto result = outputAsVector(outputs);
+
+    // Run 3 frame segment with and without resetting.
+
+    auto threeFramesData = MakeSharedObject<NDArrayView>(DataType::Float, NDShape{ inputDim, numberOfFrames, 1 }, inputData.data(), inputData.size() * sizeof(float), DeviceDescriptor::CPUDevice());
+    auto mask = MakeSharedObject<NDMask>(NDShape{ numberOfFrames, 1 });
+    mask->Clear();
+    auto threeFramesValue = MakeSharedObject<Value>(threeFramesData, mask);
+    mask = MakeSharedObject<NDMask>(NDShape{ numberOfFrames, 1 });
+    mask->MarkSequenceBegin({ 0, 0 });
+    auto threeFramesValueWithReset = MakeSharedObject<Value>(threeFramesData, mask);
+
+    // With reset.
+    outputs[output] =  nullptr;
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, DeviceDescriptor::CPUDevice());
+    auto result1 = outputAsVector(outputs);
+
+    // Without reset.
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, threeFramesValue } }, outputs, DeviceDescriptor::CPUDevice());
+    auto result2 = outputAsVector(outputs);
+
+    // With reset.
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, DeviceDescriptor::CPUDevice());
+    auto result3 = outputAsVector(outputs);
+
+    // With reset.
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, DeviceDescriptor::CPUDevice());
+    auto result4 = outputAsVector(outputs);
+
+    RequireClose(result1, result3, 0.00001f, 0.01f);
+    RequireClose(result1, result4, 0.00001f, 0.01f);
+
+    auto norm1 = GetL1Norm(result1, result4);
+    auto norm2 = GetL1Norm(result1, result3);
+    auto norm3 = GetL1Norm(result1, result2);
+
+    BOOST_REQUIRE_CLOSE(norm1, 0.0, 0.1);
+    BOOST_REQUIRE_LT(std::abs(norm1 - norm2), 0.0001);
+    BOOST_REQUIRE_GT(std::abs(norm1 - norm3), 0.0001);
 
     // Create the C model from the saved file.
     CNTK_ModelHandle model;
@@ -476,44 +521,158 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
     rc = CNTK_GetModelOutputsInfo(model, &outputInfos, &numOutputs);
     BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
     BOOST_CHECK_EQUAL(numOutputs, classifier->Outputs().size());
+    BOOST_CHECK_EQUAL(numOutputs, 1u);
 
     CNTK_Variable* argumentInfos;
     uint32_t numArguments = 0;
     rc = CNTK_GetModelArgumentsInfo(model, &argumentInfos, &numArguments);
     BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
 
-    auto s = std::vector<uint32_t>{ (uint32_t)inputDim, (uint32_t)numberOfFrames };
-    CNTK_Shape shape;
-    shape.size = 2;
-    shape.value = s.data();
+    // Sequence mode.
+    {
+        auto s = std::vector<uint32_t>{ (uint32_t)inputDim, (uint32_t)numberOfFrames };
+        CNTK_Shape shape;
+        shape.size = 2;
+        shape.value = s.data();
 
-    CNTK_Value iv;
-    iv.data = inputData.data();
-    iv.dataSize = (uint32_t)inputData.size();
-    iv.shape = shape;
+        CNTK_Value iv;
+        iv.data = inputData.data();
+        iv.shape = shape;
 
-    bool sequenceFlags[]{ true };
+        bool sequenceFlags[]{ true };
 
-    CNTK_Value* outputValues = nullptr;
-    rc = CNTK_EvaluateSequence(model, argumentInfos, &iv, sequenceFlags, numArguments,
-        outputInfos, numOutputs, &outputValues);
-    BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        // With reset.
+        NDShape outputShape;
+        CNTK_Value* outputValues = nullptr;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &iv, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult1(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
 
-    // Run C cloned forward.
-    CNTK_Value* clonedOutputValues = nullptr;
-    rc = CNTK_EvaluateSequence(cloned, argumentInfos, &iv, sequenceFlags, numArguments,
-        outputInfos, numOutputs, &clonedOutputValues);
-    BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        // Without reset.
+        sequenceFlags[0] = false;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &iv, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult2(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
 
-    // Check that C and C++ results match.
-    std::vector<float> c1(outputValues[0].data, outputValues[0].data + outputValues[0].dataSize);
-    std::vector<float> c2(clonedOutputValues[0].data, clonedOutputValues[0].data + clonedOutputValues[0].dataSize);
+        // With reset.
+        sequenceFlags[0] = true;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &iv, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult3(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
 
-    BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(),
-        c1.begin(), c1.end());
+        // With reset.
+        sequenceFlags[0] = true;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &iv, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult4(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
 
-    BOOST_CHECK_EQUAL_COLLECTIONS(c2.begin(), c2.end(),
-        c1.begin(), c1.end());
+        for (uint32_t i = 0; i < numOutputs; i++)
+            CNTK_CleanValue(&outputValues[i]);
+        CNTK_ReleaseArray(outputValues);
+
+        // Run C cloned forward.
+        CNTK_Value* clonedOutputValues = nullptr;
+        rc = CNTK_EvaluateSequence(cloned, argumentInfos, &iv, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &clonedOutputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+
+        // Check that C and C++ results match.
+        outputShape =NDShape(std::vector<size_t>(clonedOutputValues[0].shape.value, clonedOutputValues[0].shape.value + clonedOutputValues[0].shape.size));
+        std::vector<float> c2(clonedOutputValues[0].data, clonedOutputValues[0].data + outputShape.TotalSize());
+
+        for (uint32_t i = 0; i < numOutputs; i++)
+            CNTK_CleanValue(&clonedOutputValues[i]);
+        CNTK_ReleaseArray(clonedOutputValues);
+
+        RequireClose(result, cresult1, 0.00001f, 0.01f);
+        RequireClose(result1, cresult1, 0.00001f, 0.01f);
+        RequireClose(result2, cresult2, 0.00001f, 0.01f);
+        RequireClose(result3, cresult3, 0.00001f, 0.01f);
+        RequireClose(result4, cresult4, 0.00001f, 0.01f);
+
+        BOOST_CHECK_EQUAL_COLLECTIONS(c2.begin(), c2.end(),
+            cresult1.begin(), cresult1.end());
+    }
+
+    // Frame mode.
+    {
+        uint32_t s = (uint32_t)inputDim;
+        CNTK_Shape shape;
+        shape.size = 1;
+        shape.value = &s;
+
+        CNTK_Value frame1;
+        frame1.data = inputData.data();
+        frame1.shape = shape;
+
+        bool sequenceFlags[]{ true };
+        NDShape outputShape;
+
+        // First frame with reset.
+        CNTK_Value* outputValues = nullptr;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame1, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> resultFrame1(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        // Second frame without reset.
+        auto frame2 = frame1;
+        frame2.data += inputDim;
+        sequenceFlags[0] = false;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame2, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> resultFrame2(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        // Third frame without reset.
+        auto frame3 = frame2;
+        frame3.data += inputDim;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame3, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> resultFrame3(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        auto cresult1 = CombineVectors({ resultFrame1, resultFrame2, resultFrame3 });
+
+        // Without reset.
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame1, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        resultFrame1.assign(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame2, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        resultFrame2.assign(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame3, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        resultFrame3.assign(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        for (uint32_t i = 0; i < numOutputs; i++)
+            CNTK_CleanValue(&outputValues[i]);
+        CNTK_ReleaseArray(outputValues);
+
+        auto cresult2 = CombineVectors({ resultFrame1, resultFrame2, resultFrame3 });
+
+        RequireClose(result1, cresult1, 0.00001f, 0.01f);
+        RequireClose(result2, cresult2, 0.00001f, 0.01f);
+    }
 
     // Cleanup C code.
     CNTK_ReleaseModel(model);
@@ -526,14 +685,6 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
     for (uint32_t i = 0; i < numArguments; i++)
         CNTK_CleanVariable(&argumentInfos[i]);
     CNTK_ReleaseArray(argumentInfos);
-
-    for (uint32_t i = 0; i < numOutputs; i++)
-         CNTK_CleanValue(&outputValues[i]);
-    CNTK_ReleaseArray(outputValues);
-
-    for (uint32_t i = 0; i < numOutputs; i++)
-        CNTK_CleanValue(&clonedOutputValues[i]);
-    CNTK_ReleaseArray(clonedOutputValues);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

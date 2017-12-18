@@ -65,32 +65,10 @@ namespace CNTK
 
             auto inputValue = inputValues[i];
             auto inputShape = ToNDShape(inputValue.shape);
-            auto inputSampleShape = inputShape.SubShape(0, inputShape.Rank() - 1);
 
-            // Prepare the mask.
-            NDMaskPtr mask = nullptr;
-            if (!inputResetFlags[i])
-            {
-                mask = make_shared<NDMask>(inputShape);
-                mask->MarkSequenceBegin({ 0 });
-            }
-
-            ValuePtr value = nullptr;
-            NDArrayViewPtr data = nullptr;
-            if (inputShape == var->second.Shape())
-            {
-                data = make_shared<NDArrayView>(DataType::Float, inputShape, inputValue.data, inputValue.dataSize * sizeof(float), m_device);
-            }
-            else if (inputSampleShape == var->second.Shape())
-            {
-                data = make_shared<NDArrayView>(DataType::Float, inputShape.AppendShape(NDShape{ 1 }), inputValue.data, inputValue.dataSize * sizeof(float), m_device);
-            }
-            else
-                InvalidArgument("Unexpected dimensionality of the input '%ls'.", inputs[i].name);
-
-            value = make_shared<Value>(data, mask);
-
-            preparedInputs[var->second] = value;
+            // TODO: Avoid copying.
+            preparedInputs[var->second] =
+                Value::CreateSequence(inputShape.SubShape(0, var->second.Shape().Rank()), std::vector<float>(inputValue.data, inputValue.data + inputShape.TotalSize()), inputResetFlags[i], m_device);
         }
 
         // Prepare outputs.
@@ -102,13 +80,14 @@ namespace CNTK
                 InvalidArgument("Unexpected output.");
 
             ValuePtr value = nullptr;
-            if (*outputValues != nullptr) // Buffer has been preallocated, TODO: make sure the user did not mess up.
+            if (*outputValues != nullptr) // Buffer has been preallocated.
             {
                 auto buffer = *outputValues[i];
-                auto data = make_shared<NDArrayView>(DataType::Float, ToNDShape(buffer.shape), buffer.data, buffer.dataSize * sizeof(float), m_device);
-                value = make_shared<Value>(data);
+                auto shape = ToNDShape(buffer.shape);
+                NDShape maskShape = shape.SubShape(var->second.Shape().Rank(), shape.Rank());
+                auto data = make_shared<NDArrayView>(DataType::Float, shape, buffer.data, shape.TotalSize() * sizeof(float), m_device);
+                value = make_shared<Value>(data, make_shared<NDMask>(maskShape));
             }
-
             preparedOutputs[var->second] = value;
         }
 
@@ -121,7 +100,7 @@ namespace CNTK
         if (*outputValues != nullptr)
             return;
 
-        // Copy to outputs if non were provided.
+        // Copy to outputs if none was provided.
         auto arrayValueCleaner = std::bind(CleanAndDestroyValues, _1, preparedOutputs.size());
         unique_ptr<CNTK_Value, decltype(arrayValueCleaner)> result(new CNTK_Value[preparedOutputs.size()], arrayValueCleaner);
         memset(result.get(), 0, sizeof(CNTK_Value) * preparedOutputs.size());
@@ -138,16 +117,13 @@ namespace CNTK
 
             {
                 // Making sure with cleaners we do not leak anything on exception.
-                CNTK_Value v{ {0, 0}, 0, 0 };
+                CNTK_Value v{ {0, 0}, 0 };
                 unique_ptr<CNTK_Value, decltype(&CNTK_CleanValue)> valCleaner(&v, CNTK_CleanValue);
-
-                auto size = value->Data()->Shape().TotalSize();
-                v.dataSize = (uint32_t)size;
-                v.data = new float[v.dataSize];
-                copy(value->Data()->DataBuffer<float>(), value->Data()->DataBuffer<float>() + size, v.data);
                 v.shape = FromNDShape(value->Shape());
+                auto size = value->Shape().TotalSize();
+                v.data = new float[size];
+                std::copy(value->Data()->DataBuffer<float>(), value->Data()->DataBuffer<float>() + size, v.data);
                 result.get()[i] = v;
-
                 valCleaner.release();
             }
         }

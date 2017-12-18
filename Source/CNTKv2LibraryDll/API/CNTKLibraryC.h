@@ -169,8 +169,7 @@ CNTK_API CNTK_StatusCode CNTK_GetModelOutputsInfo(
 typedef struct CNTK_Value
 {
     CNTK_Shape shape;   // Shape of the value
-    float* data;        // Actual buffer
-    uint32_t dataSize;  // Buffer size in elements
+    float* data;        // Actual buffer, size is equal to total size of the elements in the shape.
 } CNTK_Value;
 
 //
