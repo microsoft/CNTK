@@ -109,11 +109,16 @@ namespace CNTK {
             prevId = id;
             prevSequenceStartOffset = byteOffset;
         }
-
+        size_t fileSize = filesize(m_input.File());
+        auto seqSize = (uint32_t)(fileSize - prevSequenceStartOffset);
+        if (seqSize % sizeof(float) == 0)
+            seqSize = seqSize / sizeof(float);
+        else
+            seqSize = seqSize / sizeof(float) + 1;
         sequence.SetKey(prevId)
-            .SetNumberOfSamples(1)
+            .SetNumberOfSamples(seqSize)
             .SetOffset(prevSequenceStartOffset)
-            .SetSize(filesize(m_input.File()) - prevSequenceStartOffset);
+            .SetSize(fileSize - prevSequenceStartOffset);
         index->AddSequence(sequence);
     }
 
