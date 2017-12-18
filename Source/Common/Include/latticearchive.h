@@ -961,16 +961,21 @@ public:
         freadOrDie(v, sz, f);
     }
     
-    void CheckTag(char*& buffer, const std::string& expectedTag) {
-        std::string tag(buffer, LATTICE_TAG_LENGTH);
+    bool CheckTag(char*& buffer, const std::string& expectedTag) {
+        std::string tag(buffer, expectedTag.length());
         if (tag != expectedTag)
-            RuntimeError("invalid tag '%s' found; expected '%s'", tag.c_str(), expectedTag.c_str());
-        buffer += LATTICE_TAG_LENGTH;
+            return false;
+        buffer += expectedTag.length();
+        return true;
     }
     
     int ReadTagFromBuffer(char*& buffer, const std::string& expectedTag, size_t expectedSize = SIZE_MAX)
     {
-        CheckTag(buffer, expectedTag);
+        if (!CheckTag(buffer, expectedTag)) {
+            // since lattice is packed densely by the reader, we may need to shift the buffer by 2 bytes.
+            if (!CheckTag(buffer, expectedTag.substr(2)))
+                RuntimeError("CheckTag: malformed file, missing expected tag: %s,", expectedTag);
+        }
         int* sz = (int*)buffer;
         if (expectedSize != SIZE_MAX && *sz != expectedSize)
             RuntimeError("ReadVectorFromBuffer: malformed file, number of vector elements differs from head, for tag %s", expectedSize);
@@ -1031,6 +1036,7 @@ public:
     }
 
     // The same as fread above, but for buffer and only supporting lattice version 2.
+    // Advances the buffer by reference.
     void freadFromBuffer(char* buffer, const std::vector<unsigned int>& idmap, size_t spunit)
     {
         ReadTagFromBuffer(buffer, "LAT ", 2);
@@ -1044,6 +1050,7 @@ public:
             RuntimeError("freadFromBuffer: mismatch between info.numframes and last node's time");
         ReadVectorFromBuffer(buffer, "EDGS", edges2, info.numedges); // uniqued edges
         ReadVectorFromBuffer(buffer, "ALNS", uniquededgedatatokens); // uniqued alignments
+        CheckTag(buffer, "END ");
         //fcheckTag(f, "END ");
         ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap);
     }

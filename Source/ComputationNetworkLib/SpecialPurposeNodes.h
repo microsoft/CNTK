@@ -756,6 +756,8 @@ public:
         const auto& labelSequences = labelMBLayout->GetAllSequences();
 
         let& latticeMBLayout = InputRef(3).GetMBLayout();
+        size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
+        const auto& latticeSequences = latticeMBLayout->GetAllSequences();
 
         size_t uttId = 0;
         
@@ -770,25 +772,25 @@ public:
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
-            auto& currentSeq = labelSequences[i];
-            auto columnIndices = labelMBLayout->GetColumnIndices(currentSeq);
+            auto& currentLabelSeq = labelSequences[i];
+            auto& currentLatticeSeq = latticeSequences[i];
+            assert(currentLabelSeq.seqId == currentLatticeSeq.seqId);
+
+            // Fill up labels
+            auto columnIndices = labelMBLayout->GetColumnIndices(currentLabelSeq);
             
             for (size_t ci = 0; ci < columnIndices.size(); ci++)
             {
                 size_t refId = (int)(*m_maxIndexes)(0, columnIndices[ci]);
                 m_uids.push_back(refId);
             }
-
             m_extraUttMap.push_back(uttId++);
-
-            auto& latticeSeqInfo = latticeMBLayout->FindSequence(currentSeq.seqId);
-            auto latColumnIndices = latticeMBLayout->GetColumnIndices(latticeSeqInfo);
-            LOGPRINTF(stderr, " %d ", (int)latColumnIndices[0]);
 
             std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
             latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
-            buffer += sizeof(float) * latticeSeqInfo.tEnd;
             m_lattices.push_back(latticePair);
+
+            buffer = buffer + latticeMBNumTimeSteps * sizeof(float);
         }
         m_boundaries.resize(m_uids.size());
         std::fill(m_boundaries.begin(), m_boundaries.end(), 0);
