@@ -483,17 +483,17 @@ struct TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AX
 // -----------------------------------------------------------------------
 
 // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
-template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
-struct TensorOpElement
-{
-    // template-recursive version loops over indices
-    template<class ElemType>
-    static __device__ void Compute(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, NUM_ARGS>& pointers,
-                                   ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                   const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
-                                   const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
-                                   CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
-                                   FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
+template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
+//struct TensorOpElement
+//{
+//    // template-recursive version loops over indices
+//    template<class ElemType>
+    static __device__ void OpElement(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, NUM_ARGS>& pointers,
+                                     ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                     const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
+                                     const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
+                                     CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
+                                     FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
     {
         // --- step 1: locate the element
         //  - map linear thread 'id' to REDUCTION_RANK axes
@@ -620,7 +620,7 @@ struct TensorOpElement
             }
         }
     }
-};
+//};
 
 // -----------------------------------------------------------------------
 // perform loop over regular index REGULAR_AXIS for NUM_ARGS-nary operations (NUM_ARGS counting the output)
@@ -702,9 +702,11 @@ __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, NUM_ARGS> p
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements) // note: there are no __syncthread() calls inside
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, false>::Compute(
+        OpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/false>(
+        //TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, false>::Compute(
             id, beta, pointers,
-            alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, 0, 0,
+            alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides,
+            /*reductionBegin=*/ 0, /*reductionChunkSize=*/ 0,
             regularOpStrideDivmod, reducingOpDimDivmod);
 }
 
@@ -795,7 +797,8 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
     pointers[pointers.size() - 1] += numElements * reductionBlock; // the output tensor is dense (no gaps); and there is one copy for each reduction block (those get further reduced into one later)
 #endif
     if (id < numElements)                               // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, true>::Compute(
+        OpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/true>(
+        //TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, true>::Compute(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
