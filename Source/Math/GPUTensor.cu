@@ -299,32 +299,33 @@ template<typename ReductionType, class ElemType> __device__ void Aggregate(Reduc
 
 // -----------------------------------------------------------------------
 // function to compute the value for a given output location (including reduction)
+// This requires a nested loop, with nesting depth = REDUCTION_RANK.
+// This is implemented by a recursive function template. Since C++ does not allow
+// partial specialization, we must detour via a struct template.
 // -----------------------------------------------------------------------
 
 #define ReduceElemType ElemType // (note: we could use 'double' here, but that would cause problems with CUDA cards that don't support double)
 
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REDUCTION_AXIS>
-struct TensorOpReduce
+struct ReduceWithNestedLoops
 {
-    // this version for REDUCTION_AXIS >= 0
+    // this version for REDUCTION_AXIS >= 0. A specialization for REDUCTION_AXIS=-1 to terminate the recursion follows below.
     static __device__ ElemType Compute(FixedArray<ElemType*, NUM_ARGS> pointers,
                                        ElementWiseOperator op, ElementWiseOperator reductionOp,
                                        const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides)
     {
         // start with index 0
         // We may use 'double' since we are memory-bound anyway.
-        ReduceElemType aggregate = TensorOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+        ReduceElemType aggregate = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
         // apply this index to the pointers
         C_size_t dim = reducingOpDims[REDUCTION_AXIS];
         for (C_size_t k = 1 /*done with k=0 already*/; k < dim; k++)
         {
             // bump the pointers
-            #pragma unroll
+#pragma unroll
             for (C_size_t i = 0; i < NUM_ARGS - 1; i++) // NUM_ARGS-1 because output is not used here
-            {
                 pointers[i] += reducingStrides(i, (C_size_t) REDUCTION_AXIS);
-            }
-            ElemType val = TensorOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+            ElemType val = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
             Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
         return (ElemType) aggregate;
@@ -332,11 +333,12 @@ struct TensorOpReduce
 };
 
 // this one terminates the template recursion over reduction dimensions
+// We also get here if the operation has no reduction.
 // The pointers are pointing to the input element.
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
-struct TensorOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/-1>
+struct ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/-1>
 {
-    // this version for REDUCTION_AXIS = -1
+    // this version for REDUCTION_AXIS=-1
     // the pointers are pointing to the right location(s) to take the operation over
     static __device__ ElemType Compute(FixedArray<ElemType*, NUM_ARGS> pointers,
                                        ElementWiseOperator op, ElementWiseOperator reductionOp,
@@ -346,7 +348,7 @@ struct TensorOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/-1>
     }
 };
 
-// Similar to TensorOpReduce but count the number of elements seen so far and keep track
+// Similar to ReduceWithNestedLoops but count the number of elements seen so far and keep track
 // of the index of the last element assigned to the aggregate. It assume that reduction is done
 // in a single thread.
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REDUCTION_AXIS>
@@ -416,11 +418,12 @@ struct TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/
 // -----------------------------------------------------------------------
 
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
-static __device__ ElemType OpReduce(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS> pointers,
-                                    ElementWiseOperator op,
-                                    const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
-                                    FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
+static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS> pointers,
+                                                     ElementWiseOperator op,
+                                                     const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
+                                                     const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
 {
+    // --- step 1: map linear thread index 'id' to multi-axis index to memory location
 #pragma unroll
     for (auto reductionAxis = (C_size_t)REDUCTION_RANK; reductionAxis --> 0; )
     {
@@ -431,20 +434,23 @@ static __device__ ElemType OpReduce(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS
             stride *= reducingOpDims[(C_size_t) i];
 
         C_size_t index;
-#ifndef USE_FAST_DIVMOD
-        index = id / stride;    // this dimension. For reductionAxis=0, the stride is 1 and hence the division will be removed at compile time.
-        id = id - stride*index; // remaining dimensions inside this. For reductionAxis=0 this value is ignored and hence not even computed.
-#else
         if (reductionAxis == 0)
             index = id, id = 0;
         else
+#ifndef USE_FAST_DIVMOD
+            {
+                index = id / stride;    // this dimension. For reductionAxis=0, the stride is 1 and hence the division will be removed at compile time.
+                id = id - stride*index; // remaining dimensions inside this. For reductionAxis=0 this value is ignored and hence not even computed.
+            }
+#else
             reducingOpDimDivmod[reductionAxis].divmod(id, index, id);
 #endif
-        // apply this index to the pointers
-#pragma unroll
+#pragma unroll // apply this index to the pointers
         for (C_size_t i = 0; i < NUM_ARGS - 1; i++)
             pointers[i] += index * reducingStrides(i, reductionAxis); // now this dimension is taken care of
     }
+
+    // --- step 2: compute the element at the determined location
     return Op(pointers, op); // finally computing something!
 }
 
@@ -452,14 +458,16 @@ static __device__ ElemType OpReduce(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS
 // perform loop over regular index k for (NUM_ARGS-1)-ary operations
 // -----------------------------------------------------------------------
 
-// compute a single output element (which may involve reduction)
+// compute a single output element
+// The linear thread index 'id' determines which output element we compute.
+// The element's output value may be the result of a reduction.
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
-static __device__ void OpElement(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, NUM_ARGS>& pointers,
-                                 ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                 const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
-                                 const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
-                                 CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
-                                 FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
+static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, NUM_ARGS>& pointers,
+                                            ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                            const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
+                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
+                                            CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
+                                            const FixedArray<fast_divmod, REGULAR_RANK>& regularOpStrideDivmod, const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
 {
     // --- step 1: locate the element
     //  - map linear thread 'id' to REDUCTION_RANK axes
@@ -471,22 +479,18 @@ static __device__ void OpElement(CUDA_LONG id, ElemType beta, FixedArray<ElemTyp
     {
         // map thread id (location on grid) to index[regularAxis]
         C_size_t index;
-        if (regularAxis == 0)
-        {
-            // for regularAxis=0, op stride is guaranteed to be 1 (cf. construction of regularOpStrideVector in LaunchTensorOp())
-            index = id; // this dimension
-            id = 0;     // (we are going enter the recursion-terminating specialization next, so this is a dummy, actually)
-        }
+        if (regularAxis == 0) // for regularAxis=0, op stride is guaranteed to be 1 (cf. construction of regularOpStrideVector in LaunchTensorOp())
+            index = id, id = 0; // this dimension (id is ignored)
         else
-        {
 #ifndef USE_FAST_DIVMOD
-            C_size_t stride = regularOpStrides[(C_size_t)regularAxis];
-            C_size_t index = id / stride; // this dimension
-            id = id - stride*index;       // remaining dimensions inside this
+            {
+                C_size_t stride = regularOpStrides[(C_size_t)regularAxis];
+                C_size_t index = id / stride; // this dimension
+                id = id - stride*index;       // remaining dimensions inside this
+            }
 #else
             regularOpStrideDivmod[regularAxis].divmod(id, index, id);
 #endif
-        }
         // apply this index to the pointers
 #pragma unroll
         for (C_size_t i = 0; i < NUM_ARGS; i++)
@@ -498,10 +502,9 @@ static __device__ void OpElement(CUDA_LONG id, ElemType beta, FixedArray<ElemTyp
     //  - the output pointers point to the right element (input pointers may still iterate for reduction)
     if (!PARALLEL_REDUCE)
     {
-        // no cross-thread reduction (TODO: actually, no reduction, so we may simplify this)
-        // compute the operation for this output coordinate
-        // This may still involve a reduction over inverse-broadcasting dimensions.
-        ElemType val = TensorOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_RANK - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+        // no cross-thread reduction (that is, either there is no reduction, or the operation
+        // has enough elements to do one output element per thread)
+        ElemType val = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_RANK - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
         // scale
         val *= alpha;
         // combine with previous value in target matrix, then write it out
@@ -510,19 +513,16 @@ static __device__ void OpElement(CUDA_LONG id, ElemType beta, FixedArray<ElemTyp
             auto* pout = pointers[pointers.size() - 1];
             if (beta != 0) // (skip memory access if not needed, and allow for ignoring NaNs)
                 val += beta * *pout;
-            // save
-            *pout = val;
+            *pout = val;   // save
         }
     }
-    else
+    else // reduction using parallel threads. We will only get here if REDUCTION_RANK > 0.
     {
 #undef ALLOW_ATOMIC_REDUCTION // define to enable use of atomicAdd() below, for comparing it (note: this may no longer compile or work)
         // now the output pointers point to the right element (input pointers may still iterate for reduction)
         CUDA_LONG reductionBlock = blockIdx.z; // reduction-block index  --larger reductions are split into blocks
         CUDA_LONG tid = threadIdx.x;           // thread index
         CUDA_LONG tids = blockDim.x;           // out of how many threads  --note: last block is partial
-
-        // note: we will only get here if REDUCTION_RANK > 0
 
         // determine our range  --this is a single int mul, we can stomach it (we could alternatively pass in yet another parameter)
         CUDA_LONG reductionDim = (CUDA_LONG)reducingOpDims[0];
@@ -539,7 +539,7 @@ static __device__ void OpElement(CUDA_LONG id, ElemType beta, FixedArray<ElemTyp
 
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
-            auto val = OpReduce<ElemType, NUM_ARGS, REDUCTION_RANK>(redId, pointers, op, reducingOpDims, reducingStrides, reducingOpDimDivmod);
+            auto val = ReduceWithParallelThreads<ElemType, NUM_ARGS, REDUCTION_RANK>(redId, pointers, op, reducingOpDims, reducingStrides, reducingOpDimDivmod);
             Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
 
@@ -580,8 +580,7 @@ static __device__ void OpElement(CUDA_LONG id, ElemType beta, FixedArray<ElemTyp
                 {
                     if (beta != 0)
                         val += beta * *pout;
-                    // save
-                    *pout = val;
+                    *pout = val; // save
                 }
             }
         }
@@ -603,7 +602,7 @@ struct TensorArgOpElement
                                    const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
                                    const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
                                    CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
-                                   FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
+                                   const FixedArray<fast_divmod, REGULAR_RANK>& regularOpStrideDivmod, const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
     {
         // map id (location on grid) to index[REGULAR_AXIS]
 #ifndef USE_FAST_DIVMOD
@@ -621,7 +620,8 @@ struct TensorArgOpElement
             pointers[i] += index * regularStrides(i, (C_size_t)REGULAR_AXIS); // now this dimension is taken care of
         }
         // process the previous index
-        TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, REGULAR_AXIS - 1>::Compute(id, pointers, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
+        TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, REGULAR_AXIS - 1>::Compute(
+            id, pointers, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
     }
 };
@@ -636,7 +636,7 @@ struct TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*RE
                                    ElementWiseOperator reductionOp,
                                    const FixedArray<C_unsigned_int, REGULAR_RANK>& /*regularOpStrides*/, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& /*regularStrides*/,
                                    const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides, CUDA_LONG /*reductionBegin*/, CUDA_LONG /*reductionChunkSize*/,
-                                   FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
+                                   const FixedArray<fast_divmod, REGULAR_RANK>& regularOpStrideDivmod, const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
     {
         // compute the operation for this output coordinate
         // This may still involve a reduction over inverse-broadcasting dimensions.
@@ -668,7 +668,7 @@ __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, NUM_ARGS> p
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements) // note: there are no __syncthread() calls inside
-        OpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/false>(
+        ComputeOutputElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/false>(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides,
             /*reductionBegin=*/ 0, /*reductionChunkSize=*/ 0,
@@ -762,7 +762,7 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
     pointers[pointers.size() - 1] += numElements * reductionBlock; // the output tensor is dense (no gaps); and there is one copy for each reduction block (those get further reduced into one later)
 #endif
     if (id < numElements)                               // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
-        OpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/true>(
+        ComputeOutputElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/true>(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
