@@ -492,30 +492,34 @@ struct TensorOpElement
                                    CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
                                    FixedArray<fast_divmod, REGULAR_RANK> regularOpStrideDivmod, FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
     {
-        // map thread id (location on grid) to index[REGULAR_AXIS]
-        C_size_t index;
-        if (REGULAR_AXIS == 0)
-        {
-            // for REGULAR_AXIS=0, op stride is guaranteed to be 1 (cf. construction of regularOpStrideVector in LaunchTensorOp())
-            index = id; // this dimension
-            id = 0;     // (we are going enter the recursion-terminating specialization next, so this is a dummy, actually)
-        }
-        else
-        {
-#ifndef USE_FAST_DIVMOD
-            C_size_t stride = regularOpStrides[(C_size_t)REGULAR_AXIS];
-            C_size_t index = id / stride; // this dimension
-            id = id - stride*index;       // remaining dimensions inside this
-#else
-            regularOpStrideDivmod[REGULAR_AXIS].divmod(id, index, id);
-#endif
-        }
-        // apply this index to the pointers
 #pragma unroll
-        for (C_size_t i = 0; i < NUM_ARGS; i++)
-            pointers[i] += index * regularStrides(i, (C_size_t) REGULAR_AXIS); // now this dimension is taken care of
+        for (auto regularAxis = (C_size_t)REGULAR_AXIS; regularAxis >= 0; regularAxis--)
+        {
+            // map thread id (location on grid) to index[regularAxis]
+            C_size_t index;
+            if (regularAxis == 0)
+            {
+                // for regularAxis=0, op stride is guaranteed to be 1 (cf. construction of regularOpStrideVector in LaunchTensorOp())
+                index = id; // this dimension
+                id = 0;     // (we are going enter the recursion-terminating specialization next, so this is a dummy, actually)
+            }
+            else
+            {
+#ifndef USE_FAST_DIVMOD
+                C_size_t stride = regularOpStrides[(C_size_t)regularAxis];
+                C_size_t index = id / stride; // this dimension
+                id = id - stride*index;       // remaining dimensions inside this
+#else
+                regularOpStrideDivmod[regularAxis].divmod(id, index, id);
+#endif
+            }
+            // apply this index to the pointers
+#pragma unroll
+            for (C_size_t i = 0; i < NUM_ARGS; i++)
+                pointers[i] += index * regularStrides(i, (C_size_t) regularAxis); // now this dimension is taken care of
+        }
         // process the previous index
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, REGULAR_AXIS - 1>::Compute(
+        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, PARALLEL_REDUCE, /*REGULAR_AXIS*/ - 1>::Compute(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
