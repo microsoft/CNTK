@@ -9,6 +9,7 @@
 #include "gammacalculation.h"
 #include "NonlinearityNodes.h"
 #include "latticearchive.h"
+#include "ProgressTracing.h"
 
 #include <map>
 #include <string>
@@ -16,9 +17,6 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
-#include "ProgressTracing.h"
-
-#include <fstream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -749,22 +747,12 @@ public:
 
         char* buffer = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->CopyToArray());
 
-        size_t numrows = InputRef(3).ValuePtrRef()->GetNumRows();
-        size_t numcows = InputRef(3).ValuePtrRef()->GetNumCols();
-        LOGPRINTF(stderr, " %d ", (int)(numrows + numcows));
         let& labelMBLayout = InputRef(0).GetMBLayout();
         const auto& labelSequences = labelMBLayout->GetAllSequences();
 
         let& latticeMBLayout = InputRef(3).GetMBLayout();
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
         const auto& latticeSequences = latticeMBLayout->GetAllSequences();
-
-        size_t uttId = 0;
-        
-        /*
-        FrameRange frameRange(InputRef(0).GetMBLayout());
-        InputRef(0).ValueFor(frameRange).VectorMax(*m_maxIndexes, *m_maxValues, true);
-        */
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
 
@@ -784,7 +772,7 @@ public:
                 size_t refId = (int)(*m_maxIndexes)(0, columnIndices[ci]);
                 m_uids.push_back(refId);
             }
-            m_extraUttMap.push_back(uttId++);
+            m_extraUttMap.push_back(labelSequences[i].s);
 
             std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
             latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
@@ -848,6 +836,10 @@ public:
             auto node = dynamic_pointer_cast<SequenceWithLatticeNode<ElemType>>(nodeP);
 
             node->m_idmap = m_idmap;
+            node->m_symListPath = m_symListPath;
+            node->m_phonePath = m_phonePath;
+            node->m_stateListPath = m_stateListPath;
+            node->m_stateListPath = m_transProbPath;
         }
     }
 
@@ -868,7 +860,8 @@ private:
     std::wstring m_transProbPath;
     shared_ptr<Matrix<ElemType>> m_maxIndexes, m_maxValues;
 
-    void InitSEParams(const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath) {
+    void InitSEParams(const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath) 
+    {
         LOGPRINTF(stderr, "Reading files\n %ls \n %ls \n %ls \n %ls \n", symListPath.c_str(), phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
         m_hmm.loadfromfile(phonePath, stateListPath, transProbPath);
         auto symmap = m_hmm.getsymmap(); 

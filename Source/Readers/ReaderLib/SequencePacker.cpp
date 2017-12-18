@@ -11,7 +11,6 @@
 #include <inttypes.h>
 #include "SequencePacker.h"
 #include "ReaderUtil.h"
-#include "ProgressTracing.h"
 
 namespace CNTK {
 
@@ -80,7 +79,6 @@ Minibatch SequencePacker::ReadMinibatch()
         const auto& type = m_outputStreamDescriptions[streamIndex].m_storageFormat;
         auto isBinary = m_inputStreamDescriptions[streamIndex].m_isBinary;
 
-        LOGPRINTF(stderr, "-------------------------Packing streamIndex %u ", streamIndex);
         MBLayoutPtr pMBLayout = nullptr;
         if (isBinary)
             pMBLayout = PackBinaryStream(streamBatch, streamIndex);
@@ -164,7 +162,6 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
     size_t sampleSize = GetSampleSize(m_outputStreamDescriptions[streamIndex]);
     auto pMBLayout = CreateMBLayout(batch);
     size_t requiredSize = pMBLayout->GetNumCols() * sampleSize;
-    LOGPRINTF(stderr, "requiredSize %zu ", requiredSize);
     if (buffer.m_size < requiredSize)
     {
         buffer.Resize(requiredSize);
@@ -204,7 +201,6 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
             {
                 // verify that the offset (an invariant for dense).
                 assert(sampleOffset == sampleIndex * sampleSize);
-                //LOGPRINTF(stderr, "Reading sampleOffset %zu ", sampleOffset);
                 PackDenseSample(destination, sequence, sampleOffset, sampleSize);
                 sampleOffset += sampleSize;
             }
@@ -379,7 +375,6 @@ MBLayoutPtr SequencePacker::PackBinaryStream(const StreamBatch& batch, size_t st
     auto pMBLayout = CreateBinaryMBLayout(batch);
     size_t requiredSize = pMBLayout->GetNumCols() * sampleSize;
 
-    LOGPRINTF(stderr, "requiredSize %zu ", requiredSize);
     if (buffer.m_size < requiredSize)
         buffer.Resize(requiredSize);
 

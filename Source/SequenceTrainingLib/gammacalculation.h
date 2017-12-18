@@ -55,10 +55,9 @@ public:
     // ========================================
     // Sec. 1 init functions
     // ========================================
-    void init(const msra::asr::simplesenonehmm& hset, int DeviceId)
+    void init(msra::asr::simplesenonehmm hset, int DeviceId)
     {
         m_deviceid = DeviceId;
-
         if (!initialmark)
         {
             m_hset = hset;
