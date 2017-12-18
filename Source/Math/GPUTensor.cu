@@ -74,9 +74,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Indices and dimensions used throughout this code:
 //  - NUM_ARGS       = N = ariness+1; number of arguments *including output* (binary op: N=3)
 //  - REGULAR_RANK   = K = rank of output elements, regularOpDims.size(). K=0 means scalar.
-//  - REGULAR_AXIS   = k = -1..K-1 = recursion index
 //  - REDUCTION_RANK = M = reduction rank, reducingOpDims.size(). M=0 means no reduction.
-//  - REGULAR_AXIS   = m = -1..M-1 = recursion index
+//  - REDUCTION_AXIS = m = -1..M-1 = recursion index
 //
 // Other frequently used variable names:
 //  - alpha, beta: BLAS-style weights: outVal = beta * outVal + alpha * f(inVals)
@@ -484,7 +483,7 @@ struct TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AX
 // -----------------------------------------------------------------------
 
 // The 'pointers' only refer to a single element, so we will bump them in-place to perform indexing.
-template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE, C_int REGULAR_AXIS>
+template <C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
 struct TensorOpElement
 {
     // template-recursive version loops over indices
@@ -501,7 +500,7 @@ struct TensorOpElement
         //  - map the axis indices to the element address (in case of reduction, for the inputs, this is the *first* element's address)
         //  - and do so for all pointers
 #pragma unroll
-        for (auto regularAxis = (C_size_t)REGULAR_AXIS; regularAxis >= 0; regularAxis--)
+        for (auto regularAxis = (C_size_t)REGULAR_RANK - 1; regularAxis >= 0; regularAxis--)
         {
             // map thread id (location on grid) to index[regularAxis]
             C_size_t index;
@@ -703,7 +702,7 @@ __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, NUM_ARGS> p
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements) // note: there are no __syncthread() calls inside
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, false, /*REGULAR_AXIS=*/REGULAR_RANK - 1>::Compute(
+        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, false>::Compute(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, 0, 0,
             regularOpStrideDivmod, reducingOpDimDivmod);
@@ -796,7 +795,7 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
     pointers[pointers.size() - 1] += numElements * reductionBlock; // the output tensor is dense (no gaps); and there is one copy for each reduction block (those get further reduced into one later)
 #endif
     if (id < numElements)                               // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
-        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, true, REGULAR_RANK - 1>::Compute(
+        TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, true>::Compute(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
