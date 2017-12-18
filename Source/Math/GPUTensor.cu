@@ -424,40 +424,45 @@ struct TensorOpParallelReduce
                                        const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
                                        FixedArray<fast_divmod, REDUCTION_RANK> reducingOpDimDivmod)
     {
+        // terminate recursion
+        for (auto reductionAxis = (C_size_t)REDUCTION_RANK; reductionAxis --> 0; )
+        {
         // map id (location on grid) to index[k]
         C_size_t stride = 1; // compute the stride. This seems expensive, but since we we only currently support REDUCTION_RANK <= 2, this is just compile-time selection between 1 and reducingOpDims[0].
         #pragma unroll
-        for (int i = 0; i < REDUCTION_AXIS; i++)
+        for (int i = 0; i < reductionAxis; i++)
         {
             stride *= reducingOpDims[(C_size_t) i];
         }
 
         C_size_t index;
 #ifndef USE_FAST_DIVMOD
-        index = id / stride; // this dimension. For REDUCTION_AXIS=0, the stride is 1 and hence the division will be removed at compile time.
-        // id = id % stride;             // remaining dimensions inside this. For REDUCTION_AXIS=0 this value is ignored and hence not even computed.
-        id = id - stride*index;             // remaining dimensions inside this. For REDUCTION_AXIS=0 this value is ignored and hence not even computed.
+        index = id / stride;    // this dimension. For reductionAxis=0, the stride is 1 and hence the division will be removed at compile time.
+        id = id - stride*index; // remaining dimensions inside this. For reductionAxis=0 this value is ignored and hence not even computed.
 #else
-        if (REDUCTION_AXIS == 0)
+        if (reductionAxis == 0)
         {
             index = id;
             id = 0;
         }
         else
         {
-            reducingOpDimDivmod[REDUCTION_AXIS].divmod(id, index, id);
+            reducingOpDimDivmod[reductionAxis].divmod(id, index, id);
         }
 #endif
         // apply this index to the pointers
         #pragma unroll
         for (C_size_t i = 0; i < NUM_ARGS - 1; i++)
         {
-            pointers[i] += index * reducingStrides(i, (C_size_t) REDUCTION_AXIS); // now this dimension is taken care of
+            pointers[i] += index * reducingStrides(i, reductionAxis); // now this dimension is taken care of
         }
-        return TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(id, pointers, op, reducingOpDims, reducingStrides, reducingOpDimDivmod);
-    }
+        //return TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, reductionAxis - 1>::Compute(id, pointers, op, reducingOpDims, reducingStrides, reducingOpDimDivmod);
+        }
+        return Op(pointers, op); // finally computing something!
+}
 };
 
+#if 0
 // this one terminates the template recursion over reduction dimensions
 // The pointers are pointing to the input element.
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
@@ -473,6 +478,7 @@ struct TensorOpParallelReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AX
         return Op(pointers, op); // finally computing something!
     }
 };
+#endif
 
 // -----------------------------------------------------------------------
 // perform loop over regular index k for (NUM_ARGS-1)-ary operations
@@ -789,7 +795,6 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
 #endif
     if (id < numElements)                               // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
         OpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/true>(
-        //TensorOpElement<NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, true>::Compute(
             id, beta, pointers,
             alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
             regularOpStrideDivmod, reducingOpDimDivmod);
