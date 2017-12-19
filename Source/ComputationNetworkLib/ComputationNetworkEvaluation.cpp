@@ -353,21 +353,21 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
 /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::AllocateGradientMatricesForInputs(MatrixPool& matrixPool) /*override*/
 {
     // TODO: should we deallocate in opposite order?
-	/* guoye: start */
-	fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 0, m_nestedNodes.size() = %d \n", int(m_nestedNodes.size()));
-	int count = 0;
-	/* guoye: end */
+    /* guoye: start */
+    fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 0, m_nestedNodes.size() = %d \n", int(m_nestedNodes.size()));
+    int count = 0;
+    /* guoye: end */
 
     for (auto nodeIter = m_nestedNodes.rbegin(); nodeIter != m_nestedNodes.rend(); ++nodeIter)
     {
-		/* guoye: start */
-		fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 1, count = %d \n", int(count));
-		/* guoye: end */
+        /* guoye: start */
+        fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 1, count = %d \n", int(count));
+        /* guoye: end */
 
-		
+        
         (*nodeIter)->AllocateGradientMatricesForInputs(matrixPool);
-		count++;
-		fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 2, count = %d \n", int(count));
+        count++;
+        fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 2, count = %d \n", int(count));
     }
 }
 /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::RequestMatricesBeforeBackprop(MatrixPool& matrixPool) /*override*/
