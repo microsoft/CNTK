@@ -119,9 +119,29 @@ void Bundler::CreateChunkDescriptions()
 
             if (m_mbDefiningDeserializer != std::numeric_limits<size_t>::max())
             {
-                // Pick up the sequence from the main deserializer.
-                if (m_deserializers[m_mbDefiningDeserializer]->GetSequenceInfo(sequenceDescriptions[sequenceIndex], s))
-                    sequenceSamples = s.m_numberOfSamples;
+                if (m_mbDefiningDeserializer != 0)
+                {
+                    // Pick up the sequence from a particular deserializer.
+                    if (m_deserializers[m_mbDefiningDeserializer]->GetSequenceInfo(sequenceDescriptions[sequenceIndex], s))
+                        sequenceSamples = s.m_numberOfSamples;
+                    else
+                        invalid.insert(sequenceIndex);
+                }
+            }
+            else
+            {
+                // Need to check the sequence length for all deserializers.
+                for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
+                {
+                    isValid = m_deserializers[deserializerIndex]->GetSequenceInfo(sequenceDescriptions[sequenceIndex], s);
+                    if (!isValid)
+                    {
+                        invalid.insert(sequenceIndex);
+                        break;
+                    }
+
+                    sequenceSamples = std::max<size_t>(sequenceSamples, s.m_numberOfSamples);
+                }
             }
 
             if (isValid)
@@ -171,7 +191,7 @@ void Bundler::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInf
     m_primaryDeserializer->SequenceInfosForChunk(original.m_id, sequences);
 
     std::vector<SequenceInfo> result;
-    if (m_takePrimarySequenceLength) // No need to consult other deserializers.
+    if (m_takePrimarySequenceLength || m_mbDefiningDeserializer == 0) // No need to consult other deserializers.
     {
         // Do cleansing.
         result.reserve(sequences.size());

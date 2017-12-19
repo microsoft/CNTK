@@ -43,7 +43,7 @@ private:
 
     // Initialization functions.
     void InitializeChunkInfos(ConfigHelper& config);
-    void InitializeStreams(const std::wstring& featureName);
+    void InitializeStreams(const std::wstring& featureName, bool definesMbSize);
     void InitializeFeatureInformation();
     void InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow);
 
