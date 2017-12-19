@@ -6315,9 +6315,9 @@ template <size_t N>
 
     // do the operation
     DISPATCH_MATRIX_ON_FLAG(&out, &out,
-        CPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return ref(*arg.m_CPUMatrix); }), op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        CPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return arg.m_CPUMatrix->Data(); }), op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
         {
-            for (size_t i = 0; i < arity; i++)
+            for (size_t i = 0; i < N - 1; i++)
                 if (((Matrix<ElemType>&)args[i]).m_GPUMatrix->GetComputeDeviceId() != out.m_GPUMatrix->GetComputeDeviceId())
                     InvalidArgument("All matrices must be on the same GPU");
             GPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return arg.m_GPUMatrix->Data(); }), out.m_GPUMatrix->GetComputeDeviceId(), op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
@@ -6336,12 +6336,14 @@ void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperato
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
+    // TODO: once I test this again, change this to a call to TensorOp(), then make the methods private
     VerifyIsDense(*this) && VerifyIsDense(a);
 
     DecideAndMoveToRightDevice(*this, a);
 
+    // TODO: updated signature of CPUMatrix not tested
     DISPATCH_MATRIX_ON_FLAG(this, this,
-                            m_CPUMatrix->TensorArgOp(*a.m_CPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            CPUMatrix<ElemType>::TensorArgOp({ a.m_CPUMatrix->Data(), m_CPUMatrix->Data() }, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             m_GPUMatrix->TensorArgOp(*a.m_GPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);

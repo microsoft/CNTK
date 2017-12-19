@@ -457,34 +457,34 @@ public:
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const CPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
 
     template <size_t N>
-    static void TensorOp(size_t arity, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, N>& args,
+    static void TensorOp(size_t arity, const std::array<ElemType*, N>& pointers,
                          ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
                          const std::array<size_t, N>& offsets,
                          const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, N>& regularStrides,
                          const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, N>& reducingStrides)
     {
-        assert(args.size() == arity + 1); arity;
-        TensorOp(beta, args, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        assert(pointers.size() == arity + 1); arity;
+        TensorOp(beta, pointers, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 private:
     // TODO: these are the same as TensorOp above except for 'arity' and different order. This is the result of some refactoring. Clean this up further some day.
-    static void TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 1>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    static void TensorOp(ElemType beta, const std::array<ElemType*, 1>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 1>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& reducingStrides);
-    static void TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 2>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    static void TensorOp(ElemType beta, const std::array<ElemType*, 2>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 2>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
-    static void TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 3>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    static void TensorOp(ElemType beta, const std::array<ElemType*, 3>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 3>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 3>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 3>& reducingStrides);
-    static void TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 4>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    static void TensorOp(ElemType beta, const std::array<ElemType*, 4>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
-    static void TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 5>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    static void TensorOp(ElemType beta, const std::array<ElemType*, 5>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 5>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
@@ -495,10 +495,10 @@ public:
     int ArgOp(ElementWiseOperator reductionOp) const;
 
     // TODO: merge this with TensorOp() above
-    void TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
-                     const std::array<size_t, 2>& offsets,
-                     const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-                     const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+    static void TensorArgOp(std::array<ElemType*, 2> pointers, ElementWiseOperator reductionOp,
+                            const std::array<size_t, 2>& offsets,
+                            const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                            const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
     static CPUMatrix<ElemType> Ones(const size_t rows, const size_t cols);
     static CPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols);

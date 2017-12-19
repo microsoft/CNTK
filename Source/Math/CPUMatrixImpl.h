@@ -7220,13 +7220,13 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
 // perform nullary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 1>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<ElemType*, 1>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                               const array<size_t, 1>& offsets,
                                               const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
                                               const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides)
 {
     // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
-#define CaseNullaryTensorOp(oper)                                                        \
+#define CaseNullaryTensorOp(oper)                                                      \
     case ElementWiseOperator::op##oper:                                                \
         return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 1>& pp) \
                               {                                                        \
@@ -7234,7 +7234,6 @@ template <class ElemType>
                               },                                                       \
                               reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
-    auto pointers = ::CNTK::MapArray(args, [](CPUMatrix<ElemType>& arg) { return arg.Data(); });
     switch (op)
     {
         ForAllNullaryOps(CaseNullaryTensorOp);
@@ -7246,7 +7245,7 @@ template <class ElemType>
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 2>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<ElemType*, 2>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                               const array<size_t, 2>& offsets,
                                               const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                               const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
@@ -7256,9 +7255,7 @@ template <class ElemType>
         // note: this code path is untested for now. GPU version is tested.
         if (alpha != 1 || beta != 0 || op != opCopy)
             InvalidArgument("LaunchTensorOp: Argmin/max reductions require opCopy, alpha=1, and beta=0");
-        CPUMatrix<ElemType>& out = args.back();
-        const CPUMatrix<ElemType>& a = args.front();
-        return out.TensorArgOp(a, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorArgOp(pointers, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 
     if (reductionOp != ElementWiseOperator::opSum    &&
@@ -7277,7 +7274,6 @@ template <class ElemType>
                               },                                                       \
                               reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
-    auto pointers = ::CNTK::MapArray(args, [](CPUMatrix<ElemType>& arg) { return arg.Data(); });
     switch (op)
     {
         ForAllUnaryOps(CaseUnaryTensorOp);
@@ -7289,7 +7285,7 @@ template <class ElemType>
 // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 3>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<ElemType*, 3>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                               const array<size_t, 3>& offsets,
                                               const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
                                               const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
@@ -7305,7 +7301,6 @@ template <class ElemType>
                               },                                                       \
                               reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
-    auto pointers = ::CNTK::MapArray(args, [](CPUMatrix<ElemType>& arg) { return arg.Data(); });
     switch (op)
     {
         ForAllBinaryOps(CaseBinaryTensorOp);
@@ -7317,7 +7312,7 @@ template <class ElemType>
 // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 4>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<ElemType*, 4>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                               const array<size_t, 4>& offsets,
                                               const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                                               const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
@@ -7333,7 +7328,6 @@ template <class ElemType>
                               },                                                       \
                               reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
-    auto pointers = ::CNTK::MapArray(args, [](CPUMatrix<ElemType>& arg) { return arg.Data(); });
     switch (op)
     {
         ForAllTernaryOps(CaseTernaryTensorOp);
@@ -7345,7 +7339,7 @@ template <class ElemType>
 // perform ternary operation 'op' on a, and c giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
-/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<std::reference_wrapper<CPUMatrix<ElemType>>, 5>& args, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+/*static*/ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const std::array<ElemType*, 5>& pointers, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                               const array<size_t, 5>& offsets,
                                               const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 5>& regularStrides,
                                               const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 5>& reducingStrides)
@@ -7361,7 +7355,6 @@ template <class ElemType>
                               },                                                                   \
                               reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
-    auto pointers = ::CNTK::MapArray(args, [](CPUMatrix<ElemType>& arg) { return arg.Data(); });
     switch (op)
     {
         ForAllQuaternaryOps(CaseQuaternaryTensorOp);
@@ -7473,41 +7466,34 @@ int CPUMatrix<ElemType>::ArgOp(ElementWiseOperator reductionOp) const
     return -1;
 }
 
+// TODO: make this function private, only accessible via TensorOp()
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
-                                      const array<size_t, 2>& offsets,
-                                      const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-                                      const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+/*static*/ void CPUMatrix<ElemType>::TensorArgOp(std::array<ElemType*, 2> pointers, ElementWiseOperator reductionOp,
+                                                 const array<size_t, 2>& offsets,
+                                                 const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
     if (reductionOp != ElementWiseOperator::opArgmin &&
         reductionOp != ElementWiseOperator::opArgmax)
         InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
 
-    if (GetNumElements() == 1)
-    {
-        Data()[0] = (ElemType) a.ArgOp(reductionOp);
-    }
-    else
-    {
-        const size_t N = 2;
-        array<ElemType*, N> pointers = { a.Data(), Data() };
-        for (size_t i = 0; i < N; i++)
-            pointers[i] += offsets[i];
+    const size_t N = 2;
+    for (size_t i = 0; i < N; i++)
+        pointers[i] += offsets[i];
 
-        switch (regularOpDims.size())
-        {
-            case 2:
-                TensorArgOpIteration<ElemType, N, 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
-                break;
-            case 1:
-                TensorArgOpIteration<ElemType, N, 0>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
-                break;
-            case 0:
-                TensorArgOpIteration<ElemType, N, -1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
-                break;
-            default:
-                LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)regularOpDims.size());
-        }
+    switch (regularOpDims.size())
+    {
+    case 2:
+        TensorArgOpIteration<ElemType, N, 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+        break;
+    case 1:
+        TensorArgOpIteration<ElemType, N, 0>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+        break;
+    case 0:
+        TensorArgOpIteration<ElemType, N, -1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+        break;
+    default:
+        LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)regularOpDims.size());
     }
 }
 
