@@ -413,17 +413,15 @@ struct TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/
 };
 
 // -----------------------------------------------------------------------
-// function to compute one constituent of the value for a given output location
-// (reduction is not done here, but by calling into here multiple times)
+// helper function to locate an element
 // -----------------------------------------------------------------------
 
 // BUGBUG: This no longer works without USE_FAST_DIVMOD. Fine for now. We should just remove it.
 template<class ElemType, C_size_t NUM_ARGS, C_int RANK>
-static __device__ FixedArray<ElemType*, NUM_ARGS> Locate(CUDA_LONG id, const FixedArray<ElemType*, NUM_ARGS>& basePointers,
-                                                         const FixedMatrix<C_int, NUM_ARGS, RANK>& strides,
-                                                         const FixedArray<fast_divmod, RANK>& opStrideDivmod)
+static __device__ bool Locate(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS>& /*in/out*/ pointers,
+                              const FixedMatrix<C_int, NUM_ARGS, RANK>& strides,
+                              const FixedArray<fast_divmod, RANK>& opStrideDivmod)
 {
-    auto pointers = basePointers;
 #pragma unroll
     for (auto axis = (C_size_t)RANK; axis --> 0; )
     {
@@ -450,20 +448,7 @@ static __device__ FixedArray<ElemType*, NUM_ARGS> Locate(CUDA_LONG id, const Fix
         for (C_size_t i = 0; i < NUM_ARGS; i++)
             pointers[i] += index * strides(i, axis); // now this dimension is taken care of
     }
-    return pointers;
-}
-
-template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
-static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS> basePointers,
-                                                     ElementWiseOperator op,
-                                                     const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
-                                                     const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
-{
-    // --- step 1: map linear thread index 'id' to multi-axis index to memory location
-    auto pointers = Locate(id, basePointers, reducingStrides, reducingOpDimDivmod);
-
-    // --- step 2: compute the element at the determined location
-    return Op(pointers, op); // finally computing something!
+    return true;
 }
 
 // -----------------------------------------------------------------------
@@ -474,7 +459,7 @@ static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<El
 // The linear thread index 'id' determines which output element we compute.
 // The element's output value may be the result of a reduction.
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
-static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, const FixedArray<ElemType*, NUM_ARGS>& basePointers,
+static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, NUM_ARGS>& pointers,
                                             ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                             const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
                                             const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
@@ -486,7 +471,7 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, const F
     //  - map the axis indices to the element address (in case of reduction, for the inputs, this is the *first* element's address)
     //  - add the offset to the pointer
     //  - and do so for all pointers (output and all inputs)
-    auto pointers = Locate(id, basePointers, regularStrides, regularOpStrideDivmod);
+    Locate(id, pointers, regularStrides, regularOpStrideDivmod);
 
     // --- step 2: compute the output element at that location
     //  - in case of reduction, this still involves a loop, which may be serial or parallel
@@ -530,7 +515,23 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, const F
 
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
-            auto val = ReduceWithParallelThreads<ElemType, NUM_ARGS, REDUCTION_RANK>(redId, pointers, op, reducingOpDims, reducingStrides, reducingOpDimDivmod);
+            // map linear thread index 'id' to multi-axis index to memory location
+            // This operates on top of 'pointers' which points to the first element to be reduced.
+            auto pointers1 = pointers;
+            Locate(redId, pointers1, reducingStrides, reducingOpDimDivmod);
+
+            // compute the element at the determined location
+            auto val = Op(pointers1, op); // finally computing something!
+            //auto val = ReduceWithParallelThreads<ElemType, NUM_ARGS, REDUCTION_RANK>(redId, pointers, op, reducingOpDims, reducingStrides, reducingOpDimDivmod);
+
+            //template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
+            //static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS> pointers,
+            //    ElementWiseOperator op,
+            //    const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
+            //    const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
+            //{
+            //}
+
             Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
 
