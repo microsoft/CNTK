@@ -744,6 +744,8 @@ public:
         m_uids.clear();
         m_boundaries.clear();
         m_extraUttMap.clear();
+        
+        Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
 
         char* buffer = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->CopyToArray());
 
@@ -825,6 +827,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         SequenceWithSoftmaxNode::Validate(isFinalValidationPass);
+        Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
