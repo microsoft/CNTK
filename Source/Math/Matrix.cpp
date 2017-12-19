@@ -6286,61 +6286,60 @@ static bool VerifyIsDense(const Matrix<ElemType>& a)
     return true;
 }
 
-template<typename IteratorType>
-using Span = ::CNTK::Span<IteratorType>;
-// this function is a stop-gap until the types are propagated down all the way
-template<typename T, size_t N>
-static array<T, N> MakeArray(const Span<T*>& span)
+//template<typename IteratorType>
+//using Span = ::CNTK::Span<IteratorType>;
+//// this function is a stop-gap until the types are propagated down all the way
+//template<typename T, size_t N>
+//static array<T, N> MakeArray(const Span<T*>& span)
+//{
+//    array<T, N> a;
+//    auto iter = span.begin();
+//    for (auto& ai : a)
+//        ai = *iter++;
+//    return a;
+//}
+template<typename T, size_t N> // TODO: remove this once it works
+static const array<T, N>& MakeArray(const array<T, N>& span)
 {
-    array<T, N> a;
-    auto iter = span.begin();
-    for (auto& ai : a)
-        ai = *iter++;
-    return a;
+    return span;
 }
 
 // arity = number of arguments; remaining elements in args etc. is output
 // Presently only one output is implemented. This prototype is meant to allow future extension towards multiple outputs.
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::TensorOp(size_t arity, const Span<reference_wrapper<Matrix>*>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
-                                           const Span<size_t*>& offsets,
-                                           const SmallVector<size_t>& regularOpDims,  const Span<SmallVector<ptrdiff_t>*>& regularStrides,
-                                           const SmallVector<size_t>& reducingOpDims, const Span<SmallVector<ptrdiff_t>*>& reducingStrides)
+template <size_t N>
+/*static*/ void Matrix<ElemType>::TensorOp(size_t arity, const array<reference_wrapper<Matrix>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
+                                           const array<size_t, N>& offsets,
+                                           const SmallVector<size_t>& regularOpDims,  const array<SmallVector<ptrdiff_t>, N>& regularStrides,
+                                           const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 {
-    // checks
-    if (args.size() != arity + 1)
-        NOT_IMPLEMENTED; // so far we only support single output operations
     for (Matrix& arg : args)
         VerifyIsDense(arg);
 
+    // move data between devices if needed
     Matrix& out = args.back();
-    // stop-gap implementation until this as been pushed all the way down
-    switch (arity)
+    switch (N)
     {
-    case 0:
-        return out.TensorOp(beta, alpha, op, reductionOp, MakeArray<size_t, 1>(offsets),
-                             regularOpDims,  MakeArray<SmallVector<ptrdiff_t>, 1>(regularStrides ),
-                             reducingOpDims, MakeArray<SmallVector<ptrdiff_t>, 1>(reducingStrides));
-    case 1:
-        return out.TensorOp(beta, args[0], alpha, op, reductionOp, MakeArray<size_t, 2>(offsets),
-                             regularOpDims,  MakeArray<SmallVector<ptrdiff_t>, 2>(regularStrides ),
-                             reducingOpDims, MakeArray<SmallVector<ptrdiff_t>, 2>(reducingStrides));
-    case 2:
-        return out.TensorOp(beta, args[0], args[1], alpha, op, reductionOp, MakeArray<size_t, 3>(offsets),
-                             regularOpDims,  MakeArray<SmallVector<ptrdiff_t>, 3>(regularStrides ),
-                             reducingOpDims, MakeArray<SmallVector<ptrdiff_t>, 3>(reducingStrides));
-    case 3:
-        return out.TensorOp(beta, args[0], args[1], args[2], alpha, op, reductionOp, MakeArray<size_t, 4>(offsets),
-                             regularOpDims,  MakeArray<SmallVector<ptrdiff_t>, 4>(regularStrides ),
-                             reducingOpDims, MakeArray<SmallVector<ptrdiff_t>, 4>(reducingStrides));
-    case 4:
-        return out.TensorOp(beta, args[0], args[1], args[2], args[3], alpha, op, reductionOp, MakeArray<size_t, 5>(offsets),
-                             regularOpDims,  MakeArray<SmallVector<ptrdiff_t>, 5>(regularStrides ),
-                             reducingOpDims, MakeArray<SmallVector<ptrdiff_t>, 5>(reducingStrides));
-    default:
-        NOT_IMPLEMENTED;
+    case 1: break;
+    case 2: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0]); break;
+    case 3: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0], (Matrix<ElemType>&)args[1]); break;
+    case 4: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0], (Matrix<ElemType>&)args[1], (Matrix<ElemType>&)args[2]); break;
+    case 5: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0], (Matrix<ElemType>&)args[1], (Matrix<ElemType>&)args[2], (Matrix<ElemType>&)args[3]); break;
+    default: NOT_IMPLEMENTED;
     }
+
+    // do the operation
+    DISPATCH_MATRIX_ON_FLAG(&out, &out,
+        CPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return ref(*arg.m_CPUMatrix); }), op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        GPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return ref(*arg.m_GPUMatrix); }) , op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
 }
+#define InstantiateTensorOp(ElemType, N) template void Matrix<ElemType>::TensorOp(size_t arity, const array<reference_wrapper<Matrix>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta, const array<size_t, N>& offsets, const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
+InstantiateTensorOp(float, 1); InstantiateTensorOp(float, 2); InstantiateTensorOp(float, 3); InstantiateTensorOp(float, 4); InstantiateTensorOp(float, 5);
+InstantiateTensorOp(double, 1); InstantiateTensorOp(double, 2); InstantiateTensorOp(double, 3); InstantiateTensorOp(double, 4); InstantiateTensorOp(double, 5);
+
+#if 0
 template <class ElemType>
 void Matrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                                 const array<size_t, 1>& offsets,
@@ -6419,7 +6418,9 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
+#endif
 
+// TODO: Absorb into the above.
 template <class ElemType>
 void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
                                    const array<size_t, 2>& offsets,

@@ -250,13 +250,13 @@ static void CheckDifferentObjects(const array<reference_wrapper<TensorView<ElemT
     }
 }
 
-template<typename IteratorType>
-using Span = ::CNTK::Span<IteratorType>;
-template<typename T, size_t N>
-static inline Span<T*> MakeArgSpan(array<T, N>& args)
-{
-    return Span<T*>(args.data(), args.size());
-}
+//template<typename IteratorType>
+//using Span = ::CNTK::Span<IteratorType>;
+//template<typename T, size_t N>
+//static inline Span<T*> MakeArgSpan(array<T, N>& args)
+//{
+//    return Span<T*>(args.data(), args.size());
+//}
 
 // single entry point for TensorView execution
 template<typename ElemType>
@@ -377,8 +377,8 @@ template<size_t N>
 
     // now perform the operation
     auto sobs = ::CNTK::MapArray(args, [](TensorView<ElemType>& arg) { return ref(arg.GetSOB()); }); // get all storage objects
-    Matrix<ElemType>::TensorOp(arity, MakeArgSpan(sobs), op, reductionOp, alpha, beta,
-                               MakeArgSpan(offsets), regularOpDims, MakeArgSpan(regularStrides), reducingOpDims, MakeArgSpan(reducingStrides));
+    Matrix<ElemType>::TensorOp<N>(arity, (sobs), op, reductionOp, alpha, beta,
+                               (offsets), regularOpDims, (regularStrides), reducingOpDims, (reducingStrides));
 }
 
 // TODO: Can we unify this interface as well and go through Do()? It seems internally, TensorArgOp() already does that.
