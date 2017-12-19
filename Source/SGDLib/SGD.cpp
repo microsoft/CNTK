@@ -262,7 +262,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             }
         }
     }
-
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 1 \n");
+    /* guoye: end */
     std::vector<ComputationNodeBasePtr> additionalNodesToEvaluate;
 
     // Do not include the output nodes in the matrix sharing structure when using forward value matrix
@@ -273,13 +275,17 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         auto& outputNodes = net->OutputNodes();
         additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), outputNodes.cbegin(), outputNodes.cend());
     }
-
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 2 \n");
+    /* guoye: end */
     auto preComputeNodesList = net->GetNodesRequiringPreComputation();
     additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
 
     // allocate memory for forward and backward computation
     net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]); // TODO: use criterionNodes.front() throughout
-
+                                                                                             /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 3 \n");
+    /* guoye: end */
     // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
     // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
     StreamMinibatchInputs* inputMatrices = new StreamMinibatchInputs();
@@ -287,13 +293,18 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     let& featureNodes = net->FeatureNodes();
     let& labelNodes = net->LabelNodes();
     // BUGBUG: ^^ should not get all feature/label nodes, but only the ones referenced in a criterion
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 4 \n");
+    /* guoye: end */
     for (size_t pass = 0; pass < 2; pass++)
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;
         for (const auto & node : nodes)
             inputMatrices->AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
     }
-
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 5 \n");
+    /* guoye: end */
     // get hmm file for sequence training
     bool isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax");
     if (isSequenceTrainingCriterion)
@@ -303,6 +314,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         auto hmm = node->gethmm();
         trainSetDataReader->GetHmmData(hmm);
     }
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 6 \n");
+    /* guoye: end */
 
     // used for KLD regularized adaptation. For all other adaptation techniques
     // use MEL to edit the model and using normal training algorithm
@@ -328,6 +342,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // allocate memory for forward computation
         refNet->AllocateAllMatrices({refNode}, {}, nullptr);
     }
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 7 \n");
+    /* guoye: end */
 
     // initializing weights and gradient holder
     // only one criterion so far TODO: support multiple ones?
@@ -337,6 +354,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     size_t numParameters = 0;
 
     vector<wstring> nodesToUpdateDescriptions; // for logging only
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 8 \n");
+    /* guoye: end */
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -353,12 +373,18 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             numParameters += node->GetSampleLayout().GetNumElements();
         }
     }
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 9 \n");
+    /* guoye: end */
     size_t numNeedsGradient = 0;
     for (let node : net->GetEvalOrder(criterionNodes[0]))
     {
         if (node->NeedsGradient())
             numNeedsGradient++;
     }
+    /* guoye: start */
+    LOGPRINTF(stderr, "SGD debug 10 \n");
+    /* guoye: end */
     fprintf(stderr, "\n");
     LOGPRINTF(stderr, "Training %.0f parameters in %d ",
               (double)numParameters, (int)nodesToUpdateDescriptions.size());
