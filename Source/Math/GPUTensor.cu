@@ -428,17 +428,16 @@ static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<El
     for (auto reductionAxis = (C_size_t)REDUCTION_RANK; reductionAxis --> 0; )
     {
         // map id (location on grid) to index[k]
-        C_size_t stride = 1; // compute the stride. This seems expensive, but since we we only currently support REDUCTION_RANK <= 2, this is just compile-time selection between 1 and reducingOpDims[0].
-#pragma unroll
-        for (int i = 0; i < reductionAxis; i++)
-            stride *= reducingOpDims[(C_size_t) i];
-
         C_size_t index;
         if (reductionAxis == 0)
             index = id, id = 0;
         else
 #ifndef USE_FAST_DIVMOD
             {
+                C_size_t stride = 1; // compute the stride. This seems expensive, but since we we only currently support REDUCTION_RANK <= 2, this is just compile-time selection between 1 and reducingOpDims[0].
+#pragma unroll
+                for (int i = 0; i < reductionAxis; i++)
+                    stride *= reducingOpDims[(C_size_t) i];
                 index = id / stride;    // this dimension. For reductionAxis=0, the stride is 1 and hence the division will be removed at compile time.
                 id = id - stride*index; // remaining dimensions inside this. For reductionAxis=0 this value is ignored and hence not even computed.
             }
@@ -491,8 +490,7 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedAr
 #else
             regularOpStrideDivmod[regularAxis].divmod(id, index, id);
 #endif
-        // apply this index to the pointers
-#pragma unroll
+#pragma unroll // apply this index to the pointers
         for (C_size_t i = 0; i < NUM_ARGS; i++)
             pointers[i] += index * regularStrides(i, (C_size_t) regularAxis); // now this dimension is taken care of
     }
