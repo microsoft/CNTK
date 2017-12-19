@@ -310,13 +310,14 @@ template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REDUCTI
 struct ReduceWithNestedLoops
 {
     // this version for REDUCTION_AXIS >= 0. A specialization for REDUCTION_AXIS=-1 to terminate the recursion follows below.
-    static __device__ ElemType Compute(FixedArray<ElemType*, NUM_ARGS> pointers,
-                                       ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                       const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides)
+    static __device__ ElemType ComputeAndReduceAlongOneAxis(FixedArray<ElemType*, NUM_ARGS> pointers,
+                                                            ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims,
+                                                            const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides)
     {
         // start with index 0
         // We may use 'double' since we are memory-bound anyway.
-        ReduceElemType aggregate = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+        ReduceElemType aggregate = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::ComputeAndReduceAlongOneAxis(pointers, op, reductionOp, reducingOpDims, reducingStrides);
         // apply this index to the pointers
         C_size_t dim = reducingOpDims[REDUCTION_AXIS];
         for (C_size_t k = 1 /*done with k=0 already*/; k < dim; k++)
@@ -325,7 +326,7 @@ struct ReduceWithNestedLoops
 #pragma unroll
             for (C_size_t i = 0; i < NUM_ARGS - 1; i++) // NUM_ARGS-1 because output is not used here
                 pointers[i] += reducingStrides(i, (C_size_t) REDUCTION_AXIS);
-            ElemType val = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+            ElemType val = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::ComputeAndReduceAlongOneAxis(pointers, op, reductionOp, reducingOpDims, reducingStrides);
             Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
         return (ElemType) aggregate;
@@ -340,9 +341,10 @@ struct ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXI
 {
     // this version for REDUCTION_AXIS=-1
     // the pointers are pointing to the right location(s) to take the operation over
-    static __device__ ElemType Compute(FixedArray<ElemType*, NUM_ARGS> pointers,
-                                       ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                       const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/)
+    static __device__ ElemType ComputeAndReduceAlongOneAxis(FixedArray<ElemType*, NUM_ARGS> pointers,
+                                                            ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/,
+                                                            const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/)
     {
         return Op(pointers, op); // finally computing something!
     }
@@ -416,6 +418,15 @@ struct TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/
 // helper function to locate an element
 // -----------------------------------------------------------------------
 
+template<class ElemType, C_size_t NUM_ARGS, C_int RANK, C_size_t NUM_ARGS_TO_BUMP>
+static __device__ void BumpPointers(C_size_t axis, C_size_t index, FixedArray<ElemType*, NUM_ARGS>& /*in/out*/ pointers,
+                                    const FixedMatrix<C_int, NUM_ARGS, RANK>& strides)
+{
+#pragma unroll // apply this index to the pointers
+    for (C_size_t i = 0; i < NUM_ARGS_TO_BUMP; i++)
+        pointers[i] += index * strides(i, axis);
+}
+
 // BUGBUG: This no longer works without USE_FAST_DIVMOD. Fine for now. We should just remove it.
 template<class ElemType, C_size_t NUM_ARGS, C_int RANK>
 static __device__ bool Locate(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS>& /*in/out*/ pointers,
@@ -444,9 +455,9 @@ static __device__ bool Locate(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS>& /*i
 #else
             opStrideDivmod[axis].divmod(id, index, id);
 #endif
-#pragma unroll // apply this index to the pointers
-        for (C_size_t i = 0; i < NUM_ARGS; i++)
-            pointers[i] += index * strides(i, axis); // now this dimension is taken care of
+        // and update the pointers by this index along axis
+        BumpPointers<ElemType, NUM_ARGS, RANK, /*NUM_ARGS_TO_BUMP=*/NUM_ARGS>(axis, index, pointers, strides);
+        // now this axis is taken care of
     }
     return true;
 }
@@ -480,7 +491,7 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedAr
     {
         // no cross-thread reduction (that is, either there is no reduction, or the operation
         // has enough elements to do one output element per thread)
-        ElemType val = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_RANK - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+        ElemType val = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_RANK - 1>::ComputeAndReduceAlongOneAxis(pointers, op, reductionOp, reducingOpDims, reducingStrides);
         // scale
         val *= alpha;
         // combine with previous value in target matrix, then write it out
