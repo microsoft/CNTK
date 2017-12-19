@@ -569,7 +569,7 @@ public:
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
 
     template <size_t N>
-    static void TensorOp(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<ElemType>>, N>& args,
+    static void TensorOp(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<ElemType>>, N>& args, DEVICEID_TYPE deviceId,
                          ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
                          const std::array<size_t, N>& offsets,
                          const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, N>& regularStrides,

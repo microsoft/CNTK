@@ -6295,6 +6295,9 @@ template <size_t N>
                                            const SmallVector<size_t>& regularOpDims,  const array<SmallVector<ptrdiff_t>, N>& regularStrides,
                                            const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 {
+    if (args.size() != arity + 1)
+        NOT_IMPLEMENTED; // so far we only support single output operations
+
     for (Matrix& arg : args)
         VerifyIsDense(arg);
 
@@ -6313,7 +6316,12 @@ template <size_t N>
     // do the operation
     DISPATCH_MATRIX_ON_FLAG(&out, &out,
         CPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return ref(*arg.m_CPUMatrix); }), op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-        GPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return ref(*arg.m_GPUMatrix); }) , op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        {
+            for (size_t i = 0; i < arity; i++)
+                if (((Matrix<ElemType>&)args[i]).m_GPUMatrix->GetComputeDeviceId() != out.m_GPUMatrix->GetComputeDeviceId())
+                    InvalidArgument("All matrices must be on the same GPU");
+            GPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return ref(*arg.m_GPUMatrix); }), out.m_GPUMatrix->GetComputeDeviceId(), op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        },
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }

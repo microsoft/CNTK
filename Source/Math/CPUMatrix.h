@@ -463,8 +463,7 @@ public:
                          const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, N>& regularStrides,
                          const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, N>& reducingStrides)
     {
-        if (args.size() != arity + 1)
-            NOT_IMPLEMENTED; // so far we only support single output operations
+        assert(args.size() == arity + 1); arity;
         TensorOp(beta, args, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 private:
