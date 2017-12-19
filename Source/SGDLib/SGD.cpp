@@ -279,8 +279,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     LOGPRINTF(stderr, "SGD debug 2 \n");
     /* guoye: end */
     auto preComputeNodesList = net->GetNodesRequiringPreComputation();
+    LOGPRINTF(stderr, "SGD debug 2.1 \n");
     additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
-
+    LOGPRINTF(stderr, "SGD debug 2.2 \n");
     // allocate memory for forward and backward computation
     net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]); // TODO: use criterionNodes.front() throughout
                                                                                              /* guoye: start */

@@ -1043,36 +1043,53 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode)
 {
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 1\n");
+    /* guoye: end */
     if (AreMatricesAllocated())
         return;
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 2\n");
+    /* guoye: end */
 
     // Allocate memory for forward/backward computation
     if (TraceLevel() > 0)
         fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
     VerifyIsCompiled("AllocateAllMatrices");
-
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 3\n");
+    /* guoye: end */
     std::vector<ComputationNodeBasePtr> forwardPropRoots;
     forwardPropRoots.insert(forwardPropRoots.end(), evalRootNodes.begin(), evalRootNodes.end());
     forwardPropRoots.insert(forwardPropRoots.end(), outValueRootNodes.begin(), outValueRootNodes.end());
     if (trainRootNode != nullptr)
         forwardPropRoots.push_back(trainRootNode);
-
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 4\n");
+    /* guoye: end */
     // Mark all the eval, output and criterion roots as non-shareable
     for (auto& rootNode : forwardPropRoots)
         rootNode->MarkValueNonSharable();
-
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 5\n");
+    /* guoye: end */
     // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
     MarkValueNonSharableNodes();
 
     bool performingBackPropagation = (trainRootNode != nullptr);
-
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 6\n");
+    /* guoye: end */
     // Create a composite Eval order with the specified nodes as roots
     // For each node determine parents and whether the output of the
     // node is needed during back propagation
     std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
     std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
     std::unordered_set<ComputationNodeBasePtr> uniqueForwardPropEvalNodes;
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 7\n");
+    /* guoye: end */
     for (auto& rootNode : forwardPropRoots)
     {
         for (const auto& node : GetEvalOrder(rootNode))
@@ -1097,7 +1114,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             }
         }
     }
-
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 8\n");
+    /* guoye: end */
     // gradient reuse maps
     std::unordered_map<MatrixPool::AliasNodePtr, std::unordered_set<MatrixPool::AliasNodePtr>> gradientReuseChildrenMap;
     std::unordered_map<MatrixPool::AliasNodePtr, MatrixPool::AliasNodePtr> gradientReuseParentMap;
@@ -1133,6 +1152,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             }
         }
     }
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 9\n");
+    /* guoye: end */
 
     m_matrixPool.Reset();
 
@@ -1157,7 +1179,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             ReleaseMatricesAfterEvalForChildren(node, parentsMap);
         }
     });
-
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 10\n");
+    /* guoye: end */
     if (trainRootNode != nullptr)
     {
         const std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
@@ -1245,10 +1269,14 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             }
         }
     }
-
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 11\n");
+    /* guoye: end */
     m_matrixPool.OptimizedMemoryAllocation(); 
     m_areMatricesAllocated = true;
-
+    /* guoye: start */
+    fprintf(stderr, "\nAllocateAllMatrices: debug 12\n");
+    /* guoye: end */
     // TO DO: At the time of AllocateAllMatrices we don't know the minibatch size. In theory one may allocate memory again once we start to receive
     // data from the reader (and the minibatch size is known). For some problems, minibatch size can change constantly, and there needs to be a 
     // tradeoff in deciding how frequent to run optimized memory allocation. For now, we do it only once at the very beginning for speed concerns. 
