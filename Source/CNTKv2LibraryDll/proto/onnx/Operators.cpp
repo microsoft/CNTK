@@ -81,7 +81,7 @@ namespace ONNX
             } } },
         { L"LocalResponseNormalization",{ {
             { L"LocalResponseNormalization", "LRN" },
-            { L"depthRadius", "size" },
+            { L"size", "size" },
             { L"bias", "bias" },
             { L"alpha", "alpha" },
             { L"beta", "beta" },
@@ -93,7 +93,7 @@ namespace ONNX
         } } },
         { L"Reshape",{ {
             { L"Reshape", "Reshape" },
-            { L"newShape", "shape" },
+            { L"shape", "shape" },
             } } },
         { L"Flatten",{ {
             { L"Flatten", "Flatten" },

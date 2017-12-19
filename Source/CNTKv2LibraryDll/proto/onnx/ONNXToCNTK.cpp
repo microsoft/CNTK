@@ -1361,8 +1361,16 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         NDShape newShape = GetNamedAttributeAsShape(node, "shape", false);
         if (inputs[0].HasBatchAxis())
+        {
+            if (newShape.Rank() == 1)
+                LogicError("Reshape: 'shape' attribute must include element for batch axis.");
             newShape = newShape.SubShape(0, newShape.Rank() - 1);
-
+        }
+        for (size_t i = 0; i < newShape.Dimensions().size(); ++i)
+        {
+            if (newShape[i] == 0)
+                newShape[i] = inputs[0].Shape()[i];
+        }
         FunctionPtr cntkFunction = Reshape(inputs[0], newShape, ToWString(node->Name()));
         return cntkFunction;
     }

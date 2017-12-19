@@ -788,7 +788,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             auto alpha = (float)src->Attributes()[L"alpha"].Value<double>();
             auto beta = (float)src->Attributes()[L"beta"].Value<double>();
 
-            node->AddAttribute(attributesMap[L"depthRadius"], depthRadius);
+            node->AddAttribute(attributesMap[L"size"], depthRadius);
             node->AddAttribute(attributesMap[L"bias"], bias);
             node->AddAttribute(attributesMap[L"alpha"], alpha);
             node->AddAttribute(attributesMap[L"beta"], beta);
@@ -868,8 +868,25 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
         }
         else if (src->OpName() == L"Reshape")
         {
-            auto shape = (NDShape)src->Attributes()[L"newShape"].Value<NDShape>();
-            node->AddAttribute(attributesMap[L"newShape"], ToINTS(shape, true));
+            auto shapeVec = src->Output().Shape().Dimensions();
+            std::vector<int> newShapeVec;
+            size_t numInferredDimensions(0);
+            for (const auto& axisSize : shapeVec)
+            {
+                if (axisSize == NDShape::InferredDimension) 
+                {
+                    numInferredDimensions++;
+                    if (numInferredDimensions > 1)
+                        LogicError("Reshape: Multiple InferredDimension not supported by ONNX.");
+                    else
+                        newShapeVec.push_back(-1);
+                }
+                else // REVIEW SPTIWARI: Should we fill 0 for FreeDimension here?
+                    newShapeVec.push_back(static_cast<int>(axisSize));
+            }
+            // Always add a 1 to the shape for batch axis in ONNX tensors.
+            newShapeVec.push_back(1);
+            node->AddAttribute(attributesMap[L"shape"], ToINTS(newShapeVec));
         }
         else if (src->OpName() == L"Splice")
         {
