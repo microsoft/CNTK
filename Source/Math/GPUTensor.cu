@@ -370,6 +370,7 @@ struct ReduceWithNestedLoops
                                                             const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims,
                                                             const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides)
     {
+        // TODO: We may need to change this from incrementing the pointers to absolute value, so that we can support advanced indexing schemes here.
         // start with index 0
         // We may use 'double' since we are memory-bound anyway.
         ReduceElemType aggregate = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::ComputeAndReduceAlongOneAxis(pointers, op, reductionOp, reducingOpDims, reducingStrides);
