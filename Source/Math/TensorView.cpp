@@ -253,7 +253,9 @@ static void CheckDifferentObjects(const array<reference_wrapper<TensorView<ElemT
 // single entry point for TensorView execution
 template<typename ElemType>
 template<size_t N>
-/*static*/ void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<TensorView<ElemType>>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta)
+/*static*/ void TensorView<ElemType>::Do(size_t arity, const array<reference_wrapper<TensorView<ElemType>>, N>& args,
+                                         ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                         ElemType alpha, ElemType beta)
 {
     if (arity != N - 1)
         InvalidArgument("DoNaryOpOf: Operations with >1 output are presently not supported.");
@@ -368,12 +370,12 @@ template<size_t N>
 //#undef d
 
     // now perform the operation
-    auto sobs = ::CNTK::MapArray(args, [](TensorView<ElemType>& arg) { return ref(arg.GetSOB()); }); // get all storage objects
-    Matrix<ElemType>::TensorOp(arity, sobs, op, reductionOp, alpha, beta,
+    Matrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](TensorView<ElemType>& arg) { return ref(arg.GetSOB()); }),
+                               op, reductionOp, alpha, beta,
                                offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
-// TODO: Can we unify this interface as well and go through Do()? It seems internally, TensorArgOp() already does that.
+// TODO: Unify this interface as well and go through Do(). Internally, TensorArgOp() already does that.
 //       This is only called from one place, so once we can run Python tests again, it should be safe to eliminate this.
 template <class ElemType>
 void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOperator reductionOp)
