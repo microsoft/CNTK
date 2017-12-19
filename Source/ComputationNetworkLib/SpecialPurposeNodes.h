@@ -757,13 +757,13 @@ public:
         const auto& latticeSequences = latticeMBLayout->GetAllSequences();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
-
+        size_t latIndex = 0;
         for (size_t i = 0;i<labelSequences.size();i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
             auto& currentLabelSeq = labelSequences[i];
-            auto& currentLatticeSeq = latticeSequences[i];
+            auto& currentLatticeSeq = latticeSequences[latIndex++];
             assert(currentLabelSeq.seqId == currentLatticeSeq.seqId);
 
             // Fill up labels
