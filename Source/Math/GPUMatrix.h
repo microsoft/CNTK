@@ -569,33 +569,11 @@ public:
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
 
     template <size_t N>
-    static void TensorOp(size_t arity, const std::array<std::reference_wrapper<GPUMatrix<ElemType>>, N>& args, DEVICEID_TYPE deviceId,
+    static void TensorOp(size_t arity, const std::array<ElemType*, N>& pointers, DEVICEID_TYPE deviceId,
                          ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta,
                          const std::array<size_t, N>& offsets,
                          const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, N>& regularStrides,
                          const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, N>& reducingStrides);
-#if 0
-    void TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                  const std::array<size_t, 1>& offsets,
-                  const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 1>& regularStrides,
-                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 1>& reducingStrides);
-    void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                  const std::array<size_t, 2>& offsets,
-                  const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
-    void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                  const std::array<size_t, 3>& offsets,
-                  const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 3>& regularStrides,
-                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 3>& reducingStrides);
-    void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                  const std::array<size_t, 4>& offsets,
-                  const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
-                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
-    void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& c, const GPUMatrix<ElemType>& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                  const std::array<size_t, 5>& offsets,
-                  const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 5>& regularStrides,
-                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 5>& reducingStrides);
-#endif
     void TensorArgOp(const GPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
                      const std::array<size_t, 2>& offsets,
                      const SmallVector<size_t>& regularOpDims,  const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,

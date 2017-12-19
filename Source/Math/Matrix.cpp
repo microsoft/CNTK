@@ -6306,10 +6306,10 @@ template <size_t N>
     switch (N)
     {
     case 1: break;
-    case 2: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0]); break;
-    case 3: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0], (Matrix<ElemType>&)args[1]); break;
-    case 4: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0], (Matrix<ElemType>&)args[1], (Matrix<ElemType>&)args[2]); break;
-    case 5: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0], (Matrix<ElemType>&)args[1], (Matrix<ElemType>&)args[2], (Matrix<ElemType>&)args[3]); break;
+    case 2: DecideAndMoveToRightDevice(out, (Matrix<ElemType>&)args[0]); break; // (typecast needed due to some template issue with thisone)
+    case 3: DecideAndMoveToRightDevice(out, args[0], args[1]); break;
+    case 4: DecideAndMoveToRightDevice(out, args[0], args[1], args[2]); break;
+    case 5: DecideAndMoveToRightDevice(out, args[0], args[1], args[2], args[3]); break;
     default: NOT_IMPLEMENTED;
     }
 
@@ -6320,7 +6320,7 @@ template <size_t N>
             for (size_t i = 0; i < arity; i++)
                 if (((Matrix<ElemType>&)args[i]).m_GPUMatrix->GetComputeDeviceId() != out.m_GPUMatrix->GetComputeDeviceId())
                     InvalidArgument("All matrices must be on the same GPU");
-            GPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return ref(*arg.m_GPUMatrix); }), out.m_GPUMatrix->GetComputeDeviceId(), op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+            GPUMatrix<ElemType>::TensorOp(arity, ::CNTK::MapArray(args, [](Matrix<ElemType>& arg) { return arg.m_GPUMatrix->Data(); }), out.m_GPUMatrix->GetComputeDeviceId(), op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
         },
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
