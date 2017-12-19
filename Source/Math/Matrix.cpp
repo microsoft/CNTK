@@ -6286,24 +6286,6 @@ static bool VerifyIsDense(const Matrix<ElemType>& a)
     return true;
 }
 
-//template<typename IteratorType>
-//using Span = ::CNTK::Span<IteratorType>;
-//// this function is a stop-gap until the types are propagated down all the way
-//template<typename T, size_t N>
-//static array<T, N> MakeArray(const Span<T*>& span)
-//{
-//    array<T, N> a;
-//    auto iter = span.begin();
-//    for (auto& ai : a)
-//        ai = *iter++;
-//    return a;
-//}
-template<typename T, size_t N> // TODO: remove this once it works
-static const array<T, N>& MakeArray(const array<T, N>& span)
-{
-    return span;
-}
-
 // arity = number of arguments; remaining elements in args etc. is output
 // Presently only one output is implemented. This prototype is meant to allow future extension towards multiple outputs.
 template <class ElemType>
@@ -6338,87 +6320,6 @@ template <size_t N>
 #define InstantiateTensorOp(ElemType, N) template void Matrix<ElemType>::TensorOp(size_t arity, const array<reference_wrapper<Matrix>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta, const array<size_t, N>& offsets, const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 InstantiateTensorOp(float, 1); InstantiateTensorOp(float, 2); InstantiateTensorOp(float, 3); InstantiateTensorOp(float, 4); InstantiateTensorOp(float, 5);
 InstantiateTensorOp(double, 1); InstantiateTensorOp(double, 2); InstantiateTensorOp(double, 3); InstantiateTensorOp(double, 4); InstantiateTensorOp(double, 5);
-
-#if 0
-template <class ElemType>
-void Matrix<ElemType>::TensorOp(ElemType beta, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                const array<size_t, 1>& offsets,
-                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 1>& regularStrides,
-                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 1>& reducingStrides)
-{
-    DISPATCH_MATRIX_ON_FLAG(this, this,
-                            m_CPUMatrix->TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            (GPUMatrix<ElemType>::TensorOp((size_t)0, array<reference_wrapper<GPUMatrix<ElemType>>, 1>{ ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
-                            //m_GPUMatrix->TensorOp(beta, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-template <class ElemType>
-void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                const array<size_t, 2>& offsets,
-                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
-{
-    DecideAndMoveToRightDevice(*this, a);
-
-    DISPATCH_MATRIX_ON_FLAG(this, this,
-                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            (GPUMatrix<ElemType>::TensorOp((size_t)1, array<reference_wrapper<GPUMatrix<ElemType>>, 2>{ ref(*a.m_GPUMatrix), ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
-                            //m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-template <class ElemType>
-void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                const array<size_t, 3>& offsets,
-                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
-                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
-{
-    DecideAndMoveToRightDevice(*this, a, b);
-
-    DISPATCH_MATRIX_ON_FLAG(this, this,
-                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            (GPUMatrix<ElemType>::TensorOp((size_t)2, array<reference_wrapper<GPUMatrix<ElemType>>, 3>{ ref(*a.m_GPUMatrix), ref(*b.m_GPUMatrix), ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
-                            //m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-template <class ElemType>
-void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                const array<size_t, 4>& offsets,
-                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
-                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
-{
-    DecideAndMoveToRightDevice(*this, a, b, c);
-
-    DISPATCH_MATRIX_ON_FLAG(this, this,
-                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            (GPUMatrix<ElemType>::TensorOp((size_t)3, array<reference_wrapper<GPUMatrix<ElemType>>, 4>{ ref(*a.m_GPUMatrix), ref(*b.m_GPUMatrix), ref(*c.m_GPUMatrix), ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
-                            //m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-
-template <class ElemType>
-void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                const array<size_t, 5>& offsets,
-                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 5>& regularStrides,
-                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 5>& reducingStrides)
-{
-    DecideAndMoveToRightDevice(*this, a, b, c, d);
-
-    DISPATCH_MATRIX_ON_FLAG(this, this,
-                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, *d.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            (GPUMatrix<ElemType>::TensorOp((size_t)4, array<reference_wrapper<GPUMatrix<ElemType>>, 5>{ ref(*a.m_GPUMatrix), ref(*b.m_GPUMatrix), ref(*c.m_GPUMatrix), ref(*d.m_GPUMatrix), ref(*m_GPUMatrix) }, op, reductionOp, alpha, beta, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)),
-                            //m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, *d.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-#endif
 
 // TODO: Absorb into the above.
 template <class ElemType>
