@@ -417,37 +417,50 @@ struct TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/
 // (reduction is not done here, but by calling into here multiple times)
 // -----------------------------------------------------------------------
 
+// BUGBUG: This no longer works without USE_FAST_DIVMOD. Fine for now. We should just remove it.
+template<class ElemType, C_size_t NUM_ARGS, C_int RANK>
+static __device__ FixedArray<ElemType*, NUM_ARGS> Locate(CUDA_LONG id, const FixedArray<ElemType*, NUM_ARGS>& basePointers,
+                                                         const FixedMatrix<C_int, NUM_ARGS, RANK>& strides,
+                                                         const FixedArray<fast_divmod, RANK>& opStrideDivmod)
+{
+    auto pointers = basePointers;
+#pragma unroll
+    for (auto axis = (C_size_t)RANK; axis --> 0; )
+    {
+        // map thread id (location on grid) to index[axis]
+        C_size_t index;
+        if (axis == 0) // for axis=0, op stride is guaranteed to be 1 (cf. construction of regularOpStrideVector in LaunchTensorOp())
+            index = id, id = 0; // this dimension (id is ignored)
+        else
+#ifndef USE_FAST_DIVMOD
+            {
+                // this is the code for the non-USE_FAST_DIVMOD case for parallel reduction, in case we ever need to resurrect it. TODO: Just delete this.
+                //C_size_t stride = 1; // compute the stride. This seems expensive, but since we we only currently support REDUCTION_RANK <= 2, this is just compile-time selection between 1 and reducingOpDims[0].
+                //#pragma unroll
+                //for (int i = 0; i < reductionAxis; i++)
+                //    stride *= reducingOpDims[(C_size_t) i];
+                C_size_t stride = opStrides[(C_size_t)axis];
+                index = id / stride; // this dimension
+                id = id - stride*index;       // remaining dimensions inside this
+            }
+#else
+            opStrideDivmod[axis].divmod(id, index, id);
+#endif
+#pragma unroll // apply this index to the pointers
+        for (C_size_t i = 0; i < NUM_ARGS; i++)
+            pointers[i] += index * strides(i, axis); // now this dimension is taken care of
+    }
+    return pointers;
+}
+
 template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
-static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS> pointers,
+static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<ElemType*, NUM_ARGS> basePointers,
                                                      ElementWiseOperator op,
                                                      const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
                                                      const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
 {
     // --- step 1: map linear thread index 'id' to multi-axis index to memory location
-#pragma unroll
-    for (auto reductionAxis = (C_size_t)REDUCTION_RANK; reductionAxis --> 0; )
-    {
-        // map id (location on grid) to index[k]
-        C_size_t index;
-        if (reductionAxis == 0)
-            index = id, id = 0;
-        else
-#ifndef USE_FAST_DIVMOD
-            {
-                C_size_t stride = 1; // compute the stride. This seems expensive, but since we we only currently support REDUCTION_RANK <= 2, this is just compile-time selection between 1 and reducingOpDims[0].
-#pragma unroll
-                for (int i = 0; i < reductionAxis; i++)
-                    stride *= reducingOpDims[(C_size_t) i];
-                index = id / stride;    // this dimension. For reductionAxis=0, the stride is 1 and hence the division will be removed at compile time.
-                id = id - stride*index; // remaining dimensions inside this. For reductionAxis=0 this value is ignored and hence not even computed.
-            }
-#else
-            reducingOpDimDivmod[reductionAxis].divmod(id, index, id);
-#endif
-#pragma unroll // apply this index to the pointers
-        for (C_size_t i = 0; i < NUM_ARGS - 1; i++)
-            pointers[i] += index * reducingStrides(i, reductionAxis); // now this dimension is taken care of
-    }
+    auto pointers = Locate(id, basePointers, reducingStrides, reducingOpDimDivmod);
 
     // --- step 2: compute the element at the determined location
     return Op(pointers, op); // finally computing something!
@@ -456,35 +469,6 @@ static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<El
 // -----------------------------------------------------------------------
 // perform loop over regular index k for (NUM_ARGS-1)-ary operations
 // -----------------------------------------------------------------------
-template<class ElemType, C_size_t NUM_ARGS, C_int REGULAR_RANK>
-static __device__ FixedArray<ElemType*, NUM_ARGS> Locate(CUDA_LONG id, const FixedArray<ElemType*, NUM_ARGS>& basePointers,
-    const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
-    const FixedArray<fast_divmod, REGULAR_RANK>& regularOpStrideDivmod)
-{
-    auto pointers = basePointers;
-#pragma unroll
-    for (auto regularAxis = (C_size_t)REGULAR_RANK - 1; regularAxis >= 0; regularAxis--)
-    {
-        // map thread id (location on grid) to index[regularAxis]
-        C_size_t index;
-        if (regularAxis == 0) // for regularAxis=0, op stride is guaranteed to be 1 (cf. construction of regularOpStrideVector in LaunchTensorOp())
-            index = id, id = 0; // this dimension (id is ignored)
-        else
-#ifndef USE_FAST_DIVMOD
-            {
-                C_size_t stride = regularOpStrides[(C_size_t)regularAxis];
-                C_size_t index = id / stride; // this dimension
-                id = id - stride*index;       // remaining dimensions inside this
-            }
-#else
-            regularOpStrideDivmod[regularAxis].divmod(id, index, id);
-#endif
-#pragma unroll // apply this index to the pointers
-        for (C_size_t i = 0; i < NUM_ARGS; i++)
-            pointers[i] += index * regularStrides(i, (C_size_t) regularAxis); // now this dimension is taken care of
-    }
-    return pointers;
-}
 
 // compute a single output element
 // The linear thread index 'id' determines which output element we compute.
@@ -502,7 +486,7 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, const F
     //  - map the axis indices to the element address (in case of reduction, for the inputs, this is the *first* element's address)
     //  - add the offset to the pointer
     //  - and do so for all pointers (output and all inputs)
-    auto pointers = Locate<ElemType, NUM_ARGS, REGULAR_RANK>(id, basePointers, regularOpStrides, regularStrides, regularOpStrideDivmod);
+    auto pointers = Locate(id, basePointers, regularStrides, regularOpStrideDivmod);
 
     // --- step 2: compute the output element at that location
     //  - in case of reduction, this still involves a loop, which may be serial or parallel
