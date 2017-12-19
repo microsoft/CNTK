@@ -1842,21 +1842,21 @@ public:
     virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
     {
         /* guoye: start */
-        fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 0, m_inputs.size() = %d \n", int(m_inputs.size()));
+        fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 0, m_inputs.size() = %d \n", int(m_inputs.size()));
         
         /* guoye: end */
 
         for (int i = 0; i < m_inputs.size(); i++)
         {
             /* guoye: start */
-            fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 1, i = %d \n", int(i));
+            fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 1, i = %d \n", int(i));
 
             /* guoye: end */
 
             if (m_inputs[i]->NeedsGradient())
                 m_inputs[i]->RequestMatricesBeforeBackprop(matrixPool);
 
-            fprintf(stderr, "\AllocateGradientMatricesForInputs: debug 2, i = %d \n", int(i));
+            fprintf(stderr, "\n AllocateGradientMatricesForInputs: debug 2, i = %d \n", int(i));
         }
     }
 
