@@ -1190,10 +1190,11 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
         std::unordered_map<MatrixPool::AliasNodePtr, std::unordered_set<MatrixPool::AliasNodePtr>> compactGradientAliasMap;
         std::unordered_map<MatrixPool::AliasNodePtr, MatrixPool::AliasNodePtr> compactGradientAliasRootMap;
+        fprintf(stderr, "\nAllocateAllMatrices: debug 10.1\n");
         for (const auto& gradientReuseKeyValue : gradientReuseChildrenMap)
         {
             // keep searching parent until reaching root
-
+            fprintf(stderr, "\nAllocateAllMatrices: debug 10.2\n");
             auto parent = gradientReuseKeyValue.first;
             auto parentIter = gradientReuseParentMap.find(parent);
             while (parentIter != gradientReuseParentMap.end())
@@ -1220,20 +1221,22 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             compactGradientAliasMap[parent].insert(parent);
             compactGradientAliasRootMap[parent] = parent;
         }
-
+        fprintf(stderr, "\nAllocateAllMatrices: debug 10.3\n");
         // print the memory aliasing info
         if (TraceLevel() > 0 && compactGradientAliasRootMap.size() > 0)
         {
+            fprintf(stderr, "\nAllocateAllMatrices: debug 10.4\n");
             fprintf(stderr, "\nGradient Memory Aliasing: %d are aliased.\n", (int)compactGradientAliasRootMap.size());
             for (const auto pair : compactGradientAliasRootMap)
             {
+                fprintf(stderr, "\nAllocateAllMatrices: debug 10.5\n");
                 auto child = (const ComputationNodeBase*)pair.first;
                 auto parent = (const ComputationNodeBase*)pair.second;
                 if (child != parent)
                     fprintf(stderr, "\t%S (gradient) reuses %S (gradient)\n", child->GetName().c_str(), parent->GetName().c_str());
             }
         }
-
+        fprintf(stderr, "\nAllocateAllMatrices: debug 10.6\n");
         m_matrixPool.SetAliasInfo(compactGradientAliasMap, compactGradientAliasRootMap);
 
         // now, simulate the gradient computation order to determine how to allocate matrices
@@ -1241,9 +1244,10 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
         // we need to call it here since we always compute gradients for children and root node is not children of other node
         trainRootNode->RequestMatricesBeforeBackprop(m_matrixPool);
-
+        fprintf(stderr, "\nAllocateAllMatrices: debug 10.7\n");
         for (auto iter = backPropNodes.rbegin(); iter != backPropNodes.rend(); iter++) // for gradient computation, traverse in reverse order
         {
+            fprintf(stderr, "\nAllocateAllMatrices: debug 10.8\n");
             auto n = *iter;
             if (n->IsPartOfLoop())
             {
@@ -1268,6 +1272,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                     n->ReleaseMatricesAfterBackprop(m_matrixPool);
             }
         }
+        fprintf(stderr, "\nAllocateAllMatrices: debug 10.9\n");
     }
     /* guoye: start */
     fprintf(stderr, "\nAllocateAllMatrices: debug 11\n");
