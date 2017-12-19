@@ -1249,28 +1249,39 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         {
             fprintf(stderr, "\nAllocateAllMatrices: debug 10.8\n");
             auto n = *iter;
+            fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.1\n");
             if (n->IsPartOfLoop())
             {
+            fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.2\n");
                 std::vector<ComputationNodeBasePtr> recurrentNodes;
                 shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, n);
+                fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.3\n");
                 if (completedGradient.insert(recInfo).second)
                 {
                     // SEQ mode: allocate all in loop first, then deallocate again
                     // TODO: next step: use PARTraversalFlowControlNode::AllocateGradientMatricesForInputs() and ReleaseMatricesAfterBackprop()...
                     // BUGBUG: naw, ^^ would not work! Wrong order! Need to rethink this. Need to make AllocateEvalMatrices() and AllocateGradientMatrices() the virtual functions.
+                    
+                    fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.4\n");
                     recInfo->AllocateGradientMatricesForInputs(m_matrixPool);
+                    fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.5\n");
                     // Loops are computed sample by sample so we have to allocate them all
                     recInfo->ReleaseMatricesAfterBackprop(m_matrixPool);
+                    fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.6\n");
                 }
             }
             else
             {
                 // PAR mode: we can allocate and immediately deallocate one by one
+                fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.7\n");
                 n->AllocateGradientMatricesForInputs(m_matrixPool);
+                fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.8\n");
                 // Root node's information will be used and should not be shared with others, also it's small (1x1)
                 if ((n != trainRootNode) && n->NeedsGradient())
                     n->ReleaseMatricesAfterBackprop(m_matrixPool);
+                fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.9\n");    
             }
+            fprintf(stderr, "\nAllocateAllMatrices: debug 10.8.10\n");
         }
         fprintf(stderr, "\nAllocateAllMatrices: debug 10.9\n");
     }
