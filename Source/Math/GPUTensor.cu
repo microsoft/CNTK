@@ -456,23 +456,12 @@ static __device__ ElemType ReduceWithParallelThreads(CUDA_LONG id, FixedArray<El
 // -----------------------------------------------------------------------
 // perform loop over regular index k for (NUM_ARGS-1)-ary operations
 // -----------------------------------------------------------------------
-
-// compute a single output element
-// The linear thread index 'id' determines which output element we compute.
-// The element's output value may be the result of a reduction.
-template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
-static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedArray<ElemType*, NUM_ARGS>& pointers,
-                                            ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                            const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
-                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
-                                            CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
-                                            const FixedArray<fast_divmod, REGULAR_RANK>& regularOpStrideDivmod, const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
+template<class ElemType, C_size_t NUM_ARGS, C_int REGULAR_RANK>
+static __device__ FixedArray<ElemType*, NUM_ARGS> Locate(CUDA_LONG id, const FixedArray<ElemType*, NUM_ARGS>& basePointers,
+    const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
+    const FixedArray<fast_divmod, REGULAR_RANK>& regularOpStrideDivmod)
 {
-    // --- step 1: locate the element
-    //  - map linear thread 'id' to REDUCTION_RANK axes
-    //  - map the axis indices to the element address (in case of reduction, for the inputs, this is the *first* element's address)
-    //  - add the offset to the pointer
-    //  - and do so for all pointers (output and all inputs)
+    auto pointers = basePointers;
 #pragma unroll
     for (auto regularAxis = (C_size_t)REGULAR_RANK - 1; regularAxis >= 0; regularAxis--)
     {
@@ -494,6 +483,26 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedAr
         for (C_size_t i = 0; i < NUM_ARGS; i++)
             pointers[i] += index * regularStrides(i, (C_size_t) regularAxis); // now this dimension is taken care of
     }
+    return pointers;
+}
+
+// compute a single output element
+// The linear thread index 'id' determines which output element we compute.
+// The element's output value may be the result of a reduction.
+template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REGULAR_RANK, bool PARALLEL_REDUCE>
+static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, const FixedArray<ElemType*, NUM_ARGS>& basePointers,
+                                            ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                            const FixedArray<C_unsigned_int, REGULAR_RANK>& regularOpStrides, const FixedMatrix<C_int, NUM_ARGS, REGULAR_RANK>& regularStrides,
+                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides,
+                                            CUDA_LONG reductionBegin, CUDA_LONG reductionChunkSize,
+                                            const FixedArray<fast_divmod, REGULAR_RANK>& regularOpStrideDivmod, const FixedArray<fast_divmod, REDUCTION_RANK>& reducingOpDimDivmod)
+{
+    // --- step 1: locate the element
+    //  - map linear thread 'id' to REDUCTION_RANK axes
+    //  - map the axis indices to the element address (in case of reduction, for the inputs, this is the *first* element's address)
+    //  - add the offset to the pointer
+    //  - and do so for all pointers (output and all inputs)
+    auto pointers = Locate<ElemType, NUM_ARGS, REGULAR_RANK>(id, basePointers, regularOpStrides, regularStrides, regularOpStrideDivmod);
 
     // --- step 2: compute the output element at that location
     //  - in case of reduction, this still involves a loop, which may be serial or parallel
