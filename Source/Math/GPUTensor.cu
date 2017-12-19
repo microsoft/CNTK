@@ -100,8 +100,10 @@ struct FixedArray
 {
     T m_data[N];
     __device__ __host__ size_t size() const { return N; }
-    __device__ __host__ T& operator[](size_t n) { return m_data[n]; }
-    __device__ __host__ T operator[](size_t n) const { return m_data[n]; }
+    __device__ __host__ T& operator[](size_t n)       { return m_data[n]; }
+    __device__ __host__ T  operator[](size_t n) const { return m_data[n]; }
+    __device__ __host__ T& back()       { return m_data[N-1]; }
+    __device__ __host__ T  back() const { return m_data[N-1]; }
     template <class VEC>
     FixedArray(const VEC& data) // construct from CPU-side STL array or vector
     {
@@ -119,7 +121,9 @@ struct FixedArray<T, 0>
 {
     __device__ __host__ size_t size() const { return 0; }
     __device__ __host__ T& operator[](size_t n); // should never be called
-    __device__ __host__ T operator[](size_t n) const;
+    __device__ __host__ T  operator[](size_t n) const;
+    __device__ __host__ T& back();
+    __device__ __host__ T  back() const;
     template <class VEC>
     FixedArray(const VEC& data)
     {
@@ -298,124 +302,7 @@ template<typename ReductionType, class ElemType> __device__ void Aggregate(Reduc
 };
 
 // -----------------------------------------------------------------------
-// function to compute the value for a given output location (including reduction)
-// This requires a nested loop, with nesting depth = REDUCTION_RANK.
-// This is implemented by a recursive function template. Since C++ does not allow
-// partial specialization, we must detour via a struct template.
-// -----------------------------------------------------------------------
-
-#define ReduceElemType ElemType // (note: we could use 'double' here, but that would cause problems with CUDA cards that don't support double)
-
-template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REDUCTION_AXIS>
-struct ReduceWithNestedLoops
-{
-    // this version for REDUCTION_AXIS >= 0. A specialization for REDUCTION_AXIS=-1 to terminate the recursion follows below.
-    static __device__ ElemType ComputeAndReduceAlongOneAxis(FixedArray<ElemType*, NUM_ARGS> pointers,
-                                                            ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims,
-                                                            const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides)
-    {
-        // start with index 0
-        // We may use 'double' since we are memory-bound anyway.
-        ReduceElemType aggregate = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::ComputeAndReduceAlongOneAxis(pointers, op, reductionOp, reducingOpDims, reducingStrides);
-        // apply this index to the pointers
-        C_size_t dim = reducingOpDims[REDUCTION_AXIS];
-        for (C_size_t k = 1 /*done with k=0 already*/; k < dim; k++)
-        {
-            // bump the pointers
-#pragma unroll
-            for (C_size_t i = 0; i < NUM_ARGS - 1; i++) // NUM_ARGS-1 because output is not used here
-                pointers[i] += reducingStrides(i, (C_size_t) REDUCTION_AXIS);
-            ElemType val = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::ComputeAndReduceAlongOneAxis(pointers, op, reductionOp, reducingOpDims, reducingStrides);
-            Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
-        }
-        return (ElemType) aggregate;
-    }
-};
-
-// this one terminates the template recursion over reduction dimensions
-// We also get here if the operation has no reduction.
-// The pointers are pointing to the input element.
-template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
-struct ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/-1>
-{
-    // this version for REDUCTION_AXIS=-1
-    // the pointers are pointing to the right location(s) to take the operation over
-    static __device__ ElemType ComputeAndReduceAlongOneAxis(FixedArray<ElemType*, NUM_ARGS> pointers,
-                                                            ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/,
-                                                            const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/)
-    {
-        return Op(pointers, op); // finally computing something!
-    }
-};
-
-// Similar to ReduceWithNestedLoops but count the number of elements seen so far and keep track
-// of the index of the last element assigned to the aggregate. It assume that reduction is done
-// in a single thread.
-template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REDUCTION_AXIS>
-struct TensorArgOpReduce
-{
-    // this version for REDUCTION_AXIS >= 0
-    static __device__ ElemType Compute(FixedArray<ElemType*, NUM_ARGS> pointers,
-                                       ElementWiseOperator reductionOp,
-                                       const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides, 
-                                       C_unsigned_int& count, C_unsigned_int& index)
-    {
-        // start with index 0
-        ReduceElemType aggregate = TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, reductionOp, reducingOpDims, reducingStrides, count, index);
-        // apply this index to the pointers
-        C_size_t dim = reducingOpDims[REDUCTION_AXIS];
-        for (C_size_t k = 1 /*done with k=0 already*/; k < dim; k++)
-        {
-            // bump the pointers
-#pragma unroll
-            for (C_size_t i = 0; i < NUM_ARGS - 1; i++) // NUM_ARGS-1 because output is not used here
-            {
-                pointers[i] += reducingStrides(i, (C_size_t)REDUCTION_AXIS);
-            }
-
-            ElemType val = TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, reductionOp, reducingOpDims, reducingStrides, count, index);
-            bool update = false;
-            switch (reductionOp)
-            {
-                case ElementWiseOperator::opArgmin:
-                    update = (aggregate > val);
-                    break;
-                case ElementWiseOperator::opArgmax:
-                    update = (aggregate < val);
-                    break;
-            }
-
-            if (update)
-            {
-                aggregate = val;
-                index = count - 1;
-            }
-        }
-        return (ElemType)aggregate;
-    }
-};
-
-// this one terminates the template recursion over reduction dimensions
-// The pointers are pointing to the input element.
-template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
-struct TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/-1>
-{
-    // this version for REDUCTION_AXIS = -1
-    // the pointers are pointing to the right location(s) to take the operation over
-    static __device__ ElemType Compute(FixedArray<ElemType*, NUM_ARGS> pointers,
-                                       ElementWiseOperator reductionOp,
-                                       const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/,
-                                       C_unsigned_int& count, C_unsigned_int& index)
-    {
-        count++;
-        return *(pointers[0]);
-    }
-};
-
-// -----------------------------------------------------------------------
-// helper function to locate an element
+// helper functions to locate elements
 // -----------------------------------------------------------------------
 
 // increment one axis by a number of index steps
@@ -466,6 +353,121 @@ static __device__ bool LocateElementFromThreadId(CUDA_LONG id, FixedArray<ElemTy
 }
 
 // -----------------------------------------------------------------------
+// function to compute the value for a given output location (including reduction)
+// This requires a nested loop, with nesting depth = REDUCTION_RANK.
+// This is implemented by a recursive function template. Since C++ does not allow
+// partial specialization, we must detour via a struct template.
+// -----------------------------------------------------------------------
+
+#define ReduceElemType ElemType // (note: we could use 'double' here, but that would cause problems with CUDA cards that don't support double)
+
+template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REDUCTION_AXIS>
+struct ReduceWithNestedLoops
+{
+    // this version for REDUCTION_AXIS >= 0. A specialization for REDUCTION_AXIS=-1 to terminate the recursion follows below.
+    static __device__ ElemType ComputeAndReduceAlongOneAxis(FixedArray<ElemType*, NUM_ARGS> pointers,
+                                                            ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims,
+                                                            const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides)
+    {
+        // start with index 0
+        // We may use 'double' since we are memory-bound anyway.
+        ReduceElemType aggregate = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::ComputeAndReduceAlongOneAxis(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+        // apply this index to the pointers
+        C_size_t dim = reducingOpDims[REDUCTION_AXIS];
+        for (C_size_t k = 1 /*done with k=0 already*/; k < dim; k++)
+        {
+            // bump the pointers (NUM_ARGS-1 because output is not used here)
+            IncrementPointersAlongAxis<ElemType, NUM_ARGS, REDUCTION_RANK, /*NUM_ARGS_TO_BUMP=*/NUM_ARGS - 1>((C_size_t)REDUCTION_AXIS, /*indexIncrement=*/1, pointers, reducingStrides);
+            // do the next iteration along this axis
+            ElemType val = ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::ComputeAndReduceAlongOneAxis(pointers, op, reductionOp, reducingOpDims, reducingStrides);
+            // and aggregate
+            Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
+        }
+        return (ElemType) aggregate;
+    }
+};
+
+// this one terminates the template recursion over reduction dimensions
+// We also get here if the operation has no reduction.
+// The pointers are pointing to the input element.
+template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
+struct ReduceWithNestedLoops<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/-1>
+{
+    // this version for REDUCTION_AXIS=-1
+    // the pointers are pointing to the right location(s) to take the operation over
+    static __device__ ElemType ComputeAndReduceAlongOneAxis(FixedArray<ElemType*, NUM_ARGS> pointers,
+                                                            ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                                            const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/,
+                                                            const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/)
+    {
+        return Op(pointers, op); // finally computing something!
+    }
+};
+
+// Similar to ReduceWithNestedLoops but count the number of elements seen so far and keep track
+// of the index of the last element assigned to the aggregate. It assume that reduction is done
+// in a single thread.
+template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK, C_int REDUCTION_AXIS>
+struct TensorArgOpReduce
+{
+    // this version for REDUCTION_AXIS >= 0
+    static __device__ ElemType Compute(FixedArray<ElemType*, NUM_ARGS> pointers,
+                                       ElementWiseOperator reductionOp,
+                                       const FixedArray<C_unsigned_int, REDUCTION_RANK>& reducingOpDims, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& reducingStrides, 
+                                       C_unsigned_int& count, C_unsigned_int& index)
+    {
+        // start with index 0
+        ReduceElemType aggregate = TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, reductionOp, reducingOpDims, reducingStrides, count, index);
+        // apply this index to the pointers
+        C_size_t dim = reducingOpDims[REDUCTION_AXIS];
+        for (C_size_t k = 1 /*done with k=0 already*/; k < dim; k++)
+        {
+            // bump the pointers
+#pragma unroll
+            for (C_size_t i = 0; i < NUM_ARGS - 1; i++) // NUM_ARGS-1 because output is not used here
+                pointers[i] += reducingStrides(i, (C_size_t)REDUCTION_AXIS);
+
+            ElemType val = TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, REDUCTION_AXIS - 1>::Compute(pointers, reductionOp, reducingOpDims, reducingStrides, count, index);
+            bool update = false;
+            switch (reductionOp)
+            {
+                case ElementWiseOperator::opArgmin:
+                    update = (aggregate > val);
+                    break;
+                case ElementWiseOperator::opArgmax:
+                    update = (aggregate < val);
+                    break;
+            }
+
+            if (update)
+            {
+                aggregate = val;
+                index = count - 1;
+            }
+        }
+        return (ElemType)aggregate;
+    }
+};
+
+// this one terminates the template recursion over reduction dimensions
+// The pointers are pointing to the input element.
+template <class ElemType, C_size_t NUM_ARGS, C_int REDUCTION_RANK>
+struct TensorArgOpReduce<ElemType, NUM_ARGS, REDUCTION_RANK, /*REDUCTION_AXIS=*/-1>
+{
+    // this version for REDUCTION_AXIS = -1
+    // the pointers are pointing to the right location(s) to take the operation over
+    static __device__ ElemType Compute(FixedArray<ElemType*, NUM_ARGS> pointers,
+                                       ElementWiseOperator reductionOp,
+                                       const FixedArray<C_unsigned_int, REDUCTION_RANK>& /*reducingOpDims*/, const FixedMatrix<C_int, NUM_ARGS, REDUCTION_RANK>& /*reducingStrides*/,
+                                       C_unsigned_int& count, C_unsigned_int& index)
+    {
+        count++;
+        return *(pointers[0]);
+    }
+};
+
+// -----------------------------------------------------------------------
 // perform loop over regular index k for (NUM_ARGS-1)-ary operations
 // -----------------------------------------------------------------------
 
@@ -500,7 +502,7 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedAr
         // combine with previous value in target matrix, then write it out
         if (NUM_ARGS < 4 || val != 0 || beta != 1) // (skip memory access if not needed) (NUM_ARGS<4: skip this test)
         {
-            auto* pout = pointers[pointers.size() - 1];
+            auto* pout = pointers.back();
             if (beta != 0) // (skip memory access if not needed, and allow for ignoring NaNs)
                 val += beta * *pout;
             *pout = val;   // save
@@ -566,7 +568,7 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedAr
             // combine with previous value in target matrix, then write it out
             if (NUM_ARGS < 4 || val != 0 || beta != 1) // (skip memory access if not needed) (NUM_ARGS<4: skip this test)
             {
-                auto* pout = pointers[pointers.size() - 1];
+                auto* pout = pointers.back();
 #ifdef ALLOW_ATOMIC_REDUCTION
                 CUDA_LONG reductionBlocks = gridDim.z; // number of reduction blocks. If >1 we need atomicAdd
                 if (reductionBlocks > 1) // multiple blocks: need to use atomicAdd()
@@ -615,9 +617,8 @@ struct TensorArgOpElement
 #endif
         // apply this index to the pointers
 #pragma unroll
-        for (C_size_t i = 0; i < NUM_ARGS; i++) {
+        for (C_size_t i = 0; i < NUM_ARGS; i++)
             pointers[i] += index * regularStrides(i, (C_size_t)REGULAR_AXIS); // now this dimension is taken care of
-        }
         // process the previous index
         TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, REGULAR_AXIS - 1>::Compute(
             id, pointers, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
@@ -646,10 +647,8 @@ struct TensorArgOpElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*RE
         // combine with previous value in target matrix, then write it out
         if (NUM_ARGS < 4 || val != 0) // (skip memory access if not needed) (NUM_ARGS<4: skip this test)
         {
-            auto* pout = pointers[pointers.size() - 1];
-
-            // save
-            *pout = (ElemType) index;
+            auto* pout = pointers.back();
+            *pout = (ElemType) index; // save
         }
     }
 };
@@ -758,7 +757,7 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
     CUDA_LONG id = gridDim.x * blockIdx.y + blockIdx.x; // input dimensions are Y dimension of blocks in this case, so we can use thread dim for shared-memory/parallelization
 #ifndef ALLOW_ATOMIC_REDUCTION
     CUDA_LONG reductionBlock = blockIdx.z;                         // reduction-block index  --larger reductions are split into blocks
-    pointers[pointers.size() - 1] += numElements * reductionBlock; // the output tensor is dense (no gaps); and there is one copy for each reduction block (those get further reduced into one later)
+    pointers.back() += numElements * reductionBlock; // the output tensor is dense (no gaps); and there is one copy for each reduction block (those get further reduced into one later)
 #endif
     if (id < numElements)                               // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
         ComputeOutputElement<ElemType, NUM_ARGS, REDUCTION_RANK, REGULAR_RANK, /*PARALLEL_REDUCE=*/true>(
