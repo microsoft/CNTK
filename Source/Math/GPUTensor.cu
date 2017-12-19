@@ -488,7 +488,7 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedAr
     //  - map the axis indices to the element address (in case of reduction, for the inputs, this is the *first* element's address)
     //  - add the offset to the pointer
     //  - and do so for all pointers (output and all inputs)
-    LocateElementFromThreadId(id, pointers, regularStrides, regularOpStrideDivmod);
+    LocateElementFromThreadId<ElemType, NUM_ARGS, REGULAR_RANK>(id, pointers, regularStrides, regularOpStrideDivmod);
 
     // --- step 2: compute the output element at that location
     //  - in case of reduction, this still involves a loop, which may be serial or parallel
@@ -536,7 +536,7 @@ static __device__ void ComputeOutputElement(CUDA_LONG id, ElemType beta, FixedAr
             // map linear thread index 'redId' to multi-axis index to memory location
             // This operates on top of 'pointers' which points to the first element to be reduced.
             auto redPointers = pointers;
-            LocateElementFromThreadId(redId, redPointers, reducingStrides, reducingOpDimDivmod);
+            LocateElementFromThreadId<ElemType, NUM_ARGS, REDUCTION_RANK>(redId, redPointers, reducingStrides, reducingOpDimDivmod);
 
             // compute the element value at the determined input location
             auto val = Op(redPointers, op);
