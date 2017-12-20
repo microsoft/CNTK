@@ -99,59 +99,59 @@ public:
 
 #pragma push_macro("DeclareNullaryTensorOp")
 #define DeclareNullaryTensorOp(oper) \
-    void     Do##oper##Of(ElemType beta, ElemType alpha       ) { DoNullaryOpOf(beta, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void Assign##oper##Of(               ElemType alpha = 1.0f) { DoNullaryOpOf(0   , alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void    Add##oper##Of(               ElemType alpha = 1.0f) { DoNullaryOpOf(1.0f, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); }
+    void     Do##oper##Of(ElemType beta, ElemType alpha       ) { Do<1>(1-1, { ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, beta); } \
+    void Assign##oper##Of(               ElemType alpha = 1.0f) { Do<1>(1-1, { ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 0   ); } \
+    void    Add##oper##Of(               ElemType alpha = 1.0f) { Do<1>(1-1, { ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 1.0f); }
 
     ForAllNullaryOps(DeclareNullaryTensorOp);
 #pragma pop_macro("DeclareNullaryTensorOp")
 
 #pragma push_macro("DeclareUnaryTensorOp")
 #define DeclareUnaryTensorOp(oper) \
-    void     Do##oper##Of(ElemType beta, const TensorView& a, ElemType alpha       ) { DoUnaryOpOf(beta, a, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void Assign##oper##Of(               const TensorView& a, ElemType alpha = 1.0f) { DoUnaryOpOf(0   , a, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void    Add##oper##Of(               const TensorView& a, ElemType alpha = 1.0f) { DoUnaryOpOf(1.0f, a, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); }
+    void     Do##oper##Of(ElemType beta, const TensorView& a, ElemType alpha       ) { Do<2>(2-1, { ViewRef(a), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, beta); } \
+    void Assign##oper##Of(               const TensorView& a, ElemType alpha = 1.0f) { Do<2>(2-1, { ViewRef(a), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 0   ); } \
+    void    Add##oper##Of(               const TensorView& a, ElemType alpha = 1.0f) { Do<2>(2-1, { ViewRef(a), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 1.0f); }
 
     ForAllUnaryOps(DeclareUnaryTensorOp);
 #pragma pop_macro("DeclareUnaryTensorOp")
 
 #pragma push_macro("DeclareBinaryTensorOp")
 #define DeclareBinaryTensorOp(oper) \
-    void     Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha       ) { DoBinaryOpOf(beta, a, b, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void Assign##oper##Of(               const TensorView& a, const TensorView& b, ElemType alpha = 1.0f) { DoBinaryOpOf(0   , a, b, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void    Add##oper##Of(               const TensorView& a, const TensorView& b, ElemType alpha = 1.0f) { DoBinaryOpOf(1.0f, a, b, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); }
+    void     Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha       ) { Do<3>(3-1, { ViewRef(a), ViewRef(b), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, beta); } \
+    void Assign##oper##Of(               const TensorView& a, const TensorView& b, ElemType alpha = 1.0f) { Do<3>(3-1, { ViewRef(a), ViewRef(b), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 0   ); } \
+    void    Add##oper##Of(               const TensorView& a, const TensorView& b, ElemType alpha = 1.0f) { Do<3>(3-1, { ViewRef(a), ViewRef(b), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 1.0f); }
 
     ForAllBinaryOps(DeclareBinaryTensorOp);
 #pragma pop_macro("DeclareBinaryTensorOp")
 
 #pragma push_macro("DeclareTernaryTensorOp")
 #define DeclareTernaryTensorOp(oper) \
-    void     Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha       ) { DoTernaryOpOf(beta, a, b, c, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void Assign##oper##Of(               const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha = 1.0f) { DoTernaryOpOf(0   , a, b, c, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void    Add##oper##Of(               const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha = 1.0f) { DoTernaryOpOf(1.0f, a, b, c, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); }
+    void     Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha       ) { Do<4>(4-1, { ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, beta); } \
+    void Assign##oper##Of(               const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha = 1.0f) { Do<4>(4-1, { ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 0   ); } \
+    void    Add##oper##Of(               const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha = 1.0f) { Do<4>(4-1, { ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 1.0f); }
 
     ForAllTernaryOps(DeclareTernaryTensorOp);
 #pragma pop_macro("DeclareTernaryTensorOp")
 
 #pragma push_macro("DeclareQuaternaryTensorOp")
 #define DeclareQuaternaryTensorOp(oper) \
-    void     Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha       ) { DoQuaternaryOpOf(beta, a, b, c, d, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void Assign##oper##Of(               const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha = 1.0f) { DoQuaternaryOpOf(0   , a, b, c, d, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); } \
-    void    Add##oper##Of(               const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha = 1.0f) { DoQuaternaryOpOf(1.0f, a, b, c, d, alpha, ElementWiseOperator::op##oper, ElementWiseOperator::opSum); }
+    void     Do##oper##Of(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha       ) { Do<5>(5-1, { ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(d), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, beta); } \
+    void Assign##oper##Of(               const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha = 1.0f) { Do<5>(5-1, { ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(d), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 0   ); } \
+    void    Add##oper##Of(               const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha = 1.0f) { Do<5>(5-1, { ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(d), ViewRef(*this) }, ElementWiseOperator::op##oper, ElementWiseOperator::opSum, alpha, 1.0f); }
 
     ForAllQuaternaryOps(DeclareQuaternaryTensorOp);
 #pragma pop_macro("DeclareQuaternaryTensorOp")
 
-private:
     // all different arities are routed through a single function template
     template<size_t N> static void Do(size_t arity, const std::array<std::reference_wrapper<TensorView<ElemType>>, N>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, ElemType alpha, ElemType beta);
     static std::reference_wrapper<TensorView> ViewRef(const TensorView& arg) { return std::ref(const_cast<TensorView&>(arg)); } // helper for calling Do()
-public:
-    inline void DoNullaryOpOf   (ElemType beta,                                                                                     ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do(0, std::array<std::reference_wrapper<TensorView<ElemType>>, 1>{                                                 ViewRef(*this) }, op, reductionOp, alpha, beta); }
-    inline void DoUnaryOpOf     (ElemType beta, const TensorView& a,                                                                ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do(1, std::array<std::reference_wrapper<TensorView<ElemType>>, 2>{ ViewRef(a),                                     ViewRef(*this) }, op, reductionOp, alpha, beta); }
-    inline void DoBinaryOpOf    (ElemType beta, const TensorView& a, const TensorView& b,                                           ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do(2, std::array<std::reference_wrapper<TensorView<ElemType>>, 3>{ ViewRef(a), ViewRef(b),                         ViewRef(*this) }, op, reductionOp, alpha, beta); }
-    inline void DoTernaryOpOf   (ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c,                      ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do(3, std::array<std::reference_wrapper<TensorView<ElemType>>, 4>{ ViewRef(a), ViewRef(b), ViewRef(c),             ViewRef(*this) }, op, reductionOp, alpha, beta); }
-    inline void DoQuaternaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do(4, std::array<std::reference_wrapper<TensorView<ElemType>>, 5>{ ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(d), ViewRef(*this) }, op, reductionOp, alpha, beta); }
+
+    // some code may use this interface
+    inline void DoNullaryOpOf   (ElemType beta,                                                                                     ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do<1>(0, {                                                 ViewRef(*this) }, op, reductionOp, alpha, beta); }
+    inline void DoUnaryOpOf     (ElemType beta, const TensorView& a,                                                                ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do<2>(1, { ViewRef(a),                                     ViewRef(*this) }, op, reductionOp, alpha, beta); }
+    inline void DoBinaryOpOf    (ElemType beta, const TensorView& a, const TensorView& b,                                           ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do<3>(2, { ViewRef(a), ViewRef(b),                         ViewRef(*this) }, op, reductionOp, alpha, beta); }
+    inline void DoTernaryOpOf   (ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c,                      ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do<4>(3, { ViewRef(a), ViewRef(b), ViewRef(c),             ViewRef(*this) }, op, reductionOp, alpha, beta); }
+    inline void DoQuaternaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, const TensorView& d, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp) { Do<5>(4, { ViewRef(a), ViewRef(b), ViewRef(c), ViewRef(d), ViewRef(*this) }, op, reductionOp, alpha, beta); }
 
     // -------------------------------------------------------------------
     // arg based operations
