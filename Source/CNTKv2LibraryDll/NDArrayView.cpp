@@ -622,7 +622,7 @@ namespace CNTK
     {
         const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator)opInt;
         const auto reductionOp = reductionOpInt != -1 ? (Microsoft::MSR::CNTK::ElementWiseOperator)reductionOpInt : Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
-        TensorView<ElementType>::Do<N>(N-1, MapArray(args, [](NDArrayView* view) { return std::ref(view->WritableNativeTensorView<ElementType>()); }), op, reductionOp, (ElementType)alpha, (ElementType)beta);
+        TensorView<ElementType>::template Do<N>(N-1, MapArray(args, [](NDArrayView* view) { return std::ref(view->WritableNativeTensorView<ElementType>()); }), op, reductionOp, (ElementType)alpha, (ElementType)beta);
         // Note: Only the last element of args[] is written to, but for regularity of interface, we pass all as writable.
     }
 
