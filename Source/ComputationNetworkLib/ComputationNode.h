@@ -1863,14 +1863,32 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        size_t matrixSize = m_sampleLayout.GetNumElements();
-        RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout(), /*isWorkSpace*/false, ParentGradientReused() || IsGradientReused());
+        /* guoye: start */
+        fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 1 \n");
+        /* guoye: end */
 
+        size_t matrixSize = m_sampleLayout.GetNumElements();
+        /* guoye: start */
+        fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 2 \n");
+        /* guoye: end */
+        RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout(), /*isWorkSpace*/false, ParentGradientReused() || IsGradientReused());
+        /* guoye: start */
+        fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 3 \n");
+        /* guoye: end */
         auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+        /* guoye: start */
+        fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 4 \n");
+        /* guoye: end */
         if (multiOutputNode)
         {
+            /* guoye: start */
+            fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 5, multiOutputNode->m_numOutputs = %d \n", int(multiOutputNode->m_numOutputs));
+            /* guoye: end */
             for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+            {
+                fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 6, i = %d \n", int(i));
                 RequestMatrixFromPool(multiOutputNode->m_outputsGradient[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
+            }
         }
     }
 
