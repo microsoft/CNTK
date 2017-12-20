@@ -1141,6 +1141,8 @@ namespace CNTK
         const Microsoft::MSR::CNTK::TensorView<ElementType>& NativeTensorView() const;
         template <typename ElementType>
         Microsoft::MSR::CNTK::TensorView<ElementType>& WritableNativeTensorView();
+        template <typename ElementType, size_t N>
+        friend static void NativeNumericOperation(const std::array<NDArrayView*, N>& args, int opInt, int reductionOpInt, double alpha, double beta);
 
         const Microsoft::MSR::CNTK::TensorShape& GetTensorShape() const;
 

@@ -396,16 +396,16 @@ void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOp
     GetSOB().TensorArgOp(a.GetSOB(), reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
-template void TensorView<float>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<float>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<float>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<float>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<float>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
-template void TensorView<double>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-template void TensorView<double>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-template void TensorView<double>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-template void TensorView<double>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
-template void TensorView<double>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template MATH_API void TensorView<float>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template MATH_API void TensorView<float>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template MATH_API void TensorView<float>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template MATH_API void TensorView<float>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template MATH_API void TensorView<float>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<float>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, float alpha, float beta);
+template MATH_API void TensorView<double>::Do<1>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 1>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template MATH_API void TensorView<double>::Do<2>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 2>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template MATH_API void TensorView<double>::Do<3>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 3>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template MATH_API void TensorView<double>::Do<4>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 4>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
+template MATH_API void TensorView<double>::Do<5>(size_t arity, const std::array<std::reference_wrapper<TensorView<double>>, 5>& args, ElementWiseOperator op, ElementWiseOperator reductionOp, double alpha, double beta);
 
 // -------------------------------------------------------------------
 // matrix product -- GEMM for flattened tensors

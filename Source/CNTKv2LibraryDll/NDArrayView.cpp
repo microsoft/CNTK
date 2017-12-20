@@ -616,6 +616,16 @@ namespace CNTK
         //return *(TensorView<ElementType>*)(m_tensorViewPtr.get());
     }
 
+    // templated helper to execute TensorView operations
+    template <typename ElementType, size_t N>
+    static inline void NativeNumericOperation(const std::array<NDArrayView*, N>& args, int opInt, int reductionOpInt, double alpha, double beta)
+    {
+        const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator)opInt;
+        const auto reductionOp = reductionOpInt != -1 ? (Microsoft::MSR::CNTK::ElementWiseOperator)reductionOpInt : Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
+        TensorView<ElementType>::Do<N>(N-1, MapArray(args, [](NDArrayView* view) { return std::ref(view->WritableNativeTensorView<ElementType>()); }), op, reductionOp, (ElementType)alpha, (ElementType)beta);
+        // Note: Only the last element of args[] is written to, but for regularity of interface, we pass all as writable.
+    }
+
     /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, NDArrayViewPtr out, double beta, int reductionOpInt)
     {
         // create result object if not given
@@ -638,52 +648,28 @@ namespace CNTK
             beta = 0; // newly created object is already 0
         }
         // perform operation in-place on result object
-        const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator) (opInt);
-        const auto reductionOp = reductionOpInt != -1 ? (Microsoft::MSR::CNTK::ElementWiseOperator) (reductionOpInt) : Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
         switch (out->m_dataType)
         {
         case DataType::Float:
             switch (inputs.size())
             {
-            case 0:
-                out->WritableNativeTensorView<float>().DoNullaryOpOf((float)beta, (float)alpha, op, reductionOp);
-                break;
-            case 1:
-                out->WritableNativeTensorView<float>().DoUnaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
-                break;
-            case 2:
-                out->WritableNativeTensorView<float>().DoBinaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
-                break;
-            case 3:
-                out->WritableNativeTensorView<float>().DoTernaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), inputs[2]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
-                break;
-            case 4:
-                out->WritableNativeTensorView<float>().DoQuaternaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), inputs[2]->NativeTensorView<float>(), inputs[3]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
-                break;
-            default:
-                LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
+            case 0: NativeNumericOperation<float, 1>({                                                                     out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            case 1: NativeNumericOperation<float, 2>({ inputs[0].get(),                                                    out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            case 2: NativeNumericOperation<float, 3>({ inputs[0].get(), inputs[1].get(),                                   out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            case 3: NativeNumericOperation<float, 4>({ inputs[0].get(), inputs[1].get(), inputs[2].get(),                  out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            case 4: NativeNumericOperation<float, 5>({ inputs[0].get(), inputs[1].get(), inputs[2].get(), inputs[3].get(), out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            default: LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
             }
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
             switch (inputs.size())
             {
-            case 0:
-                out->WritableNativeTensorView<double>().DoNullaryOpOf((double)beta, (double)alpha, op, reductionOp);
-                break;
-            case 1:
-                out->WritableNativeTensorView<double>().DoUnaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
-                break;
-            case 2:
-                out->WritableNativeTensorView<double>().DoBinaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
-                break;
-            case 3:
-                out->WritableNativeTensorView<double>().DoTernaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), inputs[2]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
-                break;
-            case 4:
-                out->WritableNativeTensorView<double>().DoQuaternaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), inputs[2]->NativeTensorView<double>(), inputs[3]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
-                break;
-            default:
-                LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
+            case 0: NativeNumericOperation<double, 1>({                                                                     out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            case 1: NativeNumericOperation<double, 2>({ inputs[0].get(),                                                    out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            case 2: NativeNumericOperation<double, 3>({ inputs[0].get(), inputs[1].get(),                                   out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            case 3: NativeNumericOperation<double, 4>({ inputs[0].get(), inputs[1].get(), inputs[2].get(),                  out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            case 4: NativeNumericOperation<double, 5>({ inputs[0].get(), inputs[1].get(), inputs[2].get(), inputs[3].get(), out.get() }, opInt, reductionOpInt, alpha, beta); break;
+            default: LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
             }
             break;
         default:
