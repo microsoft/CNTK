@@ -618,8 +618,9 @@ namespace CNTK
 
     // templated helper to execute TensorView operations
     template <typename ElementType, size_t N>
-    static inline void NativeNumericOperation(const std::array<NDArrayView*, N>& args, int opInt, int reductionOpInt, double alpha, double beta)
+    /*static*/ inline void NativeNumericOperation(const std::array<NDArrayView*, N>& args, int opInt, int reductionOpInt, double alpha, double beta)
     {
+        // note: ^^ static does not work because gcc does not accept "static" in "friend" decl, but MSVC takes the non-static friend decl as a declaration
         const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator)opInt;
         const auto reductionOp = reductionOpInt != -1 ? (Microsoft::MSR::CNTK::ElementWiseOperator)reductionOpInt : Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
         TensorView<ElementType>::template Do<N>(N-1, MapArray(args, [](NDArrayView* view) { return std::ref(view->WritableNativeTensorView<ElementType>()); }), op, reductionOp, (ElementType)alpha, (ElementType)beta);
