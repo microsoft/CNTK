@@ -8,15 +8,18 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <set>
+#include "SequenceData.h"
 
 namespace CNTK {
 
 Bundler::Bundler(
     const ConfigParameters& readerConfig,
+    CorpusDescriptorPtr corpus,
     DataDeserializerPtr primaryDeserializer,
     std::vector<DataDeserializerPtr> deserializers,
     bool cleanse)
     : DataDeserializerBase(true),
+      m_corpus(corpus),
       m_deserializers(deserializers),
       m_primaryDeserializer(primaryDeserializer),
       m_mbDefiningDeserializer(std::numeric_limits<size_t>::max())
@@ -318,9 +321,18 @@ public:
                 }
 
                 size_t currentIndex = sequenceIndex * deserializers.size() + deserializerIndex;
-                deserializers[deserializerIndex]->GetSequenceInfo(sequences[sequenceIndex], s);
-                m_sequenceToSequence[currentIndex] = s.m_indexInChunk;
+                bool exists = deserializers[deserializerIndex]->GetSequenceInfo(sequences[sequenceIndex], s);
+                if (!exists)
+                {
+                    if(m_parent->m_verbosity >= (int)TraceLevel::Warning)
+                        fprintf(stderr, "Warning: sequence '%s' could not be found in the deserializer responsible for stream '%ls'\n",
+                            m_parent->m_corpus->IdToKey(sequences[sequenceIndex].m_key.m_sequence).c_str(),
+                            deserializers[deserializerIndex]->StreamInfos().front().m_name.c_str());
+                    m_sequenceToSequence[currentIndex] = SIZE_MAX;
+                    continue;
+                }
 
+                m_sequenceToSequence[currentIndex] = s.m_indexInChunk;
                 ChunkPtr secondaryChunk = chunkTable[s.m_chunkId].lock();
                 if (!secondaryChunk)
                 {
@@ -341,6 +353,15 @@ public:
         for (int i = 0; i < m_parent->m_deserializers.size(); ++i)
         {
             size_t originalSequenceId = m_sequenceToSequence[currentIndex + i];
+            if (originalSequenceId == SIZE_MAX) // Invalid.
+            {
+                // Fill in invalid data.
+                size_t numStreams = m_parent->m_deserializers[i]->StreamInfos().size();
+                for (size_t j = 0; j < numStreams; ++j)
+                    result.push_back(InvalidSequenceData::Instance());
+                continue;
+            }
+
             m_innerChunks[currentIndex + i]->GetSequence(originalSequenceId, result);
         }
     }

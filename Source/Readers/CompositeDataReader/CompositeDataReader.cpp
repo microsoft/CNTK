@@ -100,7 +100,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         // Bundling deserializers together.
         // Option whether we need to check data between different deserializers.
         bool cleanse = config(L"checkData", true);
-        deserializer = std::make_shared<Bundler>(config, deserializer, m_deserializers, cleanse);
+        deserializer = std::make_shared<Bundler>(config, m_corpus, deserializer, m_deserializers, cleanse);
     }
 
     int verbosity = config(L"verbosity", 0);

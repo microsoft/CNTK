@@ -8,6 +8,7 @@
 #include <set>
 #include "DataDeserializerBase.h"
 #include "Config.h"
+#include "CorpusDescriptor.h"
 
 namespace CNTK {
 
@@ -17,7 +18,7 @@ namespace CNTK {
 class Bundler : public DataDeserializerBase
 {
 public:
-    Bundler(const ConfigParameters& readerConfig, DataDeserializerPtr driver, std::vector<DataDeserializerPtr> deserializers, bool cleanse);
+    Bundler(const ConfigParameters& readerConfig, CorpusDescriptorPtr corpus, DataDeserializerPtr driver, std::vector<DataDeserializerPtr> deserializers, bool cleanse);
 
     // Gets chunk descriptions.
     virtual std::vector<ChunkInfo> ChunkInfos() override;
@@ -78,6 +79,8 @@ private:
 
     // Optional index of the deserializer whose stream defines the minibatch size.
     size_t m_mbDefiningDeserializer;
+
+    CorpusDescriptorPtr m_corpus;
 };
 
 }
