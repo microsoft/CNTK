@@ -611,8 +611,13 @@ public:
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
+        /* guoye: start */
+        fprintf(stderr, "\n convolutionalnodes.h, RequestMatricesBeforeBackprop, debug 1 .\n");
+        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
+        fprintf(stderr, "\n convolutionalnodes.h, RequestMatricesBeforeBackprop, debug 2 .\n");
         RequestMatrixFromPool(m_tempMatrixBackward, matrixPool, 0, false, true);
+        fprintf(stderr, "\n convolutionalnodes.h, RequestMatricesBeforeBackprop, debug 3 .\n");
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
