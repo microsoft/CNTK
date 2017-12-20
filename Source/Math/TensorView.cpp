@@ -659,6 +659,8 @@ void TensorView<ElemType>::DoGatherBatchOf(const IArrayRef<const TensorView*>& i
         // This is not efficient for many objects (e.g. a batch gather), but fine for 2 or 3.
         size_t sliceStart = 0;
         let arity = inputs.size();
+        vector<TensorView> outputs; // PERF BUGBUG: avoid mallocs; and this gets unnecessarily big
+        outputs.reserve(arity);
         for (size_t i = 0; i < arity; i++)
         {
             let& input = *inputs[i];
@@ -667,9 +669,41 @@ void TensorView<ElemType>::DoGatherBatchOf(const IArrayRef<const TensorView*>& i
             // slice in output
             TensorShape outSlice = m_shape;
             outSlice.NarrowTo(axis, sliceStart, sliceStart + sliceHeight);
-            Reviewed(outSlice).AssignCopyOf(input);
+            outputs.emplace_back(move(Reviewed(outSlice)));
             sliceStart += sliceHeight;
         }
+        // batch operation
+        // TODO: figure out a good interface that does not require to construct many TensorView objects for the output
+        //       Then change this to DoBatch(), and then trickle it down only for GPU (CPU is fine either way)
+        //       Probably needs a callback... :( or a standard pattern. An increment? Tie along a specific axis?
+        //       Inputs need no axis, but synthesizing the target location does.
+        //       This is only the Do() interface. Inside, Do() calls TensorOp() which takes offsets and optimized shapes/strides.
+        //       So we can make the above loop part of a specific Do() interface.
+        // Idea:
+        //  - DoBatch() that takes spans for all inputs, which must either have the same #elements or 1 element (broadcast).
+        //    This signature may even be called from the non-batched Do().
+        //  - DoBatch() that for some inputs and/or the output implements the above logic
+        // Batch index is always associated with one axis (same for all args of the operation): batchAxis, batchSize
+        //  - e.g. batching [10 x 3 x 20] and [10 x 5 x 20] as [10 x 8 x 20]: batchAxis=1, batchSize=2
+        //  - inputs can broadcast, e.g. a second arg could be [10 x 1 x 20] and another [10 x 1 x 20], by means of per-item strides
+        //  - we really also need the output to be able to broadcast, for variable-length reductions e.g. attention model
+        //  - nasty case: Output has multiple pointers (scatter) --> cannot know about overlap.
+        //                Pass flag to indicate potential overlap; and for overlap, require beta=1 and use atomicAdd.
+        // How about this:
+        //  - base pointer to the one/first TensorView
+        //  - array size (==batchSize or ==1)
+        //  - for ==1, dim[batchAxis] decides whether to broadcast or to auto-increment
+        //     - dim[batchAxis] can be
+        //        - dim[batchAxis]=1: denoted by stride[batchAxis]=0: per-slice reduction into it
+        //        - dim[batchAxis]=batch item dim[batchAxis]: denoted by ?
+        //     - batchStride = 0: broadcast the one item
+        //     - batchStride = 1: auto-increment by dim[batchAxis]
+        //        - strides[batchAxis] = 0 means reduction into output slice, slice has height 1, increment by 1
+        //        - strides[batchAxis] != 0: increment by input dimension[batchAxis]
+        //        - TODO: Double-check whether this is consistent; seems not.
+        //  - can apply to different items (reuse in GPUTensor)
+        for (size_t i = 0; i < arity; i++)
+            Do<2>(2-1, { ViewRef(*inputs[i]), ViewRef(outputs[i]) }, ElementWiseOperator::opCopy, ElementWiseOperator::opSum, /*alpha=*/1, /*beta=*/0);
     }
 }
 
