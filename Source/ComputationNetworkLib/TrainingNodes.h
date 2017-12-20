@@ -352,12 +352,12 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         /* guoye: start */
-        fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 1 .\n");
+        // fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 1 .\n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 2 .\n");
+        // fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 2 .\n");
         RequestMatrixFromPool(m_leftDivRight, matrixPool);
-        fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 3 .\n");
+        // fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 3 .\n");
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -450,11 +450,11 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         /* guoye: start */
-        fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 4 .\n");
+        //fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 4 .\n");
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 5 .\n");
+        //fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 5 .\n");
         RequestMatrixFromPool(m_gradientOfL1Norm, matrixPool);
-        fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 6 .\n");
+        //fprintf(stderr, "\n trainingnodes.h, RequestMatricesBeforeBackprop, debug 6 .\n");
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -2925,16 +2925,16 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 1 .\n");
+        // fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 1 .\n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 2 .\n");
+        // fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 2 .\n");
         RequestMatrixFromPool(m_dDataDummy, matrixPool);
-        fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 3 .\n");
+        // fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 3 .\n");
         RequestMatrixFromPool(m_dScale, matrixPool);
-        fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 4 .\n");
+        // fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 4 .\n");
         RequestMatrixFromPool(m_dBias, matrixPool);
-        fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 5 .\n");
+        // fprintf(stderr, "\n TrainingNodes.h, RequestMatricesBeforeBackprop, debug 5 .\n");
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override

@@ -986,15 +986,15 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         /* guoye: start */
-        fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 8 .\n");
+       // fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 8 .\n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 9 .\n");
+        // fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 9 .\n");
         /* guoye: end */
         RequestReduceSequenceAxisMatricesIfNeeded(matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 10 .\n");
+        // fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 10 .\n");
         /* guoye: end */
     }
 
@@ -1840,14 +1840,14 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         /* guoye: start */
-        fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 4 .\n");
+       // fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 4 .\n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 5 .\n");
+        // fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 5 .\n");
         RequestMatrixFromPool(m_invNormSquare, matrixPool);
-        fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 6 .\n");
+        // fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 6 .\n");
         RequestMatrixFromPool(m_temp, matrixPool);
-        fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 7 .\n");
+        //fprintf(stderr, "\n linearalgebranodes.h, RequestMatricesBeforeBackprop, debug 7 .\n");
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.

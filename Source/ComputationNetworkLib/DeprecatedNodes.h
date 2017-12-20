@@ -270,14 +270,14 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         /* guoye: start */
-        fprintf(stderr, "\n deprecatednodes.h, RequestMatricesBeforeBackprop, debug 1  .\n");
+        //fprintf(stderr, "\n deprecatednodes.h, RequestMatricesBeforeBackprop, debug 1  .\n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        fprintf(stderr, "\n deprecatednodes.h, RequestMatricesBeforeBackprop, debug 2  .\n");
+        //fprintf(stderr, "\n deprecatednodes.h, RequestMatricesBeforeBackprop, debug 2  .\n");
         RequestMatrixFromPool(m_innerproduct, matrixPool);
-        fprintf(stderr, "\n deprecatednodes.h, RequestMatricesBeforeBackprop, debug 3  .\n");
+        // fprintf(stderr, "\n deprecatednodes.h, RequestMatricesBeforeBackprop, debug 3  .\n");
         RequestMatrixFromPool(m_rightGradient, matrixPool);
-        fprintf(stderr, "\n deprecatednodes.h, RequestMatricesBeforeBackprop, debug 4 .\n");
+        // fprintf(stderr, "\n deprecatednodes.h, RequestMatricesBeforeBackprop, debug 4 .\n");
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
