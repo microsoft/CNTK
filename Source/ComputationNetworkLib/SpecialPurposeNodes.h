@@ -747,24 +747,20 @@ public:
         
         Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
 
-        char* buffer = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->CopyToArray());
+        char* bufferStart = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->CopyToArray());
 
         let& labelMBLayout = InputRef(0).GetMBLayout();
         const auto& labelSequences = labelMBLayout->GetAllSequences();
 
         let& latticeMBLayout = InputRef(3).GetMBLayout();
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
-        const auto& latticeSequences = latticeMBLayout->GetAllSequences();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
-        size_t latIndex = 0;
         for (size_t i = 0;i<labelSequences.size();i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
             auto& currentLabelSeq = labelSequences[i];
-            auto& currentLatticeSeq = latticeSequences[latIndex++];
-            assert(currentLabelSeq.seqId == currentLatticeSeq.seqId);
 
             // Fill up labels
             auto columnIndices = labelMBLayout->GetColumnIndices(currentLabelSeq);
@@ -776,11 +772,12 @@ public:
             }
             m_extraUttMap.push_back(labelSequences[i].s);
 
+            // Fill up lattice
+            auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
             std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
+            char * buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s;
             latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
             m_lattices.push_back(latticePair);
-
-            buffer = buffer + latticeMBNumTimeSteps * sizeof(float);
         }
         m_boundaries.resize(m_uids.size());
         std::fill(m_boundaries.begin(), m_boundaries.end(), 0);
