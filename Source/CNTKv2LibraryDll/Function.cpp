@@ -17,6 +17,12 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+
+    inline Variable ExactPlaceholderLike(const Variable& var)
+    {
+        return Variable(var.Shape(), VariableKind::Placeholder, var.GetDataType(), nullptr, false, var.DynamicAxes(), var.Name(), var.Uid());
+    }
+
     /*static*/ UserFunctionFactoryPtr Function::s_userFunctionFactory = std::make_shared<UserFunctionFactory>();
 
     /*static*/ void Function::RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName)
@@ -677,12 +683,12 @@ namespace CNTK
         return this->shared_from_this();
     }
 
-    FunctionPtr Function::FlattenFunction(const FunctionPtr& clonee, const std::vector<Variable>& clonedInputs)
+    FunctionPtr Function::FlattenFunction(const FunctionPtr& clonee, const std::vector<Variable>& clonedInputs, bool preserveIds)
     {
         FunctionPtr clonedFunction;
         const BlockFunction* blockFunction = dynamic_cast<const BlockFunction*>(clonee.get());
         if (!blockFunction)
-            return clonee->Clone(clonedInputs);
+            return clonee->Clone(clonedInputs, preserveIds, clonee->Uid());
 
         std::unordered_map<Variable, Variable> cloneeToClonedInputMap;
         auto cloneeInputs = clonee->Inputs();
@@ -713,7 +719,7 @@ namespace CNTK
                 }
             }
         }
-        return cloneeComposite->CloneImpl(ParameterCloningMethod::Share, cloneeCompositeReplacements, FlattenFunction);
+        return cloneeComposite->CloneImpl(ParameterCloningMethod::Share, cloneeCompositeReplacements, FlattenFunction, preserveIds);
     }
 
     FunctionPtr Function::Clone(const FunctionPtr& clonee,
@@ -722,7 +728,8 @@ namespace CNTK
                                 std::unordered_map<const Function*, FunctionPtr>& cloneMap,
                                 std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
                                 std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&)> clone)
+                                std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&, bool)> clone,
+                                bool keepId)
     {
         if (cloneMap.find(clonee.get()) != cloneMap.end())
             LogicError("Function::Clone: Cloning an already visited Function '%S'.", clonee->AsString().c_str());
@@ -738,7 +745,7 @@ namespace CNTK
             if (replacements.find(cloneeInput) != replacements.end())
             {
                 auto replacement = replacements.at(cloneeInput);
-                clonedInput = PlaceholderLike(replacement);
+                clonedInput = keepId ? ExactPlaceholderLike(replacement) : PlaceholderLike(replacement);
                 placeholderReplacements[clonedInput] = replacement;
             }
             else
@@ -757,7 +764,7 @@ namespace CNTK
                             switch (parameterCloneMethod)
                             {
                             case ParameterCloningMethod::Clone:
-                                clonedInput = cloneeInput.Clone();
+                                clonedInput = cloneeInput.Clone(keepId);
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             case ParameterCloningMethod::Share:
@@ -768,13 +775,13 @@ namespace CNTK
                                 {
                                     //parameter values can be updated so we need our own copy
                                     const auto& ndav = Parameter(cloneeInput).Value();
-                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name(), keepId ? cloneeInput.Uid(): Internal::GenerateUid(VariableKind::Constant));
                                 }
                                 else
                                 {
                                     //constants can also be updated via non-sgd means
                                     const auto& ndav = Constant(cloneeInput).Value();
-                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name());
+                                    clonedInput = Constant(ndav->DeepClone(ndav->Device(), ndav->IsReadOnly()), cloneeInput.Name(), keepId ? cloneeInput.Uid() : Internal::GenerateUid(VariableKind::Constant));
                                 }
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
@@ -784,7 +791,7 @@ namespace CNTK
                         }
                         else
                         {
-                            clonedInput = cloneeInput.Clone();
+                            clonedInput = cloneeInput.Clone(keepId);
                             leafVariablesCloneMap[cloneeInput] = clonedInput;
                         }
                     }
@@ -816,7 +823,7 @@ namespace CNTK
                     }
                     else
                     {
-                        auto clonedFunction = Clone(cloneeInput.Owner(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements, clone);
+                        auto clonedFunction = Clone(cloneeInput.Owner(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements, clone, keepId);
                         clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.Owner(), clonedFunction);
                     }
                 }
@@ -826,12 +833,12 @@ namespace CNTK
             cloneeToClonedInputMap.insert({cloneeInput, clonedInput});
         }
 
-        FunctionPtr clonedFunction = clone(clonee, inputs);
+        FunctionPtr clonedFunction = clone(clonee, inputs, keepId);
         cloneMap[clonee.get()] = clonedFunction;
         return clonedFunction;
     }
 
-    FunctionPtr Function::CloneFunction(const FunctionPtr& clonee, const std::vector<Variable>& clonedInputs)
+    FunctionPtr Function::CloneFunction(const FunctionPtr& clonee, const std::vector<Variable>& clonedInputs, bool)
     {
         auto inputs = clonedInputs;
         auto cloneeInputs = clonee->Inputs();
@@ -916,18 +923,19 @@ namespace CNTK
 
     FunctionPtr Function::Clone(ParameterCloningMethod parameterCloneMethod, const std::unordered_map<Variable, Variable>& replacements) const
     {
-        return CloneImpl(parameterCloneMethod, replacements, CloneFunction);
+        return CloneImpl(parameterCloneMethod, replacements, CloneFunction, false);
     }
 
-    FunctionPtr Function::CloneFlattened(ParameterCloningMethod parameterCloneMethod) const
+    FunctionPtr Function::CloneFlattened(ParameterCloningMethod parameterCloneMethod, bool preserveIds) const
     {
-        return CloneImpl(parameterCloneMethod, {}, FlattenFunction);
+        return CloneImpl(parameterCloneMethod, {}, FlattenFunction, preserveIds);
     }
 
     FunctionPtr Function::CloneImpl(
         ParameterCloningMethod parameterCloneMethod, 
         const std::unordered_map<Variable, Variable>& replacements,
-        std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&)> clone) const
+        std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&, bool)> clone,
+        bool keepId) const
     {
         const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
         if (compositeFunction == nullptr)
@@ -967,7 +975,7 @@ namespace CNTK
         std::unordered_map<const Function*, FunctionPtr> cloneMap;
         std::unordered_map<Variable, Variable> leafVariablesCloneMap;
         std::unordered_map<Variable, Variable> placeholderReplacements;
-        auto clonedRootFunction = Function::Clone(compositeRootFunction, parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements, clone);
+        auto clonedRootFunction = Function::Clone(compositeRootFunction, parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements, clone, keepId);
 
         // Patch the values in the placeholderReplacements map with newly cloned Variables where applicable
         std::unordered_set<FunctionPtr> replacementClones;
@@ -1004,7 +1012,7 @@ namespace CNTK
                     if (!cloningReplacementsForPlaceholderReplacement.empty())
                     {
                         auto replacementToClone = AsComposite(varPair.second.Owner());
-                        auto replacementClone = replacementToClone->CloneImpl(parameterCloneMethod, cloningReplacementsForPlaceholderReplacement, clone);
+                        auto replacementClone = replacementToClone->CloneImpl(parameterCloneMethod, cloningReplacementsForPlaceholderReplacement, clone, keepId);
                         replacementClones.insert(replacementClone);
                         placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.Owner(), replacementClone->RootFunction());
                     }

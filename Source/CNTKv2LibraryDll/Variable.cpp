@@ -57,10 +57,10 @@ namespace CNTK
         return m_dataFields->m_needsGradient; 
     }
 
-    Variable Variable::Clone() const
+    Variable Variable::Clone(bool keepId) const
     {
         Variable clonedVariable;
-        clonedVariable.m_dataFields = m_dataFields->Clone();
+        clonedVariable.m_dataFields = m_dataFields->Clone(keepId);
 
         return clonedVariable;
     }
@@ -222,7 +222,7 @@ namespace CNTK
             return nullptr;
     }
 
-    std::shared_ptr<VariableFields> VariableFields::Clone() const
+    std::shared_ptr<VariableFields> VariableFields::Clone(bool keepId) const
     {
         if (Owner() != nullptr)
             InvalidArgument("Output variable '%S' cannot be cloned.", AsString().c_str());
@@ -237,7 +237,7 @@ namespace CNTK
             m_dynamicAxes,
             m_isSparse,
             m_name,
-            Internal::GenerateUid(m_varKind));
+            keepId ? m_uid: Internal::GenerateUid(m_varKind));
 
         if (m_valueInitializer)
             clone->SetValueInitialization(*m_valueInitializer, *m_valueInitializationDevice);

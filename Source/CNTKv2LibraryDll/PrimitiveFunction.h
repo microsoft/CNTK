@@ -775,9 +775,9 @@ namespace CNTK
 
         void InferOutputs(std::vector<Variable>& outputs) override;
 
-        FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override
+        FunctionPtr Clone(const std::vector<Variable>& clonedInputs, bool preserveId, const std::wstring& id) override
         {
-            return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
+            return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name(), preserveId ? id : GenerateUid(OpType()));
         }
 
         void SetDropoutRate(double dropoutRate);

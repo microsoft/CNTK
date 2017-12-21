@@ -1814,6 +1814,7 @@ namespace CNTK
         friend inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes);
         friend inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes()*/);
         friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/);
+        friend inline Variable ExactPlaceholderLike(const Variable& var);
 #endif
 
     public:
@@ -1953,7 +1954,7 @@ namespace CNTK
 private:
         CNTK_API const Variable& BlockFunctionVariableMapping() const;
 
-        CNTK_API Variable Clone() const;
+        CNTK_API Variable Clone(bool keepId) const;
 
         CNTK_API virtual Dictionary Serialize() const override;
 
@@ -2301,11 +2302,11 @@ private:
         CNTK_API void SetValue(const NDArrayViewPtr& value);
         CNTK_API void RecordValueUpdate();
 
-    private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
             : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, false, {}, name, uid)
         {}
 
+    private:
         ///
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
@@ -3199,7 +3200,7 @@ namespace CNTK
         ///
         /// Creates a clone of this Function instance, using the specified 'inputs' that are inputs of the clone to be constructed.
         ///
-        CNTK_API virtual FunctionPtr Clone(const std::vector<Variable>& /*clonedInputs*/) { NOT_IMPLEMENTED; }
+        virtual CNTK_API FunctionPtr Clone(const std::vector<Variable>& clonedInputs) { return Clone(clonedInputs, false, L""); }
 
     public:
         ///
@@ -3246,7 +3247,7 @@ namespace CNTK
         ///
         /// Clones 'this' Function with flattening(removing all block functions). Parameters as above.
         ///
-        CNTK_API FunctionPtr CloneFlattened(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Share) const;
+        CNTK_API FunctionPtr CloneFlattened(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Share, bool preserveIds = false) const;
 
         ///
         /// Deserializes a Function from the model dictionary, using the specified UDF deserializer to
@@ -3542,6 +3543,8 @@ namespace CNTK
 
 
     protected:
+        virtual FunctionPtr Clone(const std::vector<Variable>& /*clonedInputs*/, bool /* preserveIds*/, const std::wstring& /*id*/) { NOT_IMPLEMENTED; }
+
         static bool IsArgument(const Variable& var)
         {
             return (var.IsInput() || var.IsPlaceholder() || var.IsOutput());
@@ -3646,18 +3649,22 @@ namespace CNTK
                                  std::unordered_map<const Function*, FunctionPtr>& cloneMap,
                                  std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
                                  std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                 std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&)> clone);
+                                 std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&, bool)> clone,
+                                 bool keepId);
 
         static FunctionPtr CloneFunction(const FunctionPtr& clonee,
-            const std::vector<Variable>& clonedInputs);
+            const std::vector<Variable>& clonedInputs,
+            bool preserveIds);
 
         static FunctionPtr FlattenFunction(const FunctionPtr& clonee,
-            const std::vector<Variable>& clonedInputs);
+            const std::vector<Variable>& clonedInputs,
+            bool preserveIds);
 
         FunctionPtr CloneImpl(
             ParameterCloningMethod parameterCloneMethod,
             const std::unordered_map<Variable, Variable>& replacements,
-            std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&)> clone) const;
+            std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&, bool)> clone,
+            bool keepId) const;
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;

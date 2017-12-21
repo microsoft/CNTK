@@ -1665,7 +1665,7 @@ namespace CNTK
             {
                 for (auto inferredArgumentShapePair : inferredArgumentDimensions)
                 {
-                    auto fullyDefinedArgument = inferredArgumentShapePair.first.Clone();
+                    auto fullyDefinedArgument = inferredArgumentShapePair.first.Clone(false);
                     fullyDefinedArgument.m_dataFields->m_shape = inferredArgumentShapePair.second;
                     m_fullyDefinedArgumentsMap.insert({ inferredArgumentShapePair.first, fullyDefinedArgument });
                 }
