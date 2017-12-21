@@ -1869,7 +1869,7 @@ public:
 
         size_t matrixSize = m_sampleLayout.GetNumElements();
         /* guoye: start */
-        fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 2 \n");
+        fprintf(stderr, "\n computationnode.h: RequestMatricesBeforeBackprop: debug 2, matrixSize = %d, mbscale = %d \n", int(matrixSize), int(HasMBLayout()));
         /* guoye: end */
         RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout(), /*isWorkSpace*/false, ParentGradientReused() || IsGradientReused());
         /* guoye: start */
@@ -1955,8 +1955,7 @@ protected:
     {
         /* guoye: start */
         fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 0 \n");
-        return;
-
+        
         fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 1 \n");
         /* guoye: end */
         if (matrixPtr == nullptr)
