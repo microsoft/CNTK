@@ -544,6 +544,7 @@ public:
             m_gammaCalculator.init(m_hmm, m_deviceId);
             m_gammaCalcInitialized = true;
         }
+
         // softmax
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value() /*prediction*/, true);
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
@@ -775,14 +776,15 @@ public:
             // Fill up lattice
             auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
             std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
-            char * buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s;
+            char * buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
             latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
+            assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
             m_lattices.push_back(latticePair);
         }
         m_boundaries.resize(m_uids.size());
         std::fill(m_boundaries.begin(), m_boundaries.end(), 0);
-
         SequenceWithSoftmaxNode::ForwardPropNonLooping();
+        LOGPRINTF(stderr, "--------------------\n");
     }
 
     virtual void Save(File& fstream) const override

@@ -84,11 +84,9 @@ public:
         {
         }
     };
-
+    header_v1_v2 info; // information about the lattice
 private:
     mutable int verbosity;
-    
-    header_v1_v2 info;                           // information about the lattice
     static const unsigned int NOEDGE = 0xffffff; // 24 bits
     // static_assert (sizeof (nodeinfo) == 8, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
     // ensure type size as these are expected to be of this size in the files we read
