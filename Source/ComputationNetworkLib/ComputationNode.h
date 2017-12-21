@@ -1953,13 +1953,44 @@ protected:
     // this is currently a workaround for workspace memory for convolutions
     void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
     {
+        /* guoye: start */
+        fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 0 \n");
+        return;
+
+        fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 1 \n");
+        /* guoye: end */
         if (matrixPtr == nullptr)
         {
+            /* guoye: start */
+            fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 2 \n");
+            /* guoye: end */
             if (aliasing)
+            {
+                /* guoye: start */
+                fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 3 \n");
+                /* guoye: end */
                 matrixPool.RequestAliasedAllocate<ElemType>(m_deviceId, this, &matrixPtr, matrixSize, mbScale);
+                /* guoye: start */
+                fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 4 \n");
+                /* guoye: end */
+            }
             else
+            {
+                /* guoye: start */
+                fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 5 \n");
+                /* guoye: end */
                 matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
+                /* guoye: start */
+                fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 6 \n");
+                /* guoye: end */
+            }
+            /* guoye: start */
+            fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 7\n");
+            /* guoye: end */
         }
+        /* guoye: start */
+        fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 8 \n");
+        /* guoye: end */
     }
 
     void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
