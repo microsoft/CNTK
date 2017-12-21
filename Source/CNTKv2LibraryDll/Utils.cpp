@@ -924,6 +924,36 @@ namespace CNTK
         return GetValueObjectFromCNTKImplMatrixAndMBLayout(varShape, var.DynamicAxes(), matrix, layout, readOnly);
     }
 
+    NDShape GetSqueezedShape(const NDShape& inputShape, const Dictionary& squeezeConfig)
+    {
+        auto replacementDims = inputShape.Dimensions();
+
+        // collect all indices that need to be squeezed
+        if (squeezeConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+        {
+            auto squeezedIdx = std::vector<size_t>({});
+            auto axes = AsVector<Axis>(squeezeConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+            for (auto& ax : axes)
+            {
+                auto axis = NormalizeStaticAxis(ax, inputShape);
+                if (!axis.IsStaticAxis())
+                    LogicError("Squeeze: can only squeeze static axes.");
+                auto idx = axis.StaticAxisIndex();
+                if (inputShape[idx] != 1)
+                    LogicError("Squeeze: cannot squeeze a static axis whose dimension (=%zd) is not 1.", inputShape[idx]);
+                squeezedIdx.push_back(idx);
+            }
+            // delete all squeezed indices from back to front
+            std::sort(std::begin(squeezedIdx), std::end(squeezedIdx), [](const size_t a, const size_t b) {return a > b; });
+            for (auto i : squeezedIdx)
+                replacementDims.erase(std::begin(replacementDims) + i);
+        }
+        else
+            replacementDims.erase(std::remove_if(std::begin(replacementDims), std::end(replacementDims), [](const size_t dim) {return dim == 1; }), std::end(replacementDims));
+
+        return NDShape(replacementDims);
+    }
+
     NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device)
     {
         size_t numSequences = sequenceLengths.size();
@@ -991,7 +1021,8 @@ namespace CNTK
 
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),
-        m_isDistributed(false)
+        m_isDistributed(false),
+        DoAggregateMetricsIfNeededLambda(nullptr)
     {
         if (learners.empty())
             InvalidArgument("These must be at least one learner.");
@@ -999,8 +1030,18 @@ namespace CNTK
         std::unordered_set<Parameter> learnerParameters;
         for (const auto& learner : m_learners)
         {
-            if (dynamic_pointer_cast<DistributedLearner>(learner) != nullptr)
+            DistributedLearnerPtr distLearner = dynamic_pointer_cast<DistributedLearner>(learner);
+            if (distLearner)
+            {
                 m_isDistributed = true;
+
+                // When only 1 distributed learner is present, enable the lambda. This is used to correctly report loss and eval in BMUF learner case.
+                // Todo : Reconsider this design of working with only 1 distributed learner.
+                if (m_learners.size() == 1)
+                {
+                    DoAggregateMetricsIfNeededLambda = std::bind(&DistributedLearner::DoAggregateMetricsIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
+                }
+            }
 
             const auto& currentLearnerParameters = learner->Parameters();
             for (const auto& parameter : currentLearnerParameters)
@@ -1117,7 +1158,7 @@ namespace CNTK
             InvalidArgument("Attempting to accumulate a null Value.");
 
         bool copied = false;
-        if (m_isUninitialized ||
+        if (!m_isInitialized ||
             GetDataType() != delta->GetDataType() ||
             Shape() != delta->Shape() ||
             Device() != device ||
@@ -1127,7 +1168,7 @@ namespace CNTK
             m_data = MakeSharedObject<NDArrayView>(delta->GetDataType(), delta->Shape(), device);
             m_mask = delta->Mask();
             ResetToZero();
-            m_isUninitialized = false;
+            m_isInitialized = true;
         }
 
         if (delta->GetDataType() == DataType::Float)
@@ -1149,7 +1190,7 @@ namespace CNTK
 
     void Accumulator::ResetToZero()
     {
-        if (m_isUninitialized)
+        if (!m_isInitialized)
             return;
 
         if (GetDataType() == DataType::Float)

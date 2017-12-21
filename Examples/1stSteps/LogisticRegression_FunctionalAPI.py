@@ -54,7 +54,7 @@ def criterion(data, label_one_hot):
 
 # Learner object. The learner implements the update algorithm, in this case plain SGD.
 learning_rate = 0.1
-learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(learning_rate, cntk.UnitType.minibatch))
+learner = cntk.sgd(model.parameters, cntk.learning_parameter_schedule(learning_rate))
 
 # Trainer configuration parameters.
 progress_writer = cntk.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches

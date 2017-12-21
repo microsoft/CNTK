@@ -140,6 +140,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Sigmoid;
                 else if (node->OperationName() == OperationNameOf(StableSigmoidNode))
                     opType = PrimitiveOpType::StableSigmoid;
+                else if (node->OperationName() == OperationNameOf(AtanhNode))
+                    opType = PrimitiveOpType::Atanh;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
                 else if (node->OperationName() == OperationNameOf(AsinNode))
@@ -152,6 +154,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Sin;
                 else if (node->OperationName() == OperationNameOf(CoshNode))
                     opType = PrimitiveOpType::Cosh;
+                else if (node->OperationName() == OperationNameOf(AsinhNode))
+                    opType = PrimitiveOpType::Asinh;
                 else if (node->OperationName() == OperationNameOf(SinhNode))
                     opType = PrimitiveOpType::Sinh;
                 else if (node->OperationName() == OperationNameOf(PassNode))
@@ -251,7 +255,14 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(MinusNode))
                     opType = PrimitiveOpType::Minus;
                 else if (node->OperationName() == OperationNameOf(ElementTimesNode))
+                {
                     opType = PrimitiveOpType::ElementTimes;
+                }
+                // legacy support for DiagTimesNode
+                else if (node->OperationName() == OperationNameOf(DiagTimesNode))
+                {
+                    opType = PrimitiveOpType::ElementTimes;
+                }
                 else if (node->OperationName() == OperationNameOf(EqualNode))
                     opType = PrimitiveOpType::Equal;
                 else if (node->OperationName() == OperationNameOf(NotEqualNode))
@@ -441,6 +452,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDisableRegularization] = batchNormalizationNode->DisableRegularization();
 
                     opType = PrimitiveOpType::BatchNormalization;
                 }

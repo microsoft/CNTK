@@ -153,6 +153,24 @@ namespace CNTK
         GetWritableMatrix<double>()->SetValue(value);
     }
 
+    bool NDArrayView::IsSliceView()
+    {
+        switch (m_dataType)
+        {
+        case DataType::Float:
+        {
+            auto currentMatrix = GetMatrix<float>();
+            return currentMatrix->IsView();
+        }
+        case DataType::Double:
+        {
+            auto currentMatrix = GetMatrix<double>();
+            return currentMatrix->IsView();
+        }
+        }
+        return false;
+    }
+
     template <typename ElementType>
     /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>* tensorView, size_t rowColSplitPoint)
     {

@@ -159,7 +159,7 @@ namespace CNTK
         else if (s_SWIGCallbackWrapper != nullptr)
         {
             // If we're being called from SWIG, the actual deserializer should be registered by
-            // the target language CNTK implementation (i.e., cnkt_py for Python)
+            // the target language CNTK implementation (i.e., cntk_py for Python)
             udf = s_SWIGCallbackWrapper->operator()(inputs, name, state);
         }
 

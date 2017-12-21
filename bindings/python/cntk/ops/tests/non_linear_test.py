@@ -612,6 +612,101 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     forward_input = {a: t}
 
     unittest_helper(op_node, forward_input, expected_forward, expected_backward=None, device_id=device_id, precision=precision)
+    
+@pytest.mark.parametrize("shape", [(1,), (16,), (16,32,), (16,32,32,)])
+@pytest.mark.parametrize("spatial", [True, False])
+def test_op_batch_normalization_numpy(shape, spatial, device_id, precision):
+    # for some reason the numpy code below does not work in python 2.7
+    import sys
+    if sys.version_info[0] < 3:
+        pytest.skip("Only works on Python 3+")
+
+    dtype = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    if spatial:
+        param_shape = (shape[0],)
+        reduced_shape = shape[1:]
+        reduce_dims = (0,2,3,4)[0:len(shape)]
+    else:
+        param_shape = (np.prod(shape),)
+        reduced_shape = ()
+        reduce_dims = (0,)
+
+    batch_size = 3
+    x = 10 * np.random.random((batch_size,)+shape).astype(dtype)
+
+    init_scale = 1
+    init_bias  = 2
+    init_mean  = 3
+    init_var   = 4
+    init_count = 2
+    epsilon    = 0.01
+
+    i = C.input_variable(shape, dtype=dtype)
+    scale = C.parameter(param_shape, init=init_scale, dtype=dtype, device=dev)
+    bias = C.parameter(param_shape, init=init_bias, dtype=dtype, device=dev)
+    run_mean = C.constant(init_mean, shape=param_shape, dtype=dtype, device=dev)
+    run_var = C.constant(init_var, shape=param_shape, dtype=dtype, device=dev)
+    run_count = C.constant(init_count, shape=(), dtype=dtype, device=dev)
+    #use negative normalization_time_constant for easier exp_avg compute
+    bn = C.batch_normalization(i, scale, bias, run_mean, run_var, spatial, normalization_time_constant=-1, epsilon=epsilon, running_count = run_count)
+    fwd = bn.eval(x, device=dev)
+    y_fwd = (x - init_mean) / np.sqrt(init_var + epsilon) * init_scale + init_bias
+    assert(np.allclose(y_fwd, fwd))
+
+    bwd = bn.grad(x, wrt=bn.parameters, outputs=[bn], device=dev)
+    exp_avg = batch_size / (init_count + batch_size)
+
+    mean = np.mean(x, reduce_dims)
+    mean_b = np.asarray([[np.ones(reduced_shape)*x for x in mean]]*batch_size)
+    reduced_count = batch_size * np.prod(reduced_shape)
+    var = np.mean((x - mean_b) ** 2, reduce_dims)
+    #the output variance is unbiased, while computation uses biased variance
+    var_out = var * reduced_count / (reduced_count - 1)
+    var_b = np.asarray([[np.ones(reduced_shape)*x for x in var]]*batch_size)
+    x_hat = (x - mean_b) / np.sqrt(var_b + epsilon)
+    y = init_scale * x_hat + init_bias;
+
+    d_scale = np.sum(x_hat, reduce_dims)
+    d_bias = np.sum(np.ones_like(x_hat), reduce_dims)
+
+    assert(np.allclose(y, bwd[1], atol=1e-6))
+    assert(np.allclose(d_scale.reshape(param_shape), bwd[0][scale], atol=1e-2))
+    assert(np.allclose(d_bias.reshape(param_shape), bwd[0][bias]))
+    assert(np.allclose(init_var * (1-exp_avg) + var_out.reshape(param_shape) * exp_avg, run_var.value))
+    assert(np.allclose(init_mean * (1-exp_avg) + mean.reshape(param_shape) * exp_avg, run_mean.value))
+    assert(run_count.value == init_count + batch_size)
+
+def test_local_response_normalization(device_id, precision):
+    dtype = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    def lrn(x, depth_radius, bias, alpha, beta, name=''):
+        x2 = C.square(x)
+        # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
+        x2s = C.reshape(x2, (1, C.InferredDimension), 0, 1)
+        W = C.constant(alpha/(2*depth_radius+1), shape=(1,2*depth_radius+1,1,1), dtype=dtype, name='W')
+        # 3D convolution with a filter that has a non 1-size only in the 3rd axis, and does not reduce since the reduction dimension is fake and 1
+        y = C.convolution (W, x2s)
+        # reshape back to remove the fake singleton reduction dimension
+        b = C.reshape(y, C.InferredDimension, 0, 2)
+        den = C.exp(beta * C.log(bias + b))
+        return C.element_divide(x, den)
+
+    from cntk import local_response_normalization
+
+    img_shape = (64, 32, 32)
+    img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
+    x_gt = C.input_variable(shape=img_shape, dtype=dtype)
+    x_r = C.input_variable(shape=img_shape, dtype=dtype)
+
+    gt = lrn(x_gt, 2, 1.0, 0.0001, 0.75)
+    r = local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
+    ss = gt.eval({x_gt:img})
+    sa = r.eval({x_r:img})
+
+    assert np.allclose(r.eval({x_r:img}), gt.eval({x_gt:img}))
 
 TENSOR_PAIRS = [
     ([0.3], [0.1]),

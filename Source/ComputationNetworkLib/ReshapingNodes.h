@@ -612,7 +612,7 @@ class UnpackBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public N
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() {
-        return L"UnpackBatchAixs";
+        return L"UnpackBatchAxis";
     }
 public:
     UnpackBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)

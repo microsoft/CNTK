@@ -60,6 +60,7 @@ void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+MATH_API std::size_t GetCUDNNVersion();
 
 class DataTransferer;
 
@@ -242,6 +243,7 @@ public:
                      const bool initialized);
 
     void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
+    void AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -351,6 +353,9 @@ public:
     GPUMatrix<ElemType>& InplaceTanh();
     GPUMatrix<ElemType>& AssignTanhOf(const GPUMatrix<ElemType>& a);
 
+    GPUMatrix<ElemType>& InplaceAtanh();
+    GPUMatrix<ElemType>& AssignAtanhOf(const GPUMatrix<ElemType>& a);
+
     GPUMatrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     GPUMatrix<ElemType>& AssignLogSoftmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise);
 
@@ -391,6 +396,9 @@ public:
 
     GPUMatrix<ElemType>& InplaceSinh();
     GPUMatrix<ElemType>& AssignSinhOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceAsinh();
+    GPUMatrix<ElemType>& AssignAsinhOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& InplaceAbs();
     GPUMatrix<ElemType>& AssignAbsOf(const GPUMatrix<ElemType>& a);

@@ -1844,25 +1844,38 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
     DecideAndMoveToRightDevice(*this, gradients);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-        { return m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(CPU); },
-        { return m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); },
+        { auto ret = m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(CPU); return ret; },
+        { auto ret = m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); return ret; },
         { NOT_IMPLEMENTED; },
-        { return gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); });
+        { auto ret = gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier, initialized); SetDataLocation(GPU); return ret; });
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
 template <class ElemType>
 void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
     Matrix<ElemType>& functionValues,
-    ElemType learningRate, ElemType rho, ElemType epsilon)
+    ElemType learningRate, ElemType rho, ElemType epsilon,
+    int* timestamps, int currentTimestamp)
 {
     DecideAndMoveToRightDevice(*this, gradients);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-    { return m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
-    { return m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); },
-    { return gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
-    { return gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); });
+    { m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
+    { m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); },
+    { gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon, timestamps, currentTimestamp); SetDataLocation(CPU); },
+    { gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon, timestamps, currentTimestamp); SetDataLocation(GPU); });
+}
+
+template <class ElemType>
+void Matrix<ElemType>::AdaDeltaFlushState(size_t cols, ElemType rho, int* timestamps, int currentTimestamp)
+{
+    DecideAndMoveToRightDevice(*this, *this);
+
+    DISPATCH_MATRIX_ON_FLAG(this, this,
+    { m_CPUMatrix->AdaDeltaFlushTimestamps(cols, rho, timestamps, currentTimestamp); SetDataLocation(CPU); },
+    { m_GPUMatrix->AdaDeltaFlushTimestamps(cols, rho, timestamps, currentTimestamp); SetDataLocation(GPU); },
+    { NOT_IMPLEMENTED; },
+    { NOT_IMPLEMENTED; });
 }
 
 template <class ElemType>
@@ -1881,7 +1894,7 @@ void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 // Note: Resize() will leave the matrix content undefined.
 // Note: Resize calls RequireSizeAndAllocate on the sparse versions in for performance reasons. If the external caller knows the nz, then we should set it.
 template <class ElemType>
-void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
+void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/, bool keepValue /*=false*/)
 {
     // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
     DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
@@ -1890,8 +1903,10 @@ void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const 
         { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
         { m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); });
 #ifdef _DEBUG
-    if (GetMatrixType() != MatrixType::SPARSE)
+    if (GetMatrixType() != MatrixType::SPARSE && !keepValue)
         Invalidate(); // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.
+#else
+    UNUSED(keepValue);
 #endif
 }
 
@@ -1953,6 +1968,12 @@ template <class ElemType>
 bool Matrix<ElemType>::IsEmpty() const
 {
     return m_baseMatrix->IsEmpty();
+}
+
+template <class ElemType>
+bool Matrix<ElemType>::IsView() const
+{
+    return m_baseMatrix->IsView();
 }
 
 #pragma endregion Basic Operators
@@ -2851,6 +2872,39 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTanhOf(const Matrix<ElemType>& a)
     return *this;
 }
 
+//[this]=atanh([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceAtanh()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceAtanh(),
+                            m_GPUMatrix->InplaceAtanh(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignAtanhOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAtanhOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignAtanhOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignAtanhOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
 //[this]=softmax([this]) element wise
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::InplaceLogSoftmax(const bool isColWise)
@@ -3271,6 +3325,39 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSinhOf(const Matrix<ElemType>& a)
                             this,
                             m_CPUMatrix->AssignSinhOf(*a.m_CPUMatrix),
                             m_GPUMatrix->AssignSinhOf(*a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+//[this]=asinh([this]) element wise
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::InplaceAsinh()
+{
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->InplaceAsinh(),
+                            m_GPUMatrix->InplaceAsinh(),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignAsinhOf(const Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAsinhOf: Matrix a is empty.");
+
+    DecideAndMoveToRightDevice(a, *this);
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            this,
+                            m_CPUMatrix->AssignAsinhOf(*a.m_CPUMatrix),
+                            m_GPUMatrix->AssignAsinhOf(*a.m_GPUMatrix),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 
@@ -4014,7 +4101,7 @@ MatrixFormat Matrix<ElemType>::GetFormat() const
 // BUGBUG: This performs a copy operation even for the output matrix that gets overwritten right away.
 //         We should (1) define which is the output and (2) whether it will be completely overwritten (so we won't actually copy it).
 // bring two matrices onto the same device
-// If different and prefered devices are the same, move to preferred device.
+// If different and preferred devices are the same, move to preferred device.
 // Otherwise GPU takes precedence over CPU, and if both are GPU move to a's device.
 // The inputs are only distinguished in that a's GPU takes precedence over b's in case they differ.
 // TODO: This is called somewhat inconsistently, sometimes with a=*this, sometimes with b=*this.
@@ -6220,9 +6307,10 @@ template void Matrix<char>::SetValue(const Matrix<char>&);
 template void Matrix<char>::AssignValuesOf(const Matrix<char>&);
 template void Matrix<char>::CastAssignValuesOf(const MatrixBase& other);
 template bool Matrix<char>::IsEmpty() const;
-template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
+template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly, bool keepValue);
 template void Matrix<char>::Reshape(const size_t, const size_t);
 template char* Matrix<char>::CopyToArray(void) const;
+template bool Matrix<char>::IsView() const;
 
 // Matrix<short> methods
 template Matrix<short>::Matrix(DEVICEID_TYPE);
@@ -6246,9 +6334,10 @@ template void Matrix<short>::SetValue(const Matrix<short>&);
 template void Matrix<short>::AssignValuesOf(const Matrix<short>&);
 template void Matrix<short>::CastAssignValuesOf(const MatrixBase& other);
 template bool Matrix<short>::IsEmpty() const;
-template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
+template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly, bool keepValue);
 template void Matrix<short>::Reshape(const size_t, const size_t);
 template short* Matrix<short>::CopyToArray(void) const;
+template bool Matrix<short>::IsView() const;
 
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 

@@ -31,7 +31,7 @@ void TestUpdate(LearnerPtr& learner, const NDShape& shape, size_t numMinibatches
             gradientValues[parameter] = NDArrayView::RandomUniform<ElementType>(shape, -1.0, 1.0, seed + i, device);
         }
 
-        learner->Update(gradientValues, 1);
+        learner->Update(gradientValues, 1, false);
     }
 }
 
@@ -162,13 +162,13 @@ void TestTrainingParametersSchedule()
     assert(schedule3[100] == 0.3);
 
     LearningRateSchedule schedule4(vector<double>{ 0.5 }, 10 ); // without vector<> gcc complains that conversion here is ambiguousS
-    assert(schedule4.GetMinibatchSize() == LearningRateSchedule::UnspecifiedMinibatchSize);
+    assert(schedule4.GetMinibatchSize() == LearningRateSchedule::IgnoredMinibatchSize);
     assert(schedule4[0] == 0.5);
     assert(schedule4[10] == 0.5);
     assert(schedule4[100] == 0.5);
 
     LearningRateSchedule schedule5{ std::vector<double>{ 0.5, 0.3, 0.2 }, 10 };
-    assert(schedule5.GetMinibatchSize() == LearningRateSchedule::UnspecifiedMinibatchSize); //unspecified reference minibatch size is 0
+    assert(schedule5.GetMinibatchSize() == LearningRateSchedule::IgnoredMinibatchSize); //unspecified reference minibatch size is 0
     assert(schedule5[0] == 0.5);
     assert(schedule5[9] == 0.5);
     assert(schedule5[10] == 0.3);
@@ -177,20 +177,20 @@ void TestTrainingParametersSchedule()
     assert(schedule5[100] == 0.2);
 
     MomentumSchedule schedule6{ { make_pair(1, 0.5) } }; // without make_pair this is interpreted as a vector of doubles
-    assert(schedule6.GetMinibatchSize() == MomentumSchedule::UnspecifiedMinibatchSize);
+    assert(schedule6.GetMinibatchSize() == MomentumSchedule::IgnoredMinibatchSize);
     assert(schedule6[0] == 0.5);
     assert(schedule6[10] == 0.5);
     assert(schedule6[100] == 0.5);
 
     LearningRateSchedule schedule7{ std::vector<std::pair<size_t, double>>{ { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } } };
-    assert(schedule7.GetMinibatchSize() == LearningRateSchedule::UnspecifiedMinibatchSize);
+    assert(schedule7.GetMinibatchSize() == LearningRateSchedule::IgnoredMinibatchSize);
     assert(schedule7[0] == 0.5);
     assert(schedule7[1] == 0.3);
     assert(schedule7[2] == 0.2);
     assert(schedule7[100] == 0.2);
 
     MomentumSchedule schedule8{ std::vector<std::pair<size_t, double>>{ { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } }, 10 };
-    assert(schedule8.GetMinibatchSize() == MomentumSchedule::UnspecifiedMinibatchSize);
+    assert(schedule8.GetMinibatchSize() == MomentumSchedule::IgnoredMinibatchSize);
     assert(schedule8[0] == 0.5);
     assert(schedule8[9] == 0.5);
     assert(schedule8[10] == 0.3);
@@ -208,7 +208,7 @@ void TestTrainingParametersSchedule()
     assert(schedule9[100] == 0.2);
 
     MomentumSchedule schedule10 = { std::vector<std::pair<size_t, double>>{ { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, 10 };
-    assert(schedule10.GetMinibatchSize() == MomentumSchedule::UnspecifiedMinibatchSize);
+    assert(schedule10.GetMinibatchSize() == MomentumSchedule::IgnoredMinibatchSize);
     assert(schedule10[0] == 0.5);
     assert(schedule10[29] == 0.5);
     assert(schedule10[30] == 0.3);

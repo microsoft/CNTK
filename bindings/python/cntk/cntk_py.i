@@ -112,15 +112,15 @@
 // consumption in proxy objects.
 %rename(train_minibatch_overload_for_minibatchdata) CNTK::Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
 %rename(train_minibatch_overload_for_minibatchdata) CNTK::Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
-%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
-%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>& , const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
+%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice(), bool distributed = false);
+%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>& , const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice(), bool distributed = false);
 
 %rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
 %rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
-%rename(unspecified_minibatch_size) CNTK::TrainingParameterSchedule<double>::UnspecifiedMinibatchSize;
-%rename(unspecified_minibatch_size) CNTK::TrainingParameterSchedule<std::size_t>::UnspecifiedMinibatchSize;
+%rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<double>::IgnoredMinibatchSize;
+%rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<std::size_t>::IgnoredMinibatchSize;
 %rename(_MINIBATCH_SIZE) CNTK::Learner::MinibatchSizeKey; // L"MinibatchSize"
-%rename(unspecified_minibatch_size)  CNTK::Learner::UnspecifiedMinibatchSize;
+%rename(ignored_minibatch_size)  CNTK::Learner::IgnoredMinibatchSize;
 %rename(_options) CNTK::Learner::GetOptions;
 
 %rename(ndcg_at_1) CNTK::NDCGAt1;
