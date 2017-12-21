@@ -766,6 +766,11 @@ BOOST_AUTO_TEST_CASE(Index_with_caching)
 
 BOOST_AUTO_TEST_CASE(Index_64MB_with_caching_check_perf)
 {
+    if (true)
+        // This test is a reference point to expected indexing timing (with and without caching). 
+        // It became flaky after we move Jenkins to Azure VM, further investigation is needed.
+        return;
+
     auto content = s_textData;
     while (content.size() < 64*g_1MB)
     {

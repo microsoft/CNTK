@@ -32,6 +32,7 @@ $includeFiles = New-Object string[] 3
 $includeFiles[0] = Join-Path $includePath -ChildPath Eval.h
 $includeFiles[1] = Join-Path $includePath20 -ChildPath CNTKLibrary.h
 $includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
+$includeFiles[3] = Join-Path $includePath20 -ChildPath CNTKLibraryC.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 # binaryDrop locations

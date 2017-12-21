@@ -118,7 +118,6 @@ __C.BBOX_NORMALIZE_TARGETS = True
 __C.BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
 __C.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
 
-
 #
 # Testing parameters
 #

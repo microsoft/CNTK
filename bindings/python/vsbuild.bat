@@ -74,8 +74,9 @@ for %%D in (
   Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll
   Cntk.BinaryConvolutionExample-%CNTK_COMPONENT_VERSION%.dll
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
-  mkl_cntk_p.dll
+  mklml.dll
 ) do (
   if defined CNTK_LIBRARIES (
     set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D

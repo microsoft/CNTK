@@ -20,8 +20,7 @@ pip install opencv-python easydict pyyaml future
 ```
 
 The code uses prebuild Cython modules for parts of the region proposal network (see `Examples/Image/Detection/utils/cython_modules`). 
-These binaries are contained in the repository for Python 3.5 under Windows and Python 3.4 under Linux.
-If you require other versions please follow the instructions at [https://github.com/rbgirshick/py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#installation-sufficient-for-the-demo).
+These binaries are contained in the repository for Python 3.5 under Windows and Python 3.4/3.5/3.6 under Linux. For some systems you might need to rename the corresponding module (e.g., rename `cython_bbox.cpython-35m.so` to `cython_bbox.so` for Python 3.5) in order for things to work. If you require other versions please follow the instructions at [https://github.com/rbgirshick/py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#installation-sufficient-for-the-demo).
 
 If you want to use the debug output you need to run `pip install pydot_ng` ([website](https://pypi.python.org/pypi/pydot-ng)) and install [graphviz](http://graphviz.org/) to be able to plot the CNTK graphs (the GraphViz executable has to be in the system’s PATH).
 

@@ -731,4 +731,60 @@ public:
 template class LookupTableNode<float>;
 template class LookupTableNode<double>;
 
+// -----------------------------------------------------------------------
+// ConstantNode
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class ConstantNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ConstantOp"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(ConstantNode);
+    ConstantNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        m_fillValue = ElemType(0);
+    }
+    ConstantNode(DEVICEID_TYPE deviceId, const wstring& name, double fillValue)
+        : Base(deviceId, name)
+    {
+        m_fillValue = ElemType(fillValue);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /* inputIndex */, const FrameRange& /* t */) override
+    {
+        // Node is constant nothing to backpropagate
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto result = ValueFor(fr);
+        result.SetValue(m_fillValue);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+private:
+    ElemType m_fillValue;
+};
+
+template class ConstantNode<float>;
+template class ConstantNode<double>;
+
 }}}

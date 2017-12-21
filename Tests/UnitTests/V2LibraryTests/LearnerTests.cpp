@@ -31,7 +31,7 @@ void TestUpdate(LearnerPtr& learner, const NDShape& shape, size_t numMinibatches
             gradientValues[parameter] = NDArrayView::RandomUniform<ElementType>(shape, -1.0, 1.0, seed + i, device);
         }
 
-        learner->Update(gradientValues, 1);
+        learner->Update(gradientValues, 1, false);
     }
 }
 

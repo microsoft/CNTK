@@ -36,6 +36,9 @@ private:
     struct BundlerChunkDescription : public ChunkInfo
     {
         ChunkInfo m_original;
+
+        std::vector<std::vector<ChunkIdType>> m_secondaryChunks;
+
         // Sequences that are invalid in at least one deserializer.
         std::set<size_t> m_invalid;
     };

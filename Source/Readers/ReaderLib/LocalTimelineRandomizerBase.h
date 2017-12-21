@@ -24,11 +24,6 @@ namespace CNTK {
 class LocalTimelineRandomizerBase : public SequenceEnumerator
 {
 public:
-    LocalTimelineRandomizerBase(
-        DataDeserializerPtr deserializer,
-        bool multithreadedGetNextSequences = false,
-        size_t maxNumberOfInvalidSequences= 0); // per worker
-
     virtual void StartEpoch(const EpochConfiguration& config) override;
 
     void SetConfiguration(const ReaderConfiguration& config) override
@@ -47,6 +42,12 @@ public:
     void SetState(const std::map<std::wstring, size_t>& state) override;
 
 protected:
+    LocalTimelineRandomizerBase(
+        DataDeserializerPtr deserializer,
+        const std::map<std::wstring, size_t>& initialState,
+        bool multithreadedGetNextSequences = false,
+        size_t maxNumberOfInvalidSequences = 0); // per worker
+
     // Struct that describes a window of sequences
     // that are currently processed.
     struct SequenceWindow
