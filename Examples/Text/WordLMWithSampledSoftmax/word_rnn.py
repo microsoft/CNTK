@@ -10,7 +10,7 @@ import cntk as C
 import timeit
 from cntk import Axis
 from cntk.train import Trainer
-from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.learners import momentum_sgd
 from cntk.ops import sequence
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -34,7 +34,7 @@ sequence_length = 40
 sequences_per_batch = 10
 alpha = 0.75
 learning_rate = 0.002
-momentum_as_time_constant = 10000
+momentum_per_sample = 0.9999000049998333
 clipping_threshold_per_sample = 5.0
 token_to_id_path        = './ptb/token2id.txt'
 validation_file_path    = './ptb/valid.txt'
@@ -173,7 +173,7 @@ def print_progress(samples_per_second, average_full_ce, total_samples, total_tim
 
 
 # Creates and trains an rnn language model.
-def train_lm():
+def train_lm(testing=False):
     data = DataReader(token_to_id_path, segment_sepparator)
 
     # Create model nodes for the source and target inputs
@@ -196,14 +196,15 @@ def train_lm():
     num_trained_samples_since_last_report = 0
 
     # Instantiate the trainer object to drive the model training
-    lr_schedule = learning_rate_schedule(learning_rate, UnitType.sample)
-    momentum_schedule = momentum_as_time_constant_schedule(momentum_as_time_constant)
+    lr_schedule = C.learning_parameter_schedule_per_sample(learning_rate)
+    momentum_schedule = C.momentum_schedule_per_sample(momentum_per_sample)
     gradient_clipping_with_truncation = True
     learner = momentum_sgd(z.parameters, lr_schedule, momentum_schedule,
                             gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                             gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     trainer = Trainer(z, (cross_entropy, error), learner)
-  
+
+    last_avg_ce = 0
     for epoch_count in range(num_epochs):
         for features, labels, token_count in data.minibatch_generator(train_file_path, sequence_length, sequences_per_batch):
             arguments = ({input_sequence : features, label_sequence : labels})
@@ -220,14 +221,18 @@ def train_lm():
                 av_ce = average_cross_entropy(full_ce, input_sequence, label_sequence, data)
                 print_progress(samples_per_second, av_ce, num_trained_samples, t_start)
                 num_trained_samples_since_last_report = 0
+                last_avg_ce = av_ce
 
             num_trained_samples += token_count
             num_trained_samples_since_last_report += token_count
 
-        # after each epoch save the model
-        model_filename = "models/lm_epoch%d.dnn" % epoch_count
-        z.save(model_filename)
-        print("Saved model to '%s'" % model_filename)
+        if not testing:
+            # after each epoch save the model
+            model_filename = "models/lm_epoch%d.dnn" % epoch_count
+            z.save(model_filename)
+            print("Saved model to '%s'" % model_filename)
+
+    return last_avg_ce
 
 
 if __name__=='__main__':

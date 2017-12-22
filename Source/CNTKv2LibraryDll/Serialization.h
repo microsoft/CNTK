@@ -29,12 +29,15 @@ namespace CNTK
     const std::wstring functionsKey = L"primitive_functions";
     const std::wstring sampleCountKey = L"sample_count";
     const std::wstring minibatchCountKey = L"minibatchCount"; // TODO: Python-style spelling
+    const std::wstring sweepCountKey = L"sweepCount";
     const std::wstring unitKey = L"unit";
+    const std::wstring refMBSizeKey = L"ref_mb_size";
     const std::wstring epochSizeKey = L"epoch_size";
     const std::wstring scheduleKey = L"schedule";
     const std::wstring learningRateScheduleKey = L"learnig_rate_schedule";
     const std::wstring smoothedGradientsKey = L"smoothed_gradients";
     const std::wstring noiseInjectionSeedKey = L"noise_injection_seed";
+    const std::wstring smoothedCountKey = L"smoothed_count";
     const std::wstring stateKey = L"state";
     const std::wstring rngSeedKey = L"rng_seed";
     const std::wstring rngOffsetKey = L"rng_offset";

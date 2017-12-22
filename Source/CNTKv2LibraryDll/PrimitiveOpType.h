@@ -85,6 +85,20 @@ namespace CNTK
         Assign = 73,
         Gather = 74,
         StableSigmoid = 75,
+        RandomDistribution = 76,
+        Sinh = 77,
+        Cosh = 78,
+        UnpackBatch = 79,
+        ToBatch = 80,
+        Asin = 81,
+        Acos = 82,
+        Pad = 83,
+        Crop = 84,
+        Atanh = 85,
+        Asinh = 86,
+        TopK = 87,
+        Squeeze = 88,
+        ConstantOp = 89,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

@@ -55,6 +55,11 @@ namespace CNTK
                 return Value::IsValid();
         }
 
+        ///
+        /// Returns the dynamic axes associated with this packed value
+        ///
+        const std::vector<Axis>& DynamicAxes() const { return m_sampleDynamicAxes; }
+
         const NDShape& Shape() const override { return m_unpackedShape; }
         DeviceDescriptor Device() const override { return m_isPacked ? m_packedData->Device() : Value::Device(); }
         DataType GetDataType() const override { return m_isPacked ? m_packedData->GetDataType() : Value::GetDataType(); }

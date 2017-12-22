@@ -23,6 +23,12 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Names of random variable types
+static const wstring RandomDistributionTypeUniform   = L"uniform";
+static const wstring RandomDistributionTypeNormal    = L"normal";
+static const wstring RandomDistributionTypeGumbel    = L"gumbel";
+static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
+
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)
 // = SumElements ((left - right) .* (left - right))
@@ -626,7 +632,7 @@ public:
         }
 
         // Update K (number of url pairs that have smaller or equal gain), rk (rank of 
-        // score in descending order) and and m_pairwiseDifferences (save for gradient 
+        // score in descending order) and m_pairwiseDifferences (save for gradient 
         // computation).
         size_t pairCount = 0;
         for (auto &qu : m_queryUrls)
@@ -1232,6 +1238,88 @@ protected:
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
+
+// -----------------------------------------------------------------------
+// RandomDistributionNode (/*no input*/)
+// a random variable
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class RandomDistributionNode : public ComputationNode<ElemType>, public RngUser
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"RandomDistribution"; }
+
+    enum RandomDistributionType : unsigned int
+    {
+        Uniform,
+        Normal,
+        Gumbel,
+        Bernoulli
+    };
+
+    RandomDistributionType GetRandomDistributionType(const std::wstring rvType)
+    {
+        if (rvType == RandomDistributionTypeUniform)
+            return RandomDistributionType::Uniform;
+        else if (rvType == RandomDistributionTypeNormal)
+            return RandomDistributionType::Normal;
+        else if (rvType == RandomDistributionTypeGumbel)
+            return RandomDistributionType::Gumbel;
+        else if (rvType == RandomDistributionTypeBernoulli)
+            return RandomDistributionType::Bernoulli;
+        else
+            InvalidArgument("GetRandomDistributionType: Unknown random distribution type '%ls'", rvType.c_str());
+    }
+
+public:
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        SetRngState(CreateUniqId());
+    }
+
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args)
+        : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)) /*, m_shape(TensorShape())*/
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args, const TensorShape& sampleLayout)
+        : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)), m_shape(sampleLayout)
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
+    virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        auto numInputs = GetNumInputs();
+        if (numInputs == 0)
+        {
+            this->m_pMBLayout = nullptr;
+            SetDims(m_shape, /*HasMbLayout=*/ false);
+        }
+        else if (numInputs == 1)
+            ValidateUnaryMap(isFinalValidationPass);
+        else
+            LogicError("%ls %ls RandomDistributionNode::Validate: Operation must either have 0 or 1 inputs", NodeName().c_str(), OperationName().c_str());
+    }
+
+    RNGHandle& GetRNGHandle()
+    {
+        return RngUser::GetRNGHandle(ValuePtr()->GetDeviceId());
+    }
+private:
+    RandomDistributionType m_type;
+    std::vector<ElemType> m_args;
+    TensorShape m_shape;
+};
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNodeBase(samplingWeights, sizeOfSampledSet, allowDuplicates): 
 // Base class for RandomSampleNode and RandomSampleInclusionFrequencyNode.
@@ -1359,9 +1447,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 private:
-    // Approximates the expected number of occurences of a class in the sampled set.
+    // Approximates the expected number of occurrences of a class in the sampled set.
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
-    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
+    // the probability that a specific class in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
     // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
     double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
 
@@ -1436,7 +1524,7 @@ private:
         return sz;
     }
 
-    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // this should never be called for input[0], which is controlled through learningRateMultiplier == 0
@@ -1693,7 +1781,7 @@ public:
 
         size_t nS = InputRef(0).GetNumParallelSequences();
         if (nS != 1)
-            LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly.");
+            LogicError("CRFNode: >1 parallel sequences are currently not implemented correctly.");
         for (size_t i = 0; i < nS; i++) // process parallel sequences one by one  --BUGBUG: We should loop over individual sequences.
         {
             FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
@@ -2056,7 +2144,7 @@ public:
 
             if (isFinalValidationPass &&
                 !(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
-                  (Input(0)->GetMBLayout() == Input(2)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(2)->HasMBLayout())))
+                  Input(0)->IsMBLayoutCompatibleWith(Input(2))))
             {
                 LogicError("The Matrix dimensions of the second argument weights the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
             }
@@ -2166,14 +2254,28 @@ public:
         Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        if (IsEnabled())
-            sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+        if (InputRef(0).IsGradientInitializedBy(this))
+        {
+            if (IsEnabled())
+                sliceInput0Grad.AssignElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+            else
+                sliceInput0Grad.AssignValuesOf(sliceOutputGrad);
+        }
         else
-            sliceInput0Grad += sliceOutputGrad;
+        {
+            if (IsEnabled())
+                sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+            else
+                sliceInput0Grad += sliceOutputGrad;
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* /*input*/) const
+    {
+        return ParentGradientOptimization::Overwrite;
+    }
 
     virtual void UpdateFunctionMBSize() override
     {
@@ -2245,8 +2347,8 @@ private:
 // -----------------------------------------------------------------------
 // BatchNormalizationNode (input, scale, bias, runMean, runVariance, runCount,
 //                         spatial, normalizationTimeConstant = 0, blendTimeConstant = 0,
-//                         epsilon = 0.00001,
-//                         useCntkEngine = true, imageLayout = 'cudnn')
+//                         epsilon = 0.00001, useCntkEngine = true, 
+//                         disableRegularization = false, imageLayout = 'cudnn')
 //
 // Implements batch normalization technique as described in:
 // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
@@ -2282,6 +2384,7 @@ private:
 //      Value 1#INF (infinity) means only running mean / var will be used(this is used, for example, in evaluation phase).
 // * epsilon is a conditioner constant used in computing inverse standard deviation
 // * useCntkEngine is a Boolean flag that specifies which batch normalization implementation to use: CNTK or cuDNN-based.
+// * disableRegularization is a Boolean flag that specifies this batch normalization node turns off regularization or not.
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
@@ -2302,19 +2405,19 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
-                           double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
+                           double epsilon = 0, bool useCntkEngine = true, bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_disableRegularization(disableRegularization), m_imageLayoutKind(imageLayoutKind),
         m_runCountUntied(0),
-        m_convertRunningVariancePending(false),
-        m_one(1, 1, deviceId)
+        m_one(1, 1, deviceId),
+        m_convertRunningVariancePending(false)
     {
         m_one.SetValue((ElemType)1); // (constant value used for GPU-side update of runCount)
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
         BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
-                               configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"), 
-                               configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+                               configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"),
+                               configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), configp->Get(L"disableRegularization"),
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
@@ -2435,13 +2538,14 @@ public:
             auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
             assert(node != nullptr);
 
-            node->m_spatial         = m_spatial;
-            node->m_normTimeConst   = m_normTimeConst;
-            node->m_blendTimeConst  = m_blendTimeConst;
-            node->m_imageLayoutKind = m_imageLayoutKind;
-            node->m_runCountUntied  = m_runCountUntied;
-            node->m_epsilon         = m_epsilon;
-            node->m_useCntkEngine   = m_useCntkEngine;
+            node->m_spatial               = m_spatial;
+            node->m_normTimeConst         = m_normTimeConst;
+            node->m_blendTimeConst        = m_blendTimeConst;
+            node->m_imageLayoutKind       = m_imageLayoutKind;
+            node->m_runCountUntied        = m_runCountUntied;
+            node->m_epsilon               = m_epsilon;
+            node->m_useCntkEngine         = m_useCntkEngine;
+            node->m_disableRegularization = m_disableRegularization;
         }
     }
 
@@ -2639,24 +2743,42 @@ public:
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
                               *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
-                              *m_dScale, *m_dBias);             // (out) gradients for scale and bias
+                              *m_dScale, *m_dBias,              // (out) gradients for scale and bias
+                              !Input(DATA)->IsGradientInitializedBy(this)); // whether data gradient should be accumulated
 
             m_gradientValid = true;
         }
         if (inputIndex == SCALE) // derivative with respect to the scale, precomputed during input derivative computation
         {
             assert(m_gradientValid);
-            Input(SCALE)->Gradient() += *m_dScale;
+
+            if (Input(SCALE)->IsGradientInitializedBy(this))
+                Input(SCALE)->Gradient().AssignValuesOf(*m_dScale);
+            else
+                Input(SCALE)->Gradient() += *m_dScale;
         }
         else if (inputIndex == BIAS) // derivative with respect to the bias, precomputed during input derivative computation
         {
             assert(m_gradientValid);
-            Input(BIAS)->Gradient() += *m_dBias;
+
+            if (Input(BIAS)->IsGradientInitializedBy(this))
+                Input(BIAS)->Gradient().AssignValuesOf(*m_dBias);
+            else
+                Input(BIAS)->Gradient() += *m_dBias;
         }
         // No derivatives with respect to running mean and variance.
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const
+    {
+        auto iter = std::find_if(m_inputs.begin(), m_inputs.end(), [input](ComputationNodeBasePtr p) { return input == &*p; });
+        if (iter == m_inputs.end())
+            InvalidArgument("%ls is not an input of %ls.", input->NodeName().c_str(), NodeName().c_str());
+        auto inputIndex = iter - m_inputs.begin();
+        return (inputIndex == DATA || inputIndex == SCALE || inputIndex == BIAS) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None;
+    }
 
     void Validate(bool isFinalValidationPass) override
     {
@@ -2783,6 +2905,11 @@ public:
                 m_bnEng = BatchNormEngine<ElemType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
                                                             m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
             }
+
+            if (m_disableRegularization)
+            {
+                this->DisableRegInBatchNormalization();
+            }
         }
     }
 
@@ -2853,6 +2980,7 @@ public:
     bool Spatial() const { return m_spatial; }
     double Epsilon() const { return m_epsilon; }
     bool UseCNTKEngine() const { return m_useCntkEngine; }
+    bool DisableRegularization() const { return m_disableRegularization; }
 
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
@@ -2899,6 +3027,8 @@ private:
     double m_epsilon;
     // Whether to use CNTK or cuDNN BN implementation.
     bool m_useCntkEngine;
+    // Whether to disable regulararization in Batch Normalization.
+    bool m_disableRegularization;
     // Layout (e.g. CHW).
     ImageLayoutKind m_imageLayoutKind;
 

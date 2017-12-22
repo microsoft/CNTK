@@ -22,7 +22,7 @@ sys.path.append(os.path.join(base_folder, "..", "DataSets", "Grocery"))
 from install_grocery import download_grocery_data
 download_grocery_data()
 
-sys.path.append(os.path.join(base_folder, "..", "PretrainedModels"))
-from models_util import download_model_by_name
-download_model_by_name("ResNet_18")
+sys.path.append(os.path.join(base_folder, "..", "..", "..", "PretrainedModels"))
+from download_model import download_model_by_name
+download_model_by_name("ResNet18_ImageNet_CNTK")
 

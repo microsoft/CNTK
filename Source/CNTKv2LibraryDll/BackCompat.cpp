@@ -140,12 +140,24 @@ namespace CNTK
                     opType = PrimitiveOpType::Sigmoid;
                 else if (node->OperationName() == OperationNameOf(StableSigmoidNode))
                     opType = PrimitiveOpType::StableSigmoid;
+                else if (node->OperationName() == OperationNameOf(AtanhNode))
+                    opType = PrimitiveOpType::Atanh;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
+                else if (node->OperationName() == OperationNameOf(AsinNode))
+                    opType = PrimitiveOpType::Asin;
+                else if (node->OperationName() == OperationNameOf(AcosNode))
+                    opType = PrimitiveOpType::Acos;
                 else if (node->OperationName() == OperationNameOf(CosineNode))
                     opType = PrimitiveOpType::Cos;
                 else if (node->OperationName() == OperationNameOf(SinNode))
                     opType = PrimitiveOpType::Sin;
+                else if (node->OperationName() == OperationNameOf(CoshNode))
+                    opType = PrimitiveOpType::Cosh;
+                else if (node->OperationName() == OperationNameOf(AsinhNode))
+                    opType = PrimitiveOpType::Asinh;
+                else if (node->OperationName() == OperationNameOf(SinhNode))
+                    opType = PrimitiveOpType::Sinh;
                 else if (node->OperationName() == OperationNameOf(PassNode))
                     opType = PrimitiveOpType::Pass;
                 else if (node->OperationName() == OperationNameOf(LabelsToGraphNode))
@@ -243,7 +255,14 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(MinusNode))
                     opType = PrimitiveOpType::Minus;
                 else if (node->OperationName() == OperationNameOf(ElementTimesNode))
+                {
                     opType = PrimitiveOpType::ElementTimes;
+                }
+                // legacy support for DiagTimesNode
+                else if (node->OperationName() == OperationNameOf(DiagTimesNode))
+                {
+                    opType = PrimitiveOpType::ElementTimes;
+                }
                 else if (node->OperationName() == OperationNameOf(EqualNode))
                     opType = PrimitiveOpType::Equal;
                 else if (node->OperationName() == OperationNameOf(NotEqualNode))
@@ -319,7 +338,7 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(ReduceElementsNode))
                 {
                     auto reduceElementsNode = node->As<ReduceElementsNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(reduceElementsNode->ReductionAxis());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(AsAxis(reduceElementsNode->ReductionAxis()));
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameReductionOpName] = reduceElementsNode->ReductionOpName();
 
                     opType = PrimitiveOpType::ReduceElements;
@@ -374,7 +393,9 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(ROIPoolingNode))
                 {
                     auto roiPoolingNode = node->As<ROIPoolingNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)(AsPoolingType(roiPoolingNode->PoolingKind()));
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameROIOutputShape] = AsNDShape(roiPoolingNode->ROIOutputShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSpatialScale] = roiPoolingNode->SpatialScale();
 
                     opType = PrimitiveOpType::ROIPooling;
                 }
@@ -431,6 +452,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDisableRegularization] = batchNormalizationNode->DisableRegularization();
 
                     opType = PrimitiveOpType::BatchNormalization;
                 }
@@ -505,6 +527,10 @@ namespace CNTK
                     std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(node->NodeName());
 
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
+                }
+                else if (node->OperationName() == OperationNameOf(CropNode))
+                {
+                    opType = PrimitiveOpType::Crop;
                 }
                 else
                     InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"

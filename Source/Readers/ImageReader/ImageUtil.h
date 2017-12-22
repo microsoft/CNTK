@@ -7,45 +7,46 @@
 
 #include <opencv2/opencv.hpp>
 #include "SequenceData.h"
+#include "DataDeserializer.h"
 #include <numeric>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-    inline bool IdentifyElementTypeFromOpenCVType(int openCvType, ElementType& type)
+    inline bool IdentifyDataTypeFromOpenCVType(int openCvType, DataType& type)
     {
-        type = ElementType::tvariant;
+        type = DataType::Unknown;
         switch (openCvType)
         {
         case CV_64F:
-            type = ElementType::tdouble;
+            type = DataType::Double;
             return true;
         case CV_32F:
-            type = ElementType::tfloat;
+            type = DataType::Float;
             return true;
         case CV_8U:
-            type = ElementType::tuchar;
+            type = DataType::UChar;
             return true;
         default:
             return false;
         }
     }
 
-    inline ElementType GetElementTypeFromOpenCVType(int openCvType)
+    inline DataType GetDataTypeFromOpenCVType(int openCvType)
     {
-        ElementType result;
-        if (!IdentifyElementTypeFromOpenCVType(openCvType, result))
+        DataType result;
+        if (!IdentifyDataTypeFromOpenCVType(openCvType, result))
             RuntimeError("Unsupported OpenCV type '%d'", openCvType);
         return result;
     }
 
-    inline ElementType ConvertImageToSupportedDataType(cv::Mat& image, ElementType defaultElementType)
+    inline DataType ConvertImageToSupportedDataType(cv::Mat& image, DataType defaultElementType)
     {
-        ElementType resultType;
-        if (!IdentifyElementTypeFromOpenCVType(image.depth(), resultType))
+        DataType resultType;
+        if (!IdentifyDataTypeFromOpenCVType(image.depth(), resultType))
         {
             // Could not identify element type.
             // Natively unsupported image type. Let's convert it to required precision.
-            int requiredType = defaultElementType == ElementType::tfloat ? CV_32F : CV_64F;
+            int requiredType = defaultElementType == DataType::Float ? CV_32F : CV_64F;
             image.convertTo(image, requiredType);
             resultType = defaultElementType;
         }
@@ -72,10 +73,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         TypedLabelGenerator(size_t labelDimension) : m_value(1), m_indices(labelDimension)
         {
-            if (labelDimension > numeric_limits<IndexType>::max())
+            if (labelDimension > numeric_limits<SparseIndexType>::max())
             {
                 RuntimeError("Label dimension (%d) exceeds the maximum allowed "
-                    "value (%d)\n", (int)labelDimension, (int)numeric_limits<IndexType>::max());
+                    "value (%d)\n", (int)labelDimension, (int)numeric_limits<SparseIndexType>::max());
             }
             iota(m_indices.begin(), m_indices.end(), 0);
         }
@@ -96,6 +97,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         TElement m_value;
-        vector<IndexType> m_indices;
+        std::vector<SparseIndexType> m_indices;
     };
-}}}
+}

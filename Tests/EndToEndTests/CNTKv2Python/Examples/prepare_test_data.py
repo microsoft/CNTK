@@ -94,7 +94,7 @@ def prepare_Grocery_data():
 
 def prepare_fastrcnn_grocery_100_model():
     base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             *"../../../../Examples/Image/PretrainedModels".split("/"))
+                             *"../../../../PretrainedModels".split("/"))
     base_path = os.path.normpath(base_path)
 
     if not os.path.isfile(os.path.join(base_path, 'Fast-RCNN_grocery100.model')):
@@ -125,7 +125,7 @@ def cmudict_dataset_directory():
 # Read the flower and animal data set file
 def prepare_resnet_v1_model():
     src_file = "PreTrainedModels/ResNet/v1/ResNet_18.model"
-    dst_file = "Examples/Image/PretrainedModels/ResNet_18.model"
+    dst_file = "PretrainedModels/ResNet_18.model"
     
     _data_copier([src_file], [dst_file])
     
@@ -149,14 +149,21 @@ def prepare_animals_data():
 
 def prepare_alexnet_v0_model():
     local_base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         *"../../../../Examples/Image/PretrainedModels".split("/"))
+                         *"../../../../PretrainedModels".split("/"))
     local_base_path = os.path.normpath(local_base_path)
 
+    # v0 model:
     model_file = os.path.join(local_base_path, "AlexNet.model")
-
     if not os.path.isfile(model_file):
         external_model_path = os.path.join(os.environ[envvar], "PreTrainedModels", "AlexNet", "v0", "AlexNet.model")
         copyfile(external_model_path, model_file)
+
+    # v1 model:
+    model_file = os.path.join(local_base_path, "AlexNet_ImageNet_Caffe.model")
+    if not os.path.isfile(model_file):
+        external_model_path = os.path.join(os.environ[envvar], "PreTrainedModels", "AlexNet", "v1", "AlexNet_ImageNet_Caffe.model")
+        copyfile(external_model_path, model_file)
+
     return local_base_path
 
 def prepare_UCF11_data():
@@ -169,3 +176,20 @@ def prepare_UCF11_data():
                                 *"DataSets/UCF11-v0.tar".split("/"))
         with tarfile.TarFile(tar_path) as mytar:
             mytar.extractall(base_path)
+
+# TODO: We should have a common PTB (Penn Tree Bank) dataset for other tests also based on it
+#       There is already similar data checked in Examples\SequenceToSequence\PennTreebank\Data
+def prepare_WordLMWithSampledSoftmax_ptb_data():
+    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "Examples", "Text", "WordLMWithSampledSoftmax", "ptb")
+    base_path = os.path.normpath(base_path)
+
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+
+    external_data_path = os.path.join(os.environ[envvar], "Text", "WordLMWithSampledSoftmax_ptb")
+    src_files = ["test.txt", "token2freq.txt", "token2id.txt", "train.txt", "valid.txt", "vocab.txt", "freq.txt"]
+
+    for src_file in src_files:
+        if os.path.isfile(os.path.join(base_path, src_file)):
+            continue
+        copyfile(os.path.join(external_data_path, src_file), os.path.join(base_path, src_file))

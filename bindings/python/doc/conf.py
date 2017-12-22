@@ -13,7 +13,7 @@ try:
 except ImportError:
     raise ImportError("Unable to import sphinx_rtd_theme, please install via "
                       "'pip install sphinx_rtd_theme'")
-
+                      
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.extlinks',
@@ -21,7 +21,15 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
+    'nbsphinx',
+    'IPython.sphinxext.ipython_console_highlighting'
 ]
+
+# Suppress warnings
+suppress_warnings = ['image.nonlocal_uri']
+
+# Define source suffix
+source_suffix = ['.rst', '.ipynb']
 
 master_doc = 'index'
 
@@ -82,7 +90,9 @@ else:
 extlinks = {
     'cntk': (source_prefix + '/%s', ''),
     'cntktut': (source_prefix + '/Tutorials/%s.ipynb', ''),
-    'cntkwiki': ('https://github.com/Microsoft/CNTK/wiki/%s', 'CNTK Wiki - ')
+    # CNTK Wiki has moved to a new site:
+    'cntkwiki': ('https://docs.microsoft.com/en-us/cognitive-toolkit/%s', 'CNTK Doc - '),
+    'cntkman': (source_prefix + '/Manual/%s.ipynb', ''),
 }
 
 # sphinx.ext.napoleon options
