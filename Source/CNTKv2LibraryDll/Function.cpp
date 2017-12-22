@@ -2451,6 +2451,20 @@ namespace CNTK
         return AsBlock(std::move(result), argumentsMap, L"Mean", name);
     }
 
+    FunctionPtr ElementMaxPooling(const std::vector<Variable>& operands, const std::wstring& name)
+    {
+        int count = operands.size();
+        if (count == 0)
+        {
+            LogicError("ElementMaxPooling: none operand provided.");
+        }
+
+        std::vector<Variable> operandsCopy = operands;
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ElementMaxPooling, operandsCopy, Dictionary(), name), name);
+        //return AsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, std::move(attributes), blockName), blockName);
+    }
+
+
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::NoOp, operand, Dictionary(), name);

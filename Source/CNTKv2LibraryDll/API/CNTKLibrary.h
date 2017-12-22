@@ -4502,6 +4502,11 @@ namespace CNTK
     CNTK_API FunctionPtr Mean(const std::vector<Variable>& operands, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in element-wise max with # of words operation
+    ///
+    CNTK_API FunctionPtr ElementMaxPooling(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+    ///
     /// Creates a new Function instance which is just an alias of the specified operand.
     ///
     CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = L"");

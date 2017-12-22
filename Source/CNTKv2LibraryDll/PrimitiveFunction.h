@@ -115,6 +115,7 @@ namespace CNTK
         {PrimitiveOpType::TopK, L"TopK"},
         {PrimitiveOpType::ConstantOp, L"ConstantOp"},
         {PrimitiveOpType::Squeeze, L"Squeeze"},
+        {PrimitiveOpType::ElementMaxPooling, L"ElementMaxPooling" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
