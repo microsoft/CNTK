@@ -145,7 +145,7 @@ public:
         /* guoye: end */
         MemRequestInfo<ElemType> memInfo(deviceId, pMatrixPtr, matrixSize, mbScale, isWorkSpace, m_stepCounter);
         /* guoye: start */
-        fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 3 \n");
+        fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 3,  memInfoVec.size() =%d \n", int(memInfoVec.size()));
         /* guoye: end */
         memInfoVec.push_back(memInfo); 
         /* guoye: start */
