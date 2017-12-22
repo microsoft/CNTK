@@ -4,9 +4,8 @@ tags:
     # In BVT, run Release GPU
     - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release') 
     # In Nightly on Linux, additionally run Debug GPU
-    # Note: Batch normalization training on CPU is not yet implemented.
-    - nightly-e (build_sku == 'gpu') and (device == 'gpu')
-    - weekly-e (build_sku == 'gpu') and (device == 'gpu')
+    - nightly-e (build_sku == 'gpu') and (((device == 'gpu') and (flavor == 'release')) or (os == 'linux' and ((flavor == 'debug') ^ (device == 'cpu'))))
+    - weekly-e (build_sku == 'gpu') and (((device == 'gpu') and (flavor == 'release')) or (os == 'linux' and ((flavor == 'debug') ^ (device == 'cpu'))))
 
 testCases:
   CNTK Run must be completed:

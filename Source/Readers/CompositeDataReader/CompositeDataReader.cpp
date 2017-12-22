@@ -290,50 +290,41 @@ DataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamete
 //     [
 //         type = "ImageDataDeserializer"
 //         module = "ImageReader"
-//         inputs = [
+//         input = [
 //               features = [
 //---->              transforms = [
 //                       [type = "Crop"]:[type = "Scale"]...
-
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
     if (!deserializerConfig.Exists("input"))
         return;
 
-    argvector<ConfigParameters> inputs = deserializerConfig("input");
-    for (size_t i = 0; i < inputs.size(); ++i)
+    const ConfigParameters& inputs = deserializerConfig("input");
+    for (const pair<string, ConfigParameters>& section : inputs)
     {
-        // Trying to find transfomers in a stream section of the config.
-        auto inputSections = TryGetSectionsWithParameter(inputs[i], "transforms");
-        if (inputSections.size() > 1)
-        {
-            LogicError("Only a single 'transforms' config is allowed per stream.");
-        }
+        ConfigParameters inputBody = section.second;
 
-        // No need to create anything for this stream, skipping.
-        if (inputSections.empty())
-        {
+        // Trying to find transforms in the input section of the config.
+        if (inputBody.find("transforms") == inputBody.end())
             continue;
-        }
 
-        ConfigParameters input = inputs[i](inputSections.front());
-        std::wstring inputName = msra::strfun::utf16(input.ConfigName());
+        std::wstring inputName = msra::strfun::utf16(section.first);
 
         // Read transformers in order and appending them to the transformer pipeline.
-        argvector<ConfigParameters> transforms = input("transforms");
+        argvector<ConfigParameters> transforms = inputBody("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
             ConfigParameters p = transforms[j];
             p.Insert("precision", deserializerConfig("precision"));
 
             TransformerPtr transformer = CreateTransformer(p, defaultModule, std::wstring());
-            m_transforms.push_back(Transformation{transformer, inputName});
+            m_transforms.push_back(Transformation{ transformer, inputName });
         }
 
         // Let's add a cast transformer by default. It is noop if the type provided by others is float
         // or double, but will do a proper cast if the type is uchar.
-        auto cast = CreateTransformer(input, defaultModule, std::wstring(L"Cast"));
+        auto cast = CreateTransformer(inputBody, defaultModule, std::wstring(L"Cast"));
         m_transforms.push_back(Transformation{ cast, inputName });
     }
 }

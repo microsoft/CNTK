@@ -264,7 +264,7 @@ struct TensorOps
 };
 
 // ----------------------------------------------------------------------------
-// Function to update an aggregate value for the specifed reduction operation
+// Function to update an aggregate value for the specified reduction operation
 // ----------------------------------------------------------------------------
 
 template <typename ElemType> __device__ ElemType AggregateNeutralValue(ElementWiseOperator op)
@@ -1205,6 +1205,9 @@ void TensorOpN(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, Elem
     size_t dims = regularOpDims.size();
     switch (dims)
     {
+    // N.B. consider code size impact when adding more cases.
+    case 5:
+        return TensorOpWithRegularLoop<ElemType, N, 5>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 4:
         return TensorOpWithRegularLoop<ElemType, N, 4>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 3:

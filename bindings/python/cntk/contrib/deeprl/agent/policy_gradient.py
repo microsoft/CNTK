@@ -235,12 +235,11 @@ class ActorCritic(AgentBaseClass):
             (combined_loss, None),
             C.learners.adam(
                 combined_networks.parameters,
-                C.learners.learning_rate_schedule(
-                    self._parameters.initial_eta,
-                    C.learners.UnitType.sample),
+                C.learners.learning_parameter_schedule_per_sample(
+                    self._parameters.initial_eta),
                 momentum=C.learners.momentum_schedule(self._parameters.momentum),
                 variance_momentum=C.learners.momentum_schedule(0.999),
-                use_mean_gradient=True))
+                minibatch_size=C.learners.IGNORE))
 
         print("Parameterized the agent's value function using neural network "
               '"{0}".\n'.format(
@@ -255,8 +254,7 @@ class ActorCritic(AgentBaseClass):
                     (self._parameters.initial_eta - self._parameters.eta_minimum) *
                     (1 - float(self.step_count)/self._parameters.eta_decay_step_count))
             self._trainer.parameter_learners[0].reset_learning_rate(
-                C.learners.learning_rate_schedule(
-                    eta, C.learners.UnitType.sample))
+                C.learners.learning_parameter_schedule_per_sample(eta))
 
     def _choose_action(self, state):
         """

@@ -759,7 +759,7 @@ SectionHeader* Section::GetSectionHeader(size_t filePosition, MappingType& mappi
     }
     case mappingFile:
         if (filePosition != 0)
-            RuntimeError("invalid fileposition, file mapping sections must start at filePostion zero");
+            RuntimeError("invalid fileposition, file mapping sections must start at filePosition zero");
     // intentional fall-through - same case, just at beginning of file
     case mappingSectionAll:
         sectionHeader = m_file->GetSection(filePosition, size);

@@ -896,8 +896,8 @@ def test_usermbsource_training(tmpdir, with_checkpoint_impl):
     mbs_cv = MBS_CV_CLASS(input_dim, num_output_classes)
 
     from cntk import sequence, parameter, plus, cross_entropy_with_softmax, \
-            classification_error, learning_rate_schedule, sgd, Trainer, \
-            training_session, times, UnitType
+            classification_error, learning_parameter_schedule_per_sample, sgd, Trainer, \
+            training_session, times
 
     feature = sequence.input_variable(shape=(input_dim,))
     label = C.input_variable(shape=(num_output_classes,))
@@ -906,8 +906,9 @@ def test_usermbsource_training(tmpdir, with_checkpoint_impl):
     ce = cross_entropy_with_softmax(z, label)
     errs = classification_error(z, label)
 
-    lr_per_sample = learning_rate_schedule(
-        [0.3, 0.2, 0.1, 0.0], UnitType.sample)
+    #having a large learning rate to prevent the model from converging earlier where not all the intended samples are fed
+    #note that training session can end earlier if there is no updates
+    lr_per_sample = learning_parameter_schedule_per_sample(0.3)
     learner = sgd(z.parameters, lr_per_sample)
     trainer = Trainer(z, (ce, errs), [learner])
     input_map = {
@@ -1040,6 +1041,55 @@ def test_base64_is_equal_image(tmpdir):
         images2_stream = mb_source.streams['images2']
         images2 = mb[images2_stream].asarray()
         assert(images1 == images2).all()
+
+def test_crop_dimensionality(tmpdir):
+    import io; from PIL import Image
+    np.random.seed(1)
+
+    file_mapping_path = str(tmpdir / 'file_mapping.txt')
+    with open(file_mapping_path, 'w') as file_mapping:
+        for i in range(5):
+            data = np.random.randint(0, 2**8, (20, 40, 3))
+            image = Image.fromarray(data.astype('uint8'), "RGB")
+            buf = io.BytesIO()
+            image.save(buf, format='PNG')
+            assert image.width == 40 and image.height == 20
+            
+            label = str(i) 
+            # save to mapping + png file
+            file_name = label + '.png'
+            with open(str(tmpdir/file_name), 'wb') as f:
+                f.write(buf.getvalue())
+            file_mapping.write('.../%s\t%s\n' % (file_name, label))
+
+    transforms1 = [
+        xforms.scale(width=40, height=20, channels=3),
+        xforms.crop(crop_type='randomside', 
+                    crop_size=(20, 10), side_ratio=(0.2, 0.5),
+                    jitter_type='uniratio')]
+
+    transforms2 = [
+        xforms.crop(crop_type='randomside', 
+                    crop_size=(20, 10), side_ratio=(0.2, 0.5),
+                    jitter_type='uniratio')]
+
+    d1 = ImageDeserializer(file_mapping_path,
+        StreamDefs(
+            images1=StreamDef(field='image', transforms=transforms1),
+            labels1=StreamDef(field='label', shape=10)))
+
+    d2 = ImageDeserializer(file_mapping_path,
+        StreamDefs(
+            images2=StreamDef(field='image', transforms=transforms2),
+            labels2=StreamDef(field='label', shape=10)))
+
+    mbs = MinibatchSource([d1, d2])
+    for j in range(5):
+        mb = mbs.next_minibatch(1)
+        images1 = mb[mbs.streams.images1].asarray()
+        images2 = mb[mbs.streams.images2].asarray()
+        assert images1.shape == (1, 1, 3, 10, 20)
+        assert (images1 == images2).all()
 
 def test_prefetch_with_unpacking(tmpdir):
     data = r'''0  |S0 1 1 1 1   |S1 1000
@@ -1311,9 +1361,13 @@ def test_user_deserializer_sequence_mode():
     d = GenDeserializer(stream_infos=streams, num_chunks=15, 
                         num_sequences=100, max_sequence_len=10)
     mbs = MinibatchSource([d], randomize=False, max_sweeps=2)
+    state = mbs.get_checkpoint_state()
+    mbs.restore_from_checkpoint(state)
     run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=200)
     # Randomized
     mbs = MinibatchSource([d], randomize=True, max_sweeps=2, randomization_window_in_chunks=5)
+    state = mbs.get_checkpoint_state()
+    mbs.restore_from_checkpoint(state)
     run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=200)
 
     # Small chunks of 1
@@ -1326,41 +1380,46 @@ def test_user_deserializer_sequence_mode():
     run_minibatch_source(mbs, num_chunks=15, num_sequences_per_value=3)
 
 def test_index_caching(tmpdir):
-    import os, time, glob
+    pytest.skip("test_index_caching is disabled")
+    import os, time, glob, uuid
     MB = 1 << 20
     data = MBDATA_DENSE_1
     while(len(data) < 64 * MB):
         data += data
 
-    tmpfile = _write_data(tmpdir, data)
-    streams = stream_defs[0]
+    timeWithoutCache, timeWithCache = 0, 0 
 
     cpu=C.device.cpu()
+    streams = stream_defs[0]
 
-    cache_files = glob.glob(str(tmpdir + '/*.cache'))
-    for cache_file in cache_files:
-        os.remove(cache_file)
+    for _ in range(3):
+        tmpfile = _write_data(tmpdir, data, str(uuid.uuid4()))
+
+        cache_files = glob.glob(str(tmpdir + '/*.cache'))
+        for cache_file in cache_files:
+            os.remove(cache_file)
+
+        config = CTFDeserializer(tmpfile, streams)
+        config['cacheIndex'] = C.cntk_py.DictionaryValue(True)
+
+        start = time.time()
+        MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
+        end = time.time()
+
+        timeWithoutCache += (end - start)
+
+        time.sleep(5)
+        
+        cache_files = glob.glob(str(tmpdir + '/*.cache'))
+        assert len(cache_files) == 1
 
 
-    config = CTFDeserializer(tmpfile, streams)
-    config['cacheIndex'] = C.cntk_py.DictionaryValue(True)
+        start = time.time()
+        MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
+        end = time.time()
 
-    start = time.time()
-    MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
-    end = time.time()
+        os.remove(tmpfile)
 
-    timeWithoutCache = end - start
-
-    time.sleep(5)
-    
-    cache_files = glob.glob(str(tmpdir + '/*.cache'))
-    assert len(cache_files) == 1
-
-
-    start = time.time()
-    MinibatchSource(config, randomize=False).next_minibatch(1, device=cpu)
-    end = time.time()
-
-    timeWithCache = end - start
+        timeWithCache += (end - start)
 
     assert timeWithCache < timeWithoutCache

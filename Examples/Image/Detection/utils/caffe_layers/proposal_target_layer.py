@@ -9,7 +9,7 @@
 import yaml
 import numpy as np
 import numpy.random as npr
-from utils.default_config import cfg
+from utils.caffe_layers.default_config import cfg
 from utils.rpn.bbox_transform import bbox_transform
 from utils.cython_modules.cython_bbox import bbox_overlaps
 
@@ -64,7 +64,7 @@ class ProposalTargetLayer(): #caffe.Layer):
 
         #num_images = 1
         #rois_per_image = int(cfg.TRAIN.BATCH_SIZE / num_images)
-        rois_per_image = cfg.TRAIN.RPN_POST_NMS_TOP_N
+        rois_per_image = cfg.TRAIN.BATCH_SIZE
         fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image).astype(int)
 
         # Sample rois with classification labels and bounding box regression

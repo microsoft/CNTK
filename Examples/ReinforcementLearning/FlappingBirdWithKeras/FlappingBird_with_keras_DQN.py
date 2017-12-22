@@ -48,7 +48,7 @@ img_rows , img_cols = 80, 80
 #Convert image into Black and white
 img_channels = 4 #We stack 4 frames
 
-def pretrained_model_download(url, filename):
+def pretrained_model_download(url, filename, max_retries=3):
     '''Download the file unless it already exists, with retry. Throws if all retries fail.'''
     if os.path.exists(filename):
         print('Reusing locally cached: ', filename)

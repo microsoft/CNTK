@@ -98,5 +98,130 @@ namespace CNTK
             return inputVector;
         }
 
+        internal static StreamConfigurationVector AsStreamConfigurationVector(IList<StreamConfiguration> input)
+        {
+            StreamConfigurationVector inputVector = new StreamConfigurationVector();
+            foreach (var element in input)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
+
+        internal static UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr
+            AsUnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr(
+            IDictionary<StreamInformation, Tuple<NDArrayView, NDArrayView>> input)
+        {
+            UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr inputVector = new UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr();
+            foreach (var element in input)
+            {
+                inputVector.Add(element.Key, new PairNDArrayViewPtrNDArrayViewPtr(element.Value.Item1, element.Value.Item2));
+            }
+            return inputVector;
+        }
+
+        internal static VariableVector AsVariableVector(IList<Variable> input)
+        {
+            VariableVector inputVector = new VariableVector();
+            foreach (var element in input)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
+
+        internal static ParameterVector AsParameterVector(IList<Parameter> input)
+        {
+            ParameterVector inputVector = new ParameterVector();
+            foreach (var element in input)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
+
+        internal static LearnerVector AsLearnerVector(IList<Learner> input)
+        {
+            LearnerVector inputVector = new LearnerVector();
+            foreach (var element in input)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
+
+        internal static UnorderedMapVariableMinibatchData AsUnorderedMapVariableMinibatchData( 
+            IDictionary<Variable, MinibatchData> input)
+        {
+            UnorderedMapVariableMinibatchData inputVector = new UnorderedMapVariableMinibatchData();
+            foreach (var element in input)
+            {
+                inputVector.Add(element.Key, element.Value);
+            }
+            return inputVector;
+        }
+
+        internal static UnorderedMapVariableValuePtr AsUnorderedMapVariableValue( 
+            IDictionary<Variable, Value> input)
+        {
+            UnorderedMapVariableValuePtr inputVector = new UnorderedMapVariableValuePtr();
+            foreach (var element in input)
+            {
+                inputVector.Add(element.Key, element.Value);
+            }
+            return inputVector;
+        }
+
+        internal static IDictionary<Variable, MinibatchData> FromUnorderedMapStreamInformationMinibatchData(
+            UnorderedMapVariableMinibatchData unorderedMapVariableMinibatchData)
+        {
+            IDictionary<Variable, MinibatchData> dict = new Dictionary<Variable, MinibatchData>();
+            foreach (var pair in unorderedMapVariableMinibatchData)
+            {
+                dict.Add(pair.Key, pair.Value);
+            }
+            return dict;
+        }
+
+        internal static AxisVector AsAxisVector(IList<Axis> input)
+        {
+            AxisVector inputVector = new AxisVector();
+            foreach (var element in input)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
+
+        internal static UnorderedMapVariableVariable AsUnorderedMapVariableVariable(IDictionary<Variable, Variable> input)
+        {
+            UnorderedMapVariableVariable inputMap = new UnorderedMapVariableVariable();
+            foreach (var element in input)
+            {
+                inputMap.Add(element.Key, element.Value);
+            }
+            return inputMap;
+        }
+
+        internal static IList<Parameter> FromParameterVector(ParameterVector parameterVector)
+        {
+            IList<Parameter> parameterList = new List<Parameter>();
+            foreach (var parameter in parameterVector)
+            {
+                parameterList.Add(parameter);
+            }
+
+            return parameterList;
+        }
+
+        internal static DictionaryVector AsDictionaryVector(IList<CNTKDictionary> input)
+        {
+            DictionaryVector inputVector = new DictionaryVector();
+            foreach (var element in input)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
     }
 }

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+VSTEST_CONSOLE=$(cygpath -au "$VS140COMNTOOLS\\..\\IDE\\CommonExtensions\\Microsoft\\TestWindow\\vstest.console.exe")
+
+test -x "$VSTEST_CONSOLE" || exit $?
+
+"$VSTEST_CONSOLE" /inIsolation /Platform:x64 $(cygpath -aw "$TEST_BIN_DIR/V2LibraryCSTests.dll") || exit $?

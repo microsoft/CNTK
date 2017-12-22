@@ -97,14 +97,16 @@ class QLearning(AgentBaseClass):
         else:
             self._loss = model['loss']
 
+
+        minibatch_size = int(self._parameters.minibatch_size)
         # If gradient_clipping_threshold_per_sample is inf, gradient clipping
         # will not be performed. Set gradient_clipping_with_truncation to False
         # to clip the norm.
         # TODO: allow user to specify learner through config file.
         opt = C.learners.adam(
             self._q.parameters,
-            C.learners.learning_rate_schedule(
-                self._parameters.initial_eta, C.learners.UnitType.sample),
+            C.learners.learning_parameter_schedule_per_sample(
+                self._parameters.initial_eta),
             use_mean_gradient=True,
             momentum=C.learners.momentum_schedule(self._parameters.momentum),
             variance_momentum=C.learners.momentum_schedule(0.999),
@@ -224,8 +226,8 @@ class QLearning(AgentBaseClass):
                 (1 - float(self.step_count)/self._parameters.eta_decay_step_count))
 
             self._trainer.parameter_learners[0].reset_learning_rate(
-                C.learners.learning_rate_schedule(
-                    eta, C.learners.UnitType.sample))
+                C.learners.learning_parameter_schedule_per_sample(
+                    eta))
 
     def _adjust_exploration_rate(self):
         self._epsilon = self._parameters.epsilon_minimum + max(

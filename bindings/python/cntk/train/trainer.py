@@ -93,7 +93,7 @@ class Trainer(cntk_py.Trainer):
                     raise ValueError("evaluation function must have the same signature and inputs as the loss function")
         return args
 
-    def train_minibatch(self, arguments, outputs=None, device=None):
+    def train_minibatch(self, arguments, outputs=None, device=None, is_sweep_end=None):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
 
@@ -119,6 +119,10 @@ class Trainer(cntk_py.Trainer):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
+            is_sweep_end (bool): indicate whether this minibatch is at the end of a sweep (of an eopoch), default to None.
+            This is used in combination with `arguments` being fed with numpy arrays data; when the data is from
+             :class:`~cntk.io.MinibatchData`, `is_sweep_end` is provided by :class:`~cntk.io.MinibatchData` so there is
+             no need to specify it manually.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for examples on
@@ -149,6 +153,13 @@ class Trainer(cntk_py.Trainer):
             value = next(iter(arguments.values()))
             contains_minibatch_data = isinstance(value, MinibatchData)
 
+        if contains_minibatch_data and is_sweep_end is not None:
+            raise ValueError("is_sweep_end is ignored by Trainer::train_minibatch when it is fed with MinibatchData!")
+
+        if not contains_minibatch_data and is_sweep_end is None:
+            #for legacy code when is_sweep_end is not specified.
+            is_sweep_end = False
+
         if outputs:
             output_map = {v: None for v in outputs}
 
@@ -156,7 +167,7 @@ class Trainer(cntk_py.Trainer):
                 updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
                     arguments, output_map, device)
             else:
-                updated = super(Trainer, self).train_minibatch(arguments,
+                updated = super(Trainer, self).train_minibatch(arguments, is_sweep_end,
                     output_map, device)
 
             for k, v in output_map.items():
@@ -169,7 +180,7 @@ class Trainer(cntk_py.Trainer):
                 updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
                     arguments, device)
             else:
-                updated = super(Trainer, self).train_minibatch(arguments,
+                updated = super(Trainer, self).train_minibatch(arguments, is_sweep_end,
                     device)
 
         return updated

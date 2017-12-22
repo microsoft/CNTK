@@ -159,6 +159,12 @@ namespace CNTK
         m_shim->Init(config);
     }
 
+    bool CompositeMinibatchSource::IsInfinite()
+    {
+        return m_maxNumSamplesToRead == MinibatchSource::InfinitelyRepeat &&
+               m_maxNumSweepsToRead == MinibatchSource::InfinitelyRepeat;
+    }
+
     /*virtual*/ const std::unordered_map<StreamInformation, MinibatchData>&
     CompositeMinibatchSource::GetNextMinibatch(size_t minibatchSizeInSequences,
                                                size_t minibatchSizeInSamples,
@@ -166,7 +172,9 @@ namespace CNTK
                                                size_t workerRank,
                                                const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/) /*override*/
     {
+#ifndef  CNTK_UWP
         auto profGetMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGetMinibatch);
+#endif
 
         m_minibatchData.clear();
 
@@ -284,7 +292,7 @@ namespace CNTK
                     if (!matrix)
                         LogicError("GetNextMinibatch: Invalid matrix type.");
 
-                    minibatchValuePtr = MakeSharedObject<PackedValue>(s.m_sampleLayout, Axis::DefaultInputVariableDynamicAxes(), matrix, input.pMBLayout, /*readOnly =*/ false);
+                    minibatchValuePtr = MakeSharedObject<PackedValue>(AsNDShape(input.sampleLayout), Axis::DefaultInputVariableDynamicAxes(), matrix, input.pMBLayout, /*readOnly =*/ false);
 
                     size_t numSamples = input.pMBLayout->GetActualNumSamples();
                     size_t numSequences = input.pMBLayout->GetNumSequences();

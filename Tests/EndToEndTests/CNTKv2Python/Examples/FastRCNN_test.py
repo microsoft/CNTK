@@ -13,71 +13,66 @@ from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import try_set_default_device, gpu
 from cntk.logging.graph import get_node_outputs
 from cntk.ops.tests.ops_test_utils import cntk_device
+from _cntk_py import force_deterministic_algorithms
+force_deterministic_algorithms()
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Detection"))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Detection", "FastRCNN"))
 
 from prepare_test_data import prepare_Grocery_data, prepare_alexnet_v0_model
-
 grocery_path = prepare_Grocery_data()
+prepare_alexnet_v0_model()
 
-python34_only = pytest.mark.skipif(sys.version_info[:2] != (3,4), reason="requires python 3.4")
-linux_only = pytest.mark.skipif(sys.platform == 'win32', reason="it runs currently only in linux")
+from install_data_and_model import create_grocery_mappings
+create_grocery_mappings(grocery_path)
 
-@python34_only
-@linux_only
-def test_fastrcnn_grocery_visualization():
-    from A1_GenerateInputROIs import generate_input_rois
-    assert generate_input_rois(testing=True)
+win35 = pytest.mark.skipif(not (sys.platform == 'win32' and sys.version_info[:2] == (3,5)),
+                           reason="it runs currently only in windows-py35 due to precompiled cython modules")
+# TODO NaN on M60?
+#win35_linux34 = pytest.mark.skipif(not ((sys.platform == 'win32' and sys.version_info[:2] == (3,5)) or
+#                                        (sys.platform != 'win32' and sys.version_info[:2] == (3,4))),
+#                                   reason="it runs currently only in windows-py35 and linux-py34 due to precompiled cython modules")
 
-    from B1_VisualizeInputROIs import generate_rois_visualization
-    assert generate_rois_visualization(testing=True)
-
-    from B2_EvaluateInputROIs import evaluate_rois
-    assert evaluate_rois()
-
-@python34_only
-@linux_only
-def test_fastrcnn_with_config_file(device_id):
+@win35
+def test_fastrcnnpy_grocery_training(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU') # it runs very slow in CPU
+        pytest.skip('test only runs on GPU')  # it runs very slow in CPU
     try_set_default_device(cntk_device(device_id))
 
-    from A1_GenerateInputROIs import generate_input_rois
-    assert generate_input_rois(testing=True)
+    from utils.config_helpers import merge_configs
+    from FastRCNN_config import cfg as detector_cfg
+    from utils.configs.AlexNet_config import cfg as network_cfg
+    from utils.configs.Grocery_config import cfg as dataset_cfg
 
-    prepare_alexnet_v0_model()
+    cfg = merge_configs([detector_cfg, network_cfg, dataset_cfg])
+    cfg["CNTK"].FORCE_DETERMINISTIC = True
+    cfg["CNTK"].DEBUG_OUTPUT = False
+    cfg["CNTK"].MAKE_MODE = False
+    cfg["CNTK"].FAST_MODE = False
+    cfg["CNTK"].MAX_EPOCHS = 4
+    cfg.IMAGE_WIDTH = 600
+    cfg.IMAGE_HEIGHT = 600
+    cfg.NUM_ROI_PROPOSALS = 200
+    cfg.USE_GPU_NMS = False
+    cfg.VISUALIZE_RESULTS = False
+    cfg["DATA"].MAP_FILE_PATH = grocery_path
 
-    from A2_RunWithBSModel import run_fastrcnn_with_config_file
-    assert run_fastrcnn_with_config_file(os.environ["TEST_CNTK_BINARY"])
-
-@python34_only
-@linux_only
-def test_fastrcnn_grocery_training(device_id):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU') # it runs very slow in CPU
-    try_set_default_device(cntk_device(device_id))
-
-    from A1_GenerateInputROIs import generate_input_rois
-    assert generate_input_rois(testing=True)
-
-    # since we do not use a reader for evaluation we need unzipped data
     externalData = 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ
-
     if externalData:
         extPath = os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY']
-        model_file = os.path.join(extPath, "PreTrainedModels", "AlexNet", "v0", "AlexNet.model")
+        cfg['BASE_MODEL_PATH'] = os.path.join(extPath, "PreTrainedModels", "AlexNet", "v1", "AlexNet_ImageNet_Caffe.model")
     else:
-        model_file = os.path.join(abs_path, *"../../../../Examples/Image/PretrainedModels/AlexNet.model".split("/"))
+        cfg['BASE_MODEL_PATH'] = os.path.join(abs_path, *"../../../../PretrainedModels/AlexNet_ImageNet_Caffe.model".split("/"))
 
-    from A2_RunWithPyModel import train_fast_rcnn, evaluate_fast_rcnn
-    trained_model = train_fast_rcnn(model_path=model_file)
+    from FastRCNN_train import prepare, train_fast_rcnn
+    from FastRCNN_eval import compute_test_set_aps
+    prepare(cfg, False)
 
-    assert evaluate_fast_rcnn(trained_model)
-
-    from A3_ParseAndEvaluateOutput import evaluate_output
-    assert evaluate_output()
-
-    from B3_VisualizeOutputROIs import visualize_output_rois
-    assert visualize_output_rois(testing=True)
+    np.random.seed(seed=3)
+    trained_model = train_fast_rcnn(cfg)
+    eval_results = compute_test_set_aps(trained_model, cfg)
+    meanAP = np.nanmean(list(eval_results.values()))
+    print('meanAP={}'.format(meanAP))
+    assert meanAP > 0.01

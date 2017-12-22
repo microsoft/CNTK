@@ -14,11 +14,6 @@ from utils.rpn.generate_anchors import generate_anchors
 from utils.rpn.bbox_transform import bbox_transform
 from utils.cython_modules.cython_bbox import bbox_overlaps
 
-try:
-    from config import cfg
-except ImportError:
-    from utils.default_config import cfg
-
 DEBUG = False
 
 class AnchorTargetLayer(UserFunction):
@@ -27,16 +22,29 @@ class AnchorTargetLayer(UserFunction):
     labels and bounding-box regression targets.
     '''
 
-    def __init__(self, arg1, arg2, arg3, name='AnchorTargetLayer', param_str=None, deterministic=False):
+    def __init__(self, arg1, arg2, arg3,
+                 rpn_batch_size=256,
+                 rpn_fg_fraction=0.5,
+                 clobber_positives=False,
+                 positive_overlap=0.7,
+                 negative_overlap=0.3,
+                 param_str=None,
+                 name='AnchorTargetLayer', cfm_shape=None, deterministic=False):
         super(AnchorTargetLayer, self).__init__([arg1, arg2, arg3], name=name)
-        self.param_str_ = param_str if param_str is not None else "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
+        self._rpn_batch_size = rpn_batch_size
+        self._rpn_fg_fraction = rpn_fg_fraction
+        self._clobber_positives = clobber_positives
+        self._positive_overlap = positive_overlap
+        self._negative_overlap = negative_overlap
+        self._param_str = param_str if param_str is not None else "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
 
         # parse the layer parameter string, which must be valid YAML
-        layer_params = yaml.load(self.param_str_)
+        layer_params = yaml.load(self._param_str)
         anchor_scales = layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
         self._feat_stride = layer_params['feat_stride']
+        self._cfm_shape = cfm_shape
         self._determininistic_mode = deterministic
 
         if DEBUG:
@@ -47,7 +55,7 @@ class AnchorTargetLayer(UserFunction):
                 self._anchors[:, 2::4] - self._anchors[:, 0::4],
                 self._anchors[:, 3::4] - self._anchors[:, 1::4],
             )))
-            self._counts = cfg.EPS
+            self._counts = 1e-14 # avoid division by zero
             self._sums = np.zeros((1, 4))
             self._squared_sums = np.zeros((1, 4))
             self._fg_sum = 0
@@ -58,7 +66,11 @@ class AnchorTargetLayer(UserFunction):
         self._allowed_border = False # layer_params.get('allowed_border', 0)
 
     def infer_outputs(self):
-        height, width = self.inputs[0].shape[-2:]
+        # This is a necessary work around since after cloning the cloned inputs are just place holders without the proper shape
+        if self._cfm_shape is None:
+            self._cfm_shape = self.inputs[0].shape
+        height, width = self._cfm_shape[-2:]
+
         if DEBUG:
             print('AnchorTargetLayer: height', height, 'width', width)
 
@@ -94,7 +106,7 @@ class AnchorTargetLayer(UserFunction):
         # GT boxes (x1, y1, x2, y2, label)
         gt_boxes = bottom[1][0,:]
         # im_info
-        im_info = bottom[2]
+        im_info = bottom[2][0]
 
         # remove zero padded ground truth boxes
         keep = np.where(
@@ -105,8 +117,11 @@ class AnchorTargetLayer(UserFunction):
 
         if DEBUG:
             print ('')
+            # im_info = (pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height)
+            # e.g.(1000, 1000, 1000, 600, 500, 300) for an original image of 600x300 that is scaled and padded to 1000x1000
             print ('im_size: ({}, {})'.format(im_info[0], im_info[1]))
-            print ('scale: {}'.format(im_info[2]))
+            print ('scaled im_size: ({}, {})'.format(im_info[2], im_info[3]))
+            print ('original im_size: ({}, {})'.format(im_info[4], im_info[5]))
             print ('height, width: ({}, {})'.format(height, width))
             print ('rpn: gt_boxes.shape', gt_boxes.shape)
             #print ('rpn: gt_boxes', gt_boxes)
@@ -129,11 +144,17 @@ class AnchorTargetLayer(UserFunction):
         total_anchors = int(K * A)
 
         # only keep anchors inside the image
+        padded_wh = im_info[0:2]
+        scaled_wh = im_info[2:4]
+        xy_offset = (padded_wh - scaled_wh) / 2
+        xy_min = xy_offset
+        xy_max = xy_offset + scaled_wh
+
         inds_inside = np.where(
-            (all_anchors[:, 0] >= -self._allowed_border) &
-            (all_anchors[:, 1] >= -self._allowed_border) &
-            (all_anchors[:, 2] < im_info[1] + self._allowed_border) &  # width
-            (all_anchors[:, 3] < im_info[0] + self._allowed_border)    # height
+            (all_anchors[:, 0] >= xy_min[0] - self._allowed_border) &
+            (all_anchors[:, 1] >= xy_min[1] - self._allowed_border) &
+            (all_anchors[:, 2] < xy_max[0] + self._allowed_border) &  # width
+            (all_anchors[:, 3] < xy_max[1] + self._allowed_border)    # height
         )[0]
 
         if DEBUG:
@@ -144,6 +165,7 @@ class AnchorTargetLayer(UserFunction):
         anchors = all_anchors[inds_inside, :]
         if DEBUG:
             print ('anchors.shape', anchors.shape)
+            print('gt_boxes.shape', gt_boxes.shape)
 
         # label: 1 is positive, 0 is negative, -1 is dont care
         labels = np.empty((len(inds_inside), ), dtype=np.float32)
@@ -161,22 +183,22 @@ class AnchorTargetLayer(UserFunction):
                                    np.arange(overlaps.shape[1])]
         gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
 
-        if not cfg["TRAIN"].RPN_CLOBBER_POSITIVES:
+        if not self._clobber_positives:
             # assign bg labels first so that positive labels can clobber them
-            labels[max_overlaps < cfg["TRAIN"].RPN_NEGATIVE_OVERLAP] = 0
+            labels[max_overlaps < self._negative_overlap] = 0
 
         # fg label: for each gt, anchor with highest overlap
         labels[gt_argmax_overlaps] = 1
 
         # fg label: above threshold IOU
-        labels[max_overlaps >= cfg["TRAIN"].RPN_POSITIVE_OVERLAP] = 1
+        labels[max_overlaps >= self._positive_overlap] = 1
 
-        if cfg["TRAIN"].RPN_CLOBBER_POSITIVES:
+        if self._clobber_positives:
             # assign bg labels last so that negative labels can clobber positives
-            labels[max_overlaps < cfg["TRAIN"].RPN_NEGATIVE_OVERLAP] = 0
+            labels[max_overlaps < self._negative_overlap] = 0
 
         # subsample positive labels if we have too many
-        num_fg = int(cfg["TRAIN"].RPN_FG_FRACTION * cfg["TRAIN"].RPN_BATCHSIZE)
+        num_fg = int(self._rpn_fg_fraction * self._rpn_batch_size)
         fg_inds = np.where(labels == 1)[0]
         if len(fg_inds) > num_fg:
             if self._determininistic_mode:
@@ -186,7 +208,7 @@ class AnchorTargetLayer(UserFunction):
             labels[disable_inds] = -1
 
         # subsample negative labels if we have too many
-        num_bg = cfg["TRAIN"].RPN_BATCHSIZE - np.sum(labels == 1)
+        num_bg = self._rpn_batch_size - np.sum(labels == 1)
         bg_inds = np.where(labels == 0)[0]
         if len(bg_inds) > num_bg:
             if self._determininistic_mode:
@@ -250,17 +272,35 @@ class AnchorTargetLayer(UserFunction):
         pass
 
     def clone(self, cloned_inputs):
-        return AnchorTargetLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], param_str=self.param_str_)
+        return AnchorTargetLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2],
+                                 rpn_batch_size = self._rpn_batch_size,
+                                 rpn_fg_fraction = self._rpn_fg_fraction,
+                                 clobber_positives = self._clobber_positives,
+                                 positive_overlap = self._positive_overlap,
+                                 negative_overlap = self._negative_overlap,
+                                 param_str=self._param_str,
+                                 cfm_shape=self._cfm_shape)
 
     def serialize(self):
         internal_state = {}
-        internal_state['param_str'] = self.param_str_
+        internal_state['param_str'] = self._param_str
+        internal_state['rpn_batch_size'] = self._rpn_batch_size
+        internal_state['rpn_fg_fraction'] = self._rpn_fg_fraction
+        internal_state['clobber_positives'] = self._clobber_positives
+        internal_state['positive_overlap'] = self._positive_overlap
+        internal_state['negative_overlap'] = self._negative_overlap
         return internal_state
 
     @staticmethod
     def deserialize(inputs, name, state):
-        param_str = state['param_str']
-        return AnchorTargetLayer(inputs[0], inputs[1], inputs[2], name=name, param_str=param_str)
+        return AnchorTargetLayer(inputs[0], inputs[1], inputs[2],
+                                 rpn_batch_size=state['rpn_batch_size'],
+                                 rpn_fg_fraction=state['rpn_fg_fraction'],
+                                 clobber_positives=state['clobber_positives'],
+                                 positive_overlap=state['positive_overlap'],
+                                 negative_overlap=state['negative_overlap'],
+                                 param_str=state['param_str'],
+                                 name=name)
 
 
 def _unmap(data, count, inds, fill=0):

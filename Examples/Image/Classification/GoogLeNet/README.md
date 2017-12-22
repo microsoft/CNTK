@@ -29,19 +29,4 @@ We currently offer the BN-Inception (https://arxiv.org/abs/1502.03167) and Incep
 
 ## Pre-trained Models
 
-### CNTK Pre-trained
-Models pre-trained with CNTK scripts.
-
-|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/InceptionV3_ImageNet_CNTK.model
-|:---------|:---
-|Training script | [InceptionV3.cntk](./InceptionV3/BrainScript/InceptionV3.cntk)
-|Single crop top 1 / top 5 error | 21.620% / 5.810%
-
-### Caffe-Converted
-
-#### BN-Inception
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/BNInception_ImageNet_Caffe.model
-|:---------|:---
-|Last updated | April, 28th, 2017
-|Source Caffe model website | https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet
-|Single crop top 5 error | 11.50%
+Pre-trained GoogLeNet models can be found [here](../../../../PretrainedModels/Image.md#googlenet). 

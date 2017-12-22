@@ -40,11 +40,11 @@ if __name__=='__main__':
     z = plus(n, p2, name='z')
     ce = squared_error(z, labels)
 
-    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
-    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    momentum_schedule = C.momentum_schedule_per_sample(0.9990913221888589)
+    lr_per_sample = C.learning_parameter_schedule_per_sample(0.007)
     dist_learners = [
-        C.distributed.data_parallel_distributed_learner(C.momentum_sgd([p1], lr_per_sample, momentum_time_constant, True)),
-        C.distributed.data_parallel_distributed_learner(C.momentum_sgd([p2], lr_per_sample, momentum_time_constant, True))
+        C.distributed.data_parallel_distributed_learner(C.momentum_sgd([p1], lr_per_sample, momentum_schedule, True)),
+        C.distributed.data_parallel_distributed_learner(C.momentum_sgd([p2], lr_per_sample, momentum_schedule, True))
     ]
 
     trainer = C.Trainer(z, ce, dist_learners)

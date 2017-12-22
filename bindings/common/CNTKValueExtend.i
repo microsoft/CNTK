@@ -31,23 +31,27 @@
         return CNTK::Value::Create<double>(sampleShape, sequences, sequenceStartFlags, device, readOnly);
     }
 
-    static CNTK::ValuePtr CNTK::Value::CreateBatchFloat(const NDShape& sampleShape, const std::vector<float>& batchData,
-        const DeviceDescriptor& device, bool readOnly = false ) {
+    static CNTK::ValuePtr CNTK::Value::CreateBatchFloat(const NDShape& sampleShape, const float *dataBuffer, int dataStart, int dataSize,
+        const DeviceDescriptor& device, bool readOnly = false) {
+        std::vector<float> batchData(dataBuffer + dataStart, dataBuffer + dataStart + dataSize);
         return CNTK::Value::CreateBatch<float>(sampleShape, batchData, device, readOnly);
     }
 
-    static CNTK::ValuePtr CNTK::Value::CreateBatchDouble(const NDShape& sampleShape, const std::vector<double>& batchData,
-        const DeviceDescriptor& device, bool readOnly = false ) {
+    static CNTK::ValuePtr CNTK::Value::CreateBatchDouble(const NDShape& sampleShape, const double *dataBuffer, int dataStart, int dataSize,
+        const DeviceDescriptor& device, bool readOnly = false) {
+        std::vector<double> batchData(dataBuffer + dataStart, dataBuffer + dataStart + dataSize);
         return CNTK::Value::CreateBatch<double>(sampleShape, batchData, device, readOnly);
     }
 
-    static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(const NDShape& sampleShape, const std::vector<float>& sequenceData,
+    static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(const NDShape& sampleShape, const float *dataBuffer, int dataSize,
         bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
+        std::vector<float> sequenceData(dataBuffer, dataBuffer + dataSize);
         return CNTK::Value::CreateSequence<float>(sampleShape, sequenceData, sequenceStartFlag, device, readOnly);
     }
 
-    static CNTK::ValuePtr CNTK::Value::CreateSequenceDouble(const NDShape& sampleShape, const std::vector<double>& sequenceData,
+    static CNTK::ValuePtr CNTK::Value::CreateSequenceDouble(const NDShape& sampleShape, const double *dataBuffer, int dataSize,
         bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
+        std::vector<double> sequenceData(dataBuffer, dataBuffer + dataSize);
         return CNTK::Value::CreateSequence<double>(sampleShape, sequenceData, sequenceStartFlag, device, readOnly);
     }
 
@@ -148,5 +152,23 @@
     void CNTK::Value::CopyVariableValueToDouble(const CNTK::Variable& outputVariable, std::vector<std::vector<double>>& sequences)
     {
         return self->CopyVariableValueTo<double>(outputVariable, sequences);
+    }
+
+    void CNTK::Value::CopyVariableValueToFloat(const Variable& outputVariable, int* sequenceLength, std::vector<SparseIndexType>& colStarts, 
+        std::vector<SparseIndexType>& rowIndices, std::vector<float>& nonZeroValues, int* numNonZeroValues)
+    {
+        size_t sequenceLengthSizeT, numNonZeroValuesSizeT;
+        self->CopyVariableValueTo<float>(outputVariable, sequenceLengthSizeT, colStarts, rowIndices, nonZeroValues, numNonZeroValuesSizeT);
+        *sequenceLength = (int)sequenceLengthSizeT;
+        *numNonZeroValues = (int)numNonZeroValuesSizeT;
+    }
+
+    void CNTK::Value::CopyVariableValueToDouble(const Variable& outputVariable, int* sequenceLength, std::vector<SparseIndexType>& colStarts, 
+        std::vector<SparseIndexType>& rowIndices, std::vector<double>& nonZeroValues, int* numNonZeroValues)
+    {
+        size_t sequenceLengthSizeT, numNonZeroValuesSizeT;
+        self->CopyVariableValueTo<double>(outputVariable, sequenceLengthSizeT, colStarts, rowIndices, nonZeroValues, numNonZeroValuesSizeT);
+        *sequenceLength = (int)sequenceLengthSizeT;
+        *numNonZeroValues = (int)numNonZeroValuesSizeT;
     }
 }

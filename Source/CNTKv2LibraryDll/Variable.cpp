@@ -525,7 +525,7 @@ namespace CNTK
 
             // TODO: this copying here is redundant, value should be moved from the dictionary to the variable.
             // Also, the correct device should be used upfront when deserializing NDArrayView.
-            Variable var(shape, kind, dataType, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
+            Variable var(shape, kind, dataType, value.DeepClone(device, value.IsReadOnly()), needsGradient, dynamicAxis, isSparse, name, uid);
             if (var.IsParameter())
                 return Parameter(var);
             else

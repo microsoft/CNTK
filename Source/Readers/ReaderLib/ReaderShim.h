@@ -145,6 +145,7 @@ private:
     {
         std::shared_ptr<MSR_CNTK::Matrix<ElemType>> m_matrix;
         MSR_CNTK::MBLayoutPtr m_mbLayout;
+        NDShape m_sampleShape;
     };
 
     // Intermediate buffer where the prefetch thread puts its data to.
