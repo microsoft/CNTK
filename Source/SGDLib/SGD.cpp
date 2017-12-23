@@ -308,12 +308,17 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     /* guoye: end */
     // get hmm file for sequence training
     bool isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax");
+    LOGPRINTF(stderr, "SGD debug 5.1 \n");
     if (isSequenceTrainingCriterion)
     {
         // SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+        LOGPRINTF(stderr, "SGD debug 5.2 \n");
         auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
+        LOGPRINTF(stderr, "SGD debug 5.3 \n");
         auto hmm = node->gethmm();
+        LOGPRINTF(stderr, "SGD debug 5.4 \n");
         trainSetDataReader->GetHmmData(hmm);
+        LOGPRINTF(stderr, "SGD debug 5.5 \n");
     }
     /* guoye: start */
     LOGPRINTF(stderr, "SGD debug 6 \n");
