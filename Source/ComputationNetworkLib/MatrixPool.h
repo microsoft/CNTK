@@ -149,12 +149,10 @@ public:
         if (memInfoVec.size() >= 256)
         {
             fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 3.5,   sizeof(meminfo) is equal or large than 256, do no push \n");
-            memInfoVec.resize(memInfoVec.size() + 1);
-            memInfoVec[memInfoVec.size()-1] = (memInfo);
+            memInfoVec.resize(memInfoVec.size() + 1, memInfo);            
         }
         /* guoye: end */
         /* guoye: start */
-        
         else
         {
 
