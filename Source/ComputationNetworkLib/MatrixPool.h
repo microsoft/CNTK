@@ -154,13 +154,13 @@ public:
         }
         /* guoye: end */
         /* guoye: start */
-        /*
+        
         else
         {
 
             memInfoVec.push_back(memInfo);
         }
-        */
+        
         /* guoye: end */
         /* guoye: start */
         fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 4 \n");
