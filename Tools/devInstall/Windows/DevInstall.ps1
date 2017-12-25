@@ -5,7 +5,7 @@
 <#
   .SYNOPSIS
  Use this cmdlet to install a CNTK development environment on your machine.
- A detailed description can be found here: https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows
+ A detailed description can be found here: https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-with-script-on-Windows
  
  .DESCRIPTION
  The script will download and install the files necessary to create a CNTK development environment on your system. 
@@ -15,7 +15,7 @@
  Repeated operation of this script will reuse already downloaded components.
  
  Before you can run this machine you should have read the instructions at 
-     https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows
+     https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-with-script-on-Windows
  
  .PARAMETER Execute
  You can set this switch to false to prevent devInstall from performing any physical changes to the machine.
@@ -137,14 +137,14 @@ Function main
         $operation += OpCheckVS15Update3
 
         $operation += OpCheckCuda8
-        $operation += OpNVidiaCudnn5180 -cache $localCache -targetFolder $localDir
+        $operation += OpNVidiaCudnn6080 -cache $localCache -targetFolder $localDir
         $operation += OpNvidiaCub141 -cache $localCache -targetFolder $localDir
 
         $operation += OpCMake362 -cache $localCache
         $operation += OpMSMPI70 -cache $localCache
         $operation += OpMSMPI70SDK -cache $localCache
         $operation += OpBoost160VS15 -cache $localCache -targetFolder $localDir
-        $operation += OpCNTKMKL3 -cache $localCache -targetFolder $localDir
+        $operation += OpMKLML011 -cache $localCache -targetFolder $localDir
         $operation += OpSwig3010 -cache $localCache -targetFolder $localDir
         $operation += OpProtoBuf310VS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
         $operation += OpProtoBuf310VS15Prebuild -cache $localCache -targetFolder $localDir

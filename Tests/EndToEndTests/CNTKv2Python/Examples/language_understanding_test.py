@@ -227,15 +227,14 @@ def test_language_understanding(device_id):
             ]), [0.0579573500457558, 0.3214986774820327])
 
         # test of a config like in the example but with additions to test many code paths
-        # TODO temporarily disabled, investigating a BN issue
-        #with default_options(enable_self_stabilization=True, use_peepholes=True):
-        #        run_model_test('alternate paths', Sequential([
-        #        Embedding(emb_dim),
-        #        BatchNormalization(),
-        #        Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
-        #        BatchNormalization(map_rank=1),
-        #            Dense(num_labels)
-        #        ]), [0.08574360112032389, 0.41847621578367716])
+        with default_options(enable_self_stabilization=True, use_peepholes=True):
+                run_model_test('alternate paths', Sequential([
+                Embedding(emb_dim),
+                BatchNormalization(),
+                Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
+                BatchNormalization(map_rank=1),
+                    Dense(num_labels)
+                ]), [0.08574360112032389, 0.41847621578367716])
 
     # test of the example itself
     # this emulates the main code in the PY file
@@ -251,31 +250,30 @@ def test_language_understanding(device_id):
         evaluate(reader, model)
 
     # test of a config like in the example but with additions to test many code paths
-    # TODO temporarily disabled, investigating a BN issue
-    #if device_id >= 0: # BatchNormalization currently does not run on CPU
-    #    # Create a path to TensorBoard log directory and make sure it does not exist.
-    #    abs_path = os.path.dirname(os.path.abspath(__file__))
-    #    tb_logdir = os.path.join(abs_path, 'language_understanding_test_log')
-    #    if os.path.exists(tb_logdir):
-    #        shutil.rmtree(tb_logdir)
+    if device_id >= 0: # BatchNormalization currently does not run on CPU
+        # Create a path to TensorBoard log directory and make sure it does not exist.
+        abs_path = os.path.dirname(os.path.abspath(__file__))
+        tb_logdir = os.path.join(abs_path, 'language_understanding_test_log')
+        if os.path.exists(tb_logdir):
+            shutil.rmtree(tb_logdir)
 
-    #    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-    #    model = create_test_model()
-    #    # TODO: update example to support tensorboard, or decide to not show it in all examples (in upcoming update of examples)
-    #    loss_avg, evaluation_avg = train(reader, model, max_epochs=1) #, tensorboard_logdir=tb_logdir)
-    #    log_number_of_parameters(model, trace_level=1) ; print()
-    #    expected_avg = [0.084, 0.407364]
-    #    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+        reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
+        model = create_test_model()
+        # TODO: update example to support tensorboard, or decide to not show it in all examples (in upcoming update of examples)
+        loss_avg, evaluation_avg = train(reader, model, max_epochs=1) #, tensorboard_logdir=tb_logdir)
+        log_number_of_parameters(model, trace_level=1) ; print()
+        expected_avg = [0.084, 0.407364]
+        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
-    #    # Ensure that the TensorBoard log directory was created and contains exactly one file with the expected name.
-    #    #tb_files = 0
-    #    #for tb_file in os.listdir(tb_logdir):
-    #    #    assert tb_file.startswith("events.out.tfevents")
-    #    #    tb_files += 1
-    #    #assert tb_files == 1
+        # Ensure that the TensorBoard log directory was created and contains exactly one file with the expected name.
+        #tb_files = 0
+        #for tb_file in os.listdir(tb_logdir):
+        #    assert tb_file.startswith("events.out.tfevents")
+        #    tb_files += 1
+        #assert tb_files == 1
 
-    #    # example also saves and loads; we skip it here, so that we get a test case of no save/load
-    #    # (we save/load in all cases above)
+        # example also saves and loads; we skip it here, so that we get a test case of no save/load
+        # (we save/load in all cases above)
 
 if __name__=='__main__':
     test_language_understanding(0)

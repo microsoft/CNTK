@@ -5,6 +5,8 @@
 # ==============================================================================
 
 from __future__ import print_function
+from __future__ import division
+
 import os
 import math
 import argparse
@@ -14,7 +16,7 @@ import _cntk_py
 
 import cntk.io.transforms as xforms
 from cntk.debugging import start_profiler, stop_profiler
-from cntk.learners import learning_rate_schedule, momentum_schedule, momentum_sgd, UnitType
+from cntk.learners import learning_parameter_schedule, momentum_schedule, momentum_sgd
 from cntk.logging import ProgressPrinter, log_number_of_parameters
 from cntk.ops import input
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
@@ -49,7 +51,7 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
         lr_per_mb.extend([learning_rate] * learn_rate_adjust_interval)
         learning_rate *= learn_rate_decrease_factor
 
-    lr_schedule       = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch, epoch_size=epoch_size)
+    lr_schedule       = learning_parameter_schedule(lr_per_mb, epoch_size=epoch_size)
     mm_schedule       = momentum_schedule(0.9)
     l2_reg_weight     = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
     
@@ -83,7 +85,7 @@ def train_and_test(network, trainer, train_source, test_source, max_epochs, mini
                                            filename = os.path.join(
                                            model_path, "BN-Inception_CIFAR10"),
                                            restore=restore),
-        test_config=TestConfig(source=test_source, mb_size=minibatch_size)
+        test_config=TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
 
     if profiling:
@@ -96,7 +98,7 @@ def bn_inception_train_and_eval(train_data, test_data, mean_data, num_quantizati
 
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
-    # up. However, bigger minimatch size on the same number of samples means less updates, 
+    # up. However, bigger minibatch size on the same number of samples means less updates,
     # thus leads to higher training error. This is a trade-off of speed and accuracy
     if minibatch_size is None:
         mb_size = 128 * (Communicator.num_workers() if scale_up else 1)

@@ -1,0 +1,16 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-1650 v4 @ 3.60GHz
+    Hardware threads: 12
+    Total Memory: 16691576 kB
+-------------------------------------------------------------------
+Test CNTKLibraryCSTrainingExamples
+======== Train model using CPUOnly build ========
+======== running LSTMSequenceClassifier.Train using CPU ========
+Minibatch: 0 CrossEntropyLoss = 1.597417, EvaluationCriterion = 0.5
+Minibatch: 20 CrossEntropyLoss = 1.491089, EvaluationCriterion = 0.3877551
+Minibatch: 40 CrossEntropyLoss = 1.381261, EvaluationCriterion = 0.4210526
+Minibatch: 60 CrossEntropyLoss = 1.348759, EvaluationCriterion = 0.4444444
+Minibatch: 80 CrossEntropyLoss = 1.227766, EvaluationCriterion = 0.3902439
+Minibatch: 100 CrossEntropyLoss = 1.207913, EvaluationCriterion = 0.3555556
+Minibatch: 120 CrossEntropyLoss = 1.220562, EvaluationCriterion = 0.4130435
+======== Train completes. ========

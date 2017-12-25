@@ -47,6 +47,8 @@ message NDArrayView {
 	FloatValues float_values = 4;
 	DoubleValues double_values = 5;
   }
+
+  // TODO: bool read_only = 6;
 }
 
 message Vector {

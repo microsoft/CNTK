@@ -6,8 +6,9 @@
 #include "Config.h"
 #include "DataReader.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
-    
+namespace CNTK {
+    using namespace Microsoft::MSR::CNTK;
+
     size_t GetRandomizationWindowFromConfig(const ConfigParameters& config)
     {
         wstring randomizeString = config(L"randomize", wstring());
@@ -34,4 +35,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return randomizeAuto;
     }
 
-}}}
+}

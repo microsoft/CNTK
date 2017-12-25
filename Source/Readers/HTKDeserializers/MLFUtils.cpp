@@ -16,7 +16,7 @@
 
 using namespace std;
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     inline void EraseEmptyLines(vector<boost::iterator_range<char*>>& lines)
     {
@@ -216,4 +216,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
-}}}
+}

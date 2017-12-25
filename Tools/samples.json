@@ -1,8 +1,26 @@
 [
     {
+        "category": ["GettingStarted"],
+        "name":  "LogisticRegression_FunctionalAPI",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/1stSteps/LogisticRegression_FunctionalAPI.py",
+        "description":  "Introduces basic CNTK usage using logistic regression as an example, using the Functional API.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/24/2017"
+    },
+    {
+        "category": ["GettingStarted"],
+        "name":  "LogisticRegression_GraphAPI",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/1stSteps/LogisticRegression_GraphAPI.py",
+        "description":  "Introduces basic CNTK usage using logistic regression as an example, using the Graph API.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/24/2017"
+    },
+    {
         "category": [""],
         "name":  "Model Evaluation on Azure",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Evaluate-a-model-in-an-Azure-WebApi",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Evaluate-a-model-in-an-Azure-WebApi",
         "description":  "Host an already trained CNTK model on Azure.",
         "language":  [],
         "type":  ["Tutorial"],
@@ -10,12 +28,21 @@
     },
     {
         "category": [""],
-        "name":  "Model Evaluation in C++/C#",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/CNTK-Eval-Examples",
+        "name":  "Model Evaluation in C++/C#/.NET",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Eval-Examples",
         "description":  "Evaluation or inference of an already trained CNTK model in C++/C#.",
-        "language":  ["C#"],
+        "language":  ["C++", "C#", ".NET"],
         "type":  ["Example"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": [""],
+        "name":  "Model Evaluation on Universal Windows Platform (UWP)",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Library-Evaluation-on-UWP",
+        "description":  "Evaluation or inference of an already trained CNTK model on UWP.",
+        "language":  ["C++", "C#"],
+        "type":  ["Example"],
+	"dateadded": "7/31/2017"
     },
     {
         "category": ["Image"],
@@ -82,12 +109,30 @@
     },
     {
         "category": ["Image"],
+        "name":  "Faster R-CNN",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Faster-R-CNN",
+        "description":  "Train object detection from images using a region proposal netwrok in Faster R-CNN.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "8/30/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "Fast R-CNN",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN",
         "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling.",
         "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Faster R-CNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection/FasterRCNN",
+        "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling and region proposal networks.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "7/25/2017"
     },
     {
         "category": ["Image"],
@@ -103,9 +148,18 @@
         "name":  "GoogLeNet (Inception V3)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/InceptionV3#cntk-examples-imageclassificationgooglenetinceptionv3",
         "description":  "GoogLeNet (Inception V3) network for image classification.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "GoogLeNet (Inception-ResNet-V1)",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/Inception-ResNet-V1#cntk-examples-imageclassificationgooglenetinception-resnet-v1",
+        "description":  "GoogLeNet (Inception-ResNet-V1) network for image classification.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"],
+	"dateadded": "7/5/2017"
     },
     {
         "category": ["Image"],
@@ -165,7 +219,7 @@
         "category": ["Image"],
         "name":  "Generative Adversarial Networks (GAN)",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206A_Basic_GAN.ipynb",
-        "description":  "This tutorial is a basic implementation of GAN networks. This allows us generate realistic looking MNIST images with no human input (unsupervised learning).",
+        "description":  "This tutorial is a basic implementation of GAN networks. This allows us to generate realistic looking MNIST images with no human input (unsupervised learning).",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/14/2017"
@@ -174,10 +228,19 @@
         "category": ["Image"],
         "name":  "Deep Convolutional Generative Adversarial Networks (DCGAN)",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206B_DCGAN.ipynb",
-        "description":  "This tutorial is an implementation of deep convolutional GAN (DCGAN) networks. This allows us generate realistic looking MNIST images with no human input (unsupervised learning).",
+        "description":  "This tutorial is an implementation of deep convolutional GAN (DCGAN) networks. This allows us to generate realistic looking MNIST images with no human input (unsupervised learning).",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Wasserstein and Loss Sensitive Generative Adversarial Networks (WGAN and LSGAN)",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206C_WGAN_LSGAN.ipynb",
+        "description":  "This tutorial is an implementation of Wasserstein and Loss Sensitive GAN networks. This allows us to generate CIFAR images with no human input (unsupervised learning).",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
     },
     {
         "category": ["Image"],
@@ -274,7 +337,7 @@
         "name":  "Logistic Regression",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_101_LogisticRegression.ipynb",
         "description":  "Classify cancer using simulated data (Logistic Regression).",
-        "language":  ["Python", "BrainScript"],
+        "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/14/2017"
     },
@@ -405,6 +468,15 @@
 	"dateadded": "4/14/2017"
     },
     {
+        "category": ["Speech"],
+        "name":  "Connectionist Temporal Classification",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_208_Speech_Connectionist_Temporal_Classification.ipynb",
+        "description":  "Train a speech recognition LSTM acoustic model with CTC criteria.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/20/2017"
+    },
+    {
         "category": ["Speech", "Text"],
         "name":  "Grapheme to Phoneme (G2P)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceToSequence/CMUDict",
@@ -486,6 +558,15 @@
 	"dateadded": "4/14/2017"
     },
     {
+        "category": ["Text"],
+        "name": "LightRNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/LightRNN",
+        "description": "LightRNN: Memory and Computation-Efficient Recurrent Neural Networks",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dateadded": "07/14/2017"
+    },
+    {
         "category": ["Reinforcement Learning"],
         "name": "Deep Q Neural Network",
         "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
@@ -493,5 +574,41 @@
         "language": ["Python"],
         "type": ["Recipe"],
         "dataadded": "05/05/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Flapping Bird with Keras",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning/FlappingBirdWithKeras",
+        "description": "Using CNTK Keras backend to train an agent to navigate a bird through a cactus maze",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "07/21/2017"
+    },
+    {
+        "category": ["Text"],
+        "name":  "Deep semantic modeling",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.ipynb",
+        "description":  "Compare two documents using deep semantic similarity.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	    "dateadded": "10/11/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Pretrained Super-resolution GANs",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_302A_Evaluation_of_Pretrained_Super-resolution_Models.ipynb",
+        "description":  "This tutorial uses pre-trained models for generating high resolution images from lower resolution images.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Training super-resolution GANs",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs.ipynb",
+        "description":  "This tutorial shows how to train networks to generate higher resolution images using CNNs and GANs",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
     }
 ]

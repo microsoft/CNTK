@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.0rc2+'
+__version__ = '2.3.1+'
 
 import numpy as np
 
@@ -29,9 +29,14 @@ from . import logging
 from . import io
 from . import layers
 from . import misc
+from . import random
 
 from .sample_installer import install_samples
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension
 FreeDimension = cntk_py.FreeDimension
+
+from .internal.utils import _to_cntk_dict_value
+import _cntk_py
+cntk_py.Dictionary.__setitem__ = lambda self, key, value: _cntk_py.Dictionary___setitem__(self, key, _to_cntk_dict_value(value))

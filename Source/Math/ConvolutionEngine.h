@@ -53,7 +53,7 @@ public:
 
     void ForwardPooling(const Mat& in, Mat& out);
 
-    void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad);
+    void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient);
 
     void MaxUnpooling(const Mat& out, const Mat& poolIn, Mat& in);
 
@@ -62,7 +62,8 @@ public:
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
                                                                ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None,
                                                                ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
-                                                               std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false, bool poolIncludePad = false);
+                                                               std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false,
+                                                               bool poolIncludePad = false, bool inputHasFreeDimension = false);
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 
@@ -95,7 +96,7 @@ protected:
 
     virtual void ForwardPoolingCore(const Mat& in, Mat& out) = 0;
 
-    virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) = 0;
+    virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) = 0;
 
     virtual void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) = 0;
 

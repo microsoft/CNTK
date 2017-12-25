@@ -28,19 +28,6 @@ function ActionItem(
     Invoke-Expression $expr 
 }
 
-function InstallExeForPlatform(
-    [Parameter(Mandatory = $true)][hashtable] $table)
-{
-    FunctionIntro $table
-
-    $func = $table["Function"]
-    $platform = $table["Platform"]
-
-    if (PlatformMatching $platform) {
-        InstallExe $table
-    }
-}
-
 function InstallExe(
     [Parameter(Mandatory = $true)][hashtable] $table)
 {
@@ -269,19 +256,6 @@ function AddToPath(
     }
 }
 
-function ExtractAllFromZipForPlatform(
-    [Parameter(Mandatory = $true)][hashtable] $table)
-{
-    FunctionIntro $table
-
-    $func = $table["Function"]
-    $platform = $table["Platform"]
-
-    if (PlatformMatching $platform) {
-        ExtractAllFromZip $table
-    }
-}
-
 function ExtractAllFromZip(
     [Parameter(Mandatory = $true)][hashtable] $table)
 {
@@ -326,7 +300,7 @@ function ExtractAllFromZip(
 
     RobocopySourceDestination $completeTempDestination $completeDestination $copyAdditive
 
-    rm -r $tempDir -Force -ErrorAction SilentlyContinue | Out-Null
+    Remove-Item -r $tempDir -Force -ErrorAction SilentlyContinue | Out-Null
 }
 
 
@@ -368,7 +342,7 @@ function Extract7zipSelfExtractingArchive(
     }
     RobocopySourceDestination $completeTempDestination $completeDestination $copyAdditive
 
-    rm -r $tempDir -Force -ErrorAction SilentlyContinue | Out-Null
+    Remove-Item -r $tempDir -Force -ErrorAction SilentlyContinue | Out-Null
 }
 
 function ExtractAllFromTarGz(

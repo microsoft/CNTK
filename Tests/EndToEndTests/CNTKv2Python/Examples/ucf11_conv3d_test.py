@@ -21,8 +21,9 @@ from prepare_test_data import prepare_UCF11_data
 
 TOLERANCE_ABSOLUTE = 2E-1
 
-@pytest.mark.skipif(sys.platform != 'win32',
-                    reason="does currently run only on Windows")
+#@pytest.mark.skipif(sys.platform != 'win32',
+#                    reason="does currently run only on Windows")
+@pytest.mark.skip(reason="Issue with imageio.plugins.ffmpeg.Reader. Error: Couldn't load meta information.")
 def test_ucf11_conv3d_error(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')

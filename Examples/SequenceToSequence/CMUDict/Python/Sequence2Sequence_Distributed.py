@@ -15,7 +15,7 @@ import cntk
 from cntk import Trainer
 from cntk.train.distributed import Communicator, data_parallel_distributed_learner, block_momentum_distributed_learner
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learners import fsadagrad, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+from cntk.learners import fsadagrad, learning_parameter_schedule_per_sample, momentum_schedule, momentum_schedule_per_sample
 from cntk.train.training_session import *
 from cntk.logging import *
 
@@ -50,8 +50,8 @@ def train_and_test(s2smodel, train_reader, test_reader, block_size, num_quantiza
 
     lr = 0.001 if use_attention else 0.005   # TODO: can we use the same value for both?
     local_learner = fsadagrad(model_train.parameters,
-                        lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], UnitType.sample, epoch_size),
-                        momentum = momentum_as_time_constant_schedule(1100),
+                        lr       = learning_parameter_schedule_per_sample([lr]*2+[lr/2]*3+[lr/4], epoch_size=epoch_size),
+                        momentum = momentum_schedule_per_sample(0.9990913221888589),
                         gradient_clipping_threshold_per_sample=2.3,
                         gradient_clipping_with_truncation=True)
 
@@ -74,7 +74,7 @@ def train_and_test(s2smodel, train_reader, test_reader, block_size, num_quantiza
         checkpoint_config=CheckpointConfig(frequency = epoch_size,
                                            filename = os.path.join(model_path, "SequenceToSequence"),
                                            restore = False),
-        cv_config=CrossValidationConfig(source=test_reader, mb_size=minibatch_size)
+        cv_config=CrossValidationConfig(test_reader, minibatch_size=minibatch_size)
     ).train()
 
 def sequence_to_sequence_translator(train_data, test_data, epoch_size=908241, num_quantization_bits=default_quantization_bits, block_size=3200, warm_up=0, minibatch_size=72, max_epochs=10, randomize_data=False, log_to_file=None, num_mbs_per_log=10, gen_heartbeat=False):

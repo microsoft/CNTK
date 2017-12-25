@@ -91,5 +91,9 @@ def test_cntk_conv2d():
     # load parameters from crosstalk and verify results are the same
     ci.assign('conv2d', load=True)
     assert ci.compare('conv2d_out', rtol=1e-4, atol=1e-6)
+    
+    # test assign with value
+    ci.assign('conv2d', value=cstk.Conv2DArgs(W=np.random.random((num_filters,) + filter_shape).astype(np.float32),
+                                              b=np.random.random((num_filters,)).astype(np.float32)))
 
     ci.reset()
