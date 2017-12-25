@@ -582,8 +582,8 @@ public:
             if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match size
                   Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
                   Input(0)->HasMBLayout() &&
-                  Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
-                  Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
+                  Input(0)->GetMBLayout() == Input(1)->GetMBLayout())) 
+                //&& Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
             {
                 LogicError("The Matrix dimension in the SequenceWithSoftmaxNode operation does not match.");
             }
@@ -752,7 +752,7 @@ public:
         m_extraUttMap.clear();
         
         Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
-
+        
         char* bufferStart = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->CopyToArray());
 
         let& labelMBLayout = InputRef(0).GetMBLayout();
@@ -789,7 +789,6 @@ public:
         m_boundaries.resize(m_uids.size());
         std::fill(m_boundaries.begin(), m_boundaries.end(), 0);
         SequenceWithSoftmaxNode::ForwardPropNonLooping();
-        LOGPRINTF(stderr, "--------------------\n");
     }
 
     virtual void Save(File& fstream) const override

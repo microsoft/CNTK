@@ -1786,6 +1786,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
         net->ForwardProp(nodes);
 
         numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
+        break;
     }
 
     // finalize

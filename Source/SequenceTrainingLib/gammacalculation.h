@@ -140,7 +140,7 @@ public:
                 tempmatrix = loglikelihood.ColumnSlice(ts, numframes);
                 // if (m_deviceid == CPUDEVICE)
                 {
-                    CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe, true);
+                    CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe, false);
                 }
 
                 if (m_deviceid != CPUDEVICE)
@@ -176,7 +176,7 @@ public:
 
                 // if (doreferencealign || m_deviceid == CPUDEVICE)
                 {
-                    CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe, true);
+                    CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe, false);
                 }
 
                 if (m_deviceid != CPUDEVICE)
@@ -384,7 +384,7 @@ public:
 
 private:
     // Helper methods for copying between ssematrix objects and CNTK matrices
-    void CopyFromCNTKMatrixToSSEMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& src, size_t numCols, msra::math::ssematrixbase& dest, bool print = false)
+    void CopyFromCNTKMatrixToSSEMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& src, size_t numCols, msra::math::ssematrixbase& dest)
     {
         if (!std::is_same<ElemType, float>::value)
         {
@@ -405,22 +405,6 @@ private:
         {
             LogicError("Unexpected re-allocation of destination CPU buffer in Matrix::CopyToArray!");
         }
-
-        std::ofstream outfile;
-        outfile.open("D:\\users\\vadimma\\musor\\matrix.txt", std::ios_base::app);
-        
-
-        if (print) {
-            float* refCopy = (float*)pBufpBuf;
-            for (size_t row = 0;row < numRows;row++) {
-                for (size_t col = 0;col < numCols;col++){
-                    outfile << *refCopy << " ";
-                    refCopy += 1;
-                }
-                outfile << "\n";
-            }
-        }
-        outfile << "------------------------------------\n";
 
         if ((dest.getcolstride() == dest.rows()) && (numRows == dest.rows()))
         {

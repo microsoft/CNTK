@@ -49,9 +49,9 @@ MBLayoutPtr SequencePacker::CreateBinaryMBLayout(const StreamBatch& batch)
 {
     auto infos = CreateSequenceInfos(batch);
     auto layout = make_shared<MBLayout>();
-    layout->Init(infos.first.size(), infos.second);
+    layout->Init(infos.first.size(), infos.second, false);
     for (const auto& info : infos.first)
-        layout->AddSequence(info);
+        layout->AddSequence(info, false);
     return layout;
 }
 
