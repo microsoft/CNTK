@@ -140,7 +140,7 @@ public:
                 tempmatrix = loglikelihood.ColumnSlice(ts, numframes);
                 // if (m_deviceid == CPUDEVICE)
                 {
-                    CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe, false);
+                    CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe);
                 }
 
                 if (m_deviceid != CPUDEVICE)
@@ -176,7 +176,7 @@ public:
 
                 // if (doreferencealign || m_deviceid == CPUDEVICE)
                 {
-                    CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe, false);
+                    CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe);
                 }
 
                 if (m_deviceid != CPUDEVICE)
