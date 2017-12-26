@@ -704,7 +704,7 @@ class SequenceWithLatticeNode : public SequenceWithSoftmaxNode<ElemType>, public
 public:
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath,
         float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen)
-        : SequenceWithSoftmaxNode(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath)
+        : SequenceWithSoftmaxNode<ElemType>(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath)
     {
         if (sizeof(ElemType) != sizeof(float))
             LogicError("SequenceWithLatticeNode currently only supports floats.\n"); // due to the binary reader restrictions 
@@ -722,11 +722,11 @@ public:
         this->m_seqGammarbMMIFactor = seqGammarBMMIFactor;
         this->m_seqGammarWP = seqGammarWordPen;
 
-        SetGammarCalculationParam(seqGammarAMF, seqGammarLMF, seqGammarWordPen, seqGammarBMMIFactor, seqGammarUsesMBR);
+        this->SetGammarCalculationParam(seqGammarAMF, seqGammarLMF, seqGammarWordPen, seqGammarBMMIFactor, seqGammarUsesMBR);
     }
 
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
-        : SequenceWithSoftmaxNode(deviceId, name)
+        : SequenceWithSoftmaxNode<ElemType>(deviceId, name)
     {
     }
 
@@ -741,7 +741,7 @@ public:
     // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        SequenceWithSoftmaxNode::BackpropToNonLooping(inputIndex);
+        SequenceWithSoftmaxNode<ElemType>::BackpropToNonLooping(inputIndex);
     }
 
     // -sum(left_i * log(softmax_i(right)))
@@ -787,9 +787,9 @@ public:
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
             this->m_lattices.push_back(latticePair);
         }
-        this->m_boundaries.resize(m_uids.size());
+        this->m_boundaries.resize(this->m_uids.size());
         std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
-        SequenceWithSoftmaxNode::ForwardPropNonLooping();
+        SequenceWithSoftmaxNode<ElemType>::ForwardPropNonLooping();
     }
 
     virtual void Save(File& fstream) const override
@@ -825,18 +825,18 @@ public:
         fstream >> this->m_seqGammarUsesMBR;
         fstream >> this->m_doReferenceAlignment;
         InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
-        SetGammarCalculationParam(this->m_seqGammarAMF, this->m_seqGammarLMF, this->m_seqGammarWP, this->m_seqGammarbMMIFactor, this->m_seqGammarUsesMBR);
+        this->SetGammarCalculationParam(this->m_seqGammarAMF, this->m_seqGammarLMF, this->m_seqGammarWP, this->m_seqGammarbMMIFactor, this->m_seqGammarUsesMBR);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        SequenceWithSoftmaxNode::Validate(isFinalValidationPass);
+        SequenceWithSoftmaxNode<ElemType>::Validate(isFinalValidationPass);
         Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
-        SequenceWithSoftmaxNode::CopyTo(nodeP, newName, flags);
+        SequenceWithSoftmaxNode<ElemType>::CopyTo(nodeP, newName, flags);
 
         if (flags & CopyNodeFlags::copyNodeValue)
         {
@@ -853,7 +853,7 @@ public:
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
-        SequenceWithSoftmaxNode::RequestMatricesBeforeForwardProp(matrixPool);
+        SequenceWithSoftmaxNode<ElemType>::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
         Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
