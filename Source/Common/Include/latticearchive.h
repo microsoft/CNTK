@@ -972,11 +972,11 @@ public:
         if (!CheckTag(buffer, expectedTag)) {
             // since lattice is packed densely by the reader, we may need to shift the buffer by 2 bytes.
             if (!CheckTag(buffer, expectedTag.substr(2)))
-                RuntimeError("CheckTag: malformed file, missing expected tag: %s,", expectedTag);
+                RuntimeError("ReadTagFromBuffer: malformed file, missing expected tag: %s,", expectedTag.c_str());
         }
         int* sz = (int*)buffer;
         if (expectedSize != SIZE_MAX && *sz != expectedSize)
-            RuntimeError("ReadVectorFromBuffer: malformed file, number of vector elements differs from head, for tag %s", expectedSize);
+            RuntimeError("ReadTagFromBuffer: malformed file, number of vector elements differs from head, for tag %zu", expectedSize);
 
         buffer += 4;
         return *sz;

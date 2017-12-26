@@ -713,16 +713,16 @@ public:
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
         
         InitSEParams(symListPath, phonePath, stateListPath, transProbPath);
-        m_fsSmoothingWeight = hSmoothingWeight;
-        m_frameDropThreshold = frameDropThresh;
-        m_doReferenceAlignment = doReferenceAlign;
-        m_seqGammarUsesMBR = seqGammarUsesMBR;
-        m_seqGammarAMF = seqGammarAMF;
-        m_seqGammarLMF = seqGammarLMF;
-        m_seqGammarbMMIFactor = seqGammarBMMIFactor;
-        m_seqGammarWP = seqGammarWordPen;
+        this->m_fsSmoothingWeight = hSmoothingWeight;
+        this->m_frameDropThreshold = frameDropThresh;
+        this->m_doReferenceAlignment = doReferenceAlign;
+        this->m_seqGammarUsesMBR = seqGammarUsesMBR;
+        this->m_seqGammarAMF = seqGammarAMF;
+        this->m_seqGammarLMF = seqGammarLMF;
+        this->m_seqGammarbMMIFactor = seqGammarBMMIFactor;
+        this->m_seqGammarWP = seqGammarWordPen;
 
-        SetGammarCalculationParam(m_seqGammarAMF, m_seqGammarLMF, m_seqGammarWP, m_seqGammarbMMIFactor, m_seqGammarUsesMBR);
+        SetGammarCalculationParam(seqGammarAMF, seqGammarLMF, seqGammarWordPen, seqGammarBMMIFactor, seqGammarUsesMBR);
     }
 
     SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
@@ -747,10 +747,10 @@ public:
     // -sum(left_i * log(softmax_i(right)))
     virtual void ForwardPropNonLooping()
     {
-        m_lattices.clear();
-        m_uids.clear();
-        m_boundaries.clear();
-        m_extraUttMap.clear();
+        this->m_lattices.clear();
+        this->m_uids.clear();
+        this->m_boundaries.clear();
+        this->m_extraUttMap.clear();
         
         Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
         
@@ -775,9 +775,9 @@ public:
             for (size_t ci = 0; ci < columnIndices.size(); ci++)
             {
                 size_t refId = (int)(*m_maxIndexes)(0, columnIndices[ci]);
-                m_uids.push_back(refId);
+                this->m_uids.push_back(refId);
             }
-            m_extraUttMap.push_back(labelSequences[i].s);
+            this->m_extraUttMap.push_back(labelSequences[i].s);
 
             // Fill up lattice
             auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
@@ -785,10 +785,10 @@ public:
             char * buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
             latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
-            m_lattices.push_back(latticePair);
+            this->m_lattices.push_back(latticePair);
         }
-        m_boundaries.resize(m_uids.size());
-        std::fill(m_boundaries.begin(), m_boundaries.end(), 0);
+        this->m_boundaries.resize(m_uids.size());
+        std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
         SequenceWithSoftmaxNode::ForwardPropNonLooping();
     }
 
@@ -799,14 +799,14 @@ public:
         fstream << m_phonePath;
         fstream << m_stateListPath;
         fstream << m_transProbPath;
-        fstream << m_frameDropThreshold;
-        fstream << m_fsSmoothingWeight;
-        fstream << m_seqGammarAMF;
-        fstream << m_seqGammarLMF;
-        fstream << m_seqGammarWP;
-        fstream << m_seqGammarbMMIFactor;
-        fstream << m_seqGammarUsesMBR;
-        fstream << m_doReferenceAlignment;
+        fstream << this->m_frameDropThreshold;
+        fstream << this->m_fsSmoothingWeight;
+        fstream << this->m_seqGammarAMF;
+        fstream << this->m_seqGammarLMF;
+        fstream << this->m_seqGammarWP;
+        fstream << this->m_seqGammarbMMIFactor;
+        fstream << this->m_seqGammarUsesMBR;
+        fstream << this->m_doReferenceAlignment;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -816,16 +816,16 @@ public:
         fstream >> m_phonePath;
         fstream >> m_stateListPath;
         fstream >> m_transProbPath;
-        fstream >> m_frameDropThreshold;
-        fstream >> m_fsSmoothingWeight;
-        fstream >> m_seqGammarAMF;
-        fstream >> m_seqGammarLMF;
-        fstream >> m_seqGammarWP;
-        fstream >> m_seqGammarbMMIFactor;
-        fstream >> m_seqGammarUsesMBR;
-        fstream >> m_doReferenceAlignment;
+        fstream >> this->m_frameDropThreshold;
+        fstream >> this->m_fsSmoothingWeight;
+        fstream >> this->m_seqGammarAMF;
+        fstream >> this->m_seqGammarLMF;
+        fstream >> this->m_seqGammarWP;
+        fstream >> this->m_seqGammarbMMIFactor;
+        fstream >> this->m_seqGammarUsesMBR;
+        fstream >> this->m_doReferenceAlignment;
         InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
-        SetGammarCalculationParam(m_seqGammarAMF, m_seqGammarLMF, m_seqGammarWP, m_seqGammarbMMIFactor, m_seqGammarUsesMBR);
+        SetGammarCalculationParam(this->m_seqGammarAMF, this->m_seqGammarLMF, this->m_seqGammarWP, this->m_seqGammarbMMIFactor, this->m_seqGammarUsesMBR);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -870,8 +870,8 @@ private:
     void InitSEParams(const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath) 
     {
         LOGPRINTF(stderr, "Reading files\n %ls \n %ls \n %ls \n %ls \n", symListPath.c_str(), phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
-        m_hmm.loadfromfile(phonePath, stateListPath, transProbPath);
-        auto symmap = m_hmm.getsymmap(); 
+        this->m_hmm.loadfromfile(phonePath, stateListPath, transProbPath);
+        auto symmap = this->m_hmm.getsymmap();
         msra::lattices::archive::getSymList(m_idmap, symListPath, symmap);
     }
 };
