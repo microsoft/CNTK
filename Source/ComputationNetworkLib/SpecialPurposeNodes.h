@@ -550,10 +550,11 @@ public:
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
 
-		for (size_t i = 0;i < m_boundaries.size();i++) {
-			if (m_boundaries[i] != 0)
-				LogicError("Non zero boundary");
-		}
+        // TODO: remove this after some runs
+        for (size_t i = 0;i < m_boundaries.size();i++) {
+            if (m_boundaries[i] != 0)
+                LogicError("Non zero boundary");
+        }
 
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
