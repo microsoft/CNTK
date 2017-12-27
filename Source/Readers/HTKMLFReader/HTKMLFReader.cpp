@@ -561,7 +561,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
                       "Type 'msra::asr::htkmlfreader' should be move constructible!");
 
         /* guoye: start */
-        map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
+        // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
+        // debug purpose
+        fprintf(stderr, "debug to set wordlabels to empty");
+        map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels;
         wordlabelsmulti.push_back(std::move(wordlabels));
         /* guoye: end */
         labelsmulti.push_back(std::move(labels));
