@@ -1257,6 +1257,8 @@ public:
 
                                 /* guoye: start */
 
+                                /* mask for guoye debug */
+                                /* 
                                 foreach_index(j, wordlabels)
                                 {
                                     const auto &wordlabseq = wordlabels[j].find(key)->second.words;
@@ -1276,7 +1278,8 @@ public:
                                     wordids[j]->push_back((WORDIDTYPE)-1);      // append a boundary marker marker for checking
                                     
                                 }
-
+                                */
+                                wordlabels;
                                 /* guoye: end */
                                 utteranceset.push_back(std::move(utterance));
 
