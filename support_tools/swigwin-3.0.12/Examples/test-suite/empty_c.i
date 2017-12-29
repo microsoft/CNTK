@@ -1,1 +1,0 @@
-%module empty_c

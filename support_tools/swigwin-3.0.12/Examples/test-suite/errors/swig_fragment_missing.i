@@ -1,4 +1,0 @@
-%module xxx
-
-%fragment("awol");
-

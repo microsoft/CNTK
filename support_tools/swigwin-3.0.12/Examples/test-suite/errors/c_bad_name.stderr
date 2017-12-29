@@ -1,2 +1,0 @@
-c_bad_name.i:3: Warning 121: %name is deprecated.  Use %rename instead.
-c_bad_name.i:3: Error: Missing argument to %name directive.

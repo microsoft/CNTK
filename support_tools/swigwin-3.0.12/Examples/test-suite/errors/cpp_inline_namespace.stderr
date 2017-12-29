@@ -1,1 +1,0 @@
-cpp_inline_namespace.i:4: Error: %inline directive inside a namespace is disallowed.

@@ -1,2 +1,0 @@
-pp_badeval.i:4: Warning 202: Could not evaluate expression 'FOO==4+'
-pp_badeval.i:4: Warning 202: Error: 'Expected an expression'

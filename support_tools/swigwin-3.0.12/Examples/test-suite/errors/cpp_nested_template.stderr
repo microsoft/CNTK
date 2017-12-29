@@ -1,2 +1,0 @@
-cpp_nested_template.i:9: Warning 324: Named nested template instantiations not supported. Processing as if no name was given to %template().
-cpp_nested_template.i:18: Warning 324: Named nested template instantiations not supported. Processing as if no name was given to %template().

@@ -1,2 +1,0 @@
-pp_misplaced_elif.i:4: Error: Misplaced #elif.
-pp_misplaced_elif.i:6: Error: Extraneous #endif.

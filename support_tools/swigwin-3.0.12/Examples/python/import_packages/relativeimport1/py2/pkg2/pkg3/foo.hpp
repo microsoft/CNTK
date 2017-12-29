@@ -1,4 +1,0 @@
-#ifndef PY2_PKG2_PKG3_FOO_HPP
-#define PY2_PKG2_PKG3_FOO_HPP
-struct Pkg3_Foo {};
-#endif /* PY2_PKG2_PKG3_FOO_HPP */

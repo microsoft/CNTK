@@ -1,3 +1,0 @@
-cpp_nobase.i:3: Warning 401: Nothing known about base class 'Bar'. Ignored.
-cpp_nobase.i:6: Warning 401: Nothing known about base class 'Bar< int >'. Ignored.
-cpp_nobase.i:6: Warning 401: Maybe you forgot to instantiate 'Bar< int >' using %template.

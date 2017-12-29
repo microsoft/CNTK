@@ -1,4 +1,0 @@
-See ../README for common README file.
-
-Any testcases which have _runme.tcl appended after the testcase name will be detected and run.
-

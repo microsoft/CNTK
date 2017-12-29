@@ -1,6 +1,0 @@
-%module xxx
-
-/* Hello
-
-
-

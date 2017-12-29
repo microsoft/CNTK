@@ -1,7 +1,0 @@
-# see top-level Makefile.in
-class
-constants
-enum
-overload
-simple
-template

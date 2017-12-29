@@ -1,3 +1,0 @@
-cpp_inherit_ignored.i:15: Warning 401: Nothing known about base class 'TemplateClass< int >'. Ignored.
-cpp_inherit_ignored.i:15: Warning 401: Maybe you forgot to instantiate 'TemplateClass< int >' using %template.
-cpp_inherit_ignored.i:18: Warning 401: Nothing known about base class 'BaseClassNoTemplates'. Ignored.

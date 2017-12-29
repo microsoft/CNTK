@@ -1,8 +1,0 @@
-See ../README for common README file.
-
-Any testcases which have _runme.py (or _runme3.py for Python 3) appended after the testcase name will be detected and run.
-
-If you intend to write a testcase for both Python 2.x and 3.x, do *not* directly put the _runme3.py in this directory. Just write Python 2.x's _runme.py testcase and it will be automatically converted to Python 3 code during test.
-
-You can run make with PY3=y to run test case with Python 3.x, eg.
-  $ make voidtest.cpptest PY3=y

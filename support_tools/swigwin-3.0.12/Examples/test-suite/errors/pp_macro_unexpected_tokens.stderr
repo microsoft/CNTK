@@ -1,5 +1,0 @@
-pp_macro_unexpected_tokens.i:5: Warning 206: Unexpected tokens after #endif directive.
-pp_macro_unexpected_tokens.i:8: Warning 206: Unexpected tokens after #endif directive.
-pp_macro_unexpected_tokens.i:11: Warning 206: Unexpected tokens after #else directive.
-pp_macro_unexpected_tokens.i:18: Warning 206: Unexpected tokens after #endif directive.
-pp_macro_unexpected_tokens.i:21: Warning 206: Unexpected tokens after #else directive.

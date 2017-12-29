@@ -1,9 +1,0 @@
-#!/bin/sh
-
-# Convenience script for running SWIG before it is installed.
-# Intended for ad-hoc usage and not by the test-suite or examples.
-
-builddir=`dirname "$0"`
-SWIG_LIB='@SWIG_LIB_PREINST@'
-export SWIG_LIB
-exec "$builddir/swig" "$@"

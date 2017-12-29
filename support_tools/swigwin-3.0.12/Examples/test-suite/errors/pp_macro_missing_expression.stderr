@@ -1,5 +1,0 @@
-pp_macro_missing_expression.i:4: Error: Missing identifier for #ifdef.
-pp_macro_missing_expression.i:7: Error: Missing identifier for #ifndef.
-pp_macro_missing_expression.i:10: Error: Missing expression for #if.
-pp_macro_missing_expression.i:14: Error: Missing expression for #elif.
-pp_macro_missing_expression.i:21: Error: Missing expression for #elif.

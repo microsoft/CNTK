@@ -1,7 +1,0 @@
-swig_typemap_warn.i:7: Warning 1000: Test warning for 'in' typemap for int abc (arg1) - argnum: 1 &1_ltype: int * descriptor: SWIGTYPE_int
-swig_typemap_warn.i:7: Warning 1000: Test warning for 'in' typemap for int arg3 (arg3) - argnum: 3 &1_ltype: int * descriptor: SWIGTYPE_int
-swig_typemap_warn.i:7: Warning 1001: Test warning for 'out' typemap for double mmm (result) - name: mmm symname: mmm &1_ltype: double * descriptor: SWIGTYPE_double
-swig_typemap_warn.i:7: Warning 1000: Test warning for 'in' typemap for int abc (arg1) - argnum: 1 &1_ltype: int * descriptor: SWIGTYPE_int
-swig_typemap_warn.i:7: Warning 1000: Test warning for 'in' typemap for int arg3 (arg3) - argnum: 3 &1_ltype: int * descriptor: SWIGTYPE_int
-swig_typemap_warn.i:7: Warning 1000: Test warning for 'in' typemap for int abc (arg1) - argnum: 1 &1_ltype: int * descriptor: SWIGTYPE_int
-swig_typemap_warn.i:7: Warning 1000: Test warning for 'in' typemap for int arg3 (arg3) - argnum: 3 &1_ltype: int * descriptor: SWIGTYPE_int

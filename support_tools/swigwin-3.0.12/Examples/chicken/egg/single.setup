@@ -1,2 +1,0 @@
-(run (csc -s -o single.so single.scm single_wrap.cxx))
-(install-extension 'single '("single.so"))

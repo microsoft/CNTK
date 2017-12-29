@@ -1,1 +1,0 @@
-swig_apply_nargs.i:6: Error: Can't apply (char *str,int len) to (int x).  Number of arguments don't match.

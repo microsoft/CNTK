@@ -1,3 +1,0 @@
-cpp_shared_ptr.i:20: Warning 520: Base class 'A' of 'C' is not similarly marked as a smart pointer.
-cpp_shared_ptr.i:24: Warning 520: Derived class 'D' of 'C' is not similarly marked as a smart pointer.
-cpp_shared_ptr.i:24: Warning 520: Derived class 'D' of 'B' is not similarly marked as a smart pointer.

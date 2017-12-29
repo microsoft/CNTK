@@ -1,2 +1,0 @@
-This example illustrates the translation from Scheme file ports to
-temporary FILE streams. Read the source and run ./my-guile -s runme.scm

@@ -1,4 +1,0 @@
-These are actually regression tests for SF bug #1297 (GH issue #7).
-The namespace_pkg is an example of python3's namespace packages.
-
-See individual READMEs in subdirectories.

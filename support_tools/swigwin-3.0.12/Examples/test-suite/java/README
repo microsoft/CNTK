@@ -1,6 +1,0 @@
-See ../README for common README file.
-
-The Java implementation of the test-suite is a little different to the other languages in that all of SWIG's output goes into a subdirectory named after the individual test case. This is so that all the shadow classes can be compiled as Java classes which have to go into separate files. Otherwise the Makefile wouldn't know which .java files would be relevant to the testcase. For this to work the testcase must go into a Java package.
-
-Any testcases which have _runme.java appended after the testcase name will be detected and run.
-
