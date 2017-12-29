@@ -1,0 +1,90 @@
+<html>
+<head>
+<title>SWIG:Examples:ruby:funcptr</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+
+<tt>SWIG/Examples/ruby/funcptr/</tt>
+<hr>
+
+<H2>Pointers to Functions</H2>
+
+<p>
+Okay, just what in the heck does SWIG do with a declaration like this?
+
+<blockquote>
+<pre>
+int do_op(int a, int b, int (*op)(int, int));
+</pre>
+</blockquote>
+
+Well, it creates a wrapper as usual.  Of course, that does raise some
+questions about the third argument (the pointer to a function). 
+
+<p>
+In this case, SWIG will wrap the function pointer as it does for all other
+pointers.  However, in order to actually call this function from a script,
+you will need to pass some kind of C function pointer object.  In C,
+this is easy, you just supply a function name as an argument like this:
+
+<blockquote>
+<pre>
+/* Some callback function */
+int add(int a, int b) {
+   return a+b;
+} 
+...
+int r = do_op(x,y,add);
+</pre>
+</blockquote>
+
+To make this work with SWIG, you will need to do a little extra work.  Specifically,
+you need to create some function pointer objects using the %constant directive like this:
+
+<blockquote>
+<pre>
+%constant(int (*)(int,int)) ADD = add;
+</pre>
+</blockquote>
+
+Now, in a script, you would do this:
+
+<blockquote>
+<pre>
+r = do_op(x,y, ADD)
+</pre>
+</blockquote>
+
+<h2>An Example</h2>
+
+Here are some files that illustrate this with a simple example:
+
+<ul>
+<li><a href="example.c">example.c</a>
+<li><a href="example.h">example.h</a>
+<li><a href="example.i">example.i</a> (SWIG interface)
+<li><a href="runme.rb">runme.rb</a> (Sample script)
+</ul>
+
+<h2>Notes</h2>
+
+<ul>
+<li>The value of a function pointer must correspond to a function written in C or C++.
+It is not possible to pass an arbitrary Ruby proc object in as a substitute for a C 
+function pointer.
+
+<p>
+<li>A ruby proc can be used as a C/C++ callback if you write some
+clever typemaps and are very careful about how you create your extension.
+This is an advanced topic not covered here.
+</ul>
+
+<hr>
+</body>
+</html>
+
+
+
+

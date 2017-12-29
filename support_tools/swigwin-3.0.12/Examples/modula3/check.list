@@ -1,0 +1,7 @@
+# see top-level Makefile.in
+class
+enum
+exception
+reference
+simple
+typemap

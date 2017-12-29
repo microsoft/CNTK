@@ -1,0 +1,22 @@
+ccache (2.4-8) unstable; urgency=high
+
+  zlib compression is now enabled by default in order to increase the amount
+  of object files that can fit in the cache.
+
+  The impact on performance is supposed to be almost negligible
+  (see http://www.gustaebel.de/lars/ccache/). If you do want to disable
+  it however, simply export the CCACHE_NOCOMPRESS environment variable.
+
+  Note that a zlib-enabled ccache will still read your existing
+  uncompressed cache.  If you want to compress/uncompress your cache,
+  see the manage-cache.sh script under /usr/share/doc/ccache/examples/.
+
+ -- Francois Marier <francois@debian.org>  Sun, 20 May 2007 19:45:07 +1200
+
+ccache (2.4-1) unstable; urgency=low
+
+  * This release changes the hash input slighly, so you will probably find 
+    that you will not get any hits against your existing cache when you 
+    upgrade.
+
+ -- Francois Marier <francois@debian.org>  Sat, 11 Jun 2005 13:54:33 -0400

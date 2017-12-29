@@ -1,0 +1,1 @@
+pp_macro_unterminated.i:5: Error: Unterminated call invoking macro 'foo'

@@ -1,0 +1,13 @@
+diff -ru ccache-2.4/ccache.c ccache-2.4-tp/ccache.c
+--- ccache.c	2007-05-20 03:14:19.000000000 +1000
++++ ccache.c	2007-05-20 03:17:54.000000000 +1000
+@@ -641,6 +641,9 @@
+ 
+ 		/* these are too hard */
+ 		if (strcmp(argv[i], "-fbranch-probabilities")==0 ||
++		    strcmp(argv[i], "-fprofile-arcs") == 0 ||
++		    strcmp(argv[i], "-ftest-coverage") == 0 ||
++		    strcmp(argv[i], "--coverage") == 0 ||
+ 		    strcmp(argv[i], "-M") == 0 ||
+ 		    strcmp(argv[i], "-MM") == 0 ||
+ 		    strcmp(argv[i], "-x") == 0) {

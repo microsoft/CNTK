@@ -1,0 +1,63 @@
+This example tests the %import directive and python import from __init__.py.
+
+This case is not correctly handled by swig 2.
+
+The issue was reported as Source Forge bug #1297 and later as GitHub issue #7.
+
+Use 'python runme.py' to run a test.
+
+
+Overview:
+---------
+
+The example defines 2 different extension modules--each wrapping a separate C++
+class.
+
+     pyX/pkg2/foo.i        - Pkg2_Foo class
+     pyX/pkg2/bar.i        - Pkg2_Bar class derived from Pkg2_Foo
+
+and the package pyX.pkg2 has:
+
+     pyX/pkg2/__init__.py  - which imports something from "bar" module (we
+                              import Pkg2_Bar class, but it is not the clue,
+                              the clue is the 'from' keyword)
+
+For example with python2.x the py2/pkg2/__init__.py imports Pkg2_Bar class
+as follows
+
+    from bar import Pkg2_Bar                    # [1]
+
+Such cases doesn't work when fully qualified python module names are used by
+swig (swig 2.0.10, e.g.) to generate python import directives (SF bug #1297).
+The generated file "py2/pkg2/bar.py" has following lines:
+
+    import py2.pkg2.foo                        # [2]
+    class Pkg2_Bar(py2.pkg2.foo.Pkg2_Foo):     # [3]
+
+but it's not possible to import anything from py2.pkg2 subpackage, e.g.
+
+    import py2.pkg2
+
+fails with the following exception:
+
+Traceback (most recent call last):
+  File "runme.py", line 3, in <module>
+      import py2.pkg2
+  File "py2/pkg2/__init__.py", line 7, in <module>
+      from .bar import Pkg2_Bar
+  File "py2/pkg2/bar.py", line 71, in <module>
+      class Pkg2_Bar(py2.pkg2.foo.Pkg2_Foo):
+  AttributeError: 'module' object has no attribute 'pkg2'
+
+
+It seems like during the import [1], the sub-package pkg2 is not yet fully
+initialized, so py2.pkg2 is not known. The above exception is raised at
+line [3]. The problem disappears, for example, if we force swig to use relative
+package names.
+
+If everything works well, the package py2.pkg2 shall load properly.
+
+Unix:
+-----
+- Run make
+- Run the test as described above

@@ -1,0 +1,45 @@
+--- ccache.1.orig	2007-05-20 17:30:57.000000000 +1200
++++ ccache.1	2007-05-20 17:31:27.000000000 +1200
+@@ -367,12 +367,6 @@
+ .IP o 
+ ccache avoids a double call to cpp on a cache miss
+ .PP 
+-.SH "BUGS" 
+-.PP 
+-When the cache is stored on an NFS filesystem, the filesystem must be
+-exported with the \fBno_subtree_check\fP option to make renames between
+-directories reliable\&.
+-.PP 
+ .SH "CREDITS" 
+ .PP 
+ Thanks to the following people for their contributions to ccache
+--- util.c.patched	2007-05-20 18:19:11.000000000 +1200
++++ util.c	2007-05-20 18:20:55.000000000 +1200
+@@ -58,9 +58,26 @@
+ 	}
+ }
+ 
++static int safe_rename(const char* oldpath, const char* newpath)
++{
++    /* safe_rename is for creating entries in the cache.
++
++       Works like rename(), but it never overwrites an existing
++       cache entry. This avoids corruption on NFS. */
++    int status = link( oldpath, newpath );
++    if( status == 0 || errno == EEXIST )
++    {
++	return unlink( oldpath );
++    }
++    else
++    {
++	return -1;
++    }
++}
++ 
+ /* move a file using rename */
+ int move_file(const char *src, const char *dest) {
+-	return rename(src, dest);
++	return safe_rename(src, dest);
+ }
+ 
+ /* copy a file - used when hard links don't work 

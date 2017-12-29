@@ -1,0 +1,49 @@
+#######################################################################
+# Makefile for Pike test-suite
+#######################################################################
+
+LANGUAGE     = pike
+PIKE         = pike
+SCRIPTSUFFIX = _runme.pike
+
+srcdir       = @srcdir@
+top_srcdir   = @top_srcdir@
+top_builddir = @top_builddir@
+
+include $(srcdir)/../common.mk
+
+# Overridden variables here
+# none!
+
+# Custom tests - tests with additional commandline options
+# none!
+
+# Rules for the different types of tests
+%.cpptest:
+	$(setup)
+	+$(swig_and_compile_cpp)
+	$(run_testcase)
+
+%.ctest:
+	$(setup)
+	+$(swig_and_compile_c)
+	$(run_testcase)
+
+%.multicpptest:
+	$(setup)
+	+$(swig_and_compile_multi_cpp)
+	$(run_testcase)
+
+# Runs the testcase. A testcase is only run if
+# a file is found which has _runme.pike appended after the testcase name.
+run_testcase = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
+	  env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) $(PIKE) $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX); \
+	fi
+
+# Clean: remove the generated .pike file
+%.clean:
+	@rm -f $*.pike;
+
+clean:
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' pike_clean

@@ -1,0 +1,4 @@
+pp_macro_redef.i:4: Error: Macro 'foo' redefined,
+pp_macro_redef.i:3: Error: previous definition of 'foo'.
+pp_macro_redef.i:7: Error: Macro 'foo' redefined,
+pp_macro_redef.i:3: Error: previous definition of 'foo'.

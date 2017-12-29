@@ -1,0 +1,139 @@
+#!@PYTHON@
+'''A setup.py script with better SWIG support.  To use it, either
+rename it to setup.py.in and have it pe processed by your configure
+script (you will need to define @PYTHON@), or replace the @*@ strings
+by hand.
+
+Copyright 2001,  Anthony Joseph Seward'''
+
+
+from distutils.core import setup, Extension
+
+###############################################################################
+##      Start of better Swig support
+###############################################################################
+from distutils.command.build_ext import build_ext
+import os
+import string
+class build_swig_ext(build_ext):
+    '''Better swig support for Distutils'''
+
+    ## __ Tell Distutils about the options
+    user_options = build_ext.user_options
+    boolean_options = build_ext.boolean_options
+
+    user_options.append(
+        ('swig-doc=', None,
+         'what type of documentation should SWIG produce (default: none)')
+        )
+    user_options.append(
+        ('swig-inc=', None,
+         'a list of directories to add to the SWIG include path'
+         +  "(separated by ':')(default: SWIG)")
+        )
+    user_options.append(
+        ('swig-shadow', None,
+         'have SWIG create shadow classes'
+         + ' (also adds docstrings to the shadow classes')
+        )
+
+    boolean_options.append('swig-shadow')
+
+    def initialize_options(self):
+        '''Initialize the new options after the inherited ones'''
+        build_ext.initialize_options(self)
+        self.swig_doc = 'none'
+        self.swig_inc = 'SWIG'
+        self.swig_shadow = None        
+    
+    def swig_sources(self, sources):
+        """Override the definition of 'swig_sources' in build_ext.  This
+        is essentially the same function but with better swig support.
+        I will now quote the original docstring:
+
+          Walk the list of source files in 'sources', looking for SWIG
+          interface (.i) files.  Run SWIG on all that are found, and
+          return a modified 'sources' list with SWIG source files replaced
+          by the generated C (or C++) files.
+        """
+
+        new_sources = []
+        swig_sources = []
+        swig_targets = {}
+
+        # XXX this drops generated C/C++ files into the source tree, which
+        # is fine for developers who want to distribute the generated
+        # source -- but there should be an option to put SWIG output in
+        # the temp dir.
+
+        if self.swig_cpp:
+            target_ext = '.cpp'
+        else:
+            target_ext = '.c'
+
+        for source in sources:
+            (base, ext) = os.path.splitext(source)
+            if ext == ".i":             # SWIG interface file
+                new_sources.append(base + target_ext)
+                swig_sources.append(source)
+                swig_targets[source] = new_sources[-1]
+            else:
+                new_sources.append(source)
+
+        if not swig_sources:
+            return new_sources
+
+        includes = self.swig_inc
+        if type(includes) is type(''):
+            includes = string.split(includes, ':')
+            includes = map(lambda x: '-I'+x, includes)
+            includes = string.join(includes)
+        
+        swig = self.find_swig()
+##        swig_cmd = [swig, "-python", "-d%s" % self.swig_doc,  includes]
+        swig_cmd = [swig, '-v', '-python', '-d%s' % self.swig_doc,  includes]
+        if self.swig_cpp:
+            swig_cmd.append('-c++')
+
+        if self.swig_shadow:
+            swig_cmd.append('-shadow')
+## swig1.1            swig_cmd.append('-docstring')
+
+        for source in swig_sources:
+            target = swig_targets[source]
+            self.announce('swigging %s to %s' % (source, target))
+            self.spawn(swig_cmd + ['-o', target, source])
+
+        return new_sources
+
+    # swig_sources ()
+###############################################################################
+##      End of improved swig support
+###############################################################################
+
+package = '@PACKAGE@'
+version = '@VERSION@'
+include_dirs = ['@top_srcdir@']
+lib_dirs = ['@top_srcdir@/@PACKAGE@']
+libraries = ['@PACKAGE@', 'stdc++']
+
+setup(name = package,
+      version = version,
+      description = '',
+      author = '',
+      author_email = '',
+      url = 'http://',
+
+      cmdclass = {'build_ext': build_swig_ext},
+      ext_modules = [Extension(package+'cmodule',
+                               [package+'.i'],
+                               include_dirs=include_dirs,
+                               library_dirs=lib_dirs,
+                               libraries=libraries,
+                               )],
+      options = {'build_ext':
+                 {'swig_doc': 'html',
+                  'swig_cpp': not None,
+                  'swig_shadow': not None}
+                 }
+      )

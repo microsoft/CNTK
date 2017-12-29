@@ -1,0 +1,19 @@
+These examples show how to build a chicken extension module in the form of an
+egg.  There are two eggs that get built, single.egg which contains a single
+module which is built with -nounit and multi.egg, which contains two modules
+mod1 and mod2.  These are built normally, and multi_init.scm loads them both.
+Read section "17.4.2 Building chicken extension libraries" in the manual
+for a description of these two techniques.
+
+To build:
+
+$ make
+$ make setup
+$ make run
+
+$ make clean
+
+The eggs are built into an eggs subdirectory, because chicken-setup has
+problems installing eggs when there are other files named similar in
+the same directory.  The make setup step runs chicken-setup to install
+the eggs into the eggs/install directory.

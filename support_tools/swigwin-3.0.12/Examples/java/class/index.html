@@ -1,0 +1,162 @@
+<html>
+<head>
+<title>SWIG:Examples:java:class</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+
+<tt>SWIG/Examples/java/class/</tt>
+<hr>
+
+<H2>Wrapping a simple C++ class</H2>
+
+<p>
+This example illustrates the high level form of C++ class wrapping performed
+by SWIG.  In this case, a C++ class has a proxy Java class, which 
+provides access to C++ class members.
+
+<h2>The C++ Code</h2>
+
+Suppose you have some C++ classes described by the following (and admittedly lame) 
+header file:
+
+<blockquote>
+<pre>
+/* File : example.h */
+
+class Shape {
+public:
+  Shape() {
+    nshapes++;
+  }
+  virtual ~Shape() {
+    nshapes--;
+  }
+  double  x, y;
+  void    move(double dx, double dy);
+  virtual double area() = 0;
+  virtual double perimeter() = 0;
+  static  int nshapes;
+};
+
+class Circle : public Shape {
+private:
+  double radius;
+public:
+  Circle(double r) : radius(r) { }
+  virtual double area();
+  virtual double perimeter();
+};
+
+class Square : public Shape {
+private:
+  double width;
+public:
+  Square(double w) : width(w) { }
+  virtual double area();
+  virtual double perimeter();
+};
+</pre>
+</blockquote>
+
+<h2>The SWIG interface</h2>
+
+A simple SWIG interface for this can be built by simply grabbing the header file
+like this:
+
+<blockquote>
+<pre>
+/* File : example.i */
+%module example
+
+%{
+#include "example.h"
+%}
+
+/* Let's just grab the original header file here */
+%include "example.h"
+</pre>
+</blockquote>
+
+Note: when creating a C++ extension, you must run SWIG with the <tt>-c++</tt> option like this:
+<blockquote>
+<pre>
+% swig -c++ -java example.i
+</pre>
+</blockquote>
+
+<h2>A sample Java program</h2>
+
+Click <a href="runme.java">here</a> to see a Java program that calls the C++ functions from Java.
+
+<h2>Key points</h2>
+
+<ul>
+<li>To create a new object, you call a constructor like this:
+
+<blockquote>
+<pre>
+Circle c = new Circle(10);
+</pre>
+</blockquote>
+
+<p>
+<li>To access member data, a pair of accessor functions are used.
+For example:
+
+<blockquote>
+<pre>
+c.setX(15);        // Set member data
+x = c.getX();      // Get member data
+</pre>
+</blockquote>
+
+<p>
+<li>To invoke a member function, you simply do this
+
+<blockquote>
+<pre>
+System.out.println( "The area is " + c.area() );
+</pre>
+</blockquote>
+
+<p>
+<li>To invoke a destructor, simply do this
+
+<blockquote>
+<pre>
+c.delete();     // Deletes a shape
+</pre>
+</blockquote>
+
+<p>
+<li>Static member variables are wrapped with java static get and set access functions.  For example:
+
+<blockquote>
+<pre>
+n = Shape.getNshapes();     // Get a static data member
+Shape.setNshapes(13);       // Set a static data member
+</pre>
+</blockquote>
+
+</ul>
+
+<h2>General Comments</h2>
+
+<ul>
+<li>This high-level interface using proxy classes is not the only way to handle C++ code. 
+A low level interface using C functions to access member variables and member functions is the alternative SWIG
+approach. This entails passing around the C pointer or C++ 'this' pointer and as such it is not difficult to crash the JVM. 
+The abstraction of the underlying pointer by the java proxy classes far better fits the java programming paradigm.
+
+<p>
+<li>SWIG <b>does</b> know how to properly perform upcasting of objects in an inheritance
+hierarchy (including multiple inheritance).  However Java classes can only derive from one base class so multiple inheritance
+is not implemented. Java classes can implement more than one interface so there is scope for improvement in the future. 
+
+</ul>
+
+<hr>
+</body>
+</html>

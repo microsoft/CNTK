@@ -1,0 +1,17 @@
+# see top-level Makefile.in
+callback
+class
+constants
+contract
+enum
+extend
+funcptr
+funcptr2
+functor
+operator
+module_load
+pointer
+reference
+simple
+template
+variables

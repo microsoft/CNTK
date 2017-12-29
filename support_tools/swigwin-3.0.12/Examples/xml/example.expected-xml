@@ -1,0 +1,23 @@
+<swigxml:swig name="namespaces" xmlns:swigxml="http://jniplusplus.sourceforge.net" xmlns:swig="http://swig.sourceforge.net" xmlns:c="http://www.ansi.org" >
+  <swig:top >
+    <swigxml:child >
+      <swig:file name="../../Lib/swig.swg" >
+        <swigxml:type string="include"  />
+      </swig:file>
+      <swig:file name="example.i" >
+        <swigxml:child >
+          <swig:module name="example"  />
+          <swig:apply name="OUTPUT" >
+            <swigxml:parms >
+              <swigxml:none name="r" >
+                <swigxml:type string="p.int"  />
+              </swigxml:none>
+            </swigxml:parms>
+            <swigxml:type string="p.int"  />
+          </swig:apply>
+        </swigxml:child>
+        <swigxml:type string="include"  />
+      </swig:file>
+    </swigxml:child>
+  </swig:top>
+</swigxml:swig>

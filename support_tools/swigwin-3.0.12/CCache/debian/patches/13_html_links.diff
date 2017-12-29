@@ -1,0 +1,33 @@
+--- web/index.html~	2004-09-13 13:38:30.000000000 +0300
++++ web/index.html	2004-09-26 01:04:38.458008118 +0300
+@@ -29,10 +29,10 @@
+ <li>fixed handling of HOME environment variable
+ </ul>
+ 
+-See the <a href="/ccache/ccache-man.html">manual page</a> for details
++See the <a href="ccache-man.html">manual page</a> for details
+ on the new options.<p>
+ 
+-You can get this release from the <a href="/ftp/ccache/">download directory</a> 
++You can get this release from the <a href="http://ccache.samba.org/ftp/ccache/">download directory</a> 
+ 
+ <p>NOTE! This release changes the hash input slighly, so you will
+ probably find that you will not get any hits against your existing
+@@ -87,7 +87,7 @@
+ 
+ <h2>Documentation</h2>
+ 
+-See the <a href="/ccache/ccache-man.html">manual page</a>
++See the <a href="ccache-man.html">manual page</a>
+ 
+ 
+ <h2>Performance</h2>
+@@ -116,7 +116,7 @@
+ <h2>Download</h2>
+ 
+ You can download the latest release from the <a
+-href="/ftp/ccache/">download directory</a>.<p>
++href="http://ccache.samba.org/ftp/ccache/">download directory</a>.<p>
+ 
+ For the bleeding edge, you can fetch ccache via CVS or
+ rsync. To fetch via cvs use the following command:

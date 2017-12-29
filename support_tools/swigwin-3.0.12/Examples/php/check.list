@@ -1,0 +1,19 @@
+# see top-level Makefile.in
+# (see also top-level configure.ac kludge)
+callback
+class
+constants
+cpointer
+disown
+enum
+extend
+funcptr
+overloading
+pointer
+pragmas
+proxy
+reference
+simple
+sync
+value
+variables

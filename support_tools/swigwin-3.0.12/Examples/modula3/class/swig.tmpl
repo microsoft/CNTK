@@ -1,0 +1,11 @@
+
+readonly proc cxx_source (X) is
+  local cxxfile = X&".cxx"
+  local objfile = X&".o"
+  %exec("echo $PWD")
+  if stale(objfile,cxxfile)
+    exec("cd",path(),"; g++ -I.. -c -o",objfile,cxxfile)
+  end
+  import_obj(X)
+  %unlink_file(path()&SL&objfile)
+end

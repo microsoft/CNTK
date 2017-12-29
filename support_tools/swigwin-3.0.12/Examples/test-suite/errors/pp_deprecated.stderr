@@ -1,0 +1,4 @@
+pp_deprecated.i:4: Warning 101: %extern is deprecated. Use %import instead.
+pp_deprecated.i:4: Error: Unable to find 'ext;'
+pp_deprecated.i:6: Warning 204: CPP #warning, "Print this warning".
+pp_deprecated.i:8: Error: CPP #error "This is an error". Use the -cpperraswarn option to continue swig processing.

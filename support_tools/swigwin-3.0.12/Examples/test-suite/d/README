@@ -1,0 +1,7 @@
+D language module testsuite
+---------------------------
+
+Please see ../README for the common readme file.
+
+By default the D1 version is built, set D_VERSION=2 (in the environment or at
+the make command line) to run it for D2 instead.

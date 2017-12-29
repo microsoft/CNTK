@@ -1,0 +1,23 @@
+--- ccache.c	(révision 8804)
++++ ccache.c	(copie de travail)
+@@ -481,6 +481,9 @@
+ 		return;
+ 	}
+ 
++	/* update timestamps for LRU cleanup
++	   also gives output_file a sensible mtime when hard-linking (for make) */
++	utime(hashname, NULL);
+ 	utime(stderr_file, NULL);
+ 
+ 	if (strcmp(output_file, "/dev/null") == 0) {
+@@ -513,10 +516,6 @@
+ 			failed();
+ 		}
+ 	}
+-	if (ret == 0) {
+-		/* update the mtime on the file so that make doesn't get confused */
+-		utime(output_file, NULL);
+-	}
+ 
+ 	/* get rid of the intermediate preprocessor file */
+ 	if (i_tmpfile) {

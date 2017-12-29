@@ -1,0 +1,48 @@
+Index: ccache.1
+===================================================================
+RCS file: /cvsroot/ccache/ccache.1,v
+retrieving revision 1.26
+diff -u -r1.26 ccache.1
+--- ccache.1	24 Nov 2005 21:10:08 -0000	1.26
++++ ccache.1	21 Jul 2007 21:03:32 -0000
+@@ -330,7 +330,7 @@
+ .IP o 
+ Use the same \fBCCACHE_DIR\fP environment variable setting
+ .IP o 
+-Set the \fBCCACHE_NOLINK\fP environment variable
++Unset the \fBCCACHE_HARDLINK\fP environment variable
+ .IP o 
+ Make sure everyone sets the CCACHE_UMASK environment variable
+ to 002, this ensures that cached files are accessible to everyone in
+Index: ccache.yo
+===================================================================
+RCS file: /cvsroot/ccache/ccache.yo,v
+retrieving revision 1.27
+diff -u -r1.27 ccache.yo
+--- ccache.yo	24 Nov 2005 21:54:09 -0000	1.27
++++ ccache.yo	21 Jul 2007 21:03:32 -0000
+@@ -289,7 +289,7 @@
+ 
+ itemize(
+   it() Use the same bf(CCACHE_DIR) environment variable setting
+-  it() Set the bf(CCACHE_NOLINK) environment variable
++  it() Unset the bf(CCACHE_HARDLINK) environment variable
+   it() Make sure everyone sets the CCACHE_UMASK environment variable
+   to 002, this ensures that cached files are accessible to everyone in
+   the group.
+Index: web/ccache-man.html
+===================================================================
+RCS file: /cvsroot/ccache/web/ccache-man.html,v
+retrieving revision 1.25
+diff -u -r1.25 ccache-man.html
+--- web/ccache-man.html	13 Sep 2004 10:38:17 -0000	1.25
++++ web/ccache-man.html	21 Jul 2007 21:03:32 -0000
+@@ -256,7 +256,7 @@
+ following conditions need to be met:
+ <p><ul>
+   <li > Use the same <strong>CCACHE_DIR</strong> environment variable setting
+-  <li > Set the <strong>CCACHE_NOLINK</strong> environment variable
++  <li > Unset the <strong>CCACHE_HARDLINK</strong> environment variable
+   <li > Make sure everyone sets the CCACHE_UMASK environment variable
+   to 002, this ensures that cached files are accessible to everyone in
+   the group.

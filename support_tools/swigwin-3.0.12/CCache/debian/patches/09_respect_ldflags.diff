@@ -1,0 +1,11 @@
+--- Makefile.in.orig	2008-03-23 17:01:19.000000000 +1300
++++ Makefile.in	2008-03-23 17:03:03.000000000 +1300
+@@ -21,7 +21,7 @@
+ docs: ccache.1 web/ccache-man.html
+ 
+ ccache$(EXEEXT): $(OBJS) $(HEADERS)
+-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
++	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+ 
+ ccache.1: ccache.yo
+ 	-yodl2man -o ccache.1 ccache.yo

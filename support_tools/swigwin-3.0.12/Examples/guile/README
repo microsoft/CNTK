@@ -1,0 +1,15 @@
+This directory contains examples for Guile.
+
+constants   -- handling #define and %constant literals
+class       -- classic c++ class example
+matrix      -- a very simple Matrix example
+multimap    -- typemaps with multiple sub-types
+multivalue  -- using the %values_as_list directive
+port        -- scheme ports as temporary FILE streams
+simple      -- the simple example from the user manual
+std_vector  -- C++ STL vector<int> and vector<double>
+
+
+Note that the examples in this directory build a special version of
+Guile which includes the wrapped functions in the top-level module.
+

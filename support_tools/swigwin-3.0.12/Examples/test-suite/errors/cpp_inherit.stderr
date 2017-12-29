@@ -1,0 +1,20 @@
+cpp_inherit.i:18: Warning 309: private inheritance from base 'A3' (ignored).
+cpp_inherit.i:20: Warning 309: private inheritance from base 'A4' (ignored).
+cpp_inherit.i:28: Warning 309: protected inheritance from base 'A8< double >' (ignored).
+cpp_inherit.i:39: Warning 319: No access specifier given for base class 'B1' (ignored).
+cpp_inherit.i:40: Warning 319: No access specifier given for base class 'B2< int >' (ignored).
+cpp_inherit.i:15: Warning 401: Base class 'A1' undefined.
+cpp_inherit.i:33: Warning 401: 'A1' must be defined before it is used as a base class.
+cpp_inherit.i:17: Warning 401: Nothing known about base class 'A2'. Ignored.
+cpp_inherit.i:22: Warning 402: Base class 'A5' is incomplete.
+cpp_inherit.i:4: Warning 402: Only forward declaration 'A5' was found.
+cpp_inherit.i:24: Error: 'A6' is not a valid base class.
+cpp_inherit.i:5: Error: See definition of 'A6'.
+cpp_inherit.i:24: Warning 401: Nothing known about base class 'A6'. Ignored.
+cpp_inherit.i:26: Warning 401: Nothing known about base class 'A7< int >'. Ignored.
+cpp_inherit.i:26: Warning 401: Maybe you forgot to instantiate 'A7< int >' using %template.
+cpp_inherit.i:45: Warning 323: Recursive scope inheritance of 'Recursive'.
+cpp_inherit.i:52: Warning 401: Base class 'Base< int >' has no name as it is an empty template instantiated with '%template()'. Ignored.
+cpp_inherit.i:51: Warning 401: The %template directive must be written before 'Base< int >' is used as a base class and be declared with a name.
+cpp_inherit.i:53: Warning 401: Base class 'Base< double >' undefined.
+cpp_inherit.i:54: Warning 401: 'Base< double >' must be defined before it is used as a base class.

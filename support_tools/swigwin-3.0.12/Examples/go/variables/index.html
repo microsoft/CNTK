@@ -1,0 +1,87 @@
+<html>
+<head>
+<title>SWIG:Examples:go:variables</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+<tt>SWIG/Examples/go/variables/</tt>
+<hr>
+
+<H2>Wrapping C Global Variables</H2>
+
+<p>
+When a C global variable appears in an interface file, SWIG provides
+getter and setter functions for the variable.  The getter function is
+named <tt>Get</tt> followed by the capitalized name of the variable.
+The setter variable starts with <tt>Set</tt> instead.  The getter
+function takes no parameters and returns the value of the variable.
+The setter function takes a single parameter with the same type as the
+variable, and returns nothing.
+
+<p>Click <a href="example.i">here</a> to see a SWIG interface with
+some variable declarations in it.
+
+<h2>Manipulating Variables from Go</h2>
+
+For example, if the package is called <tt>example</tt>, the global
+variable
+
+<blockquote>
+<pre>
+double foo;
+</pre>
+</blockquote>
+
+will be accessed from Go as
+<blockquote>
+<pre>
+example.GetFoo();
+example.SetFoo(12.3);
+</pre>
+</blockquote>
+
+Click <a href="runme.go">here</a> to see the example program that
+updates and prints out the values of the variables using this
+technique.
+
+<h2>Key points</h2>
+
+<ul>
+<li>The name of the variable is capitalized.
+<li>When a global variable has the type "<tt>char *</tt>", SWIG
+manages it as a character string.
+<li><tt>signed char</tt> and <tt>unsigned char</tt> are handled as
+small 8-bit integers.
+<li>String array variables such as '<tt>char name[256]</tt>' are
+managed as Go strings, but when setting the value, the result is
+truncated to the maximum length of the array.  Furthermore, the string
+is assumed to be null-terminated.
+<li>When structures and classes are used as global variables, they are
+mapped into pointers.  Getting the "value" returns a pointer to the
+global variable.  Setting the value of a structure results in a memory
+copy from a pointer to the global.
+</ul>
+
+<h2>Creating read-only variables</h2>
+
+The <tt>%immutable</tt> and <tt>%mutable</tt> directives can be used
+to specify a collection of read-only variables.  A read only variable
+will have a getter function but no setter function.  For example:
+
+<blockquote>
+<pre>
+%immutable;
+int    status;
+double blah;
+...
+%mutable;
+</pre>
+</blockquote>
+
+The <tt>%immutable</tt> directive remains in effect until it is
+explicitly disabled using the <tt>%mutable</tt> directive.
+
+</body>
+</html>
+<hr>

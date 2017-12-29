@@ -1,0 +1,80 @@
+#######################################################################
+# Makefile for php5 test-suite
+#######################################################################
+
+LANGUAGE     = php5
+SCRIPTSUFFIX = _runme.php
+
+srcdir       = @srcdir@
+top_srcdir   = @top_srcdir@
+top_builddir = @top_builddir@
+
+CPP_TEST_CASES += \
+	callback \
+	li_factory \
+	php_iterator \
+	php_namewarn_rename \
+
+include $(srcdir)/../common.mk
+
+# Overridden variables here
+TARGETPREFIX =# Should be php_ for Windows, empty otherwise
+
+# Custom tests - tests with additional commandline options
+prefix.cpptest: SWIGOPT += -prefix Project
+
+# write out tests without a _runme.php
+missingcpptests:
+	for test in $(CPP_TEST_CASES) ; do test -f $${test}_runme.php || echo $${test}; done
+
+missingctests:
+	for test in $(C_TEST_CASES) ; do test -f $${test}_runme.php || echo $${test}; done
+
+missingtests: missingcpptests missingctests
+
+# Rules for the different types of tests
+%.cpptest:
+	$(setup)
+	+$(swig_and_compile_cpp)
+	+$(run_testcase)
+
+%.ctest:
+	$(setup)
+	+$(swig_and_compile_c)
+	+$(run_testcase)
+
+%.multicpptest:
+	$(setup)
+	+$(swig_and_compile_multi_cpp)
+	+$(run_testcase)
+
+# Smart target
+%.test:
+	@echo ' $(C_TEST_CASES) '|grep -F -v ' $* ' >/dev/null ||\
+	    $(MAKE) $*.ctest
+	@echo ' $(CPP_TEST_CASES) '|grep -F -v ' $* ' >/dev/null ||\
+	    $(MAKE) $*.cpptest
+	@echo ' $(MULTI_CPP_TEST_CASES) '|grep -F -v ' $* ' >/dev/null ||\
+	    $(MAKE) $*.multicpptest
+
+# Runs the testcase. Tries to run testcase_runme.php, and if that's not
+# found, runs testcase.php, except for multicpptests.
+run_testcase = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile PHP5_SCRIPT=$(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) RUNTOOL='$(RUNTOOL)' php5_run; \
+	elif [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*.php -a ! -f $(top_srcdir)/$(EXAMPLES)/$(TEST_SUITE)/$*.list ]; then \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile PHP5_SCRIPT=$(SCRIPTDIR)/$(SCRIPTPREFIX)$*.php RUNTOOL='$(RUNTOOL)' php5_run; \
+	fi
+
+# Clean: remove the generated .php file
+%.clean:
+	@rm -f $*.php php_$*.h
+
+clean:
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' php5_clean
+	rm -f clientdata_prop_a.php clientdata_prop_b.php php_clientdata_prop_a.h php_clientdata_prop_b.h
+	rm -f import_stl_a.php import_stl_b.php php_import_stl_a.h php_import_stl_b.h
+	rm -f imports_a.php imports_b.php php_imports_a.h php_imports_b.h
+	rm -f mod_a.php mod_b.php php_mod_a.h php_mod_b.h
+	rm -f multi_import_a.php multi_import_b.php php_multi_import_a.h php_multi_import_b.h
+	rm -f packageoption_a.php packageoption_b.php packageoption_c.php php_packageoption_a.h php_packageoption_b.h php_packageoption_c.h

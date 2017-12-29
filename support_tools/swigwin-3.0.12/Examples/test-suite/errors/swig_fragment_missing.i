@@ -1,0 +1,4 @@
+%module xxx
+
+%fragment("awol");
+

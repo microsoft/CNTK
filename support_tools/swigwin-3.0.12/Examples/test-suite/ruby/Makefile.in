@@ -1,0 +1,72 @@
+#######################################################################
+# Makefile for ruby test-suite
+#######################################################################
+
+LANGUAGE     = ruby
+RUBY         = @RUBY@
+SCRIPTSUFFIX = _runme.rb
+
+srcdir       = @srcdir@
+top_srcdir   = @top_srcdir@
+top_builddir = @top_builddir@
+
+CPP_TEST_CASES = \
+	li_cstring \
+	li_factory \
+	li_std_functors \
+	li_std_multimap \
+	li_std_pair_lang_object \
+	li_std_queue \
+	li_std_set \
+	li_std_stack \
+	primitive_types \
+	ruby_keywords \
+	ruby_minherit_shared_ptr \
+	ruby_naming \
+	ruby_track_objects \
+	ruby_track_objects_directors \
+	std_containers
+#	ruby_li_std_speed
+#	stl_new
+
+C_TEST_CASES += \
+	li_cstring \
+	ruby_manual_proxy \
+
+include $(srcdir)/../common.mk
+
+# Overridden variables here
+SWIGOPT += -w801 -noautorename -features autodoc=4
+
+# Custom tests - tests with additional commandline options
+ruby_naming.cpptest: SWIGOPT += -autorename
+
+# Rules for the different types of tests
+%.cpptest:
+	$(setup)
+	+$(swig_and_compile_cpp)
+	$(run_testcase)
+
+%.ctest:
+	$(setup)
+	+$(swig_and_compile_c)
+	$(run_testcase)
+
+%.multicpptest:
+	$(setup)
+	+$(swig_and_compile_multi_cpp)
+	$(run_testcase)
+
+# Runs the testcase. A testcase is only run if
+# a file is found which has _runme.rb appended after the testcase name.
+run_testcase = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
+	  env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) $(RUBY) $(RUBYFLAGS) -I$(srcdir):. $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX); \
+	fi
+
+# Clean
+%.clean:
+	@exit 0
+
+clean:
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' ruby_clean

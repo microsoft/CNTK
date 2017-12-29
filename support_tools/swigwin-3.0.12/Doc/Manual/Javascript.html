@@ -1,0 +1,999 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="./style.css">
+<title></title>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+<body>
+
+<H1><a name="Javascript">26 SWIG and Javascript</a></H1>
+<!-- INDEX -->
+<div class="sectiontoc">
+<ul>
+<li><a href="#Javascript_overview">Overview</a>
+<li><a href="#Javascript_preliminaries">Preliminaries</a>
+<ul>
+<li><a href="#Javascript_running_swig">Running SWIG</a>
+<li><a href="#Javascript_running_tests_examples">Running Tests and Examples</a>
+<li><a href="#Javascript_known_issues">Known Issues</a>
+</ul>
+<li><a href="#Javascript_integration">Integration</a>
+<ul>
+<li><a href="#Javascript_node_extensions">Creating node.js Extensions</a>
+<ul>
+<li><a href="#Javascript_troubleshooting">Troubleshooting</a>
+</ul>
+<li><a href="#Javascript_embedded_webkit">Embedded Webkit</a>
+<ul>
+<li><a href="#Javascript_osx">Mac OS X</a>
+<li><a href="#Javascript_gtk">GTK</a>
+</ul>
+<li><a href="#Javascript_applications_webkit">Creating Applications with node-webkit</a>
+</ul>
+<li><a href="#Javascript_examples">Examples</a>
+<ul>
+<li><a href="#Javascript_simple_example">Simple</a>
+<li><a href="#Javascript_class_example">Class</a>
+</ul>
+<li><a href="#Javascript_implementation">Implementation</a>
+<ul>
+<li><a href="#Javascript_source_code">Source Code</a>
+<li><a href="#Javascript_code_templates">Code Templates</a>
+<li><a href="#Javascript_emitter">Emitter</a>
+<li><a href="#Javascript_emitter_states">Emitter states</a>
+<li><a href="#Javascript_jsc_exceptions">Handling Exceptions in JavascriptCore</a>
+</ul>
+</ul>
+</div>
+<!-- INDEX -->
+
+
+
+<p>This chapter describes SWIG's support of Javascript. It does not cover SWIG basics, but only information that is specific to this module.</p>
+
+<H2><a name="Javascript_overview">26.1 Overview</a></H2>
+
+
+<p>Javascript is a prototype-based scripting language that is dynamic, weakly typed and has first-class functions. Its arguably the most popular language for web development.
+Javascript has gone beyond being a browser-based scripting language and with <a href="http://nodejs.org">node.js</a>, it is also used as a backend development language.</p>
+<p>Native Javascript extensions can be used for applications that embed a web-browser view or that embed a Javascript engine (such as <em>node.js</em>). Extending a general purpose web-browser is not possible as this would be a severe security issue.</p>
+<p>SWIG Javascript currently supports <strong>JavascriptCore</strong>, the Javascript engine used by <code>Safari/Webkit</code>, and <a href="https://developers.google.com/v8"><strong>v8</strong></a>, which is used by <code>Chromium</code> and <code>node.js</code>.</p>
+<p><a href="http://www.webkit.org/">WebKit</a> is a modern browser implementation available as open-source which can be embedded into an application.
+With <a href="https://github.com/rogerwang/node-webkit">node-webkit</a> there is a platform which uses Google's <code>Chromium</code> as Web-Browser widget and <code>node.js</code> for javascript extensions.
+</p>
+
+<H2><a name="Javascript_preliminaries">26.2 Preliminaries</a></H2>
+
+
+<H3><a name="Javascript_running_swig">26.2.1 Running SWIG</a></H3>
+
+
+<p>Suppose that you defined a SWIG module such as the following:</p>
+<div class="code">
+<pre>
+%module example
+%{
+#include "example.h"
+%}
+int gcd(int x, int y);
+extern double Foo;</pre>
+</div>
+<p>To build a Javascript module, run SWIG using the <code>-javascript</code> option and a desired target engine <code>-jsc</code>, <code>-v8</code>, or <code>-node</code>. The generator for <code>node</code> is essentially delegating to the <code>v8</code> generator and adds some necessary preprocessor definitions.</p>
+<div class="shell">
+<pre>
+$ swig -javascript -jsc example.i</pre>
+</div>
+<p>If building a C++ extension, add the -c++ option:</p>
+<div class="shell">
+<pre>
+$ swig -c++ -javascript -jsc example.i</pre>
+</div>
+<p>The V8 code that SWIG generates should work with most versions from 3.11.10 up to 3.29.14 and later.</p>
+<p>The API headers for V8 &gt;= 4.3.0 define constants which SWIG can use to
+determine the V8 version it is compiling for.  For versions &lt; 4.3.0, you
+need to specify the V8 version when running SWIG.  This is specified as a hex
+constant, but the constant is read as pairs of decimal digits, so for V8
+3.25.30 use constant 0x032530.  This scheme can't represent components &gt; 99,
+but this constant is only useful for V8 &lt; 4.3.0, and no V8 versions from
+that era had a component &gt; 99.  For example:</p>
+<div class="shell">
+<pre>
+$ swig -c++ -javascript -v8 -DV8_VERSION=0x032530 example.i</pre>
+</div>
+<p>If you're targetting V8 &gt;= 4.3.0, you would just run swig like so:</p>
+<div class="shell">
+<pre>
+$ swig -c++ -javascript -v8 example.i</pre>
+</div>
+<p>This creates a C/C++ source file <code>example_wrap.c</code> or <code>example_wrap.cxx</code>. The generated C source file contains the low-level wrappers that need to be compiled and linked with the rest of your C/C++ application to create an extension module.</p>
+<p>The name of the wrapper file is derived from the name of the input file. For example, if the input file is <code>example.i</code>, the name of the wrapper file is <code>example_wrap.c</code>. To change this, you can use the -o option. The wrapped module will export one function which must be called to register the module with the Javascript interpreter. For example, if your module is named <code>example</code> the corresponding initializer for JavascriptCore would be</p>
+<div class="code">
+<pre>
+bool example_initialize(JSGlobalContextRef context, JSObjectRef *exports)</pre>
+</div>
+<p>and for v8:</p>
+<div class="code">
+<pre>
+void example_initialize(v8::Handle&lt;v8::Object&gt; exports)</pre>
+</div>
+<p>
+<b>Note</b>: be aware that <code>v8</code> has a C++ API, and thus, the generated modules must be compiled as C++.
+</p>
+
+<H3><a name="Javascript_running_tests_examples">26.2.2 Running Tests and Examples</a></H3>
+
+
+<p>The configuration for tests and examples currently supports Linux and Mac only and not MinGW (Windows) yet.</p>
+<p>The default interpreter is <code>node.js</code> as it is available on all platforms and convenient to use.</p>
+<p>Running the examples with JavascriptCore requires <code>libjavascriptcoregtk-1.0</code> to be installed, e.g., under Ubuntu with</p>
+<div class="shell">
+<pre>
+$ sudo apt-get install libjavascriptcoregtk-1.0-dev</pre>
+</div>
+<p>Running with <code>V8</code> requires <code>libv8</code>:</p>
+<div class="shell">
+<pre>
+$ sudo apt-get install libv8-dev</pre>
+</div>
+<p>Examples can be run using</p>
+<div class="shell">
+<pre>
+$ make check-javascript-examples ENGINE=jsc</pre>
+</div>
+<p><code>ENGINE</code> can be <code>node</code>, <code>jsc</code>, or <code>v8</code>.</p>
+<p>The test-suite can be run using</p>
+<div class="shell">
+<pre>
+$ make check-javascript-test-suite ENGINE=jsc</pre>
+</div>
+<p>You can specify a specific <code>V8</code> version for running the examples and tests</p>
+<div class="shell">
+<pre>
+$ make check-javascript-examples V8_VERSION=0x032530 ENGINE=v8</pre>
+</div>
+
+<H3><a name="Javascript_known_issues">26.2.3 Known Issues</a></H3>
+
+
+<p>At the moment, the Javascript generators pass all tests syntactically, i.e., the generated source code compiles. However, there are still remaining runtime issues.</p>
+
+<ul>
+    <li><p>Default optional arguments do not work for all targeted interpreters</p></li>
+    <li><p>Multiple output arguments do not work for JSC</p></li>
+    <li><p>C89 incompatibily: the JSC generator might still generate C89 violating code</p></li>
+    <li><p><code>long long</code> is not supported</p></li>
+    <li><p><code>%native</code> is not supported</p></li>
+    <li><p>Javascript callbacks are not supported</p></li>
+    <li><p><code>instanceOf</code> does not work under JSC</p></li>
+</ul>
+
+<p>The primary development environment has been Linux (Ubuntu 12.04). Windows and Mac OS X have been tested sporadically. Therefore, the generators might have more issues on those platforms. Please report back any problem you observe to help us improving this module quickly.</p>
+
+<H2><a name="Javascript_integration">26.3 Integration</a></H2>
+
+
+<p>This chapter gives a short introduction how to use a native Javascript extension: as a <code>node.js</code> module, and as an extension for an embedded Webkit.</p>
+
+<H3><a name="Javascript_node_extensions">26.3.1 Creating node.js Extensions</a></H3>
+
+
+<p>To install <code>node.js</code> you can download an installer from their <a href="https://launchpad.net/~chris-lea/+archive/node.js">web-site</a> for Mac OS X and Windows. For Linux you can either build the source yourself and run <code>sudo checkinstall</code> or keep to the (probably stone-age) packaged version. For Ubuntu there is a <a href="https://launchpad.net/~chris-lea/+archive/ubuntu/node.js/">PPA</a> available.</p>
+<div class="shell">
+<pre>
+$ sudo add-apt-repository ppa:chris-lea/node.js
+$ sudo apt-get update
+$ sudo apt-get install nodejs</pre>
+</div>
+<p>As <code>v8</code> is written in C++ and comes as a C++ library it is crucial to compile your module using the same compiler flags as used for building v8. To make things easier, <code>node.js</code> provides a build tool called <code>node-gyp</code>.</p>
+<p>You have to install it using <code>npm</code>:</p>
+<div class="shell">
+<pre>
+$ sudo npm install -g node-gyp</pre>
+</div>
+<p><code>node-gyp</code> expects a configuration file named <code>binding.gyp</code> which is basically in JSON format and conforms to the same format that is used with Google's build-tool <code>gyp</code>.</p>
+<p><code>binding.gyp</code>:</p>
+<div class="code">
+<pre>
+{
+  "targets": [
+    {
+      "target_name": "example",
+      "sources": [ "example.cxx", "example_wrap.cxx" ]
+    }
+  ]
+}</pre>
+</div>
+<p>First create the wrapper using SWIG:</p>
+<div class="shell">
+<pre>
+$ swig -javascript -node -c++ example.i</pre>
+</div>
+<p>Then run <code>node-gyp build</code> to actually create the module:</p>
+<div class="shell">
+<pre>
+$ node-gyp build</pre>
+</div>
+<p>This will create a <code>build</code> folder containing the native module. To use the extension you need to 'require' it in your Javascript source file:</p>
+<div class="code">
+<pre>
+require("./build/Release/example")</pre>
+</div>
+<p>A more detailed explanation is given in the <a href="#Javascript_examples">Examples</a> section.</p>
+
+<H4><a name="Javascript_troubleshooting">26.3.1.1 Troubleshooting</a></H4>
+
+
+<ul>
+<li><em>'module' object has no attribute 'script_main'</em></li>
+</ul>
+<p>This error happens when <code>gyp</code> is installed as a distribution package. It seems to be outdated. Removing it resolves the problem.</p>
+<div class="shell">
+<pre>
+$ sudo apt-get remove gyp</pre>
+</div>
+
+<H3><a name="Javascript_embedded_webkit">26.3.2 Embedded Webkit</a></H3>
+
+
+<p>Webkit is pre-installed on Mac OS X and available as a library for GTK.</p>
+
+<H4><a name="Javascript_osx">26.3.2.1 Mac OS X</a></H4>
+
+
+<p>There is general information about programming with WebKit on <a href="https://developer.apple.com/library/mac/documentation/cocoa/conceptual/DisplayWebContent/DisplayWebContent.html">Apple Developer Documentation</a>. Details about <code>Cocoa</code> programming are not covered here.</p>
+<p>An integration of a native extension 'example' would look like this:</p>
+<div class="code">
+<pre>
+#import "appDelegate.h"
+
+extern bool example_initialize(JSGlobalContextRef context, JSObjectRef* exports);
+
+
+@implementation ExampleAppDelegate
+
+@synthesize webView;
+
+- (void)addGlobalObject:(JSContextRef) context:(NSString *)objectName:(JSObjectRef) theObject {
+  JSObjectRef global = JSContextGetGlobalObject(context);
+  JSStringRef objectJSName = JSStringCreateWithCFString( (CFStringRef) objectName )
+  if ( objectJSName != NULL ) {
+    JSObjectSetProperty(context, global, objectJSName, theObject, kJSPropertyAttributeReadOnly, NULL);
+    JSStringRelease( objectJSName );
+  }
+}
+
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+
+  // Start a webview with the bundled index.html file
+  NSString *path = [[NSBundle mainBundle] bundlePath];
+  NSString *url =  [NSString stringWithFormat: @"file://%@/Contents/Assets/index.html", path];
+
+  WebFrame *webframe = [webView mainFrame];
+  JSGlobalContextRef context = [webframe globalContext];
+
+  JSObjectRef example;
+  example_initialize(context, &amp;example);
+  [self addGlobalObject:context:@"example":example]
+
+  JSObjectSetProperty(context, global, JSStringRef propertyName, example, JSPropertyAttributes attributes, NULL);
+
+  [ [webView mainFrame] loadRequest:
+    [NSURLRequest requestWithURL: [NSURL URLWithString:url] ]
+  ];
+}
+
+@end</pre>
+</div>
+
+<H4><a name="Javascript_gtk">26.3.2.2 GTK</a></H4>
+
+
+<p>There is general information about programming GTK at <a href="https://developer.gnome.org/gtk2/">GTK documentation</a> and in the <a href="https://developer.gnome.org/gtk-tutorial">GTK tutorial</a>, and for Webkit there is a <a href="http://webkitgtk.org/reference/webkitgtk/stable/index.html">Webkit GTK+ API Reference</a>.</p>
+<p>An integration of a native extension 'example' would look like this:</p>
+<div class="code">
+<pre>
+#include &lt;gtk/gtk.h&gt;
+#include &lt;webkit/webkit.h&gt;
+
+extern bool example_initialize(JSGlobalContextRef context);
+
+int main(int argc, char* argv[])
+{
+  // Initialize GTK+
+  gtk_init(&amp;argc, &amp;argv);
+
+  ...
+
+  // Create a browser instance
+  WebKitWebView *webView = WEBKIT_WEB_VIEW(webkit_web_view_new());
+  WebFrame *webframe = webkit_web_view_get_main_frame(webView);
+  JSGlobalContextRef context = webkit_web_frame_get_global_context(webFrame);
+  JSObjectRef global = JSContextGetGlobalObject(context);
+
+  JSObjectRef exampleModule;
+  example_initialize(context, &amp;exampleModule);
+  JSStringRef jsName = JSStringCreateWithUTF8CString("example");
+  JSObjectSetProperty(context, global, jsName, exampleModule, kJSPropertyAttributeReadOnly, NULL);
+  JSStringRelease(jsName);
+
+  ...
+
+  // Load a web page into the browser instance
+  webkit_web_view_load_uri(webView, "http://www.webkitgtk.org/");
+
+  ...
+
+  // Run the main GTK+ event loop
+  gtk_main();
+
+  return 0;
+}</pre>
+</div>
+
+<H3><a name="Javascript_applications_webkit">26.3.3 Creating Applications with node-webkit</a></H3>
+
+
+<p>To get started with <code>node-webkit</code> there is a very informative set of <a href="https://github.com/rogerwang/node-webkit/wiki">wiki pages</a>.</p>
+<p>Similar to <code>node.js</code>, <code>node-webkit</code> is started from command line within a <code>node.js</code> project directory.
+Native extensions are created in the very same way as for <code>node.js</code>, except that a customized <code>gyp</code> derivate has to be used: <a href="https://github.com/rogerwang/nw-gyp">nw-gyp</a>.
+</p>
+
+<p>
+A simple example would have the following structure:
+</p>
+
+<div class="code">
+<pre>
+- package.json
+- app.html
+- app.js
+- node_modules
+  / example
+  ... (as known from node.js)
+</pre>
+</div>
+
+<p>
+The configuration file essentially conforms to <code>node.js</code> syntax.
+It has some extras to configure <code>node-webkit</code>. See the <a href="https://github.com/rogerwang/node-webkit/wiki/Manifest-format">Manifest</a> specification for more details.
+</p>
+
+<p>
+<code>package.json</code>:
+</p>
+<div class="code">
+<pre>
+{
+  "name": "example",
+  "main": "app.html",
+  "window": {
+    "show": true,
+    "width": 800,
+    "height": 600
+  }
+}</pre>
+</div>
+
+<p>
+The <code>'main'</code> property of <code>package.json</code> specifies a web-page to be rendered in
+the main window.</p>
+
+<p>
+<code>app.html</code>:
+</p>
+
+<div class="code">
+<pre>
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;script src="app.js"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;div&gt;
+      The greatest common divisor of
+      &lt;span id="x"&gt;&lt;/span&gt; and
+      &lt;span id="y"&gt;&lt;/span&gt; is
+      &lt;span id="z"&gt;&lt;/span&gt;.
+    &lt;/div&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</pre>
+</div>
+
+<p>
+As known from <code>node.js</code> one can use <code>require</code> to load javascript modules.
+Additionally, <code>node-webkit</code> provides an API that allows to manipulate the window's menu,
+open new windows, and many more things.
+</p>
+
+<p>
+<code>app.js</code>:
+</p>
+
+<div class="code">
+<pre>window.onload = function() {
+  var example = require("example");
+  var x = 18;
+  var y = 24;
+  var z = example.gcd(x, y);
+  document.querySelector('#x').innerHTML = x;
+  document.querySelector('#y').innerHTML = y;
+  document.querySelector('#z').innerHTML = z;
+};</pre>
+</div>
+
+<H2><a name="Javascript_examples">26.4 Examples</a></H2>
+
+
+<p>Some basic examples are shown here in more detail.</p>
+
+<H3><a name="Javascript_simple_example">26.4.1 Simple</a></H3>
+
+
+<p>The common example <code>simple</code> looks like this:</p>
+<div class="code">
+<pre>
+/* File : example.i */
+%module example
+
+%inline %{
+extern int    gcd(int x, int y);
+extern double Foo;
+%}</pre>
+</div>
+<p>To make this available as a node extension a <code>binding.gyp</code> has to be created:</p>
+<div class="code">
+<pre>
+{
+  "targets": [
+    {
+      "target_name": "example",
+      "sources": [ "example.cxx", "example_wrap.cxx" ]
+    }
+  ]
+}</pre>
+</div>
+<p>Then <code>node-gyp</code> is used to build the extension:</p>
+<div class="shell">
+<pre>
+$ node-gyp configure build</pre>
+</div>
+<p>From a 'nodejs` application the extension would be used like this:</p>
+<div class="code">
+<pre>
+// import the extension via require
+var example = require("./build/Release/example");
+
+// calling the global method
+var x = 42;
+var y = 105;
+var g = example.gcd(x, y);
+
+// Accessing the global variable
+var f = example.Foo;
+example.Foo = 3.1415926;</pre>
+</div>
+<p>First the module <code>example</code> is loaded from the previously built extension. Global methods and variables are available in the scope of the module.</p>
+
+<p><b>Note</b>: ECMAScript 5, the currently implemented Javascript standard, does not have modules. <code>node.js</code> and other implementations provide this mechanism defined by the <a href="http://wiki.commonjs.org/wiki/CommonJS">CommonJS</a> group. For browsers this is provided by <a href="http://browserify.org">Browserify</a>, for instance.</p>
+
+<H3><a name="Javascript_class_example">26.4.2 Class</a></H3>
+
+
+<p>The common example <code>class</code> defines three classes, <code>Shape</code>, <code>Circle</code>, and <code>Square</code>:</p>
+<div class="code">
+<pre>
+class Shape {
+public:
+  Shape() {
+    nshapes++;
+  }
+  virtual ~Shape() {
+    nshapes--;
+  }
+  double  x, y;
+  void    move(double dx, double dy);
+  virtual double area(void) = 0;
+  virtual double perimeter(void) = 0;
+  static  int nshapes;
+};
+
+class Circle : public Shape {
+private:
+  double radius;
+public:
+  Circle(double r) : radius(r) { }
+  virtual double area(void);
+  virtual double perimeter(void);
+};
+
+class Square : public Shape {
+private:
+  double width;
+public:
+  Square(double w) : width(w) { }
+  virtual double area(void);
+  virtual double perimeter(void);
+};</pre>
+</div>
+<p><code>Circle</code> and <code>Square</code> inherit from <code>Shape</code>. <code>Shape</code> has a static variable <code>nshapes</code>, a function <code>move</code> that can't be overridden (non-virtual), and two abstract functions <code>area</code> and <code>perimeter</code> (pure virtual) that must be overridden by the sub-classes.</p>
+<p>A <code>nodejs</code> extension is built the same way as for the <code>simple</code> example.</p>
+<p>In Javascript it can be used as follows:</p>
+<div class="code">
+<pre>
+var example = require("./build/Release/example");
+
+// local aliases for convenience
+var Shape = example.Shape;
+var Circle = example.Circle;
+var Square = example.Square;
+
+// creating new instances using the 'new' operator
+var c = new Circle(10);
+var s = new Square(10);
+
+// accessing a static member
+Shape.nshapes;
+
+// accessing member variables
+c.x = 20;
+c.y = 30;
+s.x = -10;
+s.y = 5;
+
+// calling some methods
+c.area();
+c.perimeter();
+s.area();
+s.perimeter();
+
+// instantiation of Shape is not permitted
+new Shape();</pre>
+</div>
+<p>Running these commands in an interactive node shell results in the following output:</p>
+<div class="shell">
+<pre>
+$ node -i
+&amp; var example = require("./build/Release/example");
+undefined
+&amp; var Shape = example.Shape;
+undefined
+&amp; var Circle = example.Circle;
+undefined
+&amp; var Square = example.Square;
+undefined
+&amp; var c = new Circle(10);
+undefined
+&amp; var s = new Square(10);
+undefined
+&amp; Shape.nshapes;
+2
+&amp; c.x = 20;
+20
+&amp; c.y = 30;
+30
+&amp; s.x = -10;
+-10
+&amp; s.y = 5;
+5
+&amp; c.area();
+314.1592653589793
+&amp; c.perimeter();
+62.83185307179586
+&amp; s.area();
+100
+&amp; s.perimeter();
+40
+&amp; c.move(40, 40)
+undefined
+&amp; c.x
+60
+&amp; c.y
+70
+&amp; new Shape()
+Error: Class Shape can not be instantiated
+at repl:1:2
+at REPLServer.self.eval (repl.js:110:21)
+at Interface.&lt;anonymous&gt; (repl.js:239:12)
+at Interface.EventEmitter.emit (events.js:95:17)
+at Interface._onLine (readline.js:202:10)
+at Interface._line (readline.js:531:8)
+at Interface._ttyWrite (readline.js:760:14)
+at ReadStream.onkeypress (readline.js:99:10)
+at ReadStream.EventEmitter.emit (events.js:98:17)
+at emitKey (readline.js:1095:12)</pre>
+</div>
+<p>
+<b>Note</b>: In ECMAScript 5 there is no concept for classes. Instead each function can be used as a constructor function which is executed by the 'new' operator. Furthermore, during construction the key property <code>prototype</code> of the constructor function is used to attach a prototype instance to the created object. A prototype is essentially an object itself that is the first-class delegate of a class used whenever the access to a property of an object fails. The very same prototype instance is shared among all instances of one type. Prototypal inheritance is explained in more detail on in <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain">Inheritance and the prototype chain</a>, for instance.
+</p>
+
+<H2><a name="Javascript_implementation">26.5 Implementation</a></H2>
+
+
+<p>The Javascript Module implementation has taken a very different approach compared to other language modules in order to support different Javascript interpreters.</p>
+
+<H3><a name="Javascript_source_code">26.5.1 Source Code</a></H3>
+
+
+<p>The Javascript module is implemented in <code>Source/Modules/javascript.cxx</code>. It dispatches the code generation to a <code>JSEmitter</code> instance, <code>V8Emitter</code> or <code>JSCEmitter</code>. Additionally there are some helpers: <code>Template</code>, for templated code generation, and <code>JSEmitterState</code>, which is used to manage state information during AST traversal. This rough map shall make it easier to find a way through this huge source file:</p>
+<div class="code">
+<pre>
+// module wide defines
+
+#define NAME "name"
+...
+
+// ###############################
+// #  Helper class declarations
+
+class JSEmitterState { ... };
+
+class Template { ... };
+
+// ###############################
+// # JSEmitter declaration
+
+class JSEmitter { ... };
+
+// Emitter factory declarations
+
+JSEmitter *swig_javascript_create_JSCEmitter();
+JSEmitter *swig_javascript_create_V8Emitter();
+
+// ###############################
+// # Javascript module
+
+// Javascript module declaration
+
+class JAVASCRIPT:public Language { ... };
+
+// Javascript module implementation
+
+int JAVASCRIPT::functionWrapper(Node *n) { ... }
+...
+
+// Module factory implementation
+
+static Language *new_swig_javascript() { ... }
+
+extern "C" Language *swig_javascript(void) { ... }
+
+// ###############################
+// # JSEmitter base implementation
+
+JSEmitter::JSEmitter() { ... }
+
+Template JSEmitter::getTemplate(const String *name) { ... }
+...
+
+// ###############################
+// # JSCEmitter
+
+// JSCEmitter declaration
+
+class JSCEmitter: public JSEmitter { ... };
+
+// JSCEmitter implementation
+
+JSCEmitter::JSCEmitter() { ... }
+
+void JSCEmitter::marshalInputArgs(Node *n, ParmList *parms, Wrapper *wrapper, MarshallingMode mode, bool is_member, bool is_static) { ... }
+...
+
+// JSCEmitter factory
+
+JSEmitter *swig_javascript_create_JSCEmitter() { ... }
+
+
+// ###############################
+// # V8Emitter
+
+// V8Emitter declaration
+
+class V8Emitter: public JSEmitter { ... };
+
+// V8Emitter implementation
+
+V8Emitter::V8Emitter() { ... }
+
+int V8Emitter::initialize(Node *n) { ... }
+
+// V8Emitter factory
+
+JSEmitter *swig_javascript_create_V8Emitter() { ... }
+
+
+// ###############################
+// # Helper implementation (JSEmitterState, Template)
+
+JSEmitterState::JSEmitterState() { ... }
+...
+
+Template::Template(const String *code_) { ... }
+...</pre>
+</div>
+
+<H3><a name="Javascript_code_templates">26.5.2 Code Templates</a></H3>
+
+
+<p>All generated code is created on the basis of code templates. The templates for <em>JavascriptCore</em> can be found in <code>Lib/javascript/jsc/javascriptcode.swg</code>, for <em>v8</em> in <code>Lib/javascript/v8/javascriptcode.swg</code>.</p>
+<p>To track the originating code template for generated code you can run</p>
+<div class="shell">
+<pre>
+$ swig -javascript -jsc -debug-codetemplates</pre>
+</div>
+<p>which wraps generated code with a descriptive comment</p>
+<div class="code">
+<pre>
+/* begin fragment("template_name") */
+
+...generated code ...
+
+/* end fragment("template_name") */</pre>
+</div>
+<p>The Template class is used like this:</p>
+<div class="code">
+<pre>
+Template t_register = getTemplate("jsv8_register_static_variable");
+t_register.replace("$jsparent", state.clazz(NAME_MANGLED))
+    .replace("$jsname", state.variable(NAME))
+    .replace("$jsgetter", state.variable(GETTER))
+    .replace("$jssetter", state.variable(SETTER))
+    .trim().
+    print(f_init_static_wrappers);</pre>
+</div>
+<p>A code template is registered with the <em>JSEmitter</em> via <code>fragment(name, &quot;template&quot;)</code>, e.g., </p>
+<div class="code">
+<pre>
+%fragment ("jsc_variable_declaration", "templates")
+%{
+  {"$jsname", $jsgetter, $jssetter, kJSPropertyAttributeNone},
+%}</pre>
+</div>
+<p><code>Template</code> creates a copy of that string and <code>Template::replace</code> uses Swig's <code>Replaceall</code> to replace variables in the template. <code>Template::trim</code> can be used to eliminate leading and trailing whitespaces. <code>Template::print</code> is used to write the final template string to a Swig <code>DOH</code> (based on <code>Printv</code>). All methods allow chaining.</p>
+
+<H3><a name="Javascript_emitter">26.5.3 Emitter</a></H3>
+
+
+<p>The Javascript module delegates code generation to a <code>JSEmitter</code> instance. The following extract shows the essential interface:</p>
+<div class="code">
+<pre>
+class JSEmitter {
+  ...
+
+  /**
+   * Opens output files and temporary output DOHs.
+   */
+  virtual int initialize(Node *n);
+
+  /**
+   * Writes all collected code into the output file(s).
+   */
+  virtual int dump(Node *n) = 0;
+
+  /**
+   * Cleans up all open output DOHs.
+   */
+  virtual int close() = 0;
+
+  ...
+
+  /**
+   * Invoked at the beginning of the classHandler.
+   */
+  virtual int enterClass(Node *);
+
+  /**
+   * Invoked at the end of the classHandler.
+   */
+  virtual int exitClass(Node *) {
+    return SWIG_OK;
+  }
+
+  /**
+   * Invoked at the beginning of the variableHandler.
+   */
+  virtual int enterVariable(Node *);
+
+  /**
+   * Invoked at the end of the variableHandler.
+   */
+  virtual int exitVariable(Node *) {
+    return SWIG_OK;
+  }
+
+  /**
+   * Invoked at the beginning of the functionHandler.
+   */
+  virtual int enterFunction(Node *);
+
+  /**
+   * Invoked at the end of the functionHandler.
+   */
+  virtual int exitFunction(Node *) {
+    return SWIG_OK;
+  }
+
+  /**
+   * Invoked by functionWrapper callback after call to Language::functionWrapper.
+   */
+  virtual int emitWrapperFunction(Node *n);
+
+  /**
+   * Invoked from constantWrapper after call to Language::constantWrapper.
+   **/
+  virtual int emitConstant(Node *n);
+
+  /**
+   * Registers a given code snippet for a given key name.
+   *
+   * This method is called by the fragmentDirective handler
+   * of the JAVASCRIPT language module.
+   **/
+  int registerTemplate(const String *name, const String *code);
+
+  /**
+   * Retrieve the code template registered for a given name.
+   */
+  Template getTemplate(const String *name);
+
+  State &amp;getState();
+
+  ...
+
+}</pre>
+</div>
+<p>The module calls <code>initialize</code>, <code>dump</code>, and <code>close</code> from within the <code>top</code> method:</p>
+<div class="code">
+<pre>
+int JAVASCRIPT::top(Node *n) {
+  emitter-&gt;initialize(n);
+
+  Language::top(n);
+
+  emitter-&gt;dump(n);
+  emitter-&gt;close();
+
+  return SWIG_OK;
+}</pre>
+</div>
+<p>The methods <code>enterClass</code> and <code>exitClass</code> are called from within the <code>classHandler</code> method:</p>
+<div class="code">
+<pre>
+int JAVASCRIPT::classHandler(Node *n) {
+
+  emitter-&gt;enterClass(n);
+  Language::classHandler(n);
+  emitter-&gt;exitClass(n);
+
+  return SWIG_OK;
+}</pre>
+</div>
+<p>In <code>enterClass</code> the emitter stores state information that is necessary when processing class members. In <code>exitClass</code> the wrapper code for the whole class is generated.</p>
+
+<H3><a name="Javascript_emitter_states">26.5.4 Emitter states</a></H3>
+
+
+<p>For storing information during the AST traversal the emitter provides a <code>JSEmitterState</code> with different slots to store data representing the scopes global, class, function, and variable.</p>
+<div class="code">
+<pre>
+class JSEmitterState {
+
+public:
+
+  JSEmitterState();
+
+  ~JSEmitterState();
+
+  DOH *global();
+
+  DOH *global(const char* key, DOH *initial = 0);
+
+  DOH *clazz(bool reset = false);
+
+  DOH *clazz(const char* key, DOH *initial = 0);
+
+  DOH *function(bool reset = false);
+
+  DOH *function(const char* key, DOH *initial = 0);
+
+  DOH *variable(bool reset = false);
+
+  DOH *variable(const char* key, DOH *initial = 0);
+
+  static int IsSet(DOH *val);
+
+  ...
+};</pre>
+</div>
+<p>When entering a scope, such as in <code>enterClass</code>, the corresponding state is reset and new data is stored:</p>
+<div class="code">
+<pre>
+state.clazz(RESET);
+state.clazz(NAME, Getattr(n, "sym:name"));</pre>
+</div>
+<p>State information can be retrieved using <code>state.clazz(NAME)</code> or with <code>Getattr</code> on <code>state.clazz()</code> which actually returns a <code>Hash</code> instance.</p>
+
+
+<H3><a name="Javascript_jsc_exceptions">26.5.5 Handling Exceptions in JavascriptCore</a></H3>
+
+
+<p>Applications with an embedded JavascriptCore should be able to present detailed exception messages that occur in the Javascript engine. Below is an example derived from code provided by Brian Barnes on how these exception details can be extracted.</p>
+<div class="code">
+<pre>
+void script_exception_to_string(JSContextRef js_context, JSValueRef exception_value_ref, char* return_error_string, int return_error_string_max_length)
+{
+  JSObjectRef exception_object;
+  JSValueRef value_ref;
+  JSStringRef jsstring_property_name = NULL;
+  JSValueRef temporary_exception = NULL;
+  JSStringRef js_return_string = NULL;
+  size_t bytes_needed;
+  char* c_result_string = NULL;
+  exception_object = JSValueToObject(js_context, exception_value_ref, NULL);
+
+  /* source url */
+  strcpy(return_error_string, &quot;[&quot;);
+  jsstring_property_name = JSStringCreateWithUTF8CString(&quot;sourceURL&quot;);
+  value_ref = JSObjectGetProperty(js_context, exception_object, jsstring_property_name, &amp;temporary_exception);
+  JSStringRelease(jsstring_property_name);
+  js_return_string = JSValueToStringCopy(js_context, value_ref, NULL);
+  bytes_needed = JSStringGetMaximumUTF8CStringSize(js_return_string);
+  c_result_string = (char*)calloc(bytes_needed, sizeof(char));
+  JSStringGetUTF8CString(js_return_string, c_result_string, bytes_needed);
+  JSStringRelease(js_return_string);
+  strncat(return_error_string, c_result_string, return_error_string_max_length-1);
+  free(c_result_string);
+
+  strncat(return_error_string, &quot;:&quot;, return_error_string_max_length-1);
+
+  /* line number */
+
+  jsstring_property_name = JSStringCreateWithUTF8CString(&quot;line&quot;);
+  value_ref = JSObjectGetProperty(js_context, exception_object, jsstring_property_name, &amp;temporary_exception);
+  JSStringRelease(jsstring_property_name);
+  js_return_string = JSValueToStringCopy(js_context, value_ref, NULL);
+  bytes_needed = JSStringGetMaximumUTF8CStringSize(js_return_string);
+  c_result_string = (char*)calloc(bytes_needed, sizeof(char));
+  JSStringGetUTF8CString(js_return_string, c_result_string, bytes_needed);
+  JSStringRelease(js_return_string);
+  strncat(return_error_string, c_result_string, return_error_string_max_length-1);
+  free(c_result_string);
+
+  strncat(return_error_string, &quot;]&quot;, return_error_string_max_length-1);
+
+  /* error message */
+
+  jsstring_property_name = JSStringCreateWithUTF8CString(&quot;message&quot;);
+  value_ref = JSObjectGetProperty(js_context, exception_object, jsstring_property_name, &amp;temporary_exception);
+  JSStringRelease(jsstring_property_name);
+  if(NULL == value_ref)
+  {
+    strncat(return_error_string, &quot;Unknown Error&quot;, return_error_string_max_length-1);
+  }
+  else
+  {
+    js_return_string = JSValueToStringCopy(js_context, value_ref, NULL);
+    bytes_needed = JSStringGetMaximumUTF8CStringSize(js_return_string);
+    c_result_string = (char*)calloc(bytes_needed, sizeof(char));
+    JSStringGetUTF8CString(js_return_string, c_result_string, bytes_needed);
+    JSStringRelease(js_return_string);
+    strncat(return_error_string, c_result_string, return_error_string_max_length-1);
+    free(c_result_string);
+  }
+}</pre>
+</div>
+
+<p>It would be used in the following way:</p>
+<div class="code">
+<pre>
+if(js_exception)
+{
+  char return_error_string[256];
+  script_exception_to_string(js_context, js_exception, return_error_string, 256);
+  printf("Compile error is %s", return_error_string);
+}</pre>
+</div>
+
+</body>
+</html>

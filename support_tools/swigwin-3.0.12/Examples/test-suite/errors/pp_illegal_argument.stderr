@@ -1,0 +1,3 @@
+pp_illegal_argument.i:6: Error: Illegal macro argument name '..'
+pp_illegal_argument.i:10: Error: Illegal macro argument name '..'
+pp_illegal_argument.i:16: Error: Illegal character in macro argument name

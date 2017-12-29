@@ -1,0 +1,441 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Getting started on Windows</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+
+<body bgcolor="#ffffff">
+<H1><a name="Windows">3 Getting started on Windows </a></H1>
+<!-- INDEX -->
+<div class="sectiontoc">
+<ul>
+<li><a href="#Windows_installation">Installation on Windows</a>
+<ul>
+<li><a href="#Windows_executable">Windows Executable</a>
+</ul>
+<li><a href="#Windows_examples">SWIG Windows Examples</a>
+<ul>
+<li><a href="#Windows_visual_studio">Instructions for using the Examples with Visual Studio</a>
+<ul>
+<li><a href="#Windows_csharp">C#</a>
+<li><a href="#Windows_java">Java</a>
+<li><a href="#Windows_perl">Perl</a>
+<li><a href="#Windows_python">Python</a>
+<li><a href="#Windows_tcl">TCL</a>
+<li><a href="#Windows_r">R</a>
+<li><a href="#Windows_ruby">Ruby</a>
+</ul>
+<li><a href="#Windows_other_compilers">Instructions for using the Examples with other compilers</a>
+</ul>
+<li><a href="#Windows_cygwin_mingw">SWIG on Cygwin and MinGW</a>
+<ul>
+<li><a href="#Windows_swig_exe">Building swig.exe on Windows</a>
+<ul>
+<li><a href="#Windows_mingw_msys">Building swig.exe using MinGW and MSYS</a>
+<li><a href="#Windows_cygwin">Building swig.exe using Cygwin</a>
+<li><a href="#Windows_building_alternatives">Building swig.exe alternatives</a>
+</ul>
+<li><a href="#Windows_examples_cygwin">Running the examples on Windows using Cygwin</a>
+</ul>
+<li><a href="#Windows_interface_file">Microsoft extensions and other Windows quirks</a>
+</ul>
+</div>
+<!-- INDEX -->
+
+
+
+<p>
+This chapter describes SWIG usage on Microsoft Windows. 
+Installing SWIG and running the examples is covered as well as building the SWIG executable.
+Usage within the Unix like environments MinGW and Cygwin is also detailed.
+</p>
+
+
+<H2><a name="Windows_installation">3.1 Installation on Windows</a></H2>
+
+
+<p>
+SWIG does not come with the usual Windows type installation program, however it is quite easy to get started. The main steps are:
+</p>
+<ul>
+        <li>Download the swigwin zip package from the <a href="http://www.swig.org">SWIG website</a> and unzip into a directory. This is all that needs downloading for the Windows platform.
+        <li>Set environment variables as described in the <a href="#Windows_examples">SWIG Windows Examples</a> section in order to run examples using Visual C++.
+</ul>
+
+<H3><a name="Windows_executable">3.1.1 Windows Executable</a></H3>
+
+
+<p>
+The swigwin distribution contains the SWIG Windows executable, swig.exe, which will run on 32 bit versions of Windows, ie Windows 95 and later.
+If you want to build your own swig.exe have a look at <a href="#Windows_swig_exe">Building swig.exe on Windows</a>.
+</p>
+
+
+<H2><a name="Windows_examples">3.2 SWIG Windows Examples</a></H2>
+
+
+<p>
+Using Microsoft Visual C++ is the most common approach to compiling and linking SWIG's output. 
+The Examples directory has a few Visual C++ project files (.dsp files). 
+These were produced by Visual C++ 6.
+Newer versions of Visual Studio should be able to open and convert these project files.
+Each C# example comes with a Visual Studio 2005 solution and associated project files instead of Visual C++ 6 project files.
+The project files have been set up to execute SWIG in a custom build rule for the SWIG interface (.i) file. 
+Alternatively run the <a href="#Windows_examples_cygwin">examples using Cygwin</a>.
+
+<p>
+More information on each of the examples is available with the examples distributed with SWIG (Examples/index.html).
+
+<H3><a name="Windows_visual_studio">3.2.1 Instructions for using the Examples with Visual Studio</a></H3>
+
+
+<p>
+Ensure the SWIG executable is as supplied in the SWIG root directory in order for the examples to work. 
+Most languages require some environment variables to be set <b>before</b> running Visual C++. 
+Note that Visual C++ must be re-started to pick up any changes in environment variables. 
+Open up an example .dsp file, Visual C++ will create a workspace for you (.dsw file). 
+Ensure the Release build is selected then do a Rebuild All from the Build menu.
+The required environment variables are displayed with their current values.
+</p>
+<p>
+The list of required environment variables for each module language is also listed below.
+They are usually set from the Control Panel and System properties, but this depends on which flavour of Windows you are running.
+If you don't want to use environment variables then change all occurrences of the environment variables in the .dsp files with hard coded values.
+If you are interested in how the project files are set up there is explanatory information in some of the language module's documentation.
+</p>
+
+<H4><a name="Windows_csharp">3.2.1.1 C#</a></H4>
+
+
+<p>
+The C# examples do not require any environment variables to be set as a C# project file is included.
+Just open up the .sln solution file in Visual Studio .NET 2003 or later, select Release Build, and do a Rebuild All from the Build menu.
+The accompanying C# and C++ project files are automatically used by the solution file.
+</p>
+
+
+<H4><a name="Windows_java">3.2.1.2 Java</a></H4>
+
+
+<p>
+<b><tt>JAVA_INCLUDE</tt></b> : Set this to the directory containing jni.h<br>
+<b><tt>JAVA_BIN</tt></b> : Set this to the bin directory containing javac.exe<p>
+Example using JDK1.3:<br>
+<tt>
+JAVA_INCLUDE: D:\jdk1.3\include<br>
+JAVA_BIN: D:\jdk1.3\bin<br>
+</tt>
+</p>
+
+
+<H4><a name="Windows_perl">3.2.1.3 Perl</a></H4>
+
+
+<p>
+<b><tt>PERL5_INCLUDE</tt></b> : Set this to the directory containing perl.h<br>
+<b><tt>PERL5_LIB</tt></b> : Set this to the Perl library including path for linking<p>
+Example using nsPerl 5.004_04:<p>
+<tt>
+PERL5_INCLUDE: D:\nsPerl5.004_04\lib\CORE<br>
+PERL5_LIB: D:\nsPerl5.004_04\lib\CORE\perl.lib<br>
+</tt>
+</p>
+
+
+<H4><a name="Windows_python">3.2.1.4 Python</a></H4>
+
+
+<p>
+<b><tt>PYTHON_INCLUDE</tt></b> : Set this to the directory that contains Python.h<br>
+<b><tt>PYTHON_LIB</tt></b> : Set this to the python library including path for linking<p>
+Example using Python 2.1.1:<br>
+<tt>
+PYTHON_INCLUDE: D:\python21\include<br>
+PYTHON_LIB: D:\python21\libs\python21.lib<br>
+</tt>
+</p>
+
+
+<H4><a name="Windows_tcl">3.2.1.5 TCL</a></H4>
+
+
+<p>
+<b><tt>TCL_INCLUDE</tt></b> : Set this to the directory containing tcl.h<br>
+<b><tt>TCL_LIB</tt></b> : Set this to the TCL library including path for linking<p>
+Example using ActiveTcl 8.3.3.3<br>
+<tt>
+TCL_INCLUDE: D:\tcl\include<br>
+TCL_LIB: D:\tcl\lib\tcl83.lib<br>
+</tt>
+</p>
+
+
+<H4><a name="Windows_r">3.2.1.6 R</a></H4>
+
+
+<p>
+<b><tt>R_INCLUDE</tt></b> : Set this to the directory containing R.h<br>
+<b><tt>R_LIB</tt></b> : Set this to the R library (Rdll.lib) including path for linking. The library needs to be built as described in the R README.packages file (the pexports.exe approach is the easiest).<p>
+Example using R 2.5.1:<br>
+<tt>
+R_INCLUDE: C:\Program Files\R\R-2.5.1\include<br>
+R_LIB: C:\Program Files\R\R-2.5.1\bin\Rdll.lib<br>
+</tt>
+</p>
+
+
+<H4><a name="Windows_ruby">3.2.1.7 Ruby</a></H4>
+
+
+<p>
+<b><tt>RUBY_INCLUDE</tt></b> : Set this to the directory containing ruby.h<br>
+<b><tt>RUBY_LIB</tt></b> : Set this to the ruby library including path for linking<p>
+Example using Ruby 1.6.4:<br>
+<tt>
+RUBY_INCLUDE: D:\ruby\lib\ruby\1.6\i586-mswin32<br>
+RUBY_LIB: D:\ruby\lib\mswin32-ruby16.lib<br>
+</tt>
+</p>
+
+
+<H3><a name="Windows_other_compilers">3.2.2 Instructions for using the Examples with other compilers</a></H3>
+
+
+<p>
+If you do not have access to Visual C++ you will have to set up project files / Makefiles for your chosen compiler. There is a section in each of the language modules detailing what needs setting up using Visual C++ which may be of some guidance. Alternatively you may want to use Cygwin as described in the following section.
+</p>
+
+<H2><a name="Windows_cygwin_mingw">3.3 SWIG on Cygwin and MinGW</a></H2>
+
+
+<p>
+SWIG can also be compiled and run using <a href="http://www.cygwin.com">Cygwin</a> or <a href="http://www.mingw.org">MinGW</a> which provides a Unix like front end to Windows and comes free with gcc, an ANSI C/C++ compiler. However, this is not a recommended approach as the prebuilt executable is supplied. 
+</p>
+
+<H3><a name="Windows_swig_exe">3.3.1 Building swig.exe on Windows</a></H3>
+
+
+<p>
+If you want to replicate the build of swig.exe that comes with the download, follow the MinGW instructions below.
+This is not necessary to use the supplied swig.exe. 
+This information is provided for those that want to modify the SWIG source code in a Windows environment. 
+Normally this is not needed, so most people will want to ignore this section. 
+</p>
+
+<H4><a name="Windows_mingw_msys">3.3.1.1 Building swig.exe using MinGW and MSYS</a></H4>
+
+
+<p>
+The short abbreviated instructions follow...
+</p>
+
+<ul>
+    <li>Install MinGW and MSYS from the <a href="http://www.mingw.org">MinGW</a> site. This provides a Unix environment on Windows.
+    <li>Follow the usual Unix instructions in the README file in the SWIG root directory to build swig.exe from the MinGW command prompt.
+</ul>
+
+<p>
+The step by step instructions to download and install MinGW and MSYS, then download and build the latest version of SWIG from Github follow...
+Note that the instructions for obtaining SWIG from Github are also online at <a href="http://www.swig.org/svn.html">SWIG Bleeding Edge</a>.
+</p>
+
+<p>
+<b>Pitfall note:</b>
+Execute the steps in the order shown and don't use spaces in path names. In fact it is best to use the default installation directories.
+</p>
+
+<ol>
+  <li>
+  Download the following packages from the <a href="http://www.mingw.org/download.shtml">MinGW download page</a>
+  or <a href="http://sourceforge.net/projects/mingw/files/">MinGW SourceForge download page</a>.
+  Note that at the time of writing, the majority of these are in the Current
+  release list and some are in the Snapshot or Previous release list.
+  <ul>
+    <li>MinGW-3.1.0-1.exe</li>
+    <li>MSYS-1.0.11-2004.04.30-1.exe</li>
+    <li>msysDTK-1.0.1.exe</li>
+    <li>bison-2.0-MSYS.tar.gz</li>
+    <li>msys-autoconf-2.59.tar.bz2</li>
+    <li>msys-automake-1.8.2.tar.bz2</li>
+  </ul>
+  </li>
+
+  <li>
+  Install MinGW-3.1.0-1.exe (C:\MinGW is default location.)
+  </li>
+
+  <li>
+  Install MSYS-1.0.11-2004.04.30-1.exe. Make sure you install it on the same
+  windows drive letter as MinGW (C:\msys\1.0 is default).
+  In the post install script,
+  <ul>
+    <li>Answer y to the "do you wish to continue with the post install?"</li>
+    <li>Answer y to the "do you have MinGW installed?"</li>
+    <li>Type in the folder in which you installed MinGW (C:/MinGW is default)</li>
+  </ul>
+  </li>
+
+  <li>
+  Install msysDTK-1.0.1.exe to the same folder that you installed MSYS (C:\msys\1.0 is default).
+  </li>
+
+  <li>
+  Copy the following to the MSYS install folder (C:\msys\1.0 is default):
+  <ul>
+    <li>msys-automake-1.8.2.tar.bz2</li>
+    <li>msys-autoconf-2.59.tar.bz2</li>
+    <li>bison-2.0-MSYS.tar.gz</li>
+  </ul>
+  </li>
+
+  <li>
+  Start the MSYS command prompt and execute:
+<div class="shell"><pre>
+cd /
+tar -jxf msys-automake-1.8.2.tar.bz2
+tar -jxf msys-autoconf-2.59.tar.bz2
+tar -zxf bison-2.0-MSYS.tar.gz
+</pre></div>
+  </li>
+
+  <li>
+  The very latest development version of SWIG is available from <a href="https://github.com/swig/swig">SWIG on Github</a>
+  and can be downloaded as a zip file or if you have Git installed, via Git.
+  Either download the latest <a href="https://github.com/swig/swig/archive/master.zip">Zip file</a> snapshot and unzip and rename the top level folder to /usr/src/swig.
+
+  Otherwise if using Git, type in the following:
+<div class="shell"><pre>
+mkdir /usr/src
+cd /usr/src
+git clone https://github.com/swig/swig.git
+</pre></div>
+
+  <b>Pitfall note:</b>
+If you want to place SWIG in a different folder to the proposed
+/usr/src/swig, do not use MSYS emulated windows drive letters, because
+the autotools will fail miserably on those.
+  </li>
+
+  <li>
+The PCRE third party library needs to be built next. 
+Download the latest PCRE source tarball, such as <tt>pcre-8.10.tar.bz2</tt>, from 
+<a href=http://www.pcre.org>PCRE</a> and place in the <tt>/usr/src/swig</tt> directory.
+Build PCRE as a static library using the Tools/pcre-build.sh script as follows:
+
+<div class="shell"><pre>
+cd /usr/src/swig
+Tools/pcre-build.sh
+</pre></div>
+  </li>
+
+  <li>
+  You are now ready to build SWIG. Execute the following commands to build swig.exe:
+<div class="shell"><pre>
+cd /usr/src/swig
+./autogen.sh
+./configure
+make
+</pre></div>
+  </li>
+</ol>
+
+
+<H4><a name="Windows_cygwin">3.3.1.2 Building swig.exe using Cygwin</a></H4>
+
+
+<p>
+Note that SWIG can also be built using Cygwin.
+However, SWIG will then require the Cygwin DLL when executing. 
+Follow the Unix instructions in the README file in the SWIG root directory.
+Note that the Cygwin environment will also allow one to regenerate the autotool generated files which are supplied with the release distribution. 
+These files are generated using the <tt>autogen.sh</tt> script and will only need regenerating in circumstances such as changing the build system.
+</p>
+
+<H4><a name="Windows_building_alternatives">3.3.1.3 Building swig.exe alternatives</a></H4>
+
+
+<p>
+If you don't want to install Cygwin or MinGW, use a different compiler to build 
+SWIG. For example, all the source code files can be added to a Visual C++ project 
+file in order to build swig.exe from the Visual C++ IDE.
+</p>
+
+
+<H3><a name="Windows_examples_cygwin">3.3.2 Running the examples on Windows using Cygwin</a></H3>
+
+
+<p>
+The examples and test-suite work as successfully on Cygwin as on any other Unix operating system. 
+The modules which are known to work are Python, Tcl, Perl, Ruby, Java and C#.
+Follow the Unix instructions in the README file in the SWIG root directory to build the examples.
+</p>
+
+<H2><a name="Windows_interface_file">3.4 Microsoft extensions and other Windows quirks</a></H2>
+
+
+<p>
+A common problem when using SWIG on Windows are the Microsoft function calling conventions which are not in the C++ standard.
+SWIG parses ISO C/C++ so cannot deal with proprietary conventions such as <tt>__declspec(dllimport)</tt>, <tt>__stdcall</tt> etc.
+There is a Windows interface file, <tt>windows.i</tt>, to deal with these calling conventions though.
+The file also contains typemaps for handling commonly used Windows specific types such as <tt>__int64</tt>, <tt>BOOL</tt>, <tt>DWORD</tt> etc.
+Include it like you would any other interface file, for example:
+</p>
+
+<div class="code"><pre>
+%include &lt;windows.i&gt;
+
+__declspec(dllexport) ULONG __stdcall foo(DWORD, __int32);
+</pre></div>
+
+<p>Note that if you follow Microsoft's recommendation of wrapping the
+<tt>__declspec</tt> calls in a preprocessor definition, you will need to
+make sure that the definition is included by SWIG as well, by either defining it
+manually or via a header. For example, if you have specified the
+preprocessor definition in a header named <tt>export_lib.h</tt> and include
+other headers which depend on it, you should use the <tt>%include</tt> directive
+to include the definition explicitly. For example, if you had a header file,
+<tt>bar.h</tt>, which depended on <tt>export_lib.h</tt>, your SWIG definition
+file might look like:</p>
+
+<div class="code"><pre>
+// bar.i
+%module bar
+%include &lt;windows.i&gt;
+%include "export_lib.h"
+%include "bar.h"
+</pre></div>
+
+<p>
+where export_lib.h may contain:
+</p>
+
+<div class="code"><pre>
+// export_lib.h
+#define BAR_API __declspec(dllexport)
+</pre></div>
+
+<p>
+and bar.h may look like:
+</p>
+
+<div class="code"><pre>
+// bar.h
+#include "export_lib.h"
+BAR_API void bar_function(int, double);
+</pre></div>
+
+<p>
+Using the preprocessor to remove BAR_API is a popular simpler solution:
+</p>
+
+<div class="code"><pre>
+// bar.i
+%module bar
+#define BAR_API
+%include "bar.h"
+</pre></div>
+
+</body>
+</html>

@@ -1,0 +1,1 @@
+var empty = require("empty");

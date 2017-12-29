@@ -1,0 +1,21 @@
+This directory contains the HTML for the SWIG users manual.
+
+All of this HTML is hand-written.  However, section numbering, indices,
+and the table of contents are generated automatically by the 'maketoc.py'
+script. The Makefile has further information on how the various alternative
+forms of the documentation are generated from the hand-written HTML.
+
+There are 4 types of boxes that code or whatever can be inside:
+  - <div class="shell">...</div>
+    This is for text that shows the output of running commands on the shell.
+  - <div class="code">...</div>
+    This is for either C, C++, or SWIG code
+  - <div class="targetlang">...</div>
+    This is for code in a target scripting language
+  - <div class="diagram">...</div>
+    This is for text that is not code or a shell
+
+The general format is
+<div class="foo"><pre>
+whatever here
+</pre></div>

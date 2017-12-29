@@ -1,0 +1,2678 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>SWIG and C#</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#FFFFFF">
+<H1><a name="CSharp">20 SWIG and C#</a></H1>
+<!-- INDEX -->
+<div class="sectiontoc">
+<ul>
+<li><a href="#CSharp_introduction">Introduction</a>
+<ul>
+<li><a href="#CSharp_introduction_swig2_compatibility">SWIG 2 Compatibility</a>
+<li><a href="#CSharp_commandline">Additional command line options</a>
+</ul>
+<li><a href="#CSharp_differences_java">Differences to the Java module</a>
+<li><a href="#CSharp_void_pointers">Void pointers</a>
+<li><a href="#CSharp_arrays">C# Arrays</a>
+<ul>
+<li><a href="#CSharp_arrays_swig_library">The SWIG C arrays library</a>
+<li><a href="#CSharp_arrays_pinvoke_default_array_marshalling">Managed arrays using P/Invoke default array marshalling</a>
+<li><a href="#CSharp_arrays_pinning">Managed arrays using pinning</a>
+</ul>
+<li><a href="#CSharp_exceptions">C# Exceptions</a>
+<ul>
+<li><a href="#CSharp_exception_example_check_typemap">C# exception example using "check" typemap</a>
+<li><a href="#CSharp_exception_example_percent_exception">C# exception example using %exception</a>
+<li><a href="#CSharp_exception_example_exception_specifications">C# exception example using exception specifications</a>
+<li><a href="#CSharp_custom_application_exception">Custom C# ApplicationException example</a>
+</ul>
+<li><a href="#CSharp_directors">C# Directors</a>
+<ul>
+<li><a href="#CSharp_directors_example">Directors example</a>
+<li><a href="#CSharp_directors_implementation">Directors implementation</a>
+<li><a href="#CSharp_director_caveats">Director caveats</a>
+</ul>
+<li><a href="#CSharp_multiple_modules">Multiple modules</a>
+<li><a href="#CSharp_typemap_examples">C# Typemap examples</a>
+<ul>
+<li><a href="#CSharp_memory_management_member_variables">Memory management when returning references to member variables</a>
+<li><a href="#CSharp_memory_management_objects">Memory management for objects passed to the C++ layer</a>
+<li><a href="#CSharp_date_marshalling">Date marshalling using the csin typemap and associated attributes</a>
+<li><a href="#CSharp_date_properties">A date example demonstrating marshalling of C# properties</a>
+<li><a href="#CSharp_date_pre_post_directors">Date example demonstrating the 'pre' and 'post' typemap attributes for directors</a>
+<li><a href="#CSharp_partial_classes">Turning wrapped classes into partial classes</a>
+<li><a href="#CSharp_extending_proxy_class">Extending proxy classes with additional C# code</a>
+<li><a href="#CSharp_enum_underlying_type">Underlying type for enums</a>
+</ul>
+</ul>
+</div>
+<!-- INDEX -->
+
+
+
+<H2><a name="CSharp_introduction">20.1 Introduction</a></H2>
+
+
+<p>
+The purpose of the C# module is to offer an automated way of accessing existing C/C++ code from .NET languages.
+The wrapper code implementation uses C# and the Platform Invoke (PInvoke) interface to access natively compiled C/C++ code.
+The PInvoke interface has been chosen over Microsoft's Managed C++ interface as it is portable to both Microsoft Windows and non-Microsoft platforms.
+PInvoke is part of the ECMA/ISO C# specification.
+It is also better suited for robust production environments due to the Managed C++ flaw called the
+<a href="http://msdn.microsoft.com/en-us/library/aa290048(VS.71).aspx">Mixed DLL Loading Problem</a>.
+SWIG C# works equally well on non-Microsoft operating systems such as Linux, Solaris and Apple Mac using
+<a href="http://www.mono-project.com/Main_Page">Mono</a> and <a href="http://www.dotgnu.org/pnet.html">Portable.NET</a>.
+</p>
+
+<p>
+To get the most out of this chapter an understanding of interop is required.
+The <a href="http://msdn.microsoft.com">Microsoft Developer Network (MSDN)</a> has a good reference guide in a section titled "Interop Marshaling".
+Monodoc, available from the Mono project, has a very useful section titled <a href="http://www.mono-project.com/docs/advanced/pinvoke/">Interop with native libraries</a>.
+</p>
+
+<H3><a name="CSharp_introduction_swig2_compatibility">20.1.1 SWIG 2 Compatibility</a></H3>
+
+
+<p>
+In order to minimize name collisions between names generated based on input to SWIG and names used in the generated code from the .NET framework, SWIG 3 fully qualifies the use of all .NET types. Furthermore, SWIG 3 avoids <tt>using</tt> directives in generated code. This breaks backwards compatibility with typemaps, pragmas, etc written for use with SWIG 2 that assume the presence of <tt>using System;</tt> or <tt>using System.Runtime.InteropServices;</tt> directives in the intermediate class imports, module imports, or proxy imports. SWIG 3 supports backwards compatibility though the use of the <tt>SWIG2_CSHARP</tt> macro. If <tt>SWIG2_CSHARP</tt> is defined, SWIG 3 generates <tt>using</tt> directives in the intermediate class, module class, and proxy class code similar to those generated by SWIG 2. This can be done without modifying any of the input code by passing the <tt>-DSWIG2_CSHARP</tt> commandline parameter when executing <tt>swig</tt>.
+</p>
+
+
+<H3><a name="CSharp_commandline">20.1.2 Additional command line options</a></H3>
+
+
+<p>
+The following table lists the additional commandline options available for the C# module. They can also be seen by using: 
+</p>
+
+<div class="code"><pre>
+swig -csharp -help 
+</pre></div>
+
+<table summary="C# specific options">
+<tr>
+<th>C# specific options</th>
+</tr>
+
+<tr>
+<td>-dllimport &lt;dl&gt;</td>
+<td>Override DllImport attribute name to &lt;dl&gt;</td>
+</tr>
+
+<tr>
+<td>-namespace &lt;nm&gt;</td>
+<td>Generate wrappers into C# namespace &lt;nm&gt;</td>
+</tr>
+
+<tr>
+<td>-noproxy</td>
+<td>Generate the low-level functional interface instead of proxy classes</td>
+</tr>
+
+<tr>
+<td>-oldvarnames</td>
+<td>Old intermediary method names for variable wrappers</td>
+</tr>
+
+<tr>
+<td>-outfile &lt;file&gt;</td>
+<td>Write all C# into a single &lt;file&gt; located in the output directory
+</td>
+</tr>
+
+</table>
+
+<p>
+The -outfile option combines all the generated C# code into a single output file instead of creating multiple C# files.
+The default, when this option is not provided, is to generate separate .cs files for the module class,
+intermediary class and each of the generated proxy and type wrapper classes.
+Note that the file extension (.cs) will not be automatically added and needs to be provided.
+Due to possible compiler limits it is not advisable to use <tt>-outfile</tt> for large projects.
+</p>
+
+<H2><a name="CSharp_differences_java">20.2 Differences to the Java module</a></H2>
+
+
+<p>
+The C# module is very similar to the Java module, so until some more complete documentation has been written,
+please use the <a href="Java.html#Java">Java documentation</a> as a guide to using SWIG with C#.
+The C# module has the same major SWIG features as the Java module.
+The rest of this section should be read in conjunction with the Java documentation as it lists the main differences.
+
+The most notable differences to Java are the following:
+<ul>
+
+<li>
+When invoking SWIG use the <tt>-csharp</tt> command line option instead of <tt>-java</tt>.
+</li>
+
+<li>
+The <tt>-nopgcpp</tt> command line option does not exist.
+</li>
+
+<li>
+The <tt>-package</tt> command line option does not exist.
+</li>
+
+<li>
+The <tt>-namespace &lt;name&gt;</tt> commandline option will generate all code into the namespace specified by <tt>&lt;name&gt;</tt>.
+C# supports nested namespaces that are not lexically nested, so nested namespaces will of course also work. For example:
+<tt>-namespace com.bloggs.widget</tt>, will generate code into C# namespaces:
+
+<div class="code"><pre>
+namespace com.bloggs.widget {
+  ...
+}
+</pre></div>
+Note that by default, the generated C# classes have no namespace and the module name is unrelated to namespaces. The module name is just like in Java and is merely used to name some of the generated classes.
+</li>
+
+<li>
+The <a href="SWIGPlus.html#SWIGPlus_nspace">nspace feature</a> is also supported as described in this general section with a C# example.
+Unlike Java which requires the use of the -package option when using the <tt>nspace</tt> feature, the -namespace option is not mandatory for C#.
+</li>
+
+<li>
+The <tt>-dllimport &lt;name&gt;</tt> commandline option specifies the name of the DLL for the <tt>DllImport</tt> attribute for every PInvoke method. If this commandline option is not given, the <tt>DllImport</tt> DLL name is the same as the module name. This option is useful for when one wants to invoke SWIG multiple times on different modules, yet compile all the resulting code into a single DLL.
+</li>
+
+<li>
+C/C++ variables are wrapped with C# properties and not JavaBean style getters and setters.
+</li>
+
+<li>
+Global constants are generated into the module class. There is no constants interface.
+</li>
+
+<li>
+There is no implementation for type unsafe enums - not deemed necessary.
+</li>
+
+<li>
+The default enum wrapping approach is proper C# enums, not typesafe enums.
+<br>
+Note that %csconst(0) will be ignored when wrapping C/C++ enums with proper C# enums.
+This is because C# enum items must be initialised from a compile time constant.
+If an enum item has an initialiser and the initialiser doesn't compile as C# code,
+then the %csconstvalue directive must be used as %csconst(0) will have no effect.
+If it was used, it would generate an illegal runtime initialisation via a PInvoke call.
+</li>
+
+<li>
+C# doesn't support the notion of throws clauses.
+Therefore there is no 'throws' typemap attribute support for adding exception classes to a throws clause.
+Likewise there is no need for an equivalent to <tt>%javaexception</tt>.
+In fact, throwing C# exceptions works quite differently, see <a href="CSharp.html#CSharp_exceptions">C# Exceptions</a> below.
+</li>
+
+<li>
+The majority of the typemaps are in csharp.swg, not java.swg.
+</li>
+
+<li>
+<p>Typemap equivalent names:</p>
+
+<div class="code"><pre>
+jni                         -&gt; ctype
+jtype                       -&gt; imtype
+jstype                      -&gt; cstype
+javain                      -&gt; csin
+javaout                     -&gt; csout
+javadirectorin              -&gt; csdirectorin
+javadirectorout             -&gt; csdirectorout
+javainterfaces              -&gt; csinterfaces and csinterfaces_derived
+javabase                    -&gt; csbase
+javaclassmodifiers          -&gt; csclassmodifiers
+javacode                    -&gt; cscode
+javaimports                 -&gt; csimports
+javabody                    -&gt; csbody
+javafinalize                -&gt; csfinalize
+javadestruct                -&gt; csdestruct
+javadestruct_derived        -&gt; csdestruct_derived
+javainterfacecode           -&gt; csinterfacecode
+</pre></div>
+
+</li>
+
+<li>
+<p>Typemap macros:</p>
+<div class="code"><pre>
+SWIG_JAVABODY_PROXY         -&gt; SWIG_CSBODY_PROXY
+SWIG_JAVABODY_TYPEWRAPPER   -&gt; SWIG_CSBODY_TYPEWRAPPER
+</pre></div>
+</li>
+
+<li>
+<p>Additional typemaps:</p>
+
+<div class="code"><pre>
+csvarin                     C# code property set typemap
+csvarout                    C# code property get typemap
+csattributes                C# attributes for attaching to proxy classes/enums
+</pre></div>
+
+</li>
+
+<li>
+<p>Additional typemap attributes:</p>
+
+<p>
+The "null" attribute in the "out" typemap can be specified to provide a value for <tt>$null</tt> to expand into for wrapped functions that return non-void. Normally the default value of <tt>0</tt> is used.
+For example this is needed if you change the return type to void:
+</p>
+<div class="code"><pre>
+%typemap(ctype) Status "void"
+%typemap(out, null="") Status { ... }
+</pre></div>
+
+</li>
+
+<li>
+<p>Feature equivalent names:</p>
+<div class="code"><pre>
+%javaconst                  -&gt; %csconst
+%javaconstvalue             -&gt; %csconstvalue
+%javamethodmodifiers        -&gt; %csmethodmodifiers
+</pre></div>
+</li>
+
+<li>
+<p>Pragma equivalent names:</p>
+<div class="code"><pre>
+%pragma(java)               -&gt; %pragma(csharp)
+jniclassbase                -&gt; imclassbase
+jniclassclassmodifiers      -&gt; imclassclassmodifiers
+jniclasscode                -&gt; imclasscode
+jniclassimports             -&gt; imclassimports
+jniclassinterfaces          -&gt; imclassinterfaces
+</pre></div>
+</li>
+
+<li>
+<p>Special variable equivalent names:</p>
+<div class="code"><pre>
+$javaclassname              -&gt; $csclassname
+$&amp;javaclassname             -&gt; $&amp;csclassname
+$*javaclassname             -&gt; $*csclassname
+$javaclazzname              -&gt; $csclazzname
+$javainput                  -&gt; $csinput
+$jnicall                    -&gt; $imcall
+$javainterfacename          -&gt; $csinterfacename
+$&amp;javainterfacename         -&gt; $&amp;csinterfacename
+$*javainterfacename         -&gt; $*csinterfacename
+</pre></div>
+</li>
+
+<li>
+<p>
+Unlike the "javain" typemap, the "csin" typemap does not support the 'pgcpp' attribute as the C# module does not have a premature garbage collection prevention parameter. 
+The "csin" typemap supports additional optional attributes called 'cshin' and 'terminator'. 
+The "csdirectorin" typemap supports additional optional attributes called 'terminator'. 
+The 'cshin' attribute should contain the parameter type and name whenever a <a href="Java.html#Java_constructor_helper_function">constructor helper function</a> is generated due to the 'pre' or 'post' attributes. 
+The 'terminator' attribute normally just contains a closing brace for when the 'pre' attribute contains an opening brace, such as when a C# <tt>using</tt> or <tt>fixed</tt> block is started.
+Note that 'pre', 'post', 'terminator' and 'cshin' attributes are not used for marshalling the property set.
+Please see the <a href="#CSharp_date_marshalling">Date marshalling example</a> and <a href="#CSharp_date_properties">Date marshalling of properties example</a> for further understanding of these "csin" applicable attributes.
+Please see the <a href="#CSharp_date_pre_post_directors">Date marshalling director example</a> for further understanding of the "csdirectorin" attributes.
+</p>
+</li>
+
+<li>
+<p>
+Support for asymmetric type marshalling. The 'ctype', 'imtype' and 'cstype' typemaps support an optional <tt>out</tt> attribute which is used for output types.
+If this typemap attribute is specified, then the type specified in the attribute is used for output types and
+the type specified in the typemap itself is used for the input type.
+If this typemap attribute is not specified, then the type used for both input and output is the type specified in the typemap.
+An example shows that <tt>char *</tt> could be marshalled in different ways, 
+</p>
+
+<div class="code">
+<pre>
+%typemap(imtype, out="global::System.IntPtr") char * "string"
+char * function(char *);
+</pre>
+</div>
+
+<p>
+The output type is thus IntPtr and the input type is string. The resulting intermediary C# code is:
+</p>
+
+<div class="code">
+<pre>
+public static extern global::System.IntPtr function(string jarg1);
+</pre>
+</div>
+
+</li>
+
+<li>
+<p>
+Support for type attributes.
+The 'imtype' and 'cstype' typemaps can have an optional <tt>inattributes</tt> and <tt>outattributes</tt> typemap attribute.
+The 'imtype' typemap can also have an optional <tt>directorinattributes</tt> and <tt>directoroutattributes</tt>
+typemap attribute which attaches to director delegates, an implementation detail of directors, see <a href="#CSharp_directors_implementation">directors implementation</a>.
+Note that there are C# attributes and typemap attributes, don't get confused between the two!!
+The C# attributes specified in these typemap attributes are generated wherever the type is used in the C# wrappers.
+These can be used to specify any C# attribute associated with a C/C++ type, but are more typically used for the C# <tt>MarshalAs</tt> attribute.
+For example:
+</p>
+
+<div class="code">
+<pre>
+%typemap(imtype,
+         inattributes="[global::System.Runtime.InteropServices.MarshalAs(UnmanagedType.LPStr)]",
+         outattributes="[return: global::System.Runtime.InteropServices.MarshalAs(UnmanagedType.LPStr)]") const char * "String"
+
+const char * GetMsg() {}
+void SetMsg(const char *msg) {}
+</pre>
+</div>
+
+<p>
+The intermediary class will then have the marshalling as specified by everything in the 'imtype' typemap:
+</p>
+
+<div class="code">
+<pre>
+class examplePINVOKE {
+  ...
+  [global::System.Runtime.InteropServices.DllImport("example", EntryPoint="CSharp_GetMsg")]
+  [return: global::System.Runtime.InteropServices.MarshalAs(UnmanagedType.LPStr)]
+  public static extern String GetMsg();
+
+  [global::System.Runtime.InteropServices.DllImport("example", EntryPoint="CSharp_SetMsg")]
+  public static extern void SetMsg([global::System.Runtime.InteropServices.MarshalAs(UnmanagedType.LPStr)]String jarg1);
+}
+</pre>
+</div>
+
+<p>
+Note that the <tt>DllImport</tt> attribute is always generated, irrespective of any additional attributes specified.
+</p>
+
+<p>
+These attributes are associated with the C/C++ parameter type or return type, which is subtly different to 
+the attribute features and typemaps covered next.
+Note that all these different C# attributes can be combined so that a method has more than one attribute.
+</p>
+
+<p>
+The <tt>directorinattributes</tt> and <tt>directoroutattributes</tt> typemap attribute are attached to the delegates in the director class, for example, the SwigDelegateBase_0
+</p>
+
+</li>
+
+<li>
+<p>
+Support for attaching C# attributes to wrapped methods, variables and enum values.
+This is done using the <tt>%csattributes</tt> feature, see <a href="Customization.html#Customization_features">%feature directives</a>.
+Note that C# attributes are attached to proxy classes and enums using the <tt>csattributes</tt> typemap.
+For example, imagine we have a custom attribute class, <tt>ThreadSafeAttribute</tt>, for labelling thread safety.
+The following SWIG code shows how to attach this C# attribute to some methods and the class declaration itself:
+</p>
+
+<div class="code">
+<pre>
+%typemap(csattributes) AClass          "[ThreadSafe]"
+%csattributes AClass::AClass(double d) "[ThreadSafe(false)]"
+%csattributes AClass::AMethod()        "[ThreadSafe(true)]"
+
+%inline %{
+class AClass {
+public:
+  AClass(double a) {}
+  void AMethod() {}
+};
+%}
+</pre>
+</div>
+
+<p>
+will generate a C# proxy class:
+</p>
+
+<div class="code">
+<pre>
+[ThreadSafe]
+public class AClass : global::System.IDisposable {
+  ...
+  [ThreadSafe(false)]
+  public AClass(double a) ...
+
+  [ThreadSafe(true)]
+  public void AMethod() ...
+}
+</pre>
+</div>
+
+<p>
+If C# attributes need adding to the <tt>set</tt> or <tt>get</tt> part of C# properties, when wrapping C/C++ variables,
+they can be added using the 'csvarin' and 'csvarout' typemaps respectively.
+Note that the type used for the property is specified in the 'cstype' typemap.
+If the 'out' attribute exists in this typemap, then the type used is from the 'out' attribute.
+</p>
+
+<p>
+An example for attaching attributes to the enum and enum values is shown below.
+</p>
+
+<div class="code">
+<pre>
+%typemap(csattributes) Couleur "[global::System.ComponentModel.Description(\"Colours\")]"
+%csattributes Rouge "[global::System.ComponentModel.Description(\"Red\")]"
+%csattributes Vert "[global::System.ComponentModel.Description(\"Green\")]"
+%inline %{
+  enum Couleur { Rouge, Orange, Vert };
+%}
+</pre>
+</div>
+
+<p>
+which will result in the following C# enum:
+</p>
+
+<div class="code">
+<pre>
+[global::System.ComponentModel.Description("Colours")]
+public enum Couleur {
+  [global::System.ComponentModel.Description("Red")]
+  Rouge,
+  Orange,
+  [global::System.ComponentModel.Description("Green")]
+  Vert
+}
+</pre>
+</div>
+</li>
+
+<li>
+<p>
+The intermediary classname has <tt>PINVOKE</tt> appended after the module name instead of <tt>JNI</tt>, for example <tt>modulenamePINVOKE</tt>.
+</p>
+</li>
+
+<li>
+<p>
+The <tt>%csmethodmodifiers</tt> feature can also be applied to variables as well as methods.
+In addition to the default <tt>public</tt> modifier that SWIG generates when <tt>%csmethodmodifiers</tt> is not
+specified, the feature will also replace the <tt>virtual</tt>/<tt>new</tt>/<tt>override</tt> modifiers that SWIG thinks is appropriate.
+This feature is useful for some obscure cases where SWIG might get the <tt>virtual</tt>/<tt>new</tt>/<tt>override</tt> modifiers incorrect, for example with multiple inheritance.
+</p>
+</li>
+
+<li>
+<a name="CSharp_module_directive"></a>
+<p>
+The name of the intermediary class can be changed from its default, that is, the module name with PINVOKE appended after it. 
+The module directive attribute <tt>imclassname</tt> is used to achieve this:
+</p>
+
+<div class="code">
+<pre>
+%module (imclassname="name") modulename
+</pre>
+</div>
+
+<p>
+If <tt>name</tt> is the same as <tt>modulename</tt> then the module class name gets changed
+from <tt>modulename</tt> to <tt>modulenameModule</tt>.
+</p>
+</li>
+
+<li>
+There is no additional 'premature garbage collection prevention parameter' as the marshalling of the <tt>HandleRef</tt> object
+takes care of ensuring a reference to the proxy class is held until the unmanaged call completed.
+</li>
+
+</ul>
+
+<p>
+<b><tt>$dllimport</tt></b><br>
+This is a C# only special variable that can be used in typemaps, pragmas, features etc.
+The special variable will get translated into the value specified by the <tt>-dllimport</tt> commandline option
+if specified, otherwise it is equivalent to the <b>$module</b> special variable.
+</p>
+
+<p>
+<b><tt>$imclassname</tt></b><br>
+This special variable expands to the intermediary class name. For C# this is usually the same as '$modulePINVOKE' ('$moduleJNI' for Java),
+unless the imclassname attribute is specified in the <a href="CSharp.html#CSharp_module_directive">%module directive</a>.
+</p>
+
+<p>
+The directory <tt>Examples/csharp</tt> has a number of simple examples. 
+Visual Studio .NET 2003 solution and project files are available for compiling with the Microsoft .NET C#
+compiler on Windows. This also works with newer versions of Visual Studio if you allow
+it to convert the solution to the latest version.
+If your SWIG installation went well on a Unix environment and your C# compiler was detected, you should be able to type <tt>make</tt> in each example directory.
+After SWIG has run and both the C# and C/C++ compilers have finished building,
+the examples will be run, by either running <tt>runme.exe</tt> or by running
+<tt>mono runme.exe</tt> (Mono C# compiler).
+Windows users can also get the examples working using a
+<a href="http://www.cygwin.com">Cygwin</a> or <a href="http://www.mingw.org">MinGW</a> environment for automatic configuration of the example makefiles.
+Any one of the C# compilers (Mono or Microsoft) can be detected from within a Cygwin or Mingw environment if installed in your path. 
+
+<H2><a name="CSharp_void_pointers">20.3 Void pointers</a></H2>
+
+
+<p>
+By default SWIG treats <tt>void *</tt> as any other pointer and hence marshalls it as a type wrapper class called <tt>SWIGTYPE_p_void</tt>.
+If you want to marshall with the .NET <tt>System.IntPtr</tt> type instead, there is a simple set of named typemaps called
+<tt>void *VOID_INT_PTR</tt> that can be used.
+They can be applied like any other named typemaps:
+</p>
+
+
+<div class="code">
+<pre>
+%apply void *VOID_INT_PTR { void * }
+void * f(void *v);
+</pre>
+</div>
+
+<H2><a name="CSharp_arrays">20.4 C# Arrays</a></H2>
+
+
+<p>
+There are various ways to pass arrays from C# to C/C++. 
+The default wrapping treats arrays as pointers and as such simple type wrapper classes are generated, 
+eg <tt>SWIGTYPE_p_int</tt> when wrapping the C type <tt>int []</tt> or <tt>int *</tt>.
+This gives a rather restricted use of the underlying unmanaged code and the most practical way to use arrays is to enhance or customise
+with one of the following three approaches; namely the SWIG C arrays library, P/Invoke default array marshalling or 
+pinned arrays.
+</p>
+
+<H3><a name="CSharp_arrays_swig_library">20.4.1 The SWIG C arrays library</a></H3>
+
+
+<p>
+The C arrays library keeps all the array memory in the unmanaged layer.
+The library is available to all language modules and is documented in the <a href="Library.html#Library_carrays">carrays.i library</a> section.
+Please refer to this section for details, but for convenience, the C# usage for the two examples outlined there is shown below.
+</p>
+
+<p>
+For the <tt>%array_functions</tt> example, the equivalent usage would be:
+</p>
+
+<div class="code">
+<pre>
+SWIGTYPE_p_double a = example.new_doubleArray(10);  // Create an array
+for (int i=0; i&lt;10; i++)
+  example.doubleArray_setitem(a, i, 2*i);           // Set a value
+example.print_array(a);                             // Pass to C
+example.delete_doubleArray(a);                      // Destroy array
+</pre>
+</div>
+
+<p>
+and for the <tt>%array_class</tt> example, the equivalent usage would be:
+</p>
+
+<div class="code">
+<pre>
+doubleArray c = new doubleArray(10);    // Create double[10]
+for (int i=0; i&lt;10; i++)
+  c.setitem(i, 2*i);                    // Assign values
+example.print_array(c.cast());          // Pass to C
+</pre>
+</div>
+
+
+<H3><a name="CSharp_arrays_pinvoke_default_array_marshalling">20.4.2 Managed arrays using P/Invoke default array marshalling</a></H3>
+
+
+<p>
+In the P/Invoke default marshalling scheme, one needs to designate whether the invoked function will treat a managed
+array parameter as input, output, or both. When the function is invoked, the CLR allocates a separate chunk of memory as big as the given managed array, 
+which is automatically released at the end of the function call. If the array parameter is marked as being input, the content of the managed array is copied
+into this buffer when the call is made. Correspondingly, if the array parameter is marked as being output, the contents of the reserved buffer are copied
+back into the managed array after the call returns. A pointer to this buffer
+is passed to the native function.
+</p>
+
+<p>
+The reason for allocating a separate buffer is to leave the CLR free to relocate the managed array object 
+during garbage collection. If the overhead caused by the copying is causing a significant performance penalty, consider pinning the managed array and
+passing a direct reference as described in the next section.
+</p>
+
+<p>
+For more information on the subject, see  the
+<a href="http://msdn.microsoft.com/en-us/library/z6cfh6e6(VS.80).aspx">Default Marshaling for Arrays</a> article
+on MSDN.
+</p>
+
+
+<p>
+The P/Invoke default marshalling is supported by the <tt>arrays_csharp.i</tt> library via the INPUT, OUTPUT and INOUT typemaps. 
+Let's look at some example usage. Consider the following C function:
+</p>
+<div class="code">
+<pre>
+void myArrayCopy(int *sourceArray, int *targetArray, int nitems);
+</pre>
+</div>
+
+<p>
+We can now instruct SWIG to use the default marshalling typemaps by 
+</p>
+
+<div class="code">
+<pre>
+%include "arrays_csharp.i"
+
+%apply int INPUT[]  {int *sourceArray}
+%apply int OUTPUT[] {int *targetArray}
+</pre>
+</div>
+
+<p>
+As a result, we get the following method in the module class:
+</p>
+
+<div class="code">
+<pre>
+public static void myArrayCopy(int[] sourceArray, int[] targetArray, int nitems) {
+    examplePINVOKE.myArrayCopy(sourceArray, targetArray, nitems);
+}
+</pre>
+</div>
+
+<p>
+If we look beneath the surface at the corresponding intermediary class code, we see
+that SWIG has generated code that uses attributes 
+(from the System.Runtime.InteropServices namespace) to tell the CLR to use default
+marshalling for the arrays:
+</p>
+
+<div class="code">
+<pre>
+[global::System.Runtime.InteropServices.DllImport("example", EntryPoint="CSharp_myArrayCopy")]
+public static extern void myArrayCopy([global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(UnmanagedType.LPArray)]int[] jarg1, 
+                                      [global::System.Runtime.InteropServices.Out, global::System.Runtime.InteropServices.MarshalAs(UnmanagedType.LPArray)]int[] jarg2,
+                                       int jarg3);
+</pre>
+</div>
+
+<p>
+As an example of passing an inout array (i.e. the target function will both read from and
+write to the array), consider this C function that swaps a given number of elements
+in the given arrays:
+</p>
+
+<div class="code">
+<pre>
+void myArraySwap(int *array1, int *array2, int nitems);
+</pre>
+</div>
+
+<p>
+Now, we can instruct SWIG to wrap this by
+</p>
+
+<div class="code">
+<pre>
+%include "arrays_csharp.i"
+
+%apply int INOUT[] {int *array1}
+%apply int INOUT[] {int *array2}
+</pre>
+</div>
+
+<p>
+This results in the module class method
+</p>
+
+<div class="code">
+<pre>
+  public static void myArraySwap(int[] array1, int[] array2, int nitems) {
+    examplePINVOKE.myArraySwap(array1, array2, nitems);
+  }
+</pre>
+</div>
+
+<p>
+and intermediary class method
+</p>
+
+<div class="code">
+<pre>
+  [global::System.Runtime.InteropServices.DllImport("example", EntryPoint="CSharp_myArraySwap")]
+  public static extern void myArraySwap([global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.Out, global::System.Runtime.InteropServices.MarshalAs(UnmanagedType.LPArray)]int[] jarg1, 
+                                        [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.Out, global::System.Runtime.InteropServices.MarshalAs(UnmanagedType.LPArray)]int[] jarg2,
+                                         int jarg3);
+</pre>
+</div>
+
+
+<H3><a name="CSharp_arrays_pinning">20.4.3 Managed arrays using pinning</a></H3>
+
+
+<p>
+It is also possible to pin a given array in memory (i.e. fix its location in memory), obtain a
+direct pointer to it, and then pass this pointer to the wrapped C/C++ function. This approach
+involves no copying, but it makes the work of the garbage collector harder as 
+the managed array object can not be relocated before the fix on the array is released. You should avoid 
+fixing arrays in memory in cases where the control may re-enter the managed side via a callback and/or
+another thread may produce enough garbage to trigger garbage collection.
+</p>
+
+<p>
+For more information, see the <a href="http://msdn.microsoft.com/en-us/library/f58wzh21(VS.80).aspx">fixed statement</a> in the C# language reference.
+</p>
+
+
+<p>
+Now let's look at an example using pinning, thus avoiding the CLR making copies
+of the arrays passed as parameters. The <tt>arrays_csharp.i</tt> library file again provides the required support via the <tt>FIXED</tt> typemaps.
+Let's use the same function from the previous section:
+</p>
+
+<div class="code">
+<pre>
+void myArrayCopy(int *sourceArray, int *targetArray, int nitems);
+</pre>
+</div>
+
+<p>
+We now need to declare the module class method unsafe, as we are using pointers:
+</p>
+
+<div class="code">
+<pre>
+%csmethodmodifiers myArrayCopy "public unsafe";
+ </pre>
+</div>
+
+<p>
+Apply the appropriate typemaps to the array parameters:
+</p>
+
+<div class="code">
+<pre>
+%include "arrays_csharp.i"
+
+%apply int FIXED[] {int *sourceArray}
+%apply int FIXED[] {int *targetArray}
+</pre>
+</div>
+
+<p>
+Notice that there is no need for separate in, out or inout typemaps as is the
+case when using P/Invoke default marshalling. 
+</p>
+
+<p>
+As a result, we get the following method in the module class:
+</p>
+
+<div class="code">
+<pre>
+  public unsafe static void myArrayCopy(int[] sourceArray, int[] targetArray, int nitems) {
+    fixed ( int *swig_ptrTo_sourceArray = sourceArray ) {
+    fixed ( int *swig_ptrTo_targetArray = targetArray ) {
+    {
+      examplePINVOKE.myArrayCopy((global::System.IntPtr)swig_ptrTo_sourceArray, (global::System.IntPtr)swig_ptrTo_targetArray,
+                                 nitems);
+    }
+    }
+    }
+  }
+</pre>
+</div>
+
+<p>
+On the method signature level the only difference to the version using P/Invoke default
+marshalling is the "unsafe" quantifier, which is required because we are handling pointers.
+</p>
+
+<p>
+Also the intermediary class method looks a little different from the default marshalling
+example - the method is expecting an IntPtr as the parameter type.
+</p>
+
+<div class="code">
+<pre>
+[global::System.Runtime.InteropServices.DllImport("example", EntryPoint="CSharp_myArrayCopy")]
+public static extern void myArrayCopy(global::System.IntPtr jarg1, global::System.IntPtr jarg2, int jarg3);
+</pre>
+</div>
+
+
+
+<H2><a name="CSharp_exceptions">20.5 C# Exceptions</a></H2>
+
+
+<p>
+It is possible to throw a C# Exception from C/C++ code.
+SWIG already provides the framework for throwing C# exceptions if it is able to detect that a C++ exception could be thrown.
+Automatically detecting that a C++ exception could be thrown is only possible when a C++ exception specification is used,
+see <a href="SWIGPlus.html#SWIGPlus_exception_specifications">Exception specifications</a>. 
+The <a href="Customization.html#Customization_exception">Exception handling with %exception</a> section details the <tt>%exception</tt> feature.
+Customised code for handling exceptions with or without a C++ exception specification is possible and the details follow.
+However anyone wishing to do this should be familiar with the contents of the sections referred to above.
+</p>
+
+<p>
+Unfortunately a C# exception cannot simply be thrown from unmanaged code for a variety of reasons.
+Most notably being that throwing a C# exception results in exceptions being thrown across the C PInvoke interface and C does not understand exceptions.
+The design revolves around a C# exception being constructed and stored as a pending exception, to be thrown only when the unmanaged code has completed.
+Implementing this is a tad involved and there are thus some unusual typemap constructs.
+Some practical examples follow and they should be read in conjunction with the rest of this section.
+</p>
+
+<p>
+First some details about the design that must be followed.
+Each typemap or feature that generates <b>unmanaged code</b> supports an attribute called <tt>canthrow</tt>.
+This is simply a flag which when set indicates that the code in the typemap/feature has code which might want to throw a C# exception.
+The code in the typemap/feature can then raise a C# exception by calling one of the C functions,
+<tt>SWIG_CSharpSetPendingException()</tt> or <tt>SWIG_CSharpSetPendingExceptionArgument()</tt>.
+When called, the function makes a callback into the managed world via a delegate.
+The callback creates and stores an exception ready for throwing when the unmanaged code has finished.
+The typemap/feature unmanaged code is then expected to force an immediate return from the unmanaged wrapper function,
+so that the pending managed exception can then be thrown.
+The support code has been carefully designed to be efficient as well as thread-safe.
+However to achieve the goal of efficiency requires some optional code generation in the <b>managed code</b> typemaps.
+Code to check for pending exceptions is generated if and only if the unmanaged code has code to set a pending exception,
+that is if the <tt>canthrow</tt> attribute is set.
+The optional managed code is generated using the <tt>excode</tt> typemap attribute and <tt>$excode</tt> special variable in the relevant managed code typemaps.
+Simply, if any relevant unmanaged code has the <tt>canthrow</tt> attribute set, then any occurrences of <tt>$excode</tt>
+is replaced with the code in the <tt>excode</tt> attribute.
+If the <tt>canthrow</tt> attribute is not set, then any occurrences of <tt>$excode</tt> are replaced with nothing.
+</p>
+
+<p>
+The prototypes for the <tt>SWIG_CSharpSetPendingException()</tt> and <tt>SWIG_CSharpSetPendingExceptionArgument()</tt> functions are
+</p>
+
+<div class="code">
+<pre>
+static void SWIG_CSharpSetPendingException(SWIG_CSharpExceptionCodes code,
+                                           const char *msg);
+
+static void SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpExceptionArgumentCodes code,
+                                                   const char *msg,
+                                                   const char *param_name);
+</pre>
+</div>
+
+<p>
+The first parameter defines which .NET exceptions can be thrown:
+</p>
+
+<div class="code">
+<pre>
+typedef enum {
+  SWIG_CSharpApplicationException,
+  SWIG_CSharpArithmeticException,
+  SWIG_CSharpDivideByZeroException,
+  SWIG_CSharpIndexOutOfRangeException,
+  SWIG_CSharpInvalidCastException,
+  SWIG_CSharpInvalidOperationException,
+  SWIG_CSharpIOException,
+  SWIG_CSharpNullReferenceException,
+  SWIG_CSharpOutOfMemoryException,
+  SWIG_CSharpOverflowException,
+  SWIG_CSharpSystemException
+} SWIG_CSharpExceptionCodes;
+
+typedef enum {
+  SWIG_CSharpArgumentException,
+  SWIG_CSharpArgumentNullException,
+  SWIG_CSharpArgumentOutOfRangeException,
+} SWIG_CSharpExceptionArgumentCodes;
+</pre>
+</div>
+
+<p>
+where, for example, <tt>SWIG_CSharpApplicationException</tt> corresponds to the .NET exception, <tt>ApplicationException</tt>.
+The <tt>msg</tt> and <tt>param_name</tt> parameters contain the C# exception message and parameter name associated with the exception.
+</p>
+
+
+<p>
+The <tt>%exception</tt> feature in C# has the <tt>canthrow</tt> attribute set.
+The <tt>%csnothrowexception</tt> feature is like <tt>%exception</tt>, but it does not have the <tt>canthrow</tt> attribute
+set so should only be used when a C# exception is not created.
+</p>
+
+
+<H3><a name="CSharp_exception_example_check_typemap">20.5.1 C# exception example using "check" typemap</a></H3>
+
+
+<p>
+Let's say we have the following simple C++ method:
+</p>
+
+
+<div class="code">
+<pre>
+void positivesonly(int number);
+</pre>
+</div>
+
+<p>
+and we want to check that the input <tt>number</tt> is always positive and if not throw a C# <tt>ArgumentOutOfRangeException</tt>.
+The "check" typemap is designed for checking input parameters. Below you will see the <tt>canthrow</tt> attribute is set because
+the code contains a call to <tt>SWIG_CSharpSetPendingExceptionArgument()</tt>. The full example follows:
+</p>
+
+<div class="code">
+<pre>
+%module example
+
+%typemap(check, canthrow=1) int number %{
+if ($1 &lt; 0) {
+  SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentOutOfRangeException,
+                                         "only positive numbers accepted", "number");
+  return $null;
+}
+// SWIGEXCODE is a macro used by many other csout typemaps
+%define SWIGEXCODE
+ "\n    if ($modulePINVOKE.SWIGPendingException.Pending)"
+ "\n      throw $modulePINVOKE.SWIGPendingException.Retrieve();"
+%enddef
+%typemap(csout, excode=SWIGEXCODE) void {
+    $imcall;$excode
+  }
+%}
+
+%inline %{
+
+void positivesonly(int number) {
+}
+
+%}
+</pre>
+</div>
+
+<p>
+When the following C# code is executed:
+</p>
+
+<div class="code">
+<pre>
+public class runme {
+    static void Main() {
+      example.positivesonly(-1);
+    }
+}
+</pre>
+</div>
+
+<p>
+The exception is thrown:
+</p>
+
+<div class="code">
+<pre>
+Unhandled Exception: System.ArgumentOutOfRangeException: only positive numbers accepted
+Parameter name: number
+in &lt;0x00034&gt; example:positivesonly (int)
+in &lt;0x0000c&gt; runme:Main ()
+</pre>
+</div>
+
+<p>
+Now let's analyse the generated code to gain a fuller understanding of the typemaps. The generated unmanaged C++ code is:
+</p>
+
+
+<div class="code">
+<pre>
+SWIGEXPORT void SWIGSTDCALL CSharp_positivesonly(int jarg1) {
+  int arg1 ;
+
+  arg1 = (int)jarg1;
+
+  if (arg1 &lt; 0) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentOutOfRangeException,
+      "only positive numbers accepted", "number");
+    return ;
+  }
+
+  positivesonly(arg1);
+
+}
+</pre>
+</div>
+
+<p>
+This largely comes from the "check" typemap. The managed code in the module class is:
+</p>
+
+<div class="code">
+<pre>
+public class example {
+  public static void positivesonly(int number) {
+    examplePINVOKE.positivesonly(number);
+    if (examplePINVOKE.SWIGPendingException.Pending)
+      throw examplePINVOKE.SWIGPendingException.Retrieve();
+  }
+
+}
+</pre>
+</div>
+
+<p>
+This comes largely from the "csout" typemap. 
+</p>
+
+<p>
+The "csout" typemap is the same as the default void "csout" typemap so is not strictly necessary for the example.
+However, it is shown to demonstrate what managed output code typemaps should contain,
+that is, a <tt>$excode</tt> special variable and an <tt>excode</tt> attribute.
+Also note that <tt>$excode</tt> is expanded into the code held in the <tt>excode</tt> attribute.
+The <tt>$imcall</tt> as always expands into <tt>examplePINVOKE.positivesonly(number)</tt>.
+The exception support code in the intermediary class, <tt>examplePINVOKE</tt>, is not shown, but is contained within the inner classes,
+<tt>SWIGPendingException</tt> and <tt>SWIGExceptionHelper</tt> and is always generated.
+These classes can be seen in any of the generated wrappers.
+However, all that is required of a user is as demonstrated in the "csin" typemap above.
+That is, is to check <tt>SWIGPendingException.Pending</tt> and to throw the exception returned by <tt>SWIGPendingException.Retrieve()</tt>.
+</p>
+
+<p>
+If the "check" typemap did not exist, then
+the following module class would instead be generated:
+</p>
+
+<div class="code">
+<pre>
+public class example {
+  public static void positivesonly(int number) {
+    examplePINVOKE.positivesonly(number);
+  }
+
+}
+</pre>
+</div>
+
+<p>
+Here we see the pending exception checking code is omitted.
+In fact, the code above would be generated if the <tt>canthrow</tt> attribute was not in the "check" typemap, such as:
+</p>
+
+<div class="code">
+<pre>
+%typemap(check) int number %{
+if ($1 &lt; 0) {
+  SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentOutOfRangeException,
+                                         "only positive numbers accepted", "number");
+  return $null;
+}
+%}
+</pre>
+</div>
+
+<p>
+Note that if SWIG detects you have used <tt>SWIG_CSharpSetPendingException()</tt> or <tt>SWIG_CSharpSetPendingExceptionArgument()</tt>
+without setting the <tt>canthrow</tt> attribute you will get a warning message similar to
+</p>
+
+<div class="code">
+<pre>
+example.i:21: Warning 845: Unmanaged code contains a call to a SWIG_CSharpSetPendingException
+method and C# code does not handle pending exceptions via the canthrow attribute.
+</pre>
+</div>
+<p>
+Actually it will issue this warning for any function beginning with <tt>SWIG_CSharpSetPendingException</tt>.
+</P>
+
+<H3><a name="CSharp_exception_example_percent_exception">20.5.2 C# exception example using %exception</a></H3>
+
+
+<p>
+Let's consider a similar, but more common example that throws a C++ exception from within a wrapped function.
+We can use <tt>%exception</tt> as mentioned in <a href="Customization.html#Customization_exception">Exception handling with %exception</a>.
+</p>
+
+<div class="code">
+<pre>
+%exception negativesonly(int value) %{
+try {
+  $action
+} catch (std::out_of_range e) {
+  SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, e.what());
+  return $null;
+}
+%}
+
+%inline %{
+#include &lt;stdexcept&gt;
+void negativesonly(int value) {
+  if (value &gt;= 0)
+    throw std::out_of_range("number should be negative");
+}
+%}
+</pre>
+</div>
+
+<p>
+The generated unmanaged code this time catches the C++ exception and converts it into a C# <tt>ApplicationException</tt>.
+</p>
+
+<div class="code">
+<pre>
+SWIGEXPORT void SWIGSTDCALL CSharp_negativesonly(int jarg1) {
+  int arg1 ;
+
+  arg1 = (int)jarg1;
+
+  try {
+    negativesonly(arg1);
+
+  } catch (std::out_of_range e) {
+    SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, e.what());
+    return ;
+  }
+}
+</pre>
+</div>
+
+<p>
+The managed code generated does check for the pending exception as mentioned earlier as the C# version of <tt>%exception</tt> has the <tt>canthrow</tt> attribute set by default:
+</p>
+
+<div class="code">
+<pre>
+  public static void negativesonly(int value) {
+    examplePINVOKE.negativesonly(value);
+    if (examplePINVOKE.SWIGPendingException.Pending)
+      throw examplePINVOKE.SWIGPendingException.Retrieve();
+  }
+</pre>
+</div>
+
+<H3><a name="CSharp_exception_example_exception_specifications">20.5.3 C# exception example using exception specifications</a></H3>
+
+
+<p>
+When C++ exception specifications are used, SWIG is able to detect that the method might throw an exception.
+By default SWIG will automatically generate code to catch the exception and convert it into a managed <tt>ApplicationException</tt>,
+as defined by the default "throws" typemaps.
+The following example has a user supplied "throws" typemap which is used whenever an exception specification contains a <tt>std::out_of_range</tt>,
+such as the <tt>evensonly</tt> method below.
+</p>
+
+<div class="code">
+<pre>
+%typemap(throws, canthrow=1) std::out_of_range {
+  SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentException, $1.what(), NULL);
+  return $null;
+}
+
+%inline %{
+#include &lt;stdexcept&gt;
+void evensonly(int input) throw (std::out_of_range) {
+  if (input%2 != 0)
+    throw std::out_of_range("number is not even");
+}
+%}
+</pre>
+</div>
+
+<p>
+Note that the type for the throws typemap is the type in the exception specification.
+SWIG generates a try catch block with the throws typemap code in the catch handler.
+</p>
+
+<div class="code">
+<pre>
+SWIGEXPORT void SWIGSTDCALL CSharp_evensonly(int jarg1) {
+  int arg1 ;
+
+  arg1 = (int)jarg1;
+  try {
+    evensonly(arg1);
+  }
+  catch(std::out_of_range &amp;_e) {
+    {
+      SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentException, (&amp;_e)-&gt;what(), NULL);
+      return ;
+    }
+  }
+}
+</pre>
+</div>
+
+<p>
+Multiple catch handlers are generated should there be more than one exception specifications declared.
+</p>
+
+<H3><a name="CSharp_custom_application_exception">20.5.4 Custom C# ApplicationException example</a></H3>
+
+
+<p>
+This example involves a user defined exception.
+The conventional .NET exception handling approach is to create a custom <tt>ApplicationException</tt> and throw it in your application.
+The goal in this example is to convert the STL <tt>std::out_of_range</tt> exception into one of these custom .NET exceptions.
+</p>
+
+
+<p>
+The default exception handling is quite easy to use as the <tt>SWIG_CSharpSetPendingException()</tt> and <tt>SWIG_CSharpSetPendingExceptionArgument()</tt>
+methods are provided by SWIG.
+However, for a custom C# exception, the boiler plate code that supports these functions needs replicating.
+In essence this consists of some C/C++ code and C# code.
+The C/C++ code can be generated into the wrapper file using the <tt>%insert(runtime)</tt> directive and
+the C# code can be generated into the intermediary class using the <tt>imclasscode</tt> pragma as follows:
+
+</p>
+
+<div class="code">
+<pre>
+%insert(runtime) %{
+  // Code to handle throwing of C# CustomApplicationException from C/C++ code.
+  // The equivalent delegate to the callback, CSharpExceptionCallback_t, is CustomExceptionDelegate
+  // and the equivalent customExceptionCallback instance is customDelegate
+  typedef void (SWIGSTDCALL* CSharpExceptionCallback_t)(const char *);
+  CSharpExceptionCallback_t customExceptionCallback = NULL;
+
+  extern "C" SWIGEXPORT
+  void SWIGSTDCALL CustomExceptionRegisterCallback(CSharpExceptionCallback_t customCallback) {
+    customExceptionCallback = customCallback;
+  }
+
+  // Note that SWIG detects any method calls named starting with
+  // SWIG_CSharpSetPendingException for warning 845
+  static void SWIG_CSharpSetPendingExceptionCustom(const char *msg) {
+    customExceptionCallback(msg);
+  }
+%}
+
+%pragma(csharp) imclasscode=%{
+  class CustomExceptionHelper {
+    // C# delegate for the C/C++ customExceptionCallback
+    public delegate void CustomExceptionDelegate(string message);
+    static CustomExceptionDelegate customDelegate =
+                                   new CustomExceptionDelegate(SetPendingCustomException);
+
+    [global::System.Runtime.InteropServices.DllImport("$dllimport", EntryPoint="CustomExceptionRegisterCallback")]
+    public static extern
+           void CustomExceptionRegisterCallback(CustomExceptionDelegate customCallback);
+
+    static void SetPendingCustomException(string message) {
+      SWIGPendingException.Set(new CustomApplicationException(message));
+    }
+
+    static CustomExceptionHelper() {
+      CustomExceptionRegisterCallback(customDelegate);
+    }
+  }
+  static CustomExceptionHelper exceptionHelper = new CustomExceptionHelper();
+%}
+</pre>
+</div>
+
+<p>
+The method stored in the C# delegate instance, <tt>customDelegate</tt> is what gets called by the C/C++ callback.
+However, the equivalent to the C# delegate, that is the C/C++ callback, needs to be assigned before any unmanaged code is executed.
+This is achieved by putting the initialisation code in the intermediary class.
+Recall that the intermediary class contains all the PInvoke methods, so the static variables in the intermediary class will be initialised
+before any of the PInvoke methods in this class are called.
+The <tt>exceptionHelper</tt> static variable ensures the C/C++ callback is initialised with the value in <tt>customDelegate</tt> by calling
+the <tt>CustomExceptionRegisterCallback</tt> method in the <tt>CustomExceptionHelper</tt> static constructor.
+Once this has been done, unmanaged code can make callbacks into the managed world as <tt>customExceptionCallback</tt> will be initialised with a valid callback/delegate.
+Any calls to <tt>SWIG_CSharpSetPendingExceptionCustom()</tt> will make the callback to create the pending exception in the same way that
+<tt>SWIG_CSharpSetPendingException()</tt> and <tt>SWIG_CSharpSetPendingExceptionArgument()</tt> does.
+In fact the method has been similarly named so that SWIG can issue the warning about missing <tt>canthrow</tt> attributes as discussed earlier.
+It is an invaluable warning as it is easy to forget the <tt>canthrow</tt> attribute when writing typemaps/features.
+</p>
+
+<p>
+The <tt>SWIGPendingException</tt> helper class is not shown, but is generated as an inner class into the intermediary class.
+It stores the pending exception in Thread Local Storage so that the exception handling mechanism is thread safe.
+</p>
+
+<p>
+The boiler plate code above must be used in addition to a handcrafted <tt>CustomApplicationException</tt>:
+</p>
+
+<div class="code">
+<pre>
+// Custom C# Exception
+class CustomApplicationException : global::System.ApplicationException {
+  public CustomApplicationException(string message) 
+    : base(message) {
+  }
+}
+</pre>
+</div>
+
+<p>
+and the SWIG interface code:
+</p>
+
+<div class="code">
+<pre>
+%typemap(throws, canthrow=1) std::out_of_range {
+  SWIG_CSharpSetPendingExceptionCustom($1.what());
+  return $null;
+}
+
+%inline %{
+void oddsonly(int input) throw (std::out_of_range) {
+  if (input%2 != 1)
+    throw std::out_of_range("number is not odd");
+}
+%}
+</pre>
+</div>
+
+<p>
+The "throws" typemap now simply calls our new <tt>SWIG_CSharpSetPendingExceptionCustom()</tt> function so that the exception can be caught, as such:
+</p>
+
+<div class="code">
+<pre>
+try {
+  example.oddsonly(2);
+} catch (CustomApplicationException e) {
+  ...
+}
+</pre>
+</div>
+
+<H2><a name="CSharp_directors">20.6 C# Directors</a></H2>
+
+
+<p>
+The SWIG directors feature adds extra code to the generated C# proxy classes that enable these classes to be used in cross-language polymorphism.
+Essentially, it enables unmanaged C++ code to call back into managed code for virtual methods so that a C# class can derive from a wrapped C++ class.
+</p>
+
+<p>
+The following sections provide information on the C# director implementation and contain most of the information required to use the C# directors.
+However, the <a href="Java.html#Java_directors">Java directors</a> section should also be read in order to gain more insight into directors.
+</p>
+
+<H3><a name="CSharp_directors_example">20.6.1 Directors example</a></H3>
+
+
+<p>
+Imagine we are wrapping a C++ base class, <tt>Base</tt>, from which we would like to inherit in C#.
+Such a class is shown below as well as another class, <tt>Caller</tt>, which calls the virtual method <tt>UIntMethod</tt>
+from pure unmanaged C++ code.
+</p>
+
+
+<div class="code">
+<pre>
+// file: example.h
+class Base {
+public:
+  virtual ~Base() {}
+
+  virtual unsigned int UIntMethod(unsigned int x) {
+    std::cout &lt;&lt; "Base - UIntMethod(" &lt;&lt; x &lt;&lt; ")" &lt;&lt; std::endl;
+    return x;
+  }
+  virtual void BaseBoolMethod(const Base &amp;b, bool flag) {}
+};
+
+class Caller {
+public:
+  Caller(): m_base(0) {}
+  ~Caller() { delBase(); }
+  void set(Base *b) { delBase(); m_base = b; }
+  void reset() { m_base = 0; }
+  unsigned int UIntMethodCall(unsigned int x) { return m_base-&gt;UIntMethod(x); }
+
+private:
+  Base *m_base;
+  void delBase() { delete m_base; m_base = 0; }
+};
+</pre>
+</div>
+
+<p>
+The director feature is turned off by default and the following simple interface file shows how directors are enabled
+for the class <tt>Base</tt>.
+</p>
+
+<div class="code">
+<pre>
+/* File : example.i */
+%module(directors="1") example
+%{
+#include "example.h"
+%}
+
+%feature("director") Base;
+
+%include "example.h"
+</pre>
+</div>
+
+<p>
+The following is a C# class inheriting from <tt>Base</tt>:
+</p>
+
+<div class="code">
+<pre>
+public class CSharpDerived : Base
+{
+  public override uint UIntMethod(uint x)
+  {
+    Console.WriteLine("CSharpDerived - UIntMethod({0})", x);
+    return x;
+  }
+}
+</pre>
+</div>
+
+<p>
+The <tt>Caller</tt> class can demonstrate the <tt>UIntMethod</tt> method being called from unmanaged code using the following C# code:
+</p>
+
+<div class="targetlang">
+<pre>
+public class runme
+{
+  static void Main() 
+  {
+    Caller myCaller = new Caller();
+
+    // Test pure C++ class
+    using (Base myBase = new Base())
+    {
+      makeCalls(myCaller, myBase);
+    }
+
+    // Test director / C# derived class
+    using (Base myBase = new CSharpDerived())
+    {
+      makeCalls(myCaller, myBase);
+    }
+  }
+
+  static void makeCalls(Caller myCaller, Base myBase)
+  {
+    myCaller.set(myBase);
+    myCaller.UIntMethodCall(123);
+    myCaller.reset();
+  }
+}
+</pre>
+</div>
+
+<p>
+If the above is run, the output is then:
+</p>
+
+<div class="shell">
+<pre>
+Base - UIntMethod(123)
+CSharpDerived - UIntMethod(123)
+</pre>
+</div>
+
+<H3><a name="CSharp_directors_implementation">20.6.2 Directors implementation</a></H3>
+
+
+<p>
+The previous section demonstrated a simple example where the virtual <tt>UIntMethod</tt> method was called from
+C++ code, even when the overridden method is implemented in C#.
+The intention of this section is to gain an insight into how the director feature works. 
+It shows the generated code for the two virtual methods, <tt>UIntMethod</tt> and <tt>BaseBoolMethod</tt>,
+when the director feature is enabled for the <tt>Base</tt> class.
+</p>
+
+<p>
+Below is the generated C# <tt>Base</tt> director class.
+</p>
+
+<div class="code">
+<pre>
+public class Base : global::System.IDisposable {
+  private global::System.Runtime.InteropServices.HandleRef swigCPtr;
+  protected bool swigCMemOwn;
+
+  internal Base(global::System.IntPtr cPtr, bool cMemoryOwn) {
+    swigCMemOwn = cMemoryOwn;
+    swigCPtr = new global::System.Runtime.InteropServices.HandleRef(this, cPtr);
+  }
+
+  internal static global::System.Runtime.InteropServices.HandleRef getCPtr(Base obj) {
+    return (obj == null) ? new global::System.Runtime.InteropServices.HandleRef(null, global::System.IntPtr.Zero) : obj.swigCPtr;
+  }
+
+  ~Base() {
+    Dispose();
+  }
+
+  public virtual void Dispose() {
+    lock(this) {
+      if(swigCPtr.Handle != global::System.IntPtr.Zero &amp;&amp; swigCMemOwn) {
+        swigCMemOwn = false;
+        examplePINVOKE.delete_Base(swigCPtr);
+      }
+      swigCPtr = new global::System.Runtime.InteropServices.HandleRef(null, global::System.IntPtr.Zero);
+      global::System.GC.SuppressFinalize(this);
+    }
+  }
+
+  public virtual uint UIntMethod(uint x) {
+    uint ret = examplePINVOKE.Base_UIntMethod(swigCPtr, x);
+    return ret;
+  }
+
+  public virtual void BaseBoolMethod(Base b, bool flag) {
+    examplePINVOKE.Base_BaseBoolMethod(swigCPtr, Base.getCPtr(b), flag);
+    if (examplePINVOKE.SWIGPendingException.Pending)
+      throw examplePINVOKE.SWIGPendingException.Retrieve();
+  }
+
+  public Base() : this(examplePINVOKE.new_Base(), true) {
+    SwigDirectorConnect();
+  }
+
+  private void SwigDirectorConnect() {
+    if (SwigDerivedClassHasMethod("UIntMethod", swigMethodTypes0))
+      swigDelegate0 = new SwigDelegateBase_0(SwigDirectorUIntMethod);
+    if (SwigDerivedClassHasMethod("BaseBoolMethod", swigMethodTypes1))
+      swigDelegate1 = new SwigDelegateBase_1(SwigDirectorBaseBoolMethod);
+    examplePINVOKE.Base_director_connect(swigCPtr, swigDelegate0, swigDelegate1);
+  }
+
+  private bool SwigDerivedClassHasMethod(string methodName, global::System.global::System.Type[] methodTypes) {
+    System.Reflection.MethodInfo methodInfo = this.GetType().GetMethod(methodName, methodTypes);
+    bool hasDerivedMethod = methodInfo.DeclaringType.IsSubclassOf(typeof(Base));
+    return hasDerivedMethod;
+  }
+
+  private uint SwigDirectorUIntMethod(uint x) {
+    return UIntMethod(x);
+  }
+
+  private void SwigDirectorBaseBoolMethod(global::System.IntPtr b, bool flag) {
+    BaseBoolMethod(new Base(b, false), flag);
+  }
+
+  public delegate uint SwigDelegateBase_0(uint x);
+  public delegate void SwigDelegateBase_1(global::System.IntPtr b, bool flag);
+
+  private SwigDelegateBase_0 swigDelegate0;
+  private SwigDelegateBase_1 swigDelegate1;
+
+  private static global::System.Type[] swigMethodTypes0 = new global::System.Type[] { typeof(uint) };
+  private static global::System.Type[] swigMethodTypes1 = new global::System.Type[] { typeof(Base), typeof(bool) };
+}
+</pre>
+</div>
+
+<p>
+Everything from the <tt>SwigDirectorConnect()</tt> method and below is code that is only generated when
+directors are enabled.
+The design comprises a C# delegate being initialised for each virtual method on construction of the class.
+Let's examine the <tt>BaseBoolMethod</tt>.
+</p>
+
+<p>
+In the <tt>Base</tt> constructor a call is made to <tt>SwigDirectorConnect()</tt> which contains the initialisation code for all the virtual methods.
+It uses a support method, <tt>SwigDerivedClassHasMethod()</tt>, which simply uses reflection to determine if the named method,
+BaseBoolMethod, with the list of required parameter types, exists in a subclass.
+If it does not exist, the delegate is not initialised as there is no need for unmanaged code to call back into managed C# code.
+However, if there is an overridden method in any subclass, the delegate is required. 
+It is then initialised to the <tt>SwigDirectorBaseBoolMethod</tt> which in turn will call <tt>BaseBoolMethod</tt> if invoked.
+The delegate is not initialised to the <tt>BaseBoolMethod</tt> directly as quite often types will need marshalling from the unmanaged type
+to the managed type in which case an intermediary method (<tt>SwigDirectorBaseBoolMethod</tt>) is required for the marshalling.
+In this case, the C# <tt>Base</tt> class needs to be created from the unmanaged <tt>IntPtr</tt> type.
+</p>
+
+<p>
+The last thing that <tt>SwigDirectorConnect()</tt> does is to pass the delegates to the unmanaged code.
+It calls the intermediary method <tt>Base_director_connect()</tt> which is really a call to the C function <tt>CSharp_Base_director_connect()</tt>.
+This method simply maps each C# delegate onto a C function pointer.
+</p>
+
+<div class="code">
+<pre>
+SWIGEXPORT void SWIGSTDCALL CSharp_Base_director_connect(void *objarg, 
+                                        SwigDirector_Base::SWIG_Callback0_t callback0,
+                                        SwigDirector_Base::SWIG_Callback1_t callback1) {
+  Base *obj = (Base *)objarg;
+  SwigDirector_Base *director = dynamic_cast&lt;SwigDirector_Base *&gt;(obj);
+  if (director) {
+    director-&gt;swig_connect_director(callback0, callback1);
+  }
+}
+
+class SwigDirector_Base : public Base, public Swig::Director {
+public:
+  SwigDirector_Base();
+  virtual unsigned int UIntMethod(unsigned int x);
+  virtual ~SwigDirector_Base();
+  virtual void BaseBoolMethod(Base const &amp;b, bool flag);
+
+  typedef unsigned int (SWIGSTDCALL* SWIG_Callback0_t)(unsigned int);
+  typedef void (SWIGSTDCALL* SWIG_Callback1_t)(void *, unsigned int);
+  void swig_connect_director(SWIG_Callback0_t callbackUIntMethod,
+                             SWIG_Callback1_t callbackBaseBoolMethod);
+
+private:
+  SWIG_Callback0_t swig_callbackUIntMethod;
+  SWIG_Callback1_t swig_callbackBaseBoolMethod;
+  void swig_init_callbacks();
+};
+
+void SwigDirector_Base::swig_connect_director(SWIG_Callback0_t callbackUIntMethod, 
+                                              SWIG_Callback1_t callbackBaseBoolMethod) {
+  swig_callbackUIntMethod = callbackUIntMethod;
+  swig_callbackBaseBoolMethod = callbackBaseBoolMethod;
+}
+</pre>
+</div>
+
+<p>
+Note that for each director class SWIG creates an unmanaged director class for making the callbacks. For example <tt>Base</tt> has <tt>SwigDirector_Base</tt> and <tt>SwigDirector_Base</tt>
+is derived from <tt>Base</tt>.
+Should a C# class be derived from <tt>Base</tt>, the underlying C++ <tt>SwigDirector_Base</tt> is created rather than <tt>Base</tt>.
+The <tt>SwigDirector_Base</tt> class then implements all the virtual methods, redirecting calls up to managed code if the callback/delegate is non-zero.
+The implementation of <tt>SwigDirector_Base::BaseBoolMethod</tt> shows this - the callback is made by invoking the <tt>swig_callbackBaseBoolMethod</tt> function pointer:
+</p>
+
+<div class="code">
+<pre>
+void SwigDirector_Base::BaseBoolMethod(Base const &amp;b, bool flag) {
+  void * jb = 0 ;
+  unsigned int jflag  ;
+  
+  if (!swig_callbackBaseBoolMethod) {
+    Base::BaseBoolMethod(b, flag);
+    return;
+  } else {
+    jb = (Base *) &amp;b; 
+    jflag = flag;
+    swig_callbackBaseBoolMethod(jb, jflag);
+  }
+}
+</pre>
+</div>
+
+<p>
+The delegates from the above example are <tt>public</tt> by default:
+</p>
+
+<div class="code">
+<pre>
+  public delegate uint SwigDelegateBase_0(uint x);
+  public delegate void SwigDelegateBase_1(global::System.IntPtr b, bool flag);
+</pre>
+</div>
+
+<p>
+These can be changed if desired via the <tt>csdirectordelegatemodifiers</tt>
+<a href="Customization.html#Customization_features">%feature directive</a>.
+For example, using <tt>%feature("csdirectordelegatemodifiers") "internal"</tt>
+before SWIG parses the Base class will change all the delegates to <tt>internal</tt>:
+</p>
+
+<div class="code">
+<pre>
+  internal delegate uint SwigDelegateBase_0(uint x);
+  internal delegate void SwigDelegateBase_1(global::System.IntPtr b, bool flag);
+</pre>
+</div>
+
+<H3><a name="CSharp_director_caveats">20.6.3 Director caveats</a></H3>
+
+
+<p>
+There is a subtle gotcha with directors.
+If default parameters are used, it is recommended to follow a pattern of always calling a single method in any C# derived class.
+An example will clarify this and the reasoning behind the recommendation. Consider the following C++ class wrapped as a director class:
+</p>
+
+<div class="code">
+<pre>
+class Defaults {
+public:
+  virtual ~Defaults();
+  virtual void DefaultMethod(int a=-100);
+};
+</pre>
+</div>
+
+<p>
+Recall that C++ methods with default parameters generate overloaded methods for each defaulted parameter, so a C# derived class can be created
+with two <tt>DefaultMethod</tt> override methods:
+</p>
+
+<div class="code">
+<pre>
+public class CSharpDefaults : Defaults
+{
+  public override void DefaultMethod()
+  {
+    DefaultMethod(-100); // note C++ default value used
+  }
+  public override void DefaultMethod(int x)
+  {
+  }
+}
+</pre>
+</div>
+
+<p>
+It may not be clear at first, but should a user intend to call <tt>CSharpDefaults.DefaultMethod()</tt> from C++, a call is actually made to <tt>CSharpDefaults.DefaultMethod(int)</tt>.
+This is because the initial call is made in C++ and therefore the <tt>DefaultMethod(int)</tt> method will be called as is expected with C++ calls to methods with defaults,
+with the default being set to -100.
+The callback/delegate matching this method is of course the overloaded method <tt>DefaultMethod(int)</tt>.
+However, a call from C# to <tt>CSharpDefaults.DefaultMethod()</tt> will of course call this exact method and in order for behaviour to be consistent with calls from C++, the implementation
+should pass the call on to <tt>CSharpDefaults.DefaultMethod(int)</tt>using the C++ default value, as shown above.
+</p>
+
+<H2><a name="CSharp_multiple_modules">20.7 Multiple modules</a></H2>
+
+
+<p>
+When using <a href="Modules.html#Modules">multiple modules</a> it is is possible to compile each SWIG generated wrapper
+into a different assembly.
+However, by default the generated code may not compile if 
+generated classes in one assembly use generated classes in another assembly.
+The visibility of the
+<tt>getCPtr()</tt> and pointer constructor generated from the <tt>csbody</tt> typemaps needs changing.
+The default visibility is <tt>internal</tt> but it needs to be <tt>public</tt> for access from a different assembly.
+Just changing 'internal' to 'public' in the typemap achieves this.
+Two macros are available in <tt>csharp.swg</tt> to make this easier and using them is the preferred approach
+over simply copying the typemaps and modifying as this is forward compatible with any changes in
+the <tt>csbody</tt> typemap in future versions of SWIG.
+The macros are for the proxy and typewrapper classes and can respectively be used to
+to make the method and constructor public:
+</p>
+
+<div class="code">
+<pre>
+  SWIG_CSBODY_PROXY(public, public, SWIGTYPE)
+  SWIG_CSBODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
+</pre>
+</div>
+
+<p>
+Alternatively, instead of exposing these as public, consider 
+using the <tt>[assembly:InternalsVisibleTo("Name")]</tt> attribute available in the .NET framework when you
+know which assemblies these can be exposed to.
+Another approach would be to make these public, but also to hide them from intellisense by using
+the <tt>[System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]</tt> attribute
+if you don't want users to easily stumble upon these so called 'internal workings' of the wrappers.
+</p>
+
+<H2><a name="CSharp_typemap_examples">20.8 C# Typemap examples</a></H2>
+
+
+This section includes a few examples of typemaps.  For more examples, you
+might look at the files "<tt>csharp.swg</tt>" and "<tt>typemaps.i</tt>" in
+the SWIG library.
+
+
+<H3><a name="CSharp_memory_management_member_variables">20.8.1 Memory management when returning references to member variables</a></H3>
+
+
+<p>
+This example shows how to prevent premature garbage collection of objects when the underlying C++ class returns a pointer or reference to a member variable.
+The example is a direct equivalent to this <a href="Java.html#Java_memory_management_objects">Java equivalent</a>.
+</p>
+
+<p>
+Consider the following C++ code:
+</p>
+
+<div class="code">
+<pre>
+struct Wheel {
+  int size;
+  Wheel(int sz) : size(sz) {}
+};
+
+class Bike {
+  Wheel wheel;
+public:
+  Bike(int val) : wheel(val) {}
+  Wheel&amp; getWheel() { return wheel; }
+};
+</pre>
+</div>
+
+<p>
+and the following usage from C# after running the code through SWIG:
+</p>
+
+
+<div class="code">
+<pre>
+      Wheel wheel = new Bike(10).getWheel();
+      Console.WriteLine("wheel size: " + wheel.size);
+      // Simulate a garbage collection
+      global::System.GC.Collect();
+      global::System.GC.WaitForPendingFinalizers();
+      global::System.Console.WriteLine("wheel size: " + wheel.size);
+</pre>
+</div>
+
+<p>
+Don't be surprised that if the resulting output gives strange results such as...
+</p>
+
+<div class="shell">
+<pre>
+wheel size: 10
+wheel size: 135019664
+</pre>
+</div>
+
+<p>
+What has happened here is the garbage collector has collected the <tt>Bike</tt> instance as it doesn't think it is needed any more.
+The proxy instance, <tt>wheel</tt>, contains a reference to memory that was deleted when the <tt>Bike</tt> instance was collected.
+In order to prevent the garbage collector from collecting the <tt>Bike</tt> instance a reference to the <tt>Bike</tt> must
+be added to the <tt>wheel</tt> instance. You can do this by adding the reference when the <tt>getWheel()</tt> method
+is called using the following typemaps.
+</p>
+
+
+<div class="code">
+<pre>
+%typemap(cscode) Wheel %{
+  // Ensure that the GC doesn't collect any Bike instance set from C#
+  private Bike bikeReference;
+  internal void addReference(Bike bike) {
+    bikeReference = bike;
+  }
+%}
+
+// Add a C# reference to prevent premature garbage collection and resulting use
+// of dangling C++ pointer. Intended for methods that return pointers or
+// references to a member variable.
+%typemap(csout, excode=SWIGEXCODE) Wheel&amp; getWheel {
+    global::System.IntPtr cPtr = $imcall;$excode
+    $csclassname ret = null;
+    if (cPtr != global::System.IntPtr.Zero) {
+      ret = new $csclassname(cPtr, $owner);
+      ret.addReference(this);
+    }
+    return ret;
+  }
+</pre>
+</div>
+
+<p>
+The code in the first typemap gets added to the <tt>Wheel</tt> proxy class.
+The code in the second typemap constitutes the bulk of the code in the generated <tt>getWheel()</tt> function:
+</p>
+
+<div class="code">
+<pre>
+public class Wheel : global::System.IDisposable {
+  ...
+  // Ensure that the GC doesn't collect any Bike instance set from C#
+  private Bike bikeReference;
+  internal void addReference(Bike bike) {
+    bikeReference = bike;
+  }
+}
+
+public class Bike : global::System.IDisposable {
+  ...
+  public Wheel getWheel() {
+    global::System.IntPtr cPtr = examplePINVOKE.Bike_getWheel(swigCPtr);
+    Wheel ret = null;
+    if (cPtr != global::System.IntPtr.Zero) {
+      ret = new Wheel(cPtr, false);
+      ret.addReference(this);
+    }
+    return ret;
+  }
+}
+</pre>
+</div>
+
+<p>
+Note the <tt>addReference</tt> call.
+</p>
+
+<H3><a name="CSharp_memory_management_objects">20.8.2 Memory management for objects passed to the C++ layer</a></H3>
+
+
+<p>
+The example is a direct equivalent to this <a href="Java.html#Java_memory_management_objects">Java equivalent</a>.
+Managing memory can be tricky when using C++ and C# proxy classes.
+The previous example shows one such case and this example looks at memory management for a class passed to a C++ method which expects the object to remain in scope
+after the function has returned. Consider the following two C++ classes:
+</p>
+
+<div class="code">
+<pre>
+struct Element {
+  int value;
+  Element(int val) : value(val) {}
+};
+class Container {
+  Element* element;
+public:
+  Container() : element(0) {}
+  void setElement(Element* e) { element = e; }
+  Element* getElement() { return element; }
+};
+</pre>
+</div>
+
+<p>
+and usage from C++
+</p>
+
+<div class="code">
+<pre>
+  Container container;
+  Element element(20);
+  container.setElement(&amp;element);
+  cout &lt;&lt; "element.value: " &lt;&lt; container.getElement()-&gt;value &lt;&lt; endl;
+</pre>
+</div>
+
+<p>
+and more or less equivalent usage from C#
+</p>
+
+<div class="code">
+<pre>
+      Container container = new Container();
+      Element element = new Element(20);
+      container.setElement(element);
+</pre>
+</div>
+
+<p>
+The C++ code will always print out 20, but the value printed out may not be this in the C# equivalent code.
+In order to understand why, consider a garbage collection occuring...
+</p>
+
+<div class="code">
+<pre>
+      Container container = new Container();
+      Element element = new Element(20);
+      container.setElement(element);
+      Console.WriteLine("element.value: " + container.getElement().value);
+      // Simulate a garbage collection
+      global::System.GC.Collect();
+      global::System.GC.WaitForPendingFinalizers();
+      global::System.Console.WriteLine("element.value: " + container.getElement().value);
+</pre>
+</div>
+
+<p>
+The temporary element created with <tt>new Element(20)</tt> could get garbage collected
+which ultimately means the <tt>container</tt> variable is holding a dangling pointer, thereby printing out any old random value instead of the expected value of 20.
+One solution is to add in the appropriate references in the C# layer...
+</p>
+
+<div class="code">
+<pre>
+public class Container : global::System.IDisposable {
+
+  ...
+
+  // Ensure that the GC doesn't collect any Element set from C#
+  // as the underlying C++ class stores a shallow copy
+  private Element elementReference;
+  private global::System.Runtime.InteropServices.HandleRef getCPtrAndAddReference(Element element) {
+    elementReference = element;
+    return Element.getCPtr(element);
+  }
+
+  public void setElement(Element e) {
+    examplePINVOKE.Container_setElement(swigCPtr, getCPtrAndAddReference(e));
+  }
+}
+</pre>
+</div>
+
+<p>
+The following typemaps will generate the desired code.
+The 'csin' typemap matches the input parameter type for the <tt>setElement</tt> method.
+The 'cscode' typemap simply adds in the specified code into the C# proxy class.
+</p>
+
+<div class="code">
+<pre>
+%typemap(csin) Element *e "getCPtrAndAddReference($csinput)"
+
+%typemap(cscode) Container %{
+  // Ensure that the GC doesn't collect any Element set from C#
+  // as the underlying C++ class stores a shallow copy
+  private Element elementReference;
+  private global::System.Runtime.InteropServices.HandleRef getCPtrAndAddReference(Element element) {
+    elementReference = element;
+    return Element.getCPtr(element);
+  }
+%}
+</pre>
+</div>
+
+
+<H3><a name="CSharp_date_marshalling">20.8.3 Date marshalling using the csin typemap and associated attributes</a></H3>
+
+
+<p>
+The <a href="Java.html#Java_nan_exception_typemap">NaN Exception example</a> is a simple example of the "javain" typemap and its 'pre' attribute.
+This example demonstrates how a C++ date class, say <tt>CDate</tt>, can be mapped onto the standard .NET date class,
+<tt>System.DateTime</tt> by using the 'pre', 'post' and 'pgcppname' attributes of the "csin" typemap (the C# equivalent to the "javain" typemap).
+The example is an equivalent to the <a href="Java.html#Java_date_marshalling">Java Date marshalling example</a>.
+The idea is that the <tt>System.DateTime</tt> is used wherever the C++ API uses a <tt>CDate</tt>.
+Let's assume the code being wrapped is as follows:
+</p>
+
+<div class="code">
+<pre>
+class CDate {
+public:
+  CDate();
+  CDate(int year, int month, int day);
+  int getYear();
+  int getMonth();
+  int getDay();
+  ...
+};
+struct Action {
+  static int doSomething(const CDate &amp;dateIn, CDate &amp;dateOut);
+  Action(const CDate &amp;date, CDate &amp;dateOut);
+};
+</pre>
+</div>
+
+<p>
+Note that <tt>dateIn</tt> is const and therefore read only and <tt>dateOut</tt> is a non-const output type.
+</p>
+
+<p>
+First let's look at the code that is generated by default, where the C# proxy class <tt>CDate</tt> is used in the proxy interface:
+</p>
+
+<div class="code">
+<pre>
+public class Action : global::System.IDisposable {
+  ...
+  public Action(CDate dateIn, CDate dateOut) 
+      : this(examplePINVOKE.new_Action(CDate.getCPtr(dateIn), CDate.getCPtr(dateOut)), true) {
+    if (examplePINVOKE.SWIGPendingException.Pending) 
+      throw examplePINVOKE.SWIGPendingException.Retrieve();
+  }
+
+  public int doSomething(CDate dateIn, CDate dateOut) {
+    int ret = examplePINVOKE.Action_doSomething(swigCPtr, 
+                                                CDate.getCPtr(dateIn), 
+                                                CDate.getCPtr(dateOut));
+    if (examplePINVOKE.SWIGPendingException.Pending) 
+      throw examplePINVOKE.SWIGPendingException.Retrieve();
+    return ret;
+  }
+}
+</pre>
+</div>
+
+<p>
+The <tt>CDate &amp;</tt> and <tt>const CDate &amp;</tt> C# code is generated from the following two default typemaps:
+</p>
+
+<div class="code">
+<pre>
+%typemap(cstype) SWIGTYPE &amp; "$csclassname"
+%typemap(csin) SWIGTYPE &amp; "$csclassname.getCPtr($csinput)"
+</pre>
+</div>
+
+<p>
+where '$csclassname' is translated into the proxy class name, <tt>CDate</tt> and '$csinput' is translated into the name of the parameter, eg <tt>dateIn</tt>.
+From C#, the intention is then to call into a modifed API with something like:
+</p>
+
+<div class="code">
+<pre>
+System.DateTime dateIn = new System.DateTime(2011, 4, 13);
+System.DateTime dateOut = new System.DateTime();
+
+// Note in calls below, dateIn remains unchanged and dateOut 
+// is set to a new value by the C++ call
+Action action = new Action(dateIn, out dateOut);
+dateIn = new System.DateTime(2012, 7, 14);
+</pre>
+</div>
+
+<p>
+To achieve this mapping, we need to alter the default code generation slightly so that at the C# layer, 
+a <tt>System.DateTime</tt> is converted into a <tt>CDate</tt>. 
+The intermediary layer will still take a pointer to the underlying <tt>CDate</tt> class.
+The typemaps to achieve this are shown below.
+</p>
+
+<div class="code">
+<pre>
+%typemap(cstype) const CDate &amp; "System.DateTime"
+%typemap(csin, 
+         pre="    CDate temp$csinput = new CDate($csinput.Year, $csinput.Month, $csinput.Day);"
+        ) const CDate &amp;
+         "$csclassname.getCPtr(temp$csinput)"
+
+%typemap(cstype) CDate &amp; "out System.DateTime"
+%typemap(csin, 
+         pre="    CDate temp$csinput = new CDate();", 
+         post="      $csinput = new System.DateTime(temp$csinput.getYear(),"
+              " temp$csinput.getMonth(), temp$csinput.getDay(), 0, 0, 0);",
+         cshin="out $csinput"
+        ) CDate &amp;
+         "$csclassname.getCPtr(temp$csinput)"
+
+</pre>
+</div>
+
+<p>
+The resulting generated proxy code in the <tt>Action</tt> class follows:
+ </p>
+
+<div class="code">
+<pre>
+public class Action : global::System.IDisposable {
+  ...
+  public int doSomething(System.DateTime dateIn, out System.DateTime dateOut) {
+    CDate tempdateIn = new CDate(dateIn.Year, dateIn.Month, dateIn.Day);
+    CDate tempdateOut = new CDate();
+    try {
+      int ret = examplePINVOKE.Action_doSomething(swigCPtr, 
+                                                  CDate.getCPtr(tempdateIn), 
+                                                  CDate.getCPtr(tempdateOut));
+      if (examplePINVOKE.SWIGPendingException.Pending) 
+        throw examplePINVOKE.SWIGPendingException.Retrieve();
+      return ret;
+    } finally {
+      dateOut = new System.DateTime(tempdateOut.getYear(), 
+                                    tempdateOut.getMonth(), tempdateOut.getDay(), 0, 0, 0);
+    }
+  }
+
+  static private global::System.IntPtr SwigConstructAction(System.DateTime dateIn, out System.DateTime dateOut) {
+    CDate tempdateIn = new CDate(dateIn.Year, dateIn.Month, dateIn.Day);
+    CDate tempdateOut = new CDate();
+    try {
+      return examplePINVOKE.new_Action(CDate.getCPtr(tempdateIn), CDate.getCPtr(tempdateOut));
+    } finally {
+      dateOut = new System.DateTime(tempdateOut.getYear(), 
+                                    tempdateOut.getMonth(), tempdateOut.getDay(), 0, 0, 0);
+    }
+  }
+
+  public Action(System.DateTime dateIn, out System.DateTime dateOut) 
+      : this(Action.SwigConstructAction(dateIn, out dateOut), true) {
+    if (examplePINVOKE.SWIGPendingException.Pending) 
+      throw examplePINVOKE.SWIGPendingException.Retrieve();
+  }
+}
+</pre>
+</div>
+
+<p>
+A few things to note:
+</p>
+<ul>
+  <li> The "cstype" typemap has changed the parameter type to <tt>System.DateTime</tt> instead of the default generated <tt>CDate</tt> proxy.
+  <li> The non-const <tt>CDate &amp;</tt> type is marshalled as a reference parameter in C# as the date cannot be explicitly set once the object has been created, so a new object is created instead.
+  <li> The code in the 'pre' attribute appears before the intermediary call (<tt>examplePINVOKE.new_Action</tt> / <tt>examplePINVOKE.Action_doSomething</tt>).
+  <li> The code in the 'post' attribute appears after the intermediary call.
+  <li> A try .. finally block is generated with the intermediary call in the try block and 'post' code in the finally block.
+  The alternative of just using a temporary variable for the return value from the intermediary call and the 'post' code being inserted before the
+  return statement is not possible given that the intermediary call and method return comes from a single source (the "csout" typemap).
+  <li> The temporary variables in the "csin" typemaps are called <tt>temp$csin</tt>, where "$csin" is replaced with the parameter name.
+  "$csin" is used to mangle the variable name so that more than one <tt>CDate &amp;</tt> type can be used as a parameter in a method, otherwise two or 
+  more local variables with the same name would be generated.
+  <li> The use of the "csin" typemap causes a constructor helper function (<tt>SwigConstructAction</tt>) to be generated.
+  This allows C# code to be called before the intermediary call made in the constructor initialization list.
+  <li> The 'cshin' attribute is required for the <tt>SwigConstructAction</tt> constructor helper function so that the 2nd parameter is declared as <tt>out dateOut</tt> instead of just <tt>dateOut</tt>.
+</ul>
+
+<p>
+So far we have considered the date as an input only and an output only type.
+Now let's consider <tt>CDate *</tt> used as an input/output type. Consider the following C++ function which modifies the date passed in:
+</p>
+
+<div class="code">
+<pre>
+void addYears(CDate *pDate, int years) {
+  *pDate = CDate(pDate-&gt;getYear() + years, pDate-&gt;getMonth(), pDate-&gt;getDay());
+}
+</pre>
+</div>
+
+<p>
+If usage of <tt>CDate *</tt> commonly follows this input/output pattern, usage from C# like the following
+</p>
+
+<div class="code">
+<pre>
+System.DateTime christmasEve = new System.DateTime(2000, 12, 24);
+example.addYears(ref christmasEve, 10); // christmasEve now contains 2010-12-24
+</pre>
+</div>
+
+<p>
+will be possible with the following <tt>CDate *</tt> typemaps
+</p>
+
+<div class="code">
+<pre>
+%typemap(cstype, out="System.DateTime") CDate * "ref System.DateTime"
+
+%typemap(csin,
+         pre="    CDate temp$csinput = new CDate($csinput.Year, $csinput.Month, $csinput.Day);",
+         post="      $csinput = new System.DateTime(temp$csinput.getYear(),"
+              " temp$csinput.getMonth(), temp$csinput.getDay(), 0, 0, 0);",
+         cshin="ref $csinput"
+        ) CDate *
+         "$csclassname.getCPtr(temp$csinput)"
+</pre>
+</div>
+
+<p>
+Globals are wrapped by the module class and for a module called example, the typemaps result in the following code:
+</p>
+
+<div class="code">
+<pre>
+public class example {
+  public static void addYears(ref System.DateTime pDate, int years) {
+    CDate temppDate = new CDate(pDate.Year, pDate.Month, pDate.Day);
+    try {
+      examplePINVOKE.addYears(CDate.getCPtr(temppDate), years);
+    } finally {
+      pDate = new System.DateTime(temppDate.getYear(), temppDate.getMonth(), temppDate.getDay(),
+                                  0, 0, 0);
+    }
+  }
+  ...
+}
+</pre>
+</div>
+
+<p>
+The following typemap is the same as the previous but demonstrates how a using block can be used for the temporary variable.
+The only change to the previous typemap is the introduction of the 'terminator' attribute to terminate the <tt>using</tt> block.
+The <tt>subtractYears</tt> method is nearly identical to the above <tt>addYears</tt> method.
+</p>
+
+<div class="code">
+<pre>
+%typemap(csin,
+  pre="    using (CDate temp$csinput = new CDate($csinput.Year, $csinput.Month, $csinput.Day)) {",
+  post="      $csinput = new System.DateTime(temp$csinput.getYear(),"
+       " temp$csinput.getMonth(), temp$csinput.getDay(), 0, 0, 0);",
+  terminator="    } // terminate temp$csinput using block",
+  cshin="ref $csinput"
+ ) CDate *
+  "$csclassname.getCPtr(temp$csinput)"
+
+void subtractYears(CDate *pDate, int years) {
+  *pDate = CDate(pDate-&gt;getYear() - years, pDate-&gt;getMonth(), pDate-&gt;getDay());
+}
+</pre>
+</div>
+
+<p>
+The resulting generated code shows the termination of the <tt>using</tt> block:
+</p>
+
+<div class="code">
+<pre>
+public class example {
+  public static void subtractYears(ref System.DateTime pDate, int years) {
+    using (CDate temppDate = new CDate(pDate.Year, pDate.Month, pDate.Day)) {
+    try {
+      examplePINVOKE.subtractYears(CDate.getCPtr(temppDate), years);
+    } finally {
+      pDate = new System.DateTime(temppDate.getYear(), temppDate.getMonth(), temppDate.getDay(),
+                                  0, 0, 0);
+    }
+    } // terminate temppDate using block
+  }
+  ...
+}
+</pre>
+</div>
+
+<H3><a name="CSharp_date_properties">20.8.4 A date example demonstrating marshalling of C# properties</a></H3>
+
+
+<p>
+The previous section looked at converting a C++ date class to <tt>System.DateTime</tt> for parameters.
+This section extends this idea so that the correct marshalling is obtained when wrapping C++ variables.
+Consider the same <tt>CDate</tt> class from the previous section and a global variable:
+</p>
+
+<div class="code">
+<pre>
+CDate ImportantDate = CDate(1999, 12, 31);
+</pre>
+</div>
+
+<p>
+The aim is to use <tt>System.DateTime</tt> from C# when accessing this date as shown in the following usage where the module name is 'example':
+</p>
+
+<div class="code">
+<pre>
+example.ImportantDate = new System.DateTime(2000, 11, 22);
+System.DateTime importantDate = example.ImportantDate;
+Console.WriteLine("Important date: " + importantDate);
+</pre>
+</div>
+
+<p>
+When SWIG wraps a variable that is a class/struct/union, it is wrapped using a pointer to the type for the reasons given in <a href="SWIG.html#SWIG_structure_data_members">Structure data members</a>.
+The typemap type required is thus <tt>CDate *</tt>. Given that the previous section already designed <tt>CDate *</tt> typemaps, we'll use those same typemaps plus the 'csvarin' and 'csvarout' typemaps.
+
+<div class="code">
+<pre>
+%typemap(cstype, out="System.DateTime") CDate * "ref System.DateTime"
+
+%typemap(csin,
+         pre="    CDate temp$csinput = new CDate($csinput.Year, $csinput.Month, $csinput.Day);",
+         post="      $csinput = new System.DateTime(temp$csinput.getYear(),"
+              " temp$csinput.getMonth(), temp$csinput.getDay(), 0, 0, 0);",
+         cshin="ref $csinput"
+        ) CDate *
+         "$csclassname.getCPtr(temp$csinput)"
+
+%typemap(csvarin, excode=SWIGEXCODE2) CDate * %{
+    /* csvarin typemap code */
+    set {
+      CDate temp$csinput = new CDate($csinput.Year, $csinput.Month, $csinput.Day);
+      $imcall;$excode
+    } %}
+
+%typemap(csvarout, excode=SWIGEXCODE2) CDate * %{
+    /* csvarout typemap code */
+    get {
+      global::System.IntPtr cPtr = $imcall;
+      CDate tempDate = (cPtr == global::System.IntPtr.Zero) ? null : new CDate(cPtr, $owner);$excode
+      return new System.DateTime(tempDate.getYear(), tempDate.getMonth(), tempDate.getDay(),
+                                 0, 0, 0);
+    } %}
+</pre>
+</div>
+
+<p>
+For a module called example, the typemaps result in the following code:
+</p>
+
+<div class="code">
+<pre>
+public class example {
+  public static System.DateTime ImportantDate {
+    /* csvarin typemap code */
+    set {
+      CDate tempvalue = new CDate(value.Year, value.Month, value.Day);
+      examplePINVOKE.ImportantDate_set(CDate.getCPtr(tempvalue));
+    } 
+    /* csvarout typemap code */
+    get {
+      global::System.IntPtr cPtr = examplePINVOKE.ImportantDate_get();
+      CDate tempDate = (cPtr == global::System.IntPtr.Zero) ? null : new CDate(cPtr, false);
+      return new System.DateTime(tempDate.getYear(), tempDate.getMonth(), tempDate.getDay(),
+                                 0, 0, 0);
+    } 
+  }
+  ...
+}
+</pre>
+</div>
+
+<p>
+Some points to note:
+</p>
+
+<ul>
+  <li>The property set comes from the 'csvarin' typemap and the property get comes from the 'csvarout' typemap.
+  <li>The type used for the property comes from the 'cstype' typemap. This particular example has the 'out' attribute set in the typemap and as it is specified, it is used in preference to the type in the typemap body. This is because the type in the 'out' attribute can never include modifiers such as 'ref', thereby avoiding code such as <tt>public static ref System.DateTime ImportantDate { ...</tt>, which would of course not compile.
+  <li>The <tt>$excode</tt> special variable expands to nothing as there are no exception handlers specified in any of the unmanaged code typemaps (in fact the marshalling was done using the default unmanaged code typemaps.)
+  <li>The <tt>$imcall</tt> typemap expands to the appropriate intermediary method call in the <tt>examplePINVOKE</tt> class.
+  <li>The <tt>$csinput</tt> special variable in the 'csin' typemap always expands to <tt>value</tt> for properties. In this case <tt>$csclassname.getCPtr(temp$csinput)</tt> expands to <tt>CDate.getCPtr(tempvalue)</tt>.
+  <li>The 'csin' typemap has 'pre', 'post' and 'cshin' attributes, and these are all ignored in the property set. The code in these attributes must instead be replicated within the 'csvarin' typemap. The line creating the <tt>temp$csinput</tt> variable is such an example; it is identical to what is in the 'pre' attribute.
+</ul>
+
+<H3><a name="CSharp_date_pre_post_directors">20.8.5 Date example demonstrating the 'pre' and 'post' typemap attributes for directors</a></H3>
+
+
+<p>
+The 'pre' and 'post' attributes in the "csdirectorin" typemap act like the attributes of the same name in the "csin" typemap.
+For example if we modify the <a href="#CSharp_date_marshalling">Date marshalling example</a> like this:
+</p>
+
+<div class="code"><pre>
+class CDate {
+  ...
+  void setYear(int);
+  void setMonth(int);
+  void setDay(int);
+};
+struct Action {
+  virtual void someCallback(CDate &amp;date);
+  virtual ~Action();
+  ...
+};
+</pre></div>
+
+<p>
+and declare <tt>%feature ("director")</tt> for the <tt>Action</tt> class, we would have to define additional
+marshalling rules for <tt>CDate &amp;</tt> parameter. The typemap may look like this:
+</p>
+
+<div class="code"><pre>
+%typemap(csdirectorin,
+         pre="System.DateTime temp$iminput = new System.DateTime();",
+         post="CDate temp2$iminput = new CDate($iminput, false);\n"
+              "temp2$iminput.setYear(tempdate.Year);\n"
+              "temp2$iminput.setMonth(tempdate.Month);\n"
+              "temp2$iminput.setDay(tempdate.Day);"
+         ) CDate &amp;date "out temp$iminput"
+</pre></div>
+
+<p>
+The generated proxy class code will then contain the following wrapper for calling user-overloaded <tt>someCallback()</tt>:
+</p>
+
+<div class="code"><pre>
+...
+  private void SwigDirectorsomeCallback(global::System.IntPtr date) {
+    System.DateTime tempdate = new System.DateTime();
+    try {
+      someCallback(out tempdate);
+    } finally {
+      // we create a managed wrapper around the existing C reference, just for convenience
+      CDate temp2date = new CDate(date, false);
+      temp2date.setYear(tempdate.Year);
+      temp2date.setMonth(tempdate.Month);
+      temp2date.setDay(tempdate.Day);
+    }
+  }
+...
+</pre></div>
+<p>
+Pay special attention to the memory management issues, using these attributes.
+</p>
+
+
+<H3><a name="CSharp_partial_classes">20.8.6 Turning wrapped classes into partial classes</a></H3>
+
+
+<p>
+C# supports the notion of partial classes whereby a class definition can be split into more than one file.
+It is possible to turn the wrapped C++ class into a partial C# class using the <tt>csclassmodifiers</tt> typemap.
+Consider a C++ class called <tt>ExtendMe</tt>:
+</p>
+
+<div class="code">
+<pre>
+class ExtendMe {
+public:
+  int Part1() { return 1; }
+};
+</pre>
+</div>
+
+<p>
+The default C# proxy class generated is:
+</p>
+
+<div class="code">
+<pre>
+public class ExtendMe : global::System.IDisposable {
+  ...
+  public int Part1() {
+    ...
+  }
+}
+</pre>
+</div>
+
+<p>
+The default csclassmodifiers typemap shipped with SWIG is
+</p>
+
+<div class="code">
+<pre>
+%typemap(csclassmodifiers) SWIGTYPE "public class"
+</pre>
+</div>
+
+<p>
+Note that the type used is the special catch all type <tt>SWIGTYPE</tt>.
+If instead we use the following typemap to override this for just the <tt>ExtendMe</tt> class:
+</p>
+
+<div class="code">
+<pre>
+%typemap(csclassmodifiers) ExtendMe "public partial class"
+</pre>
+</div>
+
+<p>
+The C# proxy class becomes a partial class:
+</p>
+
+<div class="code">
+<pre>
+public partial class ExtendMe : global::System.IDisposable {
+  ...
+  public int Part1() {
+    ...
+  }
+}
+</pre>
+</div>
+
+<p>
+You can then of course declare another part of the partial class elsewhere, for example:
+</p>
+
+<div class="code">
+<pre>
+public partial class ExtendMe : global::System.IDisposable {
+  public int Part2() {
+    return 2;
+  }
+}
+</pre>
+</div>
+
+<p>
+and compile the following code:
+</p>
+
+<div class="code">
+<pre>
+ExtendMe em = new ExtendMe();
+Console.WriteLine("part1: {0}", em.Part1());
+Console.WriteLine("part2: {0}", em.Part2());
+</pre>
+</div>
+
+<p>
+demonstrating that the class contains methods calling both unmanaged code - <tt>Part1()</tt> and managed code - <tt>Part2()</tt>.
+The following example is an alternative approach to adding managed code to the generated proxy class.
+</p>
+
+<H3><a name="CSharp_extending_proxy_class">20.8.7 Extending proxy classes with additional C# code</a></H3>
+
+
+<p>
+The previous example showed how to use partial classes to add functionality to a generated C# proxy class.
+It is also possible to extend a wrapped struct/class with C/C++ code by using the <a href="SWIGPlus.html#SWIGPlus_class_extension">%extend directive</a>.
+A third approach is to add some C# methods into the generated proxy class with the <tt>cscode</tt> typemap.
+If we declare the following typemap before SWIG parses the <tt>ExtendMe</tt> class used in the previous example
+</p>
+
+<div class="code">
+<pre>
+%typemap(cscode) ExtendMe %{
+  public int Part3() {
+    return 3;
+  }
+%}
+
+</pre>
+</div>
+
+<p>
+The generated C# proxy class will instead be:
+</p>
+
+<div class="code">
+<pre>
+public class ExtendMe : global::System.IDisposable {
+  ...
+  public int Part3() {
+    return 3;
+  }
+  public int Part1() {
+    ...
+  }
+}
+</pre>
+</div>
+
+<H3><a name="CSharp_enum_underlying_type">20.8.8 Underlying type for enums</a></H3>
+
+
+<P>
+C# enums use int as the underlying type for each enum item.
+If you wish to change the underlying type to something else, then use the <tt>csbase</tt> typemap.
+For example when your C++ code uses a value larget than int, this is necessary as the C# compiler will not compile values which are too large to fit into an int.
+Here is an example:
+</p>
+
+<div class="code">
+<pre>
+%typemap(csbase) BigNumbers "uint"
+%inline %{
+  enum BigNumbers { big=0x80000000, bigger };
+%}
+</pre>
+</div>
+
+<p>
+The generated enum will then use the given underlying type and compile correctly:
+</p>
+
+<div class="code">
+<pre>
+public enum BigNumbers : uint {
+  big = 0x80000000,
+  bigger
+}
+</pre>
+</div>
+
+</body>
+</html>
+

@@ -1,0 +1,203 @@
+<html>
+<head>
+<title>SWIG:Examples:go:class</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+
+<tt>SWIG/Examples/go/class/</tt>
+<hr>
+
+<H2>Wrapping a simple C++ class</H2>
+
+<p>
+This example illustrates the most primitive form of C++ class wrapping
+performed by SWIG.  In this case, C++ classes are simply transformed
+into a collection of C-style functions that provide access to class
+members.
+
+<h2>The C++ Code</h2>
+
+Suppose you have some C++ classes described by the following (and
+admittedly lame) header file:
+
+<blockquote>
+<pre>
+/* File : example.h */
+
+class Shape {
+public:
+  Shape() {
+    nshapes++;
+  }
+  virtual ~Shape() {
+    nshapes--;
+  }
+  double  x, y;
+  void    move(double dx, double dy);
+  virtual double area() = 0;
+  virtual double perimeter() = 0;
+  static  int nshapes;
+};
+
+class Circle : public Shape {
+private:
+  double radius;
+public:
+  Circle(double r) : radius(r) { }
+  virtual double area();
+  virtual double perimeter();
+};
+
+class Square : public Shape {
+private:
+  double width;
+public:
+  Square(double w) : width(w) { }
+  virtual double area();
+  virtual double perimeter();
+};
+</pre>
+</blockquote>
+
+<h2>The SWIG interface</h2>
+
+A simple SWIG interface for this can be built by simply grabbing the
+header file like this:
+
+<blockquote>
+<pre>
+/* File : example.i */
+%module example
+
+%{
+#include "example.h"
+%}
+
+/* Let's just grab the original header file here */
+%include "example.h"
+</pre>
+</blockquote>
+
+Note: when creating a C++ extension, you must run SWIG with
+the <tt>-c++</tt> option like this:
+<blockquote>
+<pre>
+% swig -c++ -go example.i
+</pre>
+</blockquote>
+
+<h2>A sample Go script</h2>
+
+See <a href="example.go">example.go</a> for a program that calls the
+C++ functions from Go.
+
+<h2>Key points</h2>
+
+<ul>
+<li>To create a new object, you call a constructor like this:
+
+<blockquote>
+<pre>
+c := example.NewCircle(10.0)
+</pre>
+</blockquote>
+
+The name of the constructor is <tt>New</tt> followed by the name of
+the class, capitalized.
+
+<p>
+<li>
+The constructor returns a value of interface type.  The methods of the
+interface will be the methods of the C++ class, plus member accessor
+functions.
+
+<p>
+<li>To access member data, a pair of accessor methods are used.  For
+example:
+
+<blockquote>
+<pre>
+c.SetX(15)          # Set member data
+x := c.GetX()       # Get member data.
+</pre>
+</blockquote>
+
+These are methods on the type returned by the constructor.  The getter
+is named <tt>Get</tt> followed by the name of the member,
+capitalized.  The setter is similar but uses <tt>Set</tt>.
+
+<p>
+<li>To invoke a member function, you simply do this
+
+<blockquote>
+<pre>
+fmt.Println("The area is", example.c.Area())
+</pre>
+</blockquote>
+
+<li>To invoke a destructor, simply do this
+
+<blockquote>
+<pre>
+example.DeleteShape(c)     # Deletes a shape
+</pre>
+</blockquote>
+
+The name of the destructor is <tt>Delete</tt> followed by the name of
+the class, capitalized.  (Note: destructors are currently not
+inherited. This might change later).
+
+<p>
+<li>Static member variables are wrapped much like C global variables.
+For example:
+
+<blockquote>
+<pre>
+n := GetShapeNshapes()     # Get a static data member
+SetShapeNshapes(13)        # Set a static data member
+</pre>
+</blockquote>
+
+The name is <tt>Get</tt> or <tt>Set</tt>, followed by the name of the
+class, capitalized, followed by the name of the member, capitalized.
+
+</ul>
+
+<h2>General Comments</h2>
+
+<ul>
+<li>This low-level interface is not the only way to handle C++ code.
+Director classes provide a much higher-level interface.
+
+<p>
+<li>Because C++ and Go implement inheritance quite differently, you
+can not simply upcast an object in Go code when using multiple
+inheritance.  When using only single inheritance, you can simply pass
+a class to a function expecting a parent class.  When using multiple
+inheritance, you have to call an automatically generated getter
+function named <tt>Get</tt> followed by the capitalized name of the
+immediate parent.  This will return the same object converted to the
+ parent class.
+
+<p>
+<li>
+Overloaded methods should normally work.  However, when calling an
+overloaded method you must explicitly convert constants to the
+expected type when it is not <tt>int</tt> or <tt>float</tt>.  In
+particular, a floating point constant will default to
+type <tt>float</tt>, but C++ functions typically expect the C++
+type <tt>double</tt> which is equivalent to the Go
+type <tt>float64</tt> So calling an overloaded method with a floating
+point constant typically requires an explicit conversion
+to <tt>float64</tt>.
+
+<p>
+<li>Namespaces are not supported in any very coherent way.
+
+</ul>
+
+<hr>
+</body>
+</html>

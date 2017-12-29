@@ -1,0 +1,22 @@
+This example tests the %import directive and -relativeimport option.
+
+Use 'python runme.py' to run a test.
+
+Overview:
+---------
+
+The example defines 2 different extension modules--each wrapping a separate C++
+class.
+
+     pyX/pkg2/pkg3/pkg4/foo.i  - Pkg4_Foo class
+     pyX/pkg2/bar.i            - Pkg2_Bar class derived from Pkg4_Foo
+
+The difference between this ('relativeimport2') case and the case
+'relativeimport1' is the "distance" between importer and importee.
+
+If everything works well, the package pyX.pkg2 shall load properly.
+
+Unix:
+-----
+- Run make
+- Run the test as described above

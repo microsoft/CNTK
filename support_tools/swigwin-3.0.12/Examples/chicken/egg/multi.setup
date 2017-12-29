@@ -1,0 +1,2 @@
+(run (csc -s -o multi.so multi_init.scm mod1.scm mod1_wrap.cxx mod2.scm mod2_wrap.cxx))
+(install-extension 'multi '("multi.so"))

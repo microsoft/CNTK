@@ -1,0 +1,284 @@
+<html>
+<head>
+<title>SWIG Parse Tree Handling</title>
+</head>
+
+<body>
+<center>
+<h1>SWIG Parse Tree Handling</h1>
+</center>
+
+<h2>Introduction</h2>
+
+This document describes the functions related to the handling of
+parse trees in SWIG.  The structure of SWIG parse trees has been influenced heavily by ideas
+from XML-DOM trees.  In fact, the functions in the API and attribute names are nearly identical.  
+The header file <tt>Source/swig/swigtree.h</tt> contains the functions and macros described in
+this document. This API is
+considered to be stable.
+
+<h2>Parse tree navigation</h2>
+
+The following macros are used to navigate the parse tree.
+
+<p>
+<b><tt>nodeType(n)</tt></b>
+
+<blockquote>
+Returns the type of a node as a String object.  The type is stored in the "nodeType" attribute of <tt>n</tt>.
+</blockquote>
+
+<p>
+<b><tt>parentNode(n)</tt></b>
+
+<blockquote>
+Returns the parent of a node. This is found in the "parentNode" attribute of <tt>n</tt>.
+</blockquote>
+
+<p>
+<b><tt>previousSibling(n)</tt></b>
+
+<blockquote>
+Returns the previous sibling of a node (if any). This is found in the "previousSibling" attribute of <tt>n</tt>.
+</blockquote>
+
+<p>
+<b><tt>nextSibling(n)</tt></b>
+
+<blockquote>
+Returns the next sibling of a node (if any). This is found in the "nextSibling" attribute of <tt>n</tt>.
+</blockquote>
+
+<p>
+<b><tt>firstChild(n)</tt></b>
+
+<blockquote>
+Returns the first child of a node (if any). This is found in the "firstChild" attribute of <tt>n</tt>.
+</blockquote>
+
+<p>
+<b><tt>lastChild(n)</tt></b>
+
+<blockquote>
+Returns the last child of a node (if any). This is found in the "lastChild" attribute of <tt>n</tt>.
+</blockquote>
+
+
+<h2>Parse Tree Construction</h2>
+
+The following macros are used to construct parse trees.
+
+<p>
+<b><tt>set_nodeType(n, val)</tt></b>
+
+<blockquote>
+Sets the nodeType attribute of n.  val is a string containing the type.
+</blockquote>
+
+<p>
+<b><tt>set_parentNode(n, parent)</tt></b>
+
+<blockquote>
+Sets the parent of node n.
+</blockquote>
+
+<p>
+<b><tt>set_previousSibling(n, prev)</tt></b>
+
+<blockquote>
+Sets the previous sibling of node n.
+</blockquote>
+
+<p>
+<b><tt>set_nextSibling(n, next)</tt></b>
+
+<blockquote>
+Sets the next sibling of node n.
+</blockquote>
+
+<p>
+<b><tt>set_firstChild(n, chd)</tt></b>
+
+<blockquote>
+Sets the first child of node n.
+</blockquote>
+
+<p>
+<b><tt>set_lastChild(n, chd)</tt></b>
+
+<blockquote>
+Sets the last child of node n.
+</blockquote>
+
+<h2>Tree Management Functions</h2>
+
+The following functions are used to help with the management and construction of parse trees.
+
+<p>
+<b><tt>void appendChild(Node *node, Node *child)</tt></b>
+<blockquote>
+Adds a new child to <tt>node</tt>.  This function takes care of adjusting the "firstChild" and "lastChild" attributes of <tt>node</tt> to appropriate values.   After calling this function, the "lastChild" attribute will point to <tt>child</tt>.
+</blockquote>
+
+<p>
+<b><tt>void prependChild(Node *node, Node *child)</tt></b>
+<blockquote>
+Prepends a new child to <tt>node</tt>.  The new child is added so that it becomes the first child of <tt>node</tt>.
+</blockquote>
+
+<p>
+<b><tt>void removeNode(Node *node)</tt></b>
+<blockquote>
+Removes a node from the parse tree.  The removal process detaches a node from its parent by removing it from the parent's child list.  Upon return, <tt>node</tt> will have no parent and no siblings.   This function does NOT delete <tt>node</tt> or modify children of <tt>node</tt>.  If desired, <tt>node</tt> could be reattached to a different part of the parse tree.
+</blockquote>
+
+<p>
+<b><tt>Node *copyNode(Node *node)</tt></b>
+<blockquote>
+Copies a node, but only copies those attributes that are simple strings.  Thus, the new node will not contain any references to other nodes, lists, hashes, or other complex data structures.   This function may be useful if you want to copy the data contents of a node in the process of creating a new parse tree node.
+</blockquote>
+
+
+<h2>Attribute Checking</h2>
+
+The following utility is provided since this is an extremely common operation.
+
+<p>
+<b><tt>int checkAttribute(Node *n, const String_or_char *name, const String_or_char *value)</tt></b>
+<blockquote>
+This function checks to see whether node <tt>n</tt> has a given
+attribute name and that the attribute has a given value.  Returns 0 or
+1.
+</blockquote>
+
+
+<h2>Node Transformation</h2>
+
+In the course of processing, SWIG often applies a transform to a node.
+This transformation process made modify many of the attributes--even
+changing the type of a node.  The following functions are used to help
+manage this transformation process.  In addition to provide sanity
+checks, they save the old contents of the node so that they can be
+restored later.
+
+<p>
+<b><tt>void Swig_save(const char *namespace, Node *n, ...)</tt></b>
+
+<blockquote>
+This function takes a node and a list of attribute names and saves their contents in a specified namespace.   For example,
+the call
+
+<pre>
+Swig_save("temp",n,"type","parms","name",NIL)
+</pre>
+
+takes the attributes "type","parms", and "name" and saves their
+contents under the attribute names "temp:type","temp:parms","temp:name".  In addition, this function sets
+an attribute "view" to hold the name of the current namespace.  In this example, the "view" attribute would be set
+to "temp".  The attribute names specified are all optional.  If one or more of the attributes don't exist,
+this function merely records that those attributes did not exist in the original node.
+</blockquote>
+
+<p>
+<b><tt>void Swig_require(const char *namespace, Node *n, ...)</tt></b>
+
+<blockquote>
+This function is similar to <tt>Swig_save()</tt> except that adds additional attribute checking. There are different interpretations
+of the attribute names.  A name of "attr" merely requests that the function check for the presence of an attribute.  If the attribute is missing, SWIG will exit with a failed assertion.   An attribute name of "?attr" specifies that the attribute "attr" is optional and
+that its old value must be saved (if any).   An attribute name of "*attr" specifies that the attribute is required and that
+its value must be saved.   The saving of attributes is performed in the same manner as with <tt>Swig_save()</tt>. Here is an example:
+
+<pre>
+Swig_require("temp",n,"type","*name","?parms",NIL);
+</pre>
+
+</blockquote>
+
+<p>
+<b><tt>void Swig_restore(Node *n)</tt></b>
+
+<blockquote>
+This function restores a node to the state it was in prior to the last <tt>Swig_save()</tt> or <tt>Swig_require()</tt> call.  This is used to undo node transformations.
+</blockquote>
+
+<h2>Debugging Functions</h2>
+
+<p>
+The following functions can be used to help debug any SWIG DOH object.
+</p>
+
+<b><tt>void Swig_print(DOH *object, int count = -1)</tt></b>
+
+<blockquote>
+Prints to stdout a string representation of any DOH type.
+The number of nested Hash types to expand is set by count (default is 1 if count&lt;0). See Swig_set_max_hash_expand() to change default.
+<pre>
+</pre>
+</blockquote>
+
+<b><tt>void Swig_print_with_location(DOH *object, int count = -1)</tt></b>
+
+<blockquote>
+Prints to stdout a string representation of any DOH type, within [] brackets
+for Hash and List types, prefixed by line and file information.
+The number of nested Hash types to expand is set by count (default is 1 if count&lt;0). See Swig_set_max_hash_expand() to change default.
+<pre>
+</pre>
+</blockquote>
+
+
+<p>
+The following functions can be used to help debug SWIG parse trees.
+</p>
+
+<p>
+<b><tt>void Swig_print_tags(Node *node, String_or_char *prefix)</tt></b>
+
+<blockquote>
+Prints the tag-structure of the parse tree to standard output.  <tt>node</tt> is the top-level parse tree node.  <tt>prefix</tt> is
+a string prefix thats added to the start of each line.  Normally, you would specify the empty string or NIL for <tt>prefix</tt>.  
+This function is called by the <tt>-debug-tags</tt> option to SWIG.
+
+<pre>
+% swig -debug-tags -python example.i
+ . top (:1)
+ . top . include (/Users/beazley/Projects/share/swig/1.3.31/swig.swg:0)
+ . top . include . include (/Users/beazley/Projects/share/swig/1.3.31/swigwarnings.swg:0)
+ . top . include . include . include (/Users/beazley/Projects/share/swig/1.3.31/swigwarn.swg:0)
+...
+...
+ . top . include (example.i:0)
+ . top . include . module (example.i:2)
+ . top . include . insert (example.i:7)
+ . top . include . cdecl (example.i:5)
+ . top . include . cdecl (example.i:6)
+</pre>
+
+Since many language modules include hundreds of typemaps and other information, the output of this can be significantly more complicated than you might expect.
+</blockquote>
+
+<p>
+<b><tt>void Swig_print_node(Node *node)</tt></b>
+
+<blockquote>
+Prints the contents of a parse tree node, including all children, to standard output.  The output includes all attributes
+and other details.
+</blockquote>
+
+<p>
+<b><tt>void Swig_print_tree(Node *node)</tt></b>
+
+<blockquote>
+Prints the same output as <tt>Swig_print_node()</tt> except that it also processes all of the siblings of <tt>node</tt>.  This can
+be used to dump the entire parse tree to standard output.  The command line options <tt>-debug-module</tt> 
+and <tt>-debug-top</tt> use this function to display the parse tree for a SWIG input file.
+</blockquote> 
+
+
+</body>
+</html>
+
+
+
+
+

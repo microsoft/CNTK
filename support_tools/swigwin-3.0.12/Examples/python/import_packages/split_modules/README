@@ -1,0 +1,7 @@
+  These examples/tests are for when the SWIG generated wrapper module is split
+between two packages.  Specifically the pure python part is part of a package
+and the C/C++ part is not in any package at all.  Historically SWIG has
+supported this sort of thing.
+
+vanilla        # "plane Jane" module both halves in pkg1
+vanilla_split  # python 1/2 in pkg1 C 1/2 in global namespace

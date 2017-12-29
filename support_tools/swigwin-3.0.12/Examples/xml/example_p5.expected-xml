@@ -1,0 +1,24 @@
+<swigxml:swig name="namespaces" xmlns:swigxml="http://jniplusplus.sourceforge.net" xmlns:swig="http://swig.sourceforge.net" xmlns:c="http://www.ansi.org" >
+  <swig:top >
+    <swigxml:child >
+      <swig:file name="../../Lib/swig.swg" >
+        <swigxml:type string="include"  />
+      </swig:file>
+      <swig:file name="example_p5.i" >
+        <swigxml:child >
+          <swig:module name="example"  />
+          <swig:insert >
+            <swigxml:code >
+
+#include "example.h"
+            </swigxml:code>
+          </swig:insert>
+          <swig:file name="example.h" >
+            <swigxml:type string="include"  />
+          </swig:file>
+        </swigxml:child>
+        <swigxml:type string="include"  />
+      </swig:file>
+    </swigxml:child>
+  </swig:top>
+</swigxml:swig>

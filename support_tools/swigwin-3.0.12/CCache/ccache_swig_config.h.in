@@ -1,0 +1,1 @@
+#define SWIG_VERSION "@PACKAGE_VERSION@"

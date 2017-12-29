@@ -1,0 +1,4 @@
+cpp_extend_redefine.i:9: Warning 302: Identifier 'bar' redefined by %extend (ignored),
+cpp_extend_redefine.i:5: Warning 302: %extend definition of 'bar'.
+cpp_extend_redefine.i:14: Warning 322: Redundant redeclaration of 'spam',
+cpp_extend_redefine.i:10: Warning 322: previous declaration of 'spam'.

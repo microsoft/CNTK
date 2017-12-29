@@ -1,0 +1,3 @@
+c_extra_unsigned.i:3: Error: Extra unsigned specifier.
+c_extra_unsigned.i:4: Error: Extra signed specifier.
+c_extra_unsigned.i:5: Error: Extra signed specifier.

@@ -1,0 +1,3 @@
+This is a special directory for testcases that require inputs using subdirectories.
+Each subdirectory should be named after the testcase. Any desired subdirectory
+structure can be put under the testcase subdirectory.

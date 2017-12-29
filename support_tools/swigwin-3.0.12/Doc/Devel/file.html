@@ -1,0 +1,181 @@
+<html>
+<head>
+<title>SWIG File Handling</title>
+</head>
+
+<body>
+<center>
+<h1>SWIG File Handling</h1>
+
+<p>
+David M. Beazley <br>
+dave-swig@dabeaz.com<br>
+December, 2006<br>
+
+</b>
+</center>
+
+<h2>Introduction</h2>
+
+This document describes the functions related to file and filename handling in the SWIG core.   These functions are
+defined in the header file <tt>Source/Swig/swigfile.h</tt>.   This API is considered to be stable.
+
+<h2>File Search Path</h2>
+
+These functions manipulate the search path for locating files.
+
+<p>
+<b><tt>List *Swig_add_directory(const String_or_char *dirname)</tt></b>
+
+<blockquote>
+Adds a new directory to the system search path.  The directory is appended to
+the end of the search path.  Returns a list containing the current
+system search path. 
+</blockquote>
+
+<p>
+<b><tt>void Swig_push_directory(const String_or_char *dirname)</tt></b>
+<blockquote>
+Pushes a temporary directory onto the search path.  This directory is searched before 
+directories added with <tt>Swig_add_directory()</tt> except when including a system
+file explicitly (either using #include &lt;file&gt; or calling <tt>Swig_include_sys()</tt>).
+This function is normally used by the preprocessor to add temporary directories when
+processing #include statements.
+</blockquote>
+
+<p>
+<b><tt>void Swig_pop_directory()</tt></b>
+<blockquote>
+Pops off the last pushed directory with <tt>Swig_push_directory()</tt>
+</blockquote>
+
+<p>
+<b><tt>int Swig_get_push_dir()</tt></b>
+
+<blockquote>
+Returns a flag that indicates whether directory pushing is enabled or not.
+</blockquote>
+
+<p>
+<b><tt>void Swig_set_push_dir(int dopush)</tt></b>
+<blockquote>
+Enables or disables directory pushing.  By default, it is turned on.  However, the <tt>-I-</tt> command line
+option to SWIG disables it.
+</blockquote>
+
+<p>
+<b><tt>List *Swig_search_path()</tt></b>
+<blockquote>
+Returns the current search path.
+</blockquote>
+
+
+<h2>File access functions</h2>
+
+<p>
+<b><tt>FILE *Swig_open(const String_or_char *name)</tt></b>
+
+<blockquote>
+Opens a file, using the applicable search paths, and returns an open <tt>FILE *</tt> object if found.  Returns NULL if the file is not found.
+</blockquote>
+
+<p>
+<b><tt>String *Swig_read_file(FILE *f)</tt></b>
+
+<blockquote>
+Reads all of the data from an open file into a string which is returned.
+</blockquote>
+
+<p>
+<b><tt>String *Swig_include(const String_or_char *name)</tt></b>
+
+<blockquote>
+Searches for an include file <tt>name</tt> and returns its contents as
+a string if found.  Returns NULL if not found.  All of the applicable
+search paths are searched when trying to locate the file.
+</blockquote>
+
+<p>
+<b><tt>String *Swig_include_sys(const String_or_char *name)</tt></b>
+
+<blockquote>
+Searches for an include file <tt>name</tt> and returns its contents as
+a string if found.  Returns NULL if not found.  All of the applicable
+search paths are searched when trying to locate the file, but
+preference is given to system paths first. This mimics the behavior
+of <tt>#include &lt;file&gt;</tt> in the preprocessor.
+</blockquote>
+
+<p>
+<b><tt>int Swig_insert_file(const String_or_char *name, File *outfile)</tt></b>
+
+<blockquote>
+Searches for a file <tt>name</tt> and dumps its contents to <tt>outfile</tt> if found.
+Returns 0 on success, -1 if the file couldn't be found.
+</blockquote>
+
+<h2>Query functions</h2>
+
+<p>
+<b><tt>String *Swig_last_file()</tt></b>
+
+<blockquote>
+Returns the full pathname of the file last opened or included.
+</blockquote>
+
+<h2>Named files</h2>
+
+<p>
+<b><tt>void *Swig_register_filebyname(const String_or_char *filename, File *outfile)</tt></b>
+
+<blockquote>
+Registers a file object <tt>outfile</tt> with a specific name <tt>filename</tt>.   This function is
+used to implement the SWIG %insert directive and to manage different sections of the output
+file such as "runtime","header","wrapper","init", etc.   Different language modules may add their own
+sections for generating Python code, Perl code, etc.
+</blockquote>
+
+<p>
+<b><tt>File *Swig_filebyname(const String_or_char *filename)</tt></b>
+<blockquote>
+This looks up a file object previously registered using <tt>Swig_register_filebyname()</tt>.  This 
+is used to implement the %insert directive.
+</blockquote>
+
+<h2>Filename utilities</h2>
+
+<p>
+<b><tt>char *Swig_file_suffix(const String_or_char *filename)</tt></b>
+<blockquote>
+Returns the suffix of a filename.  For instance, if the filename is "foo.txt", it returns ".txt".
+</blockquote>
+
+<p>
+<b><tt>char *Swig_file_basename(const String_or_char *filename)</tt></b>
+<blockquote>
+Returns the filename without the suffix attached to it.  For instance, if the filename is "foo.txt", it returns
+"foo".  The result is stored in a static variable. If you need to save it, make your own copy.
+</blockquote>
+
+<p>
+<b><tt>char *Swig_file_filename(const String_or_char *filename)</tt></b>
+<blockquote>
+Returns the filename without any leading directories.  For instance, if the filename is "/bar/spam/foo.txt", it
+returns "foo.txt".   This function is aware of local naming conventions on the machine (e.g., forward versus back slashes on Unix and Windows).   The result is stored in a static variable.  If you need to save the value, make a copy.
+</blockquote>
+
+<p>
+<b><tt>char *Swig_file_dirname(const String_or_char *filename)</tt></b>
+<blockquote>
+Returns the directory name (if any).  For instance, if the filename is "/bar/spam/foo.txt", it
+returns "/bar/spam/".   This function is aware of local naming conventions on the machine (e.g., forward versus back slashes on Unix and Windows).  The result is stored in a static variable.  If you need to save the value, make a copy.
+</blockquote>
+
+<p>
+<b><tt>SWIG_FILE_DELIMITER</tt></b>
+<blockquote>
+This macro contains the file delimiter string for the local machine.  On Unix it is "/", on Windows it is "\\".
+</blockquote>
+
+</body>
+</html>

@@ -1,0 +1,193 @@
+#######################################################################
+# Makefile for Go test-suite
+#######################################################################
+
+LANGUAGE	= go
+GO		= @GO@
+GOGCC		= @GOGCC@
+GCCGO		= @GCCGO@
+GO1		= @GO1@
+GO12		= @GO12@
+GO13		= @GO13@
+GO15		= @GO15@
+GOC		= @GOC@
+GOVERSIONOPTION	= @GOVERSIONOPTION@
+host		= @host@
+SCRIPTSUFFIX	= _runme.go
+
+GOCOMPILEARG = `if $(GO15); then echo tool compile; elif $(GO1); then echo tool $(GOC:c=g); fi`
+GOLD = `if $(GO15); then echo link; else echo $(GOC:c=l); fi`
+GOTOOL = `if $(GO1) ; then echo go tool; fi`
+GOPACK = `if $(GO1) ; then echo go tool pack; else echo gopack; fi`
+
+GOOBJEXT = `if $(GO15); then echo o; else echo $(GOC:c=); fi`
+
+OSXOLDGOLINKFLAGS	= `if [ -n "\`$(GO) $(GOVERSIONOPTION) | grep -E 'go1($|.0|.1|.2|.3)'\`" ] && [ -n "\`echo $(host) | grep darwin\`" ]; then echo "-Wl,-U,__cgo_topofstack"; fi`
+
+SO = @SO@
+
+srcdir         = @srcdir@
+top_srcdir     = @top_srcdir@
+top_builddir   = @top_builddir@
+abs_top_srcdir = @abs_top_srcdir@
+
+CPP_TEST_CASES = \
+	go_inout \
+	go_director_inout
+
+MULTI_CPP_TEST_CASES = \
+	go_subdir_import
+
+include $(srcdir)/../common.mk
+
+INCLUDES = -I$(abs_top_srcdir)/$(EXAMPLES)/$(TEST_SUITE)
+
+.SUFFIXES: .cpptest .ctest .multicpptest
+
+# Rules for the different types of tests
+%.cpptest:
+	$(setup)
+	+$(swig_and_compile_cpp)
+	$(run_testcase_cpp)
+	if ! $(GO15); then \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CXXSRCS='$(CXXSRCS)' \
+	  SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	  INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT)' NOLINK=true \
+	  TARGET='$(TARGETPREFIX)$*$(TARGETSUFFIX)' INTERFACEDIR='$(INTERFACEDIR)' INTERFACE='$*.i' \
+	  $(LANGUAGE)$(VARIANT)_cpp_nocgo && \
+	  $(run_testcase_cpp); \
+	fi
+
+%.ctest:
+	$(setup)
+	+$(swig_and_compile_c)
+	$(run_testcase)
+	if ! $(GO15); then \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CSRCS='$(CSRCS)' \
+	  SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	  INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT)' NOLINK=true \
+	  TARGET='$(TARGETPREFIX)$*$(TARGETSUFFIX)' INTERFACEDIR='$(INTERFACEDIR)' INTERFACE='$*.i' \
+	  $(LANGUAGE)$(VARIANT)_nocgo && \
+	  $(run_testcase); \
+	fi
+
+%.multicpptest:
+	$(setup)
+	+$(swig_and_compile_multi_cpp)
+	$(run_multi_testcase)
+
+li_windows.cpptest:
+	# Does not work because go build won't build li_windows.go,
+	# because file names with "windows" are only built on Windows.
+
+multi_import.multicpptest:
+	$(setup)
+	for f in multi_import_b multi_import_a; do \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CXXSRCS='$(CXXSRCS)' \
+	  SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	  LIBS='$(LIBS)' INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT)' NOLINK=true \
+	  TARGET="$(TARGETPREFIX)$${f}$(TARGETSUFFIX)" INTERFACEDIR='$(INTERFACEDIR)' INTERFACE="$$f.i" \
+	  $(LANGUAGE)$(VARIANT)_cpp; \
+	done
+	$(run_multi_testcase)
+
+go_subdir_import.multicpptest:
+	$(setup)
+	mkdir -p testdir/go_subdir_import/
+	mkdir -p gopath/src/testdir/go_subdir_import/
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CXXSRCS='$(CXXSRCS)' \
+	SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	LIBS='$(LIBS)' INTERFACEPATH='$(SRCDIR)$(INTERFACEDIR)go_subdir_import_b.i' \
+	INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT) -outdir .' NOLINK=true \
+	TARGET='$(TARGETPREFIX)go_subdir_import_b$(TARGETSUFFIX)' INTERFACEDIR='$(INTERFACEDIR)' \
+	INTERFACE='testdir/go_subdir_import/go_subdir_import_b.i' \
+	$(LANGUAGE)$(VARIANT)_cpp;
+	for f in testdir/go_subdir_import/go_subdir_import_c go_subdir_import_a ; do \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CXXSRCS='$(CXXSRCS)' \
+	  SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	  LIBS='$(LIBS)' INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT)' NOLINK=true \
+	  TARGET="$(TARGETPREFIX)$${f}$(TARGETSUFFIX)" INTERFACEDIR='$(INTERFACEDIR)' INTERFACE="$$f.i" \
+	  $(LANGUAGE)$(VARIANT)_cpp; \
+	done
+	if $(GOGCC); then \
+	  cp gopath/src/testdir/go_subdir_import/go_subdir_import_b/go_subdir_import_b.a gopath/src/testdir/go_subdir_import/go_subdir_import_b.gox; \
+	  cp gopath/src/testdir/go_subdir_import/go_subdir_import_b/go_subdir_import_b.a .; \
+	  cp gopath/src/testdir/go_subdir_import/go_subdir_import_c/go_subdir_import_c.a gopath/src/testdir/go_subdir_import/go_subdir_import_c.gox; \
+	  cp gopath/src/testdir/go_subdir_import/go_subdir_import_c/go_subdir_import_c.a testdir/go_subdir_import/; \
+	fi
+	$(run_multi_testcase)
+
+# Runs the testcase.
+run_testcase = \
+	if test -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX); then \
+	  if $(GOGCC) ; then \
+	    $(COMPILETOOL) $(GCCGO) -c -g -I . $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    $(COMPILETOOL) $(GCCGO) -o $*_runme $(SCRIPTPREFIX)$*_runme.@OBJEXT@ $*.a; \
+	  elif $(GO12) || $(GO13) || $(GO15); then \
+	    $(COMPILETOOL) $(GO) $(GOCOMPILEARG) -I . $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -linkmode external -extld $(CC) -extldflags "$(CFLAGS) $(OSXOLDGOLINKFLAGS)" -o $*_runme $(SCRIPTPREFIX)$*_runme.$(GOOBJEXT); \
+	  else \
+	    $(COMPILETOOL) $(GO) $(GOCOMPILEARG) -I . $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -L . -r $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`}:. -o $*_runme $(SCRIPTPREFIX)$*_runme.$(GOOBJEXT); \
+	  fi && \
+	  env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) ./$*_runme; \
+	fi
+
+run_testcase_cpp = \
+	if test -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX); then \
+	  if $(GOGCC) ; then \
+	    $(COMPILETOOL) $(GCCGO) -c -g -I . $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    $(COMPILETOOL) $(GCCGO) -o $*_runme $(SCRIPTPREFIX)$*_runme.@OBJEXT@ $*.a -lstdc++; \
+	  elif $(GO12) || $(GO13) || $(GO15); then \
+	    $(COMPILETOOL) $(GO) $(GOCOMPILEARG) -I . $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -linkmode external -extld $(CXX) -extldflags "$(CXXFLAGS) $(OSXOLDGOLINKFLAGS)" -o $*_runme $(SCRIPTPREFIX)$*_runme.$(GOOBJEXT); \
+	  else \
+	    $(COMPILETOOL) $(GO) $(GOCOMPILEARG) -I . $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -L . -r $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`}:. -o $*_runme $(SCRIPTPREFIX)$*_runme.$(GOOBJEXT); \
+	  fi && \
+	  env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) ./$*_runme; \
+	fi
+
+run_multi_testcase = \
+	if test -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX); then \
+	  if $(GOGCC) ; then \
+	    $(COMPILETOOL) $(GCCGO) -c -g -I . -I gopath/src $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    files=`cat $(top_srcdir)/$(EXAMPLES)/$(TEST_SUITE)/$*.list`; \
+	    $(COMPILETOOL) $(GCCGO) -o $*_runme $(SCRIPTPREFIX)$*_runme.@OBJEXT@ `for f in $$files; do echo $$f.a; done` -lstdc++; \
+	  elif $(GO12) || $(GO13) || $(GO15); then \
+	    $(COMPILETOOL) $(GO) $(GOCOMPILEARG) -I . $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -L . -linkmode external -extld $(CXX) -extldflags "$(CXXFLAGS) $(OSXOLDGOLINKFLAGS)" -o $*_runme $(SCRIPTPREFIX)$*_runme.$(GOOBJEXT); \
+	  else \
+	    $(COMPILETOOL) $(GO) $(GOCOMPILEARG) -I . $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -L . -r $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`}:. -o $*_runme $(SCRIPTPREFIX)$*_runme.$(GOOBJEXT); \
+	  fi && \
+	  env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) ./$*_runme; \
+	fi
+
+%.clean:
+	@rm -rf $*.go $*_gc.c $*_wrap.* $*_runme $*.gox $*.a
+
+clean:
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' go_clean
+	rm -f mod_a.go mod_a.gox mod_b.go mod_b.gox
+	rm -f imports_a.go imports_a.gox imports_b.go imports_b.gox
+	rm -f clientdata_prop_a.go clientdata_prop_a.gox
+	rm -f clientdata_prop_b.go clientdata_prop_b.gox
+	rm -f multi_import_a.go multi_import_a.gox
+	rm -f multi_import_b.go multi_import_b.gox
+	rm -rf go_subdir_import_a.go go_subdir_import_a.gox testdir
+	rm -f packageoption_a.go packageoption_a.gox
+	rm -f packageoption_b.go packageoption_b.gox
+	rm -f packageoption_c.go packageoption_c.gox
+	rm -f import_stl_a.go import_stl_a.gox
+	rm -f import_stl_b.go import_stl_b.gox
+	rm -rf gopath
+
+cvsignore:
+	@echo '*_gc.c *_wrap.* *.so *.dll *.exp *.lib'
+	@echo Makefile
+	@echo mod_a.go mod_b.go imports_a.go imports_b.go
+	@echo clientdata_prop_a.go clientdata_prop_b.go
+	@echo multi_import_a.go multi_import_b.go
+	@echo packageoption_a.go packageoption_b.go packageoption_c.go
+	@for i in ${CPP_TEST_CASES} ${C_TEST_CASES}; do echo $$i.go; done

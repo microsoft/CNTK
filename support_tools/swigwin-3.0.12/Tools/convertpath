@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# Unix to Windows path conversion in a script.
+# Useful for avoiding backslash quoting difficulties in Makefiles.
+# Acts as a much dumbed down cygpath tool mainly for use on MinGW.
+
+usage()
+{
+  cat <<EOF
+Usage: $0 [-m|-u|-w|-h] [path]...
+
+Convert Windows and Unix paths
+
+  -m  Convert Unix path to mixed path (full paths, MinGW MSYS only)
+  -u  Convert forward slashes to backslashes in the paths (relative paths only)
+  -w  Convert backslashes to forward slashes in the paths (relative paths only)
+EOF
+}
+
+option="$1"
+case "$option" in
+  -m) shift
+      case $MACHTYPE in
+        # This echo converts unix to mixed paths. Then zap unexpected trailing space on old versions of MinGW.
+        *-msys) echo `cmd //c echo "$@" | sed -e "s/[ ]*$//"`;;
+        *) echo "The -m option is only supported on MinGW MSYS" 1>&2; exit 1 ;;
+      esac ;;
+  -u) shift; echo $@ | sed -e 's,\\,/,g' ;;
+  -w) shift; echo $@ | sed -e 's,/,\\,g' ;;
+  -h) shift; usage; ;;
+  *) usage; exit 1 ;;
+esac
+
+exit 0

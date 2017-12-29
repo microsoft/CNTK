@@ -1,0 +1,206 @@
+<swigxml:swig name="namespaces" xmlns:swigxml="http://jniplusplus.sourceforge.net" xmlns:swig="http://swig.sourceforge.net" xmlns:c="http://www.ansi.org" >
+  <swig:top >
+    <swigxml:child >
+      <swig:file name="../../Lib/swig.swg" >
+        <swigxml:type string="include"  />
+      </swig:file>
+      <swig:file name="gnarly.i" >
+        <swigxml:child >
+          <swig:module name="my_check"  />
+          <c:enum name="color" >
+            <swigxml:child >
+              <c:enumvalue name="RED" >
+                <swigxml:value string="RED"  />
+              </c:enumvalue>
+              <c:enumvalue name="BLUE"  />
+              <c:enumvalue name="GREEN"  />
+            </swigxml:child>
+          </c:enum>
+          <c:class name="Foo" >
+            <swigxml:child >
+              <c:access name="public"  />
+              <c:function name="Foo" >
+                <swigxml:code >
+{ }                </swigxml:code>
+                <swigxml:type string="int"  />
+              </c:function>
+              <c:enum name="speed" >
+                <swigxml:child >
+                  <c:enumvalue name="IMPULSE"  />
+                  <c:enumvalue name="WARP"  />
+                  <c:enumvalue name="LUDICROUS"  />
+                </swigxml:child>
+              </c:enum>
+              <c:function name="enum_test" >
+                <swigxml:parms >
+                  <swigxml:parm name="s" >
+                    <swigxml:type string="speed"  />
+                  </swigxml:parm>
+                </swigxml:parms>
+                <swigxml:type string="void"  />
+              </c:function>
+            </swigxml:child>
+            <swigxml:classtype string="class"  />
+            <swigxml:namespace string="Foo"  />
+          </c:class>
+          <c:function name="enum_test" >
+            <swigxml:parms >
+              <swigxml:parm name="c" >
+                <swigxml:type string="color"  />
+              </swigxml:parm>
+              <swigxml:parm name="s" >
+                <swigxml:type string="Foo::speed"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:type string="void"  />
+          </c:function>
+          <swig:typemap >
+            <swigxml:code >
+{
+    WHATEVER  MAKES YOU HAPPY AS RESULT
+}            </swigxml:code>
+            <swigxml:method string="out"  />
+            <swigxml:type string="p.int"  />
+          </swig:typemap>
+          <swig:typemap >
+            <swigxml:code >
+{
+    WHATEVER  MAKES YOU HAPPY AS PARAMETER
+}            </swigxml:code>
+            <swigxml:method string="in"  />
+            <swigxml:type string="p.int"  />
+          </swig:typemap>
+          <swig:pragma name="DEBUG" >
+            <swigxml:value string="false"  />
+            <swigxml:lang string="xml"  />
+          </swig:pragma>
+          <c:function name="my_gcd" >
+            <swigxml:parms >
+              <swigxml:parm name="x" >
+                <swigxml:type string="p.q(const).char"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="a().p.int"  />
+              </swigxml:parm>
+              <swigxml:parm name="r" >
+                <swigxml:type string="p.int"  />
+              </swigxml:parm>
+              <swigxml:parm name="op" >
+                <swigxml:type string="p.f(int,int).int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="p.int"  />
+          </c:function>
+          <c:variable name="my_foo" >
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="double"  />
+          </c:variable>
+          <c:function name="my_void" >
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="my_empty" >
+            <swigxml:type string="int"  />
+          </c:function>
+          <c:variable name="my_dutch" >
+            <swigxml:value string="1.0"  />
+            <swigxml:type string="q(const).double"  />
+          </c:variable>
+          <c:class name="my_union" >
+            <swigxml:child >
+              <c:variable name="my_iii" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="my_ccc" >
+                <swigxml:type string="char"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="union"  />
+            <swigxml:namespace string="my_union"  />
+          </c:class>
+          <c:class name="my_struct" >
+            <swigxml:child >
+              <c:access name="public"  />
+              <c:destructor name="my_struct" >
+                <swigxml:storage string="virtual"  />
+              </c:destructor>
+              <c:function name="my_foo" >
+                <swigxml:type string="int"  />
+              </c:function>
+              <c:access name="protected"  />
+              <c:variable name="my_bar" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="x" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="y" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:function name="area" >
+                <swigxml:abstract string="1"  />
+                <swigxml:storage string="virtual"  />
+                <swigxml:type string="double"  />
+              </c:function>
+              <c:variable name="nshapes" >
+                <swigxml:storage string="static"  />
+                <swigxml:type string="int"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="struct"  />
+            <swigxml:namespace string="my_struct"  />
+          </c:class>
+          <c:class name="my_class" >
+            <swigxml:child >
+              <c:access name="public"  />
+              <c:function name="my_class" >
+                <swigxml:parms >
+                  <swigxml:parm name="c" >
+                    <swigxml:type string="char"  />
+                  </swigxml:parm>
+                </swigxml:parms>
+                <swigxml:type string="int"  />
+              </c:function>
+              <c:access name="private"  />
+              <c:destructor name="my_class"  />
+              <c:function name="my_func" >
+                <swigxml:parms >
+                  <swigxml:parm >
+                    <swigxml:type string="my_class"  />
+                  </swigxml:parm>
+                  <swigxml:parm name="x" >
+                    <swigxml:type string="p.p.char"  />
+                  </swigxml:parm>
+                  <swigxml:parm name="y" >
+                    <swigxml:type string="a().int"  />
+                  </swigxml:parm>
+                  <swigxml:parm name="r" >
+                    <swigxml:type string="r.q(const).int"  />
+                  </swigxml:parm>
+                </swigxml:parms>
+                <swigxml:storage string="virtual"  />
+                <swigxml:type string="p.q(const).int"  />
+              </c:function>
+              <c:variable name="my_foo" >
+                <swigxml:type string="a(128).double"  />
+              </c:variable>
+              <c:variable name="i" >
+                <swigxml:type string="q(const).my_int"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="class"  />
+            <swigxml:bases >
+                <swigxml:item name="my_struct"  />
+                <swigxml:item name="my_union"  />
+            </swigxml:bases>
+            <swigxml:namespace string="my_class"  />
+          </c:class>
+          <c:typedef name="my_int" >
+            <swigxml:type string="int"  />
+          </c:typedef>
+        </swigxml:child>
+        <swigxml:type string="include"  />
+      </swig:file>
+    </swigxml:child>
+  </swig:top>
+</swigxml:swig>

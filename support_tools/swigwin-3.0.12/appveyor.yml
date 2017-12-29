@@ -1,0 +1,78 @@
+platform:
+- x86
+- x64
+
+environment:
+  matrix:
+  - SWIGLANG: csharp
+    VSVER: 12
+  - SWIGLANG: csharp
+    VSVER: 14
+  - SWIGLANG: java
+    VSVER: 14
+  - SWIGLANG: python
+    VSVER: 14
+    VER: 27
+  - SWIGLANG: python
+    VSVER: 14
+    VER: 35
+    PY3: 1
+
+install:
+- date /T & time /T
+- set PATH=C:\cygwin\bin;%PATH%
+- set CYGWIN=nodosfilewarning
+- git clone -q --depth=1 --single-branch --branch cccl-1.0 git://github.com/swig/cccl.git C:\cccl-1.0
+- bash -c "cp C:/cccl-1.0/cccl /usr/bin"
+- ps: >-
+    If ($env:Platform -Match "x86") {
+      $env:PCRE_PLATFORM="Win32"
+      $env:JAVA_HOME="C:/Program Files (x86)/Java/jdk1.8.0"
+      $env:VCVARS_PLATFORM="x86"
+      $env:LANG_PLATFORM=""
+    } Else {
+      $env:PCRE_PLATFORM="x64"
+      $env:JAVA_HOME="C:/Program Files/Java/jdk1.8.0"
+      $env:VCVARS_PLATFORM="amd64"
+      $env:LANG_PLATFORM="-x64"
+    }
+- ps: $env:VSCOMNTOOLS=(Get-Content ("env:VS" + "$env:VSVER" + "0COMNTOOLS"))
+- echo "Using Visual Studio %VSVER%.0 at %VSCOMNTOOLS%"
+- call "%VSCOMNTOOLS%\..\..\VC\vcvarsall.bat" %VCVARS_PLATFORM%
+- Tools\nuget-install.cmd pcre -Verbosity detailed -Version 8.33.0.1 -OutputDirectory C:\pcre
+- set PCRE_ROOT=C:/pcre/pcre.8.33.0.1/build/native
+- set PATH=C:\Python%VER%%LANG_PLATFORM%;%PATH%
+- python -V
+- bash -c "which python"
+- bash -c "python -V"
+- bash -c "which cl.exe"
+- bash -c "cl.exe /? 2>&1 | head -n 2"
+- bash -c "which csc.exe"
+- bash -c "csc.exe /? | head -n 2"
+- bash -c "which cccl"
+- bash -c "cccl --version"
+- make --version
+- uname -a
+
+build_script:
+- set CCCL_OPTIONS=--cccl-muffle /W3
+- set CHECK_OPTIONS=CSHARPOPTIONS=-platform:%Platform%
+  # Open dummy file descriptor to fix error on cygwin: ./configure: line 560: 0: Bad file descriptor
+- bash -c "exec 0</dev/null && ./autogen.sh && time ./configure --disable-dependency-tracking --disable-ccache CC=cccl CXX=cccl CFLAGS='-O2' CXXFLAGS='-O2' LDFLAGS='--cccl-link /LTCG' PCRE_CFLAGS='-I%PCRE_ROOT%/include -DPCRE_STATIC' PCRE_LIBS='-L%PCRE_ROOT%/lib/v110/%PCRE_PLATFORM%/Release/static/utf8 -lpcre8' --without-perl5 --without-go --with-boost=C:/Libraries/boost || cat config.log"
+- bash -c "time make -s"
+
+test_script:
+- set CCCL_OPTIONS=--cccl-muffle /W3 /EHsc
+# (Warning below is fixed in newer versions of Python (2.7.9)) '_hypot' : recursive on all control paths, function will cause runtime stack overflow
+- ps: >-
+    If ("$env:SWIGLANG$env:VER" -Match "python27") {
+      $env:CCCL_OPTIONS="$env:CCCL_OPTIONS /wd4717"
+    }
+- .\swig.exe -version
+- bash -c "file ./swig.exe"
+- bash -c "time make -k check-%SWIGLANG%-version"
+- bash -c "time make -k check-%SWIGLANG%-examples %CHECK_OPTIONS%"
+- bash -c "time make -k check-%SWIGLANG%-test-suite %CHECK_OPTIONS%"
+
+# Do not build on tags (GitHub only)
+skip_tags: true

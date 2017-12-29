@@ -1,0 +1,61 @@
+<html>
+<head>
+<title>SWIG:Examples:tcl:constants</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+<tt>SWIG/Examples/tcl/constants/</tt>
+<hr>
+
+<H2>Wrapping C Constants</H2>
+
+<p>
+When SWIG encounters C preprocessor macros and C declarations that look like constants,
+it creates Tcl variables with an identical value.  Click <a href="example.i">here</a>
+to see a SWIG interface with some constant declarations in it.
+
+<h2>Accessing Constants from Tcl</h2>
+
+Click <a href="runme.tcl">here</a> to see a script that prints out the values
+of the constants contained in the above file.
+
+<h2>Key points</h2>
+
+<ul>
+<li>The values of preprocessor macros are converted into Tcl read-only variables.
+<li>Types are inferred by syntax (e.g., "3" is an integer and "3.5" is a float).
+<li>Character constants such as 'x' are converted into strings.
+<li>C string literals such as "Hello World" are converted into strings.
+<li>Macros that are not fully defined are simply ignored.  For example:
+<blockquote>
+<pre>
+#define EXTERN extern
+</pre>
+</blockquote>
+is ignored because SWIG has no idea what type of variable this would be.
+
+<p>
+<li>Expressions are allowed provided that all of their components are defined. Otherwise, the constant is ignored.
+
+<li>Certain C declarations involving 'const' are also turned into Tcl constants. 
+<li>The constants that appear in a SWIG interface file do not have to appear in any sort
+of matching C source file since the creation of a constant does not require linkage
+to a stored value (i.e., a value held in a C global variable or memory location).
+<li>Since constants are turned into Tcl variables, you have to use the global
+statement when accessing from a procedure. For example:
+
+<blockquote>
+<pre>
+proc foo {} {
+    global ICONST          # Some C constant
+    puts $ICONST
+}
+</pre>
+</blockquote>
+</ul>
+
+<hr>
+
+</body>
+</html>

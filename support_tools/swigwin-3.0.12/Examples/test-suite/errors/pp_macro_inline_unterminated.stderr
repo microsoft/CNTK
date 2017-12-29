@@ -1,0 +1,2 @@
+pp_macro_inline_unterminated.i:9: Error: Unterminated call invoking macro 'foo'
+pp_macro_inline_unterminated.i:12: Error: Syntax error in input(3).

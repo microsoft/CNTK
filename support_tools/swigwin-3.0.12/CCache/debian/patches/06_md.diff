@@ -1,0 +1,77 @@
+--- ccache.c	Mon Sep 13 11:38:30 2004
++++ ccache.c	Thu Jun 21 22:17:32 2007
+@@ -627,6 +627,13 @@ static void process_args(int argc, char 
+ 	int found_S_opt = 0;
+ 	struct stat st;
+ 	char *e;
++	/* is gcc being asked to output dependencies? */
++	int generating_dependencies = 0;
++	/* is the dependency makefile name overridden with -MF? */
++	int dependency_filename_specified = 0;
++	/* is the dependency makefile target name specified with -MQ or -MF? */
++	int dependency_target_specified = 0;
++
+ 
+ 	stripped_args = args_init(0, NULL);
+ 
+@@ -702,6 +709,18 @@ static void process_args(int argc, char 
+ 			continue;
+ 		}
+ 
++		/* These options require special handling, because they
++		   behave differently with gcc -E, when the output
++		   file is not specified. */
++
++		if (strcmp(argv[i], "-MD") == 0 || strcmp(argv[i], "-MMD") == 0) {
++			generating_dependencies = 1;
++		} else if (strcmp(argv[i], "-MF") == 0) {
++			dependency_filename_specified = 1;
++		} else if (strcmp(argv[i], "-MQ") == 0 || strcmp(argv[i], "-MT") == 0) {
++			dependency_target_specified = 1;
++		}
++
+ 		/* options that take an argument */
+ 		{
+ 			const char *opts[] = {"-I", "-include", "-imacros", "-iprefix",
+@@ -812,6 +831,41 @@ static void process_args(int argc, char 
+ 		}
+ 		p[1] = found_S_opt ? 's' : 'o';
+ 		p[2] = 0;
++	}
++
++	/* If dependencies are generated, configure the preprocessor */
++
++	if (generating_dependencies && output_file) {
++		if (!dependency_filename_specified) {
++			char *default_depfile_name = x_strdup(output_file);
++			char *p = strrchr(default_depfile_name, '.');
++
++			if (p) {
++				if (strlen(p) < 2) {
++					stats_update(STATS_ARGS);
++					failed();
++					return;
++				}
++				*p = 0;
++			}
++			else  {
++				int len = p - default_depfile_name;
++				
++				p = x_malloc(len + 3);
++				strncpy(default_depfile_name, p, len - 1);
++				free(default_depfile_name);
++				default_depfile_name = p;
++			}
++
++			strcat(default_depfile_name, ".d");
++			args_add(stripped_args, "-MF");
++			args_add(stripped_args, default_depfile_name);
++		}
++
++		if (!dependency_target_specified) {
++			args_add(stripped_args, "-MT");
++			args_add(stripped_args, output_file);
++		}
+ 	}
+ 
+ 	/* cope with -o /dev/null */

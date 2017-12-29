@@ -1,0 +1,1 @@
+cpp_namespace_alias.i:8: Warning 308: Namespace alias 'B' not allowed here. Assuming 'blah'

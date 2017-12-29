@@ -1,0 +1,223 @@
+<html>
+<head>
+<title>Wrapper Objects</title>
+</head>
+
+<body>
+<center>
+<h1>Wrapper Objects</h1>
+
+<p>
+David M. Beazley <br>
+dave-swig@dabeaz.com<br>
+January 15, 2007<br>
+
+</b>
+</center>
+
+<h2>Introduction</h2>
+
+This document describes the functions related to management of
+wrapper objects.  A wrapper object is a low-level
+data structure used to contain the C/C++ code that is emitted during the
+wrapping process.  It contains not only the emitted code, but information
+about local variables.   These objects are a critical component of almost all
+SWIG target language modules. 
+
+<p>
+The functions described here are declared
+in <tt>Source/Swig/swigwrap.h</tt>.  This API is considered to be
+stable.
+
+<h2>Creating and Destroying Wrappers</h2>
+
+The following functions create and destroy wrapper objects.
+
+<p>
+<b><tt>Wrapper *NewWrapper()</tt></b>
+
+<blockquote>
+Creates a new wrapper object.
+</blockquote>
+
+<p>
+<b><tt>void DelWrapper(Wrapper *w)</tt></b>
+<blockquote>
+Destroys a wrapper object.
+</blockquote>
+
+<h2>Wrapper Objects</h2>
+
+The <tt>Wrapper</tt> object returned by <tt>NewWrapper()</tt> has
+three public attributes.
+
+<blockquote><pre>
+typedef struct Wrapper {
+    String *def;
+    String *locals;
+    String *code;
+} Wrapper;
+</pre></blockquote>
+
+The <tt>def</tt> attribute is a string that holds the function
+definition line.  This line declares the function name, return type,
+and parameters.   Language modules create this declaration by simply printing 
+the appropriate text into this attribute.
+
+<p>
+The <tt>locals</tt> attribute is a string that holds the code
+related to any local variables declaration.   Normally, language modules
+do not emit code to this string directly.  They use <tt>Wrapper_add_local()</tt> or <tt>Wrapper_new_local()</tt> to do this.
+
+<p>
+The <tt>code</tt> attribute is a string that holds code related to the body of the function.  Almost all code emitted by SWIG language modules is printed into this attribute.
+
+<h2>Creating Local Variables</h2>
+
+Perhaps the most useful aspect of <tt>Wrapper</tt> objects is the
+management of local variables.  When creating a wrapper, it is often
+necessary to emit local variables related to the API of the target
+language.  In addition to this, typemaps and other aspects of SWIG
+rely upon their own local variables.  The following functions are used
+to create local variables, but also provide support for renaming
+variables in order to avoid name clashes.
+
+<p>
+<b><tt>int Wrapper_add_local(Wrapper *w, const String_or_char *name, const String_or_char *decl)</tt></b>
+<blockquote>
+Adds a new local variable to the wrapper object. <tt>name</tt> is the
+name of the local variable.  <tt>decl</tt> is a string containing the
+actual variable declaration code.  For example, if you wanted to
+declare a variable "<tt>int x = 42;</tt>", you would set <tt>name</tt>
+to <tt>"x"</tt> and
+<tt>decl</tt> to <tt>"int x = 42;"</tt>.  On success, the text in
+<tt>decl</tt> is added to the <tt>locals</tt> attribute of <tt>w</tt>
+and 0 is returned.  -1 is returned if a variable with the given name
+has already been declared.
+</blockquote>
+
+<p>
+<b><tt>int Wrapper_add_localv(Wrapper *w, const String_or_char *name, ...)</tt></b>
+<blockquote>
+The same as <tt>Wrapper_add_local()</tt> except that instead of
+passing a single string for the declaration, a NULL-terminated list of
+strings can be passed.  These strings are joined together when
+producing the output.  This convention turns out to be fairly useful
+since language modules often create their output into pieces.
+</blockquote>
+
+<p>
+<b><tt>char * Wrapper_new_local(Wrapper *w, const String_or_char *name, const String_or_char *decl)</tt></b>
+<blockquote>
+The same as <tt>Wrapper_add_local()</tt> except that if a local variable
+with the given name already exists, this function picks a new name and adds
+the declaration using the new name.  The actual name used for the variable
+is returned.   This function is used when generating code originating from
+typemaps.  For instance, if a typemap declares a local variable, that variable
+might have to be renamed if the same typemap is used more than once in the same function.
+</blockquote>
+
+<p>
+<b><tt>char * Wrapper_new_localv(Wrapper *w, const String_or_char *name,...)</tt></b>
+<blockquote>
+The same as <tt>Wrapper_new_localv()</tt>, but accepts a NULL-terminated list
+of strings as code output. 
+</blockquote>
+
+<p>
+<b><tt>int Wrapper_check_local(Wrapper *w, const String_or_char *name)</tt></b>
+<blockquote>
+Checks to see if a local variable with name <tt>name</tt> has been declared.  Returns 1 if the local is defined, 0 otherwise.
+</blockquote>
+
+<h2>Output</h2>
+
+<p>
+<b><tt>void Wrapper_print(Wrapper *w, File *f)</tt></b>
+<blockquote>
+This function is used to format a wrapper function for output.  The
+formatted wrapper function is emitted to <tt>f</tt> which may be any
+file-like object including a <tt>FILE *</tt> object or a <tt>String
+*</tt> object.   When emitting the wrapper, the code printed to the
+wrapper object is automatically formatted.  By default, the formatting
+is done according to a "pretty printing" style in which lines are split onto
+multiple lines and indented according to reasonable C formatting rules.   This produces code that is moderately readable should you want to look at the wrapper
+code output.   An alternative output mode is "compact printing" in which
+lines are collected and compacted.   This may result in multiple C statements
+appearing on the same line.   This mode is sometimes used when the size of
+a wrapper file is too large for certain compilers. For example, some compilers
+might impose a limit of 65536 lines per source file.
+</blockquote>
+
+<p>
+<b><tt>void Wrapper_compact_print_mode_set(int flag)</tt></b>
+<blockquote>
+Sets the output mode of the <tt>Wrapper_print()</tt>
+function. If <tt>flag</tt> is set to 1, then wrapper code is formatted
+to be compact.
+</blockquote>
+
+<p>
+<b><tt>void Wrapper_pretty_print(String *str, File *f)</tt></b>
+<blockquote>
+Utility function that reformats a string containing C/C++ code and outputs
+it to the file-like object <tt>f</tt>.   The formatting process indents the code
+and structures it according to reasonable C formatting rules.
+</blockquote>
+
+<p>
+<b><tt>void Wrapper_compact_print(String *str, File *f)</tt></b>
+<blockquote>
+Utility function that reformats a string containing C/C++ code and outputs
+it to the file-like object <tt>f</tt>.   The formatting process tries to
+make the code as compact as possible, without going completely overboard.  For
+example, multiple C statements may be combined onto a single line and braces may be aligned to not use up extra lines.
+</blockquote>
+
+
+<h2>An Example</h2>
+
+Here is a simple example of how these functions are used.  Suppose
+you wanted to emit the following C function:
+
+<blockquote>
+<pre>
+void foo(int n) {
+   int i;
+   for (i = 0; i &lt; n; i++) {
+       printf("%d\n", i);
+   }
+}
+</pre>
+</blockquote>
+
+Here is code that generates the above function:
+
+<blockquote>
+<pre>
+Wrapper *w = NewWrapper();
+Printf(w-&gt;def,"void foo(int n) {");
+Wrapper_add_local(w,"n","");         /* parameter n */
+Wrapper_add_local(w,"i", "int i;");  /* local i */
+Printv(w-&gt;code,"for (i = 0; i &lt; n; i++) {",
+               "printf(\"%d\n",i);",
+               "}\n", NIL);
+Printf(w-&gt;code,"}\n");
+
+/* Emit wrapper code */
+Wrapper_print(w,outf);
+DelWrapper(w);
+</pre>
+</blockquote>
+
+Within different language modules, this process is obviously much more
+involved.  However, this example shows the basic idea of how C/C++
+code is prepared for output.
+
+</body>
+</html>
+
+
+
+
+

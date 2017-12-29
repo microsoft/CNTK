@@ -1,0 +1,2 @@
+int IntegerMember;
+double DoubleMember;

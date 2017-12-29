@@ -1,0 +1,2338 @@
+<swigxml:swig name="namespaces" xmlns:swigxml="http://jniplusplus.sourceforge.net" xmlns:swig="http://swig.sourceforge.net" xmlns:c="http://www.ansi.org" >
+  <swig:top >
+    <swigxml:child >
+      <swig:file name="../../Lib/swig.swg" >
+        <swigxml:type string="include"  />
+      </swig:file>
+      <swig:file name="example_gif.i" >
+        <swigxml:child >
+          <c:typedef name="Pixel" >
+            <swigxml:type string="unsigned char"  />
+          </c:typedef>
+          <c:typedef name="Zvalue" >
+            <swigxml:type string="float"  />
+          </c:typedef>
+          <c:class name="ColorMap" >
+            <swigxml:child >
+              <c:variable name="cmap" >
+                <swigxml:type string="p.unsigned char"  />
+              </c:variable>
+              <c:variable name="name" >
+                <swigxml:type string="p.char"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="struct"  />
+            <swigxml:namespace string="ColorMap"  />
+            <swigxml:altname string="ColorMap"  />
+          </c:class>
+          <c:typedef name="ColorMap" >
+            <swigxml:type string="ColorMap"  />
+          </c:typedef>
+          <c:function name="new_ColorMap" >
+            <swigxml:parms >
+              <swigxml:parm name="filename" >
+                <swigxml:type string="p.char"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="p.ColorMap"  />
+          </c:function>
+          <c:function name="delete_ColorMap" >
+            <swigxml:parms >
+              <swigxml:parm name="c" >
+                <swigxml:type string="p.ColorMap"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="ColorMap_default" >
+            <swigxml:parms >
+              <swigxml:parm name="c" >
+                <swigxml:type string="p.ColorMap"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="ColorMap_assign" >
+            <swigxml:parms >
+              <swigxml:parm name="c" >
+                <swigxml:type string="p.ColorMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="index" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="r" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="g" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="b" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="ColorMap_getitem" >
+            <swigxml:parms >
+              <swigxml:parm name="c" >
+                <swigxml:type string="p.ColorMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="index" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="int"  />
+          </c:function>
+          <c:function name="ColorMap_setitem" >
+            <swigxml:parms >
+              <swigxml:parm name="c" >
+                <swigxml:type string="p.ColorMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="index" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="value" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="ColorMap_write" >
+            <swigxml:parms >
+              <swigxml:parm name="c" >
+                <swigxml:type string="p.ColorMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="filename" >
+                <swigxml:type string="p.char"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="int"  />
+          </c:function>
+          <swig:constant name="BLACK" >
+            <swigxml:value string="0"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="WHITE" >
+            <swigxml:value string="1"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="RED" >
+            <swigxml:value string="2"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="GREEN" >
+            <swigxml:value string="3"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="BLUE" >
+            <swigxml:value string="4"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="YELLOW" >
+            <swigxml:value string="5"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="CYAN" >
+            <swigxml:value string="6"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="MAGENTA" >
+            <swigxml:value string="7"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <c:class name="FrameBuffer" >
+            <swigxml:child >
+              <c:variable name="pixels" >
+                <swigxml:type string="p.p.Pixel"  />
+              </c:variable>
+              <c:variable name="zbuffer" >
+                <swigxml:type string="p.p.Zvalue"  />
+              </c:variable>
+              <c:variable name="height" >
+                <swigxml:type string="unsigned int"  />
+              </c:variable>
+              <c:variable name="width" >
+                <swigxml:type string="unsigned int"  />
+              </c:variable>
+              <c:variable name="xmin" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="ymin" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="xmax" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="ymax" >
+                <swigxml:type string="int"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="struct"  />
+            <swigxml:namespace string="FrameBuffer"  />
+            <swigxml:altname string="FrameBuffer"  />
+          </c:class>
+          <c:typedef name="FrameBuffer" >
+            <swigxml:type string="FrameBuffer"  />
+          </c:typedef>
+          <swig:constant name="ZMIN" >
+            <swigxml:value string="1e+36"  />
+            <swigxml:type string="double"  />
+          </swig:constant>
+          <c:function name="new_FrameBuffer" >
+            <swigxml:parms >
+              <swigxml:parm name="width" >
+                <swigxml:type string="unsigned int"  />
+              </swigxml:parm>
+              <swigxml:parm name="height" >
+                <swigxml:type string="unsigned int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="p.FrameBuffer"  />
+          </c:function>
+          <c:function name="delete_FrameBuffer" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_resize" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="width" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="height" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="int"  />
+          </c:function>
+          <c:function name="FrameBuffer_clear" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_plot" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_horizontal" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_horizontalinterp" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="c1" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="c2" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_vertical" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_box" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_solidbox" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_interpbox" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="c1" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="c2" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="c3" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="c4" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_circle" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="radius" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_solidcircle" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="radius" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_line" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_setclip" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_noclip" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_makeGIF" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="cmap" >
+                <swigxml:type string="p.ColorMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="buffer" >
+                <swigxml:type string="p.void"  />
+              </swigxml:parm>
+              <swigxml:parm name="maxsize" >
+                <swigxml:type string="unsigned int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="int"  />
+          </c:function>
+          <c:function name="FrameBuffer_writeGIF" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="p.ColorMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="filename" >
+                <swigxml:type string="p.char"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="int"  />
+          </c:function>
+          <c:function name="FrameBuffer_zresize" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="width" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="height" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_zclear" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_solidtriangle" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_interptriangle" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="tx1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="ty1" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="c1" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="tx2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="ty2" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="c2" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="tx3" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="ty3" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="c3" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <swig:constant name="HORIZONTAL" >
+            <swigxml:value string="1"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="VERTICAL" >
+            <swigxml:value string="2"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <c:function name="FrameBuffer_drawchar" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="fgcolor" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="bgcolor" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="chr" >
+                <swigxml:type string="char"  />
+              </swigxml:parm>
+              <swigxml:parm name="orientation" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_drawstring" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="fgcolor" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="bgcolor" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="text" >
+                <swigxml:type string="p.char"  />
+              </swigxml:parm>
+              <swigxml:parm name="orientation" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:class name="PixMap" >
+            <swigxml:child >
+              <c:variable name="width" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="height" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="centerx" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="centery" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="map" >
+                <swigxml:type string="p.int"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="struct"  />
+            <swigxml:namespace string="PixMap"  />
+            <swigxml:altname string="PixMap"  />
+          </c:class>
+          <c:typedef name="PixMap" >
+            <swigxml:type string="PixMap"  />
+          </c:typedef>
+          <c:function name="new_PixMap" >
+            <swigxml:parms >
+              <swigxml:parm name="width" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="height" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="centerx" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="centery" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="p.PixMap"  />
+          </c:function>
+          <c:function name="delete_PixMap" >
+            <swigxml:parms >
+              <swigxml:parm name="pm" >
+                <swigxml:type string="p.PixMap"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="PixMap_set" >
+            <swigxml:parms >
+              <swigxml:parm name="pm" >
+                <swigxml:type string="p.PixMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="pix" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="FrameBuffer_drawpixmap" >
+            <swigxml:parms >
+              <swigxml:parm name="f" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="pm" >
+                <swigxml:type string="p.PixMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="fgcolor" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="bgcolor" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <swig:constant name="TRANSPARENT" >
+            <swigxml:value string="0"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="FOREGROUND" >
+            <swigxml:value string="1"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="BACKGROUND" >
+            <swigxml:value string="2"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <c:class name="Plot2D" >
+            <swigxml:child >
+              <c:variable name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </c:variable>
+              <c:variable name="view_xmin" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="view_ymin" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="view_xmax" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="view_ymax" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="xmin" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="ymin" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="xmax" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="ymax" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="xscale" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="yscale" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="dx" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="dy" >
+                <swigxml:type string="double"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="struct"  />
+            <swigxml:namespace string="Plot2D"  />
+            <swigxml:altname string="Plot2D"  />
+          </c:class>
+          <c:typedef name="Plot2D" >
+            <swigxml:type string="Plot2D"  />
+          </c:typedef>
+          <c:function name="new_Plot2D" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmin" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymin" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmax" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymax" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="p.Plot2D"  />
+          </c:function>
+          <c:function name="delete_Plot2D" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_copy" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="p.Plot2D"  />
+          </c:function>
+          <c:function name="Plot2D_clear" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_setview" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="vxmin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="vymin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="vxmax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="vymax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_setrange" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmin" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymin" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmax" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymax" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_setscale" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="xscale" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="yscale" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_plot" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_box" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_solidbox" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_interpbox" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c1" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="c2" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="c3" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="c4" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_circle" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="radius" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_solidcircle" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="radius" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_line" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_start" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_drawpixmap" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="pm" >
+                <swigxml:type string="p.PixMap"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="bgcolor" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_xaxis" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="xtick" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ticklength" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_yaxis" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ytick" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ticklength" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_triangle" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_solidtriangle" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot2D_interptriangle" >
+            <swigxml:parms >
+              <swigxml:parm name="p2" >
+                <swigxml:type string="p.Plot2D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c1" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c2" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c3" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <swig:constant name="LINEAR" >
+            <swigxml:value string="10"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <swig:constant name="LOG" >
+            <swigxml:value string="11"  />
+            <swigxml:type string="int"  />
+          </swig:constant>
+          <c:typedef name="Matrix" >
+            <swigxml:type string="p.double"  />
+          </c:typedef>
+          <c:class name="GL_Vector" >
+            <swigxml:child >
+              <c:variable name="x" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="y" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="z" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="w" >
+                <swigxml:type string="double"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="struct"  />
+            <swigxml:namespace string="GL_Vector"  />
+            <swigxml:altname string="GL_Vector"  />
+          </c:class>
+          <c:typedef name="GL_Vector" >
+            <swigxml:type string="GL_Vector"  />
+          </c:typedef>
+          <c:function name="new_Matrix" >
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="Matrix"  />
+          </c:function>
+          <c:function name="delete_Matrix" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_copy" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="Matrix"  />
+          </c:function>
+          <c:function name="Matrix_multiply" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="b" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_identity" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_zero" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_transpose" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="result" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_invert" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="inva" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_transform" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="r" >
+                <swigxml:type string="p.GL_Vector"  />
+              </swigxml:parm>
+              <swigxml:parm name="t" >
+                <swigxml:type string="p.GL_Vector"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_transform4" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="rx" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ry" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="rz" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="rw" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="t" >
+                <swigxml:type string="p.GL_Vector"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_print" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_translate" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="tx" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ty" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="tz" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_rotatex" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_rotatey" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Matrix_rotatez" >
+            <swigxml:parms >
+              <swigxml:parm name="a" >
+                <swigxml:type string="Matrix"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:class name="Plot3D" >
+            <swigxml:child >
+              <c:variable name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </c:variable>
+              <c:variable name="view_xmin" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="view_ymin" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="view_xmax" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="view_ymax" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="xmin" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="ymin" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="zmin" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="xmax" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="ymax" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="zmax" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="xcenter" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="ycenter" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="zcenter" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="fovy" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="aspect" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="znear" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="zfar" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="center_mat" >
+                <swigxml:type string="Matrix"  />
+              </c:variable>
+              <c:variable name="model_mat" >
+                <swigxml:type string="Matrix"  />
+              </c:variable>
+              <c:variable name="view_mat" >
+                <swigxml:type string="Matrix"  />
+              </c:variable>
+              <c:variable name="fullmodel_mat" >
+                <swigxml:type string="Matrix"  />
+              </c:variable>
+              <c:variable name="trans_mat" >
+                <swigxml:type string="Matrix"  />
+              </c:variable>
+              <c:variable name="lookatz" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="xshift" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="yshift" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="zoom" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="width" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="height" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="pers_mode" >
+                <swigxml:type string="int"  />
+              </c:variable>
+              <c:variable name="ortho_left" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="ortho_right" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="ortho_bottom" >
+                <swigxml:type string="double"  />
+              </c:variable>
+              <c:variable name="ortho_top" >
+                <swigxml:type string="double"  />
+              </c:variable>
+            </swigxml:child>
+            <swigxml:classtype string="struct"  />
+            <swigxml:namespace string="Plot3D"  />
+            <swigxml:altname string="Plot3D"  />
+          </c:class>
+          <c:typedef name="Plot3D" >
+            <swigxml:type string="Plot3D"  />
+          </c:typedef>
+          <c:function name="new_Plot3D" >
+            <swigxml:parms >
+              <swigxml:parm name="frame" >
+                <swigxml:type string="p.FrameBuffer"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmin" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymin" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="zmin" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="xmax" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="ymax" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="zmax" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="p.Plot3D"  />
+          </c:function>
+          <c:function name="delete_Plot3D" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_copy" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="p.Plot3D"  />
+          </c:function>
+          <c:function name="Plot3D_clear" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="Color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_perspective" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="fovy" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="znear" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="zfar" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_ortho" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="left" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="right" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="top" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="bottom" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_lookat" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="z" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_autoperspective" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="fovy" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_autoortho" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_rotx" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_roty" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_rotz" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_rotl" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_rotr" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_rotd" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_rotu" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_rotc" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="deg" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_zoom" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="percent" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_left" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="percent" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_right" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="percent" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_down" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="percent" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_up" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="percent" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_center" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="cx" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="cy" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_plot" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="Color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_setview" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="vxmin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="vymin" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="vxmax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+              <swigxml:parm name="vymax" >
+                <swigxml:type string="int"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_start" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_line" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_triangle" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_solidtriangle" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_interptriangle" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c1" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c2" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c3" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_quad" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_solidquad" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="x4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="color" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_interpquad" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z1" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c1" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="x2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z2" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c2" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="x3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z3" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c3" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="x4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z4" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c4" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_solidsphere" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="radius" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:function name="Plot3D_outlinesphere" >
+            <swigxml:parms >
+              <swigxml:parm name="p3" >
+                <swigxml:type string="p.Plot3D"  />
+              </swigxml:parm>
+              <swigxml:parm name="x" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="y" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="z" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="radius" >
+                <swigxml:type string="double"  />
+              </swigxml:parm>
+              <swigxml:parm name="c" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+              <swigxml:parm name="bc" >
+                <swigxml:type string="Pixel"  />
+              </swigxml:parm>
+            </swigxml:parms>
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="void"  />
+          </c:function>
+          <c:variable name="PixMap_SQUARE" >
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="PixMap"  />
+          </c:variable>
+          <c:variable name="PixMap_TRIANGLE" >
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="PixMap"  />
+          </c:variable>
+          <c:variable name="PixMap_CROSS" >
+            <swigxml:storage string="extern"  />
+            <swigxml:type string="PixMap"  />
+          </c:variable>
+        </swigxml:child>
+        <swigxml:type string="include"  />
+      </swig:file>
+    </swigxml:child>
+  </swig:top>
+</swigxml:swig>

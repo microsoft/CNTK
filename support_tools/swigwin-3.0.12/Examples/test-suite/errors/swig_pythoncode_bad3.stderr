@@ -1,0 +1,1 @@
+swig_pythoncode_bad3.i:7: Warning 740: Whitespace indentation is inconsistent compared to earlier lines (line 3 of %pythoncode or %insert("python") block)

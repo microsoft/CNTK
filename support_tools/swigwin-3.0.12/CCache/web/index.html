@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML>
+<HEAD>
+<TITLE>ccache</TITLE>
+</HEAD>
+<BODY BGCOLOR="#ffffff" TEXT="#000000" VLINK="#292555" LINK="#292555" ALINK="#cc0033">
+<h2>ccache</h2>
+
+ccache is a compiler cache. It acts as a caching pre-processor to
+C/C++ compilers, using the -E compiler switch and a hash to detect
+when a compilation can be satisfied from cache. This often results in
+a 5 to 10 times speedup in common compilations.<p>
+
+The idea came from Erik Thiele wrote the original <a
+href="http://compilercache.sourceforge.net/">compilercache</a> program
+as a bourne shell script. ccache is a re-implementation of Erik's idea
+in C with more features and better performance.<p>
+
+<h2>Latest release</h2>
+
+The latest release is ccache 2.4.
+
+<ul>
+<li>Added CCACHE_READONLY option
+<li>Added CCACHE_TEMPDIR option
+<li>fixed handling of hard-linked compilers on AIX
+<li>added O_BINARY support, to try and support win32 compiles
+<li>show cache directory in stats output
+<li>fixed handling of HOME environment variable
+</ul>
+
+See the <a href="ccache-man.html">manual page</a> for details
+on the new options.<p>
+
+You can get this release from the <a href="http://ccache.samba.org/ftp/ccache/">download directory</a> 
+
+<p>NOTE! This release changes the hash input slighly, so you will
+probably find that you will not get any hits against your existing
+cache when you upgrade.
+
+<h2>Why bother?</h2>
+
+Why bother with a compiler cache? If you ever run "make clean; make"
+then you can probably benefit from ccache. It is very common for
+developers to do a clean build of a project for a whole host of
+reasons, and this throws away all the information from your previous
+compiles.<p>
+
+By using ccache you can get exactly the same effect as "make clean;
+make" but much faster. It also helps a lot when doing RPM builds,
+as RPM can make doing incremental builds tricky.<p>
+
+I put the effort into writing ccache for 2 reasons. The first is the
+Samba build farm 
+(<a href="http://build.samba.org/">http://build.samba.org/</a>) 
+which constantly does clean builds of Samba on about 30 machines after each
+CVS commit. On some of those machines the build took over an hour. By
+using ccache we get the same effect as clean builds but about 6 times
+faster.<p>
+
+The second reason is the autobuild system I used to run for
+Quantum. That system builds our whole Linux based OS from scratch
+after every CVS commit to catch compilation problems quickly. Using
+ccache those builds are much faster.
+
+<h2>Is it safe?</h2>
+
+Yes. The most important aspect of a compiler cache is to <b>always</b>
+produce exactly the same output that the real compiler would
+produce. The includes providing exactly the same object files and
+exactly the same compiler warnings that would be produced if you use
+the real compiler. The only way you should be able to tell that you
+are using ccache is the speed.<p>
+
+I have coded ccache very carefully to try to provide these guarantees.
+
+<h2>Features</h2>
+
+<ul>
+<li> keeps statistics on hits/misses
+<li> automatic cache size management
+<li> can cache compiles that generate warnings
+<li> easy installation
+<li> very low overhead
+<li> uses hard links where possible to avoid copies
+</ul>
+
+<h2>Documentation</h2>
+
+See the <a href="ccache-man.html">manual page</a>
+
+
+<h2>Performance</h2>
+
+Here are some results for compiling Samba on my Linux laptop. I have
+also included the results of using Erik's compilercache program
+(version 1.0.10) for comparison.<p>
+
+<table border=1>
+<tr><th>              </th>      <th>&nbsp;&nbsp;&nbsp;&nbsp;ccache</th>     <th>&nbsp;compilercache</th>    </tr>
+<tr><td>normal        </td>      <td align=right>13m 4s     </td><td align=right>13m 4s</td> </tr>
+<tr><td>uncached      </td>      <td align=right>13m 15s     </td><td align=right>15m 41s</td> </tr>
+<tr><td>cached        </td>      <td align=right>2m 45s     </td><td align=right>4m 26s</td> </tr>
+</table>
+
+<h2>How to use it</h2>
+
+You can use ccache in two ways. The first is just to prefix your
+compile commands with "ccache". For example, you could change the
+"CC=gcc" line in your Makefile to be "CC=ccache gcc".<p>
+
+Alternatively, you can create symbolic links from your compilers name
+to ccache. This allows you to use ccache without any changes to your
+build system.
+
+<h2>Download</h2>
+
+You can download the latest release from the <a
+href="http://ccache.samba.org/ftp/ccache/">download directory</a>.<p>
+
+For the bleeding edge, you can fetch ccache via CVS or
+rsync. To fetch via cvs use the following command:
+
+<pre>
+  cvs -d :pserver:cvs@pserver.samba.org:/cvsroot co ccache
+</pre>
+
+To fetch via rsync use this command:
+
+<pre>
+  rsync -Pavz samba.org::ftp/unpacked/ccache .
+</pre>
+
+<h2>Related projects</h2>
+
+Here are some related programs you may find interesting
+
+<ul>
+<li> <a href="http://distcc.samba.org/">distcc</a> - a distributed compilation system
+<li> <a href="http://cachecc1.sourceforge.net/">cachecc1</a> - a gcc specific cache
+<li> <a href="http://sourceforge.net/projects/gocache/">gocache</a> - a cross platform compiler cache
+</ul>
+<p>
+
+<h2>Mailing list</h2>
+
+<p>A <a href="http://lists.samba.org/mailman/listinfo/ccache/">mailing
+list</a> is available for discussion of ccache.
+
+
+<hr>
+<tiny>
+<a href="http://samba.org/~tridge/">Andrew Tridgell</a><br>
+<a href="mailto:bugs@ccache.samba.org">bugs@ccache.samba.org</a>
+</tiny>
+
+</BODY>
+</HTML>

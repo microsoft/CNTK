@@ -1,0 +1,75 @@
+Index: ccache.c
+===================================================================
+--- ccache.c	(révision 7695)
++++ ccache.c	(copie de travail)
+@@ -1029,6 +1029,14 @@
+ 		exit(1);
+ 	}
+ 
++	if (!getenv("CCACHE_READONLY")) {
++		if (create_cachedirtag(cache_dir) != 0) {
++			fprintf(stderr,"ccache: failed to create %s/CACHEDIR.TAG (%s)\n",
++				cache_dir, strerror(errno));
++			exit(1);
++		}
++	}
++
+ 	ccache(argc, argv);
+ 	return 1;
+ }
+Index: ccache.h
+===================================================================
+--- ccache.h	(révision 7695)
++++ ccache.h	(copie de travail)
+@@ -81,6 +81,7 @@
+ int copy_file(const char *src, const char *dest);
+ 
+ int create_dir(const char *dir);
++int create_cachedirtag(const char *dir);
+ void x_asprintf(char **ptr, const char *format, ...);
+ char *x_strdup(const char *s);
+ void *x_realloc(void *ptr, size_t size);
+Index: util.c
+===================================================================
+--- util.c	(révision 7695)
++++ util.c	(copie de travail)
+@@ -138,6 +138,39 @@
+ 	return 0;
+ }
+ 
++char const CACHEDIR_TAG[] =
++	"Signature: 8a477f597d28d172789f06886806bc55\n"
++	"# This file is a cache directory tag created by ccache.\n"
++	"# For information about cache directory tags, see:\n"
++	"#	http://www.brynosaurus.com/cachedir/\n";
++
++int create_cachedirtag(const char *dir)
++{
++	char *filename;
++	struct stat st;
++	FILE *f;
++	x_asprintf(&filename, "%s/CACHEDIR.TAG", dir);
++	if (stat(filename, &st) == 0) {
++		if (S_ISREG(st.st_mode)) {
++			goto success;
++		}
++		errno = EEXIST;
++		goto error;
++	}
++	f = fopen(filename, "w");
++	if (!f) goto error;
++	if (fwrite(CACHEDIR_TAG, sizeof(CACHEDIR_TAG)-1, 1, f) != 1) {
++		goto error;
++	}
++	if (fclose(f)) goto error;
++success:
++	free(filename);
++	return 0;
++error:
++	free(filename);
++	return 1;
++}
++
+ /*
+   this is like asprintf() but dies if the malloc fails
+   note that we use vsnprintf in a rather poor way to make this more portable

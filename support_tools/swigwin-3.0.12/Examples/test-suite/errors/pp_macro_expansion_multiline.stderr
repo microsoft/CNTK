@@ -1,0 +1,4 @@
+pp_macro_expansion_multiline.i:13: Warning 509: Overloaded method foo(int const *) effectively ignored,
+pp_macro_expansion_multiline.i:12: Warning 509: as it is shadowed by foo(int *).
+pp_macro_expansion_multiline.i:31: Warning 509: Overloaded method bar(int const *) effectively ignored,
+pp_macro_expansion_multiline.i:30: Warning 509: as it is shadowed by bar(int *).

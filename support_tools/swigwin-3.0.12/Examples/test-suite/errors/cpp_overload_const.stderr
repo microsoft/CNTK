@@ -1,0 +1,10 @@
+cpp_overload_const.i:4: Warning 509: Overloaded method check(int *) effectively ignored,
+cpp_overload_const.i:3: Warning 509: as it is shadowed by check(int const *).
+cpp_overload_const.i:5: Warning 509: Overloaded method check(int &) effectively ignored,
+cpp_overload_const.i:3: Warning 509: as it is shadowed by check(int const *).
+cpp_overload_const.i:10: Warning 509: Overloaded method check(OverStruct *) effectively ignored,
+cpp_overload_const.i:9: Warning 509: as it is shadowed by check(OverStruct const *).
+cpp_overload_const.i:11: Warning 509: Overloaded method check(OverStruct &) effectively ignored,
+cpp_overload_const.i:9: Warning 509: as it is shadowed by check(OverStruct const *).
+cpp_overload_const.i:12: Warning 509: Overloaded method check(OverStruct const &) effectively ignored,
+cpp_overload_const.i:9: Warning 509: as it is shadowed by check(OverStruct const *).

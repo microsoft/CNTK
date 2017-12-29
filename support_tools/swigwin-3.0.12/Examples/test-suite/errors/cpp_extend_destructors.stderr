@@ -1,0 +1,19 @@
+cpp_extend_destructors.i:8: Warning 302: Identifier '~AStruct' redefined by %extend (ignored),
+cpp_extend_destructors.i:5: Warning 302: %extend definition of '~AStruct'.
+cpp_extend_destructors.i:14: Warning 302: Identifier '~BStruct' redefined (ignored),
+cpp_extend_destructors.i:13: Warning 302: previous definition of '~BStruct'.
+cpp_extend_destructors.i:87: Warning 302: Identifier '~JStruct' redefined (ignored),
+cpp_extend_destructors.i:85: Warning 302: previous definition of '~JStruct'.
+cpp_extend_destructors.i:100: Warning 302: Identifier '~LStruct' redefined (ignored),
+cpp_extend_destructors.i:98: Warning 302: previous definition of '~LStruct'.
+cpp_extend_destructors.i:24: Warning 521: Illegal destructor name CStruct::~NOT_CStruct(). Ignored.
+cpp_extend_destructors.i:30: Warning 521: Illegal destructor name DStruct::~NOT_DStruct(). Ignored.
+cpp_extend_destructors.i:44: Warning 521: Illegal destructor name EStruct::~NOT_EStruct(). Ignored.
+cpp_extend_destructors.i:50: Warning 521: Illegal destructor name FStruct::~NOT_FStruct(). Ignored.
+cpp_extend_destructors.i:65: Warning 521: Illegal destructor name GStruct::~NOT_GStruct(). Ignored.
+cpp_extend_destructors.i:72: Warning 521: Illegal destructor name HStruct::~NOT_HStruct(). Ignored.
+cpp_extend_destructors.i:81: Warning 521: Illegal destructor name IStruct::~NOT_IStruct(). Ignored.
+cpp_extend_destructors.i:86: Warning 521: Illegal destructor name JStruct::~NOT_JStruct(). Ignored.
+cpp_extend_destructors.i:92: Warning 521: Illegal destructor name KStruct::~NOT_KStruct(). Ignored.
+cpp_extend_destructors.i:99: Warning 521: Illegal destructor name LStruct< int >::~NOT_LStruct(). Ignored.
+cpp_extend_destructors.i:99: Warning 521: Illegal destructor name LStruct< short >::~NOT_LStruct(). Ignored.

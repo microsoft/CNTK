@@ -1,0 +1,2150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>SWIG and Allegro Common Lisp</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+
+<body bgcolor="#ffffff">
+
+<H1><a name="Allegrocl">18 SWIG and Allegro Common Lisp</a></H1>
+<!-- INDEX -->
+<div class="sectiontoc">
+<ul>
+<li><a href="#Allegrocl_nn2">Basics</a>
+<ul>
+<li><a href="#Allegrocl_nn3">Running SWIG</a>
+<li><a href="#Allegrocl_nn4">Command Line Options</a>
+<li><a href="#Allegrocl_nn5">Inserting user code into generated files</a>
+</ul>
+<li><a href="#Allegrocl_nn6">Wrapping Overview</a>
+<ul>
+<li><a href="#Allegrocl_nn7">Function Wrapping</a>
+<li><a href="#Allegrocl_nn8">Foreign Wrappers</a>
+<li><a href="#Allegrocl_nn9">FFI Wrappers</a>
+<li><a href="#Allegrocl_nn10">Non-overloaded Defuns</a>
+<li><a href="#Allegrocl_nn11">Overloaded Defuns</a>
+<li><a href="#Allegrocl_nn12">What about constant and variable access?</a>
+<li><a href="#Allegrocl_nn13">Object Wrapping</a>
+</ul>
+<li><a href="#Allegrocl_nn14">Wrapping Details</a>
+<ul>
+<li><a href="#Allegrocl_nn15">Namespaces</a>
+<li><a href="#Allegrocl_nn16">Constants</a>
+<li><a href="#Allegrocl_nn17">Variables</a>
+<li><a href="#Allegrocl_nn18">Enumerations</a>
+<li><a href="#Allegrocl_nn19">Arrays</a>
+<li><a href="#Allegrocl_nn20">Classes and Structs and Unions (oh my!)</a>
+<ul>
+<li><a href="#Allegrocl_nn21">CLOS wrapping of</a>
+<li><a href="#Allegrocl_nn22">CLOS Inheritance</a>
+<li><a href="#Allegrocl_nn23">Member fields and functions</a>
+<li><a href="#Allegrocl_nn24">Why not directly access C++ classes using foreign types?</a>
+</ul>
+<li><a href="#Allegrocl_nn25">Templates</a>
+<ul>
+<li><a href="#Allegrocl_nn26">Generating wrapper code for templates</a>
+<li><a href="#Allegrocl_nn27">Implicit Template instantiation</a>
+</ul>
+<li><a href="#Allegrocl_nn28">Typedef, Templates, and Synonym Types</a>
+<ul>
+<li><a href="#Allegrocl_nn29">Choosing a primary type</a>
+</ul>
+<li><a href="#Allegrocl_nn30">Function overloading/Parameter defaulting</a>
+<li><a href="#Allegrocl_nn31">Operator wrapping and Operator overloading</a>
+<li><a href="#Allegrocl_nn32">Varargs</a>
+<li><a href="#Allegrocl_nn33">C++ Exceptions</a>
+<li><a href="#Allegrocl_nn34">Pass by value, pass by reference</a>
+</ul>
+<li><a href="#Allegrocl_nn35">Typemaps</a>
+<ul>
+<li><a href="#Allegrocl_nn36">Code Generation in the C++ Wrapper</a>
+<ul>
+<li><a href="#Allegrocl_nn37">IN Typemap</a>
+<li><a href="#Allegrocl_nn38">OUT Typemap</a>
+<li><a href="#Allegrocl_nn39">CTYPE Typemap</a>
+</ul>
+<li><a href="#Allegrocl_nn40">Code generation in Lisp wrappers</a>
+<ul>
+<li><a href="#Allegrocl_nn41">LIN Typemap</a>
+<li><a href="#Allegrocl_nn42">LOUT Typemap</a>
+<li><a href="#Allegrocl_nn43">FFITYPE Typemap</a>
+<li><a href="#Allegrocl_nn44">LISPTYPE Typemap</a>
+<li><a href="#Allegrocl_nn45">LISPCLASS Typemap</a>
+</ul>
+<li><a href="#Allegrocl_nn46">Modifying SWIG behavior using typemaps</a>
+</ul>
+<li><a href="#Allegrocl_nn47">Identifier Converter functions</a>
+<ul>
+<li><a href="#Allegrocl_nn48">Creating symbols in the lisp environment</a>
+<li><a href="#Allegrocl_nn49">Existing identifier-converter functions</a>
+<ul>
+<li><a href="#Allegrocl_nn50">identifier-convert-null</a>
+<li><a href="#Allegrocl_nn51">identifier-convert-lispify</a>
+<li><a href="#Allegrocl_nn52">Default identifier to symbol conversions</a>
+</ul>
+<li><a href="#Allegrocl_nn53">Defining your own identifier-converter</a>
+<li><a href="#Allegrocl_nn54">Instructing SWIG to use a particular identifier-converter</a>
+</ul>
+</ul>
+</div>
+<!-- INDEX -->
+
+
+
+<p>
+This chapter describes SWIG's support of Allegro Common Lisp. Allegro
+CL is a full-featured implementation of the Common Lisp language
+standard that includes many vendor-specific enhancements and add-on
+modules for increased usability.
+</p>
+
+<p>
+One such module included in Allegro CL is the Foreign Functions
+Interface (FFI). This module, tailored primarily toward interfacing
+with C/C++ and, historically, Fortran, provides a means by which
+compiled foreign code can be loaded into a running lisp
+environment and executed. The interface supports the calling of
+foreign functions and methods, allows for executing lisp routines
+from foreign code (callbacks), and the passing of data between foreign
+and lisp code.
+</p>
+
+<p>
+The goal of this module is to make it possible to quickly generate the
+necessary foreign function definitions so one can make use of C/C++
+foreign libraries directly from lisp without the tedium of having to
+code them by hand. When necessary, it will also generate further C/C++
+code that will need to be linked with the intended library for proper
+interfacing from lisp. It has been designed with an eye toward
+flexibility. Some foreign function calls may release the heap, while
+other should not. Some foreign functions should automatically convert
+lisp strings into native strings, while others should not. These
+adjustments and many more are possible with the current module.
+</p>
+
+<p>
+It is significant to note that, while this is a vendor-specific
+module, we would like to acknowledge the current and ongoing
+work by developers in the open source lisp community that are
+working on similar interfaces to implementation-independent
+foreign function interfaces (UFFI or CFFI, for example). Such
+work can only benefit the lisp community, and we would not
+be unhappy to see some enterprising folk use this work to add
+to it.
+</p>
+
+<H2><a name="Allegrocl_nn2">18.1 Basics</a></H2>
+
+
+<H3><a name="Allegrocl_nn3">18.1.1 Running SWIG</a></H3>
+
+
+<p>
+If you're reading this, you must have some library you need to
+generate an interface for. In order for SWIG to do this work, however,
+it needs a bit of information about how it should go about creating
+your interface, and what you are interfacing to.
+</p>
+
+<p>
+SWIG expects a description of what in the foreign interface you wish
+to connect to. It must consisting of C/C++ declarations and special
+SWIG directives. SWIG can be furnished with a header file, but an
+interface can also be generated without library headers by supplying a
+simple text file--called the interface file, which is typically named
+with a <tt>.i</tt> extension--containing any foreign declarations of
+identifiers you wish to use. The most common approach is to use a an
+interface file with directives to parse the needed headers. A straight
+parse of library headers will result in usable code, but SWIG
+directives provides much freedom in how a user might tailor the
+generated code to their needs or style of coding.
+</p>
+
+<p>
+Note that SWIG does not require any function definitions; the
+declarations of those functions is all that is necessary. Be careful
+when tuning the interface as it is quite possible to generate code
+that will not load or compile.
+</p>
+
+<p>
+An example interface file is shown below. It makes use of two SWIG
+directives, one of which requests that the declarations in a header
+file be used to generate part of the interface, and also includes an
+additional declaration to be added.</p>
+
+<div class="code">example.i
+<pre>
+%module example
+
+%include "header.h"
+
+int fact(int n);
+</pre>
+</div>
+
+<p>The contents of header.h are very simple:</p>
+<div class="code">header.h
+<pre>
+int fact(char *statement);   // pass it a fact, and it will rate it.
+</pre>
+</div>
+
+<p>The contents of example.cl will look like this:</p>
+
+<div class="targetlang">example.cl
+<pre>
+(defpackage :example
+  (:use :common-lisp :swig :ff :excl))
+
+  ... helper routines for defining the interface ...
+
+(swig-in-package ())
+
+(swig-defun ("fact")
+  ((PARM0_statement cl:string (* :char) ))
+  (:returning (:int )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_statement))
+  (swig-ff-call SWIG_arg0)))
+
+(swig-defun ("fact")
+  ((PARM0_n cl:integer :int ))
+  (:returning (:int )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_n))
+  (swig-ff-call SWIG_arg0)))
+
+(swig-dispatcher ("fact" :type :function :arities (1)))
+</pre>
+</div>
+
+<p>
+The generated file contains calls to internal swig helper
+functions. In this case there are two calls to swig-defun.
+These calls will expand into code that will make the appropriate
+definitions using the Allegro FFI. Note also, that this code is
+<b>erroneous</b>. Function overloading is not supported in C, and this
+code will not compile even though SWIG did not complain.
+</p>
+
+<p>
+In order to generate a C interface to Allegro CL using this code run
+swig using the <tt>-allegrocl</tt> option, as below:
+</p>
+
+<div class="shell">
+<pre>
+% swig -allegrocl example.i
+</pre>
+</div>
+
+<p>
+When building an interface to C++ code, include the <tt>-c++</tt> option:
+</p>
+
+<div class="shell">
+<pre>
+% swig -allegrocl -c++ example.i
+</pre>
+</div>
+
+<p>
+As a result of running one of the above commands, a file named <tt>example.cl</tt> 
+will be generated containing the lisp side of the interface. As well, a file 
+<tt>example_wrap.cxx</tt> is also generated, containing C/C++ wrapper code to
+facilitate access to C++ methods, enumeration values, and constant values.
+Wrapper functions are necessary in C++ due to the lack of a standard for mangling 
+the names of symbols across all C++ compilers. These wrapper functions are
+exported from the shared library as appropriate, using the C name mangling
+convention. The lisp code that is generated will interface to your foreign
+library through these wrappers.
+</p>
+
+<p>
+It is possible to disable the creation of the .cxx file when generating a C
+interface by using the -nocwrap command-line argument. For interfaces that
+don't contain complex enum or constant expressions, contain nested struct/union
+declarations, or doesn't need to use many of the SWIG customization featuers, 
+this will result in a more streamlined, direct interface to the
+intended module.
+</p>
+
+<p>
+The generated wrapper file is below. It contains very simple
+wrappers by default, that simply pass the arguments to the
+actual function.
+</p>
+
+<div class="code">example_wrap.i
+<pre>
+  ... lots of SWIG internals ...
+
+EXPORT int ACL___fact__SWIG_0 (char *larg1) {
+  int lresult = (int)0 ;
+  char *arg1 = (char *) 0 ;
+  int result;
+
+  arg1 = larg1;
+  try {
+    result = (int)fact(arg1);
+
+    lresult = result;
+    return lresult;
+  } catch (...) {
+    return (int)0;
+  }
+}
+
+
+EXPORT int ACL___fact__SWIG_1 (int larg1) {
+  int lresult = (int)0 ;
+  int arg1 ;
+  int result;
+
+  arg1 = larg1;
+  try {
+    result = (int)fact(arg1);
+
+    lresult = result;
+    return lresult;
+  } catch (...) {
+    return (int)0;
+  }
+}
+</pre>
+</div>
+
+<p>
+And again, the generated lisp code. Note that it differs from
+what is generated when parsing C code:
+</p>
+
+<div class="targetlang">
+<pre>
+  ...
+
+(swig-in-package ())
+
+(swig-defmethod ("fact" "ACL___fact__SWIG_0" :type :function :arity 1)
+  ((PARM0_statement cl:string (* :char) ))
+  (:returning (:int )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_statement))
+  (swig-ff-call SWIG_arg0)))
+
+(swig-defmethod ("fact" "ACL___fact__SWIG_1" :type :function :arity 1)
+  ((PARM0_n cl:integer :int ))
+  (:returning (:int )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_n))
+  (swig-ff-call SWIG_arg0)))
+
+(swig-dispatcher ("fact" :type :function :arities (1)))
+</pre>
+</div>
+
+<p>In this case, the interface generates two swig-defmethod forms and
+a swig-dispatcher form. This provides a single functional interface for
+all overloaded routines. A more detailed description of this features 
+is to be found in the section titled <b>Function overloading/Parameter defaulting</b>.
+
+<p>
+In order to load a C++ interface, you will need to build a shared library
+from example_wrap.cxx. Be sure to link in the actual library you created
+the interface for, as well as any other dependent shared libraries. For
+example, if you intend to be able to call back into lisp, you will also
+need to link in the Allegro shared library. The library you create from
+the C++ wrapper will be what you then load into Allegro CL.
+</p>
+
+<H3><a name="Allegrocl_nn4">18.1.2 Command Line Options</a></H3>
+
+
+<p>
+There are three Allegro CL specific command-line option:
+</p>
+
+<div class="shell">
+<pre>
+swig -allegrocl [ options ] filename
+
+   -identifier-converter [name] - Binds the variable swig:*swig-identifier-convert* 
+                                  in the generated .cl file to <tt>name</tt>.
+                                  This function is used to generate symbols
+                                  for the lisp side of the interface.
+
+   -cwrap - [default] Generate a .cxx file containing C wrapper function when
+            wrapping C code. The interface generated is similar to what is
+            done for C++ code.
+   -nocwrap - Explicitly turn off generation of .cxx wrappers for C code. Reasonable
+              for modules with simple interfaces. Can not handle all legal enum
+              and constant constructs, or take advantage of SWIG customization features.
+
+   -isolate - With this command-line argument, all lisp helper functions are defined
+              in a unique package named <tt>swig.&lt;module-name&gt;</tt> rather than
+              <tt>swig</tt>. This prevents conflicts when the module is
+              intended to be used with other swig generated interfaces that may,
+              for instance, make use of different identifier converters.
+</pre>
+</div>
+
+<p>
+See <a href="#Allegrocl_nn47">Section 17.5 Identifier converter
+functions</a> for more details.
+</p>
+
+<H3><a name="Allegrocl_nn5">18.1.3 Inserting user code into generated files</a></H3>
+
+
+<p>
+It is often necessary to include user-defined code into the
+automatically generated interface files. For example, when building
+a C++ interface, example_wrap.cxx will likely not compile unless
+you add a <tt>#include "header.h"</tt> directive. This can be done
+using the SWIG <tt>%insert(section) %{ ...code... %}</tt> directive:
+</p>
+
+<div class="code">
+<pre>
+%module example
+
+%{
+#include "header.h"
+%}
+
+%include "header.h"
+
+int fact(int n);
+</pre>
+</div>
+
+<p>
+Additional sections have been added for inserting into the
+generated lisp interface file
+</p>
+<ul>
+  <li><tt>lisphead</tt> - inserts before type declarations</li>
+  <li><tt>lisp</tt> - inserts after type declarations according to
+    where it appears in the .i file</li>
+</ul>
+<p>
+Note that the block <tt>%{ ... %}</tt> is effectively a shortcut for
+<tt>%insert("header") %{ ... %}</tt>.
+</p>
+
+
+<H2><a name="Allegrocl_nn6">18.2 Wrapping Overview</a></H2>
+
+
+<p>
+New users to SWIG are encouraged to read
+<a href="SWIG.html#SWIG">SWIG Basics</a>, and
+<a href="SWIGPlus.html#SWIGPlus">SWIG and C++</a>, for those
+interested in generating an interface to C++.
+</p>
+
+<H3><a name="Allegrocl_nn7">18.2.1 Function Wrapping</a></H3>
+
+
+  <p>
+  Writing lisp code that directly invokes functions at the foreign
+  function interface level can be cumbersome. Data must often be
+  translated between lisp and foreign types, data extracted from
+  objects, foreign objects allocated and freed upon completion of
+  the foreign call. Dealing with pointers can be unwieldy when it
+  comes to keeping them distinct from other valid integer values.
+  </p>
+
+  <p>
+  We make an attempt to ease some of these burdens by making the
+  interface to foreign code much more lisp-like, rather than C
+  like. How this is done is described in later chapters. The
+  layers themselves, appear as follows:
+  </p>
+
+  <div class="diagram">
+  <pre>
+        ______________
+       |              |  (foreign side)
+       | Foreign Code |  What we're generating an interface to.
+       |______________|
+               |
+               |
+        _______v______
+       |              |  (foreign side)
+       | Wrapper code |  extern "C" wrappers calling C++ 
+       |______________|  functions and methods.
+               |
+    .  . . - - + - - . .  .
+        _______v______
+       |              |  (lisp side)
+       |  FFI Layer   |  Low level lisp interface. ff:def-foreign-call,
+       |______________|  ff:def-foreign-variable
+               |
+               +----------------------------
+        _______v______              _______v______
+       |              |            |              | (lisp side)    
+       |    Defuns    |            |  Defmethods  | wrapper for overloaded
+       |______________|            |______________| functions or those with
+        (lisp side)                        |        defaulted arguments
+        Wrapper for non-overloaded         |
+        functions and methods       _______v______
+                                   |              | (lisp side)
+                                   |    Defuns    | dispatch function
+                                   |______________| to overloads based
+                                                    on arity
+  </pre>
+  </div>
+
+<H3><a name="Allegrocl_nn8">18.2.2 Foreign Wrappers</a></H3>
+
+
+  <p>
+    These wrappers are as generated by SWIG default. The types of
+    function parameters can be transformed in place using the CTYPE
+    typemap. This is use for converting pass-by-value parameters to
+    pass-by-reference where necessary. All wrapper parameters are then
+    bound to local variables for possible transformation of values
+    (see LIN typemap). Return values can be transformed via the OUT
+    typemap. 
+  </p>
+
+<H3><a name="Allegrocl_nn9">18.2.3 FFI Wrappers</a></H3>
+
+
+  <p>
+    These are the generated ff:def-foreign-call forms. No typemaps are
+    applicable to this layer, but the <tt>%ffargs</tt> directive is
+    available for use in .i files, to specify which keyword arguments
+    should be specified for a given function.
+  </p>
+  
+  <div class="code">ffargs.i:
+  <pre>
+%module ffargs
+
+%ffargs(strings_convert="nil", call_direct="t") foo;
+%ffargs(strings_convert="nil", release_heap=":never", optimize_for_space="t") bar;
+
+int foo(float f1, float f2);
+int foo(float f1, char c2);
+
+void bar(void *lisp_fn);
+
+char *xxx();
+  </pre>
+  </div>
+
+  <p>Generates:
+  </p>
+  <div class="targetlang">ffargs.cl:
+  <pre>
+(swig-in-package ())
+
+(swig-defmethod ("foo" "ACL___foo__SWIG_0" :type :function :arity 2)
+  ((PARM0_f1 cl:single-float :float )
+   (PARM1_f2 cl:single-float :float ))
+  (:returning (:int )
+   :call-direct t
+   :strings-convert nil)
+  (let ((SWIG_arg0 PARM0_f1))
+  (let ((SWIG_arg1 PARM1_f2))
+  (swig-ff-call SWIG_arg0 SWIG_arg1))))
+
+(swig-defmethod ("foo" "ACL___foo__SWIG_1" :type :function :arity 2)
+  ((PARM0_f1 cl:single-float :float )
+   (PARM1_c2 cl:character :char character))
+  (:returning (:int )
+   :call-direct t
+   :strings-convert nil)
+  (let ((SWIG_arg0 PARM0_f1))
+  (let ((SWIG_arg1 PARM1_c2))
+  (swig-ff-call SWIG_arg0 SWIG_arg1))))
+
+(swig-dispatcher ("foo" :type :function :arities (2)))
+(swig-defun ("bar" "ACL___bar__SWIG_0" :type :function)
+  ((PARM0_lisp_fn  (* :void) ))
+  (:returning (:void )
+   :release-heap :never
+   :optimize-for-space t
+   :strings-convert nil)
+  (let ((SWIG_arg0 PARM0_lisp_fn))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-defun ("xxx" "ACL___xxx__SWIG_0" :type :function)
+  (:void)
+  (:returning ((* :char) )
+   :strings-convert t)
+  (swig-ff-call))
+  </pre>
+  </div>
+
+  <div class="code">
+    <pre>%ffargs(strings_convert="t");</pre>
+  </div>
+
+  <p>
+    Is the only default value specified in <tt>allegrocl.swg</tt> to force
+    the muffling of warnings about automatic string conversion when defining
+    ff:def-foreign-call's.
+  </p>
+
+<H3><a name="Allegrocl_nn10">18.2.4 Non-overloaded Defuns</a></H3>
+
+
+  <p>
+    These are simple defuns. There is no typechecking of arguments.
+    Parameters are bound to local variables for possible
+    transformation of values, such as pulling values out of instance
+    slots or allocating temporary stack allocated structures, via the
+    <tt>lin</tt> typemap. These arguments are then passed to the
+    foreign-call (where typechecking may occur). The return value from
+    this function can be manipulated via the <tt>lout</tt> typemap.
+  </p>
+
+<H3><a name="Allegrocl_nn11">18.2.5 Overloaded Defuns</a></H3>
+
+
+  <p>
+    In the case of overloaded functions, mulitple layers are
+    generated. First, all the overloads for a given name are separated
+    out into groups based on arity, and are wrapped in
+    defmethods. Each method calls a distinct wrapper function, but are
+    themselves distinguished by the types of their arguments
+    (see <tt>lispclass</tt> typemap). These are further wrapped in a
+    dispatching function (defun) which will invoke the appropriate
+    generic-function based on arity. This provides a single functional
+    interface to all overloads. The return value from this function
+    can be manipulated via the <tt>lout</tt> typemap.
+  </p>
+
+<H3><a name="Allegrocl_nn12">18.2.6 What about constant and variable access?</a></H3>
+
+
+  <p>
+    Along with the described functional layering, when creating a .cxx wrapper, 
+    this module will generate getter and--if not immutable--setter,
+    functions for variables and constants. If the -nocwrap option is used,
+    <tt>defconstant</tt> and <tt>ff:def-foreign-variable</tt> forms will be
+    generated for accessing constants and global variables. These, along with
+    the <tt>defuns</tt> listed above are the intended API for calling
+    into the foreign module.
+  </p>
+
+<H3><a name="Allegrocl_nn13">18.2.7 Object Wrapping</a></H3>
+
+
+  <p>
+  All non-primitive types (Classes, structs, unions, and typedefs
+  involving same) have a corresponding foreign-type defined on the
+  lisp side via ff:def-foreign-type.
+  </p>
+
+  <p>
+  All non-primitive types are further represented by a CLOS class,
+  created via defclass. An attempt is made to create the same class
+  hierarchy, with all classes inheriting directly or indirectly from
+  ff:foreign-pointer. Further, wherever it is apparent, all pointers
+  returned from foreign code are wrapped in a CLOS instance of the
+  appropriate class. For ff:def-foreign-calls that have been defined
+  to expect a :foreign-address type as argument, these CLOS instances
+  can legally be passed and the pointer to the C++ object
+  automatically extracted. This is a natural feature of Allegro's
+  foreign function interface.
+  </p>
+
+<H2><a name="Allegrocl_nn14">18.3 Wrapping Details</a></H2>
+
+
+  <p>
+    In this section is described how particular C/C++ constructs are
+    translated into lisp.
+  </p>
+
+<H3><a name="Allegrocl_nn15">18.3.1 Namespaces</a></H3>
+
+
+  <p>
+    C++ namespaces are translated into Lisp packages by SWIG. The
+    Global namespace is mapped to a package named by the <tt>%module</tt>
+    directive or the <tt>-module</tt> command-line argument. Further
+    namespaces are generated by the <tt>swig-defpackage</tt> utility
+    function and given names based on Allegro CLs nested namespace
+    convention. For example:
+  </p>
+
+    <div class="code">foo.i:
+    <pre>
+%module foo
+
+%{
+#include "foo.h"
+%}
+
+%include "foo.h"
+
+namespace car {
+  ...
+  namespace tires {
+    int do_something(int n);
+  }
+}
+    </pre>
+    </div>
+  <p>Generates the following code.
+  </p>
+    <div class="targetlang">foo.cl
+    <pre>
+(defpackage :foo
+  (:use :common-lisp :swig :ff :excl))
+
+...
+
+(swig-defpackage ("car"))
+(swig-defpackage ("car" "tires"))
+
+...
+
+(swig-in-package ("car" "tires"))
+(swig-defun ("do_something" "ACL_car_tires__do_something__SWIG_0" :type :function)
+  ((PARM0_n  :int ))
+  (:returning (:int )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_n))
+  (swig-ff-call SWIG_arg0)))
+    </pre>
+    </div>
+
+    <p>
+      The above interface file would cause packages foo, foo.car, and
+      foo.car.tires to be created. One would find the function wrapper
+      for do_something defined in the foo.car.tires package(*).
+    </p>
+
+    <p>(<b>*</b>) Except for the package named by the module, all
+      namespace names are passed to the identifier-converter-function
+      as strings with a <tt>:type</tt> of <tt>:namespace</tt>. It is the
+      job of this function to generate the desired symbol, accounting for
+      case preferences, additional naming cues, etc.
+    </p>
+
+    <p>
+      Note that packages created by <tt>swig-defpackage</tt> do not
+      use the COMMON-LISP or EXCL package. This reduces possible
+      conflicts when defining foreign types via the SWIG interface
+      in <b>all but the toplevel modules package</b>. This may
+      lead to confusion if, for example, the current package is
+      <tt>foo.car.tires</tt> and you attempt to use a common-lisp
+      function such as <tt>(car '(1 2 3)</tt>.
+    </p>
+
+<H3><a name="Allegrocl_nn16">18.3.2 Constants</a></H3>
+
+
+    
+    <p>
+      Constants, as declared by the preprocessor #define macro or SWIG
+      <tt>%constant</tt> directive, are included in SWIG's parse tree
+      when it can be determined that they are, or could be reduced to,
+      a literal value. Such values are translated into defconstant
+      forms in the generated lisp wrapper when the -nocwrap command-line
+      options is used. Else, wrapper functions are generated as in the
+      case of variable access (see section below).
+    </p>
+    <p>
+      Here are examples of simple preprocessor constants when using -nocwrap.
+    </p>
+      <div class="code">
+      <pre>
+#define A 1                    =&gt; (swig-defconstant "A" 1)  
+#define B 'c'                  =&gt; (swig-defconstant "B" #\c)
+#define C B                    =&gt; (swig-defconstant "C" #\c)
+#define D 1.0e2                =&gt; (swig-defconstant "D" 1.0d2)
+#define E 2222                 =&gt; (swig-defconstant "E" 2222)
+#define F (unsigned int)2222   =&gt; no code generated
+#define G 1.02e2f              =&gt; (swig-defconstant "G" 1.02f2)
+#define H foo                  =&gt; no code generated
+      </pre>
+      </div>
+
+      <p>
+      Note that where SWIG is unable to determine if a constant is
+      a literal, no node is added to the SWIG parse tree, and so
+      no values can be generated.
+      </p>
+
+    <p>
+      For preprocessor constants containing expressions which can be
+      reduced to literal values, nodes are created, but with no simplification
+      of the constant value. A very very simple infix to prefix converter
+      has been implemented that tries to do the right thing for simple cases, but
+      does not for more complex expressions. If the literal parser determines
+      that something is wrong, a warning will be generated and the literal 
+      expression will be included in the generated code, but commented out.
+    </p>
+      
+      <div class="code">
+      <pre>
+#define I A + E                =&gt; (swig-defconstant "I" (+ 1 2222))
+#define J 1|2                  =&gt; (swig-defconstant "J" (logior 1 2))
+#define Y 1 + 2 * 3 + 4        =&gt; (swig-defconstant "Y" (* (+ 1 2) (+ 3 4)))
+#define Y1 (1 + 2) * (3 + 4)   =&gt; (swig-defconstant "Y1" (* (+ 1 2) (+ 3 4)))
+#define Y2 1 * 2 + 3 * 4       =&gt; (swig-defconstant "Y2" (* 1 (+ 2 3) 4))  ;; WRONG
+#define Y3 (1 * 2) + (3 * 4)   =&gt; (swig-defconstant "Y3" (* 1 (+ 2 3) 4))  ;; WRONG
+#define Z 1 + 2 - 3 + 4 * 5    =&gt; (swig-defconstant "Z" (* (+ 1 (- 2 3) 4) 5)) ;; WRONG
+      </pre>
+      </div>
+      <p>
+      Users are cautioned to get to know their constants before use, or
+      not use the <tt>-nocwrap</tt> command-line option.
+      </p>
+
+<H3><a name="Allegrocl_nn17">18.3.3 Variables</a></H3>
+
+
+    <p>
+      For C wrapping, a def-foreign-variable call is generated for access
+      to global variables.
+    </p>
+    <p>
+      When wrapping C++ code, both global and member variables, getter
+      wrappers are generated for accessing their value, and if not immutable,
+      setter wrappers as well. In the example below, note the lack of a 
+      setter wrapper for global_var, defined as const.
+    </p>
+
+    <div class="code">vars.h
+    <pre>
+namespace nnn {
+  int const global_var = 2;
+  float glob_float = 2.0;
+}
+    </pre>
+    </div>
+
+    <p>
+    Generated code:
+    </p>
+    <div class="targetlang">vars.cl
+    <pre>
+(swig-in-package ("nnn"))
+(swig-defun ("global_var" "ACL_nnn__global_var_get__SWIG_0" :type :getter)
+  (:void)
+  (:returning (:int )
+   :strings-convert t)
+  (swig-ff-call))
+
+
+(swig-defun ("glob_float" "ACL_nnn__glob_float_set__SWIG_0" :type :setter)
+  ((PARM0_glob_float  :float ))
+  (:returning (:void )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_glob_float))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-defun ("glob_float" "ACL_nnn__glob_float_get__SWIG_0" :type :getter)
+  (:void)
+  (:returning (:float )
+   :strings-convert t)
+  (swig-ff-call))
+    </pre>
+    </div>
+
+    <p>
+      Note also, that where applicable, setter wrappers are implemented
+      as setf methods on the getter function, providing a lispy interface
+      to the foreign code.
+    </p>
+
+    <div class="targetlang">
+    <pre>
+user&gt; (load "globalvar.dll")
+; Foreign loading globalvar.dll.
+t
+user&gt; (load "globalvar.cl")
+; Loading c:\mikel\src\swig\test\globalvar.cl
+t
+user&gt; 
+globalvar&gt; (globalvar.nnn::global_var)
+2
+globalvar&gt; (globalvar.nnn::glob_float)
+2.0
+globalvar&gt; (setf (globalvar.nnn::glob_float) 3.0)
+3.0
+globalvar&gt; (globalvar.nnn::glob_float)
+3.0
+    </pre>
+    </div>
+
+<H3><a name="Allegrocl_nn18">18.3.4 Enumerations</a></H3>
+
+
+    <p>
+      In C, an enumeration value is an integer value, while in C++ an
+      enumeration value is implicitly convertible to an integer value,
+      but can also be distinguished by its enum type. For each enum
+      declaration a def-foreign-type is generated, assigning the enum
+      a default type of :int. Users may adjust the foreign type of
+      enums via SWIG <tt>typemaps</tt>.
+    </p>
+
+    <p>
+      Enum values are a bit trickier as they can be initialized using
+      any valid C/C++ expression. In C with the -nocwrap command-line option,
+      we handle the typical cases (simple integer initialization) and
+      generate a defconstant form for each enum value. This has the advantage
+      of it not being necessary to probe into foreign space to retrieve enum
+      values. When generating a .cxx wrapper file, a more general solution is
+      employed. A wrapper variable is created in the module_wrap.cxx file, and
+      a ff:def-foreign-variable call is generated to retrieve its value into lisp.
+    </p>
+
+    <p>For example, the following header file
+      <div class="code">enum.h:
+      <pre>
+enum COL { RED, GREEN, BLUE };
+enum FOO { FOO1 = 10, FOO2, FOO3 };
+      </pre>
+      </div>
+      <p>
+      In -nocwrap mode, generates
+      </p>
+      <div class="targetlang">enum.cl:
+      <pre>
+(swig-def-foreign-type "COL" :int)
+(swig-defconstant "RED" 0)
+(swig-defconstant "GREEN" (+ #.(swig-insert-id "RED" () :type :constant) 1))
+(swig-defconstant "BLUE" (+ #.(swig-insert-id "GREEN" () :type :constant) 1))
+
+(swig-def-foreign-type "FOO" :int)
+(swig-defconstant "FOO1" 10)
+(swig-defconstant "FOO2" (+ #.(swig-insert-id "FOO1" () :type :constant) 1))
+(swig-defconstant "FOO3" (+ #.(swig-insert-id "FOO2" () :type :constant) 1))
+      </pre>
+      </div>
+
+    <p>And when generating a .cxx wrapper
+      <div class="code">enum_wrap.cxx:
+      <pre>
+EXPORT const int ACL_ENUM___RED__SWIG_0 = RED;
+EXPORT const int ACL_ENUM___GREEN__SWIG_0 = GREEN;
+EXPORT const int ACL_ENUM___BLUE__SWIG_0 = BLUE;
+EXPORT const int ACL_ENUM___FOO1__SWIG_0 = FOO1;
+EXPORT const int ACL_ENUM___FOO2__SWIG_0 = FOO2;
+EXPORT const int ACL_ENUM___FOO3__SWIG_0 = FOO3;
+      </pre>
+      </div>
+    <p>
+    and
+    </p>
+      <div class="targetlang">enum.cl:
+      <pre>
+(swig-def-foreign-type "COL" :int)
+(swig-defvar "RED" "ACL_ENUM___RED__SWIG_0" :type :constant)
+(swig-defvar "GREEN" "ACL_ENUM___GREEN__SWIG_0" :type :constant)
+(swig-defvar "BLUE" "ACL_ENUM___BLUE__SWIG_0" :type :constant)
+
+(swig-def-foreign-type "FOO" :int)
+(swig-defvar "FOO1" "ACL_ENUM___FOO1__SWIG_0" :type :constant)
+(swig-defvar "FOO2" "ACL_ENUM___FOO2__SWIG_0" :type :constant)
+(swig-defvar "FOO3" "ACL_ENUM___FOO3__SWIG_0" :type :constant)
+
+      </pre>
+      </div>
+
+<H3><a name="Allegrocl_nn19">18.3.5 Arrays</a></H3>
+
+
+    <p>
+    One limitation in the Allegro CL foreign-types module, is that,
+    without macrology, expressions may not be used to specify the
+    dimensions of an array declaration. This is not a horrible
+    drawback unless it is necessary to allocate foreign structures
+    based on the array declaration using ff:allocate-fobject. When it
+    can be determined that an array bound is a valid numeric value,
+    SWIG will include this in the generated array declaration on the
+    lisp side, otherwise the value will be included, but commented out.
+    </p>
+
+    <p>
+      Below is a comprehensive example, showing a number of legal
+      C/C++ array declarations and how they are translated
+      into foreign-type specifications in the generated lisp code.
+    </p>
+    <div class="code">array.h
+    <pre>
+#define MAX_BUF_SIZE 1024
+
+namespace FOO {
+  int global_var1[13];
+  float global_var2[MAX_BUF_SIZE];
+
+}
+
+enum COLOR { RED = 10, GREEN = 20, BLUE, PURPLE = 50, CYAN };
+
+namespace BAR {
+  char global_var3[MAX_BUF_SIZE + 1];
+  float global_var4[MAX_BUF_SIZE][13];
+  signed short global_var5[MAX_BUF_SIZE + MAX_BUF_SIZE];
+
+  int enum_var5[GREEN];
+  int enum_var6[CYAN];
+
+  COLOR enum_var7[CYAN][MAX_BUF_SIZE];
+}
+    </pre>
+    </div>
+
+    <p>
+    Generates:
+    </p>
+
+    <div class="targetlang">array.cl
+    <pre>
+(in-package #.*swig-module-name*)
+
+(swig-defpackage ("FOO"))
+(swig-defpackage ("BAR"))
+
+(swig-in-package ())
+(swig-def-foreign-type "COLOR" :int)
+(swig-defvar "RED" "ACL_ENUM___RED__SWIG_0" :type :constant)
+(swig-defvar "GREEN" "ACL_ENUM___GREEN__SWIG_0" :type :constant)
+(swig-defvar "BLUE" "ACL_ENUM___BLUE__SWIG_0" :type :constant)
+(swig-defvar "PURPLE" "ACL_ENUM___PURPLE__SWIG_0" :type :constant)
+(swig-defvar "CYAN" "ACL_ENUM___CYAN__SWIG_0" :type :constant)
+
+(swig-in-package ())
+
+(swig-defconstant "MAX_BUF_SIZE" 1024)
+(swig-in-package ("FOO"))
+
+(swig-defun ("global_var1" "ACL_FOO__global_var1_get__SWIG_0" :type :getter)
+  (:void)
+  (:returning ((* :int) )
+   :strings-convert t)
+  (make-instance 'ff:foreign-pointer :foreign-address (swig-ff-call)))
+
+
+(swig-defun ("global_var2" "ACL_FOO__global_var2_set__SWIG_0" :type :setter)
+  ((global_var2  (:array :float 1024) ))
+  (:returning (:void )
+   :strings-convert t)
+  (let ((SWIG_arg0 global_var2))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-in-package ())
+(swig-in-package ("BAR"))
+(swig-defun ("global_var3" "ACL_BAR__global_var3_set__SWIG_0" :type :setter)
+  ((global_var3  (:array :char #|1024+1|#) ))
+  (:returning (:void )
+   :strings-convert t)
+  (let ((SWIG_arg0 global_var3))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-defun ("global_var4" "ACL_BAR__global_var4_set__SWIG_0" :type :setter)
+  ((global_var4  (:array (:array :float 13) 1024) ))
+  (:returning (:void )
+   :strings-convert t)
+  (let ((SWIG_arg0 global_var4))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-defun ("global_var4" "ACL_BAR__global_var4_get__SWIG_0" :type :getter)
+  (:void)
+  (:returning ((* (:array :float 13)) )
+   :strings-convert t)
+  (make-instance 'ff:foreign-pointer :foreign-address (swig-ff-call)))
+
+
+(swig-defun ("global_var5" "ACL_BAR__global_var5_set__SWIG_0" :type :setter)
+  ((global_var5  (:array :short #|1024+1024|#) ))
+  (:returning (:void )
+   :strings-convert t)
+  (let ((SWIG_arg0 global_var5))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-defun ("enum_var5" "ACL_BAR__enum_var5_set__SWIG_0" :type :setter)
+  ((enum_var5  (:array :int #|GREEN|#) ))
+  (:returning (:void )
+   :strings-convert t)
+  (let ((SWIG_arg0 enum_var5))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-defun ("enum_var6" "ACL_BAR__enum_var6_set__SWIG_0" :type :setter)
+  ((enum_var6  (:array :int #|CYAN|#) ))
+  (:returning (:void )
+   :strings-convert t)
+  (let ((SWIG_arg0 enum_var6))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-defun ("enum_var7" "ACL_BAR__enum_var7_set__SWIG_0" :type :setter)
+  ((enum_var7  (:array (:array #.(swig-insert-id "COLOR" ()) 1024) #|CYAN|#) ))
+  (:returning (:void )
+   :strings-convert t)
+  (let ((SWIG_arg0 enum_var7))
+  (swig-ff-call SWIG_arg0)))
+
+
+(swig-defun ("enum_var7" "ACL_BAR__enum_var7_get__SWIG_0" :type :getter)
+  (:void)
+  (:returning ((* (:array #.(swig-insert-id "COLOR" ()) 1024)) )
+   :strings-convert t)
+  (make-instance 'ff:foreign-pointer :foreign-address (swig-ff-call)))
+    </pre>
+    </div>
+
+<H3><a name="Allegrocl_nn20">18.3.6 Classes and Structs and Unions (oh my!)</a></H3>
+
+
+<H4><a name="Allegrocl_nn21">18.3.6.1 CLOS wrapping of</a></H4>
+
+
+    <p>
+      Classes, unions, and structs are all treated the same way by the
+      interface generator. For any of these objects, a
+      def-foreign-type and a defclass form are generated.  For every
+      function that returns an object (or pointer/reference) of C/C++
+      type <tt>X</tt>, the wrapping defun (or defmethod) on the Lisp
+      side will automatically wrap the pointer returned in an instance
+      of the appropriate class. This makes it much easier to write and
+      debug code than if pointers were passed around as a jumble of
+      integer values.
+    </p>
+
+<H4><a name="Allegrocl_nn22">18.3.6.2 CLOS Inheritance</a></H4>
+
+
+    <p>
+      The CLOS class schema generated by the interface mirrors the
+      inheritance of the classes in foreign code, with the
+      ff:foreign-pointer class at its root. ff:foreign-pointer is a thin
+      wrapper for pointers that is made available by the foreign function
+      interface. Its key benefit is that it may be passed as an argument
+      to any ff:def-foreign-call that is expecting a pointer as the
+      parameter.
+    </p>
+
+<H4><a name="Allegrocl_nn23">18.3.6.3 Member fields and functions</a></H4>
+
+
+    <p>
+      All public fields will have accessor getter/setter functions
+      generated for them, as appropriate. All public member functions
+      will have wrapper functions generated.
+    </p>
+
+    <p>
+      We currently ignore anything that isn't <tt>public</tt> (i.e.
+      <tt>private</tt> or <tt>protected</tt>), because the C++ compiler
+      won't allow the wrapper functions to access such fields. Likewise,
+      the interface does nothing for <tt>friend</tt> directives, 
+    </p>
+
+<H4><a name="Allegrocl_nn24">18.3.6.4 Why not directly access C++ classes using foreign types?</a></H4>
+
+
+    <p>
+      The def-foreign-type generated by the SWIG interface is
+      currently incomplete. We can reliably generate the object layout
+      of simple structs and unions; they can be allocated via
+      ff:allocate-fobject, and their member variables accessed
+      directly using the various ff:fslot-value-* functions. However,
+      the layout of C++ classes is more complicated. Different
+      compilers adjust class layout based on inheritance patterns, and
+      the presence of virtual member functions. The size of member
+      function pointers vary across compilers as well. As a result, it
+      is recommended that users of any generated interface not attempt
+      to access C++ instances via the foreign type system, but instead
+      use the more robust wrapper functions. 
+    </p>
+
+<H3><a name="Allegrocl_nn25">18.3.7 Templates</a></H3>
+
+
+    
+<H4><a name="Allegrocl_nn26">18.3.7.1 Generating wrapper code for templates</a></H4>
+
+
+<p>
+SWIG provides support for dealing with templates, but by
+default, it will not generate any member variable or function
+wrappers for templated classes. In order to create these
+wrappers, you need to explicitly tell SWIG to instantiate
+them. This is done via the
+<a href="SWIGPlus.html#SWIGPlus_nn30"><tt>%template</tt></a>
+directive.
+</p>
+
+<H4><a name="Allegrocl_nn27">18.3.7.2 Implicit Template instantiation</a></H4>
+
+
+<p>
+While no wrapper code is generated for accessing member
+variables, or calling member functions, type code is generated
+to include these templated classes in the foreign-type and CLOS
+class schema.
+</p>
+
+<H3><a name="Allegrocl_nn28">18.3.8 Typedef, Templates, and Synonym Types</a></H3>
+
+
+    <p>
+      In C/C++ it is possible, via typedef, to have many names refer to
+      the same <tt>type</tt>. In general, this is not a problem, though
+      it can lead to confusion.  Assume the below C++ header file:
+    </p>
+
+    <div class="code">synonyms.h
+    <pre>
+class A { 
+  int x;
+  int y;
+};
+
+typedef A Foo;
+
+A *xxx(int i);         /* sets A-&gt;x = A-&gt;y = i */
+Foo *yyy(int i);       /* sets Foo-&gt;x = Foo-&gt;y = i */
+
+int zzz(A *inst = 0);  /* return inst-&gt;x + inst-&gt;y */
+    </pre>
+    </div>
+
+    <p>
+      The function <tt>zzz</tt> is an overloaded functions; the
+      foreign function call to it will be wrapped in a
+      generic-function whose argument will be checked against a type
+      of <tt>A</tt>. Assuming a simple implementation, a call
+      to <tt>xxx(1)</tt> will return a pointer to an A object, which
+      will be wrapped in a CLOS instance of class <tt>A</tt>, and a
+      call to <tt>yyy(1)</tt> will result in a CLOS instance of
+      type <tt>Foo</tt> being returned.  Without establishing a clear
+      type relationship between <tt>Foo</tt> and <tt>A</tt>, an
+      attempt to call <tt>zzz(yyy(1))</tt> will result in an error.
+    </p>
+
+    <p>
+      We resolve this issue, by noting synonym relationships between
+      types while generating the interface. A Primary type is selected
+      (more on this below) from the candidate list of synonyms. For
+      all other synonyms, intead of generating a distinct CLOS class
+      definition, we generate a form that expands to:
+    </p>
+      <div class="targetlang">
+        <tt>(setf (find-class &lt;synonym&gt;) &lt;primary&gt;)</tt>
+      </div>
+    <p>
+      The result is that all references to synonym types in foreign
+      code, are wrapped in the same CLOS wrapper, and, in particular,
+      method specialization in wrapping generic functions works as 
+      expected.
+    </p>
+
+    <p>
+      Given the above header file, synonym.h, a Lisp session would
+      appear as follows:
+    </p>
+    <div class="targetlang">
+    <pre>
+CL-USER&gt; (load "synonym.dll")
+; Foreign loading synonym.dll.
+t
+CL-USER&gt; (load "synonym.cl")
+; Loading c:\mikel\src\swig\test\synonym.cl
+t
+CL-USER&gt; 
+synonym&gt; (setf a (xxx 3))
+#&lt;A nil #x3261a0 @ #x207299da&gt;
+synonym&gt; (setf foo (yyy 10))
+#&lt;A nil #x3291d0 @ #x2072e982&gt;
+synonym&gt; (zzz a)
+6
+synonym&gt; (zzz foo)
+20
+synonym&gt; 
+    </pre>
+    </div>
+
+<H4><a name="Allegrocl_nn29">18.3.8.1 Choosing a primary type</a></H4>
+
+
+    <p>
+      The choice of a primary type is selected by the following
+      criteria from a set of synonym types.
+    </p>
+      <ul>
+        <li>
+        If a synonym type has a class definition, it is the primary type.
+        </li>
+        <li>
+        If a synonym type is a class template and has been explicitly
+        instantiated via <tt>%template</tt>, it is the primary type.
+        </li>
+        <li>
+        For all other sets of synonymous types, the synonym which is
+        parsed first becomes the primary type.
+        </li>
+      </ul>
+
+<H3><a name="Allegrocl_nn30">18.3.9 Function overloading/Parameter defaulting</a></H3>
+
+
+    <p>
+      For each possible argument combination, a distinct wrapper
+      function is created in the .cxx file. On the Lisp side, a
+      generic functions is defined for each possible arity the
+      overloaded/defaulted call may have. Each distinct wrapper is
+      then called from within a defmethod on the appropriate generic
+      function. These are further wrapped inside a dispatch function
+      that checks the number of arguments it is called with and passes
+      them via apply to the appropriate generic-function. This allows
+      for a single entry point to overloaded functions on the lisp
+      side.
+    </p>
+
+    <p>Example:
+    </p>
+    <div class="code">overload.h:
+    <pre>
+
+class A {
+ public:
+  int x;
+  int y;
+};
+
+float xxx(int i, int x = 0);   /* return i * x */
+float xxx(A *inst, int x);     /* return x + A-&gt;x + A-&gt;y */
+    </pre>
+    </div>
+
+    <p>Creates the following three wrappers, for each of the possible argument
+      combinations
+    </p>
+    <div class="code">overload_wrap.cxx
+    <pre>
+EXPORT void ACL___delete_A__SWIG_0 (A *larg1) {
+  A *arg1 = (A *) 0 ;
+
+  arg1 = larg1;
+  try {
+    delete arg1;
+
+  } catch (...) {
+
+  }
+}
+
+
+EXPORT float ACL___xxx__SWIG_0 (int larg1, int larg2) {
+  float lresult = (float)0 ;
+  int arg1 ;
+  int arg2 ;
+  float result;
+
+  arg1 = larg1;
+  arg2 = larg2;
+  try {
+    result = (float)xxx(arg1, arg2);
+
+    lresult = result;
+    return lresult;
+  } catch (...) {
+    return (float)0;
+  }
+}
+
+
+EXPORT float ACL___xxx__SWIG_1 (int larg1) {
+  float lresult = (float)0 ;
+  int arg1 ;
+  float result;
+
+  arg1 = larg1;
+  try {
+    result = (float)xxx(arg1);
+
+    lresult = result;
+    return lresult;
+  } catch (...) {
+    return (float)0;
+  }
+}
+
+
+EXPORT float ACL___xxx__SWIG_2 (A *larg1, int larg2) {
+  float lresult = (float)0 ;
+  A *arg1 = (A *) 0 ;
+  int arg2 ;
+  float result;
+
+  arg1 = larg1;
+  arg2 = larg2;
+  try {
+    result = (float)xxx(arg1, arg2);
+
+    lresult = result;
+    return lresult;
+  } catch (...) {
+    return (float)0;
+  }
+}
+    </pre>
+    </div>
+
+    <p>
+      And the following foreign-function-call and method definitions on the
+      lisp side:
+    </p>
+    <div class="targetlang">overload.cl
+    <pre>
+(swig-defmethod ("xxx" "ACL___xxx__SWIG_0" :type :function :arity 2)
+  ((PARM0_i cl:integer :int )
+   (PARM1_x cl:integer :int ))
+  (:returning (:float )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_i))
+  (let ((SWIG_arg1 PARM1_x))
+  (swig-ff-call SWIG_arg0 SWIG_arg1))))
+
+(swig-defmethod ("xxx" "ACL___xxx__SWIG_1" :type :function :arity 1)
+  ((PARM0_i cl:integer :int ))
+  (:returning (:float )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_i))
+  (swig-ff-call SWIG_arg0)))
+
+(swig-defmethod ("xxx" "ACL___xxx__SWIG_2" :type :function :arity 2)
+  ((PARM0_inst #.(swig-insert-id "A" () :type :class) (* #.(swig-insert-id "A" ())) )
+   (PARM1_x cl:integer :int ))
+  (:returning (:float )
+   :strings-convert t)
+  (let ((SWIG_arg0 PARM0_inst))
+  (let ((SWIG_arg1 PARM1_x))
+  (swig-ff-call SWIG_arg0 SWIG_arg1))))
+
+(swig-dispatcher ("xxx" :type :function :arities (1 2)))
+    </pre>
+    </div>
+
+    <p>And their usage in a sample lisp session:
+    </p>
+    <div class="targetlang">
+    <pre>
+overload&gt; (setf a (new_A))
+#&lt;A nil #x329268 @ #x206cf612&gt;
+overload&gt; (setf (A_x a) 10)
+10
+overload&gt; (setf (A_y a) 20)
+20
+overload&gt; (xxx 1)
+0.0
+overload&gt; (xxx 3 10)
+30.0
+overload&gt; (xxx a 1)
+31.0
+overload&gt; (xxx a 2)
+32.0
+overload&gt; 
+    </pre>
+    </div>
+
+<H3><a name="Allegrocl_nn31">18.3.10 Operator wrapping and Operator overloading</a></H3>
+
+
+    <p>
+      Wrappers to defined C++ Operators are automatically renamed, using
+      <tt>%rename</tt>, to the following defaults:
+    </p>
+    <div class="code">
+    <pre>
+/* name conversion for overloaded operators. */
+#ifdef __cplusplus
+%rename(__add__)             *::operator+;
+%rename(__pos__)             *::operator+();
+%rename(__pos__)             *::operator+() const;
+
+%rename(__sub__)             *::operator-;
+%rename(__neg__)             *::operator-() const;
+%rename(__neg__)             *::operator-();
+
+%rename(__mul__)             *::operator*;
+%rename(__deref__)           *::operator*();
+%rename(__deref__)           *::operator*() const;
+
+%rename(__div__)             *::operator/;
+%rename(__mod__)             *::operator%;
+%rename(__logxor__)          *::operator^;
+%rename(__logand__)          *::operator&amp;;
+%rename(__logior__)          *::operator|;
+%rename(__lognot__)          *::operator~();
+%rename(__lognot__)          *::operator~() const;
+
+%rename(__not__)             *::operator!();
+%rename(__not__)             *::operator!() const;
+
+%rename(__assign__)          *::operator=;
+
+%rename(__add_assign__)      *::operator+=;
+%rename(__sub_assign__)      *::operator-=;
+%rename(__mul_assign__)      *::operator*=;
+%rename(__div_assign__)      *::operator/=;
+%rename(__mod_assign__)      *::operator%=;
+%rename(__logxor_assign__)   *::operator^=;
+%rename(__logand_assign__)   *::operator&amp;=;
+%rename(__logior_assign__)   *::operator|=;
+
+%rename(__lshift__)          *::operator&lt;&lt;;
+%rename(__lshift_assign__)   *::operator&lt;&lt;=;
+%rename(__rshift__)          *::operator&gt;&gt;;
+%rename(__rshift_assign__)   *::operator&gt;&gt;=;
+
+%rename(__eq__)              *::operator==;
+%rename(__ne__)              *::operator!=;
+%rename(__lt__)              *::operator&lt;;
+%rename(__gt__)              *::operator&gt;;
+%rename(__lte__)             *::operator&lt;=;
+%rename(__gte__)             *::operator&gt;=;
+
+%rename(__and__)             *::operator&amp;&amp;;
+%rename(__or__)              *::operator||;
+
+%rename(__preincr__)         *::operator++();
+%rename(__postincr__)        *::operator++(int);
+%rename(__predecr__)         *::operator--();
+%rename(__postdecr__)        *::operator--(int);
+
+%rename(__comma__)           *::operator,();
+%rename(__comma__)           *::operator,() const;
+
+%rename(__member_ref__)      *::operator-&gt;;
+%rename(__member_func_ref__) *::operator-&gt;*;
+
+%rename(__funcall__)         *::operator();
+%rename(__aref__)            *::operator[];
+    </pre>
+    </div>
+
+    <p>
+      Name mangling occurs on all such renamed identifiers, so that wrapper name
+      generated by <tt>B::operator=</tt> will be <tt>B___eq__</tt>, i.e.
+      <tt>&lt;class-or-namespace&gt;_</tt> has been added. Users may modify
+      these default names by adding <tt>%rename</tt> directives in their own .i files.
+    </p>
+
+    <p>
+      Operator overloading can be achieved by adding functions based
+      on the mangled names of the function. In the following example,
+      a class B is defined with a Operator== method defined. The
+      swig <tt>%extend</tt> directive is used to add an overload method
+      on Operator==.
+    </p>
+
+    <div class="code">opoverload.h
+    <pre>
+class B {
+ public:
+  int x;
+  int y;
+  bool operator==(B const&amp; other) const;
+};
+    </pre>
+    </div>
+
+    <p>
+    and
+    </p>
+    <div class="code">opoverload.i
+    <pre>
+%module opoverload
+
+%{
+#include &lt;fstream&gt;
+#include "opoverload.h"
+%}
+
+%{
+bool B___eq__(B const *inst, int const x)
+{
+  // insert the function definition into the wrapper code before
+  // the wrapper for it.
+  // ... do stuff ...
+}
+%}
+
+%include "opoverload.h"
+
+%extend B {
+ public:
+  bool __eq__(int const x) const;
+};
+    </pre>
+    </div>
+
+    <p>
+      Either operator can be called via a single call
+      to the dispatch function:
+    </p>
+    <div class="targetlang">
+    <pre>
+opoverload&gt; (B___eq__ x1 x2)
+nil
+opoverload&gt; (B___eq__ x1 3)
+nil
+opoverload&gt; 
+    </pre>
+    </div>
+
+<H3><a name="Allegrocl_nn32">18.3.11 Varargs</a></H3>
+
+
+    <p>
+      Variable length argument lists are not supported, by default. If
+      such a function is encountered, a warning will generated to
+      stderr. Varargs are supported via the SWIG <tt>%varargs</tt>
+      directive. This directive allows you to specify a (finite)
+      argument list which will be inserted into the wrapper in place
+      of the variable length argument indicator.  As an example,
+      consider the function <tt>printf()</tt>. Its declaration would
+      appear as follows:
+    </p>
+
+    <p>
+      See the following section
+      on <a href="Varargs.html#Varargs">Variable Length arguments</a>
+      provides examples on how <tt>%varargs</tt> can be used, along
+      with other ways such functions can be wrapped.
+    </p>
+
+<H3><a name="Allegrocl_nn33">18.3.12 C++ Exceptions</a></H3>
+
+
+    <p>
+      Each C++ wrapper includes a handler to catch any exceptions that may
+      be thrown while in foreign code. This helps prevent simple C++ errors
+      from killing the entire lisp process. There is currently no mechanism
+      to have these exceptions forwarded to the lisp condition system, nor
+      has any explicit support of the exception related SWIG typemaps been
+      implemented.
+    </p>
+
+<H3><a name="Allegrocl_nn34">18.3.13 Pass by value, pass by reference</a></H3>
+
+
+    <p>
+      Allegro CL does not support the passing of non-primitive foreign
+      structures by value. As a result, SWIG must automatically detect
+      and convert function parameters and return values to pointers
+      whenever necessary. This is done via the use of <tt>typemaps</tt>,
+      and should not require any fine tuning by the user, even for
+      newly defined types.
+    </p>
+
+<H2><a name="Allegrocl_nn35">18.4 Typemaps</a></H2>
+
+
+<p>
+  SWIG Typemaps provide a powerful tool for automatically generating
+  code to handle various menial tasks required of writing an interface
+  to foreign code. The purpose of this section is to describe each of
+  the typemaps used by the Allegro CL module. Please read the chapter
+  on <a href="Typemaps.html#Typemaps">Typemaps</a> for more information.
+</p>
+
+<H3><a name="Allegrocl_nn36">18.4.1 Code Generation in the C++ Wrapper</a></H3>
+
+
+    
+    <p>
+      Every C++ wrapper generated by SWIG takes the following form:
+    </p>
+
+    <div class="diagram">
+    <pre>
+return-val wrapper-name(parm0, parm1, ..., parmN)
+{
+  return-val lresult;   /* return value from wrapper */
+  &lt;local-declaration&gt;
+  ... results;          /* return value from function call */
+
+  &lt;binding locals to parameters&gt;
+
+  try {
+    result = function-name(local0, local1, ..., localN);
+
+    &lt;convert and bind result to lresult&gt;
+
+    return lresult;
+  catch (...) {
+    return (int)0;
+  }
+    </pre>
+    </div>
+
+<H4><a name="Allegrocl_nn37">18.4.1.1 IN Typemap</a></H4>
+
+
+    <p>
+      the <tt>in</tt> typemap is used to generate code to convert parameters
+      passed to C++ wrapper functions into the arguments desired for the
+      call being wrapped. That is, it fills in the code for the 
+      <tt>&lt;binding locals to parameters&gt;</tt> section above. We
+      use this map to automatically convert parameters passed by
+      reference to the wrapper function into by-value arguments for
+      the wrapped call, and also to convert boolean values, which are
+      passed as integers from lisp (by default), into the appropriate
+      type for the language of code being wrapped.
+    </p>
+
+    <p>These are the default specifications for the IN typemap. Here,
+      <tt>$input</tt> refers to the parameter code is being generated
+      for, and <tt>$1</tt> is the local variable to which it is
+      being assigned. The default settings of this typemap are as follows:
+    </p>
+      
+    <div class="code">
+    <pre>
+%typemap(in) bool                          "$1 = (bool)$input;";
+%typemap(in) char, unsigned char, signed char,
+             short, signed short, unsigned short,
+             int, signed int, unsigned int,
+             long, signed long, unsigned long,
+             float, double, long double, char *, void *, void,
+             enum SWIGTYPE, SWIGTYPE *,
+             SWIGTYPE[ANY], SWIGTYPE &amp;     "$1 = $input;";
+%typemap(in) SWIGTYPE                      "$1 = *$input;";
+    </pre>
+    </div>
+
+<H4><a name="Allegrocl_nn38">18.4.1.2 OUT Typemap</a></H4>
+
+
+    <p>
+      The <tt>out</tt> typemap is used to generate code to form the
+      return value of the wrapper from the return value of the wrapped
+      function. This code is placed in the &lt;convert and bind result to lresult&gt;
+      section of the above code diagram. Its default mapping is as follows:
+    </p>
+
+    <div class="code">
+    <pre>
+%typemap(out) bool                          "$result = (int)$1;";
+%typemap(out) char, unsigned char, signed char,
+              short, signed short, unsigned short,
+              int, signed int, unsigned int,
+              long, signed long, unsigned long,
+              float, double, long double, char *, void *, void,
+              enum SWIGTYPE, SWIGTYPE *,
+              SWIGTYPE[ANY], SWIGTYPE &amp;    "$result = $1;";
+%typemap(out) SWIGTYPE                     "$result = new $1_type($1);";
+    </pre>
+    </div>
+
+<H4><a name="Allegrocl_nn39">18.4.1.3 CTYPE Typemap</a></H4>
+
+
+    <p>
+      This typemap is not used for code generation, but purely for the
+      transformation of types in the parameter list of the wrapper function.
+      Its primary use is to handle by-value to by-reference conversion in the
+      wrappers parameter list. Its default settings are:
+    </p>
+
+    <div class="code">
+    <pre>
+%typemap(ctype) bool                       "int";
+%typemap(ctype) char, unsigned char, signed char,
+                short, signed short, unsigned short,
+                int, signed int, unsigned int,
+                long, signed long, unsigned long,
+                float, double, long double, char *, void *, void,
+                enum SWIGTYPE, SWIGTYPE *,
+                SWIGTYPE[ANY], SWIGTYPE &amp;  "$1_ltype";
+%typemap(ctype) SWIGTYPE                   "$&amp;1_type";
+    </pre>
+    </div>
+
+    <p>
+      These three typemaps are specifically employed by the
+      Allegro CL interface generator. SWIG also implements a number of
+      other typemaps that can be used for generating code in the C/C++
+      wrappers. You can read about
+      these <a href="Typemaps.html#Typemaps_nn25">common typemaps</a> here.
+    </p>
+
+<H3><a name="Allegrocl_nn40">18.4.2 Code generation in Lisp wrappers</a></H3>
+
+
+    <p>
+      A number of custom typemaps have also been added to facilitate
+      the generation of code in the lisp side of the interface. These
+      are described below. The basic code generation structure is
+      applied as a series of nested expressions, one for each
+      parameter, then one for manipulating the return value, and last,
+      the foreign function call itself.
+    </p>
+
+    <p>
+      Note that the typemaps below use fully qualified symbols where
+      necessary. Users writing their own typemaps should do likewise. 
+      See the explanation in the last paragraph of 
+      <a href="#Allegrocl_nn15">16.3.1 Namespaces</a> for details.
+    </p>
+
+<H4><a name="Allegrocl_nn41">18.4.2.1 LIN Typemap</a></H4>
+
+
+    <p>
+      The LIN typemap allows for the manipulating the lisp objects
+      passed as arguments to the wrapping defun before passing them to
+      the foreign function call. For example, when passing lisp
+      strings to foreign code, it is often necessary to copy the
+      string into a foreign structure of type (:char *) of appropriate
+      size, and pass this copy to the foreign call. Using the LIN
+      typemap, one could arrange for the stack-allocation of a foreign
+      char array, copy your string into it, and not have to worry
+      about freeing the copy after the function returns. 
+    </p>
+
+    <p>The LIN typemap accepts the following <tt>$variable</tt> references.
+    </p>
+      <ul>
+        <li><tt>$in</tt> - expands to the name of the parameter being
+        applied to this typemap
+        </li>
+        <li><tt>$out</tt> - expands to the name of the local variable
+        assigned to this typemap
+        </li>
+        <li><tt>$in_fftype</tt> - the foreign function type of the C type.</li>
+        <li><tt>$*in_fftype</tt> - the foreign function type of the C type
+        with one pointer removed. If there is no pointer, then $*in_fftype
+        is the same as $in_fftype.
+        </li>
+        <li><tt>$body</tt> - very important. Instructs SWIG where
+        subsequent code generation steps should be inserted into the
+        current typemap.  Leaving out a <tt>$body</tt> reference
+        will result in lisp wrappers that do very little by way of
+        calling into foreign code. Not recommended.
+        </li>
+      </ul>
+      
+    <div class="code">
+    <pre>
+%typemap(lin) SWIGTYPE "(cl:let (($out $in))\n  $body)";
+    </pre>
+    </div>
+
+<H4><a name="Allegrocl_nn42">18.4.2.2 LOUT Typemap</a></H4>
+
+
+    <p>
+      The LOUT typemap is the means by which we effect the wrapping of
+      foreign pointers in CLOS instances. It is applied after all LIN
+      typemaps, and immediately before the actual foreign-call.
+    </p>
+
+    <p>The LOUT typemap uses the following $variable
+    </p>
+      <ul>
+        <li><tt>$lclass</tt> - Expands to the CLOS class that
+        represents foreign-objects of the return type matching this
+        typemap.
+        </li>
+        <li><tt>$body</tt> - Same as for the LIN map. Place this
+        variable where you want the foreign-function call to occur.
+        </li>
+        <li><tt>$ldestructor</tt> - Expands to the symbol naming the destructor for this
+        class ($lclass) of object. Allows you to insert finalization or automatic garbage
+        collection into the wrapper code (see default mappings below).
+        </li>
+      </ul>
+
+    <div class="code">
+    <pre>
+%typemap(lout) bool, char, unsigned char, signed char,
+               short, signed short, unsigned short,
+               int, signed int, unsigned int,
+               long, signed long, unsigned long,
+               float, double, long double, char *, void *, void,
+               enum SWIGTYPE    "$body";
+%typemap(lout) SWIGTYPE[ANY], SWIGTYPE *,
+               SWIGTYPE &amp;       "(cl:make-instance '$lclass :foreign-address $body)";
+%typemap(lout) SWIGTYPE    "(cl:let* ((address $body)\n
+                            (ACL_result (cl:make-instance '$lclass :foreign-address address)))\n
+                            (cl:unless (cl::zerop address)\n
+                            (excl:schedule-finalization ACL_result #'$ldestructor))\n
+                             ACL_result)";
+    </pre>
+    </div>
+
+<H4><a name="Allegrocl_nn43">18.4.2.3 FFITYPE Typemap</a></H4>
+
+
+    
+    <p>
+      The FFITYPE typemap works as a helper for a body of code that
+      converts C/C++ type specifications into Allegro CL foreign-type
+      specifications. These foreign-type specifications appear in
+      ff:def-foreing-type declarations, and in the argument list and
+      return values of ff:def-foreign-calls. You would modify this
+      typemap if you want to change how the FFI passes through
+      arguments of a given type. For example, if you know that a
+      particular compiler represents booleans as a single byte, you
+      might add an entry for:
+    </p>
+
+    <div class="code">
+    <pre>
+%typemap(ffitype) bool ":unsigned-char";
+    </pre>
+    </div>
+
+    <p>
+      Note that this typemap is pure type transformation, and is not
+      used in any code generations step the way the LIN and LOUT
+      typemaps are. The default mappings for this typemap are:
+    </p>
+
+    <div class="code">
+    <pre>
+%typemap(ffitype) bool ":int";
+%typemap(ffitype) char ":char";
+%typemap(ffitype) unsigned char ":unsigned-char";
+%typemap(ffitype) signed char ":char";
+%typemap(ffitype) short, signed short ":short";
+%typemap(ffitype) unsigned short ":unsigned-short";
+%typemap(ffitype) int, signed int ":int";
+%typemap(ffitype) unsigned int ":unsigned-int";
+%typemap(ffitype) long, signed long ":long";
+%typemap(ffitype) unsigned long ":unsigned-long";
+%typemap(ffitype) float ":float";
+%typemap(ffitype) double ":double";
+%typemap(ffitype) char * "(* :char)";
+%typemap(ffitype) void * "(* :void)";
+%typemap(ffitype) void ":void";
+%typemap(ffitype) enum SWIGTYPE ":int";
+%typemap(ffitype) SWIGTYPE &amp; "(* :void)";
+    </pre>
+    </div>
+
+<H4><a name="Allegrocl_nn44">18.4.2.4 LISPTYPE Typemap</a></H4>
+
+
+    <p>
+      This is another type only transformation map, and is used to
+      provide the lisp-type, which is the optional third argument in
+      argument specifier in a ff:def-foreign-call form. Specifying a
+      lisp-type allows the foreign call to perform type checking on
+      the arguments passed in. The default entries in this typemap are:
+    </p>
+
+    <div class="code">
+    <pre>
+%typemap(lisptype) bool "cl:boolean";
+%typemap(lisptype) char "cl:character";
+%typemap(lisptype) unsigned char "cl:integer";
+%typemap(lisptype) signed char "cl:integer";
+    </pre>
+    </div>
+
+<H4><a name="Allegrocl_nn45">18.4.2.5 LISPCLASS Typemap</a></H4>
+
+
+    <p>
+      The LISPCLASS typemap is used to generate the method signatures
+      for the generic-functions which wrap overloaded functions and
+      functions with defaulted arguments. The default entries are:
+    </p>
+
+    <div class="code">
+    <pre>
+%typemap(lispclass) bool "t";
+%typemap(lispclass) char "cl:character";
+%typemap(lispclass) unsigned char, signed char,
+                    short, signed short, unsigned short,
+                    int, signed int, unsigned int,
+                    long, signed long, unsigned long,
+                    enum SWIGTYPE       "cl:integer";
+%typemap(lispclass) float "cl:single-float";
+%typemap(lispclass) double "cl:double-float";
+%typemap(lispclass) char * "cl:string";
+    </pre>
+    </div>
+
+<H3><a name="Allegrocl_nn46">18.4.3 Modifying SWIG behavior using typemaps</a></H3>
+
+
+    <p>
+      The following example shows how we made use of the above
+      typemaps to add support for the wchar_t type. 
+    </p>
+
+    <div class="code">
+    <pre>
+%typecheck(SWIG_TYPECHECK_UNICHAR) wchar_t { $1 = 1; };
+
+%typemap(in)        wchar_t "$1 = $input;";
+%typemap(lin)       wchar_t "(cl:let (($out (cl:char-code $in)))\n  $body)";
+%typemap(lin)       wchar_t* "(excl:with-native-string
+                                         ($out $in
+                                          :external-format #+little-endian :fat-le 
+                                                           #-little-endian :fat)\n
+                                 $body)"
+
+%typemap(out)       wchar_t "$result = $1;";
+%typemap(lout)      wchar_t "(cl:code-char $body)";
+%typemap(lout)      wchar_t* "(excl:native-to-string $body
+                                          :external-format #+little-endian :fat-le
+                                                           #-little-endian :fat)";
+
+%typemap(ffitype)   wchar_t ":unsigned-short";
+%typemap(lisptype)  wchar_t "";
+%typemap(ctype)     wchar_t "wchar_t";
+%typemap(lispclass) wchar_t "cl:character";
+%typemap(lispclass) wchar_t* "cl:string";
+    </pre>
+    </div>
+
+<H2><a name="Allegrocl_nn47">18.5 Identifier Converter functions</a></H2>
+
+
+<H3><a name="Allegrocl_nn48">18.5.1 Creating symbols in the lisp environment</a></H3>
+
+
+<p>
+  Various symbols must be generated in the lisp environment to which
+  class definitions, functions, constants, variables, etc. must be
+  bound. Rather than force a particular convention for naming these
+  symbols, an identifier (to symbol) conversion function is used. A
+  user-defined identifier-converter can then implement any symbol
+  naming, case-modifying, scheme desired.
+</p>
+
+<p>
+  In generated SWIG code, whenever some interface object must be
+  referenced by its lisp symbol, a macro is inserted that calls the
+  identifier-converter function to generate the appropriate symbol
+  reference. It is therefore expected that the identifier-converter
+  function reliably return the same (eq) symbol given the same set
+  of arguments.
+</p>
+
+<H3><a name="Allegrocl_nn49">18.5.2 Existing identifier-converter functions</a></H3>
+
+
+  <p>Two basic identifier routines have been defined.
+<H4><a name="Allegrocl_nn50">18.5.2.1 identifier-convert-null</a></H4>
+
+
+    <p>
+      No modification of the identifier string is performed. Based on
+      other arguments, the identifier may be concatenated with other
+      strings, from which a symbol will be created.
+    </p>
+
+<H4><a name="Allegrocl_nn51">18.5.2.2 identifier-convert-lispify</a></H4>
+
+
+    <p>
+      All underscores in the identifier string are converted to
+      hyphens. Otherwise, identifier-convert-lispify performs the
+      same symbol transformations.
+    </p>
+
+<H4><a name="Allegrocl_nn52">18.5.2.3 Default identifier to symbol conversions</a></H4>
+
+
+    <p>
+      Check the definitions of the above two default
+      identifier-converters in <tt>Lib/allegrocl/allegrocl.swg</tt> for
+      default naming conventions.
+    </p>
+
+<H3><a name="Allegrocl_nn53">18.5.3 Defining your own identifier-converter</a></H3>
+
+
+<p>
+  A user-defined identifier-converter function should conform to the following
+  specification:
+</p>
+
+<div class="targetlang">
+<pre>
+(defun identifier-convert-fn (id &amp;key type class arity) ...body...)
+result ==&gt; symbol or (setf symbol)
+</pre>
+</div>
+
+<p>The <tt>ID</tt> argument is a string representing an identifier in the
+foreign environment.
+</p>
+
+<p>
+The :type keyword argument provides more information on the type of
+identifier. Its value is a symbol. This allows the
+identifier-converter to apply different heuristics when mapping
+different types of identifiers to symbols. SWIG will generate calls
+to your identifier-converter using the following types.
+</p>
+
+<ul>
+  <li>:class - names a CLOS class.</li>
+  <li>:constant - names a defconstant</li>
+  <li>:constructor - names a function for creating a foreign object</li>
+  <li>:destructor - names a function for freeing a foreign object</li>
+  <li>:function - names a CLOS wrapping defmethod or defun.</li>
+  <li>:ff-operator - names a foreign call defined via ff:def-foreign-call</li>
+  <li>:getter - getter function</li>
+  <li>:namespace - names a C++ namespace</li>
+  <li>:setter - names a setter function. May return a (setf symbol) reference</li>
+  <li>:operator - names a C++ operator, such as Operator=, Operator*.</li>
+  <li>:slot - names a slot in a struct/class/union declaration.</li>
+  <li>:type - names a foreign-type defined via ff:def-foreign-type.</li>
+  <li>:variable - names a variable defined via ff:def-foreign-variable.</li>
+</ul>
+
+<p>
+The :class keyword argument is a string naming a foreign
+class. When non-nil, it indicates that the current identifier has
+scope in the specified class.
+</p>
+
+<p>
+The :arity keyword argument only appears in swig:swig-defmethod forms
+generated for overloaded functions. Its value is an integer
+indicating the number of arguments passed to the routine indicated by
+this identifier.
+</p>
+
+<H3><a name="Allegrocl_nn54">18.5.4 Instructing SWIG to use a particular identifier-converter</a></H3>
+
+
+<p>
+  By default, SWIG will use identifier-converter-null. To specify
+  another convert function, use the <tt>-identifier-converter</tt>
+  command-line argument. The value should be a string naming the
+  function you wish the interface to use instead, when generating
+  symbols. ex:
+</p>
+
+<div class="code">
+<pre>
+% swig -allegrocl -c++ -module mymodule -identifier-converter my-identifier-converter
+</pre>
+</div>
+
+
+</body>
+</html>

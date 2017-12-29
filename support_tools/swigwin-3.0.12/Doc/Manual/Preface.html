@@ -1,0 +1,459 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Preface</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+
+<body bgcolor="#ffffff">
+<H1><a name="Preface">1 Preface</a></H1>
+<!-- INDEX -->
+<div class="sectiontoc">
+<ul>
+<li><a href="#Preface_nn2">Introduction</a>
+<li><a href="#Preface_nn4">SWIG Versions</a>
+<li><a href="#Preface_license">SWIG License</a>
+<li><a href="#Preface_nn5">SWIG resources</a>
+<li><a href="#Preface_nn6">Prerequisites</a>
+<li><a href="#Preface_nn7">Organization of this manual</a>
+<li><a href="#Preface_nn8">How to avoid reading the manual</a>
+<li><a href="#Preface_nn9">Backwards compatibility</a>
+<li><a href="#Preface_release_notes">Release notes</a>
+<li><a href="#Preface_nn10">Credits</a>
+<li><a href="#Preface_nn11">Bug reports</a>
+<li><a href="#Preface_installation">Installation</a>
+<ul>
+<li><a href="#Preface_windows_installation">Windows installation</a>
+<li><a href="#Preface_unix_installation">Unix installation</a>
+<li><a href="#Preface_osx_installation">Macintosh OS X installation</a>
+<li><a href="#Preface_testing">Testing</a>
+<li><a href="#Preface_examples">Examples</a>
+</ul>
+</ul>
+</div>
+<!-- INDEX -->
+
+
+
+<H2><a name="Preface_nn2">1.1 Introduction</a></H2>
+
+
+<p>
+SWIG (Simplified Wrapper and Interface Generator) is a software development tool for building scripting language
+interfaces to C and C++ programs.  Originally developed in 1995, SWIG was
+first used by scientists in the Theoretical Physics Division at Los Alamos National Laboratory for
+building user interfaces to simulation codes running on the Connection
+Machine 5 supercomputer. In this environment, scientists needed to
+work with huge amounts of simulation data, complex hardware, and a
+constantly changing code base. The use of a scripting language
+interface provided a simple yet highly flexible foundation for solving these
+types of problems.  SWIG simplifies development by largely automating
+the task of scripting language integration--allowing developers and users
+to focus on more important problems.
+</p>
+
+<p>
+Although SWIG was originally developed for scientific applications, it
+has since evolved into a general purpose tool that is used in a wide
+variety of applications--in fact almost anything where C/C++ programming
+is involved.
+
+<H2><a name="Preface_nn4">1.2 SWIG Versions</a></H2>
+
+
+<p>
+In the late 1990's, the most stable version of SWIG was release
+1.1p5. Versions 1.3.x were officially development versions and these were released
+over a period of 10 years starting from the year 2000. The final version in the 1.3.x
+series was 1.3.40, but in truth the 1.3.x series had been stable for many years.
+An official stable version was released along with the decision to make SWIG
+license changes and this gave rise to version 2.0.0 in 2010.
+</p>
+
+<H2><a name="Preface_license">1.3 SWIG License</a></H2>
+
+
+<p>
+The LICENSE file shipped with SWIG in the top level directory contains the SWIG license.
+For further insight into the license including the license of SWIG's output code, please visit
+the SWIG legal page - <a href="http://www.swig.org/legal.html">http://www.swig.org/legal.html</a>.
+</p>
+
+<p>
+The license was clarified in version 2.0.0
+so that the code that SWIG generated could be distributed
+under license terms of the user's choice/requirements and at the same time the SWIG
+source was placed under the GNU General Public License version 3.
+</p>
+
+<H2><a name="Preface_nn5">1.4 SWIG resources</a></H2>
+
+
+<p>
+The official location of SWIG related material is
+</p>
+
+<div class="shell"><pre>
+<a href="http://www.swig.org">http://www.swig.org</a>
+</pre></div>
+
+<p>
+This site contains the latest version of the software, users guide,
+and information regarding bugs, installation problems, and
+implementation tricks. 
+
+<p>
+You can also subscribe to the swig-user mailing list by visiting the page
+</p>
+
+<div class="shell"><pre>
+<a href="http://www.swig.org/mail.html">http://www.swig.org/mail.html</a>
+</pre></div>
+
+<p>
+The mailing list often discusses some of the more technical aspects of
+SWIG along with information about beta releases and future work.
+</p>
+
+<p>
+Git and Subversion access to the latest version of SWIG is also available.  More information 
+about this can be obtained at:
+</p>
+
+<div class="shell"><pre>
+<a href="http://www.swig.org/svn.html">SWIG Bleeding Edge</a>
+</pre></div>
+
+
+
+<H2><a name="Preface_nn6">1.5 Prerequisites</a></H2>
+
+
+<p>
+This manual assumes that you know how to write C/C++ programs and that you
+have at least heard of scripting languages such as 
+Tcl, Python, and Perl. A detailed knowledge of these scripting
+languages is not required although some familiarity won't
+hurt. No prior experience with building C extensions to these
+languages is required---after all, this is what SWIG does automatically.
+However, you should be reasonably familiar with the use of
+compilers, linkers, and makefiles since making
+scripting language extensions is somewhat more complicated than
+writing a normal C program.
+</p>
+
+<p>
+Over time SWIG releases have become significantly more capable in
+their C++ handling--especially support for advanced features like
+namespaces, overloaded operators, and templates.  Whenever possible,
+this manual tries to cover the technicalities of this interface.
+However, this isn't meant to be a tutorial on C++ programming.   For many
+of the gory details, you will almost certainly want to consult a good C++ reference.  If you don't program
+in C++, you may just want to skip those parts of the manual.
+
+<H2><a name="Preface_nn7">1.6 Organization of this manual</a></H2>
+
+
+<p>
+The first few chapters of this manual describe SWIG in general and
+provide an overview of its capabilities. The remaining chapters are
+devoted to specific SWIG language modules and are self
+contained. Thus, if you are using SWIG to build Python interfaces, you
+can probably skip to that chapter and find almost everything you need
+to know. 
+</p>
+
+<H2><a name="Preface_nn8">1.7 How to avoid reading the manual</a></H2>
+
+
+<p>
+If you hate reading manuals, glance at the "Introduction" which
+contains a few simple examples. These
+examples contain about 95% of everything you need to know to use
+SWIG. After that, simply use the language-specific chapters as a reference.
+The SWIG distribution also comes with a large directory of
+examples that illustrate different topics.
+</p>
+
+<H2><a name="Preface_nn9">1.8 Backwards compatibility</a></H2>
+
+
+<p>
+If you are a previous user of SWIG, don't expect 
+SWIG to provide complete backwards compatibility.  
+Although the developers strive to the utmost to keep backwards compatibility,
+this isn't always possible as the 
+primary goal over time is to make SWIG
+better---a process that would simply be impossible if the developers
+are constantly bogged down with backwards compatibility issues.
+Potential incompatibilities are clearly marked in the detailed
+<a href="#Preface_release_notes">release notes</a>.
+</p>
+
+
+<p>
+If you need to work with different versions of SWIG and backwards
+compatibility is an issue, you can use the SWIG_VERSION preprocessor
+symbol which holds the version of SWIG being executed.
+SWIG_VERSION is a hexadecimal integer such as 0x010311 (corresponding to SWIG-1.3.11).
+This can be used in an interface file to define different typemaps, take
+advantage of different features etc:
+</p>
+
+<div class="code"><pre>
+#if SWIG_VERSION &gt;= 0x010311
+/* Use some fancy new feature */
+#endif
+</pre></div>
+
+<p>
+Note: The version symbol is not defined in the generated SWIG
+wrapper file. The SWIG preprocessor has defined SWIG_VERSION since SWIG-1.3.11.
+</p>
+
+<H2><a name="Preface_release_notes">1.9 Release notes</a></H2>
+
+
+<p>
+The CHANGES.current, CHANGES and RELEASENOTES files shipped with SWIG in the top level directory
+contain, respectively, detailed release notes for the current version,
+detailed release notes for previous releases and summary release notes from SWIG-1.3.22 onwards.
+</p>
+
+<H2><a name="Preface_nn10">1.10 Credits</a></H2>
+
+
+<p>
+SWIG is an unfunded project that would not be possible without the
+contributions of many people working in their spare time. 
+If you have benefitted from using SWIG, please consider
+<a href="http://www.swig.org/donate.html">Donating to SWIG</a> to keep development going.
+There have been a large varied number of people
+who have made contributions at all levels over time. Contributors
+are mentioned either in the COPYRIGHT file or CHANGES files shipped with SWIG or in submitted bugs.
+</p>
+
+<H2><a name="Preface_nn11">1.11 Bug reports</a></H2>
+
+
+<p>
+Although every attempt has been made to make SWIG bug-free, we are also trying
+to make feature improvements that may introduce bugs.
+To report a bug, either send mail to the SWIG developer
+list at the <a href="http://www.swig.org/mail.html">swig-devel mailing list</a> or report a bug
+at the <a href="http://www.swig.org/bugs.html">SWIG bug tracker</a>. In your report, be as specific as
+possible, including (if applicable), error messages, tracebacks (if a
+core dump occurred), corresponding portions of the SWIG interface file
+used, and any important pieces of the SWIG generated wrapper code.  We
+can only fix bugs if we know about them.
+</p>
+
+<H2><a name="Preface_installation">1.12 Installation</a></H2>
+
+
+<H3><a name="Preface_windows_installation">1.12.1 Windows installation</a></H3>
+
+
+<p>
+Please see the dedicated <a href="Windows.html#Windows">Windows chapter</a> for instructions on installing
+SWIG on Windows and running the examples. The Windows distribution is
+called swigwin and includes a prebuilt SWIG executable, swig.exe, included in
+the top level directory. Otherwise it is exactly the same as
+the main SWIG distribution. There is no need to download anything else.
+</p>
+
+<H3><a name="Preface_unix_installation">1.12.2 Unix installation</a></H3>
+
+
+<p>
+These installation instructions are for using the distributed tarball,
+for example, <tt>swig-3.0.8.tar.gz</tt>.
+If you wish to build and install from source on Github, extra steps are required.
+Please see the <a href="http://swig.org/svn.html">Bleeding Edge</a> page on the SWIG website.
+</p>
+
+<p>
+You must use <a href="http://www.gnu.org/software/make/">GNU make</a> to build and install SWIG.
+</p>
+
+<p>
+<a href="http://www.pcre.org/">PCRE</a>
+needs to be installed on your system to build SWIG, in particular
+pcre-config must be available. If you have PCRE headers and libraries but not
+pcre-config itself or, alternatively, wish to override the compiler or linker
+flags returned by pcre-config, you may set PCRE_LIBS and PCRE_CFLAGS variables
+to be used instead. And if you don't have PCRE at all, the configure script
+will provide instructions for obtaining it.
+</p>
+
+<p>
+To build and install SWIG, simply type the following:
+</p>
+
+<div class="shell"><pre>
+$ ./configure
+$ make
+$ make install
+</pre></div>
+
+<p>
+By default SWIG installs itself in /usr/local.  If you need to install SWIG in
+a different location or in your home directory, use the <tt>--prefix</tt> option
+to <tt>./configure</tt>.  For example:
+</p>
+
+<div class="shell"><pre>
+$ ./configure --prefix=/home/yourname/projects
+$ make
+$ make install
+</pre></div>
+
+<p>
+Note: the directory given to <tt>--prefix</tt> must be an absolute pathname.  Do <b>not</b> use
+the ~ shell-escape to refer to your home directory.  SWIG won't work properly
+if you do this.
+</p>
+
+<p>
+The INSTALL file shipped in the top level directory details more about using configure. Also try
+</p>
+
+<div class="shell"><pre>
+$ ./configure --help.
+</pre></div>
+
+<p>
+The configure script will attempt to locate various packages on your machine
+including Tcl, Perl5, Python and all the other target languages that SWIG
+supports.  Don't panic if you get 'not found' messages -- SWIG does not need these
+packages to compile or run.   The configure script is actually looking for
+these packages so that you can try out the SWIG examples contained
+in the 'Examples' directory without having to hack Makefiles.
+Note that the <tt>--without-xxx</tt> options, where xxx is a target language, have
+minimal effect. All they do is reduce the amount of testing done with
+'make check'. The SWIG executable and library files installed cannot currently
+be configured with a subset of target languages.
+</p>
+
+<p>
+SWIG used to include a set of runtime libraries for some languages for working
+with multiple modules. These are no longer built during the installation stage.
+However, users can build them just like any wrapper module as described in
+the <a href="Modules.html#Modules">Modules chapter</a>.
+The CHANGES file shipped with SWIG in the top level directory
+also lists some examples which build the runtime library.
+</p>
+
+<p>
+Note:
+</p>
+
+<ul>
+<li>
+If you checked the code out via Git, you will have to run <tt>./autogen.sh</tt>
+before <tt>./configure</tt>.  In addition, a full build of SWIG requires
+a number of packages to be installed.  Full instructions at
+<a href="http://www.swig.org/svn.html">SWIG bleeding edge</a>.
+</li>
+</ul>
+
+<H3><a name="Preface_osx_installation">1.12.3 Macintosh OS X installation</a></H3>
+
+
+<p>
+SWIG is known to work on various flavors of OS X.  Follow the Unix installation
+instructions above.   However, as of this writing, there is still great deal of
+inconsistency with how shared libaries are handled by various scripting languages
+on OS X.
+</p>
+
+<p>
+Users of OS X should be aware that Darwin handles shared libraries and linking in
+a radically different way than most Unix systems.  In order to test SWIG and run
+the examples, SWIG configures itself to use flat namespaces and to allow undefined
+symbols (<tt>-flat_namespace -undefined suppress</tt>). This mostly closely follows the Unix
+model and makes it more likely that the SWIG examples will work with whatever
+installation of software you might have.  However, this is generally not the recommended
+technique for building larger extension modules.  Instead, you should utilize
+Darwin's two-level namespaces.  Some details about this can be found here
+
+<a href="https://developer.apple.com/library/mac/documentation/Porting/Conceptual/PortingUnix/compiling/compiling.html#//apple_ref/doc/uid/TP40002850-BCIHJBBF">Understanding Two-Level Namespaces</a>.
+
+</p>
+
+<p>
+Needless to say, you might have to experiment a bit to get things working at first.
+</p>
+
+<H3><a name="Preface_testing">1.12.4 Testing</a></H3>
+
+
+<p>
+If you want to test SWIG after building it, a check can be performed on Unix operating systems.
+Type the following:
+</p>
+
+<div class="shell"><pre>
+    $ make -k check
+</pre></div>
+
+<p>
+This step can be performed either before or after installation.
+The check requires at least one of the target languages to be
+installed.  If it fails, it may mean that you have an uninstalled
+language module or that the file 'Examples/Makefile' has been
+incorrectly configured.  It may also fail due to compiler issues such
+as a broken C++ compiler.  Even if the check fails, there is a
+pretty good chance SWIG still works correctly --- you will just have to
+mess around with one of the examples and some makefiles to get it to work.
+Some tests may also fail due to missing dependency packages, eg PCRE
+or Boost, but this will require careful analysis of the configure output
+done during configuration.
+</p>
+
+<p>
+The test suite executed by the check is designed to stress-test
+many parts of the implementation including obscure corner cases. If some
+of these tests fail or generate warning messages, there is no reason for
+alarm --- the test may be related to some new SWIG feature or a difficult bug
+that we're trying to resolve.  Chances are that SWIG will work just fine
+for you. Note that if you have more than one CPU/core, then you can use
+parallel make to speed up the check as it does take quite some time to run,
+for example:
+</p>
+
+<div class="shell"><pre>
+    $ make -j2 -k check
+</pre></div>
+
+<p>
+Also, SWIG's support for C++ is sufficiently advanced that certain
+tests may fail on older C++ compilers (for instance if your compiler
+does not support member templates).   These errors are harmless if you
+don't intend to use these features in your own programs.
+</p>
+
+<p>
+Note: The test-suite currently contains over 500 tests.  If you
+have many different target languages installed and a slow machine, it
+might take more than an hour to run the test-suite.
+</p>
+
+<H3><a name="Preface_examples">1.12.5 Examples</a></H3>
+
+
+<p>
+The Examples directory contains a variety of examples of using SWIG
+and it has some browsable documentation.  Simply point your browser to
+the file "Example/index.html".
+</p>
+
+<p>
+The Examples directory also includes Visual C++ project 6 (.dsp) files for
+building some of the examples on Windows. Later versions of Visual Studio
+will convert these old style project files into a current solution file.
+</p>
+
+</body>
+</html>

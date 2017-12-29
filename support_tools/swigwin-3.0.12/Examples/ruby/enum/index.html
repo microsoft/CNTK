@@ -1,0 +1,35 @@
+<html>
+<head>
+<title>SWIG:Examples:ruby:enum</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+
+<tt>SWIG/Examples/ruby/enum/</tt>
+<hr>
+
+<H2>Wrapping enumerations</H2>
+
+<p>
+This example tests SWIG's ability to wrap enumerations.  By default, SWIG
+converts enumeration specifications into integer constants.  Further use
+of enumerated types are handled as integers.
+
+<ul>
+<li><a href="example.h">example.h</a>.  Header file containing some enums.
+<li><a href="example.i">example.i</a>.  Interface file.
+<li><a href="runme.rb">runme.rb</a>. Sample Ruby script.
+</ul>
+
+<h2>Notes</h2>
+
+<ul>
+<li>SWIG allows arbitrary integers to be passed as enum values.  However,
+the result of passing an integer not corresponding to any of the values
+specified in the <tt>enum</tt> specification is undefined.
+</ul>
+
+<hr>
+</body>
+</html>

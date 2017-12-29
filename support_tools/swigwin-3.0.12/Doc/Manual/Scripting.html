@@ -1,0 +1,471 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Scripting Languages</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+
+<body bgcolor="#ffffff">
+<H1><a name="Scripting">4 Scripting Languages</a></H1>
+<!-- INDEX -->
+<div class="sectiontoc">
+<ul>
+<li><a href="#Scripting_nn2">The two language view of the world</a>
+<li><a href="#Scripting_nn3">How does a scripting language talk to C?</a>
+<ul>
+<li><a href="#Scripting_nn4">Wrapper functions</a>
+<li><a href="#Scripting_nn5">Variable linking</a>
+<li><a href="#Scripting_nn6">Constants</a>
+<li><a href="#Scripting_nn7">Structures and classes</a>
+<li><a href="#Scripting_nn8">Proxy classes</a>
+</ul>
+<li><a href="#Scripting_nn9">Building scripting language extensions</a>
+<ul>
+<li><a href="#Scripting_nn10">Shared libraries and dynamic loading</a>
+<li><a href="#Scripting_nn11">Linking with shared libraries</a>
+<li><a href="#Scripting_nn12">Static linking</a>
+</ul>
+</ul>
+</div>
+<!-- INDEX -->
+
+
+
+<p>
+This chapter provides a brief overview of scripting language extension
+programming and the mechanisms by which scripting language interpreters
+access C and C++ code.
+</p>
+
+<H2><a name="Scripting_nn2">4.1 The two language view of the world</a></H2>
+
+
+<p>
+When a scripting language is used to control a C program, the
+resulting system tends to look as follows:
+</p>
+
+<center><img src="ch2.1.png" alt="Scripting language input - C/C++ functions output"></center>
+
+<p>
+In this programming model, the scripting language interpreter is used
+for high level control whereas the underlying functionality of the
+C/C++ program is accessed through special scripting language
+"commands."  If you have ever tried to write your own simple command
+interpreter, you might view the scripting language approach
+to be a highly advanced implementation of that.  Likewise, 
+If you have ever used a package such as MATLAB or IDL, it is a
+very similar model--the interpreter executes user commands and
+scripts.  However, most of the underlying functionality is written in
+a low-level language like C or Fortran.
+</p>
+
+<p>
+The two-language model of computing is extremely powerful because it
+exploits the strengths of each language. C/C++ can be used for maximal
+performance and complicated systems programming tasks. Scripting
+languages can be used for rapid prototyping, interactive debugging,
+scripting, and access to high-level data structures such associative
+arrays. </p>
+
+<H2><a name="Scripting_nn3">4.2 How does a scripting language talk to C?</a></H2>
+
+
+<p>
+Scripting languages are built around a parser that knows how
+to execute commands and scripts.  Within this parser, there is a
+mechanism for executing commands and accessing variables.
+Normally, this is used to implement the builtin features
+of the language.  However, by extending the interpreter, it is usually 
+possible to add new commands and variables.   To do this,
+most languages define a special API for adding new commands.
+Furthermore, a special foreign function interface defines how these
+new commands are supposed to hook into the interpreter.
+</p>
+
+<p>
+Typically, when you add a new command to a scripting interpreter
+you need to do two things; first you need to write a special
+"wrapper" function that serves as the glue between the interpreter
+and the underlying C function.  Then you need to give the interpreter
+information about the wrapper by providing details about the name of the
+function, arguments, and so forth.  The next few sections illustrate
+the process.
+</p>
+
+<H3><a name="Scripting_nn4">4.2.1 Wrapper functions</a></H3>
+
+
+<p>
+Suppose you have an ordinary C function like this :</p>
+
+<div class="code"><pre>
+int fact(int n) {
+  if (n &lt;= 1)
+    return 1;
+  else
+    return n*fact(n-1);
+}
+</pre></div>
+
+<p>
+In order to access this function from a scripting language, it is
+necessary to write a special "wrapper" function that serves as the
+glue between the scripting language and the underlying C function. A
+wrapper function must do three things :</p>
+
+<ul>
+<li>Gather function arguments and make sure they are valid.
+<li>Call the C function.
+<li>Convert the return value into a form recognized by the scripting language.
+</ul>
+
+<p>
+As an example, the Tcl wrapper function for the <tt>fact()</tt>
+function above example might look like the following : </p>
+
+<div class="code"><pre>
+int wrap_fact(ClientData clientData, Tcl_Interp *interp, int argc, char *argv[]) {
+  int result;
+  int arg0;
+  if (argc != 2) {
+    interp-&gt;result = "wrong # args";
+    return TCL_ERROR;
+  }
+  arg0 = atoi(argv[1]);
+  result = fact(arg0);
+  sprintf(interp-&gt;result, "%d", result);
+  return TCL_OK;
+}
+
+</pre></div>
+
+<p>
+Once you have created a wrapper function, the final step is to tell the
+scripting language about the new function. This is usually done in an
+initialization function called by the language when the module is
+loaded. For example, adding the above function to the Tcl interpreter
+requires code like the following :</p>
+
+<div class="code"><pre>
+int Wrap_Init(Tcl_Interp *interp) {
+  Tcl_CreateCommand(interp, "fact", wrap_fact, (ClientData) NULL,
+                    (Tcl_CmdDeleteProc *) NULL);
+  return TCL_OK;
+}
+</pre></div>
+
+<p>
+When executed, Tcl will now have a new command called "<tt>fact</tt>"
+that you can use like any other Tcl command.</p>
+
+<p>
+Although the process of adding a new function to Tcl has been
+illustrated, the procedure is almost identical for Perl and
+Python. Both require special wrappers to be written and both need
+additional initialization code. Only the specific details are
+different.</p>
+
+<H3><a name="Scripting_nn5">4.2.2 Variable linking</a></H3>
+
+
+<p>
+Variable linking refers to the problem of mapping a 
+C/C++ global variable to a variable in the scripting
+language interpreter. For example, suppose you had the following
+variable:</p>
+
+<div class="code"><pre>
+double Foo = 3.5;
+</pre></div>
+
+<p>
+It might be nice to access it from a script as follows (shown for Perl):</p>
+
+<div class="targetlang"><pre>
+$a = $Foo * 2.3;   # Evaluation
+$Foo = $a + 2.0;   # Assignment
+</pre></div>
+
+<p>
+To provide such access, variables are commonly manipulated using a
+pair of get/set functions.  For example, whenever the value of a
+variable is read, a "get" function is invoked.  Similarly, whenever
+the value of a variable is changed, a "set" function is called.
+</p>
+
+<p>
+In many languages, calls to the get/set functions can be attached to
+evaluation and assignment operators.  Therefore, evaluating a variable
+such as <tt>$Foo</tt> might implicitly call the get function.  Similarly, 
+typing <tt>$Foo = 4</tt> would call the underlying set function to change
+the value.
+</p>
+
+<H3><a name="Scripting_nn6">4.2.3 Constants</a></H3>
+
+
+<p>
+In many cases, a C program or library may define a large collection of
+constants.  For example:
+</p>
+
+<div class="code"><pre>
+#define RED   0xff0000
+#define BLUE  0x0000ff
+#define GREEN 0x00ff00
+</pre></div>
+<p>
+To make constants available, their values can be stored in scripting
+language variables such as <tt>$RED</tt>, <tt>$BLUE</tt>, and
+<tt>$GREEN</tt>.  Virtually all scripting languages provide C
+functions for creating variables so installing constants is usually
+a trivial exercise.
+</p>
+
+<H3><a name="Scripting_nn7">4.2.4 Structures and classes</a></H3>
+
+
+<p>
+Although scripting languages have no trouble accessing simple
+functions and variables, accessing C/C++ structures and classes
+present a different problem.  This is because the implementation
+of structures is largely related to the problem of 
+data representation and layout.  Furthermore, certain language features
+are difficult to map to an interpreter.  For instance, what
+does C++ inheritance mean in a Perl interface?
+</p>
+
+<p>
+The most straightforward technique for handling structures is to
+implement a collection of accessor functions that hide the underlying
+representation of a structure.  For example, 
+</p>
+
+<div class="code"><pre>
+struct Vector {
+  Vector();
+  ~Vector();
+  double x, y, z;
+};
+
+</pre></div>
+
+<p>
+can be transformed into the following set of functions :
+</p>
+
+<div class="code"><pre>
+Vector *new_Vector();
+void delete_Vector(Vector *v);
+double Vector_x_get(Vector *v);
+double Vector_y_get(Vector *v);
+double Vector_z_get(Vector *v);
+void Vector_x_set(Vector *v, double x);
+void Vector_y_set(Vector *v, double y);
+void Vector_z_set(Vector *v, double z);
+
+</pre></div>
+<p>
+Now, from an interpreter these function might be used as follows:
+</p>
+
+<div class="targetlang"><pre>
+% set v [new_Vector]
+% Vector_x_set $v 3.5
+% Vector_y_get $v
+% delete_Vector $v
+% ...
+</pre></div>
+
+<p>
+Since accessor functions provide a mechanism for accessing the
+internals of an object, the interpreter does not need to know anything
+about the actual representation of a <tt>Vector</tt>.
+</p>
+
+<H3><a name="Scripting_nn8">4.2.5 Proxy classes</a></H3>
+
+
+<p>
+In certain cases, it is possible to use the low-level accessor functions
+to create a proxy class, also known as a shadow class.
+A proxy class is a special kind of object that gets created
+in a scripting language to access a C/C++ class (or struct) in a way
+that looks like the original structure (that is, it proxies the real
+C++ class). For example, if you
+have the following C++ definition :</p>
+
+<div class="code"><pre>
+class Vector {
+public:
+  Vector();
+  ~Vector();
+  double x, y, z;
+};
+</pre></div>
+
+<p>
+A proxy classing mechanism would allow you to access the structure in
+a more natural manner from the interpreter. For example, in Python, you might want to do this:
+</p>
+
+<div class="targetlang"><pre>
+&gt;&gt;&gt; v = Vector()
+&gt;&gt;&gt; v.x = 3
+&gt;&gt;&gt; v.y = 4
+&gt;&gt;&gt; v.z = -13
+&gt;&gt;&gt; ...
+&gt;&gt;&gt; del v
+</pre></div>
+
+<p>
+Similarly, in Perl5 you may want the interface to work like this:</p>
+
+<div class="targetlang"><pre>
+$v = new Vector;
+$v-&gt;{x} = 3;
+$v-&gt;{y} = 4;
+$v-&gt;{z} = -13;
+
+</pre></div>
+<p>
+Finally, in Tcl :
+</p>
+
+<div class="targetlang"><pre>
+Vector v
+v configure -x 3 -y 4 -z -13
+
+</pre></div>
+
+<p>
+When proxy classes are used, two objects are really at work--one in
+the scripting language, and an underlying C/C++ object. Operations
+affect both objects equally and for all practical purposes, it appears
+as if you are simply manipulating a C/C++ object. 
+</p>
+
+<H2><a name="Scripting_nn9">4.3 Building scripting language extensions</a></H2>
+
+
+<p>
+The final step in using a scripting language with your C/C++
+application is adding your extensions to the scripting language
+itself. There are two primary approaches for doing
+this. The preferred technique is to build a dynamically loadable
+extension in the form of a shared library.  Alternatively, you can
+recompile the scripting language interpreter with your extensions
+added to it.
+</p>
+
+<H3><a name="Scripting_nn10">4.3.1 Shared libraries and dynamic loading</a></H3>
+
+
+<p>
+To create a shared library or DLL, you often need to look at the
+manual pages for your compiler and linker.  However, the procedure
+for a few common platforms is shown below:</p>
+
+<div class="shell"><pre>
+# Build a shared library for Solaris
+gcc -fpic -c example.c example_wrap.c -I/usr/local/include
+ld -G example.o example_wrap.o -o example.so
+
+# Build a shared library for Linux
+gcc -fpic -c example.c example_wrap.c -I/usr/local/include
+gcc -shared example.o example_wrap.o -o example.so
+</pre></div>
+
+<p>
+To use your shared library, you simply use the corresponding command
+in the scripting language (load, import, use, etc...). This will
+import your module and allow you to start using it. For example:
+</p>
+
+<div class="targetlang"><pre>
+% load ./example.so
+% fact 4
+24
+%
+</pre></div>
+
+<p>
+When working with C++ codes, the process of building shared libraries
+may be more complicated--primarily due to the fact that C++ modules may need
+additional code in order to operate correctly. On many machines, you
+can build a shared C++ module by following the above procedures, but
+changing the link line to the following :</p>
+
+<div class="shell"><pre>
+c++ -shared example.o example_wrap.o -o example.so
+</pre></div>
+
+<H3><a name="Scripting_nn11">4.3.2 Linking with shared libraries</a></H3>
+
+
+<p>
+When building extensions as shared libraries, it is not uncommon for
+your extension to rely upon other shared libraries on your machine. In
+order for the extension to work, it needs to be able to find all of
+these libraries at run-time. Otherwise, you may get an error such as
+the following :</p>
+
+<div class="targetlang"><pre>
+&gt;&gt;&gt; import graph
+Traceback (innermost last):
+  File "&lt;stdin&gt;", line 1, in ?
+  File "/home/sci/data1/beazley/graph/graph.py", line 2, in ?
+    import graphc
+ImportError:  1101:/home/sci/data1/beazley/bin/python: rld: Fatal Error: cannot 
+successfully map soname 'libgraph.so' under any of the filenames /usr/lib/libgraph.so:/
+lib/libgraph.so:/lib/cmplrs/cc/libgraph.so:/usr/lib/cmplrs/cc/libgraph.so:
+&gt;&gt;&gt;
+</pre></div>
+<p>
+
+What this error means is that the extension module created by SWIG
+depends upon a shared library called "<tt>libgraph.so</tt>" that the
+system was unable to locate. To fix this problem, there are a few
+approaches you can take.</p>
+
+<ul>
+<li>Link your extension and explicitly tell the linker where the
+required libraries are located. Often times, this can be done with a
+special linker flag such as <tt>-R</tt>, <tt>-rpath</tt>, etc. This
+is not implemented in a standard manner so read the man pages for your
+linker to find out more about how to set the search path for shared
+libraries.
+
+<li>Put shared libraries in the same directory as the executable. This
+technique is sometimes required for correct operation on non-Unix
+platforms.
+
+<li>Set the UNIX environment variable <tt>LD_LIBRARY_PATH</tt> to the
+directory where shared libraries are located before running Python.
+Although this is an easy solution, it is not recommended.  Consider setting
+the path using linker options instead.
+
+</ul>
+
+<H3><a name="Scripting_nn12">4.3.3 Static linking</a></H3>
+
+
+<p>
+With static linking, you rebuild the scripting language interpreter
+with extensions. The process usually involves compiling a short main
+program that adds your customized commands to the language and starts
+the interpreter.  You then link your program with a library to produce
+a new scripting language executable.
+</p>
+
+<p>
+Although static linking is supported on all platforms, this is not
+the preferred technique for building scripting language
+extensions.  In fact, there are very few practical reasons for doing this--consider
+using shared libraries instead.
+</p>
+
+</body>
+</html>

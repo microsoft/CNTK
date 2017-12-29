@@ -1,0 +1,70 @@
+<html>
+<head>
+<title>SWIG:Examples:tcl</title>
+</head>
+
+<body bgcolor="#ffffff">
+<H1>SWIG Tcl Examples</H1>
+
+<p>
+The following examples illustrate the use of SWIG with Tcl.
+
+<ul>
+<li><a href="simple/index.html">simple</a>.  A minimal example showing how SWIG can
+be used to wrap a C function and a global variable.
+<li><a href="constants/index.html">constants</a>.  This shows how preprocessor macros and
+certain C declarations are turned into constants.
+<li><a href="variables/index.html">variables</a>.  How SWIG can be used to wrap C global variables.
+<li><a href="value/index.html">value</a>. How to pass and return structures by value.
+<li><a href="class/index.html">class</a>. How wrap a simple C++ class.
+<li><a href="reference/index.html">reference</a>. C++ references.
+<li><a href="pointer/index.html">pointer</a>. Simple pointer handling.
+<li><a href="funcptr/index.html">funcptr</a>. Pointers to functions.
+</ul>
+
+<h2>Compilation Issues</h2>
+
+<ul>
+<li>To create a Tcl extension, SWIG is run with the following options:
+
+<blockquote>
+<pre>
+% swig -tcl interface.i
+</pre>
+</blockquote>
+
+<li>
+Please see the <a href="../../Doc/Manual/Windows.html">Windows</a> page in the main manual for information on using the examples on Windows. <p>
+</li>
+
+<li>The compilation of examples is done using the file <tt>Example/Makefile</tt>.  This
+makefile performs a manual module compilation which is platform specific.  Typically,
+the steps look like this (Linux):
+
+<blockquote>
+<pre>
+unix % swig -tcl interface.i
+unix % gcc -fpic -c interface_wrap.c -I/usr/local/include
+unix % gcc -shared interface_wrap.o $(OBJS) -o interface.so
+unix % tclsh8.3
+% load ./interface.so
+% blah ...
+</pre>
+</blockquote>
+</ul>
+
+<h2>Compatibility</h2>
+
+The examples have been extensively tested on the following platforms:
+
+<ul>
+<li>Linux
+<li>Solaris
+</ul>
+
+Your mileage may vary.  If you experience a problem, please let us know by 
+contacting us on the <a href="http://www.swig.org/mail.html">mailing lists</a>.
+</body>
+</html>
+
+

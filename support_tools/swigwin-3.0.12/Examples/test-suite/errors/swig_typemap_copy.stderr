@@ -1,0 +1,1 @@
+swig_typemap_copy.i:3: Error: Can't copy typemap (in) blah = int

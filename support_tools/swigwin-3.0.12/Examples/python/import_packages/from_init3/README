@@ -1,0 +1,67 @@
+This example tests the %import directive and python import from __init__.py.
+
+This case is not correctly handled by swig 2.
+
+The issue was reported as Source Forge bug #1297 and later as GitHub issue #7.
+
+Use 'python runme.py' to run a test.
+
+Overview:
+---------
+
+The example defines 2 different extension modules--each wrapping a separate C++
+class.
+
+     pyX/pkg2/pkg3/pkg4/foo.i  - Pkg4_Foo class
+     pyX/pkg2/bar.i        - Pkg2_Bar class derived from Pkg4_Foo
+
+and the package pyX.pkg2 has:
+
+     pyX/pkg2/__init__.py  - which imports something from "bar" module
+
+For example with python 2.x the py2/pkg2/__init__.py imports Pkg2_Bar class as
+follows
+
+    from bar import Pkg2_Bar                       # [1]
+
+Such cases doesn't work when fully qualified python module names are used by
+swig to generate python import directives (SF bug 1297). The generated file
+"py2/pkg2/bar.py" has following lines:
+
+    import py2.pkg2.pkg3.pkg4.foo                          # [2]
+    class Pkg2_Bar(py2.pkg2.pkg3.pkg4.foo.P1_S1_S2_Foo):  # [3]
+
+and it's not possible to import anything from py2.pkg2 subpackage, e.g.
+
+    import py2.pkg2
+
+fails with the following exception:
+
+    Traceback (most recent call last):
+      File "runme.py", line 3, in <module>
+        import py2.pkg2
+      File "py2/pkg2/__init__.py", line 4, in <module>
+        from bar import Pkg2_Bar
+      File "py2/pkg2/bar.py", line 71, in <module>
+        class Pkg2_Bar(py2.pkg2.pkg3.pkg4.foo.Pkg4_Foo):
+    AttributeError: 'module' object has no attribute 'pkg2'
+
+It seems like during the import [1], the subpackage pkg2 is not yet fully
+initialized, so py2.pkg2 can't be used. The above exception is raised at
+line [3]. The problem disappears, for example, if we force swig to use relative
+package names.
+
+The difference between this ('from_init3') case and the case
+'from_init2' is that here we import base class from module
+pyX.pkg2.pkg3.pkg4.foo, which is nested deeper than it was in
+'from_init2'. This is just to ensure, that two (and more) levels of
+subpackages get imported correctly by generated python code, i.e, not only
+'pkg3.foo' is handled properly (one-level subpackage) but the code works also
+for 'pkg3.pkg4.foo', and so on.
+
+If everything works well, the package pyX.pkg2 shall load properly.
+
+Unix:
+-----
+- Run make
+- Run the test as described above

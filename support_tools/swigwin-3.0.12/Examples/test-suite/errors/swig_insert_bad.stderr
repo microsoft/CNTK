@@ -1,0 +1,1 @@
+swig_insert_bad.i:5: Error: Unknown target 'foobar' for %insert directive.

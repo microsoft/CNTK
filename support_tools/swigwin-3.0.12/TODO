@@ -1,0 +1,373 @@
+SWIG TO-DO
+
+-----------------------------------------------------------------------------
+
+****    = High Priority
+***     = Implement if possible.
+**      = Will implement if time.
+*       = Implement if bored (or deemed necessary).
+
+defer   = Implement in next version
+
+CORE:
+
+****   Add support for nested classes.   The type system should be
+defer  ready to go.  The primary obstacle lies in the target language
+       modules (which were never programmed with nested classes in
+       mind).  There are also issues with nested C structures.  For
+       example:
+
+             struct Foo {
+                 struct {
+                     int x,y;
+                 } z;
+             };
+
+       This is one of the last remaining "hard" problems in the SWIG
+       core, but it is important that we solve it.
+
+***    "Nested" typemaps. The basic idea is similar to allowing one to 
+       use $descriptor(T) for any T, rather than just $descriptor
+       for the type currently being typemapped.
+
+       In short (ha!), given a previously defined typemap:
+
+       %typemap(in) Foo {
+           // whatever it takes to initialize $1 from $input
+       }
+
+       it would be possible to inline its code inside another typemap. 
+       While the syntax is still to be defined, the use would be
+       along the lines of:
+
+       template <class T> class vector {
+           %typemap(in) vector<T> {
+               ...
+               for (int i=0; i<N; i++) {
+                   PyObject* x = ... // i-th element
+                   $typemap(in, T, x, $1[i]);
+               }
+               ...
+           }
+           ...
+       }
+
+       i.e., when $typemap(in,Foo,x,y) is encountered, it will
+       be replaced by the code for %typemap(in) Foo; in the latter,
+       x will be replaced for $input and y will be replaced for $1. 
+       As in the case above, x and y themselves might need to be 
+       expanded before or after being substituted in the typemap code.
+       Also, $typemap(what,Foo,x,y,z,...) will be used in case of 
+       multi-arguments typemaps. The same will hold for "out" typemaps
+       and all the others.
+
+       Comment by mkoeppe:  
+
+	  I think we need to be careful to keep the syntax readable.
+	  I would like to get a syntax that is close to that of
+	  typemap definitions.  So consider this typemap:
+
+		 %typemap(in) int { ... }
+
+	  I would like to refer to this typemap like this:
+
+		 $typemap(in, input=x) int = foo;
+
+	  Here $input would be replaced by the given keyword argument
+	  x, and $1 would be replaced by foo.
+
+	  This syntax would extend easily to multi-typemaps:
+
+		 %typemap(in) ( int FIRST, double SECOND ) { ... }
+
+	      -> $typemap(in, input=x) 
+	      	    ( int FIRST = foo, double SECOND = bar );
+
+	  The advantage of this syntax would be that the formal
+	  arguments (int FIRST, double SECOND) are close to the
+	  actual arguments (foo, bar).
+
+	Comment by beazley
+
+               $typemap(in, input=x) int = foo;
+
+        is a little bit hard to parse in terms of variable substitution.
+        I'm considering something like this:
+
+               $typemap(in,1=int foo, input=x)
+
+       Note: This is partially implemented in the new Unified Typemap
+       Library(python,tcl,ruby and perl) via %fragments and the
+       SWIG_From/SWIG_AsVal methdos.
+
+***    Implement $fail special variable substitution in wrappers. Used
+       to properly transfer control out of a wrapper function while
+       reclaiming resources.
+
+       Note: Implemented in languages that uses the UTL via the
+       'SWIG_fail' macro.
+
+***    Rewrite declaration annotation to better unify %rename and related
+       directives.  Add a selector mechanism that allows specific parse tree
+       nodes to be identified.  For example:
+
+             %feature("foo", nodetype="class") Foo { ... some code ... };
+
+       Consider use of wildcards.   Namespace/nested scope support in
+       %feature is currently weak.  It works, but is fragile.  Consider
+       an implementation that is better integrated with symbol table
+       management.  Continue to consolidate SWIG directives to %feature.
+
+       Note: Initial implementation in the %rename directive.
+
+***    Add more intelligent information related to object ownership.
+       SWIG should be able to automatically strip ownership from
+       objects when they are assigned to pointer variables and structure
+       members as well as stored in a container (i.e., an array of pointers).
+
+       [ Partially finished for Ruby/Perl/Tcl/Python. ]
+
+**     Restoration of the documentation system.
+       [ Partially done for Python. ]
+              
+
+**     Restoration of Objective-C support.
+
+**     Unification of symbol tables and type system scopes.  In a sense
+       they capture the same information so it is not necessary to have
+       both.  The existence of two symbol management systems is mostly
+       historical.
+
+Build
+-----
+
+Library
+-------
+
+****   Add more support for the C++ standard library.  std::complex and other
+       core datatypes.   Refine support for STL vector.   Add more STL objects.
+
+       [ Partially finished for Python. ]
+
+****   Continue to expand the set of recognized typemaps.
+
+Windows
+-------
+
+All language modules
+--------------------
+
+Python
+------
+
+***    Ability to wrap certain classes as Python built-in types.
+
+Perl
+----
+
+****   Rewrite runtime pointer type checking to better integrate
+       shadow classes.   Creation of shadow classes should be done
+       in C instead of Perl.   This will fix a number of problems
+       related to typemaps and reduce the amount of Perl wrapper code.
+
+****   Create tests for existing support for operator overloading
+
+Tcl
+---
+
+Ruby
+----
+
+****   The "Resource Management in Proxies" section of the "SWIG and C++"
+       chapter discusses how proxies' ownership of their associated C++
+       object can change, and the use of the special disown() and
+       acquire() methods to change this ownership status. Need to
+       address this for Ruby as well.
+
+***    Add support for keyword arguments (by collecting them in a hash?).
+
+Java
+----
+
+
+C#
+--
+
+PHP
+---
+
+****   Look at moving to using the UTL.
+
+**     When returning wrapped objects via alternate constructors if that
+       pointer value already exists "out there" as a resource we should
+       use the same resource, we can't have multiple ref-counted resources
+       mapping to the same object in case it gets twice destroyed.  And check
+       if ref count destroying is even working, see smart_pointer_rename
+
+*      Work out how classes without even inherited constructors should
+       interact with the php "new <class>" notation.
+       See: abstract_inherit_wrap.cpptest
+
+**     Look at pass by point and passby ref,
+       Make sometype** to be auto allocated
+       Make sometype& and sometype* to be autoallocated IF THEY ARE NOT
+       ALREADY swigtype wrapped.
+
+*      Review to see what else is missing!
+
+Guile
+-----
+
+**     Maybe rename slot setters from CLASS-SLOT-set to CLASS-SLOT-set!
+       to match Scheme convention for naming of mutators.
+
+**     Support keyword args.
+
+**     Director Support!
+
+**     Cleaner handling of multiple values.
+       Use a typemap keyword argument "numoutputs" of "out" and
+       "argout" to indicate how many values are returned.
+
+**     Make SWIG's types first-class by using a separate smob type for
+       SWIG type descriptors; enable reflection on types.  (Maybe
+       GOOPS metaclasses?)
+
+**     Provide a clean way to construct type predicates.
+
+**     In GOOPS mode, maybe make overloaded functions methods. 
+
+**     Increase the safety of destructor functions.  John Lenz suggests:
+
+	  I think the best way of doing this would be to use %feature to mark  
+	  which classes allow for "normal" <swig> smobs to be deleted explicitly.
+
+	  We separate pointers into two classes, those that can be deleted from  
+	  scheme and those that can't.  The pointers that can be deleted use the
+	  <collectable-swig> smob and those that can not be deleted use the  
+	  <swig> smob.  A user can specify which type of each object they want  
+	  with %newobject and the CONSUMED typemap.
+
+	  By default, the exported destructor will only accept <collectable-swig>  
+	  smobs, because by definition, collectable-swig smobs are those that can  
+	  be deleted from scheme.  This allows for the user to implement  
+	  protection.  In the interface file, the user has complete control over  
+	  which objects can and can not be deleted, and can guarantee that  
+	  objects that should not be deleted can not be deleted, and that objects  
+	  that should eventually be deleted will be garbage collected.
+
+	  This protection can then be overridden with a %feature directive,  
+	  something like
+
+	  %feature("guile_allow_destroy_all","1") Foo::~Foo;
+
+	  I don't know what word we want to use, guile_allow_destroy_all is kinda  
+	  bad.  This feature would then allow for a <swig Foo *> smob to be  
+	  deleted by passing it to the destructor.  This would allow users to  
+	  maintain the protection on other classes, only manually overriding the  
+	  protection on the classes that need it.
+
+
+Mzscheme
+--------
+
+**     Port list-vector.i and pointer-in-out.i from Guile.
+
+**     Add shadow class support for the Swindle system. 
+
+Pike
+----
+
+*      Decide how to handle global variables (probably using something
+       like the Python module's cvar). Affects Examples/pike/simple.
+
+*      Decide how to handle static class member functions and member
+       variables.
+
+*      Should investigate the possibility of generating .cmod files
+       in addition to straight C/C++ code for extensions.
+
+Common Lisp
+-----------
+
+*      Random thoughts by mkoeppe on supporting Common Lisp implementations:
+
+       There are many different Foreign Function Interfaces (FFI) for
+       the various CL implementations.  Probably SWIG should interface
+       to UFFI, a least-common-denominator FFI that supports many
+       implementations.
+
+       Via the s-expression SWIG module we can export SWIG's parse
+       tree and import it into CL.  It remains to check if all
+       relevant information is dumped (for instance, the type
+       information).  Experimental code is available to generate
+       low-level UFFI declarations from this parse tree.
+
+       However, for wrapping C++, we also need to create C wrappers
+       because most FFIs cannot directly import C++.  A CL SWIG module
+       could be exporting both these wrappers and UFFI declarations.
+       I have experimental code (not checked in yet) that does this.
+
+       This is fine for generating low-level wrappers. But how do we
+       support user typemaps (like converting lists and vectors to C
+       arrays on input)?  We have to generate Lisp code that does the
+       conversion and then calls the low-level wrapper.  If we
+       generate Lisp code, it should be beautiful and readable.
+       Therefore, we need at least a Lisp pretty printer.  A Lisp
+       pretty printer works best when the Lisp program is represented
+       not as text but as Lisp data.  Moreover, typemap writers will
+       feel very much constrained by SWIG's capabilities for
+       generating wrapper code, when compared to writing Lisp macros.
+       Thus we would need half a re-implementation of Lisp in SWIG to
+       make users happy.
+
+       The solution could be the following:
+
+**     Build a SWIG library (again) and load it into a Common Lisp
+       implementation.
+
+       The FFI declarations could be written manually, or this could
+       be bootstrapped via the s-expression module or the primitive
+       UFFI wrappers.  This should be easy because SWIG's API is quite
+       simple. 
+
+       The embedded SWIG would be driven by a CL program.  High-level
+       typemaps would be written as Lisp programs that generate Lisp
+       code.
+
+ALLEGROCL
+-----
+These first three will remove most of the warnings from most of the
+remaining checkpartial tests that are failing.
+****  Throws typemap support
+****  const typemaps
+****  long long typemaps
+
+Ocaml
+-----
+**     I've been working with my camlp4 module and type information
+       from the compiler.  When I'm done, the user will have access
+       to type inference when writing code, when the inference is
+       unambiguous.  This allows the user to write x = _foo 1.0
+       instead of x = get_float (_foo (C_float 1.0)).  It's not as
+       easy as it sounds, because O'caml doesn't keep type information
+       at run time, and doesn't really have a mechanism for doing what
+       I need.  However, it's possible to write a preprocessor that
+       inserts correct type info at compile time.
+
+       That having been said, the program must compile for type info
+       to be available, so I need to attend to a lot of details;  The
+       program must compile both with and without type augmentation.
+       
+Xml
+---
+
+
+Documentation
+-------------
+
+****   Extending SWIG (and internals).
+
+***    Perl, Python, Tcl modules.
+
+***    add section for Perl module support for operator overloading

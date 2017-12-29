@@ -1,0 +1,1 @@
+swig_pythoncode_bad2.i:13: Error: Line indented less than expected (line 3 of %pythoncode or %insert("python") block) as no line should be indented less than the indentation in line 1

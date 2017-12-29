@@ -1,0 +1,13 @@
+Matrix example.  To run the example, execute the program 'matrix' and
+type the following :
+
+	(load "runme.scm")
+	(do-test 0)
+
+Alternatively, use the command-line:
+
+	./my-guile -e do-test -s runme.scm
+
+Or, if your operating system is spiffy enough:
+
+	./runme.scm

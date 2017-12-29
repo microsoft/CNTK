@@ -1,0 +1,2 @@
+cpp_using_undef.i:4: Error: Nothing known about namespace 'foo'
+cpp_using_undef.i:3: Warning 315: Nothing known about 'foo::bar'.

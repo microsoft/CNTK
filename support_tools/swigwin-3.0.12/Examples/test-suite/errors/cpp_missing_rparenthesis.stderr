@@ -1,0 +1,2 @@
+cpp_missing_rparenthesis.i:5: Error: Missing ')'. Reached end of input.
+cpp_missing_rparenthesis.i:5: Error: Syntax error in input(3).

@@ -1,0 +1,59 @@
+#######################################################################
+# Makefile for errors test-suite
+#
+# This test-suite is for checking SWIG errors and warnings and uses
+# Python as the target language.
+#
+# It compares the stderr output from SWIG to the contents of the .stderr
+# file for each test case. The test cases are different to those used by
+# the language module test-suites. The .i files in this directory are
+# used instead of those in the parent directory.
+#
+# When adding a new test case, be sure to commit the expected output
+# file (.stderr) in addition to the test case itself.
+#######################################################################
+
+LANGUAGE     = errors
+ERROR_EXT    = newerr
+
+srcdir       = @srcdir@
+top_srcdir   = @top_srcdir@
+top_builddir = @top_builddir@
+
+SWIG_LIB_SET = @SWIG_LIB_SET@
+SWIGINVOKE   = $(SWIG_LIB_SET) $(SWIGTOOL) $(SWIGEXE)
+
+# All .i files with prefix 'cpp_' will be treated as C++ input and remaining .i files as C input
+ALL_ERROR_TEST_CASES := $(patsubst %.i,%, $(notdir $(wildcard $(srcdir)/*.i)))
+CPP_ERROR_TEST_CASES := $(filter cpp_%, $(ALL_ERROR_TEST_CASES))
+C_ERROR_TEST_CASES := $(filter-out $(CPP_ERROR_TEST_CASES), $(ALL_ERROR_TEST_CASES))
+
+ERROR_TEST_CASES := $(CPP_ERROR_TEST_CASES:=.cpptest) \
+		    $(C_ERROR_TEST_CASES:=.ctest)
+
+include $(srcdir)/../common.mk
+
+# Portable dos2unix / todos for stripping CR
+TODOS        = tr -d '\r'
+#TODOS        = sed -e 's/\r$$//' # On Mac OS X behaves as if written 's/r$$//'
+
+# strip source directory from output, so that diffs compare
+STRIP_SRCDIR = sed -e 's|\\|/|g' -e 's|^$(SRCDIR)||'
+
+# Rules for the different types of tests
+%.cpptest:
+	echo "$(ACTION)ing errors testcase $*"
+	-$(SWIGINVOKE) -c++ -python -Wall -Fstandard $(SWIGOPT) $(SRCDIR)$*.i 2>&1 | $(TODOS) | $(STRIP_SRCDIR) > $*.$(ERROR_EXT)
+	$(COMPILETOOL) diff -c $(SRCDIR)$*.stderr $*.$(ERROR_EXT)
+
+%.ctest:
+	echo "$(ACTION)ing errors testcase $*"
+	-$(SWIGINVOKE) -python -Wall -Fstandard $(SWIGOPT) $(SRCDIR)$*.i 2>&1 | $(TODOS) | $(STRIP_SRCDIR) > $*.$(ERROR_EXT)
+	$(COMPILETOOL) diff -c $(SRCDIR)$*.stderr $*.$(ERROR_EXT)
+
+%.clean:
+	@exit 0
+
+clean:
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' python_clean
+	@rm -f *.$(ERROR_EXT) *.py

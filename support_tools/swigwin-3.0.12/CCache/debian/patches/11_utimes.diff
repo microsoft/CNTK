@@ -1,0 +1,85 @@
+--- ccache.c	2004-09-13 03:38:30.000000000 -0700
++++ ccache.c	2006-06-09 16:29:16.695117780 -0700
+@@ -481,8 +481,13 @@
+ 
+ 	/* update timestamps for LRU cleanup
+ 	   also gives output_file a sensible mtime when hard-linking (for make) */
++#ifdef HAVE_UTIMES
++       utimes(hashname, NULL);
++	utimes(stderr_file, NULL);
++#else
+ 	utime(hashname, NULL);
+ 	utime(stderr_file, NULL);
++#endif
+ 
+ 	if (strcmp(output_file, "/dev/null") == 0) {
+ 		ret = 0;
+--- ccache.h	2004-09-13 03:38:30.000000000 -0700
++++ ccache.h	2006-06-09 16:28:16.601658626 -0700
+@@ -22,6 +22,9 @@
+ #ifdef HAVE_PWD_H
+ #include <pwd.h>
+ #endif
++#ifdef HAVE_SYS_TIME_H
++#include <sys/time.h>
++#endif
+ 
+ #define STATUS_NOTFOUND 3
+ #define STATUS_FATAL 4
+--- config.h.in	2003-09-27 21:48:17.000000000 -0700
++++ config.h.in	2006-06-09 16:25:43.000000000 -0700
+@@ -19,6 +19,9 @@
+ /* Define to 1 if you have the `gethostname' function. */
+ #undef HAVE_GETHOSTNAME
+ 
++/* Define to 1 if you have the `getpwuid' function. */
++#undef HAVE_GETPWUID
++
+ /* Define to 1 if you have the <inttypes.h> header file. */
+ #undef HAVE_INTTYPES_H
+ 
+@@ -31,6 +34,9 @@
+ /* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
+ #undef HAVE_NDIR_H
+ 
++/* Define to 1 if you have the <pwd.h> header file. */
++#undef HAVE_PWD_H
++
+ /* Define to 1 if you have the `realpath' function. */
+ #undef HAVE_REALPATH
+ 
+@@ -60,6 +66,9 @@
+ /* Define to 1 if you have the <sys/stat.h> header file. */
+ #undef HAVE_SYS_STAT_H
+ 
++/* Define to 1 if you have the <sys/time.h> header file. */
++#undef HAVE_SYS_TIME_H
++
+ /* Define to 1 if you have the <sys/types.h> header file. */
+ #undef HAVE_SYS_TYPES_H
+ 
+@@ -69,6 +78,9 @@
+ /* Define to 1 if you have the <unistd.h> header file. */
+ #undef HAVE_UNISTD_H
+ 
++/* Define to 1 if you have the `utimes' function. */
++#undef HAVE_UTIMES
++
+ /* Define to 1 if you have the `vasprintf' function. */
+ #undef HAVE_VASPRINTF
+ 
+--- configure.in	2004-09-13 03:38:30.000000000 -0700
++++ configure.in	2006-06-09 16:25:15.541288184 -0700
+@@ -27,10 +27,11 @@
+ AC_HEADER_TIME
+ AC_HEADER_SYS_WAIT
+ 
+-AC_CHECK_HEADERS(ctype.h strings.h stdlib.h string.h pwd.h)
++AC_CHECK_HEADERS(ctype.h strings.h stdlib.h string.h pwd.h sys/time.h)
+ 
+ AC_CHECK_FUNCS(realpath snprintf vsnprintf vasprintf asprintf mkstemp)
+ AC_CHECK_FUNCS(gethostname getpwuid)
++AC_CHECK_FUNCS(utimes)
+ 
+ AC_CACHE_CHECK([for compar_fn_t in stdlib.h],ccache_cv_COMPAR_FN_T, [
+     AC_TRY_COMPILE(

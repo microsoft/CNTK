@@ -1,0 +1,147 @@
+<html>
+<head>
+<title>SWIG:Examples:tcl:reference</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+
+<tt>SWIG/Examples/tcl/reference/</tt>
+<hr>
+
+<H2>C++ Reference Handling</H2>
+
+<p>
+This example tests SWIG's handling of C++ references.  Since C++
+references are closely related to pointers (as both refer to a
+location in memory), SWIG simply collapses all references into
+pointers when creating wrappers.
+
+<h2>Some examples</h2>
+
+References are most commonly used as function parameter.  For example,
+you might have an operator like this:
+
+<blockquote>
+<pre>
+Vector operator+(const Vector &amp;a, const Vector &amp;b) {
+   Vector result;
+   result.x = a.x + b.x;
+   result.y = a.y + b.y;
+   result.z = a.z + b.z;
+   return result;
+}
+</pre>
+</blockquote>
+
+or a function:
+
+<blockquote>
+<pre>
+Vector addv(const Vector &amp;a, const Vector &amp;b) {
+   Vector result;
+   result.x = a.x + b.x;
+   result.y = a.y + b.y;
+   result.z = a.z + b.z;
+   return result;
+}
+</pre>
+</blockquote>
+
+In these cases, SWIG transforms everything into a pointer and creates a wrapper
+that looks like this:
+
+<blockquote>
+<pre>
+Vector wrap_addv(Vector *a, Vector *b) {
+    return addv(*a,*b);
+}
+</pre>
+</blockquote>
+
+Occasionally, a reference is used as a return value of a function
+when the return result is to be used as an lvalue in an expression.
+The prototypical example is an operator like this:
+
+<blockquote>
+<pre>
+Vector &amp;operator[](int index);
+</pre>
+</blockquote>
+
+or a method:
+
+<blockquote>
+<pre>
+Vector &amp;get(int index);
+</pre>
+</blockquote>
+
+For functions returning references, a wrapper like this is created:
+
+<blockquote>
+<pre>
+Vector *wrap_Object_get(Object *self, int index) {
+    Vector &amp;result = self-&gt;get(index);
+    return &amp;result;
+}
+</pre>
+</blockquote>
+
+The following <a href="example.h">header file</a> contains some class
+definitions with some operators and use of references.
+
+<h2>SWIG Interface</h2>
+
+SWIG does NOT support overloaded operators so it can not directly build
+an interface to the classes in the above file.   However, a number of workarounds
+can be made.  For example, an overloaded operator can be stuck behind a function
+call such as the <tt>addv()</tt> function above.  Array access can be handled
+with a pair of set/get functions like this:
+
+<blockquote>
+<pre>
+class VectorArray {
+public:
+ ...
+   %addmethods {
+    Vector &amp;get(int index) {
+      return (*self)[index];
+    }
+    void set(int index, Vector &amp;a) {
+      (*self)[index] = a;
+    }
+   }
+   ...
+}
+</pre>
+</blockquote>
+
+Click <a href="example.i">here</a> to see a SWIG interface file with these additions.
+
+<h2>Sample Tcl scripts</h2>
+
+Click <a href="runme.tcl">here</a> to see a script that manipulates some C++ references.
+
+<h2>Notes:</h2>
+
+<ul>
+<li>C++ references primarily provide notational convenience for C++
+source code.  However, Tcl has neither the 'x.a' or 'x-&gt;a'
+notation so it doesn't much matter.
+
+<p>
+<li>When a program returns a reference, a pointer is returned.
+Unlike return by value, memory is not allocated to hold the
+return result.
+
+<p>
+<li>SWIG has particular trouble handling various combinations of references
+and pointers.  This is side effect of an old parsing scheme and
+type representation that will be replaced in future versions.
+
+</ul>
+
+<hr>
+</body>
+</html>

@@ -1,0 +1,2 @@
+c_missing_rbrace.i:3: Error: Missing '}'. Reached end of input.
+c_missing_rbrace.i:3: Error: Syntax error in input(1).

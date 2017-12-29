@@ -1,0 +1,19 @@
+--- New --- 
+
+It's not possible to access std::(w)string at the moment as it breaks other string examples. 
+
+--- Old ---
+
+This example shows how to use both std::string and std::wstring in Ocaml,
+and also demonstrates that one might use this to make a locale-obedient
+Ocaml program.
+
+These are two sample runs; note that the output is different based on the 
+locale chosen to perform the conversion to wchar_t.
+
+bash-2.05a$ ./example ja_JP.EUC-JP
+the original string contains 2              
+the new string contains 1 : [ 29494; ]
+bash-2.05a$ ./example en_US
+the original string contains 2
+the new string contains 2 : [ 205; 177; ]

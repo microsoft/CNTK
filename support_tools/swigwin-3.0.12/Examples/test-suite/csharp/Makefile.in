@@ -1,0 +1,97 @@
+#######################################################################
+# Makefile for C# test-suite
+#######################################################################
+
+LANGUAGE     = csharp
+SCRIPTSUFFIX = _runme.cs
+CSHARPCILINTERPRETER  = @CSHARPCILINTERPRETER@
+CSHARPCILINTERPRETER_FLAGS = @CSHARPCILINTERPRETER_FLAGS@
+CSHARPCONVERTPATH     = @top_srcdir@/@CSHARPCONVERTPATH@
+
+srcdir       = @srcdir@
+top_srcdir   = ../@top_srcdir@
+top_builddir = ../@top_builddir@
+
+CPP_TEST_CASES = \
+	csharp_attributes \
+	csharp_swig2_compatibility \
+	csharp_exceptions \
+	csharp_features \
+	csharp_lib_arrays \
+	csharp_namespace_system_collision \
+	csharp_prepost \
+	csharp_typemaps \
+	enum_thorough_simple \
+	enum_thorough_typesafe \
+	exception_partial_info \
+	intermediary_classname \
+	li_boost_intrusive_ptr
+
+CPP11_TEST_CASES = \
+	cpp11_strongly_typed_enumerations_simple \
+
+include $(srcdir)/../common.mk
+
+# Overridden variables here
+SRCDIR       = ../$(srcdir)/
+SWIGOPT += -namespace $*Namespace
+
+CSHARPFLAGSSPECIAL =
+
+# Custom tests - tests with additional commandline options
+intermediary_classname.cpptest: SWIGOPT += -dllimport intermediary_classname
+csharp_lib_arrays.cpptest: CSHARPFLAGSSPECIAL = -unsafe
+csharp_swig2_compatibility.cpptest: SWIGOPT += -DSWIG2_CSHARP
+
+# Rules for the different types of tests
+%.cpptest:
+	$(setup)
+	+(cd $* && $(swig_and_compile_cpp))
+	+$(run_testcase)
+
+%.ctest:
+	$(setup)
+	+(cd $* && $(swig_and_compile_c))
+	+$(run_testcase)
+
+%.multicpptest:
+	$(setup)
+	+(cd $* && $(swig_and_compile_multi_cpp))
+	+$(run_testcase)
+
+# Makes a directory for the testcase if it does not exist
+setup = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then	  \
+	  echo "$(ACTION)ing $(LANGUAGE) testcase $* (with run test)" ; \
+	else								  \
+	  echo "$(ACTION)ing $(LANGUAGE) testcase $*" ;		  \
+	fi;								  \
+	if [ ! -d $* ]; then						  \
+	  mkdir $*;							  \
+	fi
+
+# Compiles C# files then runs the testcase. A testcase is only run if
+# a file is found which has _runme.cs appended after the testcase name.
+# Note C# uses LD_LIBRARY_PATH under Unix, PATH under Cygwin/Windows and SHLIB_PATH on HPUX.
+# DYLD_FALLBACK_LIBRARY_PATH is cleared for Mac OS X.
+run_testcase = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
+	  $(MAKE) -f $*/$(top_builddir)/$(EXAMPLES)/Makefile \
+	  CSHARPFLAGS='-nologo -debug+ $(CSHARPFLAGSSPECIAL) -out:$*_runme.exe' \
+	  CSHARPSRCS='`$(CSHARPCONVERTPATH) $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX)` `find $* -name "*.cs" -exec $(CSHARPCONVERTPATH) "{}" \+`' csharp_compile && \
+	  env LD_LIBRARY_PATH="$*:$$LD_LIBRARY_PATH" PATH="$*:$$PATH" SHLIB_PATH="$*:$$SHLIB_PATH" DYLD_FALLBACK_LIBRARY_PATH= $(RUNTOOL) $(CSHARPCILINTERPRETER) $(CSHARPCILINTERPRETER_FLAGS) ./$*_runme.exe; \
+	else \
+	  cd $* && \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile \
+	  CSHARPFLAGS='-nologo -debug+ $(CSHARPFLAGSSPECIAL) -t:module -out:$*.netmodule' \
+	  CSHARPSRCS='`find . -name "*.cs" -exec ../$(CSHARPCONVERTPATH) "{}" \+`' csharp_compile; \
+	fi
+
+# Clean: remove testcase directories
+%.clean:
+	@if [ -d $* ]; then \
+	  rm -rf $*; \
+	fi
+
+clean:
+	@rm -f *.exe *.exe.mdb

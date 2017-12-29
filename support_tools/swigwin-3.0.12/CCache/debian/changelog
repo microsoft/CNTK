@@ -1,0 +1,221 @@
+ccache (2.4-15) unstable; urgency=low
+
+  * Add a new patch which improve the consistency of timestamps on cached
+    objects to make sure clean-up is based on least recently used objects.
+  * Patch the set_limit call so that non-writable cache directories return
+    an error when attempting to size the max(files|size) (closes: #332527)
+
+ -- Francois Marier <francois@debian.org>  Sun, 13 Apr 2008 15:07:05 +1200
+
+ccache (2.4-14) unstable; urgency=low
+
+  * Mention the long options everywhere in the manpage
+  * Merge Gentoo patches:
+    - respect user's LDFLAGS
+    - use utimes() for timestamp if possible
+
+ -- Francois Marier <francois@debian.org>  Sun, 23 Mar 2008 16:30:11 +1300
+
+ccache (2.4-13) unstable; urgency=low
+
+  * Update CACHEDIR.TAG patch to avoid creating the tag file when the
+    CCACHE_READONLY environment variable is set. (closes: #464356)
+  * Mention the GNU-style long options in the manpage
+
+ -- Francois Marier <francois@debian.org>  Thu, 07 Feb 2008 10:50:42 +1300
+
+ccache (2.4-12) unstable; urgency=low
+
+  * Add symlink for gcc 4.3 (closes: #463590)
+  * Add support for the CACHEDIR.TAG spec, thanks to Karl Chen.
+    (see http://www.brynosaurus.com/cachedir/)
+  * Fix hyphens in manpage (lintian notice)
+  * Bump Standards-Version up to 3.7.3 (no changes)
+  * Bump debhelper compatibility to 6
+
+ -- Francois Marier <francois@debian.org>  Sat, 02 Feb 2008 10:37:22 +1300
+
+ccache (2.4-11) unstable; urgency=low
+
+  * Add the collab-maint repo to debian/control
+
+ -- Francois Marier <francois@debian.org>  Tue, 20 Nov 2007 15:26:37 +1300
+
+ccache (2.4-10) unstable; urgency=low
+
+  * Document where the patches are from in debian/patches/CREDITS
+  * debian/rules:
+    - Fixed "make distclean" lintian warning
+    - Removed commented-out entries
+  * Set debhelper compatibility to 5
+  * Add homepage field in debian/control
+  * Add symlinks for MinGW (closes: #445782)
+  * Bump the version to 5 in the debhelper dependency
+
+ -- Francois Marier <francois@debian.org>  Fri, 19 Oct 2007 16:04:37 +1300
+
+ccache (2.4-9) unstable; urgency=low
+
+  * Add a symlink for gcc 4.2 (closes: #431007)
+  * Fix dependencies when using -o (closes: #217713)
+
+ -- Francois Marier <francois@debian.org>  Sat, 30 Jun 2007 17:58:44 +1200
+
+ccache (2.4-8) unstable; urgency=low
+
+  * Enable zlib compression of the cache by default (closes: #409848).
+    Thanks to Sami Liedes for suggesting this.
+  * Disable ccache when profiling (closes: #215849).
+    Thanks to Ted Percival for the Patch.
+  * Fix NFS renaming issues and add instructions to the README.
+    Thanks to John Coiner and instructions.
+  * Put all patches in debian/patches and apply them at build time.
+
+ -- Francois Marier <francois@debian.org>  Sun, 20 May 2007 19:42:34 +1200
+
+ccache (2.4-7) unstable; urgency=low
+
+  * Use the real compiler when HOME is not set (closes: #396350)
+  * Include user script under doc/examples (closes: #392435)
+    Thanks to Behan Webster!
+  * Add support for GNU --long options (closes: #297126)
+
+ -- Francois Marier <francois@debian.org>  Sat, 18 Nov 2006 00:50:59 -0500
+
+ccache (2.4-6) unstable; urgency=low
+
+  * Include symlinks for gcc 4.1 (closes: #372838)
+  * Update watch file
+
+ -- Francois Marier <francois@debian.org>  Tue, 13 Jun 2006 22:17:37 -0400
+
+ccache (2.4-5) unstable; urgency=low
+
+  * Document the fact that cross-compiling is supported (closes: #349221)
+  * Bump Standards-Version up to 3.7.2 (no changes)
+
+ -- Francois Marier <francois@debian.org>  Sun,  4 Jun 2006 01:20:07 -0400
+
+ccache (2.4-4) unstable; urgency=low
+
+  * Mention another way to use ccache in README.Debian (thanks to Benjamin
+    Drieu for the suggestion) (closes: #267632)
+  * Update FSF address
+  * Fix watch file
+
+ -- Francois Marier <francois@debian.org>  Sat, 26 Nov 2005 00:15:13 -0500
+
+ccache (2.4-3) unstable; urgency=low
+
+  * Actually use the configuration flags in debian/rules
+  * Bump Standards-Version up to 3.6.2 (no changes)
+
+ -- Francois Marier <francois@debian.org>  Sun, 26 Jun 2005 13:33:19 -0400
+
+ccache (2.4-2) unstable; urgency=low
+
+  * Add gcc and g++ symlinks to /usr/lib/ccache (closes: #313490)
+  * Remove invalid entry from Depends
+
+ -- Francois Marier <francois@debian.org>  Wed, 15 Jun 2005 20:51:03 -0400
+
+ccache (2.4-1) unstable; urgency=low
+
+  * New maintainer (closes: #312867)
+  * New upstream version: (closes: #273753, #239640)
+    - New CCACHE_READONLY and CCACHE_TEMPDIR options
+    - Fixed handling of hard-linked compilers on AIX
+    - Fixed handling of HOME environment variable (closes: #299880)
+    - Show cache directory in stats output
+  * Fix copyright file
+  * Add 'distcc' to Suggests (closes: #269158)
+  * Add a note about whitespace in README.Debian (closes: #229116)
+  * Update rules to add symmlinks for gcc 3.4 & 4.0 (closes: #261177)
+  * Acknowledge NMUs (closes: #200185, #177129, #174417)
+
+ -- Francois Marier <francois@debian.org>  Sun, 12 Jun 2005 12:05:34 -0400
+
+ccache (2.3-1.1) unstable; urgency=low
+
+  * Non-maintainer upload during BSP
+  * Re-apply patch for
+    #200185 ccache: Incorrect symlinks in /usr/lib/ccache
+    (Closes: #200185)
+
+ -- Frank Lichtenheld <djpig@debian.org>  Fri, 19 Mar 2004 11:14:50 +0100
+
+ccache (2.3-1) unstable; urgency=low
+
+  * New upstream release: obsoletes existing caches.
+  * Tweak package description in arbitrary way (closes: #181721)
+
+ -- Paul Russell <prussell@debian.org>  Mon, 29 Sep 2003 02:53:20 +0200
+
+ccache (2.2-2) unstable; urgency=low
+
+  * Insert more symlinks in ccache dir (closes: #197468)
+
+ -- Paul Russell <prussell@debian.org>  Mon, 16 Jun 2003 10:52:50 +0100
+
+ccache (2.2-1) unstable; urgency=low
+
+  * New upstream release (closes: #150755)
+  * Insert more symlinks in ccache dir (closes: #144462)
+
+ -- Paul Russell <prussell@debian.org>  Mon, 17 Feb 2003 07:19:36 +0100
+
+ccache (2.1.1-2) unstable; urgency=low
+
+  * Restored /usr/lib/ccache symlinks (closes: #179393)
+  * Fixed manpage typo (closes: #179564)
+  * With thanks to Andreas Rottmann.
+
+ -- Paul Russell <prussell@debian.org>  Wed,  5 Feb 2003 10:01:10 +0100
+
+ccache (2.1.1-1) unstable; urgency=low
+
+  * NMU (with maintainer consent).
+  * New upstream release (closes: #174417, #177129).
+  * debian/control:
+    + Build-Depend on and use dephelper 4 (DH_COMPAT = 4).
+    + Bumped Standards-Version to 3.5.8.
+    + No full stop on short package description (fixes linda warning).
+  * debian/copright:
+    + Make lintian feel comfortable; fixes warnings:
+      - copyright-should-refer-to-common-license-file-for-gpl
+      - copyright-lists-upstream-authors-with-dh_make-boilerplate
+  * Built with g++ 3.2 :-).
+  
+ -- Andreas Rottmann <rotty@debian.org>  Thu, 16 Jan 2003 11:42:38 +0100
+
+ccache (1.9-1) unstable; urgency=low
+
+  * New upstream release (closes: #144920)
+
+ -- Paul Russell <prussell@debian.org>  Mon, 13 May 2002 10:01:09 +0200
+
+ccache (1.8-1) unstable; urgency=low
+
+  * New upstream release (closes: #145401)
+
+ -- Paul Russell <prussell@debian.org>  Fri,  3 May 2002 02:26:32 +0200
+
+ccache (1.7-1) unstable; urgency=low
+
+  * New upstream release
+  * Install symlinks in /usr/lib/ccache (closes: #141337)
+
+ -- Paul Russell <prussell@debian.org>  Wed, 10 Apr 2002 17:51:21 +0200
+
+ccache (1.4-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Paul Russell <prussell@debian.org>  Wed,  3 Apr 2002 03:41:46 +0200
+
+ccache (1.2-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Paul Russell <prussell@debian.org>  Sun, 31 Mar 2002 14:08:57 +0200
+

@@ -1,0 +1,26 @@
+This example tests the %import directive and working with multiple modules.
+
+There are two modules having same name but belonging to different packages.
+This case is not correctly handled by swig 2.
+
+The issue was reported as Source Forge bug #1297 and later as GitHub issue #7.
+
+Use 'python runme.py' to run a test.
+
+Overview:
+---------
+
+The example defines 2 different extension modules--each wrapping a separate C++
+class.
+
+  pkg1/foo.i - Pkg1_Foo class.
+  pkg2/foo.i - Pkg2_Foo class (derived from Pkg1_Foo).
+
+The pkg2/foo.i module uses %import to refer to pkg1/foo.i.
+
+If everything works well, the module pkg2.foo shall load properly.
+
+Unix:
+-----
+- Run make
+- Run the test as described above.

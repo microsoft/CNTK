@@ -1,0 +1,77 @@
+#######################################################################
+# Makefile for ocaml test-suite
+#######################################################################
+
+LANGUAGE     = ocaml
+OCAMLC       = @OCAMLC@
+VARIANT      = _static
+SCRIPTSUFFIX = _runme.ml
+
+srcdir       = @srcdir@
+top_srcdir   = @top_srcdir@
+top_builddir = @top_builddir@
+
+C_TEST_CASES =
+
+run_testcase = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) -a \
+	     -f $(top_srcdir)/Examples/test-suite/$*.list ] ; then \
+		$(COMPILETOOL) $(OCAMLC) -c $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX); \
+		$(COMPILETOOL) $(OCAMLC) swig.cmo -custom -g -cc '$(CXX)' -o runme `cat $(top_srcdir)/Examples/test-suite/$(*).list | sed -e 's/\(.*\)/\1_wrap.o \1.cmo/g'`&& $(RUNTOOL) ./runme; \
+	elif [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
+		$(COMPILETOOL) $(OCAMLC) -c $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX); \
+		$(COMPILETOOL) $(OCAMLC) swig.cmo -custom -g -cc '$(CXX)' -o runme $(srcdir)/$(*).cmo $(srcdir)/$(*)_runme.cmo $(srcdir)/$(*)_wrap.o && \
+		$(RUNTOOL) ./runme; \
+	fi ;
+
+check_quant:
+	: > testing
+	: > success
+	$(MAKE) check
+	echo "Failed:" > results
+	diff testing success | sed 's/^< //p;d' >> results
+	echo "Success:" >> results
+	cat success >> results
+
+include $(srcdir)/../common.mk
+
+# Overridden variables here
+# none!
+
+# Custom tests - tests with additional commandline options
+# none!
+
+# Rules for the different types of tests
+%.cpptest:
+	echo $@ >> testing
+	$(setup)
+	+$(swig_and_compile_cpp)
+	$(run_testcase)
+	if [ -f $(@:%.cpptest=%_wrap.o) ] ; then \
+		echo $@ >> success ; \
+	fi
+
+%.ctest:
+	echo $@ >> testing
+	$(setup)
+	+$(swig_and_compile_c)
+	$(run_testcase)
+	if [ -f $(@:%.ctest=%_wrap.o) ] ; then \
+		echo $@ >> success ; \
+	fi
+
+%.multicpptest:
+	echo $@ >> testing
+	+$(swig_and_compile_multi_cpp)
+	$(setup)
+	$(run_testcase)
+	if [ -f $(@:%.multicpptest=%_runtime_wrap.o) ] ; then \
+		echo $@ >> success ; \
+	fi
+
+# Clean
+%.clean:
+	@rm -f $*.ml $*.mli;
+
+clean:
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' ocaml_clean

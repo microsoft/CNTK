@@ -1,0 +1,1 @@
+cpp_no_access.i:3: Warning 319: No access specifier given for base class 'foo' (ignored).

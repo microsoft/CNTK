@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Usage: makedebugtop test_name.c[pp]test
+#
+# Creates an ocaml toplevel for debugging based on a .cpptest or .ctest
+# file.
+#
+
+OCAMLINC=/usr/local/lib/ocaml
+swigtest=$1
+thetest=`echo $1 | sed -e 's/\.c[p]*test//g'`
+cppopt=""
+if echo $swigtest | grep -s cpptest ; then
+	cppopt=-xc++
+fi
+
+echo "Making the test"
+make $swigtest
+echo "Building ${thetest}_top"
+gcc -c -g $cppopt -I$OCAMLINC ${thetest}_wrap.c
+ocamlmktop -cclib -g -custom swig.cmo ${thetest}_wrap.o ${thetest}.cmo -o ${thetest}_top -cclib -lstdc++

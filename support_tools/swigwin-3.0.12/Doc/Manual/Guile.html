@@ -1,0 +1,859 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>SWIG and Guile</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+
+<body bgcolor="#ffffff">
+
+<H1><a name="Guile">24 SWIG and Guile</a></H1>
+<!-- INDEX -->
+<div class="sectiontoc">
+<ul>
+<li><a href="#Guile_nn1">Supported Guile Versions</a>
+<li><a href="#Guile_nn2">Meaning of "Module"</a>
+<li><a href="#Guile_nn3">Old GH Guile API</a>
+<li><a href="#Guile_nn4">Linkage</a>
+<ul>
+<li><a href="#Guile_nn5">Simple Linkage</a>
+<li><a href="#Guile_nn6">Passive Linkage</a>
+<li><a href="#Guile_nn7">Native Guile Module Linkage</a>
+<li><a href="#Guile_nn8">Old Auto-Loading Guile Module Linkage</a>
+<li><a href="#Guile_nn9">Hobbit4D Linkage</a>
+</ul>
+<li><a href="#Guile_nn10">Underscore Folding</a>
+<li><a href="#Guile_nn11">Typemaps</a>
+<li><a href="#Guile_nn12">Representation of pointers as smobs</a>
+<ul>
+<li><a href="#Guile_nn14">Smobs</a>
+<li><a href="#Guile_nn15">Garbage Collection</a>
+</ul>
+<li><a href="#Guile_nn16">Native Guile pointers</a>
+<li><a href="#Guile_nn17">Exception Handling</a>
+<li><a href="#Guile_nn18">Procedure documentation</a>
+<li><a href="#Guile_nn19">Procedures with setters</a>
+<li><a href="#Guile_nn20">GOOPS Proxy Classes</a>
+<ul>
+<li><a href="#Guile_nn21">Naming Issues</a>
+<li><a href="#Guile_nn22">Linking</a>
+</ul>
+</ul>
+</div>
+<!-- INDEX -->
+
+
+
+<p>
+This section details guile-specific support in SWIG.
+
+<H2><a name="Guile_nn1">24.1 Supported Guile Versions</a></H2>
+
+
+<p>
+SWIG works with Guile versions 1.8.x and 2.0.x. Support for version
+1.6.x has been dropped. The last version of SWIG that still works with
+Guile version 1.6.x is SWIG 2.0.9.
+
+<p>
+Note that starting with guile 2.0, the guile sources can be compiled for
+improved performance. This is currently not tested with swig
+so your mileage may vary. To be safe set environment variable
+GUILE_AUTO_COMPILE to 0 when using swig generated guile code.
+
+<H2><a name="Guile_nn2">24.2 Meaning of "Module"</a></H2>
+
+
+<p>
+There are three different concepts of "module" involved, defined
+separately for SWIG, Guile, and Libtool.  To avoid horrible confusion,
+we explicitly prefix the context, e.g., "guile-module".
+
+<H2><a name="Guile_nn3">24.3 Old GH Guile API</a></H2>
+
+
+<p>Guile 1.8 and older could be interfaced using two different api's, the SCM
+or the GH API. The GH interface to guile is deprecated.  Read more about why in the 
+<a href="http://www.gnu.org/software/guile/docs/docs-1.6/guile-ref/GH.html#GH">Guile manual</a>.
+
+<p>Support for the guile GH wrapper code generation has been dropped from SWIG. The last
+version of SWIG that can still generate guile GH wrapper code is 2.0.9. Please
+use that version if you really need the GH wrapper code.
+
+<H2><a name="Guile_nn4">24.4 Linkage</a></H2>
+
+
+<p>
+Guile support is complicated by a lack of user community cohesiveness,
+which manifests in multiple shared-library usage conventions.  A set of
+policies implementing a usage convention is called a <b>linkage</b>.
+
+<H3><a name="Guile_nn5">24.4.1 Simple Linkage</a></H3>
+
+
+<p>
+The default linkage is the simplest; nothing special is done.  In this
+case the function <code>SWIG_init()</code> is exported. Simple linkage
+can be used in several ways:
+</p>
+
+<ul>
+<li><b>Embedded Guile, no modules.</b> You want to embed a Guile
+interpreter into your program; all bindings made by SWIG shall show up
+in the root module. Then call <code>SWIG_init()</code> in the
+<code>inner_main()</code> function.  See the "simple" and "matrix" examples under
+<code>Examples/guile</code>.
+
+<li><p><b>Dynamic module mix-in.</b> You want to create a Guile module
+using <code>define-module</code>, containing both Scheme code and
+bindings made by SWIG; you want to load the SWIG modules as shared
+libraries into Guile.</p>
+<div class="targetlang">
+<pre>
+(define-module (my module))
+(define my-so (dynamic-link "./libexample.so"))
+(dynamic-call "SWIG_init" my-so) ; make SWIG bindings
+;; Scheme definitions can go here
+</pre>
+</div>
+
+<p>
+Newer Guile versions provide a shorthand for <code>dynamic-link</code>
+and <code>dynamic-call</code>:
+</p>
+
+<div class="targetlang">
+<pre>
+(load-extension "./libexample.so" "SWIG_init")
+</pre>
+</div>
+
+<p>
+A more portable approach would be to drop the shared library extension:
+</p>
+
+<div class="targetlang">
+<pre>
+(load-extension "./libexample" "SWIG_init")
+</pre>
+</div>
+
+<p>
+You need to explicitly export those bindings made by SWIG that you
+want to import into other modules:
+</p>
+
+<div class="targetlang">
+<pre>
+(export foo bar)
+</pre>
+</div>
+
+<p>
+In this example, the procedures <code>foo</code> and <code>bar</code>
+would be exported.  Alternatively, you can export all bindings with the
+following module-system hack:
+</p>
+
+<div class="targetlang">
+<pre>
+(module-map (lambda (sym var)
+              (module-export! (current-module) (list sym)))
+            (current-module))
+</pre>
+</div>
+
+<p>SWIG can also generate this Scheme stub (from
+<code>define-module</code> up to <code>export</code>)
+semi-automagically if you pass it the command-line argument
+<code>-scmstub</code>.  The code will be exported in a file called
+<code><i>module</i>.scm</code> in the directory specified by <code>-outdir</code>
+or the current directory if <code>-outdir</code> is not specified.  
+Since SWIG doesn't know how
+to load your extension module (with <code>dynamic-link</code> or
+<code>load-extension</code>), you need to supply this
+information by including a directive like this in the interface file:
+</p>
+
+<div class="code">
+<pre>
+%scheme %{ (load-extension "./libexample.so" "SWIG_init") %}
+</pre>
+</div>
+
+<p>
+(The <code>%scheme</code> directive allows to insert arbitrary Scheme
+code into the generated file <code><var>module.scm</var></code>; it is
+placed between the <code>define-module</code> form and the
+<code>export</code> form.)
+</p>
+</ul>
+
+<p>If you want to include several SWIG modules, you would need to rename
+<code>SWIG_init</code> via a preprocessor define to avoid symbol
+clashes. For this case, however, passive linkage is available.
+
+<H3><a name="Guile_nn6">24.4.2 Passive Linkage</a></H3>
+
+
+<p>Passive linkage is just like simple linkage, but it generates an
+initialization function whose name is derived from the module and
+package name (see below). 
+
+<p>You should use passive linkage rather than simple linkage when you
+are using multiple modules.
+
+<H3><a name="Guile_nn7">24.4.3 Native Guile Module Linkage</a></H3>
+
+
+<p>SWIG can also generate wrapper code that does all the Guile module
+declarations on its own if you pass it the <code>-Linkage
+module</code> command-line option.
+
+<p>The module name is set with the <code>-package</code> and
+<code>-module</code> command-line options. Suppose you want to define
+a module with name <code>(my lib foo)</code>; then you would have to
+pass the options <code>-package <var>my</var>/<var>lib</var> -module
+<var>foo</var></code>. Note that the last part of the name can also be set
+via the SWIG directive <code>%module</code>. 
+
+<p>You can use this linkage in several ways:
+
+<ul>
+<li><b>Embedded Guile with SWIG modules.</b> You want to embed a Guile
+interpreter into your program; the SWIG bindings shall be put into
+different modules. Simply call the function 
+<code>scm_init_<var>my</var>_<var>modules</var>_<var>foo</var>_module</code>
+in the <code>inner_main()</code> function.
+
+<li><b>Dynamic Guile modules.</b> You want to load the SWIG modules as
+shared libraries into Guile; all bindings are automatically put in
+newly created Guile modules. 
+<div class="targetlang">
+<pre>
+(define my-so (dynamic-link "./libfoo"))
+;; create new module and put bindings there:
+(dynamic-call "scm_init_my_modules_foo_module" my-so) 
+</pre>
+</div>
+Newer Guile versions have a shorthand procedure for this:
+<div class="targetlang">
+<pre>
+(load-extension "./libfoo.so" "scm_init_my_modules_foo_module")
+</pre>
+</div>
+</ul>
+
+<H3><a name="Guile_nn8">24.4.4 Old Auto-Loading Guile Module Linkage</a></H3>
+
+
+<p>Guile used to support an autoloading facility for object-code
+modules. This support has been marked deprecated in version 1.4.1 and
+is going to disappear sooner or later. SWIG still supports building
+auto-loading modules if you pass it the <code>-Linkage ltdlmod</code>
+command-line option.
+
+<p>Auto-loading worked like this: Suppose a module with name <code>(my
+lib foo)</code> is required and not loaded yet.  Guile will then search
+all directories in its search path
+for a Scheme file <code>my/modules/foo.scm</code> or a shared library
+<code><var>my</var>/<var>modules</var>/lib<var>foo</var>.so</code> (or
+<code><var>my</var>/<var>modules</var>/lib<var>foo</var>.la</code>; 
+see the GNU libtool documentation). If a
+shared library is found that contains the symbol
+<code>scm_init_<var>my</var>_<var>modules</var>_<var>foo</var>_module</code>, 
+the library is loaded, and the function at that symbol is called with
+no arguments in order to initialize the module.
+
+<p>When invoked with the <code>-Linkage ltdlmod</code> command-line
+option, SWIG generates an exported module initialization function with
+an appropriate name. 
+
+
+<H3><a name="Guile_nn9">24.4.5 Hobbit4D Linkage</a></H3>
+
+
+<p>
+The only other linkage supported at this time creates shared object
+libraries suitable for use by hobbit's <code>(hobbit4d link)</code>
+guile module.  This is called the "hobbit" linkage, and requires also
+using the "-package" command line option to set the part of the module
+name before the last symbol.  For example, both command lines:
+</p>
+
+<div class="shell">
+<pre>
+swig -guile -package my/lib foo.i
+swig -guile -package my/lib -module foo foo.i
+</pre>
+</div>
+
+<p>
+would create module <code>(my lib foo)</code> (assuming in the first
+case foo.i declares the module to be "foo").  The installed files are
+my/lib/libfoo.so.X.Y.Z and friends.  This scheme is still very
+experimental; the (hobbit4d link) conventions are not well understood.
+</p>
+
+<H2><a name="Guile_nn10">24.5 Underscore Folding</a></H2>
+
+
+<p>
+Underscores are converted to dashes in identifiers.  Guile support may
+grow an option to inhibit this folding in the future, but no one has
+complained so far.
+
+<p>You can use the SWIG directives <code>%name</code> and
+<code>%rename</code> to specify the Guile name of the wrapped
+functions and variables (see CHANGES).
+
+<H2><a name="Guile_nn11">24.6 Typemaps</a></H2>
+
+
+<p>
+The Guile module handles all types via typemaps. This
+information is read from <code>Lib/guile/typemaps.i</code>. 
+
+Some non-standard typemap substitutions are supported:
+<ul>
+<li><code>$descriptor</code> expands to a type descriptor for use with
+the <code>SWIG_NewPointerObj()</code> and
+<code>SWIG_ConvertPtr</code> functions.
+<li>For pointer types, <code>$*descriptor</code> expands to a
+descriptor for the direct base type (i.e., one pointer is stripped),
+whereas <code>$basedescriptor</code> expands to a
+descriptor for the base type (i.e., all pointers are stripped).
+</ul>
+
+<p>A function returning <code>void</code> (more precisely, a function
+whose <code>out</code> typemap returns <code>SCM_UNSPECIFIED</code>) is
+treated as returning no values. In <code>argout</code> typemaps, one
+can use the macro <code>GUILE_APPEND_RESULT</code> in order to append
+a value to the list of function return values.
+
+<p>Multiple values can be passed up to Scheme in one of three ways:
+<ul>
+<li><p><em>Multiple values as lists.</em> 
+By default, if more than one value is to
+be returned, a list of the values is created and returned; to switch
+back to this behavior, use</p>
+
+<div class="code">
+<pre>
+%values_as_list;</pre>
+</div>
+
+<li><p><em>Multiple values as vectors.</em>
+By issuing 
+</p>
+
+<div class="code">
+<pre>
+%values_as_vector;</pre>
+</div>
+
+<p>
+vectors instead of lists will be used.
+<li><p><em>Multiple values for multiple-value continuations.</em>
+<strong>This is the most elegant way.</strong> By issuing 
+</p>
+
+<div class="code">
+<pre>
+%multiple_values;</pre>
+</div>
+
+<p>
+multiple values are passed to the multiple-value
+continuation, as created by <code>call-with-values</code> or the
+convenience macro <code>receive</code>. The latter is available if you
+issue <code>(use-modules (srfi srfi-8))</code>. Assuming that your
+<code>divide</code> function 
+wants to return two values, a quotient and a remainder, you can write: 
+</p>
+
+<div class="targetlang">
+<pre>
+(receive (quotient remainder)
+    (divide 35 17)
+  <var>body</var>...)
+</pre>
+</div>
+
+<p>
+In <code><var>body</var></code>, the first result of
+<code>divide</code> will be bound to the variable
+<code>quotient</code>, and the second result to <code>remainder</code>.
+</p>
+
+</ul>
+
+<p>
+See also the "multivalue" example.
+</p>
+
+<p>Constants are exported as a function that returns the value.  The
+%feature("constasvar") can be applied to any constant, immutable variable, or enum.
+Instead of exporting the constant as a function that must be called, the
+constant will appear as a scheme variable. See
+<a href="Customization.html#Customization_features">Features and the %feature directive</a>
+for info on how to apply the %feature.</p>
+
+<H2><a name="Guile_nn12">24.7 Representation of pointers as smobs</a></H2>
+
+
+<p>
+For pointer types, SWIG uses Guile smobs. SWIG smobs print
+like this: <code>#&lt;swig struct xyzzy * 0x1234affe&gt;</code>  Two of
+them are <code>equal?</code> if and only if they have the same type
+and value.
+
+<p>
+To construct a Scheme object from a C pointer, the wrapper code calls
+the function <code>SWIG_NewPointerObj()</code>, passing a pointer to a
+struct representing the pointer type. The type index to store in the
+upper half of the CAR is read from this struct.
+To get the pointer represented by a smob, the wrapper code calls the
+function <code>SWIG_ConvertPtr()</code>, passing a pointer to a struct
+representing the expected pointer type.  See also 
+<a href="Typemaps.html#Typemaps_runtime_type_checker">The run-time type checker</a>.
+If the Scheme object passed was not a SWIG smob representing a compatible
+pointer, a <code>wrong-type-arg</code> exception is raised.
+
+<H3><a name="Guile_nn14">24.7.1 Smobs</a></H3>
+
+
+<p>
+In earlier versions of SWIG, C pointers were represented as Scheme
+strings containing a hexadecimal rendering of the pointer value and a
+mangled type name.  As Guile allows registering user types, so-called
+"smobs" (small objects), a much cleaner representation has been
+implemented now.  The details will be discussed in the following.
+</p>
+
+<p>The whole type system, when it is first initialized, creates two smobs named "swig" and "collected_swig".
+The swig smob is used for non-garbage collected smobs, while the collected_swig smob is used as described
+below.  Each smob has the same format, which is a double cell created by SCM_NEWSMOB2()
+The first word of data is the pointer to the object and the second word of data is the swig_type_info *
+structure describing this type.  If a generated GOOPS module has been loaded, smobs will be wrapped by
+the corresponding GOOPS class.</p>
+
+
+<H3><a name="Guile_nn15">24.7.2 Garbage Collection</a></H3>
+
+
+<p>Garbage collection is a feature of Guile since version 1.6. As SWIG now requires Guile &gt; 1.8,
+it is automatically included.
+Garbage collection works like this.  Every swig_type_info structure stores in its clientdata field a pointer
+to the destructor for this type.  The destructor is the generated wrapper around the delete function.
+So swig still exports a wrapper for the destructor, it just does not call scm_c_define_gsubr() for
+the wrapped delete function.  So the only way to delete an object is from the garbage collector, since the
+delete function is not available to scripts.  How swig determines if a type should be garbage collected
+is exactly like described in <a href="Customization.html#Customization_ownership">
+Object ownership and %newobject</a> in the SWIG manual.  All typemaps use an $owner var, and
+the guile module replaces $owner with 0 or 1 depending on feature:new.</p>
+
+<H2><a name="Guile_nn16">24.8 Native Guile pointers</a></H2>
+
+
+<p>
+In addition to SWIG smob pointers, <a href="https://www.gnu.org/software/guile/manual/html_node/Foreign-Pointers.html">Guile's native pointer type</a> are accepted as arguments to wrapped SWIG functions. This can be useful for passing <a href="https://www.gnu.org/software/guile/manual/html_node/Void-Pointers-and-Byte-Access.html#">pointers to bytevector data</a> to wrapped functions.
+</p>
+
+<H2><a name="Guile_nn17">24.9 Exception Handling</a></H2>
+
+
+<p>
+SWIG code calls <code>scm_error</code> on exception, using the following
+mapping:
+
+<div class="code">
+<pre>
+      MAP(SWIG_MemoryError,     "swig-memory-error");
+      MAP(SWIG_IOError,         "swig-io-error");
+      MAP(SWIG_RuntimeError,    "swig-runtime-error");
+      MAP(SWIG_IndexError,      "swig-index-error");
+      MAP(SWIG_TypeError,       "swig-type-error");
+      MAP(SWIG_DivisionByZero,  "swig-division-by-zero");
+      MAP(SWIG_OverflowError,   "swig-overflow-error");
+      MAP(SWIG_SyntaxError,     "swig-syntax-error");
+      MAP(SWIG_ValueError,      "swig-value-error");
+      MAP(SWIG_SystemError,     "swig-system-error");
+</pre>
+</div>
+
+<p>
+The default when not specified here is to use "swig-error".
+See Lib/exception.i for details.
+
+<H2><a name="Guile_nn18">24.10 Procedure documentation</a></H2>
+
+
+<p>If invoked with the command-line option <code>-procdoc
+<var>file</var></code>, SWIG creates documentation strings for the
+generated wrapper functions, describing the procedure signature and
+return value, and writes them to <var>file</var>.
+
+<p>SWIG can generate documentation strings in three formats, which are
+selected via the command-line option <code>-procdocformat
+<var>format</var></code>:
+<ul>
+<li><code>guile-1.4</code> (default): Generates a format suitable for Guile 1.4.
+<li><code>plain</code>: Generates a format suitable for Guile 1.4.1 and
+later.
+<li><code>texinfo</code>: Generates texinfo source, which must be run
+through texinfo in order to get a format suitable for Guile 1.4.1 and
+later.
+</ul>
+
+<p>You need to register the generated documentation file with Guile
+like this:
+
+<div class="targetlang">
+<pre>
+(use-modules (ice-9 documentation))
+(set! documentation-files 
+      (cons "<var>file</var>" documentation-files))
+</pre>
+</div>
+
+<p>Documentation strings can be configured using the Guile-specific
+typemap argument <code>doc</code>. See <code>Lib/guile/typemaps.i</code> for
+details.
+
+<H2><a name="Guile_nn19">24.11 Procedures with setters</a></H2>
+
+
+<p>For global variables, SWIG creates a single wrapper procedure
+<code>(<var>variable</var> :optional value)</code>, which is used for
+both getting and setting the value. For struct members, SWIG creates
+two wrapper procedures <code>(<var>struct</var>-<var>member</var>-get
+pointer)</code> and <code>(<var>struct-member</var>-set pointer value)</code>.
+
+<p>If invoked with the command-line option <code>-emit-setters</code>
+(<em>recommended</em>),
+SWIG will additionally create procedures with setters. For global
+variables, the procedure-with-setter <code><var>variable</var></code>
+is created, so you can use <code>(<var>variable</var>)</code> to get
+the value and <code>(set! (<var>variable</var>)
+<var>value</var>)</code> to set it. For struct members, the
+procedure-with-setter <code><var>struct</var>-<var>member</var></code>
+is created, so you can use <code>(<var>struct</var>-<var>member</var>
+<var>pointer</var>)</code> to get the value and <code>(set!
+(<var>struct</var>-<var>member</var> <var>pointer</var>)
+<var>value</var>)</code> to set it.
+
+<p>If invoked with the command-line option <code>-only-setters</code>,
+SWIG will <em>only</em> create procedures with setters, i.e., for
+struct members, the procedures <code>(<var>struct</var>-<var>member</var>-get
+pointer)</code> and <code>(<var>struct-member</var>-set pointer
+value)</code> are <em>not</em> generated.
+
+<H2><a name="Guile_nn20">24.12 GOOPS Proxy Classes</a></H2>
+
+
+<p>SWIG can also generate classes and generic functions for use with
+Guile's Object-Oriented Programming System (GOOPS).  GOOPS is a
+sophisticated object system in the spirit of the Common Lisp Object
+System (CLOS).
+
+<p>To enable GOOPS support, pass the <code>-proxy</code> argument to
+swig.  This will export the GOOPS wrapper definitions into the
+<code><i>module</i>.scm</code> file in the directory specified by -outdir or the
+current directory.  GOOPS support requires either passive or module linkage.</p>
+
+<p>The generated file will contain definitions of GOOPS classes mimicking the C++ class hierarchy.
+<p>Enabling GOOPS support implies <code>-emit-setters</code>.
+
+<p>If <code>-emit-slot-accessors</code> is also passed as an argument,
+then the generated file will contain accessor methods for all the
+slots in the classes and for global variables.  The input class</p>
+<div class="code"><pre>
+  class Foo {
+    public:
+      Foo(int i) : a(i) {}
+      int a;
+      int getMultBy(int i) { return a * i; }
+      Foo getFooMultBy(int i) { return Foo(a * i); }
+  }; 
+  Foo getFooPlus(int i) { return Foo(a + i); }
+</pre></div>
+
+<p>
+will produce (if <code>-emit-slot-accessors</code> is not passed as a parameter)
+</p>
+
+<div class="targetlang"><pre>
+(define-class &lt;Foo&gt; (&lt;swig&gt;)
+  (a #:allocation #:swig-virtual 
+     #:slot-ref primitive:Foo-a-get 
+     #:slot-set! primitive:Foo-a-set)
+  #:metaclass &lt;swig-metaclass&gt;
+  #:new-function primitive:new-Foo
+)
+(define-method (getMultBy (swig_smob &lt;Foo&gt;) i)
+  (primitive:Foo-getMultBy  (slot-ref swig_smob 'smob) i))
+(define-method (getFooMultBy (swig_smob &lt;Foo&gt;) i)
+  (make &lt;Foo&gt; #:init-smob (primitive:Foo-getFooMultBy  (slot-ref swig_smob 'smob) i)))
+
+(define-method (getFooPlus i)
+  (make &lt;Foo&gt; #:init-smob (primitive:getFooPlus i)))
+
+(export &lt;Foo&gt; getMultBy getFooMultBy getFooPlus )
+</pre></div>
+
+<p>
+and will produce (if <code>-emit-slot-accessors</code> is passed as a parameter)
+</p>
+
+<div class="targetlang"><pre>
+(define-class &lt;Foo&gt; (&lt;swig&gt;)
+  (a #:allocation #:swig-virtual 
+     #:slot-ref primitive:Foo-a-get 
+     #:slot-set! primitive:Foo-a-set 
+     <b>#:accessor a</b>)
+  #:metaclass &lt;swig-metaclass&gt;
+  #:new-function primitive:new-Foo
+)
+(define-method (getMultBy (swig_smob &lt;Foo&gt;) i)
+  (primitive:Foo-getMultBy  (slot-ref swig_smob 'smob) i))
+(define-method (getFooMultBy (swig_smob &lt;Foo&gt;) i)
+  (make &lt;Foo&gt; #:init-smob (primitive:Foo-getFooMultBy  (slot-ref swig_smob 'smob) i)))
+
+(define-method (getFooPlus i)
+  (make &lt;Foo&gt; #:init-smob (primitive:getFooPlus i)))
+
+(export &lt;Foo&gt; <b>a</b> getMultBy getFooMultBy getFooPlus )
+</pre></div>
+
+<p>
+which can then be used by this code
+</p>
+
+<div class="targetlang"><pre>
+;; not using getters and setters
+(define foo (make &lt;Foo&gt; #:args '(45)))
+(slot-ref foo 'a)
+(slot-set! foo 'a 3)
+(getMultBy foo 4)
+(define foo2 (getFooMultBy foo 7))
+(slot-ref foo 'a)
+(slot-ref (getFooPlus foo 4) 'a)
+
+;; using getters and setters
+(define foo (make &lt;Foo&gt; #:args '(45)))
+(a foo)
+(set! (a foo) 5)
+(getMultBy foo 4)
+(a (getFooMultBy foo 7))
+</pre></div>
+
+<p>Notice that constructor arguments are passed as a list after the <code>#:args</code> keyword.  Hopefully in
+the future the following will be valid <code>(make &lt;Foo&gt; #:a 5 #:b 4)</code></p>
+
+<p>Also note that the order the declarations occur in the .i file make a difference.  For example,
+</p>
+
+<div class="code"><pre>
+%module test
+
+%{ #include "foo.h" %}
+
+%inline %{
+  int someFunc(Foo &amp;a) {
+    ...
+  }
+%}
+
+%include "foo.h"
+</pre></div>
+
+<p>
+This is a valid SWIG file it will work as you think it will for primitive support, but the generated
+GOOPS file will be broken.  Since the <code>someFunc</code> definition is parsed by SWIG before all the
+declarations in foo.h, the generated GOOPS file will contain the definition of <code>someFunc()</code>
+before the definition of &lt;Foo&gt;.  The generated GOOPS file would look like
+</p>
+
+<div class="targetlang"><pre>
+;;...
+
+(define-method (someFunc (swig_smob &lt;Foo&gt;))
+  (primitive:someFunc (slot-ref swig_smob 'smob)))
+
+;;...
+
+(define-class &lt;Foo&gt; (&lt;swig&gt;)
+  ;;...
+)
+
+;;...
+</pre></div>
+
+<p>
+Notice that &lt;Foo&gt; is used before it is defined.  The fix is to just put the 
+<code>%import "foo.h"</code> before the <code>%inline</code> block.
+</p>
+
+<H3><a name="Guile_nn21">24.12.1 Naming Issues</a></H3>
+
+
+<p>As you can see in the example above, there are potential naming conflicts.  The default exported
+accessor for the <code>Foo::a</code> variable is named <code>a</code>.  The name of the wrapper global 
+function is <code>getFooPlus</code>.
+If the <code>-useclassprefix</code> option is passed to swig, the name of all accessors and member 
+functions will be prepended with the class name.  So the accessor will be called <code>Foo-a</code> and 
+the member functions will be called <code>Foo-getMultBy</code>.  Also, if the 
+<code>-goopsprefix goops:</code> argument is passed to swig, every identifier will be prefixed by 
+<code>goops:</code></p>
+
+<p>Two guile-modules are created by SWIG.  The first module contains the primitive definitions
+of all the wrapped functions and variables, and is located either in the _wrap.cxx file (with <code>-Linkage
+module</code>) or in the scmstub file (if <code>-Linkage passive -scmstub</code>).  The name of this 
+guile-module is the swig-module name (given on the command line with the -module argument or with the 
+%module directive) concatenated with the string "-primitive".  For
+example, if <code>%module Test</code> is set in the swig interface file, the name of the guile-module in 
+the scmstub or <code>-Linkage module</code> will be <code>Test-primitive</code>.  Also, the scmstub
+file will be named <code>Test-primitive.scm</code>.
+The string "primitive" can be changed by the <code>-primsuffix</code> swig
+argument.  So the same interface, with the <code>-primsuffix base</code> will produce a module called 
+<code>Test-base</code>. 
+The second generated guile-module contains all the GOOPS class definitions and is located in
+a file named <i>module</i>.scm in the directory specified with -outdir or the current directory.
+The name of this guile-module is the name of the
+swig-module (given on the command line or with the <code>%module</code> directive).
+In the previous example, the GOOPS definitions will be in a file named Test.scm.</p>
+
+<p>Because of the naming conflicts, you can't in general use both the <code>-primitive</code> and the GOOPS 
+guile-modules at the same time.  To do this, you need to rename the exported symbols from one or both 
+guile-modules.  For example,</p>
+<div class="targetlang"><pre>
+(use-modules ((Test-primitive) #:renamer (symbol-prefix-proc 'primitive:)))
+(use-modules ((Test) #:renamer (symbol-prefix-proc 'goops:)))
+</pre></div>
+
+<H3><a name="Guile_nn22">24.12.2 Linking</a></H3>
+
+
+<p>The guile-modules generated above all need to be linked together.  GOOPS support requires
+either passive or module linkage.  The exported GOOPS guile-module will be the name of the swig-module
+and should be located in a file called <i>Module</i>.scm.  This should be installed on the autoload
+path for guile, so that <code>(use-modules (<i>Package Module</i>))</code> will load everything needed.
+Thus, the top of the GOOPS guile-module will contain code to load everything needed by the interface 
+(the shared library, the scmstub module, etc.).
+The <code>%goops</code> directive inserts arbitrary code into the generated GOOPS guile-module, and
+should be used to load the dependent libraries.</p>
+
+<p>This breaks up into three cases</p>
+<ul>
+<li><b>Passive Linkage without -scmstub</b>:  Note that this linkage style has the potential for naming
+conflicts, since the primitive exported function and variable names are not wrapped in a guile-module
+and might conflict with names from the GOOPS guile-module (see above).  Pass the -goopsprefix
+argument to solve this problem.  If the <code>-exportprimitive</code> option is passed to SWIG the
+<code>(export ...)</code> code that would be exported into the scmstub file is exported at the bottom 
+of the generated GOOPS guile-module.
+The <code>%goops</code> directive should contain code to load the shared library.
+
+<div class="code"><pre>
+%goops %{ (load-extension "./libfoo.so" "scm_init_my_modules_foo_module") %}
+</pre></div>
+
+<p>
+Produces the following code at the top of the generated GOOPS guile-module 
+(with the <code>-package my/modules -module foo</code> command line arguments)
+</p>
+
+<div class="targetlang"><pre>
+(define-module (my modules foo))
+
+;; %goops directive goes here
+(load-extension "./libfoo.so" "scm_init_my_modules_foo_module") 
+
+(use-modules (oop goops) (Swig common))
+</pre></div>
+</li>
+
+<li><p><b>Passive Linkage with -scmstub</b>: Here, the name of the scmstub file should be
+<code>Module-primitive.scm</code> (with <i>primitive</i> replaced with whatever is given with the <code>-primsuffix</code>
+argument.  The code to load the shared library should be located in the <code>%scheme</code> directive, 
+which will then be added to the scmstub file.
+SWIG will automatically generate the line <code>(use-modules (<i>Package</i> <i>Module-primitive</i>))</code>
+into the GOOPS guile-module.  So if <i>Module-primitive.scm</i> is on the autoload path for guile, the
+<code>%goops</code> directive can be empty.  Otherwise, the <code>%goops</code> directive should contain 
+whatever code is needed to load the <i>Module-primitive.scm</i> file into guile.</p>
+
+<div class="targetlang"><pre>
+%scheme %{ (load-extension "./libfoo.so" "scm_init_my_modules_foo_module") %}
+// only include the following definition if (my modules foo) cannot
+// be loaded automatically
+%goops %{ 
+  (primitive-load "/path/to/foo-primitive.scm") 
+  (primitive-load "/path/to/Swig/common.scm")
+%}
+</pre></div>
+
+<p>
+Produces the following code at the top of the generated GOOPS guile-module
+</p>
+
+<div class="targetlang"><pre>
+(define-module (my modules foo))
+
+;; %goops directive goes here (if any)
+(primitive-load "/path/to/foo-primitive.scm")
+(primitive-load "/path/to/Swig/common.scm")
+
+(use-modules (oop goops) (Swig common))
+(use-modules ((my modules foo-primitive) :renamer (symbol-prefix-proc
+                                                       'primitive:)))
+
+</pre></div>
+</li>
+
+<li><p><b>Module Linkage</b>: This is very similar to passive linkage with a scmstub file.
+SWIG will also automatically generate the line <code>(use-modules 
+(<i>Package</i> <i>Module-primitive</i>))</code> into the GOOPS guile-module.  Again the <code>%goops</code>
+directive should contain whatever code is needed to get that module loaded into guile.</p>
+
+<div class="code"><pre>
+%goops %{ (load-extension "./libfoo.so" "scm_init_my_modules_foo_module") %}
+</pre></div>
+
+<p>
+Produces the following code at the top of the generated GOOPS guile-module
+</p>
+
+<div class="targetlang"><pre>
+(define-module (my modules foo))
+
+;; %goops directive goes here (if any)
+(load-extension "./libfoo.so" "scm_init_my_modules_foo_module") 
+
+(use-modules (oop goops) (Swig common))
+(use-modules ((my modules foo-primitive) :renamer (symbol-prefix-proc
+                                                         'primitive:)))
+
+</pre></div>
+</li>
+</ul>
+
+<p><b>(Swig common)</b>: The generated GOOPS guile-module also imports definitions from the 
+(Swig common) guile-module.
+This module is included with SWIG and should be installed by SWIG into the autoload path for
+guile (based on the configure script and whatever arguments are passed).  If it is not, then the
+<code>%goops</code> directive also needs to contain code to load the <code>common.scm</code> file
+into guile.  Also note that if you are trying to install the generated wrappers on a computer without
+SWIG installed, you will need to include the common.swg file along with the install.</p>
+
+<p><b>Multiple Modules</b>:  Type dependencies between modules is supported.  For example, if
+<code>mod1</code> includes definitions of some classes, and <code>mod2</code> includes some classes
+derived from classes in <code>mod1</code>, the generated GOOPS file for <code>mod2</code> will declare
+the correct superclasses.  The only problem is that since <code>mod2</code> uses symbols from
+<code>mod1</code>, the <code>mod2</code> GOOPS file must include a <code>(use-modules (mod2))</code>.
+Currently, SWIG does not automatically export this line;  it must be included in the <code>%goops</code>
+directive of <code>mod2</code>.  Maybe in the future SWIG can detect dependencies and export this line.
+(how do other language modules handle this problem?)</p>
+
+</body>
+</html>

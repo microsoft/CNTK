@@ -1,0 +1,79 @@
+<html>
+<head>
+<title>SWIG Command Line Handling</title>
+</head>
+
+<body>
+<center>
+<h1>SWIG Command Line Handling</h1>
+
+<p>
+David M. Beazley <br>
+dave-swig@dabeaz.com<br>
+December, 2006<br>
+
+</b>
+</center>
+
+<h2>Introduction</h2>
+
+This document describes the functions related to the handling of
+command line options passed to SWIG. These functions are defined in
+the header file <tt>Source/Swig/swigopt.h</tt>.  This API is
+considered to be stable.
+
+<h2>Initialization</h2>
+
+Upon SWIG startup, the following function is called:
+
+<p>
+<b><tt>void Swig_init_args(int argc, char **argv_)</tt></b>
+
+<blockquote>
+Registers command line options with the SWIG core.  This creates an internal array that is used by other
+functions to mark whether or not a particular command line option was used.  This is ultimately used to issue error messages about unused or unknown command line options.   This function is currently invoked in the SWIG main() function that is found in <tt>Source/Modules/swigmain.cxx</tt>.
+</blockquote>
+
+<h2>Argument Marking</h2>
+
+As command line options are processed by language modules, the following functions are used
+to mark the arguments as used:
+
+<p>
+<b><tt>void Swig_mark_arg(int n)</tt></b>
+<blockquote>
+Mark argument number <tt>n</tt> as used. 
+</blockquote>
+
+<p>
+<b><tt>int Swig_check_marked(int n)</tt></b>
+<blockquote>
+Check to see if argument <tt>n</tt> has been marked.  Returns 0 or 1.
+</blockquote>
+
+<h2>Argument Checking</h2>
+
+The following function is used to check all of the command line options after parsing.  It looks at the marked list
+and issues an error message if any unconsumed arguments are found.
+
+<p>
+<b><tt>void Swig_check_options()</tt></b>
+<blockquote>
+Checks all command line options to see if they have all been processed.  If not, an error message is generated and
+execution terminates with a call to <tt>exit()</tt>.   This function is currently invoked in <tt>Source/Modules/main.cxx</tt> just before SWIG starts any processing of input files.
+</blockquote>
+
+<h2>Utility Function</h2>
+<p>
+<b><tt>void Swig_arg_error())</tt></b>
+
+<blockquote>
+A generic function that issues an error message about being unable to parse command line options.  SWIG is terminated by a call to <tt>exit()</tt>.
+
+</body>
+</html>
+
+
+
+
+

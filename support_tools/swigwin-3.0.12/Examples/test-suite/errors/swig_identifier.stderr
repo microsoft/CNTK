@@ -1,0 +1,1 @@
+swig_identifier.i:5: Warning 503: Can't wrap 'foo bar' unless renamed to a valid identifier.

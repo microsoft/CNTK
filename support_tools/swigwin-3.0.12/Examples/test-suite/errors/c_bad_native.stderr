@@ -1,0 +1,1 @@
+c_bad_native.i:3: Error: %native declaration 'foo' is not a function.

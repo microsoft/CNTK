@@ -1,0 +1,1 @@
+pp_macro_defined_unterminated.i:4: Error: Unterminated call to 'defined'

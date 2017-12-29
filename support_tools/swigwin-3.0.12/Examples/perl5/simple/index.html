@@ -1,0 +1,99 @@
+<html>
+<head>
+<title>SWIG:Examples:perl5:simple</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+
+<tt>SWIG/Examples/perl5/simple/</tt>
+<hr>
+
+<H2>Simple Perl5 Example</H2>
+
+<p>
+This example illustrates how you can hook Perl to a very simple C program containing
+a function and a global variable.
+
+<h2>The C Code</h2>
+
+Suppose you have the following C code:
+
+<blockquote>
+<pre>
+/* File : example.c */
+
+/* A global variable */
+double Foo = 3.0;
+
+/* Compute the greatest common divisor of positive integers */
+int gcd(int x, int y) {
+  int g;
+  g = y;
+  while (x &gt; 0) {
+    g = x;
+    x = y % x;
+    y = g;
+  }
+  return g;
+}
+</pre>
+</blockquote>
+
+<h2>The SWIG interface</h2>
+
+Here is a simple SWIG interface file:
+
+<blockquote>
+<pre>
+/* File: example.i */
+%module example
+
+extern int gcd(int x, int y);
+extern double Foo;
+</pre>
+</blockquote>
+
+<h2>Compilation</h2>
+
+<ol>
+<li><tt>swig -perl5 <a href="example.i">example.i</a></tt>
+<p>
+<li>This produces two files: <tt><a href="example_wrap.c">example_wrap.c</a></tt> and <tt><a href="example.pm">example.pm</a></tt>.
+<p>
+<li>Compile <tt><a href="example_wrap.c">example_wrap.c</a></tt> and <tt><a href="example.c">example.c</a></tt>
+to create the extension <tt>example.so</tt>. 
+</ol>
+
+<h2>Using the extension</h2>
+
+Click <a href="runme.pl">here</a> to see a script that calls our C functions from Perl.
+
+<h2>Key points</h2>
+
+<ul>
+<li>Use the <tt>use</tt> statement to load your extension module from Perl. For example:
+<blockquote>
+<pre>
+use example;
+</pre>
+</blockquote>
+
+<li>C functions work just like Perl functions. For example:
+<blockquote>
+<pre>
+$g = example::gcd(42,105);
+</pre>
+</blockquote>
+
+<li>C global variables are accessed like ordinary Perl variables. For example:
+<blockquote>
+<pre>
+$a = $example::Foo;
+</pre>
+</blockquote>
+</ul>
+
+<hr>
+</body>
+</html>

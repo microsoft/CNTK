@@ -1,0 +1,84 @@
+#######################################################################
+# Makefile for D test-suite
+#######################################################################
+
+LANGUAGE     = d
+
+srcdir       = @srcdir@
+top_srcdir   = ../@top_srcdir@
+top_builddir = ../@top_builddir@
+
+ifeq (,$(D_VERSION))
+  D_VERSION = @DDEFAULTVERSION@
+endif
+
+ifeq (2,$(D_VERSION))
+  VERSIONSUFFIX = .2
+else
+  VERSIONSUFFIX = .1
+endif
+
+SCRIPTSUFFIX = _runme$(VERSIONSUFFIX).d
+
+CPP_TEST_CASES = \
+	d_nativepointers \
+	exception_partial_info
+
+include $(srcdir)/../common.mk
+
+# Overridden variables here
+SRCDIR       = ../$(srcdir)/
+TARGETSUFFIX = _wrap
+SWIGOPT+=-splitproxy -package $*
+
+# Rules for the different types of tests
+%.cpptest:
+	$(setup)
+	+(cd $*$(VERSIONSUFFIX) && $(swig_and_compile_cpp))
+	+$(run_testcase)
+
+%.ctest:
+	$(setup)
+	+(cd $*$(VERSIONSUFFIX) && $(swig_and_compile_c))
+	+$(run_testcase)
+
+%.multicpptest:
+	$(setup)
+	+(cd $*$(VERSIONSUFFIX) && $(swig_and_compile_multi_cpp))
+	+$(run_testcase)
+
+# Makes a directory for the testcase if it does not exist
+setup = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then			\
+	  echo "$(ACTION)ing $(LANGUAGE) testcase $* (with run test)" ;	\
+	else									\
+	  echo "$(ACTION)ing $(LANGUAGE) testcase $*" ;			\
+	fi;									\
+	if [ ! -d $*$(VERSIONSUFFIX) ]; then					\
+	  mkdir $*$(VERSIONSUFFIX);						\
+	fi;									\
+	if [ ! -d $*$(VERSIONSUFFIX)/$* ]; then					\
+	  mkdir $*$(VERSIONSUFFIX)/$*;						\
+	fi
+
+# Compiles D files then runs the testcase. A testcase is only run if
+# a file is found which has _runme.d appended after the testcase name.
+run_testcase = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
+	  cd $*$(VERSIONSUFFIX) && \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile \
+	  DFLAGS='-of$*_runme' \
+	  DSRCS='../$(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) `find $* -name *.d`' d_compile && \
+	  env LD_LIBRARY_PATH=".:$$LD_LIBRARY_PATH" $(RUNTOOL) ./$*_runme; \
+	else \
+	  cd $*$(VERSIONSUFFIX) && \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile \
+	  DFLAGS='-c' \
+	  DSRCS='`find $* -name *.d`' d_compile && cd .. ; \
+	fi
+
+# Clean: remove testcase directories
+%.clean:
+	@if [ -d $*$(VERSIONSUFFIX) ]; then \
+	  rm -rf $*$(VERSIONSUFFIX); \
+	fi

@@ -1,0 +1,419 @@
+This file contains a brief overview of the changes made in each release.
+A detailed description of changes are available in the CHANGES.current
+and CHANGES files.
+
+Release Notes
+=============
+Detailed release notes are available with the release and are also
+published on the SWIG web site at http://swig.org/release.html.
+
+SWIG-3.0.12 summary:
+- Add support for Octave-4.2.
+- Enhance %extend to support template functions.
+- Language specific enhancements and fixes for C#, D, Guile, Java, PHP7.
+
+SWIG-3.0.11 summary:
+- PHP 7 support added.
+- C++11 alias templates and type aliasing support added.
+- Minor fixes and enhancements for C# Go Guile Java Javascript Octave
+  PHP Python R Ruby Scilab XML.
+
+SWIG-3.0.10 summary:
+- Regression fixes for smart pointers and importing Python modules.
+
+SWIG-3.0.9 summary:
+- Add support for Python's implicit namespace packages.
+- Fixes to support Go 1.6.
+- C++11 std::array support added for Java.
+- Improved C++ multiple inheritance support for Java/C# wrappers.
+- Various other minor fixes and improvements for C#, D, Go, Java,
+  Javascript, Lua, Python, R, Ruby, Scilab.
+
+SWIG-3.0.8 summary:
+- pdf documentation enhancements.
+- Various Python 3.5 issues fixed.
+- std::array support added for Ruby and Python.
+- shared_ptr support added for Ruby.
+- Minor improvements for CFFI, Go, Java, Perl, Python, Ruby.
+
+SWIG-3.0.7 summary:
+- Add support for Octave-4.0.0.
+- Remove potential Android security exploit in generated Java classes.
+- Minor new features and bug fixes.
+
+SWIG-3.0.6 summary:
+- Stability and regression fixes.
+- Fixed parsing of C++ corner cases.
+- Language improvements and bug fixes for C#, Go, Java, Lua, Python, R.
+
+SWIG-3.0.5 summary:
+- Added support for Scilab.
+- Important Python regression fix when wrapping C++ default arguments.
+- Minor improvements for C#, Go, Octave, PHP and Python.
+
+SWIG-3.0.4 summary:
+- Python regression fix when wrapping C++ default arguments.
+- Improved error messages.
+
+SWIG-3.0.3 summary:
+- Add support for C++11 strongly typed enumerations.
+- Numerous bug fixes and minor enhancements for C#, D, Go, Java,
+  Javascript, PHP, Perl and Python wrappers.
+
+SWIG-3.0.2 summary:
+- Bug fix during install and a couple of other minor changes.
+
+SWIG-3.0.1 summary:
+- Javascript module added. This supports JavascriptCore (Safari/Webkit),
+  v8 (Chromium) and node.js currently.
+- A few notable regressions introduced in 3.0.0 have been fixed - in 
+  Lua, nested classes and parsing of operator <<.
+- The usual round of bug fixes and minor improvements for:
+  C#, GCJ, Go, Java, Lua, PHP and Python.
+
+SWIG-3.0.0 summary:
+- This is a major new release focusing primarily on C++ improvements.
+- C++11 support added. Please see documentation for details of supported
+  features: http://www.swig.org/Doc3.0/CPlusPlus11.html
+- Nested class support added. This has been taken full advantage of in
+  Java and C#. Other languages can use the nested classes, but require
+  further work for a more natural integration into the target language.
+  We urge folk knowledgeable in the other target languages to step
+  forward and help with this effort.
+- Lua: improved metatables and support for %nspace.
+- Go 1.3 support added.
+- Python import improvements including relative imports.
+- Python 3.3 support completed.
+- Perl director support added.
+- C# .NET 2 support is now the minimum. Generated using statements are
+  replaced by fully qualified names.
+- Bug fixes and improvements to the following languages:
+  C#, Go, Guile, Java, Lua, Perl, PHP, Python, Octave, R, Ruby, Tcl
+- Various other bug fixes and improvements affecting all languages.
+- Note that this release contains some backwards incompatible changes
+  in some languages.
+- Full detailed release notes are in the changes file.
+
+SWIG-2.0.12 summary:
+- This is a maintenance release backporting some fixes from the pending
+  3.0.0 release.
+- Octave 3.8 support added.
+- C++11 support for new versions of erase/insert in the STL containers.
+- Compilation fixes on some systems for the generated Lua, PHP, Python
+  and R wrappers.
+
+SWIG-2.0.11 summary:
+- Minor bug fixes and enhancements mostly in Python, but also
+  C#, Lua, Ocaml, Octave, Perl, PHP, Python, R, Ruby, Tcl.
+
+SWIG-2.0.10 summary:
+- Ruby 1.9 support is now complete.
+- Add support for Guile 2.0 and Guile 1.6 support (GH interface) has
+  been dropped.
+- Various small language neutral improvements and fixes.
+- Various bug fixes and minor improvements specific to C#, CFFI, D,
+  Java, Octave, PHP, Python,
+- Minor bug fix in ccache-swig.
+- Development has moved to Github with Travis continuous integration
+  testing - patches using https://github.com/swig/swig are welcome.
+
+SWIG-2.0.9 summary:
+- Improved typemap matching.
+- Ruby 1.9 support is much improved.
+- Various bug fixes and minor improvements in C#, CFFI, Go, Java,
+  Modula3, Octave, Perl, Python, R, Ruby, Tcl and in ccache-swig.
+
+SWIG-2.0.8 summary:
+- Fix a couple of regressions introduced in 2.0.5 and 2.0.7.
+- Improved using declarations and using directives support.
+- Minor fixes/enhancements for C#, Java, Octave, Perl and Python.
+
+SWIG-2.0.7 summary:
+- Important regression fixes since 2.0.5 for typemaps in general and
+  in Python.
+- Fixes and enhancements for Go, Java, Octave and PHP.
+
+SWIG-2.0.6 summary:
+- Regression fix for Python STL wrappers on some systems.
+
+SWIG-2.0.5 summary:
+- Official Android support added including documentation and examples.
+- Improvements involving templates:
+  1) Various fixes with templates and typedef types.
+  2) Some template lookup problems fixed.
+  3) Templated type fixes to use correct typemaps.
+- Autodoc documentation generation improvements.
+- Python STL container wrappers improvements including addition of
+  stepped slicing.
+- Approximately 70 fixes and minor enhancements for the following
+  target languages: AllegroCL, C#, D, Go, Java, Lua, Ocaml, Octave,
+  Perl, PHP, Python, R, Ruby, Tcl, Xml.
+
+SWIG-2.0.4 summary:
+- This is mainly a Python oriented release including support for Python
+  built-in types for superior performance with the new -builtin option.
+  The -builtin option is especially suitable for performance-critical
+  libraries and applications that call wrapped methods repeatedly.
+  See the python-specific chapter of the SWIG manual for more info.
+- Python 3.2 support has also been added and various Python bugs have
+  been fixed.
+- Octave 3.4 support has also been added.
+- There are also the usual minor generic improvements, as well as bug
+  fixes and enhancements for D, Guile, Lua, Octave, Perl and Tcl. 
+
+SWIG-2.0.3 summary:
+- A bug fix release including a couple of fixes for regressions in the
+  2.0 series.
+
+SWIG-2.0.2 summary:
+- Support for the D language has been added.
+- Various bug fixes and minor enhancements.
+- Bug fixes particular to the Clisp, C#, Go, MzScheme, Ocaml, PHP, R,
+  Ruby target languages.
+
+SWIG-2.0.1 summary:
+- Support for the Go language has been added.
+- New regular expression (regex) encoder for renaming symbols based on
+  the Perl Compatible Regular Expressions (PCRE) library.
+- Numerous fixes in reporting file and line numbers in error and warning
+  messages.
+- Various bug fixes and improvements in the C#, Lua, Perl, PHP, Ruby
+  and Python language modules.
+
+SWIG-2.0.0 summary:
+- License changes, see LICENSE file and http://www.swig.org/legal.html.
+- Much better nested class/struct support.
+- Much improved template partial specialization and explicit
+  specialization handling.
+- Namespace support improved with the 'nspace' feature where namespaces
+  can be automatically translated into Java packages or C# namespaces.
+- Improved typemap and symbol table debugging.
+- Numerous subtle typemap matching rule changes when using the default
+  (SWIGTYPE) type. These now work much like C++ class template partial
+  specialization matching.
+- Other small enhancements for typemaps. Typemap fragments are also now
+  official and documented.
+- Warning and error display refinements.
+- Wrapping of shared_ptr is improved and documented now.
+- Numerous C++ unary scope operator (::) fixes.
+- Better support for boolean expressions.
+- Various bug fixes and improvements in the Allegrocl, C#, Java, Lua,
+  Octave, PHP, Python, R, Ruby and XML modules.
+
+SWIG-1.3.40 summary:
+- SWIG now supports directors for PHP.
+- PHP support improved in general.
+- Octave 3.2 support added.
+- Various bug fixes/enhancements for Allegrocl, C#, Java, Octave, Perl,
+  Python, Ruby and Tcl.
+- Other generic fixes and minor new features.
+
+SWIG-1.3.39 summary:
+- Some new small feature enhancements.
+- Improved C# std::vector wrappers.
+- Bug fixes: mainly Python, but also Perl, MzScheme, CFFI, Allegrocl 
+  and Ruby
+
+SWIG-1.3.38 summary:
+- Output directory regression fix and other minor bug fixes
+
+SWIG-1.3.37 summary:
+- Python 3 support added
+- SWIG now ships with a version of ccache that can be used with SWIG.
+  This enables the files generated by SWIG to be cached so that repeated
+  use of SWIG on unchanged input files speeds up builds quite considerably.
+- PHP 4 support removed and PHP support improved in general
+- Improved C# array support
+- Numerous Allegro CL improvements
+- Bug fixes/enhancements for Python, PHP, Java, C#, Chicken, Allegro CL,
+  CFFI, Ruby, Tcl, Perl, R, Lua.
+- Other minor generic bug fixes and enhancements
+
+SWIG-1.3.36 summary:
+- Enhancement to directors to wrap all protected members
+- Optimisation feature for objects returned by value
+- A few bugs fixes in the PHP, Java, Ruby, R, C#, Python, Lua and 
+  Perl modules
+- Other minor generic bug fixes
+
+SWIG-1.3.35 summary:
+- Octave language module added
+- Bug fixes in Python, Lua, Java, C#, Perl modules
+- A few other generic bugs and runtime assertions fixed
+
+SWIG-1.3.34 summary:
+- shared_ptr support for Python
+- Support for latest R - version 2.6
+- Various minor improvements/bug fixes for R, Lua, Python, Java, C#
+- A few other generic bug fixes, mainly for templates and using statements
+
+SWIG-1.3.33 summary:
+- Fix regression for Perl where C++ wrappers would not compile
+- Fix regression parsing macros
+
+SWIG-1.3.32 summary:
+- shared_ptr support for Java and C#
+- Enhanced STL support for Ruby
+- Windows support for R
+- Fixed long-standing memory leak in PHP Module
+- Numerous fixes and minor enhancements for Allegrocl, C#, cffi, Chicken, Guile,
+  Java, Lua, Ocaml, Perl, PHP, Python, Ruby, Tcl.
+- Improved warning support
+
+SWIG-1.3.31 summary:
+- Python modern classes regression fix
+
+SWIG-1.3.30 summary:
+- Python-2.5 support
+- New language module: R
+- Director support added for C#
+- Numerous director fixes and improvements
+- Improved mingw/msys support
+- Better constants support in Guile and chicken modules
+- Support for generating PHP5 class wrappers
+- Important Java premature garbage collection fix
+- Minor improvements/fixes in cffi, php, allegrocl, perl, chicken, lua, ruby,
+  ocaml, python, java, c# and guile language modules
+- Many many other bug fixes
+
+SWIG-1.3.29 summary:
+- Numerous important bug fixes
+- Few minor new features
+- Some performance improvements in generated code for Python
+
+SWIG-1.3.28 summary:
+- More powerful renaming (%rename) capability.
+- More user friendly warning handling.
+- Add finer control for default constructors and destructors. We discourage
+  the use of the 'nodefault' option, which disables both constructors and
+  destructors, leading to possible memory leaks. Use instead 'nodefaultctor'
+  and/or 'nodefaultdtor'.
+- Automatic copy constructor wrapper generation via the 'copyctor' option/feature.
+- Better handling of Windows extensions and types.
+- Better runtime error reporting.
+- Add the %catches directive to catch and dispatch exceptions.
+- Add the %naturalvar directive for more 'natural' variable wrapping.
+- Better default handling of std::string variables using the %naturalvar directive.
+- Add the %allowexcept and %exceptionvar directives to handle exceptions when
+  accessing a variable.
+- Add the %delobject directive to mark methods that act like destructors.
+- Add the -fastdispatch option to enable smaller and faster overload dispatch
+  mechanism.
+- Template support for %rename, %feature and %typemap improved.
+- Add/doc more debug options, such as -dump_module, -debug_typemaps, etc.
+- Unified typemap library (UTL) potentially providing core typemaps for all
+  scripting languages based on the recently evolving Python typemaps.
+- New language module: Common Lisp with CFFI.
+- Python, Ruby, Perl and Tcl use the new UTL, many old reported and hidden 
+  errors with typemaps are now fixed.
+- Initial Java support for languages using the UTL via GCJ, you can now use 
+  Java libraries in your favorite script language using gcj + swig.
+- Tcl support for std::wstring.
+- PHP4 module update, many error fixes and actively maintained again.
+- Allegrocl support for C++, also enhanced C support.
+- Ruby support for bang methods.
+- Ruby support for user classes as native exceptions.
+- Perl improved dispatching in overloaded functions via the new cast and rank
+  mechanism.
+- Perl improved backward compatibility, 5.004 and later tested and working.
+- Python improved backward compatibility, 1.5.2 and later tested and working.
+- Python can use the same cast/rank mechanism via the -castmode option.
+- Python implicit conversion mechanism similar to C++, via the %implicitconv
+  directive (replaces and improves the implicit.i library). 
+- Python threading support added.
+- Python STL support improved, iterators are supported and STL containers can
+  use now the native PyObject type.
+- Python many performance options and improvements, try the -O option to test
+  all of them. Python runtime benchmarks show up to 20 times better performance
+  compared to 1.3.27 and older versions.
+- Python support for 'multi-inheritance' on the python side.
+- Python simplified proxy classes, now swig doesn't need to generate the
+  additional 'ClassPtr' classes.
+- Python extended support for smart pointers.
+- Python better support for static member variables.
+- Python backward compatibility improved, many projects that used to work
+  only with  swig-1.3.21 to swig-1.3.24 are working again with swig-1.3.28
+- Python test-suite is now 'valgrinded' before release, and swig also
+  reports memory leaks due to missing destructors.
+- Minor bug fixes and improvements to the Lua, Ruby, Java, C#, Python, Guile,
+  Chicken, Tcl and Perl modules.
+
+SWIG-1.3.27 summary:
+- Fix bug in anonymous typedef structures which was leading to strange behaviour
+
+SWIG-1.3.26 summary:
+- New language modules: Lua, CLISP and Common Lisp with UFFI.
+- Big overhaul to the PHP module.
+- Change to the way 'extern' is handled.
+- Minor bug fixes specific to  C#, Java, Modula3, Ocaml, Allegro CL,
+  XML, Lisp s-expressions, Tcl, Ruby and Python modules.
+- Other minor improvements and bug fixes.
+
+SWIG-1.3.25 summary:
+- Improved runtime type system.  Speed of module loading improved in
+  modules with lots of types.  SWIG_RUNTIME_VERSION has been increased
+  from 1 to 2, but the API is exactly the same; only internal changes
+  were made.
+- The languages that use the runtime type system now support external
+  access to the runtime type system.
+- Various improvements with typemaps and template handling.
+- Fewer warnings in generated code.
+- Improved colour documentation.
+- Many C# module improvements (exception handling, prevention of early
+  garbage collection, C# attributes support added, more flexible type
+  marshalling/asymmetric types.)
+- Minor improvements and bug fixes specific to the C#, Java, TCL, Guile,
+  Chicken, MzScheme, Perl, Php, Python, Ruby and Ocaml modules).
+- Various other bug fixes and memory leak fixes.
+
+SWIG-1.3.24 summary:
+- Improved enum handling
+- More runtime library options
+- More bugs fixes for templates and template default arguments, directors
+  and other areas.
+- Better smart pointer support, including data members, static members
+  and %extend.
+
+SWIG-1.3.23 summary:
+- Improved support for callbacks
+- Python docstring support and better error handling
+- C++ default argument support for Java and C# added.
+- Improved c++ default argument support for the scripting languages plus
+  option to use original (compact) default arguments.
+- %feature and %ignore/%rename bug fixes and mods - they might need default
+  arguments specified to maintain compatible behaviour when using the new
+  default arguments wrapping.
+- Runtime library changes: Runtime code can now exist in more than one module
+  and so need not be compiled into just one module
+- Further improved support for templates and namespaces
+- Overloaded templated function support added
+- More powerful default typemaps (mixed default typemaps)
+- Some important %extend and director code bug fixes
+- Guile now defaults to using SCM API.  The old interface can be obtained by
+  the -gh option.
+- Various minor improvements and bug fixes for C#, Chicken, Guile, Java, 
+  MzScheme, Perl, Python and Ruby
+- Improved dependencies generation for constructing Makefiles.
+
+SWIG-1.3.22 summary:
+- Improved exception handling and translation of C errors or C++
+  exceptions into target language exceptions.
+- Improved enum support, mapping to built-in Java 1.5 enums and C#
+  enums or the typesafe enum pattern for these two languages.
+- Python - much better STL support and support for std::wstring,
+  wchar_t and FILE *.
+- Initial support for Modula3 and Allegro CL.
+- 64 bit TCL support.
+- Java and C#'s proxy classes are now nearly 100% generated from
+  typemaps and/or features for finer control on the generated code.
+- SWIG runtime library support deprecation.
+- Improved documentation. SWIG now additionally provides documentation
+  in the form of a single HTML page as well as a pdf document.
+- Enhanced C++ friend declaration support.
+- Better support for reference counted classes.
+- Various %fragment improvements.
+- RPM fixes.
+- Various minor improvements and bug fixes for C#, Chicken, Guile, Java, 
+  MzScheme, Perl, Php, Python, Ruby and XML.
+
+

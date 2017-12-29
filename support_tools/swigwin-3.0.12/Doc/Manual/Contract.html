@@ -1,0 +1,275 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Contract Checking</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+
+<body bgcolor="#ffffff">
+<H1><a name="Contract">13 Contracts</a></H1>
+<!-- INDEX -->
+<div class="sectiontoc">
+<ul>
+<li><a href="#Contract_nn2">The %contract directive</a>
+<li><a href="#Contract_nn3">%contract and classes</a>
+<li><a href="#Contract_nn4">Constant aggregation and %aggregate_check</a>
+<li><a href="#Contract_nn5">Notes</a>
+</ul>
+</div>
+<!-- INDEX -->
+
+
+
+<p>
+A common problem that arises when wrapping C libraries is that of maintaining
+reliability and checking for errors.  The fact of the matter is that many
+C programs are notorious for not providing error checks.  Not only that, 
+when you expose the internals of an application as a library, it
+often becomes possible to crash it simply by providing bad inputs or
+using it in a way that wasn't intended.
+</p>
+
+<p>
+This chapter describes SWIG's support for software contracts.  In the context
+of SWIG, a contract can be viewed as a runtime constraint that is attached
+to a declaration.  For example, you can easily attach argument checking rules,
+check the output values of a function and more. 
+When one of the rules is violated by a script, a runtime exception is 
+generated rather than having the program continue to execute.
+</p>
+
+<H2><a name="Contract_nn2">13.1 The %contract directive</a></H2>
+
+
+<p>
+Contracts are added to a declaration using the %contract directive.  Here
+is a simple example:
+</p>
+
+<div class="code">
+<pre>
+%contract sqrt(double x) {
+require:
+  x &gt;= 0;
+ensure:
+  sqrt &gt;= 0;
+}
+
+...
+double sqrt(double);
+</pre>
+</div>
+
+<p>
+In this case, a contract is being added to the <tt>sqrt()</tt> function.
+The <tt>%contract</tt> directive must always appear before the declaration
+in question.  Within the contract there are two sections, both of which
+are optional.  The <tt>require:</tt>
+section specifies conditions that must hold before the function is called.  
+Typically, this is used to check argument values.   The <tt>ensure:</tt> section
+specifies conditions that must hold after the function is called.  This is
+often used to check return values or the state of the program.  In both
+cases, the conditions that must hold must be specified as boolean expressions.
+</p>
+
+<p>
+In the above example, we're simply making sure that sqrt() returns a non-negative
+number (if it didn't, then it would be broken in some way).
+</p>
+
+<p>
+Once a contract has been specified, it modifies the behavior of the
+resulting module.  For example:
+</p>
+
+<div class="shell">
+<pre>
+&gt;&gt;&gt; example.sqrt(2)
+1.4142135623730951
+&gt;&gt;&gt; example.sqrt(-2)
+Traceback (most recent call last):
+  File "&lt;stdin&gt;", line 1, in ?
+RuntimeError: Contract violation: require: (arg1&gt;=0)
+&gt;&gt;&gt;
+</pre>
+</div>
+
+<H2><a name="Contract_nn3">13.2 %contract and classes</a></H2>
+
+
+<p>
+The <tt>%contract</tt> directive can also be applied to class methods and constructors.  For example:
+</p>
+
+<div class="code">
+<pre>
+%contract Foo::bar(int x, int y) {
+require:
+  x &gt; 0;
+ensure:
+  bar &gt; 0;
+}
+
+%contract Foo::Foo(int a) {
+require:
+  a &gt; 0;
+}
+
+class Foo {
+public:
+  Foo(int);
+  int bar(int, int);
+};
+</pre>
+</div>
+
+<p>
+The way in which <tt>%contract</tt> is applied is exactly the same as the <tt>%feature</tt> directive. 
+Thus, any contract that you specified for a base class will also be attached to inherited methods.  For example:
+</p>
+
+<div class="code">
+<pre>
+class Spam : public Foo {
+public:
+  int bar(int, int);    // Gets contract defined for Foo::bar(int, int)
+};
+</pre>
+</div>
+
+<p>
+In addition to this, separate contracts can be applied to both the base class and a derived class.  For example:
+</p>
+
+<div class="code">
+<pre>
+%contract Foo::bar(int x, int) {
+require:
+  x &gt; 0;
+}
+
+%contract Spam::bar(int, int y) {
+require:
+  y &gt; 0;
+}
+
+class Foo {
+public:
+  int bar(int, int);   // Gets Foo::bar contract.
+};
+
+class Spam : public Foo {
+public:
+  int bar(int, int);   // Gets Foo::bar and Spam::bar contract
+};
+</pre>
+</div>
+
+<p>
+When more than one contract is applied, the conditions specified in a
+"require:" section are combined together using a logical-AND operation.
+In other words conditions specified for the base class and conditions
+specified for the derived class all must hold.  In the above example,
+this means that both the arguments to <tt>Spam::bar</tt> must be positive.
+</p>
+
+<H2><a name="Contract_nn4">13.3 Constant aggregation and %aggregate_check</a></H2>
+
+
+<p>
+Consider an interface file that contains the following code:
+</p>
+
+<div class="code">
+<pre>
+#define  UP     1
+#define  DOWN   2
+#define  RIGHT  3
+#define  LEFT   4
+
+void move(SomeObject *, int direction, int distance);
+</pre>
+</div>
+
+<p>
+One thing you might want to do is impose a constraint on the direction parameter to
+make sure it's one of a few accepted values.  To do that, SWIG provides an easy to
+use macro %aggregate_check() that works like this:
+</p>
+
+<div class="code">
+<pre>
+%aggregate_check(int, check_direction, UP, DOWN, LEFT, RIGHT);
+</pre>
+</div>
+
+<p>
+This merely defines a utility function of the form
+</p>
+
+<div class="code">
+<pre>
+int check_direction(int x);
+</pre>
+</div>
+
+<p>
+That checks the argument x to see if it is one of the values listed.   This utility 
+function can be used in contracts.  For example:
+</p>
+
+<div class="code">
+<pre>
+%aggregate_check(int, check_direction, UP, DOWN, RIGHT, LEFT);
+
+%contract move(SomeObject *, int direction, in) {
+require:
+  check_direction(direction);
+}
+
+#define  UP     1
+#define  DOWN   2
+#define  RIGHT  3
+#define  LEFT   4
+
+void move(SomeObject *, int direction, int distance);
+</pre>
+</div>
+
+<p>
+Alternatively, it can be used in typemaps and other directives.  For example:
+</p>
+
+<div class="code">
+<pre>
+%aggregate_check(int, check_direction, UP, DOWN, RIGHT, LEFT);
+
+%typemap(check) int direction {
+  if (!check_direction($1)) SWIG_exception(SWIG_ValueError, "Bad direction");
+}
+
+#define  UP     1
+#define  DOWN   2
+#define  RIGHT  3
+#define  LEFT   4
+
+void move(SomeObject *, int direction, int distance);
+</pre>
+</div>
+
+<p>
+Regrettably, there is no automatic way to perform similar checks with enums values.  Maybe in a future
+release.
+</p>
+
+<H2><a name="Contract_nn5">13.4 Notes</a></H2>
+
+
+<p>
+Contract support was implemented by Songyan (Tiger) Feng and first appeared
+in SWIG-1.3.20.
+</p>
+
+</body>
+</html>

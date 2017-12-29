@@ -1,0 +1,1 @@
+pp_unknowndirective2.i:7: Error: Unknown SWIG preprocessor directive: elsif (if this is a block of target language code, delimit it with %{ and %})

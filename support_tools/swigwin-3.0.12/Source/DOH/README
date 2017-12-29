@@ -1,0 +1,118 @@
+DOH  (Dave's Object Hack)
+
+Overview:
+---------
+DOH is a small C library that provides a number of simple yet powerful
+data structures. The data structures are built around a dynamic typing
+model in which any given object is allowed to support one or more
+classes of operations.  Furthermore, a simple garbage collection
+scheme and a variety of interesting library methods are available.
+All and all, the operation of DOH makes massive abuse of the C type
+system and would probably make the language purists scream and
+performance addicts run away in horror.  However, I really don't
+care--so there! However, for the rest of us, DOH is actually kind of
+fun to use. This is only a short description of the methods and is no
+way meant to be exhaustive.
+
+Common Operations (for all types)
+---------------------------------
+Delete(obj)             Decrease the reference count and destroy if zero
+Copy(obj)               Make a copy of an object.
+Clear(obj)              Clear an object.
+Setscope(obj)           Set scope of an object (guru's only)
+Str(obj)                Create a string representation of obj.
+Data(obj)               Return pointer to raw data in an object
+Char(obj)               Convert to a char *
+Len(obj)                Length of an object
+Hash(obj)               Hash value (used for mapping)
+Cmp(obj1,obj2)          Compare two objects.
+Name(obj)               Return the object name
+First(obj)              Return first object (iterator)
+Next(obj)               Return next object
+Dump(obj,out)           Serialize on out
+Load(in)                Unserialize from in
+First(obj)              Iterator
+Next(iter)              Next iterator
+
+Mapping Operations (for hash table behavior)
+--------------------------------------------
+Getattr(hash,key)              Get an attribute
+Setattr(hash,key,value)        Set an attribute
+Delattr(hash,key)              Delete an attribute
+First(hash)                    Get first object (iterator)
+Next(hash)                     Get next object
+GetInt(hash,key)               Get attribute as an 'int'
+SetInt(hash,key,ivalue)        Set attribute as an 'int'
+GetDouble(hash,key)            Get attribute as a 'double'
+SetDouble(hash,key,dvalue)     Set Attribute as a 'double'
+GetChar(hash,key)              Get attribute as a 'char *'
+
+Sequence Operations
+-------------------
+Getitem(list,index)             Get an item
+Setitem(list,index,val)         Set an item
+Delitem(list,index)             Delete an item
+Insert(list,index,val)          Insert an item
+Append(list,val)                Append to end
+Push(list,val)                  Insert at beginning
+
+File Operations
+---------------
+Read(obj,buffer,len)            Read data
+Write(obj,buffer,len)           Write data
+Getc(obj)                       Get a character
+Putc(ch,obj)                    Put a character
+Ungetc(ch,obj)                  Put character back on input stream
+Seek(obj,offset,whence)         Seek
+Tell(obj)                       Return file pointer
+Delete(obj)                     Decrease the reference count, close file if zero
+
+String Operations
+-----------------
+Replace(obj, orig, rep, flags)  Replace occurrences of orig with rep.
+Chop(obj)                       Remove trailing whitespace
+
+flags is one of the following:
+     DOH_REPLACE_ANY
+     DOH_REPLACE_NOQUOTE
+     DOH_REPLACE_ID
+     DOH_REPLACE_FIRST
+             
+Callable Operations
+-------------------
+Call(obj, args)                 Perform a function call with arguments args.
+
+Miscellaneous library functions
+-------------------------------
+NewScope()                      Create a new scope
+DelScope(s)                     Delete scope s
+Readline(in)                    Read a line of input from in
+Printf(out,fmt,...)             Formatted output
+DohEncoding(name, fn)           Register a format encoding for Printf
+
+Currently Available datatypes
+------------------------------
+NewString(char *initial)                            Strings
+NewHash()                                           Hash
+NewList()                                           List
+NewVoid(void *ptr, void (*del)(void *))             Void
+NewFile(char *filename, char *mode, List *newfiles) File
+NewCallable(DOH *(*func)(DOH *, DOH *))             Callable object
+
+
+Odds and ends:
+
+  1.   All objects are of type 'DOH *'
+  2.   When in doubt, see rule (1)
+  3.   In certain cases, DOH performs implicit conversions
+       of 'char *' to an appropriate DOH string representation. 
+       For operations involving files, DOH works with many
+       kinds of objects including FILE *, DOH File objects,
+       and DOH strings.  Don't even ask how this works.
+
+  4.   More complete documentation is forthcoming.
+
+
+
+
+

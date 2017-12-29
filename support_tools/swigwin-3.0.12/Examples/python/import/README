@@ -1,0 +1,39 @@
+This example tests the %import directive and working with multiple modules.
+
+Use 'python runme.py' to run a test.
+
+Overview:
+---------
+
+The example defines 4 different extension modules--each wrapping
+a separate C++ class.
+
+     base.i     -  Base class
+     foo.i      -  Foo class derived from Base
+     bar.i      -  Bar class derived from Base
+     spam.i     -  Spam class derived from Bar
+
+Each module uses %import to refer to another module.  For
+example, the 'foo.i' module uses '%import base.i' to get
+definitions for its base class.
+
+If everything is okay, all of the modules will load properly and
+type checking will work correctly. Caveat: Some compilers, for example
+gcc-3.2.x, generate broken vtables with the inline methods in this test.
+This is not a SWIG problem and can usually be solved with non-inlined
+destructors compiled into separate shared objects/DLLs.
+
+Unix:
+-----
+- Run make
+- Run the test as described above
+
+Windows:
+--------
+- Use the Visual C++ 6 workspace file (example.dsw). Build the runtime
+  project DLL first followed by the other 4 DLLs as they all have a
+  dependency on the runtime DLL. The Batch build option in the Build menu
+  is usually the easiest way to do this. Only use the Release builds not
+  the Debug builds.
+- Run the test as described above
+

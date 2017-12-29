@@ -1,0 +1,1 @@
+cpp_extend_undefined.i:6: Warning 303: %extend defined for an undeclared class foo.

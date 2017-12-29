@@ -1,0 +1,57 @@
+lines(0);
+warning('off');
+ilib_verbose(0);
+
+// Get test name (used in swigtest.quit file)
+[units, typ, names] = file(1);
+swigtestname = strsubst(fileparts(names, "fname"), "_runme", "");
+
+// Does the library exists? If not then exit!
+libname = "lib" + swigtestname + getdynlibext();
+if ~isfile(libname) then
+    mfprintf(0, "*** LIBRARY NOT FOUND: %s ***\n", libname);
+    exit(1)
+end
+
+// Load library
+try
+    exec("loader.sce", -1);
+catch
+    mfprintf(0, "*** LOADER EXECUTION FAILED ***\n");
+    exit(1)
+end
+
+// Module initialization
+try
+    moduleInit = sprintf("%s_Init()", swigtestname);
+    execstr(moduleInit);
+catch
+    mfprintf(0, "*** MODULE INIT FAILED ***\n");
+    exit(1)
+end
+
+// Error management function
+function swigtesterror(msg)
+    [lines, names] = where();
+    if size(lines, '*') > 0
+        mfprintf(0, "*** TEST FAILED (at line %d) ***\n", lines($));
+        if argn(2) >= 1 then disp(msg); end
+    else
+        mfprintf(0, "*** TEST FAILED ***\n");
+    end;
+    exit(1)
+endfunction
+
+// Check equal function
+function checkequal(returned, expected, message)
+  if typeof(returned) <> typeof(expected) then
+    returned_type_msg = ["returned type:"; typeof(returned)];
+    expected_type_msg = ["expected type:"; typeof(expected)];
+    swigtesterror([message; returned_type_msg; expected_type_msg]);
+  end
+  if ~isequal(returned, expected) then
+    returned_value_msg = ["returned value:"; string(returned)];
+    expected_value_msg = ["expected value:"; string(expected)];
+    swigtesterror([message; returned_value_msg; expected_value_msg]);
+  end
+endfunction

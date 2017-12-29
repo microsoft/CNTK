@@ -1,0 +1,9 @@
+A very simple example.
+
+To run it, start the program 'my-guile' and type:
+
+	(load "runme.scm")
+
+Alternatively, you can use the shell command:
+
+	./my-guile -s runme.scm

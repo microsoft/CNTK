@@ -1,0 +1,89 @@
+Index: ccache.1
+===================================================================
+--- ccache.1	(révision 7695)
++++ ccache.1	(copie de travail)
+@@ -49,7 +49,7 @@
+ .IP "\fB-s\fP" 
+ Print the current statistics summary for the cache\&. The
+ statistics are stored spread across the subdirectories of the
+-cache\&. Using "ccache -s" adds up the statistics across all
++cache\&. Using "ccache \-s" adds up the statistics across all
+ subdirectories and prints the totals\&.
+ .IP 
+ .IP "\fB-z\fP" 
+@@ -60,7 +60,7 @@
+ .IP 
+ .IP "\fB-c\fP" 
+ Clean the cache and re-calculate the cache file count and
+-size totals\&. Normally the -c option should not be necessary as ccache
++size totals\&. Normally the \-c option should not be necessary as ccache
+ keeps the cache below the specified limits at runtime and keeps
+ statistics up to date on each compile\&. This option is mostly useful
+ if you manually modify the cache contents or believe that the cache
+@@ -100,9 +100,9 @@
+  
+ 
+   cp ccache /usr/local/bin/
+-  ln -s /usr/local/bin/ccache /usr/local/bin/gcc
+-  ln -s /usr/local/bin/ccache /usr/local/bin/g++
+-  ln -s /usr/local/bin/ccache /usr/local/bin/cc
++  ln \-s /usr/local/bin/ccache /usr/local/bin/gcc
++  ln \-s /usr/local/bin/ccache /usr/local/bin/g++
++  ln \-s /usr/local/bin/ccache /usr/local/bin/cc
+ 
+ .fi 
+  
+@@ -118,7 +118,7 @@
+ .PP 
+ When run as a compiler front end ccache usually just takes the same
+ command line options as the compiler you are using\&. The only exception
+-to this is the option \&'--ccache-skip\&'\&. That option can be used to tell
++to this is the option \&'\-\-ccache-skip\&'\&. That option can be used to tell
+ ccache that the next option is definitely not a input filename, and
+ should be passed along to the compiler as-is\&. 
+ .PP 
+@@ -128,7 +128,7 @@
+ of the resulting object file (among other things)\&. The heuristic
+ ccache uses in this parse is that any string on the command line that
+ exists as a file is treated as an input file name (usually a C
+-file)\&. By using --ccache-skip you can force an option to not be
++file)\&. By using \-\-ccache-skip you can force an option to not be
+ treated as an input file name and instead be passed along to the
+ compiler as a command line option\&.
+ .PP 
+@@ -238,7 +238,7 @@
+ .IP "\fBCCACHE_UNIFY\fP" 
+ If you set the environment variable CCACHE_UNIFY
+ then ccache will use the C/C++ unifier when hashing the pre-processor
+-output if -g is not used in the compile\&. The unifier is slower than a
++output if \-g is not used in the compile\&. The unifier is slower than a
+ normal hash, so setting this environment variable loses a little bit
+ of speed, but it means that ccache can take advantage of not
+ recompiling when the changes to the source code consist of
+@@ -262,7 +262,7 @@
+ .PP 
+ By default ccache has a one gigabyte limit on the cache size and no
+ maximum number of files\&. You can set a different limit using the
+-"ccache -M" and "ccache -F" options, which set the size and number of
++"ccache \-M" and "ccache \-F" options, which set the size and number of
+ files limits\&.
+ .PP 
+ When these limits are reached ccache will reduce the cache to 20%
+@@ -276,7 +276,7 @@
+ that it is the same code by forming a hash of:
+ .PP 
+ .IP o 
+-the pre-processor output from running the compiler with -E
++the pre-processor output from running the compiler with \-E
+ .IP o 
+ the command line options
+ .IP o 
+@@ -331,7 +331,7 @@
+ .IP o 
+ Make sure that the setgid bit is set on all directories in the
+ cache\&. This tells the filesystem to inherit group ownership for new
+-directories\&. The command "chmod g+s `find $CCACHE_DIR -type d`" might
++directories\&. The command "chmod g+s `find $CCACHE_DIR \-type d`" might
+ be useful for this\&.
+ .PP 
+ .SH "HISTORY" 

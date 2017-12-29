@@ -1,0 +1,136 @@
+#######################################################################
+# Makefile for javascript test-suite
+#######################################################################
+
+LANGUAGE     = javascript
+NODEGYP = @NODEGYP@
+NODEJS = @NODEJS@
+SCRIPTSUFFIX = _runme.js
+OBJEXT = @OBJEXT@
+SO = @SO@
+
+srcdir       = @srcdir@
+top_srcdir   = @top_srcdir@
+top_builddir = @top_builddir@
+
+SWIGEXE   = $(top_builddir)/swig
+SWIG_LIB_DIR = $(top_srcdir)/Lib
+
+ifneq (, $(ENGINE))
+	JSENGINE=$(ENGINE)
+else
+	JSENGINE=node
+endif
+
+ifneq (, $(V8_VERSION))
+    JSV8_VERSION=$(V8_VERSION)
+else
+    JSV8_VERSION=0x031110
+endif
+
+include $(srcdir)/../common.mk
+
+SWIGOPT += -DV8_VERSION=$(JSV8_VERSION)
+
+_setup = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then	  \
+	  echo "$(ACTION)ing $(LANGUAGE) ($(JSENGINE)) testcase $* (with run test)" ; \
+	else								  \
+	  echo "$(ACTION)ing $(LANGUAGE) ($(JSENGINE)) testcase $*" ;     \
+	fi;
+
+ifeq (node,$(JSENGINE))
+
+  SWIGOPT += -v8 -DBUILDING_NODE_EXTENSION=1
+
+  # shut up some warnings
+  # contract macro has an empty 'else' at the end...
+  aggregate.cpptest: GYP_CFLAGS = \"-Wno-empty-body\"
+  contract.cpptest: GYP_CFLAGS = \"-Wno-empty-body\"
+
+  # dunno... ignoring generously
+  apply_signed_char.cpptest: GYP_CFLAGS = \"-Wno-ignored-qualifiers\"
+  constant_pointers.cpptest: GYP_CFLAGS = \"-Wno-ignored-qualifiers\"
+  enum_thorough.cpptest: GYP_CFLAGS = \"-Wno-ignored-qualifiers\"
+
+	setup_node = \
+		test -d $* || mkdir $* && \
+		sed -e 's|$$testcase|$*|g; s|$$cflags|$(GYP_CFLAGS)|g; s|$$srcdir|$(srcdir)|g' \
+			$(srcdir)/node_template/binding.gyp.in > $*/binding.gyp && \
+		sed -e 's|$$testcase|$*|g;' \
+			$(srcdir)/node_template/index.js.in > $*/index.js
+
+	# Note: we need to use swig in C parse mode, but make node-gyp believe it is c++ (via file extension)
+	swig_and_compile_c = \
+		$(setup_node) && \
+		$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' \
+		SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+		SWIGOPT='-javascript $(SWIGOPT) -o $*_wrap.cxx $(srcdir)/../$*.i' swiginvoke && \
+		$(COMPILETOOL) $(NODEGYP) --loglevel=silent --directory $* configure build 1>>/dev/null
+
+	swig_and_compile_cpp = \
+		$(setup_node) && \
+		$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' \
+		SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+		SWIGOPT='-c++ -javascript $(SWIGOPT) $(srcdir)/../$*.i' swiginvoke && \
+		$(COMPILETOOL) $(NODEGYP) --loglevel=silent --directory $* configure build 1>>/dev/null
+
+	run_testcase = \
+		if [ -f $(srcdir)/$*$(SCRIPTSUFFIX) ]; then \
+			env NODE_PATH=$$PWD:$(srcdir) $(RUNTOOL) $(NODEJS) $(srcdir)/$*$(SCRIPTSUFFIX); \
+		fi
+
+
+  %.ctest:
+		$(_setup)
+		$(swig_and_compile_c)
+		$(run_testcase)
+
+  %.cpptest:
+		$(_setup)
+		$(swig_and_compile_cpp)
+		$(run_testcase)
+
+  %.multicpptest:
+		$(_setup)
+
+else
+
+  SWIGOPT += -$(JSENGINE)
+
+	run_testcase = \
+		if [ -f $(srcdir)/$*$(SCRIPTSUFFIX) ]; then \
+		  $(RUNTOOL) $(top_builddir)/Tools/javascript/javascript -$(JSENGINE) $(srcdir)/$*$(SCRIPTSUFFIX); \
+		fi
+
+  %.ctest:
+		$(_setup)
+		+$(swig_and_compile_c)
+		$(run_testcase)
+
+  %.cpptest:
+		$(_setup)
+		+$(swig_and_compile_cpp)
+		$(run_testcase)
+
+  %.multicpptest:
+		$(_setup)
+		+$(swig_and_compile_multi_cpp)
+		$(run_testcase)
+
+endif
+
+
+%.clean:
+	@rm -rf $*
+	@rm -f $*_wrap.* $*$(SO) $*.$(OBJEXT)
+
+clean:
+	for ext in _wrap.cxx _wrap.$(OBJEXT) $(SO); do \
+		rm -f clientdata_prop_a$${ext} clientdata_prop_b$${ext}; \
+		rm -f imports_a$${ext} imports_b$${ext}; \
+		rm -f import_stl_a$${ext} import_stl_b$${ext}; \
+		rm -f mod_a$${ext} mod_b$${ext}; \
+		rm -f multi_import_a$${ext} multi_import_b$${ext}; \
+		rm -f packageoption_a$${ext} packageoption_b$${ext} packageoption_c$${ext}; \
+	done

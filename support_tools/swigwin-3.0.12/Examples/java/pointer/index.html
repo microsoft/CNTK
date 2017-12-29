@@ -1,0 +1,165 @@
+<html>
+<head>
+<title>SWIG:Examples:java:pointer</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+<tt>SWIG/Examples/java/pointer/</tt>
+<hr>
+
+<H2>Simple Pointer Handling</H2>
+
+<p>
+This example illustrates a couple of techniques for handling
+simple pointers in SWIG.  The prototypical example is a C function
+that operates on pointers such as this:
+
+<blockquote>
+<pre>
+void add(int *x, int *y, int *r) { 
+    *r = *x + *y;
+}
+</pre>
+</blockquote>
+
+By default, SWIG wraps this function exactly as specified and creates
+an interface that expects pointer objects for arguments.  
+SWIG wraps a C pointer with a type wrapper class, for example, SWIGTYPE_p_int for an int*.
+The only problem is how does one go about creating these objects from a Java program?
+<p>
+
+
+<h2>Possible Solutions</h2>
+
+<ul>
+<li>Write some helper functions to explicitly create objects.  For
+example:
+
+<blockquote>
+<pre>
+int *new_int(int ivalue) {
+  int *i = (int *) malloc(sizeof(ivalue));
+  *i = ivalue;
+  return i;
+}
+int get_int(int *i) {
+  return *i;
+}
+
+void delete_int(int *i) {
+  free(i);
+}
+</pre>
+</blockquote>
+
+<p>
+<li>The SWIG pointer library provides an easier way. <br> 
+For example, in the interface file 
+you would do this:
+
+<blockquote>
+<pre>
+%include cpointer.i
+%pointer_functions(int, intp);
+</pre>
+</blockquote>
+
+and from Java you would use pointers like this:
+
+<blockquote>
+<pre>
+SWIGTYPE_p_int a = example.new_intp();
+SWIGTYPE_p_int b = example.new_intp();
+SWIGTYPE_p_int c = example.new_intp();
+example.intp_assign(a,37);
+example.intp_assign(b,42);
+
+// Note that getCPtr() has package access by default
+System.out.println("     a =" + Long.toHexString(SWIGTYPE_p_int.getCPtr(a)));
+System.out.println("     b =" + Long.toHexString(SWIGTYPE_p_int.getCPtr(b)));
+System.out.println("     c =" + Long.toHexString(SWIGTYPE_p_int.getCPtr(c)));
+
+// Call the add() function with some pointers
+example.add(a,b,c);
+
+// Now get the result
+int res = example.intp_value(c);
+System.out.println("     37 + 42 =" + res);
+
+// Clean up the pointers
+example.delete_intp(a);
+example.delete_intp(b);
+example.delete_intp(c);
+</pre>
+</blockquote>
+
+<p>
+<li>Use the SWIG typemap library.  This library allows you to completely
+change the way arguments are processed by SWIG.  For example:
+
+<blockquote>
+<pre>
+%include "typemaps.i"
+void add(int *INPUT, int *INPUT, int *OUTPUT);
+</pre>
+</blockquote>
+
+And in a Java program:
+
+<blockquote>
+<pre>
+int[] r = {0};
+example.sub(37,42,r);
+System.out.println("Result =" + r[0]);
+</pre>
+</blockquote>
+Needless to say, this is substantially easier although a bit unusual.
+
+<p>
+<li>A final alternative is to use the typemaps library in combination
+with the %apply directive.  This allows you to change the names of parameters
+that behave as input or output parameters. For example:
+
+<blockquote>
+<pre>
+%include "typemaps.i"
+%apply int *INPUT {int *x, int *y};
+%apply int *OUTPUT {int *r};
+
+void add(int *x, int *y, int *r);
+void sub(int *x, int *y, int *r);
+void mul(int *x, int *y, int *r);
+... etc ...
+</pre>
+</blockquote>
+
+</ul>
+
+<h2>Example</h2>
+
+The following example illustrates the use of these features for pointer
+extraction.
+
+<ul>
+<li> <a href="example.c">example.c</a>  (C Source)
+<li> <a href="example.i">example.i</a>  (SWIG interface)
+<li> <a href="runme.java">runme.java</a>  (Java program)
+</ul>
+
+<h2>Notes</h2>
+
+<ul>
+<li>Since pointers are used for so many different things (arrays, output values,
+etc...) the complexity of pointer handling can be as complicated as you want to
+make it.
+
+<p>
+<li>More documentation on the typemaps.i and cpointer.i library files can be
+found in the SWIG user manual.  The files also contain documentation.
+
+</ul>
+
+<hr>
+</body>
+</html>

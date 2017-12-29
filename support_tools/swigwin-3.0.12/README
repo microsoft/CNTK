@@ -1,0 +1,143 @@
+SWIG (Simplified Wrapper and Interface Generator)
+
+Version: 3.0.12 (27 Jan 2017)
+
+Tagline: SWIG is a compiler that integrates C and C++ with languages
+         including Perl, Python, Tcl, Ruby, PHP, Java, C#, D, Go, Lua,
+         Octave, R, Scheme (Guile, MzScheme/Racket, CHICKEN), Scilab,
+         Ocaml, Modula-3, Common Lisp (CLISP, Allegro CL, CFFI, UFFI)
+         and Pike. SWIG can also export its parse tree into XML and
+         Lisp s-expressions.
+
+SWIG reads annotated C/C++ header files and creates wrapper code (glue
+code) in order to make the corresponding C/C++ libraries available to
+the listed languages, or to extend C/C++ programs with a scripting
+language.
+
+Up-to-date SWIG related information can be found at
+
+        http://www.swig.org
+
+A SWIG FAQ and other hints can be found on the SWIG Wiki:
+
+        https://github.com/swig/swig/wiki
+
+License
+=======
+Please see the LICENSE file for details of the SWIG license. For
+further insight into the license including the license of SWIG's
+output code, please visit
+
+        http://www.swig.org/legal.html
+
+Release Notes
+=============
+Please see the CHANGES.current file for a detailed list of bug fixes and
+new features for the current release. The CHANGES file contains bug fixes
+and new features for older versions. A summary of changes in each release
+can be found in the RELEASENOTES file.
+
+Documentation
+=============
+The Doc/Manual directory contains the most recent set of updated
+documentation for this release. The documentation is available in
+three different formats, each of which contains identical content.
+These format are, pdf (Doc/Manual/SWIGDocumentation.pdf), single
+page html (Doc/Manual/SWIGDocumentation.html) or multiple page html
+(other files in Doc/Manual). Please select your chosen format and
+copy/install to wherever takes your fancy.
+
+There is some technical developer documentation available in the
+Doc/Devel subdirectory.  This is not necessarily up-to-date, but it
+has some information on SWIG internals.
+
+Documentation is also online at http://www.swig.org/doc.html.
+
+Backwards Compatibility
+=======================
+The developers strive their best to preserve backwards compatibility
+between releases, but this is not always possible as the overriding
+aim is to provide the best wrapping experience. Where backwards
+compatibility is known to be broken, it is clearly marked as an
+incompatibility in the CHANGES and CHANGES.current files.
+
+See the documentation for details of the SWIG_VERSION preprocessor
+symbol if you have backward compatibility issues and need to use more
+than one version of SWIG.
+
+Installation
+============
+Please read the Doc/Manual/Preface.html#Preface_installation for
+full installation instructions for Windows, Unix and Mac OS X
+using the release tarball/zip file. The INSTALL file has generic
+build and installation instructions for Unix users.
+Users wishing to build and install code from Github should
+visit http://swig.org/svn.html to obtain the more detailed
+instructions required for building code obtained from Github - extra
+steps are required compared to building from the release tarball.
+
+Testing
+=======
+The typical 'make -k check' can be performed on Unix operating systems.
+Please read Doc/Manual/Preface.html#Preface_testing for details.
+
+Examples
+========
+The Examples directory contains a variety of examples of using SWIG
+and it has some browsable documentation.  Simply point your browser to
+the file "Example/index.html".
+
+The Examples directory also includes Visual C++ project 6 (.dsp) files for
+building some of the examples on Windows. Later versions of Visual Studio
+will convert these old style project files into a current solution file.
+
+Known Issues
+============
+There are minor known bugs, details of which are in the bug tracker, see
+http://www.swig.org/bugs.html.
+
+Troubleshooting
+===============
+In order to operate correctly, SWIG relies upon a set of library
+files.  If after building SWIG, you get error messages like this,
+
+    $ swig foo.i
+    :1. Unable to find 'swig.swg'
+    :3. Unable to find 'tcl8.swg'
+
+it means that SWIG has either been incorrectly configured or
+installed.  To fix this:
+
+    1.  Make sure you remembered to do a 'make install' and that
+        the installation actually worked.  Make sure you have
+        write permission on the install directory.
+
+    2.  If that doesn't work, type 'swig -swiglib' to find out
+        where SWIG thinks its library is located.
+
+    3.  If the location is not where you expect, perhaps
+        you supplied a bad option to configure.  Use
+        ./configure --prefix=pathname to set the SWIG install
+        location.   Also, make sure you don't include a shell
+        escape character such as ~ when you specify the path.
+
+    4.  The SWIG library can be changed by setting the SWIG_LIB
+        environment variable.  However, you really shouldn't
+        have to do this.
+
+If you are having other troubles, you might look at the SWIG Wiki at
+https://github.com/swig/swig/wiki.
+
+Participate!
+============
+Please report any errors and submit patches (if possible)!  We only
+have access to a limited variety of hardware (Linux, Solaris, OS-X,
+and Windows). All contributions help.
+
+If you would like to join the SWIG development team or contribute a
+language module to the distribution, please contact the swig-devel
+mailing list, details at http://www.swig.org/mail.html.
+
+
+ -- The SWIG Maintainers
+

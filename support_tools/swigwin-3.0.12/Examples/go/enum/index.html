@@ -1,0 +1,42 @@
+<html>
+<head>
+<title>SWIG:Examples:go:enum</title>
+</head>
+
+<body bgcolor="#ffffff">
+
+
+<tt>SWIG/Examples/go/enum/</tt>
+<hr>
+
+<H2>Wrapping enumerations</H2>
+
+<p>
+This example tests SWIG's ability to wrap enumerations.
+<ul>
+<li>
+Enum values are expressed as constants or variables in GO.
+<li>
+If the enum is named, then that name, capitalized, as defined as a new
+type name for <tt>int</tt>.  All the enum values will be defined to
+have that type.
+<li>
+If the enum is declared at global level, then the name in Go is simply
+the enum value, capitalized.
+<li>
+If the enum is declared within a C++ class or struct, then the name in
+Go is the capitalized name of the class or struct followed by the
+capitalized name of the enum value.
+<li>
+</ul>
+
+<p>
+<ul>
+<li><a href="example.h">example.h</a>.  Header file containing some enums.
+<li><a href="example.i">example.i</a>.  Interface file.
+<li><a href="runme.go">runme.go</a>. Sample Go program.
+</ul>
+
+<hr>
+</body>
+</html>

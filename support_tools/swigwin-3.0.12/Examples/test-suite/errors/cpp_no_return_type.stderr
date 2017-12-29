@@ -1,0 +1,2 @@
+cpp_no_return_type.i:6: Warning 504: Function S::R() must have a return type. Ignored.
+cpp_no_return_type.i:10: Warning 504: Function U::UU() must have a return type. Ignored.

@@ -1,0 +1,6 @@
+c_redefine.i:4: Warning 302: Identifier 'foo' redefined (ignored),
+c_redefine.i:3: Warning 302: previous definition of 'foo'.
+c_redefine.i:8: Warning 302: Identifier 'bar' redefined (ignored),
+c_redefine.i:6: Warning 302: previous definition of 'bar'.
+c_redefine.i:14: Warning 322: Redundant redeclaration of 'bar' (Renamed from 'spam'),
+c_redefine.i:6: Warning 322: previous declaration of 'bar'.

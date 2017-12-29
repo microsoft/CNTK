@@ -1,0 +1,2 @@
+c_class.i:3: Warning 301: class keyword used, but not in C++ mode.
+c_class.i:3: Warning 314: 'class' is a python keyword, renaming to '_class'

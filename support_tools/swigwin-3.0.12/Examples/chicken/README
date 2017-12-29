@@ -1,0 +1,12 @@
+This directory contains examples for CHICKEN.
+
+class       -- illustrates the proxy class C++ interface
+constants   -- handling #define and %constant literals
+egg         -- examples of building chicken extension libraries
+multimap    -- typemaps with multiple sub-types
+overload    -- C++ function overloading
+simple      -- the simple example from the user manual
+zlib        -- a wrapping of the zlib compression library
+
+You should be able to run make in each of the examples.  By default, a shared
+library will be built.  Run make check to execute the test.

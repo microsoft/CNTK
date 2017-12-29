@@ -1,0 +1,8 @@
+cpp_template_friend.i:4: Warning 302: Identifier 'template_friend1' redefined (ignored),
+cpp_template_friend.i:3: Warning 302: previous definition of 'template_friend1'.
+cpp_template_friend.i:13: Warning 302: Identifier 'template_friend2' redefined (ignored),
+cpp_template_friend.i:9: Warning 302: previous definition of 'template_friend2'.
+cpp_template_friend.i:17: Warning 322: Redundant redeclaration of 'normal_friend1',
+cpp_template_friend.i:16: Warning 322: previous declaration of 'normal_friend1'.
+cpp_template_friend.i:26: Warning 322: Redundant redeclaration of 'normal_friend2',
+cpp_template_friend.i:22: Warning 322: previous declaration of 'normal_friend2'.

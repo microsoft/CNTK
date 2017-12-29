@@ -1,0 +1,59 @@
+Installing ccache
+-----------------
+
+The recommended way to use this with Debian is to either create "cc"
+and "gcc" symlinks to /usr/bin/ccache in your private bin directory
+(which must be before the real cc and gcc in your path), or use
+CC="ccache gcc" on the make command line.
+
+Another option is to just prepend /usr/lib/ccache in your PATH
+environment variable, like
+
+  export PATH="/usr/lib/ccache:$PATH"
+
+Note that ccache works with both native and cross compilers.
+
+Ignoring whitespace
+-------------------
+
+If you wish to set up ccache so that it ignores blank lines, have a
+look at the CCACHE_UNIFY option.  However, please note that this
+option is off by default since the reported line numbers may not
+match the source files anymore.
+
+
+NFS Issues
+----------
+
+(from John Coiner <john.coiner@amd.com> on the ccache mailing list)
+
+When CCache creates a hardlinked output file, it calls utime() to update
+the timestamp on the object, so that Make realizes that the object has
+changed.
+
+On NFS, utime() has no coherency guarantee, AFAIK. When utime() runs on
+host A, and our parallel implementation of Make is running on host B,
+sometimes Make doesn't see the new timestamp soon enough -- and neglects
+to relink the final binary. That's a one-way ticket to Silent Mysterious
+Failure Town.
+
+Instead of relying on the object file timestamp, we create a dummy file
+with a reliable timestamp:
+
+objs/foo.o objs/foo.o.built :
+        if ( ccache gcc -o foo.o -c foo.c ) ; \
+        then touch objs/foo.o.built ; \
+        else exit 1; \
+        fi
+
+binary : objs/foo.o.built
+        gcc -o binary objs/foo.o
+
+NFS does make a coherency guarantee, that if a file is written and
+close()d on host A, and subsequently open()ed on host B, that the second
+open() will reflect all modifications and attributes from the close().
+Since Make does open() when checking timestamps, and the dummy file is
+close()d when it's created, the binary will always relink after the
+object is recompiled.
+
+ -- Francois Marier <francois@debian.org>  Sun, 20 May 2007 17:35:36 +1200

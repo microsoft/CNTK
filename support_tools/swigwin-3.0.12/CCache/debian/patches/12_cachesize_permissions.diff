@@ -1,0 +1,83 @@
+--- stats.c	(révision 8804)
++++ stats.c	(copie de travail)
+@@ -286,7 +286,7 @@
+ 
+ 
+ /* set the per directory limits */
+-void stats_set_limits(long maxfiles, long maxsize)
++int stats_set_limits(long maxfiles, long maxsize)
+ {
+ 	int dir;
+ 	unsigned counters[STATS_END];
+@@ -298,7 +298,9 @@
+ 		maxsize /= 16;
+ 	}
+ 
+-	create_dir(cache_dir);
++	if (create_dir(cache_dir) != 0) {
++		return 1;
++	}
+ 
+ 	/* set the limits in each directory */
+ 	for (dir=0;dir<=0xF;dir++) {
+@@ -306,7 +308,9 @@
+ 		int fd;
+ 
+ 		x_asprintf(&cdir, "%s/%1x", cache_dir, dir);
+-		create_dir(cdir);
++		if (create_dir(cdir) != 0) {
++			return 1;
++		}
+ 		x_asprintf(&fname, "%s/stats", cdir);
+ 		free(cdir);
+ 
+@@ -326,6 +330,8 @@
+ 		}
+ 		free(fname);
+ 	}
++
++	return 0;
+ }
+ 
+ /* set the per directory sizes */
+--- ccache.c	(révision 8804)
++++ ccache.c	(copie de travail)
+@@ -935,15 +934,23 @@
+ 		case 'F':
+ 			check_cache_dir();
+ 			v = atoi(optarg);
+-			stats_set_limits(v, -1);
+-			printf("Set cache file limit to %u\n", (unsigned)v);
++			if (stats_set_limits(v, -1) == 0) {
++				printf("Set cache file limit to %u\n", (unsigned)v);
++			} else {
++				printf("Could not set cache file limit.\n");
++				exit(1);
++			}
+ 			break;
+ 
+ 		case 'M':
+ 			check_cache_dir();
+ 			v = value_units(optarg);
+-			stats_set_limits(-1, v);
+-			printf("Set cache size limit to %uk\n", (unsigned)v);
++			if (stats_set_limits(-1, v) == 0) {
++				printf("Set cache size limit to %uk\n", (unsigned)v);
++			} else {
++				printf("Could not set cache size limit.\n");
++				exit(1);
++			}
+ 			break;
+ 
+ 		default:
+--- ccache.h	(révision 8804)
++++ ccache.h	(copie de travail)
+@@ -101,7 +101,7 @@
+ void stats_summary(void);
+ void stats_tocache(size_t size);
+ void stats_read(const char *stats_file, unsigned counters[STATS_END]);
+-void stats_set_limits(long maxfiles, long maxsize);
++int stats_set_limits(long maxfiles, long maxsize);
+ size_t value_units(const char *s);
+ void display_size(unsigned v);
+ void stats_set_sizes(const char *dir, size_t num_files, size_t total_size);

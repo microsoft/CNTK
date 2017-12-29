@@ -1,0 +1,2 @@
+cpp_bad_extern.i:5: Warning 313: Unrecognized extern type "INTERCAL".
+cpp_bad_extern.i:7: Warning 313: Unrecognized extern type "INTERCAL".

@@ -1,0 +1,6 @@
+swig_typemap_old.i:6: Warning 450: Deprecated typemap feature ($source/$target).
+swig_typemap_old.i:6: Warning 450: The use of $source and $target in a typemap declaration is deprecated.
+For typemaps related to argument input (in,ignore,default,arginit,check), replace
+$source by $input and $target by $1.   For typemaps related to return values (out,
+argout,ret,except), replace $source by $1 and $target by $result.  See the file
+Doc/Manual/Typemaps.html for complete details.

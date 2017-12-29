@@ -1,0 +1,2 @@
+cpp_private_inherit.i:6: Warning 309: private inheritance from base 'Foo' (ignored).
+cpp_private_inherit.i:9: Warning 309: protected inheritance from base 'Foo' (ignored).

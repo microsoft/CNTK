@@ -1,0 +1,13 @@
+This example will not compile with Pike versions 7.4.20 unless you first
+patch the Pike sources. The problem is for line 91 of Pike's "stralloc.h"
+(usually installed as /usr/local/pike/7.4.10/include/pike/stralloc.h). That
+line reads:
+
+    tmp.ptr=ptr;
+
+but should be patched to read:
+
+    tmp.ptr=(p_wchar0 *) ptr;
+
+This bug has been reported to the Pike developers.
+

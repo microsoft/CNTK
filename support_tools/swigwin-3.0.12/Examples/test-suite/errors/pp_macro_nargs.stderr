@@ -1,0 +1,4 @@
+pp_macro_nargs.i:7: Error: Macro 'foo' expects 2 arguments
+pp_macro_nargs.i:8: Error: Macro 'foo' expects 2 arguments
+pp_macro_nargs.i:10: Error: Macro 'bar' expects 1 argument
+pp_macro_nargs.i:11: Error: Macro 'spam' expects no arguments
