@@ -1,6 +1,6 @@
 precision = "float"
 deviceId = $DeviceId$
-command = dptPre1:addLayer2:dptPre2:addLayer3:speechTrain:replaceCriterionNode:sequenceTrain
+command = dptPre1:addLayer2:dptPre2:addLayer3:speechTrain:sequenceTrain
 
 ndlMacros = "$ConfigDir$/macros.txt"
 
