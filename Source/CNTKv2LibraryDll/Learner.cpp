@@ -146,6 +146,7 @@ namespace CNTK
     void LearnerBase::PreProcess(const NDArrayViewPtr& parameterValue, const NDArrayViewPtr& gradientValue, size_t actualMBSize) const
     {
         const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
+        auto weightDecayFactor = GetCurrentTrainingParameterValue(m_additionalOptions.weightDecay) * LearningRate(actualMBSize);
 
         // get mean gradient if needed
         if (IsCompatibleMode())
@@ -161,8 +162,17 @@ namespace CNTK
         {
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             const auto weight = m_additionalOptions.l2RegularizationWeight * (IsCompatibleMode() ? 1 : actualMBSize);
-            const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>();
+            const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>(); // Does this need to be a writable matrix?
             Matrix<ElementType>::ScaleAndAdd(ElementType(weight), *parameterMatrix, *gradientMatrix);
+        }
+        // Weight decay before update to avoid using parameters adjusted by update when calculating decay.
+        if (weightDecayFactor > 0)
+        {
+            const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>();
+            if (!IsCompatibleMode(m_additionalOptions.weightDecay)) // Adjust if weight decay has a reference minibatch size
+                weightDecayFactor *= static_cast<double>(m_additionalOptions.weightDecay.GetMinibatchSize()) / static_cast<double>(actualMBSize);
+            weightDecayFactor *= IsCompatibleMode() ? 1 : actualMBSize; // Scale by MB Size if provided learning rate is per sample
+            *parameterMatrix *= ElementType(1 - weightDecayFactor);
         }
     }
 
@@ -191,7 +201,7 @@ namespace CNTK
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             // don't need to scale to actualMBSize if we are already taking averaged gradient
             const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * (IsCompatibleMode() ? 1 : actualMBSize);
-            parameterValue->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(ElementType(weight));
+            parameterMatrix->InplaceSoftThreshold(ElementType(weight));
         }
     }
 

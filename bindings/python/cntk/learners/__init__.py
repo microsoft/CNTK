@@ -92,6 +92,16 @@ def _verify_momentum_type(momentum):
                          % type(momentum))
 
 
+def _verify_weight_decay_type(weight_decay):
+    if not isinstance(weight_decay,
+                      cntk_py.training_double_parameter_schedule):
+
+        raise ValueError('weight decay type (%s) not supported. '
+                         'weight_decay must be a training schedule '
+                         '(output of weight_decay_schedule())'
+                         % type(momentum))
+
+
 class Learner(cntk_py.Learner):
 
     '''
@@ -468,6 +478,47 @@ def momentum_schedule_per_sample(momentum, epoch_size=None):
 
 
 @typemap
+def weight_decay_schedule(weight_decay, epoch_size=None, minibatch_size=None):
+    '''
+    Create a weight decay schedule (using the same semantics as
+    :func:`learning_parameter_schedule`) which applies the momentum 
+    decay every N samples where N is specified by the argument `minibatch_size`.
+
+    Args:
+        weight_decay (float or list): see parameter ``schedule`` in
+         :func:`lerning_parameter_schedule`.
+        epoch_size (int): see parameter ``epoch_size`` in
+         :func:`learning_parameter_schedule`.
+        minibatch_size (int): an integer to specify the reference minibatch size; 
+          CNTK will scale the momentum internally so as to simulate the momentum decay of the specified minibatch 
+          size while the actual minibatch sizes of the fed data can vary. In this way, momentum values can be provided 
+          in a minibatch-size agnostic way (equal decay per sample). If minibatch_size is `None` (default), the momentum
+          is applied to the whole minibatch regardless of the actual minibatch sizes (not in a minibatch-size agnostic way).
+
+    Examples:
+        >>> # Use a fixed weight_decay of 0.01 for all samples
+        >>> wd = weight_decay_schedule(0.01)
+
+        >>> # Use a weight decay factor of 0.1 for the first 1000 samples,
+        >>> # then 0.01 for the remaining ones
+        >>> wd = weight_decay_schedule([0.1, 0.01], 1000)
+        >>> wd[0], wd[999], wd[1000], wd[1001]
+        (0.1, 0.1, 0.01, 0.01)
+
+        >>> # Use a weight decay value of 0.09 for the first 999 samples,
+        >>> # then 0.08 for the next 888 samples, and 0.07 for the
+        >>> # the remaining ones
+        >>> wd = weight_decay_schedule([(999,0.09),(888,0.08),(0, 0.07)])
+        >>> m[0], m[998], m[999], m[999+888-1], m[999+888]
+        (0.09, 0.09, 0.08, 0.08, 0.07)
+
+    Returns:
+        weight decay schedule
+    '''
+    return learning_parameter_schedule(weight_decay, minibatch_size, epoch_size)
+
+
+@typemap
 def momentum_as_time_constant_schedule(momentum, epoch_size=None):
     '''
     Create a momentum schedule in a minibatch-size agnostic way
@@ -595,8 +646,8 @@ def sgd(parameters, lr,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True, use_mean_gradient=None,
-        minibatch_size=None, epoch_size=None):
-    '''sgd(parameters, lr, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+        minibatch_size=None, epoch_size=None, weight_decay=0.0):
+    '''sgd(parameters, lr, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, usemean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an SGD learner instance to learn the parameters. See [1] for more
     information on how to set the parameters.
 
@@ -627,6 +678,8 @@ def sgd(parameters, lr,
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
+        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
 
     Returns:
@@ -649,6 +702,7 @@ def sgd(parameters, lr,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.weight_decay = weight_decay_schedule(weight_decay)
     if minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner._MINIBATCH_SIZE] = cntk_py.SizeTWrapper(minibatch_size) #need this to make proper typed DictionaryValue
 
@@ -662,8 +716,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
                  l1_regularization_weight=0.0, l2_regularization_weight=0.0,
                  gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
                  gradient_clipping_with_truncation=True, use_mean_gradient=None,
-                 minibatch_size=None, epoch_size=None):
-    '''momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0.0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+                 minibatch_size=None, epoch_size=None, weight_decay=0.0):
+    '''momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0.0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates a Momentum SGD learner instance to learn the parameters.
 
     Args:
@@ -696,6 +750,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate and momentum. See also:  :func:`learning_parameter_schedule`
+        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -714,6 +770,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.weight_decay = weight_decay_schedule(weight_decay)
     if minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner._MINIBATCH_SIZE] = cntk_py.SizeTWrapper(minibatch_size) #need this to make proper typed DictionaryValue
 
@@ -729,7 +786,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
              gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
              gradient_clipping_with_truncation=True, use_mean_gradient=None,
              minibatch_size=None, epoch_size=None):
-    '''nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates a Nesterov SGD learner instance to learn the parameters. This was
     originally proposed by Nesterov [1] in 1983 and then shown to work well in
     a deep learning context by Sutskever, et al. [2].
@@ -764,6 +821,8 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate and momentum. See also:  :func:`learning_parameter_schedule`
+        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -791,6 +850,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.weight_decay = weight_decay_schedule(weight_decay)
     if minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner._MINIBATCH_SIZE] = cntk_py.SizeTWrapper(minibatch_size) #need this to make proper typed DictionaryValue
 
@@ -805,7 +865,7 @@ def adadelta(parameters, lr=learning_parameter_schedule_per_sample(1), rho=0.95,
              gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
              gradient_clipping_with_truncation=True, use_mean_gradient=None,
              minibatch_size=None, epoch_size=None):
-    '''adadelta(parameters, lr, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''adadelta(parameters, lr, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an AdaDelta learner instance to learn the parameters. See [1] for
     more information.
 
@@ -837,6 +897,8 @@ def adadelta(parameters, lr=learning_parameter_schedule_per_sample(1), rho=0.95,
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
+        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -858,6 +920,7 @@ def adadelta(parameters, lr=learning_parameter_schedule_per_sample(1), rho=0.95,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
     minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(minibatch_size, use_mean_gradient)
+    additional_options.weight_decay = weight_decay_schedule(weight_decay)
     if minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner._MINIBATCH_SIZE] = cntk_py.SizeTWrapper(minibatch_size) #need this to make proper typed DictionaryValue
 
@@ -873,7 +936,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
             gradient_clipping_with_truncation=True, use_mean_gradient=None,
             minibatch_size=None, epoch_size=None):
-    '''adagrad(parameters, lr, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''adagrad(parameters, lr, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an AdaGrad learner instance to learn the parameters. See [1] for
     more information.
 
@@ -904,6 +967,8 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
+        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -926,6 +991,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.weight_decay = weight_decay_schedule(weight_decay)
     minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(minibatch_size, use_mean_gradient)
     if minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner._MINIBATCH_SIZE] = cntk_py.SizeTWrapper(minibatch_size) #need this to make proper typed DictionaryValue
@@ -943,7 +1009,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
               gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
               gradient_clipping_with_truncation=True, use_mean_gradient=None,
               minibatch_size=None, epoch_size=None):
-    '''fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_schedule_per_sample(0.9999986111120757), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_schedule_per_sample(0.9999986111120757), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an FSAdaGrad learner instance to learn the parameters.
 
     Args:
@@ -978,6 +1044,8 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate, momentum and variance_momentum. See also:  :func:`learning_parameter_schedule`
+        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -1000,6 +1068,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.weight_decay = weight_decay_schedule(weight_decay)
     minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(minibatch_size, use_mean_gradient)
     if minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner._MINIBATCH_SIZE] = cntk_py.SizeTWrapper(minibatch_size) #need this to make proper typed DictionaryValue
@@ -1017,7 +1086,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
          gradient_clipping_with_truncation=True, use_mean_gradient=None, epsilon=1e-8, adamax=False,
          minibatch_size=None, epoch_size=None):
-    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_schedule_per_sample(0.9999986111120757), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8, adamax=False)
+    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_schedule_per_sample(0.9999986111120757), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8, adamax=False, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
 
@@ -1057,6 +1126,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate, momentum and variance_momentum. See also:  :func:`learning_parameter_schedule`
+        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -1083,6 +1154,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.weight_decay = weight_decay_schedule(weight_decay)
     if minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner._MINIBATCH_SIZE] = cntk_py.SizeTWrapper(minibatch_size) #need this to make proper typed DictionaryValue
 
@@ -1100,7 +1172,7 @@ def rmsprop(parameters, lr,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
             gradient_clipping_with_truncation=True, use_mean_gradient=None,
             minibatch_size=None, epoch_size=None):
-    '''rmsprop(parameters, lr, gamma, inc, dec, max, min, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''rmsprop(parameters, lr, gamma, inc, dec, max, min, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an RMSProp learner instance to learn the parameters.
 
     Args:
@@ -1135,6 +1207,8 @@ def rmsprop(parameters, lr,
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
+        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
         :class:`~cntk.learners.Learner`: learner instance that can be passed to
@@ -1152,6 +1226,7 @@ def rmsprop(parameters, lr,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.weight_decay = weight_decay_schedule(weight_decay)
     minibatch_size = _infer_ref_minibatch_size_from_legacy_use_mean_gradient(minibatch_size, use_mean_gradient)
     if minibatch_size is not None:
         additional_options.dict_options[cntk_py.Learner._MINIBATCH_SIZE] = cntk_py.SizeTWrapper(minibatch_size) #need this to make proper typed DictionaryValue
