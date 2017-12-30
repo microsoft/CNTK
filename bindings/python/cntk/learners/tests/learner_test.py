@@ -456,6 +456,13 @@ def test_learner_update():
     assert learner.learning_rate() == 0.3
     x = learner.update({w: np.asarray([[2.]], dtype=np.float32)}, 100)
     assert learner.learning_rate() == 0.4
+    
+    # Test weight decay
+    w = parameter(shape=(1,), init=w_init)
+    res = i * w
+    learner = sgd(res.parameters, lr=C.learning_parameter_schedule(0.1, minibatch_size = 1, epoch_size=1), weight_decay=0.1)
+    x = learner.update({w: np.asarray([[0.]], dtype=np.float32)}, 100)
+    assert w.value < w_init  # Weight should decay despite gradient being 0
 
 
 def test_noise_injection_with_checkpointing():
