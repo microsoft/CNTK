@@ -391,7 +391,7 @@ public:
         fprintf(stderr, "finalscore:%f\n", finalscore);
         if (finalscore > 50 || finalscore < 0)
         {
-            fprintf(stderr, "framenum:%u\n", uttFrameNum[0]);
+            fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[0]));
             matrixPhoneSeqs.Print("phone seq");
             matrixPhoneBounds.Print("phone bound");
         }
