@@ -9,6 +9,14 @@
 #include "ConfigHelper.h"
 #include "Basics.h"
 #include "MLFUtils.h"
+#include <stdio.h>  /* defines FILENAME_MAX */
+#ifdef __WINDOWS__
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
 
 namespace CNTK {
 
@@ -185,6 +193,14 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
 {
     std::string latticeIndexPath = config.GetLatticeIndexFilePath();
 
+    char cCurrentPath[FILENAME_MAX];
+
+    GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
+
+    cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
+
+    fprintf(stderr, "The current working directory is %s", cCurrentPath);
+
     fprintf(stderr, "Reading lattice index file %s ...", latticeIndexPath.c_str());
     ifstream latticeIndexStream(latticeIndexPath.c_str());
     if (!latticeIndexStream)
@@ -203,6 +219,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
         string prevLatticePath;
         while (std::getline(tocFileStream, tocLine))
         {
+            fprintf(stderr, "Reading tocLink %s ...", tocLine.c_str());
             size_t start = tocLine.find("=") + 1;
             size_t end = tocLine.find("[");
             string latticePath = tocLine.substr(start, end - start);
@@ -210,6 +227,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                 if (firstIndex)
                     firstIndex = false;
                 else {
+                    fprintf(stderr, "Recording chunk %s ...", prevLatticePath.c_str());
                     totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching);
                     tocLines.clear();
                 }
@@ -219,7 +237,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                 
             tocLines.push_back(tocLine);
         }
-
+        fprintf(stderr, "Recording chunk %s ...", prevLatticePath.c_str());
         totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching);
     }
     latticeIndexStream.close();
