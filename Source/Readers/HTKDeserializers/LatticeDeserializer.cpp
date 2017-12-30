@@ -203,7 +203,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
 
     fprintf(stderr, "Reading lattice index file %s ...", latticeIndexPath.c_str());
     ifstream latticeIndexStream(latticeIndexPath.c_str());
-    if (!latticeIndexStream)
+    if (!(latticeIndexStream && latticeIndexStream.good()))
         RuntimeError("Failed to open input file: %s", latticeIndexPath.c_str());
 
     bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
