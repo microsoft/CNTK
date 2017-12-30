@@ -386,6 +386,15 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
         CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame,
             uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
+        ElemType finalscore = 0;
+        finalscore += -1 * beta.Get00Element();
+        fprintf(stderr, "finalscore:%f\n", finalscore);
+        if (finalscore > 50 || finalscore < 0)
+        {
+            fprintf(stderr, "framenum:%I64u\n", uttFrameNum[0]);
+            matrixPhoneSeqs.Print("phone seq");
+            matrixPhoneBounds.Print("phone bound");
+        }
         //alpha.Print("alpha");
         //beta.Print("beta");
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
