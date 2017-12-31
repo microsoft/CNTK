@@ -631,8 +631,7 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
             bool reshapeNeededForBroadcastConstant =
                 inputIndex == 1 &&
                 src->Inputs().size() == 2 &&
-                ((src->OpName() == L"Plus") || (src->OpName() == L"Minus") ||
-                (src->OpName() == L"ElementTimes") || (src->OpName() == L"ElementDivide"));
+                Operators::SupportBroadcast(src->OpName());
 
             onnx::TypeProto inputArgType;
 
@@ -844,10 +843,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
                 node->AddAttribute(attributesMap[L"newShape"], ToINTS(shape));
             }
         }
-        else if ((src->OpName() == L"ReduceMax") || (src->OpName() == L"ReduceMin") ||
-            (src->OpName() == L"ReduceSum") || (src->OpName() == L"ReduceMean") ||
-            (src->OpName() == L"ReduceProd") || (src->OpName() == L"ReduceLogSum") ||
-            (src->OpName() == L"Argmax") || (src->OpName() == L"Argmin"))
+        else if ((src->OpName() == L"ReduceL1") || (src->OpName() == L"ReduceL2") || (src->OpName() == L"ReduceSumSquare"))
         {
             auto keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
             std::vector<Axis> reductionAxes;
@@ -950,8 +946,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
                 axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
             node->AddAttribute(attributesMap[L"axis"], (int64_t)ToIndex(axis));
         }
-        else if ((src->OpName() == L"Plus") || (src->OpName() == L"Minus") ||
-            (src->OpName() == L"ElementTimes") || (src->OpName() == L"ElementDivide"))
+        else if (Operators::SupportBroadcast(src->OpName()))
         {
             NDShape broadcastShape;
             bool broadcast = false;
@@ -998,6 +993,19 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
                 axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
 
             node->AddAttribute(attributesMap[L"axis"], (int64_t)ToIndex(axis));
+        }
+        else if (src->OpName() == L"Squeeze")
+        {
+            std::vector<Axis> axes;
+            if (src->Attributes().Contains(L"axisVec"))
+            {
+                axes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
+            }
+            else if (src->Attributes().Contains(L"axis"))
+            {
+                axes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
+            }
+            node->AddAttribute("axes", ToINTS(axes));
         }
     }
     else

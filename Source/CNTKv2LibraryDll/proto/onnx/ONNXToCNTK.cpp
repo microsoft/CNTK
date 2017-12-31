@@ -1156,6 +1156,32 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = ElementDivide(input0, input1, ToWString(node->Name()));
         return cntkFunction;
     }
+    else if (onnxOpName == "And")
+    {
+        Variable input0, input1;
+        std::tie<Variable, Variable>(input0, input1) = BroadcastElementWiseInput(node, inputs[0], inputs[1]);
+        FunctionPtr cntkFunction = ElementAnd(input0, input1, ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Not")
+    {
+        FunctionPtr cntkFunction = ElementNot(inputs[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Or")
+    {
+        Variable input0, input1;
+        std::tie<Variable, Variable>(input0, input1) = BroadcastElementWiseInput(node, inputs[0], inputs[1]);
+        FunctionPtr cntkFunction = ElementOr(input0, input1, ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Xor")
+    {
+        Variable input0, input1;
+        std::tie<Variable, Variable>(input0, input1) = BroadcastElementWiseInput(node, inputs[0], inputs[1]);
+        FunctionPtr cntkFunction = ElementXor(input0, input1, ToWString(node->Name()));
+        return cntkFunction;
+    }
     else if (onnxOpName == "Neg")
     {
         FunctionPtr cntkFunction = Negate(inputs[0], ToWString(node->Name()));
@@ -1297,8 +1323,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Softplus")
     {
-        // CNTK Softplus pre-append a input placehold, so we has to use inputs[1]
-        FunctionPtr cntkFunction = Softplus(inputs[1], ToWString(node->Name()));
+        FunctionPtr cntkFunction = Softplus(inputs[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Softsign")
+    {
+        FunctionPtr cntkFunction = Softsign(inputs[0], ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceMax")
@@ -1341,6 +1371,27 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         std::vector<Axis> axes = GetNamedAttributeAsAxis(node, "axes");
         CheckForAxes(node->Name(), axes, 1);
         FunctionPtr cntkFunction = ReduceLogSum(inputs[0], axes[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "ReduceL1")
+    {
+        std::vector<Axis> axes = GetNamedAttributeAsAxis(node, "axes");
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceL1(inputs[0], axes, keepdims, ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "ReduceL2")
+    {
+        std::vector<Axis> axes = GetNamedAttributeAsAxis(node, "axes");
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceL2(inputs[0], axes, keepdims, ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "ReduceSumSquare")
+    {
+        std::vector<Axis> axes = GetNamedAttributeAsAxis(node, "axes");
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceSumSquare(inputs[0], axes, keepdims, ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ArgMax")
@@ -1482,6 +1533,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         auto blockSize = GetNamedAttributeAsInt64(node, "blocksize", 1);
         return SpaceToDepth(inputs[0], static_cast<size_t>(blockSize), ToWString(node->Name()));
+    }
+    else if (onnxOpName == "Squeeze")
+    {
+        std::vector<Axis> axes = GetNamedAttributeAsAxis(node, "axes"); 
+        return Squeeze(inputs[0], axes, ToWString(node->Name()));
     }
     else
     {

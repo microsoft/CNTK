@@ -3697,6 +3697,26 @@ namespace CNTK
     };
 
     ///
+    /// Create an instance of the CNTK built-in elementwise AND logical operation on the input operands.
+    ///
+    CNTK_API FunctionPtr ElementAnd(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise NOT logical operation on the input operand.
+    ///
+    CNTK_API FunctionPtr ElementNot(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise OR logical operation on the input operands.
+    ///
+    CNTK_API FunctionPtr ElementOr(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise XOR logical operation on the input operands.
+    ///
+    CNTK_API FunctionPtr ElementXor(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise negate operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Negate(const Variable& operand, const std::wstring& name = L"");
@@ -4355,6 +4375,22 @@ namespace CNTK
     /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in L1 norm reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceL1(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in L2 norm reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceL2(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in square sum reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceSumSquare(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
+
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
@@ -4502,6 +4538,11 @@ namespace CNTK
     CNTK_API FunctionPtr Mean(const std::vector<Variable>& operands, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in element-wise sum operation
+    ///
+    CNTK_API FunctionPtr Sum(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+    ///
     /// Creates a new Function instance which is just an alias of the specified operand.
     ///
     CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = L"");
@@ -4565,6 +4606,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise softplus operation
     ///
     CNTK_API FunctionPtr Softplus(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise softsign operation
+    ///
+    CNTK_API FunctionPtr Softsign(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
