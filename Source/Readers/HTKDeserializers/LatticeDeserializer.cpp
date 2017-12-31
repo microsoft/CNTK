@@ -210,6 +210,17 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
     {
         fprintf(stderr, "Processing lattice index line: %s ... \n", tocPath.c_str());
         std::ifstream tocFileStream(tocPath);
+        if (!(tocFileStream && tocFileStream.good())) {
+            fprintf(stderr, "Failed to open input file: %s", tocPath.c_str());
+            string curPath(cCurrentPath);
+            string newPath = curPath + "/" + tocPath;
+            fprintf(stderr, "Trying to open input file: %s", newPath.c_str());
+            std::ifstream newtocFileStream(newPath);
+            if (!(newtocFileStream && newtocFileStream.good())) 
+            {
+                fprintf(stderr, "Failed to open input file: %s", newPath.c_str());
+            }
+        }
         std::string tocLine;
         tocLines.clear();
         bool firstIndex = true;
