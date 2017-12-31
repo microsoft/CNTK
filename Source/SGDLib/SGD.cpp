@@ -315,7 +315,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         auto hmm = node->gethmm();
         LOGPRINTF(stderr, "SGD debug 5.4 \n");
         trainSetDataReader->GetHmmData(hmm);
-        LOGPRINTF(stderr, "SGD debug 5.5 \n");fs
+        LOGPRINTF(stderr, "SGD debug 5.5 \n");
     }
     /* guoye: start */
     LOGPRINTF(stderr, "SGD debug 6 \n");
