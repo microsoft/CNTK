@@ -131,8 +131,6 @@ LatticeDeserializer::LatticeDeserializer(
         LogicError("Lattice deserializer does not support primary mode, it cannot control chunking. "
             "Please specify HTK deserializer as the first deserializer in your config file.");
 
-
-
     m_verbosity = cfg(L"verbosity", 0);
     m_chunkSizeBytes = cfg(L"chunkSizeInBytes", g_64MB);
 
@@ -197,11 +195,9 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
 
     GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
 
-    cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
+    fprintf(stderr, "Current working directory is %s \n", cCurrentPath);
 
-    fprintf(stderr, "The current working directory is %s", cCurrentPath);
-
-    fprintf(stderr, "Reading lattice index file %s ...", latticeIndexPath.c_str());
+    fprintf(stderr, "Reading lattice index file %s ...\n", latticeIndexPath.c_str());
     ifstream latticeIndexStream(latticeIndexPath.c_str());
     if (!(latticeIndexStream && latticeIndexStream.good()))
         RuntimeError("Failed to open input file: %s", latticeIndexPath.c_str());
@@ -212,6 +208,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
     string tocPath;
     while (getline(latticeIndexStream, tocPath))
     {
+        fprintf(stderr, "Processing lattice index line: %s ... \n", tocPath.c_str());
         std::ifstream tocFileStream(tocPath);
         std::string tocLine;
         tocLines.clear();
@@ -219,7 +216,6 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
         string prevLatticePath;
         while (std::getline(tocFileStream, tocLine))
         {
-            fprintf(stderr, "Reading tocLink %s ...", tocLine.c_str());
             size_t start = tocLine.find("=") + 1;
             size_t end = tocLine.find("[");
             string latticePath = tocLine.substr(start, end - start);
@@ -227,7 +223,6 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                 if (firstIndex)
                     firstIndex = false;
                 else {
-                    fprintf(stderr, "Recording chunk %s ...", prevLatticePath.c_str());
                     totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching);
                     tocLines.clear();
                 }
@@ -237,7 +232,6 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                 
             tocLines.push_back(tocLine);
         }
-        fprintf(stderr, "Recording chunk %s ...", prevLatticePath.c_str());
         totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching);
     }
     latticeIndexStream.close();
