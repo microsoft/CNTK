@@ -144,16 +144,21 @@ public:
         fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 2 \n");
         /* guoye: end */
         MemRequestInfo<ElemType> memInfo(deviceId, pMatrixPtr, matrixSize, mbScale, isWorkSpace, m_stepCounter);
+    
         /* guoye: start */
         fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 3,  memInfo.pMatrixPtrs.size() = %d,  memInfoVec.size() = %d, sizeof(meminfo) = %d,  \n", int(memInfo.pMatrixPtrs.size()), int(memInfoVec.size()), int(sizeof(memInfo)));
+        /*
         if (memInfoVec.size() >= 256)
         {
             fprintf(stderr, "\n matrixpool.h:RequestAllocate, debug 3.5,   sizeof(meminfo) is equal or large than 256, do no push \n");
             memInfoVec.resize(memInfoVec.size() + 1, memInfo);            
         }
+        */
         /* guoye: end */
         /* guoye: start */
+        /*
         else
+        */
         {
 
             memInfoVec.push_back(memInfo);
