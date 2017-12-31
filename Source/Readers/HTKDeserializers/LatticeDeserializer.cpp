@@ -195,12 +195,12 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
 
     GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
 
-    fprintf(stderr, "Current working directory is %s \n", cCurrentPath);
+    fprintf(stderr, "Current working directory is '%s' \n", cCurrentPath);
 
-    fprintf(stderr, "Reading lattice index file %s ...\n", latticeIndexPath.c_str());
+    fprintf(stderr, "Reading lattice index file '%s' ...\n", latticeIndexPath.c_str());
     ifstream latticeIndexStream(latticeIndexPath.c_str());
     if (!(latticeIndexStream && latticeIndexStream.good()))
-        RuntimeError("Failed to open input file: %s", latticeIndexPath.c_str());
+        RuntimeError("Failed to open input file: '%s'", latticeIndexPath.c_str());
 
     bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
     size_t totalNumSequences = 0;
@@ -208,18 +208,10 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
     string tocPath;
     while (getline(latticeIndexStream, tocPath))
     {
-        fprintf(stderr, "Processing lattice index line: %s ... \n", tocPath.c_str());
+        tocPath.erase(tocPath.find_last_not_of(" \n\r\t") + 1);
         std::ifstream tocFileStream(tocPath);
         if (!(tocFileStream && tocFileStream.good())) {
             fprintf(stderr, "Failed to open input file: %s", tocPath.c_str());
-            string curPath(cCurrentPath);
-            string newPath = curPath + "/" + tocPath;
-            fprintf(stderr, "Trying to open input file: %s", newPath.c_str());
-            std::ifstream newtocFileStream(newPath);
-            if (!(newtocFileStream && newtocFileStream.good())) 
-            {
-                fprintf(stderr, "Failed to open input file: %s", newPath.c_str());
-            }
         }
         std::string tocLine;
         tocLines.clear();
