@@ -1282,9 +1282,84 @@ namespace CNTK
         }
     }
 
+    FunctionPtr LogSoftmax(const Variable& operand, const std::wstring& name)
+    {
+        return LogSoftmax(operand, Axis(0), name);
+    }
+
+    FunctionPtr LogSoftmax(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        if (!axis.IsStaticAxis() && !axis.IsBatchAxis())
+            LogicError("Softmax: only batch and static axes are supported.");
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+
+        auto operandPlaceholder = PlaceholderVariable();
+
+        auto result = operandPlaceholder - Log(ReduceSum(Exp(operandPlaceholder), axis));
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"LogSoftmax", name);
+    }
+
     FunctionPtr Hardmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
+    }
+
+    FunctionPtr HardSigmoid(const Variable& operand, float alpha, float beta, const std::wstring& name)
+    {
+        // f(x) = max(0,min(alpha*x+beta,1))
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+        additionalProperties[PrimitiveFunction::AttributeNameBeta] = beta;
+
+        auto alphaConstant = Constant::Scalar(operand.GetDataType(), alpha);
+        auto betaConstant = Constant::Scalar(operand.GetDataType(), beta);
+        auto one = Constant::Scalar(operand.GetDataType(), 1.0);
+        auto zero = Constant::Scalar(operand.GetDataType(), 0.0);
+        auto operandPlaceholder = PlaceholderVariable();
+
+        auto result = Plus(ElementTimes(operandPlaceholder, alphaConstant), betaConstant);
+
+        result = ElementSelect(Less(result, one), result, one);
+        result = ElementSelect(Greater(result, zero), result, zero);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"HardSigmoid", name);
+    }
+
+    FunctionPtr TopK(const Variable& operand, size_t k, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis(0);
+        additionalProperties[PrimitiveFunction::AttributeNameNumItems] = k;
+        return UnaryOp(PrimitiveOpType::TopK, operand, std::move(additionalProperties), name);
+    }
+
+
+    FunctionPtr TopK(const Variable& operand, size_t k, const Axis& axis, const std::wstring& name)
+    {
+        if (!axis.IsStaticAxis())
+            LogicError("TopK operation only supports a single static axis.");
+
+        if (axis.StaticAxisIndex() == 0)
+            return TopK(operand, k, name);
+        else
+        {
+            auto additionalProperties = Dictionary();
+            additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+            additionalProperties[PrimitiveFunction::AttributeNameNumItems] = k;
+
+            auto operandPlaceholder = PlaceholderVariable();
+            auto firstAxis = Axis(0);
+            auto swapped = TransposeAxes(operandPlaceholder, firstAxis, axis);
+            auto topkSwapped = TopK(swapped, k, name);
+            auto outputs = topkSwapped->Outputs();
+            auto topkValues = TransposeAxes(outputs[0], firstAxis, axis);
+            auto topkIndices = TransposeAxes(outputs[1], firstAxis, axis);
+            auto result = Combine({ topkValues , topkIndices });
+            return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"TopK", name);
+        }
     }
 
     FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name)
@@ -1488,6 +1563,77 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr Flatten(const Variable& operand, const std::wstring& name)
+    {
+        // sanitize_axis applies Axis(-axis - 1), thus 0 -> -1: which means the last one of operand.Shape().
+        Axis axis(-1);
+        return Flatten(operand, axis, name);
+    }
+
+    FunctionPtr Flatten(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        int cntk_index;
+        int onnx_axis;
+
+        // We need to express in onnx axis system to help ONNX conversion.
+        if (axis.IsStaticAxis())
+        {
+            if (axis.StaticAxisIndex() < 0)
+            {
+                // python shape [2,3,4,5], cntk_py_index = 1 (point at 3). 
+                // in python, sanitize_axis applies Axis(-cntk_py_index - 1) so axis = -2
+                // in cpp shape becomes [5,4,3,2], axis(-2) is still pointing to 3 (from the last)
+                // With ONNX Flatten op, result shall be: [#][[2], [3,4,5]]. thus onnx_axis = cntk_py_index + 1 = 2 (point to 3)
+                // for CNTK reshape, cntk_index shall point to the one after 3 (2): cntk_index = axis + 1
+                // cntk_index (-1) needs to be converted to positive by rank + cntk_index = 3
+                int cntk_py_index = -axis.StaticAxisIndex() - 1;
+                onnx_axis = cntk_py_index + 1;
+                cntk_index = axis.StaticAxisIndex() + 1;
+                cntk_index += operand.Shape().Rank();
+            }
+            else
+            {
+                // in this case shape is the same as in python: [2,3,4,5]
+                // that is: cntk_py_index = 1, points to 3
+                // onnx_axis = 2, points to 3 in [#][[2], [3,4,5]]
+                // cntk_index = 1, points to 3 in [2,3,4,5]
+                int cntk_py_index = axis.StaticAxisIndex();
+                onnx_axis = cntk_py_index + 1;
+                cntk_index = axis.StaticAxisIndex();
+            }
+        }
+        else if (axis.IsBatchAxis())
+        {
+            // expected result: [[batch],[flatten sample]]([[#][2,3,4,5]])
+            cntk_index = 0;
+            onnx_axis = 1;
+        }
+        else
+        {
+            LogicError("Flatten: accept only static and batch axes.");
+        }
+
+        if (cntk_index > operand.Shape().Rank())
+        {
+            LogicError("Flatten: unsupported axis (operand.Shape().Rank() = %d, axis = %s).",
+                (int)operand.Shape().Rank(), ToString(axis.AsString()).c_str());
+        }
+
+        size_t dim0 = cntk_index == 0 ? 1 : operand.Shape().SubShape(0, cntk_index).TotalSize();
+        size_t dim1 = cntk_index == operand.Shape().Rank() ? 1 : operand.Shape().SubShape(cntk_index).TotalSize();
+
+        NDShape newShape({ dim0, dim1 });
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis(onnx_axis);
+
+        auto operandPlaceholder = PlaceholderVariable();
+
+        auto result = Reshape(operandPlaceholder, newShape, name);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"Flatten", name);
+    }
+
     FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
     {
         if (!beginAxis.IsStaticAxis() || !endAxis.IsStaticAxis())
@@ -1499,6 +1645,41 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameEndAxis] = endAxis;
 
         return UnaryOp(PrimitiveOpType::Reshape, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr Squeeze(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Squeeze, operand, {}, name);
+    }
+
+    FunctionPtr Squeeze(const Variable& operand, const std::vector<Axis>& axes, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+        return UnaryOp(PrimitiveOpType::Squeeze, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr ExpandDims(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = Reshape(operandPlaceholder, NDShape({ 1 }), axis, axis);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand }}, L"ExpandDims", name);
+    }
+
+    FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameFillValue] = 0.0;
+
+        return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr OnesLike(const Variable& operand, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameFillValue] = 1.0;
+
+        return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
 
     std::vector<Variable> AutoBroadcastSequence(PrimitiveOpType op, const Variable& left, const Variable& right, bool autoBroadcast)
@@ -1669,7 +1850,7 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
     }
 
-    CNTK_API FunctionPtr NCELoss(const Variable& weights, const Variable& biases, const Variable& inputs, const Variable& labels, const Constant& noiseWeights, size_t numSamples, bool allowDuplicates, unsigned long seed, const std::wstring& name)
+    FunctionPtr NCELoss(const Variable& weights, const Variable& biases, const Variable& inputs, const Variable& labels, const Constant& noiseWeights, size_t numSamples, bool allowDuplicates, unsigned long seed, const std::wstring& name)
     {
         auto inputsPlaceholder = PlaceholderVariable(L"inputs");
         auto labelsPlaceholder = PlaceholderVariable(L"labels");
@@ -1768,6 +1949,56 @@ namespace CNTK
         auto loss = lossOnPositives + lossOnNegatives;
 
         return AsBlock(std::move(loss), { { inputsPlaceholder, inputs }, { labelsPlaceholder, labels} }, L"NCE", name);
+    }
+
+    FunctionPtr DepthToSpace(const Variable& input, size_t blockSize, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameBlockSize] = blockSize;
+
+        auto inputPlaceholder = PlaceholderVariable(L"input");
+
+        if (!input.IsPlaceholder())
+        {
+            NDShape inputShape = input.Shape();
+            if (inputShape.Rank() != 3)
+                LogicError("DepthToSpace: Input operand (shape: %S) must be a 3-dimensional tensor, e.g. a 2D image with channels.", inputShape.AsString().c_str());
+            if (inputShape[2] % (blockSize*blockSize) != 0)
+                LogicError("DepthToSpace: Number of channels in the operand (%zu) must be divisible by (blocksize x blocksize), i.e., (%zu x %zu).", inputShape[2], blockSize, blockSize);
+        }
+
+        FunctionPtr inputView = Reshape(inputPlaceholder, { blockSize, blockSize, NDShape::InferredDimension }, Axis(2), Axis(3));
+        std::vector<Axis> axisShufflePermutation({ Axis(2), Axis(0), Axis(3), Axis(1), Axis(4) });
+        auto shuffleOut = Transpose(inputView, axisShufflePermutation);
+        auto merge23Out = Reshape(shuffleOut, { NDShape::InferredDimension }, Axis(2), Axis(4));
+        auto merge01Out = Reshape(merge23Out, { NDShape::InferredDimension }, Axis(0), Axis(2));
+
+        return AsBlock(std::move(merge01Out), { { inputPlaceholder, input } }, std::move(additionalProperties), L"DepthToSpace", name);
+    }
+
+    FunctionPtr SpaceToDepth(const Variable& input, size_t blockSize, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameBlockSize] = blockSize;
+
+        auto inputPlaceholder = PlaceholderVariable(L"input");
+
+        if (!input.IsPlaceholder())
+        {
+            NDShape inputShape = input.Shape();
+            if (inputShape.Rank() != 3)
+                LogicError("SpaceToDepth: Input operand (shape: %S) must be a 3-dimensional tensor, e.g. a 2D image with channels.", inputShape.AsString().c_str());
+            if ((inputShape[0] % blockSize != 0) || (inputShape[1] % blockSize != 0))
+                LogicError("SpaceToDepth: All spatial dimensions in the operand (%zu x %zu) must be divisible by blocksize (%zu).", inputShape[0], inputShape[1], blockSize);
+        }
+
+        FunctionPtr reshape01out = Reshape(inputPlaceholder, { blockSize, NDShape::InferredDimension }, Axis(0), Axis(1));
+        FunctionPtr reshape23out = Reshape(reshape01out, { blockSize, NDShape::InferredDimension }, Axis(2), Axis(3));
+        std::vector<Axis> axisShufflePermutation({ Axis(1), Axis(3), Axis(0), Axis(2), Axis(4) });
+        auto shuffleOut = Transpose(reshape23out, axisShufflePermutation);
+        auto merge234Out = Reshape(shuffleOut, { NDShape::InferredDimension }, Axis(2), Axis::EndStaticAxis());
+
+        return AsBlock(std::move(merge234Out), { { inputPlaceholder, input } }, std::move(additionalProperties), L"SpaceToDepth", name);
     }
 
     FunctionPtr LambdaRank(const Variable& prediction, const Variable& gains, const Variable& groupId, const std::wstring& name)
@@ -2193,6 +2424,31 @@ namespace CNTK
     FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name)
     {
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
+    }
+
+    FunctionPtr Mean(const std::vector<Variable>& operands, const std::wstring& name)
+    {
+        int count = operands.size();
+        if (count == 0)
+        {
+            LogicError("Mean: none operand provided.");
+        }
+
+        std::vector<std::pair<Variable, Variable>> argumentsMap;
+        auto planceholder = PlaceholderVariable();
+        argumentsMap.push_back(std::pair<Variable, Variable>(planceholder, operands[0]));
+        FunctionPtr result = planceholder;
+        for (int i = 1; i < count; i++)
+        {
+            planceholder = PlaceholderVariable();
+            argumentsMap.push_back(std::pair<Variable, Variable>(planceholder, operands[i]));
+            result = Plus(result, planceholder);
+        }
+
+        Constant divider = Constant::Scalar(operands[0].GetDataType(), static_cast<double>(operands.size()));
+        result = ElementDivide(result, divider);
+
+        return AsBlock(std::move(result), argumentsMap, L"Mean", name);
     }
 
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)

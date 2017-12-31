@@ -82,6 +82,41 @@ def combine(*operands, **kw_name):
     return combine(operands_unfold, name)
 
 @typemap
+def mean(*operands, **kw_name):
+    '''
+     Create a new Function instance that computes element-wise mean of input tensors
+
+    Example:
+        >>> in1 = C.input_variable((4,))
+        >>> in2 = C.input_variable((4,))
+        >>> model = C.mean([in1, in2])
+        >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+        >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+        >>> model.eval({in1: in1_data, in2: in2_data})
+        array([[ 0.5,  3.5,  0. ,  3. ]], dtype=float32)
+
+    Args:
+        operands (list): list of functions
+        name (str, optional): the name of the mean Function in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    name = (lambda name='': (name))(**kw_name) # Python 2.7 does not allow (*inputs, name='')
+
+    from cntk.cntk_py import mean
+    if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
+    if isinstance(operands, tuple):
+        operands = list(operands)
+    operands_unfold = []
+    for o in operands:
+        if hasattr(o, 'outputs') and len(o.outputs) > 1:
+            operands_unfold += o.outputs
+        else:
+            operands_unfold += [o]
+    return mean(operands_unfold, name)
+
+@typemap
 def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
     '''
      Create a new block Function instance which just encapsulates the specified composite Function
@@ -1651,6 +1686,25 @@ def asinh(x, name=''):
     x = sanitize_input(x)
     return asinh(x, name)
 
+@typemap
+def log_softmax(x, axis = None, name = ''):
+    '''
+    Computes the logsoftmax normalized values of x. That is, y = x - log(reduce_sum(exp(x), axis)).
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        axis (int): the axis of the inputs when coerced to 2D
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import log_softmax
+    x = sanitize_input(x)
+    if axis is not None:
+        axis = sanitize_axis(axis)
+        return log_softmax(x, axis, name)
+    else:
+        return log_softmax(x, name)
 
 @typemap
 def softmax(x, axis=None, name=''):
@@ -1723,6 +1777,61 @@ def hardmax(x, name=''):
     x = sanitize_input(x)
     return hardmax(x, name)
 
+
+@typemap
+def top_k(x, k, axis=-1, name=''):
+    '''
+    Computes the ``k`` largest values of the input tensor and the corresponding indices
+    along the specified axis (default the last axis). The returned 
+    :class:`~cntk.ops.functions.Function` has two outputs. The first one 
+    contains the top ``k`` values in sorted order, and the second one contains 
+    the corresponding top ``k`` indices.
+
+    Example:
+        >>> x = C.input_variable(10)
+        >>> y = C.top_k(-x * C.log(x), 3)
+        >>> x0 = np.arange(10,dtype=np.float32)*0.1
+        >>> top = y.eval({x:x0})
+        >>> top_values = top[y.outputs[0]]
+        >>> top_indices = top[y.outputs[1]]
+        >>> top_indices
+        array([[ 4.,  3.,  5.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        k (int): number of top items to return
+        axis: axis along which to perform the operation (default: -1)
+        name (str): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import top_k
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return top_k(x, k, axis, name)
+
+@typemap
+def hard_sigmoid(x, alpha, beta, name = ''):
+    '''
+    Computes the element-wise HardSigmoid function, y = max(0, min(1, alpha * x + beta)).
+
+    Example:
+        >>> alpha = 1 
+        >>> beta = 2
+        >>> C.hard_sigmoid([-2.5, -1.5, 1], alpha, beta).eval()
+        array([ 0. ,  0.5,  1. ], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        alpha (float): the alpha term of the above equation.
+        beta (float): the beta term of the above equation.
+        name (str): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import hard_sigmoid
+    x = sanitize_input(x)
+    return hard_sigmoid(x, alpha, beta, name)
 
 @typemap
 def exp(x, name=''):
@@ -1883,6 +1992,62 @@ def reciprocal(x, name=''):
 
 
 @typemap
+def ones_like(x, name=''):
+    '''
+    Creates an all-ones tensor with the same shape and dynamic axes as ``x``:
+
+    Example:
+        >>> x0 = np.arange(24).reshape((2, 3, 4)).astype('f')
+        >>> x = C.input_variable((3, 4))
+        >>> C.ones_like(x).eval({x: x0})
+        array([[[ 1.,  1.,  1.,  1.],
+                [ 1.,  1.,  1.,  1.],
+                [ 1.,  1.,  1.,  1.]],
+        <BLANKLINE>
+               [[ 1.,  1.,  1.,  1.],
+                [ 1.,  1.,  1.,  1.],
+                [ 1.,  1.,  1.,  1.]]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import ones_like
+    x = sanitize_input(x)
+    return ones_like(x, name)
+
+
+@typemap
+def zeros_like(x, name=''):
+    '''
+    Creates an all-zeros tensor with the same shape and dynamic axes as ``x``:
+
+    Example:
+        >>> x0 = np.arange(24).reshape((2, 3, 4)).astype('f')
+        >>> x = C.input_variable((3, 4))
+        >>> C.zeros_like(x).eval({x: x0})
+        array([[[ 0.,  0.,  0.,  0.],
+                [ 0.,  0.,  0.,  0.],
+                [ 0.,  0.,  0.,  0.]],
+        <BLANKLINE>
+               [[ 0.,  0.,  0.,  0.],
+                [ 0.,  0.,  0.,  0.],
+                [ 0.,  0.,  0.,  0.]]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import zeros_like
+    x = sanitize_input(x)
+    return zeros_like(x, name)
+
+
+@typemap
 def element_select(flag, value_if_true, value_if_false, name=''):
     '''
     return either ``value_if_true`` or ``value_if_false`` based on the value of ``flag``.
@@ -2028,6 +2193,70 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     internal_reshape_end_axis = sanitize_reshape_axis(begin_axis)
 
     return reshape(x, shape, internal_reshape_begin_axis, internal_reshape_end_axis, name)
+
+@typemap
+def squeeze(x, axes=None, name=''):
+    '''
+        Removes axes whose size is 1. If ``axes`` is specified, and any of 
+        their size is not 1 an exception will be raised.
+
+    Example:
+        >>> x0 = np.arange(12).reshape((2, 2, 1, 3)).astype('f')
+        >>> x = C.input_variable((2, 1, 3))
+        >>> C.squeeze(x).eval({x: x0})
+        array([[[  0.,   1.,   2.],
+                [  3.,   4.,   5.]],
+        <BLANKLINE>
+               [[  6.,   7.,   8.],
+                [  9.,  10.,  11.]]], dtype=float32)
+
+    Args:
+        x: input tensor
+        axes: The axes to squeeze out (default: all static axes).
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import squeeze
+    x = sanitize_input(x)
+    if axes is None:
+        return squeeze(x, name)
+    else:
+        axes = sanitize_axis_list(axes)
+        return squeeze(x, axes, name)
+
+
+@typemap
+def expand_dims(x, axis, name=''):
+    '''
+        Adds a singleton (size 1) axis at position ``axis``.
+
+    Example:
+        >>> x0 = np.arange(12).reshape((2, 2, 3)).astype('f')
+        >>> x = C.input_variable((2, 3))
+        >>> C.expand_dims(x, 0).eval({x: x0})
+        array([[[[  0.,   1.,   2.]],
+        <BLANKLINE>
+                [[  3.,   4.,   5.]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[  6.,   7.,   8.]],
+        <BLANKLINE>
+                [[  9.,  10.,  11.]]]], dtype=float32)
+
+    Args:
+        x: input tensor
+        axis: The position to insert the singleton axis.
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import expand_dims
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return expand_dims(x, axis, name)
 
 
 @typemap
@@ -2375,6 +2604,39 @@ def gather(reference, indices):
     '''
     from cntk.cntk_py import gather_op
     return gather_op(indices, reference)
+
+@typemap
+def flatten(x, axis = None, name = ''):
+    '''
+    Flattens the input tensor into a 2D matrix.
+    If the input tensor has shape (d_0, d_1, ... d_n) then the output will have shape (d_0 X d_1 ... d_(axis-1), d_axis X d_(axis+1) ... X dn).
+
+    Example:
+        >>> # create 2x3x4 matrix, flatten the matrix at axis = 1
+        >>> shape = (2, 3, 4) 
+        >>> data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
+        >>> C.flatten(data, 1).eval()
+        array([[  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.,
+                 11.],
+               [ 12.,  13.,  14.,  15.,  16.,  17.,  18.,  19.,  20.,  21.,  22.,
+                 23.]], dtype=float32)
+
+    Args:
+        x: Input tensor.
+        axis (int): (Default to 0) Indicates up to which input dimensions (exclusive) should be flattened to the outer dimension of the output
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import flatten
+    x = sanitize_input(x)
+    if axis is not None:
+        axis = sanitize_axis(axis)
+        return flatten(x, axis, name)
+    else:
+        return flatten(x, name)
+
 ##########################################################################
 # reduction ops
 ##########################################################################
@@ -2891,12 +3153,12 @@ def random_sample_inclusion_frequency(
 @typemap
 def dropout(x, dropout_rate=0.0, seed = SentinelValueForAutoSelectRandomSeed, name=''):
     '''
-    Each element of the input is independently set to 0 with probabily ``dropout_rate``
+    Each element of the input is independently set to 0 with probability ``dropout_rate``
     or to 1 / (1 - ``dropout_rate``) times its original value (with probability 1-``dropout_rate``).
     Dropout is a good way to reduce overfitting.
 
     This behavior only happens during training. During inference dropout is a no-op.
-    In the paper that introduced dropout it was suggested to scale the weights during inference
+    In the paper that introduced dropout it was suggested to scale the weights during inference.
     In CNTK's implementation, because the values that are not set to 0 are multiplied
     with (1 / (1 - ``dropout_rate``)), this is not necessary.
 
@@ -3100,7 +3362,7 @@ def parameter(shape=None, init=None, dtype=None, device=None, name=''):
 @typemap
 def constant(value=None, shape=None, dtype=None, device=None, name=''):
     '''
-    It creates a constant tensor initialized from a numpy array
+    It creates a constant tensor initialized from a numpy array.
 
     Example:
         >>> constant_data = C.constant([[1., 2.], [3., 4.], [5., 6.]])
@@ -3307,3 +3569,93 @@ def crop_automatic_with_ancestors(node_input, node_referent, ancestor_input, anc
     arg_ancestor_input = sanitize_input(ancestor_input, get_data_type(ancestor_input))
     arg_ancestor_ref = sanitize_input(ancestor_referent,  get_data_type(ancestor_referent))
     return crop(arg_node_input, arg_node_ref, arg_ancestor_input, arg_ancestor_ref, name)
+
+@typemap
+def depth_to_space(operand, block_size, name=''):
+    '''
+    Rearranges elements in the input tensor from the depth dimension into spatial blocks.
+
+    This operation is useful for implementing sub-pixel convolution that is part of models  
+    for image super-resolution (see [1]). It rearranges elements of an input tensor of shape 
+    (Cxbxb, H, W) to a tensor of shape (C, bxH, bxW), where b is the `block_size`.
+    
+    Example:
+        >>> x = np.array(np.reshape(range(8), (8, 1, 1)), dtype=np.float32)
+        >>> x = np.tile(x, (1, 2, 3))
+        >>> a = C.input_variable((8, 2, 3))
+        >>> d2s_op = C.depth_to_space(a, block_size=2)
+        >>> d2s_op.eval({a:x})
+        array([[[[ 0.,  1.,  0.,  1.,  0.,  1.],
+                 [ 2.,  3.,  2.,  3.,  2.,  3.],
+                 [ 0.,  1.,  0.,  1.,  0.,  1.],
+                 [ 2.,  3.,  2.,  3.,  2.,  3.]],
+        <BLANKLINE>
+                [[ 4.,  5.,  4.,  5.,  4.,  5.],
+                 [ 6.,  7.,  6.,  7.,  6.,  7.],
+                 [ 4.,  5.,  4.,  5.,  4.,  5.],
+                 [ 6.,  7.,  6.,  7.,  6.,  7.]]]], dtype=float32)
+
+    Args:
+        operand: Input tensor, with dimensions :math:`[C \\times H \\times W]`.
+        block_size (int): Integer value. This defines the size of the spatial block where the 
+         depth elements move to. Number of channels, C, in the input tensor must be divisible 
+         by math:`(block_size \\times block_size)`
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+
+    See also:
+        [1] W. Shi et. al. `: Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_.
+    '''
+    from cntk.cntk_py import depth_to_space
+    operand = sanitize_input(operand, get_data_type(operand))
+    if not float(block_size).is_integer():
+        raise ValueError('block_size must be an integer.')
+    return depth_to_space(operand, block_size, name)
+
+@typemap
+def space_to_depth(operand, block_size, name=''):
+    '''
+    Rearranges elements in the input tensor from the spatial dimensions to the depth dimension.
+
+    This is the reverse transformation of depth_to_space. This operation is useful for implementing 
+    and testing sub-pixel convolution that is part of models for image super-resolution (see [1]).
+    It rearranges elements of an input tensor of shape (C, H, W) to a tensor of shape (C*b*b, H/b, W/b),
+    where b is the `block_size`, by rearranging non-overlapping spatial blocks of size `block_size` x `block_size`
+    into the depth/channel dimension at each location.
+    
+    Example:
+        >>> np.random.seed(3)
+        >>> x = np.random.randint(low=0, high=100, size=(1, 4, 6)).astype(np.float32)
+        >>> a = C.input_variable((1, 4, 6))
+        >>> s2d_op = C.space_to_depth(a, block_size=2)
+        >>> s2d_op.eval({a:x})
+        array([[[[ 24.,  56.,   0.],
+                 [ 96.,  44.,  39.]],
+        <BLANKLINE>
+                [[  3.,  72.,  21.],
+                 [ 20.,  93.,  14.]],
+        <BLANKLINE>
+                [[ 19.,  41.,  21.],
+                 [ 26.,  90.,  66.]],
+        <BLANKLINE>
+                [[ 74.,  10.,  38.],
+                 [ 81.,  22.,   2.]]]], dtype=float32)
+
+    Args:
+        operand: Input tensor, with dimensions :math:`[C \\times H \\times W]`.
+        block_size (int): Integer value. This defines the size of the spatial block whose elements
+         are moved to the depth dimension. Size of spatial dimensions (H, W) in the input tensor
+         must be divisible by math:`block_size`
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+
+    See also:
+        [1] W. Shi et. al. `: Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_.
+    '''
+    from cntk.cntk_py import space_to_depth
+    operand = sanitize_input(operand, get_data_type(operand))
+    if not float(block_size).is_integer():
+        raise ValueError('block_size must be an integer.')
+    return space_to_depth(operand, block_size, name)

@@ -53,6 +53,10 @@ namespace
             {
                 return StatusCode(CNTK_ERROR_INTERNAL_ERROR, e.what());
             }
+            catch (...)
+            {
+                return StatusCode(CNTK_ERROR_INTERNAL_ERROR, "Unknown exception.");
+            }
         }
     };
 }
@@ -160,7 +164,6 @@ void CNTK_CleanValue(CNTK_Value* value)
         return;
 
     delete[] value->data;
-    value->dataSize = 0;
     CNTK_CleanShape(&value->shape);
 }
 

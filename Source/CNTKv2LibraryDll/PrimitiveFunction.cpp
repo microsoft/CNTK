@@ -331,6 +331,7 @@ namespace CNTK
                         case PrimitiveOpType::StopGradient:
                         case PrimitiveOpType::ELU:
                         case PrimitiveOpType::StableSigmoid:
+                        case PrimitiveOpType::ConstantOp:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
@@ -442,6 +443,12 @@ namespace CNTK
                                 InvalidArgument("ScatterPacked: All operands '%S' must have dynamic axes.", NamedListString(m_inputs).c_str());
 
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
+                            break;
+                        }
+                        case PrimitiveOpType::Squeeze:
+                        {
+                            assert(m_inputs.size() == 1);
+                            outputShape = GetSqueezedShape(m_inputs[0].Shape(), m_attributes);
                             break;
                         }
                         case PrimitiveOpType::TransposeAxes:
@@ -1041,6 +1048,17 @@ namespace CNTK
                             }
                             break;
                         }
+                        case PrimitiveOpType::TopK:
+                        {
+                            assert(m_inputs.size() == 1);
+                            auto k = m_attributes[PrimitiveFunction::AttributeNameNumItems].Value<size_t>();
+                            outputShape = m_inputs[0].Shape();
+                            if (outputShape.Rank() > 0)
+                                outputShape[0] = k;
+                            else if (k != 1)
+                                RuntimeError("Function '%S': cannot get k>1 items from a scalar.", AsString().c_str());
+                            break;
+                        }
                         default:
                             LogicError("Specified Primitive Function op %S is not supported", PrimitiveOpTypeName(m_op).c_str());
                             break;
@@ -1059,6 +1077,11 @@ namespace CNTK
                     auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_UnpackSequenceMask");
                     outputs.push_back(maskOutput);
                 }
+            }
+            else if (m_op == PrimitiveOpType::TopK)
+            {
+                auto IndexOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_TopKIndexMask");
+                outputs.push_back(IndexOutput);
             }
         }
     }

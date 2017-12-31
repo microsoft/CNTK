@@ -3821,9 +3821,37 @@ namespace CNTK
     CNTK_API FunctionPtr Softmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in log softmax operation on a specified tensor input operand
+    ///
+    CNTK_API FunctionPtr LogSoftmax(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in log softmax operation on specified axis
+    /// on a specified tensor input operand
+    ///
+    CNTK_API FunctionPtr LogSoftmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in hardmax operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Hardmax(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of hard sigmoid operation: f(x) = max(0,min(alpha*x+beta,1))
+    ///
+    CNTK_API FunctionPtr HardSigmoid(const Variable& operand, float alpha, float beta, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in top k operation over the first static axis on a
+    /// specified tensor input operand
+    ///
+    CNTK_API FunctionPtr TopK(const Variable& operand, size_t k, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in top k operation over the specified axis on a
+    /// specified tensor input operand
+    ///
+    CNTK_API FunctionPtr TopK(const Variable& operand, size_t k, const Axis& axis, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in transpose dimensions operation on specified tensor input operand
@@ -3926,6 +3954,18 @@ namespace CNTK
     CNTK_API FunctionPtr BernoulliRandomLike(const Variable& operand, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of a flatten operation that reshape the specified tensor into 2D tensor.
+    /// If input tensor has shape (d_0, d_1, ... d_n) then the output will have shape (d_0 X d_1 ... d_(axis-1), d_axis X d_(axis+1) ... X dn).
+    ///
+    CNTK_API FunctionPtr Flatten(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a flatten operation that reshape the specified tensor into 2D tensor.
+    /// The output tensor will have shape (d_0 X d_1 ...X d_n-1, d_n)
+    ///
+    CNTK_API FunctionPtr Flatten(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the reshape operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name = L"");
@@ -3937,6 +3977,32 @@ namespace CNTK
     {
         return Reshape(operand, newShape, Axis(0), Axis::EndStaticAxis(), name);
     }
+
+    ///
+    /// Create an instance of the squeeze operation on specified tensor input operand
+    ///
+    CNTK_API FunctionPtr Squeeze(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the squeeze operation on specified tensor input operand, for the specified axis 
+    ///
+    CNTK_API FunctionPtr Squeeze(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the expand dims operation on specified tensor input operand, for the specified axis 
+    ///
+    CNTK_API FunctionPtr ExpandDims(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    
+    ///
+    /// Create an instance of a zeros-like operation. This produces zeros with the shape and dynamic axes specified by the operand.
+    ///
+    CNTK_API FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a ones-like operation. This produces ones with the shape and dynamic axes specified by the operand.
+    ///
+    CNTK_API FunctionPtr OnesLike(const Variable& operand, const std::wstring& name = L"");
+
 
     ///
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
@@ -4159,13 +4225,22 @@ namespace CNTK
         return ClassificationError(prediction, labels, Axis(0), name);
     }
 
-
     ///
     /// Create an instance of the CNTK built-in noise contrastive estimation loss for specified operands. 
     ///
     CNTK_API FunctionPtr NCELoss(const Variable& weights, const Variable& biases, const Variable& inputs, const Variable& labels, 
         const Constant& noiseWeights, size_t numSamples, bool allowDuplicates=true, unsigned long seed = SentinelValueForAutoSelectRandomSeed,
         const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Depth-to-Space operation for an operand and specified blockSize.
+    ///
+    CNTK_API FunctionPtr DepthToSpace(const Variable& operand, size_t blockSize, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Space-To-Depth operation for an operand and specified blockSize.
+    ///
+    CNTK_API FunctionPtr SpaceToDepth(const Variable& operand, size_t blockSize, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in LambdaRank loss an effective proxy for optimizing the NDCG metric
@@ -4420,6 +4495,11 @@ namespace CNTK
     /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
     ///
     CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in element-wise mean operation
+    ///
+    CNTK_API FunctionPtr Mean(const std::vector<Variable>& operands, const std::wstring& name = L"");
 
     ///
     /// Creates a new Function instance which is just an alias of the specified operand.

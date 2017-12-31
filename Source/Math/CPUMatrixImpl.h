@@ -22,6 +22,7 @@
 #include <thread>
 #include <iostream>
 #include <algorithm>
+#include <numeric>
 #pragma warning(push)
 #pragma warning(disable:4244) // 'conversion' conversion from 'type1' to 'type2', possible loss of data
 #include <boost/random/normal_distribution.hpp>
@@ -3826,23 +3827,19 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
         else
         {
             std::vector<int> indices(m);
-            int i = 0;
-            std::generate(indices.begin(), indices.end(), [&i]
-                          {
-                              return i++;
-                          });
 
             const ElemType* curVal =            Data();
             ElemType* curIdx       = maxIndexes.Data();
             ElemType* curMax       =  maxValues.Data();
             for (int icol = 0; icol < n; icol++, curVal += m, curIdx += topK, curMax += topK)
             {
+                std::iota(indices.begin(), indices.end(), 0);
                 // Partial sort, descending order.
-                std::nth_element(indices.begin(), indices.begin() + topK, indices.end(),
-                                 [curVal](const int& a, const int& b)
-                                 {
-                                     return curVal[a] > curVal[b];
-                                 });
+                std::partial_sort(indices.begin(), indices.begin() + topK, indices.end(),
+                                    [curVal](const int& a, const int& b)
+                                    {
+                                        return curVal[a] > curVal[b];
+                                    });
                 // REVIEW alexeyk: the following produces warning (see SCL_SECURE_NO_WARNINGS) so use loop instead.
                 // std::transform(indices.begin(), indices.begin() + topK, curIdx, [](const int& a) { return static_cast<ElemType>(a); });
                 for (int i2 = 0; i2 < topK; i2++)

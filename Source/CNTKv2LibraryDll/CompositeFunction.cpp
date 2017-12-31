@@ -683,6 +683,12 @@ namespace CNTK
                 case PrimitiveOpType::Hardmax:
                     computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::TopK:
+                {
+                    auto k = functionConfig[PrimitiveFunction::AttributeNameNumItems].Value<size_t>();
+                    computationNodePtr = New<TopKNode<ElementType>>(network->GetDeviceId(), internalNodeName, k);
+                    break;
+                }
                 case PrimitiveOpType::StableSigmoid:
                     computationNodePtr = New<StableSigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
@@ -824,6 +830,22 @@ namespace CNTK
                     }
 
                     computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(replacementShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
+                    break;
+                }
+                case PrimitiveOpType::Squeeze:
+                {
+                    auto beginAxis = Axis(0);
+                    auto inputShape = functionInputs[0].Shape();
+                    auto endAxis = Axis((int)inputShape.Rank());
+                    auto outputShape = GetSqueezedShape(inputShape, functionConfig);
+
+                    computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(outputShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
+                    break;
+                }
+                case PrimitiveOpType::ConstantOp:
+                {
+                    double fillValue = functionConfig[PrimitiveFunction::AttributeNameFillValue].Value<double>();
+                    computationNodePtr = New<ConstantNode<ElementType>>(network->GetDeviceId(), internalNodeName, fillValue);
                     break;
                 }
                 case PrimitiveOpType::ROIPooling:

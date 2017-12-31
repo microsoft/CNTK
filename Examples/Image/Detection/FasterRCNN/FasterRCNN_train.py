@@ -575,3 +575,4 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
                 print("Processed {} samples".format(sample_count))
 
         progress_printer.epoch_summary(with_metric=True)
+

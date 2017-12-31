@@ -924,6 +924,36 @@ namespace CNTK
         return GetValueObjectFromCNTKImplMatrixAndMBLayout(varShape, var.DynamicAxes(), matrix, layout, readOnly);
     }
 
+    NDShape GetSqueezedShape(const NDShape& inputShape, const Dictionary& squeezeConfig)
+    {
+        auto replacementDims = inputShape.Dimensions();
+
+        // collect all indices that need to be squeezed
+        if (squeezeConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+        {
+            auto squeezedIdx = std::vector<size_t>({});
+            auto axes = AsVector<Axis>(squeezeConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+            for (auto& ax : axes)
+            {
+                auto axis = NormalizeStaticAxis(ax, inputShape);
+                if (!axis.IsStaticAxis())
+                    LogicError("Squeeze: can only squeeze static axes.");
+                auto idx = axis.StaticAxisIndex();
+                if (inputShape[idx] != 1)
+                    LogicError("Squeeze: cannot squeeze a static axis whose dimension (=%zd) is not 1.", inputShape[idx]);
+                squeezedIdx.push_back(idx);
+            }
+            // delete all squeezed indices from back to front
+            std::sort(std::begin(squeezedIdx), std::end(squeezedIdx), [](const size_t a, const size_t b) {return a > b; });
+            for (auto i : squeezedIdx)
+                replacementDims.erase(std::begin(replacementDims) + i);
+        }
+        else
+            replacementDims.erase(std::remove_if(std::begin(replacementDims), std::end(replacementDims), [](const size_t dim) {return dim == 1; }), std::end(replacementDims));
+
+        return NDShape(replacementDims);
+    }
+
     NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device)
     {
         size_t numSequences = sequenceLengths.size();

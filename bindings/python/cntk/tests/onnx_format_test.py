@@ -236,6 +236,13 @@ def test_vgg9_model(tmpdir):
     x_ = loaded_node.arguments[0]
     assert np.allclose(loaded_node.eval({x_:img}), root_node.eval({x:img}))
 
+    # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
+    filename2 = os.path.join(str(tmpdir), R'vgg9_model2.onnx')
+    loaded_node.save(filename2, format=C.ModelFormat.ONNX)
+
+    filename3 = os.path.join(str(tmpdir), R'vgg9_model2.cntkmodel')
+    loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
+
 def test_conv3d_model(tmpdir):
     def create_model(input):
         with C.default_options (activation=C.relu):
@@ -270,6 +277,13 @@ def test_conv3d_model(tmpdir):
 
     x_ = loaded_node.arguments[0]
     assert np.allclose(loaded_node.eval({x_:video}), root_node.eval({x:video}))
+
+    # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
+    filename2 = os.path.join(str(tmpdir), R'conv3d_model2.onnx')
+    loaded_node.save(filename2, format=C.ModelFormat.ONNX)
+
+    filename3 = os.path.join(str(tmpdir), R'conv3d_model2.cntkmodel')
+    loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
 
 def test_resnet_model(tmpdir):
     def convolution_bn(input, filter_size, num_filters, strides=(1,1), init=C.normal(0.01), activation=C.relu):
@@ -334,3 +348,10 @@ def test_resnet_model(tmpdir):
 
     x_ = loaded_node.arguments[0]
     assert np.allclose(loaded_node.eval({x_:img}), root_node.eval({x:img}))
+
+    # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
+    filename2 = os.path.join(str(tmpdir), R'resnet_model2.onnx')
+    loaded_node.save(filename2, format=C.ModelFormat.ONNX)
+
+    filename3 = os.path.join(str(tmpdir), R'resnet_model2.cntkmodel')
+    loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
