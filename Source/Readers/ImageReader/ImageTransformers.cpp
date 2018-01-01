@@ -1,10 +1,11 @@
-//
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
 #include "stdafx.h"
 #include <algorithm>
+#include <utility>
+#include <cmath>
 #include <unordered_map>
 #include <random>
 #include <boost/random/bernoulli_distribution.hpp>
@@ -325,6 +326,8 @@ cv::Rect CropTransformer::GetCropRectMultiView10(int viewIndex, int crow, int cc
 // scaleMode = "fill" (default) - warp the image to the given target size
 // scaleMode = "crop" - resize the image's shorter side to the given target size and crops the overlap
 // scaleMode = "pad"  - resize the image's larger side to the given target size, center it and pad the rest
+// scaleMode = "resizemin" - resize the smaller dimension of the image to a given target size, preserving the aspect ratio.
+// scaleMode = "resizemax" - resize the larger dimension of the image to a given target size, preserving the aspect ratio.
 ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
     m_imgWidth    = config(L"width");
@@ -339,6 +342,8 @@ ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransf
     if      (scaleMode == "crop") m_scaleMode = ScaleMode::Crop;
     else if (scaleMode == "pad")  m_scaleMode = ScaleMode::Pad;
     else if (scaleMode == "fill") m_scaleMode = ScaleMode::Fill;
+    else if (scaleMode == "resizemin") m_scaleMode = ScaleMode::ResizeMin;
+    else if (scaleMode == "resizemax") m_scaleMode = ScaleMode::ResizeMax;
     else RuntimeError("Invalid scaleMode value, must be fill, crop or pad (all lower case)");
 
     // the pad value used for the 'pad' mode. if set to -1 then the border will be replicated.
@@ -368,14 +373,61 @@ StreamInformation ScaleTransformer::Transform(const StreamInformation& inputStre
     return m_outputStream;
 }
 
+void NewSizeMin(int& height, int& width, float& aspectratio, int& newheight, int&newwidth, int&& scaleheight, int&& scalewidth)
+{
+  if (height <= width)
+    {
+      newheight = scaleheight;
+      newwidth = (int)(std::ceil(newheight / aspectratio));
+    }
+  else
+    {
+      newwidth = scalewidth;
+      newheight = (int)(std::ceil(newwidth * aspectratio));
+    }
+}
+
+void NewSizeMax(int& height, int& width, float& aspectratio, int& newheight, int&newwidth, int&& scaleheight, int&& scalewidth)
+{
+  if (height <= width)
+    {
+      newwidth = scalewidth;
+      newheight = (int)(std::ceil(newwidth * aspectratio));
+
+    }
+  else
+    {
+      newheight = scaleheight;
+      newwidth = (int)(std::ceil(newheight / aspectratio));
+
+    }
+}
 void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
 {
     if (m_scaleMode == ScaleMode::Fill)
     { // warp the image to the given target size
         cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp);
     }
+    else if ((m_scaleMode == ScaleMode::ResizeMin) || (m_scaleMode == ScaleMode::ResizeMax))
+      {
+	int height{mat.rows};
+	int width{mat.cols};
+	int channels{mat.channels()};
+	float aspectratio = (float)height/(float)width;
+	int newheight{};
+	int newwidth{};
+	if (m_scaleMode == ScaleMode::ResizeMin)
+	  NewSizeMin(height, width, aspectratio, newheight, newwidth, (int)m_imgHeight, (int)m_imgWidth);
+	else
+	  NewSizeMax(height, width, aspectratio, newheight, newwidth, (int)m_imgHeight, (int)m_imgWidth);
+
+	
+	cv::resize(mat, mat, cv::Size(newwidth, newheight), 0, 0, m_interp);
+	  
+      }
     else
-    {
+      
+      {
         int height = mat.rows;
         int width = mat.cols;
 
