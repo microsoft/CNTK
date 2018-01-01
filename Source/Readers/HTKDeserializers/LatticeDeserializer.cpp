@@ -9,14 +9,6 @@
 #include "ConfigHelper.h"
 #include "Basics.h"
 #include "MLFUtils.h"
-#include <stdio.h>  /* defines FILENAME_MAX */
-#ifdef __WINDOWS__
-#include <direct.h>
-#define GetCurrentDir _getcwd
-#else
-#include <unistd.h>
-#define GetCurrentDir getcwd
-#endif
 
 namespace CNTK {
 
@@ -191,12 +183,6 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
 {
     std::string latticeIndexPath = config.GetLatticeIndexFilePath();
 
-    char cCurrentPath[FILENAME_MAX];
-
-    GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
-
-    fprintf(stderr, "Current working directory is '%s' \n", cCurrentPath);
-
     fprintf(stderr, "Reading lattice index file '%s' ...\n", latticeIndexPath.c_str());
     ifstream latticeIndexStream(latticeIndexPath.c_str());
     if (!(latticeIndexStream && latticeIndexStream.good()))
@@ -210,9 +196,9 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
     {
         tocPath.erase(tocPath.find_last_not_of(" \n\r\t") + 1);
         std::ifstream tocFileStream(tocPath);
-        if (!(tocFileStream && tocFileStream.good())) {
+        if (!(tocFileStream && tocFileStream.good())) 
             fprintf(stderr, "Failed to open input file: %s", tocPath.c_str());
-        }
+
         std::string tocLine;
         tocLines.clear();
         bool firstIndex = true;
