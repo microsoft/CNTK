@@ -4,10 +4,8 @@ Wide & Deep Model jointly trained wide linear models and deep neural networks—
 we support data format [libffm](https://github.com/guestwalk/libffm)
 
 ## How To Use
-```
-python deepWide.py
-``` 
-in order to use your data, you can set your own parameters.
+
+firstly, in order to use your data, you can set your own parameters.
 ```
     params = {
         'feature_cnt': 194081,
@@ -28,6 +26,11 @@ in order to use your data, you can set your own parameters.
     }
 
 ``` 
+then,
+```
+python deepWide.py
+``` 
+
 #### Data Parameter
 parameter |description | 
 ----|------| 
