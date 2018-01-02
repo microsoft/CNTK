@@ -34,7 +34,7 @@ python deepWide.py
 #### Data Parameter
 parameter |description | 
 ----|------| 
-train_file | file path for train, must be set
+train_file | file path for train, must be set, eg, train_file = ./data/train.entertainment.no_inter.norm.fieldwise.userid.txt
 eval_file | file path for evalute, must be set
 field_cnt | field num in dataSet, field index start by 1, must be set
 feature_cnt | feature num in dataSet, feat index start by 1, must be set 
