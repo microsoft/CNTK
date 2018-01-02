@@ -5,7 +5,7 @@ we support data format [libffm](https://github.com/guestwalk/libffm)
 
 ## How To Use
 
-firstly, in order to use your data, you can set your own parameters.
+firstly, in order to train model on your own data, you can set your own parameters.
 ```
     params = {
         'feature_cnt': 194081,
@@ -26,7 +26,7 @@ firstly, in order to use your data, you can set your own parameters.
     }
 
 ``` 
-then,
+then
 ```
 python deepWide.py
 ``` 
