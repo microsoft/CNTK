@@ -46,9 +46,11 @@ embedding_dim | embedding dim, must be set, eg, embedding_dim=10
 layer_sizes | a list, the number of nodes per layer, must be set, eg, layer_sizes=[50]
 layer_activations | a list, activate function per layer, support sigmoid, relu, tanh, must be set, eg, layer_activations=['relu']
 show_steps | show train loss per N step, N = show_step, eg, show_steps=20
+
 ## Output And Result
+
 during training, the value of loss function will be output. such as:
-------
+``` 
 minibatch: 20, loss: 0.6557, logloss: 0.6557<br>
 minibatch: 40, loss: 0.2838, logloss: 0.2835<br>
 minibatch: 60, loss: 0.6476, logloss: 0.6470<br>
@@ -57,8 +59,7 @@ minibatch: 80, loss: 0.1607, logloss: 0.1601<br>
 minibatch: 100, loss: 0.1958, logloss: 0.1952<br>
 minibatch: 120, loss: 0.1524, logloss: 0.1516<br>
 epoch: 1, train logloss: 0.3691, eval logloss: 0.3880<br>
-...
-------
+``` 
 
 ## Benchmark Experiment
 we sample 8w from criteo dataset([dataset](https://www.kaggle.com/c/criteo-display-ad-challenge)), dealing with long tail features and continuous features. the dataset has 26w features and 8w samples.we split the dataset randomly into two parts: 80% is for training, 20% is for testing.
