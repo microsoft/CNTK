@@ -5,7 +5,7 @@ we support data format [libffm](https://github.com/guestwalk/libffm)
 
 ## How To Use
 
-firstly, in order to train model on your own data, you can set your own parameters.
+firstly, in order to train model on your own data, you can set your own parameters at params in deepWide.py.
 ```
     params = {
         'feature_cnt': 194081,
