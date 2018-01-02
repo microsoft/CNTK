@@ -35,19 +35,17 @@ python deepWide.py
 parameter |description | 
 ----|------| 
 train_file | file path for train, must be set, eg, train_file = ./data/train.entertainment.no_inter.norm.fieldwise.userid.txt
-eval_file | file path for evalute, must be set
-field_cnt | field num in dataSet, field index start by 1, must be set
-feature_cnt | feature num in dataSet, feat index start by 1, must be set 
-init_value | parameter initialization variance
-init_method | parameter initialization method, support normal,tnormal,uniform
-embed_l2 | l2 regular coefficient for embedding parameter
-embed_l1 | l1 regular coefficient for embedding parameter
-layer_l2 | l2 regular coefficient for layer parameter
-layer_l1 | l1 regular coefficient for layer parameter
-embedding_dim | embedding dim, must be set 
-layer_sizes | a list, the number of nodes per layer, must be set
-layer_activations | a list, activate function per layer, support sigmoid, relu, tanh, must be set
-show_step | show train loss per N step, N = show_step
+eval_file | file path for evalute, must be set, eg, eval_file = ./data/val.entertainment.no_inter.norm.fieldwise.userid.txt
+field_cnt | field num in dataSet, field index start by 1, must be set, eg, field_cnt=33
+feature_cnt | feature num in dataSet, feat index start by 1, must be set , eg, feature_cnt=194081
+init_value | parameter initialization variance, eg, init_value=0.001
+init_method | parameter initialization method, support normal,tnormal,uniform, eg, init_method=normal
+embed_l2 | l2 regular coefficient for embedding parameter, eg, embed_l2=0.1
+layer_l2 | l2 regular coefficient for layer parameter, eg, layer_l2=0.1
+embedding_dim | embedding dim, must be set, eg, embedding_dim=10
+layer_sizes | a list, the number of nodes per layer, must be set, eg, layer_sizes=[50]
+layer_activations | a list, activate function per layer, support sigmoid, relu, tanh, must be set, eg, layer_activations=['relu']
+show_steps | show train loss per N step, N = show_step, eg, show_steps=20
 ## Benchmark Experiment
 we sample 8w from criteo dataset([dataset](https://www.kaggle.com/c/criteo-display-ad-challenge)), dealing with long tail features and continuous features. the dataset has 26w features and 8w samples.we split the dataset randomly into two parts: 80% is for training, 20% is for testing.
 
