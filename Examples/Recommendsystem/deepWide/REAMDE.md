@@ -38,8 +38,8 @@ train_file | file path for train, must be set
 eval_file | file path for evalute, must be set
 field_cnt | field num in dataSet, field index start by 1, must be set
 feature_cnt | feature num in dataSet, feat index start by 1, must be set 
-init_value | initialization variance
-init_method | initialization method, support normal,tnormal,uniform
+init_value | parameter initialization variance
+init_method | parameter initialization method, support normal,tnormal,uniform
 embed_l2 | l2 regular coefficient for embedding parameter
 embed_l1 | l1 regular coefficient for embedding parameter
 layer_l2 | l2 regular coefficient for layer parameter
