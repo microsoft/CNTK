@@ -5,7 +5,7 @@ we support data format [libffm](https://github.com/guestwalk/libffm)
 
 ## How To Use
 ```
-python main.py
+python deepWide.py
 ``` 
 in order to use your data, you can set your own parameters.
 ```
