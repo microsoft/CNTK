@@ -49,8 +49,8 @@ show_steps | show train loss per N step, N = show_step, eg, show_steps=20
 ## Output And Result
 during training, the value of loss function will be output. such as:
 >------
-minibatch: 20, loss: 0.6557, logloss: 0.6557
-minibatch: 40, loss: 0.2838, logloss: 0.2835
+minibatch: 20, loss: 0.6557, logloss: 0.6557<\br>
+minibatch: 40, loss: 0.2838, logloss: 0.2835<\br>
 minibatch: 60, loss: 0.6476, logloss: 0.6470
 epoch: 0, train logloss: 0.3875, eval logloss: 0.3919
 minibatch: 80, loss: 0.1607, logloss: 0.1601
