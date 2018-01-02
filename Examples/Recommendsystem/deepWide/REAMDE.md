@@ -51,15 +51,24 @@ show_steps | show train loss per N step, N = show_step, eg, show_steps=20
 
 during training, the value of loss function will be output. such as:
 ``` 
-minibatch: 20, loss: 0.6557, logloss: 0.6557<br>
-minibatch: 40, loss: 0.2838, logloss: 0.2835<br>
-minibatch: 60, loss: 0.6476, logloss: 0.6470<br>
-epoch: 0, train logloss: 0.3875, eval logloss: 0.3919<br>
-minibatch: 80, loss: 0.1607, logloss: 0.1601<br>
-minibatch: 100, loss: 0.1958, logloss: 0.1952<br>
-minibatch: 120, loss: 0.1524, logloss: 0.1516<br>
-epoch: 1, train logloss: 0.3691, eval logloss: 0.3880<br>
+minibatch: 20, loss: 0.6557, logloss: 0.6557 
+minibatch: 40, loss: 0.2838, logloss: 0.2835 
+minibatch: 60, loss: 0.6476, logloss: 0.6470 
+epoch: 0, train logloss: 0.3875, eval logloss: 0.3919 
+minibatch: 80, loss: 0.1607, logloss: 0.1601 
+minibatch: 100, loss: 0.1958, logloss: 0.1952 
+minibatch: 120, loss: 0.1524, logloss: 0.1516 
+epoch: 1, train logloss: 0.3691, eval logloss: 0.3880 
 ``` 
+log information is saved in log.txt. such as:
+``` 
+epoch: 0, train logloss: 0.3875, eval logloss: 0.3919
+epoch: 1, train logloss: 0.3691, eval logloss: 0.3880
+epoch: 2, train logloss: 0.3473, eval logloss: 0.3876
+epoch: 3, train logloss: 0.3255, eval logloss: 0.3874
+epoch: 4, train logloss: 0.3058, eval logloss: 0.3872
+``` 
+
 
 ## Benchmark Experiment
 we sample 8w from criteo dataset([dataset](https://www.kaggle.com/c/criteo-display-ad-challenge)), dealing with long tail features and continuous features. the dataset has 26w features and 8w samples.we split the dataset randomly into two parts: 80% is for training, 20% is for testing.
