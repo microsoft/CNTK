@@ -63,13 +63,13 @@ def convnet_cifar10(debug_output=False, data_path=data_path, epoch_size=50000, m
 
     # Set learning parameters
     lr_per_sample          = [0.0015625]*10 + [0.00046875]*10 + [0.00015625]
-    lr_schedule            = C.learning_rate_schedule(lr_per_sample, C.learners.UnitType.sample, epoch_size)
-    mm_time_constant       = [0]*20 + [-minibatch_size/np.log(0.9)]
-    mm_schedule            = C.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
+    lr_schedule            = C.learning_parameter_schedule(lr_per_sample, minibatch_size=1, epoch_size=epoch_size)
+    mm                     = [0.9] * 20
+    mm_schedule            = C.learners.momentum_schedule(mm, epoch_size=epoch_size, minibatch_size=minibatch_size)
     l2_reg_weight          = 0.002
 
     # Instantiate the trainer object to drive the model training
-    learner = C.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule,
+    learner = C.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule, minibatch_size=minibatch_size,
                                         l2_regularization_weight = l2_reg_weight)
     progress_printer = C.logging.ProgressPrinter(tag='Training', num_epochs=max_epochs)
     trainer = C.Trainer(z, (ce, pe), learner, progress_printer)

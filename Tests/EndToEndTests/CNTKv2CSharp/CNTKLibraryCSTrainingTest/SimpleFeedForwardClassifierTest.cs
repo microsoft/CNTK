@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using CNTK;
+using CNTK.CSTrainingExamples;
+using System.IO;
 
 namespace CNTK.CNTKLibraryCSTrainingTest
 {
@@ -21,6 +23,12 @@ namespace CNTK.CNTKLibraryCSTrainingTest
     /// <param name="device">Specify on which device to run the evaluation.</param>
     public class SimpleFeedForwardClassifierTest
     {
+        /// <summary>
+        /// during CNTK test, train data are copied to the test execution folder
+        /// when not run as a CNTK test, DataFolder needs to be set accordingly.
+        /// </summary>
+        public static string DataFolder = "../../Tests/EndToEndTests/Simple2d/Data";
+
         internal static void TrainSimpleFeedForwardClassifier(DeviceDescriptor device)
         {
             int inputDim = 2;
@@ -45,7 +53,8 @@ namespace CNTK.CNTKLibraryCSTrainingTest
             IList<StreamConfiguration> streamConfigurations = new StreamConfiguration[]
                 { new StreamConfiguration(featureStreamName, inputDim), new StreamConfiguration(labelsStreamName, numOutputClasses) };
 
-            using (var minibatchSource = MinibatchSource.TextFormatMinibatchSource("SimpleDataTrain_cntk_text.txt",
+            using (var minibatchSource = MinibatchSource.TextFormatMinibatchSource(
+                Path.Combine(DataFolder, "SimpleDataTrain_cntk_text.txt"),
                 streamConfigurations, MinibatchSource.FullDataSweep, true, MinibatchSource.DefaultRandomizationWindowInChunks))
             {
                 var featureStreamInfo = minibatchSource.StreamInfo(featureStreamName);
@@ -92,10 +101,10 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                 }
             }
 
-            CNTK.TrainingParameterScheduleDouble learningRatePerSample = new CNTK.TrainingParameterScheduleDouble(
-                0.02, TrainingParameterScheduleDouble.UnitType.Sample);
+            CNTK.TrainingParameterScheduleDouble learningRatePerSample = new CNTK.TrainingParameterScheduleDouble(0.02, 1);
 
-            using (var minibatchSource = MinibatchSource.TextFormatMinibatchSource("SimpleDataTrain_cntk_text.txt", streamConfigurations))
+            using (var minibatchSource = MinibatchSource.TextFormatMinibatchSource(
+                Path.Combine(DataFolder, "SimpleDataTrain_cntk_text.txt"), streamConfigurations))
             {
                 var featureStreamInfo = minibatchSource.StreamInfo(featureStreamName);
                 var labelStreamInfo = minibatchSource.StreamInfo(labelsStreamName);
@@ -104,7 +113,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                     { new StreamConfiguration("features", inputDim), new StreamConfiguration("labels", numOutputClasses) };
 
                 IList<Learner> parameterLearners =
-                    new List<Learner>() { CNTKLib.SGDLearner(classifierOutput.Parameters(), learningRatePerSample) };
+                    new List<Learner>() { Learner.SGDLearner(classifierOutput.Parameters(), learningRatePerSample) };
                 var trainer = Trainer.CreateTrainer(classifierOutput, trainingLoss, prediction, parameterLearners);
 
                 int outputFrequencyInMinibatches = 20;

@@ -4,6 +4,9 @@
 //
 // NDArrayViewShim.cs -- C# Api for CNTK NDArrayView class
 //
+using System;
+using System.Collections.Generic;
+
 namespace CNTK
 {
     public partial class NDArrayView
@@ -11,10 +14,10 @@ namespace CNTK
         /// <summary>
         /// Constructor using float dense input.
         /// </summary>
-        /// <param name="viewShape"></param>
-        /// <param name="dataBuffer"></param>
-        /// <param name="device"></param>
-        /// <param name="readOnly"></param>
+        /// <param name="viewShape">shape of the data</param>
+        /// <param name="dataBuffer">data buffer</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether the data is readonly</param>
         public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
         {
         }
@@ -22,10 +25,10 @@ namespace CNTK
         /// <summary>
         /// Constructor using double dense input.
         /// </summary>
-        /// <param name="viewShape"></param>
-        /// <param name="dataBuffer"></param>
-        /// <param name="device"></param>
-        /// <param name="readOnly"></param>
+        /// <param name="viewShape">shape of the data</param>
+        /// <param name="dataBuffer">data buffer</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether the data is readonly</param>
         public NDArrayView(NDShape viewShape, double[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
         {
         }
@@ -33,42 +36,42 @@ namespace CNTK
         /// <summary>
         /// Constructor using float sparse input.
         /// </summary>
-        /// <param name="viewShape"></param>
-        /// <param name="colStarts"></param>
-        /// <param name="rowIndices"></param>
-        /// <param name="nonZeroValues"></param>
-        /// <param name="device"></param>
-        /// <param name="readOnly"></param>
+        /// <param name="viewShape">shape of the date</param>
+        /// <param name="colStarts">starting colomn</param>
+        /// <param name="rowIndices">list of column indices</param>
+        /// <param name="nonZeroValues">sparse values</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether the data is readonly</param>
         public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, float[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.Length, device, readOnly)
         {
             if (rowIndices.Length != nonZeroValues.Length)
             {
-                throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+                throw new ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
             }
             if (viewShape[viewShape.Rank - 1] + 1 != colStarts.Length)
             {
-                throw new System.ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
+                throw new ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
             }
         }
 
         /// <summary>
         /// Constructor using double sparse input.
         /// </summary>
-        /// <param name="viewShape"></param>
-        /// <param name="colStarts"></param>
-        /// <param name="rowIndices"></param>
-        /// <param name="nonZeroValues"></param>
-        /// <param name="device"></param>
-        /// <param name="readOnly"></param>
+        /// <param name="viewShape">shape of the data</param>
+        /// <param name="colStarts">starting column</param>
+        /// <param name="rowIndices">list of row indices</param>
+        /// <param name="nonZeroValues">sparse data</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether the data is readonly</param>
         public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, double[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.Length, device, readOnly)
         {
             if (rowIndices.Length != nonZeroValues.Length)
             {
-                throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+                throw new ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
             }
             if (viewShape[viewShape.Rank - 1] + 1 != colStarts.Length)
             {
-                throw new System.ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
+                throw new ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
             }
         }
 
@@ -127,7 +130,7 @@ namespace CNTK
         /// <param name="extent"></param>
         /// <param name="readOnly"></param>
         /// <returns></returns>
-        public NDArrayView SliceView(System.Collections.Generic.IEnumerable<int> startOffset, System.Collections.Generic.IEnumerable<int> extent, bool readOnly = false)
+        public NDArrayView SliceView(IEnumerable<int> startOffset, IEnumerable<int> extent, bool readOnly = false)
         {
             var startOffsetVector = Helper.AsSizeTVector(startOffset);
 
@@ -146,6 +149,16 @@ namespace CNTK
             return _Alias(readOnly);
         }
 
+        /// <summary>
+        /// Generate a normal distribution random data NDArrayView 
+        /// </summary>
+        /// <typeparam name="T">data type</typeparam>
+        /// <param name="shape">data shape</param>
+        /// <param name="mean">mean of the data</param>
+        /// <param name="stdDev">standard deviation</param>
+        /// <param name="seed">seed</param>
+        /// <param name="device">device</param>
+        /// <returns></returns>
         public static NDArrayView RandomNormal<T>(NDShape shape, double mean, double stdDev, uint seed, DeviceDescriptor device)
         {
             if (device == null)
@@ -162,10 +175,20 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
 
+        /// <summary>
+        /// Generate a uniform distribution random data NDArrayView
+        /// </summary>
+        /// <typeparam name="T">the data type</typeparam>
+        /// <param name="shape">shape of the data</param>
+        /// <param name="rangeBegin">low end value</param>
+        /// <param name="rangeEnd">high end value</param>
+        /// <param name="seed">seed</param>
+        /// <param name="device">device</param>
+        /// <returns></returns>
         public static NDArrayView RandomUniform<T>(NDShape shape, double rangeBegin, double rangeEnd, uint seed, DeviceDescriptor device)
         {
             if (device == null)
@@ -182,7 +205,7 @@ namespace CNTK
             }
             else
             {
-                throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+                throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
             }
         }
     }

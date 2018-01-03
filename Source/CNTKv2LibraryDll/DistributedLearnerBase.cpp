@@ -9,8 +9,9 @@
 
 namespace CNTK
 {
-    DistributedLearnerBase::DistributedLearnerBase(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
-        : DistributedLearner(communicator, learner, distributeAfterSamples)
+    DistributedLearnerBase::DistributedLearnerBase(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples, bool convertSparseToDense)
+        : DistributedLearner(communicator, learner, distributeAfterSamples),
+          m_convertSparseToDense(convertSparseToDense)
     {
         if (!m_learner)
             InvalidArgument("Learner cannot be null.");
@@ -45,25 +46,33 @@ namespace CNTK
         }
 
         auto dataType = gradientValues.begin()->first.GetDataType();
-        info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::CPUDevice());
-        info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::CPUDevice());
+        info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::UseDefaultDevice());
+        info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::UseDefaultDevice());
     }
 
-    void DistributedLearnerBase::ConvertToOrdered(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, std::vector<std::pair<Parameter, NDArrayViewPtr>>& result)
+    void DistributedLearnerBase::ConvertToOrdered(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, std::vector<std::pair<Parameter, NDArrayViewPtr>>& result, std::unordered_map<Parameter, NDArrayViewPtr>* convertedGradientValues)
     {
         result.reserve(gradientValues.size());
         result.clear();
+
+        if (convertedGradientValues)
+            convertedGradientValues->clear();
+
         for (auto g : gradientValues)
         {
             NDArrayViewPtr p = g.second;
             // convert sparse gradient to dense for accumulation
-            if (p->GetStorageFormat() != StorageFormat::Dense)
+            if (m_convertSparseToDense && p->GetStorageFormat() != StorageFormat::Dense)
             {
                 NDArrayViewPtr pDense = MakeSharedObject<NDArrayView>(0, p->GetDataType(), p->Shape(), p->Device());
                 pDense->CopyFrom(*p);
                 p = pDense;
             }
-            result.push_back(std::make_pair(g.first, p));
+            auto pair = std::make_pair(g.first, p);
+            result.push_back(pair);
+
+            if (convertedGradientValues)
+                convertedGradientValues->insert(pair);
         }
 
         std::sort(result.begin(), result.end(),

@@ -512,9 +512,11 @@ namespace CNTK
     void Value::CopyVariableValueToImpl(const Variable& outputVariable, std::vector<std::vector<DestType>>& sequences)
     {
         // PackedValue should be automatically unpacked when accessing Data() and Mask().
+        NDShape inferredVarShape;
         size_t numOfSequences;
         size_t maxSequenceLen;
-        std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
+        // Verify compatibility of 'this' value and outputVariable, get sequence and batch length, and get the inferred shape if the variable has a free dimension.
+        std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable, &inferredVarShape);
 
         if (sequences.size() < numOfSequences)
             RuntimeError("The size of output buffer (%zu) is smaller than the number (%zu) of sequences.", sequences.size(), numOfSequences);
@@ -548,7 +550,7 @@ namespace CNTK
 
         valueData = cpuArrayView->DataBuffer<ValueType>();
 
-        auto sampleSize = outputVariable.Shape().TotalSize();
+        auto sampleSize = inferredVarShape.TotalSize();
         for (auto seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
         {
             size_t seqStart = seqIndex * maxSequenceLen;
@@ -572,9 +574,9 @@ namespace CNTK
         }
     }
 
-    std::pair<size_t, size_t> Value::GetSequenceAndBatchLength(const Variable& outputVariable)
+    std::pair<size_t, size_t> Value::GetSequenceAndBatchLength(const Variable& outputVariable, NDShape* inferredVarShape)
     {
-        Utils::VerifyVariableValueCompatibility(outputVariable, shared_from_this());
+        Utils::VerifyVariableValueCompatibility(outputVariable, shared_from_this(), inferredVarShape);
 
         size_t varRank = outputVariable.Shape().Rank();
         size_t maxSequenceLength = 1;

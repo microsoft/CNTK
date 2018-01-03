@@ -107,7 +107,7 @@ TARGET_CONFIGURATION="${BASH_REMATCH[1]}"
 
 # Anaconda download / install dependencies
 # [coreutils for sha{1,256}sum]
-PACKAGES="bzip2 wget ca-certificates coreutils"
+PACKAGES="bzip2 wget ca-certificates coreutils cmake zlib1g-dev"
 
 # CNTK run-time dependencies (OpenMPI)
 if [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*14\.04 ]]; then
@@ -121,7 +121,7 @@ else
 fi
 
 # Additional packages for ImageReader
-PACKAGES+=" libjasper1 libjpeg8 libpng12-0"
+PACKAGES+=" libjasper1 libjpeg8 libpng12-0 libtiff5"
 
 if dpkg -s $PACKAGES 1>/dev/null 2>/dev/null; then
   printf "Packages already installed, skipping.\n"

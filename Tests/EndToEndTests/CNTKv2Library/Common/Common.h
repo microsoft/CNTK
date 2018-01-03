@@ -40,6 +40,8 @@ __declspec_noreturn inline void ReportFailure(const char* format, ...)
 
     char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
     vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
+    va_end(args);
+
     if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
         sprintf(buffer + _countof(buffer) - 4, "...");
 

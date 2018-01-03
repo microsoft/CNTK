@@ -4,6 +4,8 @@
 //
 // AxisShim.cs -- C# Api for CNTK Axis class
 //
+using System;
+
 namespace CNTK
 {
     public partial class Axis
@@ -44,7 +46,7 @@ namespace CNTK
         /// Returns index of this Axis.
         /// </summary>
         /// <param name="checkStaticAxis"></param>
-        /// <returns></returns>
+        /// <returns>the index of this Axis</returns>
         public int StaticAxisIndex(bool checkStaticAxis = true)
         {
             return _StaticAxisIndex(checkStaticAxis);
@@ -55,7 +57,7 @@ namespace CNTK
         /// </summary>
         /// <param name="obj">The object to compare with.</param>
         /// <returns>Returns true if they are equal.</returns>
-        public override bool Equals(System.Object obj)
+        public override bool Equals(Object obj)
         {
             // If parameter is null return false.
             if (obj == null)
@@ -65,7 +67,7 @@ namespace CNTK
 
             // If parameter cannot be cast to Point return false.
             Axis p = obj as Axis;
-            if ((System.Object)p == null)
+            if ((Object)p == null)
             {
                 return false;
             }

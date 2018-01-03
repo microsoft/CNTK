@@ -620,7 +620,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
 
         // For legacy readers, in BPTT mode the minibatch size was not the real minibatch size but truncation.
-        // Because of that we have to fix up the real minibatch size multiplying the number of parallel sequences by the truncation lenght.
+        // Because of that we have to fix up the real minibatch size multiplying the number of parallel sequences by the truncation length.
         // This is not require any more for the new readers.
         if (trainSetDataReader->IsLegacyReader())
             actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
@@ -658,7 +658,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       inputMatrices,
                                       learnableNodes, smoothedGradients, smoothedCounts,
                                       epochCriterion, epochEvalErrors,
-                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter);
+                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch);
         totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
         timer.Stop();
@@ -992,7 +992,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::string& prefixMsg,
                                     const size_t maxNumberOfSamples,
                                     const size_t totalMBsSeenBefore,
-                                    ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter)
+                                    ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter,
+                                    const int startEpoch)
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
 
@@ -1485,7 +1486,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // determine progress in percent
             int mbProgNumPrecision = 2;
             double mbProg = 0.0;
-            if (epochNumber > 0 || (int)epochSize > 0) // TODO: explain this condition in a comment
+
+            // Skip epoch size computation if we aren't asked to and epoch is not the starting epoch
+            bool skipComputeEpochSize = epochNumber > startEpoch || epochSize != requestDataSize;
+
+            if (skipComputeEpochSize)
             {
                 if (m_maxComputedEpochSize != 0)
                 {
@@ -1508,7 +1513,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, "%s Epoch[%2d of %d]-Minibatch[%4d-%4d",
                         prefixMsg.c_str(), epochNumber + 1, (int)m_maxEpochs,
                         (int)(numMBsRunSinceLastLogged + 1), numMBsRun);
-                if (epochNumber > 0 || (int)epochSize > 0) // got anything?  --TODO: why cast epochSize to (int) for this comparison?
+                if (skipComputeEpochSize)
                     fprintf(stderr, (", %2." + to_string(mbProgNumPrecision) + "f%%").c_str(), mbProg * 100); // --TODO: use a * format?
                 fprintf(stderr, "]: ");
                 epochCriterionSinceLastLogged.LogCriterion(criterionNodes[0]->NodeName());
@@ -2222,7 +2227,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                        /*out*/ dummyMinibatchSize);
 }
 
-// Attemps to compute the error signal for the whole utterance, which will
+// Attempts to compute the error signal for the whole utterance, which will
 // be fed to the neural network as features. Currently it is a workaround
 // for the two-forward-pass sequence and ctc training, which allows
 // processing more utterances at the same time. Only used in Kaldi2Reader.
@@ -2382,16 +2387,20 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     {
         // even if momentum is 0.0, still need to call a momentum-based update to store 
         // [learning rate * current gradient values] in the smoothed gradients, in case
-        // the momentum value for the next epoch is non-zero.
+        // the momentum value for the next epoch is non-zero. Note that the unit gain factor 
+        // can not be computed from the momentum scaled for per sample update; it should be 
+        // based on the original momentum rate.
         if (!useNesterovMomentum)
         {
             functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues, 
-                                             ElemType(learnRatePerSample), ElemType(momentum));
+                                             ElemType(learnRatePerSample), 
+                                             //By defualt, V1 uses UnitGain momentum. TODO: Do we need to enable V1 with non unit gain update?
+                                             ElemType(momentum), ElemType(1.0) - ElemType(momentum));
         }
         else
         {
             functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues, 
-                                                                ElemType(learnRatePerSample), ElemType(momentum));
+                                                                ElemType(learnRatePerSample), ElemType(momentum), ElemType(1.0) - ElemType(momentum));
         }
     }
     else if (adpType == GradientsUpdateType::AdaGrad)
@@ -2410,7 +2419,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
         smoothedGradientValues.FSAdagradUpdate(
                                          gradientValues, functionValues, targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
-                                         learnRatePerSample, momentum, varMomentum);
+                                         learnRatePerSample, momentum, varMomentum, ElemType(1.0) - ElemType(momentum));
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {

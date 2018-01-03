@@ -750,4 +750,60 @@ inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second
     }
 }
 
+template<class T>
+bool AreEqual(T a, T b, T maxRelError, T maxAbsError)
+{
+    T diff = std::abs(a - b);
+    if (diff <= maxAbsError)
+        return true;
+    T largest = std::max(std::abs(a), std::abs(b));
+    return diff < largest * maxRelError;
+}
+
+template <typename T>
+void RequireClose(const std::vector<T>& v1, const std::vector<T>& v2, T maxRelError, T maxAbsError)
+{
+    BOOST_REQUIRE(v1.size() == v2.size());
+    int count = 0;
+    int badIndex = -1;
+    for (int i = 0; i < v1.size(); ++i)
+    {
+        if (!AreEqual(v1[i], v2[i], maxRelError, maxAbsError) && count++ == 0)
+            badIndex = i;
+    }
+
+    if (count > 0)
+    {
+        T a = v1[badIndex];
+        T b = v2[badIndex];
+        std::stringstream ss;
+        ss << count << " mismatch" << (count > 1 ? "es" : "") << ", first mismatch at " << badIndex << ", " << a
+            << " != " << b
+            << ", rel = " << (std::abs(a - b) / std::max(std::abs(a), std::abs(b)))
+            << ", abs = " << std::abs(a - b);
+        BOOST_TEST_REQUIRE(false, ss.str());
+    }
+}
+
+template<class T>
+T GetL1Norm(const std::vector<T>& v1, const std::vector<T>& v2)
+{
+    BOOST_REQUIRE(v1.size() == v2.size());
+    T sumDiff = 0;
+    for (size_t i = 0; i < v1.size(); ++i)
+    {
+        sumDiff += abs(v1[i] - v2[i]);
+    }
+    return sumDiff;
+}
+
+template<class T>
+std::vector<T> CombineVectors(std::initializer_list<std::vector<T>> vs)
+{
+    std::vector<T> result;
+    for (const auto& v : vs)
+        result.insert(result.end(), v.begin(), v.end());
+    return result;
+}
+
 MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numOutputClasses, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true);

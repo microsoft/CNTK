@@ -50,7 +50,7 @@ def test_transfer_learning(device_id):
                 myzip.extractall(os.path.join(animals_path, '..'))
 
     else:
-        model_file = os.path.join(base_path, *"../../../../Examples/Image/PretrainedModels/ResNet_18.model".split("/"))
+        model_file = os.path.join(base_path, *"../../../../PretrainedModels/ResNet_18.model".split("/"))
 
     train_image_folder = os.path.join(animals_path, "Train")
     test_image_folder = os.path.join(animals_path, "Test")

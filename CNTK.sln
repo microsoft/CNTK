@@ -369,6 +369,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvalDll", "Source\EvalDll\E
 		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageWriterDll", "Source\ImageWriterDll\ImageWriterDll.vcxproj", "{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
+	EndProjectSection
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Math", "Source\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
@@ -854,6 +859,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKv2LibraryDll", "Source\
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D} = {2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "V2LibraryTests", "Tests\UnitTests\V2LibraryTests\V2LibraryTests.vcxproj", "{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}"
@@ -1165,7 +1171,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FastRCNN", "FastRCNN", "{4E
 		Examples\Image\Detection\FastRCNN\cntk_helpers.py = Examples\Image\Detection\FastRCNN\cntk_helpers.py
 		Examples\Image\Detection\FastRCNN\fastrcnn.cntk = Examples\Image\Detection\FastRCNN\fastrcnn.cntk
 		Examples\Image\Detection\FastRCNN\imdb_data.py = Examples\Image\Detection\FastRCNN\imdb_data.py
-		Examples\Image\Detection\FastRCNN\install_fastrcnn.py = Examples\Image\Detection\FastRCNN\install_fastrcnn.py
+		Examples\Image\Detection\FastRCNN\install_data_and_model.py = Examples\Image\Detection\FastRCNN\install_data_and_model.py
 		Examples\Image\Detection\FastRCNN\LabelMeConverter.py = Examples\Image\Detection\FastRCNN\LabelMeConverter.py
 		Examples\Image\Detection\FastRCNN\PARAMETERS.py = Examples\Image\Detection\FastRCNN\PARAMETERS.py
 		Examples\Image\Detection\FastRCNN\README.md = Examples\Image\Detection\FastRCNN\README.md
@@ -1613,6 +1619,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryCSTrainingTest",
 		{50EF9EE6-5018-453E-A063-F77044EF1A97} = {50EF9EE6-5018-453E-A063-F77044EF1A97}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ProposalLayer", "ProposalLayer", "{3631994A-59E6-4CD6-99A4-6D332F8DABE2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProposalLayerLib", "Examples\Extensibility\ProposalLayer\ProposalLayerLib\ProposalLayerLib.vcxproj", "{91EA9F28-B9B6-4FC7-A47D-9838F5915700}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1726,6 +1739,18 @@ Global
 		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Release_UWP|x64.ActiveCfg = Release_CpuOnly|x64
 		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Release|x64.ActiveCfg = Release|x64
 		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Release|x64.Build.0 = Release|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Debug_UWP|x64.ActiveCfg = Debug_CpuOnly|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Debug|x64.ActiveCfg = Debug|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Debug|x64.Build.0 = Debug|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Release_UWP|x64.ActiveCfg = Release_NoOpt|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Release|x64.ActiveCfg = Release|x64
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}.Release|x64.Build.0 = Release|x64
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug_UWP|x64.ActiveCfg = Debug_UWP|x64
@@ -2297,6 +2322,18 @@ Global
 		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release_UWP|x64.ActiveCfg = Release_NoOpt|x64
 		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release|x64.ActiveCfg = Release|x64
 		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3}.Release|x64.Build.0 = Release|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug_UWP|x64.ActiveCfg = Debug_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug|x64.ActiveCfg = Debug|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Debug|x64.Build.0 = Debug|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release_UWP|x64.ActiveCfg = Release_CpuOnly|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release|x64.ActiveCfg = Release|x64
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2341,6 +2378,7 @@ Global
 		{3CE841C0-02E5-46DB-B401-6F8784880173} = {47755F2E-D674-4175-9E38-8EA053455072}
 		{A4FC3467-4787-43E8-BBC0-D79AE56B468D} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{B3DD765E-694E-4494-BAD7-37BBF2942517} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{D667AF32-028A-4A5D-BE19-F46776F0F6B2} = {33EBFE78-A1A8-4961-8938-92A271941F94}
@@ -2521,5 +2559,7 @@ Global
 		{B6DED59B-B52A-4D44-9B61-26FF0382764A} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{B3B46744-DBB5-42C2-BAD7-9151D9486045} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
 		{0DF2109B-BB85-4718-82DE-1C0536D4F2C3} = {B3B46744-DBB5-42C2-BAD7-9151D9486045}
+		{3631994A-59E6-4CD6-99A4-6D332F8DABE2} = {3BF56127-6F0F-41CF-BFCE-31165A0A5E73}
+		{91EA9F28-B9B6-4FC7-A47D-9838F5915700} = {3631994A-59E6-4CD6-99A4-6D332F8DABE2}
 	EndGlobalSection
 EndGlobal

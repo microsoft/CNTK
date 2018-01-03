@@ -6,6 +6,7 @@
 //
 
 using System;
+using System.Threading.Tasks;
 using CNTK;
 
 namespace CNTKLibraryCSEvalExamples
@@ -60,10 +61,13 @@ namespace CNTKLibraryCSEvalExamples
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
 
                 MemoryTests.WriteOutputs();
-                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallelAsync(device).Wait();
 
                 // Run memory tests again.
                 MemoryTests.ValidateObjectReferences(device);
+
+                Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(device);
+                evalTask.Wait();
 
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
@@ -75,6 +79,9 @@ namespace CNTKLibraryCSEvalExamples
 
                 MemoryTests.ValueCopyToSparseCSCTest<float>(device);
                 MemoryTests.ValueCopyToSparseCSCTest<double>(device);
+
+                CNTKLibraryManagedExamples.EvaluateIntermediateLayer(device);
+                CNTKLibraryManagedExamples.EvaluateCombinedOutputs(device);
             }
 
             if (ShouldRunOnGpu())
@@ -85,9 +92,12 @@ namespace CNTKLibraryCSEvalExamples
                 MemoryTests.ValidateObjectReferences(device);
                 CNTKLibraryManagedExamples.EvaluationSingleImage(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
-                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallelAsync(device).Wait();
                 // Run memory tests.
                 MemoryTests.ValidateObjectReferences(device);
+
+                Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(device);
+                evalTask.Wait();
 
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
@@ -98,6 +108,9 @@ namespace CNTKLibraryCSEvalExamples
 
                 MemoryTests.ValueCopyToSparseCSCTest<float>(device);
                 MemoryTests.ValueCopyToSparseCSCTest<double>(device);
+
+                CNTKLibraryManagedExamples.EvaluateIntermediateLayer(device);
+                CNTKLibraryManagedExamples.EvaluateCombinedOutputs(device);
             }
 
             Console.WriteLine("======== Evaluation completes. ========");

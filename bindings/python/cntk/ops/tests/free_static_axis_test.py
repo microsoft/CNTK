@@ -139,6 +139,53 @@ def test_free_dimension_broadcast():
     assert m.shape == (-3, 5)
 
 
+def test_free_static_times():
+    x = C.input_variable((C.FreeDimension, C.FreeDimension))
+    w = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
+    t = C.times(x, w)
+
+    x_data = np.asarray([[0.5, 0.2]], np.float32)
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
+
+    x_data = np.asarray([[0.5, 0.2], [0.1, .6]], np.float32)
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.allclose(t_val, np.asarray([[[1.2, 3.1], [0.8, 2.3]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.6, .6], [.8, .8]], dtype=np.float32))
+
+    x_data = np.asarray([[0.5, 0.2]], np.float32)
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
+
+
+FREE_STATIC_AXES_POOLING_DATA = [
+    ((C.FreeDimension, C.FreeDimension, C.FreeDimension),
+     C.AVG_POOLING,
+     (2, 2),
+     (2, 2),
+     [[[[2.5, 4.5], [10.5, 12.5]]]]),
+    ((C.FreeDimension, C.FreeDimension, C.FreeDimension),
+     C.MAX_POOLING,
+     (2, 2),
+     (2, 2),
+     [[[[5, 7], [13, 15]]]]),
+    ((C.FreeDimension, C.FreeDimension, C.FreeDimension),
+     C.AVG_POOLING,
+     (2, 2),
+     (2, 1),
+     [[[[2.5, 3.5, 4.5], [10.5, 11.5, 12.5]]]])
+]
+@pytest.mark.parametrize("input_shape, pooling_type, window_shape, strides, expected", FREE_STATIC_AXES_POOLING_DATA)
+def test_free_static_pooling(input_shape, pooling_type, window_shape, strides, expected):
+    img = np.reshape(np.arange(16, dtype=np.float32), [1, 4, 4])
+    x = C.input_variable(input_shape)
+    avg_pooling = C.pooling(x, pooling_type, window_shape, strides)
+    assert avg_pooling.shape == (C.FreeDimension, C.FreeDimension, C.FreeDimension)
+    assert np.allclose(avg_pooling.eval({x:[img]}), np.asarray(expected, dtype=np.float32))
+
+
 from cntk.ops.functions import Function, UserFunction
 from .ops_test_utils import AA
 

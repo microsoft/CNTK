@@ -6,13 +6,14 @@ channels:
 dependencies:
 - enum34=1.1.6=py27_0
 - h5py=2.6.0=np111py27_2
-- imageio=2.1.1=py27_0
+- imageio=2.2.0=py27_0
 - jupyter=1.0.0=py27_3
 - matplotlib=1.5.3=np111py27_0
 - mock=2.0.0=py27_0
 - numpy=1.11.2=py27_0
 - pandas=0.19.1=np111py27_0
 - pandas-datareader=0.2.1=py27_0
+- pandoc=1.19.2.1
 - pillow=3.4.2=py27_0
 - pip=8.1.2=py27_0
 - python=2.7.11=5
@@ -32,5 +33,6 @@ dependencies:
   - pytest==3.0.3
   - sphinx-rtd-theme==0.2.4
   - sphinx==1.5.4
+  - nbsphinx==0.2.14
   - twine==1.8.1
   - protobuf==3.2.0

@@ -73,7 +73,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
-      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>        
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
     </ClCompile>
     <Link />
     <ProjectReference>

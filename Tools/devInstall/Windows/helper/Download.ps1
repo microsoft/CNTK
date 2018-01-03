@@ -53,7 +53,7 @@ function Download(
     $method = GetTableDefaultString -table $table -entryName "Method" -defaultValue "WebRequest"
     $userAgent = GetTableDefaultString -table $table -entryName "UserAgent" -defaultValue = "InternetExplorer"
     $destination = $table["Destination"]
-    $expectedHash = GetTableDefaultInt -table $table -entryName "expectedHash" -defaultValue ""
+    $expectedHash = GetTableDefaultString -table $table -entryName "expectedHash" -defaultValue ""
 
     if (test-path $destination -PathType Leaf) {
         Write-Host File [$destination] already exists

@@ -104,14 +104,14 @@ int main(int argc, char* argv[])
         model->Evaluate(inputLayer, outputLayer);
 
         // Output the results
-        fprintf(stderr, "Layer '%ls' output:\n", outputLayerName.c_str());
+        printf("Layer '%ls' output:\n", outputLayerName.c_str());
         for (auto& value : outputs)
         {
-            fprintf(stderr, "%f\n", value);
+            printf("%f\n", value);
         }
 
         // This pattern is used by End2EndTests to check whether the program runs to complete.
-        fprintf(stderr, "Evaluation complete.\n");
+        printf("Evaluation complete.\n");
         ret = 0;
     }
     catch (const std::exception& err)
@@ -125,6 +125,7 @@ int main(int argc, char* argv[])
         ret = 1;
     }
 
+    fflush(stdout);
     fflush(stderr);
     return ret;
 }

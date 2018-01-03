@@ -303,6 +303,9 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixElementOperations, RandomSeedFixture)
     m2(1, 2) = 1.0000;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
+    m3.InplaceAtanh();
+    BOOST_CHECK(m3.IsEqualTo(m0, c_epsilonFloatE4));
+
     m3.SetValue(m0);
     m3.InplaceLogSoftmax(true);
     m3.InplaceExp();
@@ -470,6 +473,16 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixElementOperations, RandomSeedFixture)
     m2(1, 0) = 27.2899172;
     m2(1, 1) = 74.20321058;
     m2(1, 2) = 201.71315737;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceAsinh();
+    m2(0, 0) = 0.88137359;
+    m2(0, 1) = 1.44363548;
+    m2(0, 2) = 1.81844646;
+    m2(1, 0) = 2.09471255;
+    m2(1, 1) = 2.31243834;
+    m2(1, 2) = 2.49177985;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 }
 
@@ -953,7 +966,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdam, RandomSeedFixture)
     parameters.SetValue(2, 1, paramValues, matrixFormatRowMajor);
     expectedParameters.SetValue(2, 1, expectedValues, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, expectedStateValues, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -962,7 +975,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdam, RandomSeedFixture)
     double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
     expectedParameters.SetValue(2, 1, expectedValues2, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, expectedStateValues2, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -985,7 +998,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdamVarEpsilon, RandomSeedFixture)
     parameters.SetValue(2, 1, paramValues, matrixFormatRowMajor);
     expectedParameters.SetValue(2, 1, expectedValues, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, expectedStateValues, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
@@ -994,7 +1007,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdamVarEpsilon, RandomSeedFixture)
     double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
     expectedParameters.SetValue(2, 1, expectedValues2, matrixFormatRowMajor);
     expectedStates.SetValue(2, 2, expectedStateValues2, matrixFormatRowMajor);
-    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, true);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, 0.1);
 
     BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));

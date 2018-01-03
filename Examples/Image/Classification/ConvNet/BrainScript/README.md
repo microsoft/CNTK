@@ -14,7 +14,7 @@ The network achieves an error rate of `0.5%`, which is very good considering no 
 
 ### ConvNet_CIFAR10.cntk
 
-The second example applies CNN on the CIFAR-10 dataset. The network contains four convolution layers and three dense layers. Max pooling is conducted for every two convolution layers. Dropout is applied after the first two dense layers. No data augmentation is used. Please refer to the CTNK configuration file [ConvNet_CIFAR10.cntk](./ConvNet_CIFAR10.cntk) for more details.
+The second example applies CNN on the CIFAR-10 dataset. The network contains four convolution layers and three dense layers. Max pooling is conducted for every two convolution layers. Dropout is applied after the first two dense layers. No data augmentation is used. Please refer to the CNTK configuration file [ConvNet_CIFAR10.cntk](./ConvNet_CIFAR10.cntk) for more details.
 
 Run the example from the current folder using:
 

@@ -64,10 +64,10 @@ namespace CNTKAzureTutorial01.Controllers
             try
             {
                 // Load the model.
-                // This example requires the ResNet20_CIFAR10_Python.model model.
-                // The model can be downloaded from <see cref="https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_Python.model"/>
+                // This example requires the ResNet20_CIFAR10_CNTK.model.
+                // The model can be downloaded from <see cref="https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_CNTK.model"/>
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-                string modelFilePath = Path.Combine(domainBaseDirectory, @"CNTK\Models\ResNet20_CIFAR10_Python.model");
+                string modelFilePath = Path.Combine(domainBaseDirectory, @"CNTK\Models\ResNet20_CIFAR10_CNTK.model");
                 if (!File.Exists(modelFilePath))
                 {
                     throw new FileNotFoundException(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));

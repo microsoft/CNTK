@@ -30,7 +30,13 @@ public:
 
     FileWrapper(const std::wstring& filename, const wchar_t* mode)
         : m_filename(filename), 
-        m_file(_wfopen(filename.c_str(), mode), std::fclose)
+        m_file(_wfopen(filename.c_str(), mode), [](FILE* m_file)
+        {
+            if (m_file)
+            {
+                std::fclose(m_file);
+            }
+        })
     {}
 
     // This variant of the FileWrapper does not own the file pointer

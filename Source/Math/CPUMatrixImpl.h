@@ -22,6 +22,7 @@
 #include <thread>
 #include <iostream>
 #include <algorithm>
+#include <numeric>
 #pragma warning(push)
 #pragma warning(disable:4244) // 'conversion' conversion from 'type1' to 'type2', possible loss of data
 #include <boost/random/normal_distribution.hpp>
@@ -46,8 +47,10 @@
 
 
 #ifdef USE_MKL
-// requires MKL 10.0 and above
-#include <mkl.h>
+// requires MKLML 0.11 and above
+#include <mkl_cblas.h>
+#include <mkl_lapacke.h>
+#include <mkl_service.h>
 #else
 #ifdef _MSC_VER
 // Visual Studio doesn't define standard complex types properly
@@ -1265,10 +1268,8 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
                                     ElemType momentum,
                                     ElemType adaWeight,
                                     ElemType adaMul,
-                                    bool unitGainMomentum)
+                                    ElemType unitGainFactor)
 {
-    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
-
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
@@ -1315,10 +1316,9 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
+    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
-    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
     {
@@ -1484,6 +1484,30 @@ void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<Ele
         ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
         smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
         val[i] += learningRate * deltaX;
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp)
+{
+    // Sets all timestamps to 0 and updates the two logical buffers that this object holds
+    // so that their values are the same as if a dense implementation of adadelta had been used.
+    // This basically means that the values of these buffers are set to decay * original value 
+    // where decay is rho ** (currentTimestamp - timestamp for that column)
+    auto rows = GetNumRows();
+    auto smoothAda = Data();
+    auto smoothX2 = Data() + cols * rows;
+#pragma omp parallel for
+    for (auto col = 0; col < cols; ++col)
+    {
+        auto decay = std::pow(rho, ElemType(currentTimestamp - timestamps[col]));
+        auto offset = rows * col;
+        timestamps[col] = 0;
+        for (auto row = 0; row < rows; ++row)
+        {
+            smoothAda[offset + row] *= decay;
+            smoothX2[offset + row] *= decay;
+        }
     }
 }
 
@@ -2366,6 +2390,45 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTanhOf(const CPUMatrix<ElemType>
     return *this;
 }
 
+//[this]=atanh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAtanh()
+{
+    return AssignAtanhOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAtanhOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAtanhOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+    long m = (long) GetNumRows(), n = (long) GetNumCols();
+#pragma omp parallel for
+    for (long j = 0; j < n; j++)
+    {
+        // four-way unrolling
+        for (long i = 0; i < (m & ~3); i += 4)
+        {
+            us(i, j) = atanh(a(i, j));
+            us(i + 1, j) = atanh(a(i + 1, j));
+            us(i + 2, j) = atanh(a(i + 2, j));
+            us(i + 3, j) = atanh(a(i + 3, j));
+        }
+        // handle remaining stuffs
+        for (long i = m & ~3; i < m; i++)
+        {
+            us(i, j) = atanh(a(i, j));
+        }
+    }
+
+    return *this;
+}
+
 //[this]=softmax([this]) element wise
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceLogSoftmax(const bool isColWise)
@@ -2829,6 +2892,33 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSinhOf(const CPUMatrix<ElemType>
     {
         const ElemType v = a(i, j);
         us(i, j) = sinh(v);
+    }
+
+    return *this;
+}
+
+//[this]=asinh([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAsinh()
+{
+    return AssignAsinhOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAsinhOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAsinhOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord (i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = asinh(v);
     }
 
     return *this;
@@ -3737,23 +3827,19 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
         else
         {
             std::vector<int> indices(m);
-            int i = 0;
-            std::generate(indices.begin(), indices.end(), [&i]
-                          {
-                              return i++;
-                          });
 
             const ElemType* curVal =            Data();
             ElemType* curIdx       = maxIndexes.Data();
             ElemType* curMax       =  maxValues.Data();
             for (int icol = 0; icol < n; icol++, curVal += m, curIdx += topK, curMax += topK)
             {
+                std::iota(indices.begin(), indices.end(), 0);
                 // Partial sort, descending order.
-                std::nth_element(indices.begin(), indices.begin() + topK, indices.end(),
-                                 [curVal](const int& a, const int& b)
-                                 {
-                                     return curVal[a] > curVal[b];
-                                 });
+                std::partial_sort(indices.begin(), indices.begin() + topK, indices.end(),
+                                    [curVal](const int& a, const int& b)
+                                    {
+                                        return curVal[a] > curVal[b];
+                                    });
                 // REVIEW alexeyk: the following produces warning (see SCL_SECURE_NO_WARNINGS) so use loop instead.
                 // std::transform(indices.begin(), indices.begin() + topK, curIdx, [](const int& a) { return static_cast<ElemType>(a); });
                 for (int i2 = 0; i2 < topK; i2++)
@@ -5111,44 +5197,22 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
     SIGMA.RequireSize(std::min(m, n), 1);
     VT.RequireSize(n, n);
 
+#if CNTK_UWP
+    RuntimeError("Error, LAPACKE_*gesvd is not supported for UWP.\n");
+#else
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_MKL
-        double wkopt;
-        int lwork = -1;
-        dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, &wkopt, &lwork, &info);
-        lwork = (int) wkopt;
-        W.RequireSize(lwork, 1);
-        dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, reinterpret_cast<double*>(W.Data()), &lwork, &info);
-#else
-#if CNTK_UWP
-        RuntimeError("Error, LAPACKE_dgesvd is not supported for UWP.\n");
-#else
         std::vector<double> superb(std::max(std::min(m, n) - 1, 1));
         info = LAPACKE_dgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
             reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &superb[0]);
-#endif
-#endif
     }
     else
     {
-#ifdef USE_MKL
-        float wkopt;
-        int lwork = -1;
-        sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, &wkopt, &lwork, &info);
-        lwork = (int) wkopt;
-        W.RequireSize(lwork, 1);
-        sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, reinterpret_cast<float*>(W.Data()), &lwork, &info);
-#else
-#if CNTK_UWP
-        RuntimeError("Error, LAPACKE_sgesvd is not supported for UWP.\n");
-#else
         std::vector<float> superb(std::max(std::min(m, n) - 1, 1));
         info = LAPACKE_sgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
             reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &superb[0]);
-#endif
-#endif
     }
+#endif
 
     if (info > 0)
     {
@@ -6806,10 +6870,12 @@ int CPUMatrix<ElemType>::GetMaxNumThreads()
 template <class ElemType>
 void CPUMatrix<ElemType>::SetCompatibleMode()
 {
-    #ifdef USE_MKL
-        if (mkl_cbwr_set(MKL_CBWR_COMPATIBLE) != MKL_CBWR_SUCCESS)
-            RuntimeError("Could not set MKL compatible mode.");
-    #endif
+    // mkl_cbwr_set not supported in MKLML yet
+    // Explanation on numeric diff: https://software.intel.com/en-us/articles/introduction-to-the-conditional-numerical-reproducibility-cnr
+    // #ifdef USE_MKL
+    //    if (mkl_cbwr_set(MKL_CBWR_COMPATIBLE) != MKL_CBWR_SUCCESS)
+    //        RuntimeError("Could not set MKL compatible mode.");
+    // #endif
 }
 
 // =======================================================================
@@ -7332,12 +7398,12 @@ template <class ElemType>
 int CPUMatrix<ElemType>::Argmax() const
 {
     int maxArg = -1;
-    ElemType maxValue = std::numeric_limits<ElemType>::min();
+    ElemType maxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp parallel 
     {
         int localMaxArg = -1;
-        ElemType localMaxValue = std::numeric_limits<ElemType>::min();
+        ElemType localMaxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp for
         for (int index = 0; index < (int)GetNumElements(); ++index)

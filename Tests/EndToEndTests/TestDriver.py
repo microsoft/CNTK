@@ -400,6 +400,7 @@ class Test:
         'Quadro K2000' : 3,
         'Quadro M2000M': 5,
         'Quadro M4000': 5,
+        'Tesla M60' : 5,
       }
       cc = sys.maxsize
       try:
@@ -691,7 +692,7 @@ def runCommand(args):
     pyPaths['py35'] = convertPythonPath(args.py35_paths)
   if args.py36_paths:
     pyPaths['py36'] = convertPythonPath(args.py36_paths)
-  # If no Python was explicitly specifed, go against current.
+  # If no Python was explicitly specified, go against current.
   if not pyPaths:
     pyPaths['py'] = ''
 
@@ -720,11 +721,6 @@ def runCommand(args):
           testPyPaths = pyPaths if test.isPythonTest else {'': ''}
 
           for pyVersion in sorted(testPyPaths.keys()):
-            pyTestLabel = " {0}".format(pyVersion) if pyVersion else ''
-
-            if testPyPaths[pyVersion]:
-              os.environ["PATH"] = testPyPaths[pyVersion] + os.pathsep + originalPath
-
             if args.tag and args.tag != '' and not test.matchesTag(args.tag, flavor, device, 'windows' if windows else 'linux', build_sku):
               continue
             if build_sku=="cpu" and device=="gpu":
@@ -733,6 +729,12 @@ def runCommand(args):
             if len(test.testCases)==0:
               # forcing verbose mode (showing all output) for all test which are based on exit code (no pattern-based test cases)
               args.verbose = True
+
+            pyTestLabel = " {0}".format(pyVersion) if pyVersion else ''
+
+            if testPyPaths[pyVersion]:
+              os.environ["PATH"] = testPyPaths[pyVersion] + os.pathsep + originalPath
+
             # Printing the test which is about to run (without terminating the line)
             sys.stdout.write("Running test {0} ({1} {2}{3}) - ".format(test.fullName, flavor, device, pyTestLabel));
             if args.dry_run:
@@ -766,6 +768,9 @@ def runCommand(args):
                   for line in testCaseRunResult.diagnostics.split('\n'):
                     print("    " + line);
                 # In non-verbose mode log wasn't piped to the stdout, showing log file path for convenience
+
+            # Restore original path
+            os.environ["PATH"] = originalPath
 
             if not result.succeeded and not args.verbose and result.logFile:
               print("  See log file for details: " + result.logFile)

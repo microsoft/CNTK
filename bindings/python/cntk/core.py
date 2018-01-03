@@ -127,7 +127,7 @@ class NDArrayView(cntk_py.NDArrayView):
             raise ValueError('csr_matrix row size (%d) does not match the least '
                              'significant axis dimension (%d) of the NDArrayView shape'
                              % (csr_array.shape[-1], shape[-1]))
-           
+
         import functools
         import operator
         csr_array_size = functools.reduce(operator.mul, csr_array.shape)
@@ -135,7 +135,7 @@ class NDArrayView(cntk_py.NDArrayView):
         if csr_array_size != ndarrayview_size:
             raise ValueError('csr_matrix total size (%d) does not match the total size '
                              '(%d) of the NDArrayView shape' % (csr_array_size, ndarrayview_size))
- 
+
         return cntk_py.NDArrayView(shape, csr_array.data,
                                    csr_array.indptr, csr_array.indices, device,
                                    read_only, borrow)
@@ -632,7 +632,7 @@ class Value(cntk_py.Value):
         Whether the data is read-only
         '''
         return super(Value, self).is_read_only()
-    
+
     @property
     def is_valid(self):
         '''
