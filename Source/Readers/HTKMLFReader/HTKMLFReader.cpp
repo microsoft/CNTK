@@ -457,8 +457,13 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     size_t silencewordid = SIZE_MAX;
     size_t startwordid = SIZE_MAX;
     size_t endwordid = SIZE_MAX;
+    /* guoye: debug */
+    /*
     if (unigrampath != L"")
+    */
+    if(false)
     {
+        RuntimeError("should not come here.");
         unigram.reset(new msra::lm::CMGramLM());
         /* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
 
@@ -470,8 +475,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         unigramsymbols["!silence"];
         /* guoye: end */
         
-        /* guoye: debug */
-        // unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
+        unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
 
         /* guoye: end  */
         
