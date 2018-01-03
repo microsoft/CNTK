@@ -111,8 +111,8 @@ sequenceTrain = [
     traceLevel = 1
     
     SGD = [
-        epochSize = 6000000
-        minibatchSize = 800000
+        epochSize = 81920
+        minibatchSize = 256
         learningRatesPerSample = 0.000002
         momentumPerSample = 0.999589
         dropoutRate = 0.0
@@ -128,6 +128,7 @@ sequenceTrain = [
 				[
 					type = "HTKFeatureDeserializer"
 					module = "HTKDeserializers"
+                                        definesMbSize = true
 					input = [
 						# Description of input stream to feed the Input node named "features"
 						features = [
@@ -168,8 +169,8 @@ sequenceTrain = [
 			
 			latticeAxis = DynamicAxis()
 			features = Input{featDim}
-			labels = Input{labelDim}
-			lattice = Input{1,dynamicAxis=latticeAxis}
+			labels = Input{labelDim, tag="label"}
+			lattice = Input{1,dynamicAxis=latticeAxis, tag="label"}
 		
 			featExtNetwork  = BS.Network.Load("$RunDir$/models/cntkSpeech")
 			featExt = BS.Network.CloneFunction (
