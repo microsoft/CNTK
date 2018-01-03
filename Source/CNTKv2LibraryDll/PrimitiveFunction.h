@@ -940,7 +940,7 @@ namespace CNTK
 
     public:
         NDArrayViewPtr BatchedForward() const;
-        void BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
+        void BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients, double beta) const;
 
         // helper for auto-batching
         VariableFields& GetOutputFields() const;

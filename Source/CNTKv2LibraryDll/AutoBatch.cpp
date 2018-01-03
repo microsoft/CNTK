@@ -4241,7 +4241,7 @@ public:
         if (!gradFields.m_gradient)
         {
             // create a new one
-            // TODO: allocate parameters as separate objects; and allow user to pass buffers in
+            // TODO: allocate parameter gradients as separate objects
             gradFields.m_gradient = m_memoizer.Arena().NewNDArrayView(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
             beta = 0.0; // has not been initialized (random section in arena)
             // if there is no redirect, then writing to the physical one is the same as writing to the cached one. Then we are done.
@@ -4304,7 +4304,10 @@ public:
     //
     // Each iteration updates the m_consumer fields of the inputs leading to this var.
     // Precondition: Call this only once per redirection target and once per leaf.
-    void RPrepareBackwardGraph(VariableFields& gradFields, bool userOwnsGradients = false)
+    //
+    // Pass 'userOwnsGradients' for the leaves. For those, the gradient NDArrayView will not be cleared/released.
+    // Instead, the existing NDArrayView will be kept and its value reset to 0 (unless beta = 1).
+    void RPrepareBackwardGraph(VariableFields& gradFields, bool userOwnsGradients = false, double beta = 0)
     {
         fail_if(gradFields.m_varKind == VariableKind::Input || gradFields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??"); // (should have been caught in forward)
         fail_if(!gradFields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
@@ -4314,12 +4317,18 @@ public:
         gradFields.m_consumers.clear();
         // this arg will receive a gradient; reset it (later, we *accumulate* into it since nodes can receive gradients from multiple consumers)
         // note: must reset in case the user calls Backward() multiple times with different roots that share subgraphs.
-        if (!userOwnsGradients) // user-owned gradients are those passed in by the user
-            gradFields.m_gradient.reset();
-        if (gradFields.m_gradient) // if one was passed in, clear it to zero   --TODO: use a dirty flag, and use beta=0 for this instead
+        if (!userOwnsGradients)            // user-owned gradients are those passed in by the user
+            gradFields.m_gradient.reset(); // not user owned: release any NDArrayView that may still be hanging here
+        else if (gradFields.m_gradient)    // for user-owned leaves, if user passed in an existing NDArrayView, clear its value to zero
         {
-            gradFields.m_gradient->SetValue(0.0);
-            m_stats.numBackpropSetZeroes++;
+            //gradFields.m_gradient->LogToFile(gradFields.m_name.get());
+            if (beta == 0) // reset the values, unless beta == 1
+            {
+                gradFields.m_gradient->SetValue(0.0);
+                m_stats.numBackpropSetZeroes++;
+            }
+            else if (beta != 1) // scale it. TODO: Implement it if ever needed. Simple but needs a test case.
+                LogicError("RPrepareBackwardGraph: Beta != 1 and != 0 is currently not supported.");
         }
         // done initializing this node. Now on to its inputs.
 
@@ -4856,7 +4865,7 @@ public:
             BackpropToMatrixWeight(m_matrixWeightConsumers);
 
         // summation bucket
-        // ...
+        // ...not used yet
 
         // others bucket
         for (auto& c : m_otherConsumers)
@@ -4898,8 +4907,9 @@ public:
 
     // implant gradients into all variables
     // Unlike BatchedForward(), this is eager. If you call it twice, it's a completely new computation.
-    // If you need multiple gradients, ask for them in a single go.
-    void BatchedBackward(const InternalVariable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
+    // If you need multiple gradients, ask for them in a single go to avoid duplicate computation.
+    // Beta can be 1 or 0. If 0, gradients are overwritten, and if 1, added to.
+    void BatchedBackward(const InternalVariable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients, double beta)
     {
         if (!root.m_dataFields->m_needsGradient)
             LogicError("BatchedBackward: cannot compute gradient for root with m_needsGradient being False.");
@@ -4910,7 +4920,8 @@ public:
         // first get the forward computation, batching, etc. done if not yet
         BatchedForward(root);
         // if user passed NDArrayViewPtrs for the gradients, then implant those
-        // If nulls are passed, then keep whatever is there. This way, the same buffers can be recycled.
+        // If nulls are passed, then the existing gradient memory will be reused, if any, and gradients[] will be updated to return that.
+        // If gradients[] gets initialized with nulls, and then never changed outside, one will keep reusing the existing buffers.
         for (auto& kv : gradients)
         {
             let& param = kv.first;
@@ -4929,7 +4940,7 @@ public:
             auto& gradFields = GetGradientFieldsForBackprop(ResetInputGradient(kv.first), /*firstTimes=*/true);
             if (m_visitorTag.Visited(gradFields.m_visitedTag)) // (note that the code does not require this; this is only to point out a likely user error)
                 InvalidArgument("BatchedBackward: a Parameter was included more than once in gradients[]");
-            RPrepareBackwardGraph(gradFields, /*userOwnsGradients=*/true);
+            RPrepareBackwardGraph(gradFields, /*userOwnsGradients=*/true, beta);
             // BUGBUG: ^^ userOwnsGradients won't work correctly if one Var in gradients[] is an input to another
         }
         // now build the graph. We use visited information for the gradients to infer our own needsGradient flag  --TODO: No, not done yet.
@@ -4996,10 +5007,10 @@ NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 
 // Perform backprop.
 // TODO: CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
-void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const
+void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients, double beta) const
 {
     auto autoBatcher = InternalVariable::AutoBatch(); // has some internal state
-    autoBatcher.BatchedBackward(m_outputs.front(), gradients);
+    autoBatcher.BatchedBackward(m_outputs.front(), gradients, beta);
 }
 
 // non-batched version of BatchedForward()
