@@ -2710,7 +2710,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     return one_hot_op(x, num_classes, sparse_output, axis, name)
 
 @typemap
-def gather(reference, indices):
+def gather(reference, indices, axis=None, name=''):
     '''
     Retrieves the elements of indices in the tensor reference.
 
@@ -2730,14 +2730,22 @@ def gather(reference, indices):
                 [[ 10.,  11.]]]], dtype=float32)
 
     Args:
-        reference: A tensor
-        indices: An integer tensor of indices
+        reference: A tensor of values
+        indices: A tensor of indices
+        axis: The axis along which the indices refer to. Default (None) means the  first axis.
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import gather_op
-    return gather_op(indices, reference)
+    indices = sanitize_input(indices)
+    reference = sanitize_input(reference)
+    if axis is None:
+        return gather_op(indices, reference, name)
+    else:
+        axis = sanitize_axis(axis)
+        return gather_op(indices, reference, axis, name)
 
 @typemap
 def flatten(x, axis = None, name = ''):

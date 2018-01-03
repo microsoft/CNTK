@@ -562,6 +562,18 @@ def test_gather_op(device_id, precision):
     assert np.isclose(np.mean(w.value[3, :]), 1)
     assert np.isclose(np.mean(w.value[4, :]), 1)
 
+
+def test_gather_op_with_axis(device_id, precision):
+    data = np.array([ [1.0, 1.2, 1.9], [2.3, 3.4, 3.9], [4.5, 5.7, 5.9], ]).astype(PRECISION_TO_TYPE[precision])
+    indices = np.array([ 0, 2]).astype(PRECISION_TO_TYPE[precision]).astype(PRECISION_TO_TYPE[precision])
+    output = np.array([ [1.0, 1.9], [2.3, 3.9], [4.5, 5.9], ]).astype(PRECISION_TO_TYPE[precision])
+    x = C.constant(data)
+    i = C.constant(indices)
+    y = C.gather(x, i, axis=1)
+    z = y.eval({}, device=cntk_device(device_id))
+    assert np.allclose(output, z)
+
+
 def test_convert_dynamic_axis():
     #test fix batch size
     batch_size = 4

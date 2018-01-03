@@ -2175,6 +2175,28 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::Gather, indices, reference, Dictionary(), name);
     }
 
+    FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const Axis& axis, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+
+        if (!axis.IsStaticAxis())
+            LogicError("Gather operation only supports a single static axis.");
+
+        if (axis.StaticAxisIndex() == -1)
+            return BinaryOp(PrimitiveOpType::Gather, indices, reference, std::move(additionalProperties), name);
+        else
+        {
+            auto indPlaceholder = PlaceholderVariable();
+            auto refPlaceholder = PlaceholderVariable();
+            auto lastAxis = Axis(-1);
+            auto swapped = TransposeAxes(refPlaceholder, lastAxis, axis);
+            auto gatherSwapped = GatherOp(indPlaceholder, swapped);
+            auto result = TransposeAxes(gatherSwapped, lastAxis, axis);
+            return AsBlock(std::move(result), { { refPlaceholder, reference }, { indPlaceholder, indices } }, std::move(additionalProperties), L"GatherOp", name);
+        }
+    }
+
     FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, axis, name);
