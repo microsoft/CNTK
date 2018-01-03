@@ -341,6 +341,15 @@ template<class ElemType, int direction>
             // truncated BPTT carry-over
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)
             auto tensorShape = GetTensorShape(rank);
+
+            // Make sure we properly have the sequence length from the previous minibatch.
+            if (T_delayedActivation > 0 && HasMBLayout())
+            {
+                auto dims = tensorShape.GetDims();
+                dims[dims.size() - 1] = T_delayedActivation;
+                tensorShape = TensorShape(dims);
+            }
+
             auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + T_delayedActivation), m_delayedActivationMBLayout);
             tensorShape.NarrowTo(slice);
             src = TensorView<ElemType>(m_delayedValue, tensorShape);

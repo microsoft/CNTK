@@ -61,6 +61,18 @@ namespace
     };
 }
 
+CNTK_StatusCode CNTK_DefaultDevice(CNTK_DeviceDescriptor* device)
+{
+    if (!device)
+        return StatusCode(CNTK_ERROR_NULL_POINTER, "'device' parameter is not allowed to be null");
+
+    return ExceptionCatcher::Call([&]() {
+        auto d = DeviceDescriptor::UseDefaultDevice();
+        device->id = d.Id();
+        device->kind = (d.Type() == DeviceKind::GPU ? CNTK_DeviceKind::CNTK_DeviceKind_GPU : CNTK_DeviceKind::CNTK_DeviceKind_CPU);
+    });
+}
+
 CNTK_StatusCode CNTK_AllDevices(CNTK_DeviceDescriptor** devices, uint32_t* size)
 {
     if (!devices)
@@ -88,9 +100,6 @@ CNTK_StatusCode CNTK_LoadModel(const wchar_t* modelFilePath, const CNTK_DeviceDe
 
     if (!modelFilePath)
         return StatusCode(CNTK_ERROR_NULL_POINTER, "'modelFilePath' parameter is not allowed to be null");
-
-    if (!device)
-        return StatusCode(CNTK_ERROR_NULL_POINTER, "'device' parameter is not allowed to be null");
 
     *handle = nullptr;
     return ExceptionCatcher::Call([&]() { *handle = new CNTKEvaluatorWrapper(modelFilePath, device); });

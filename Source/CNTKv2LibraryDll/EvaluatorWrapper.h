@@ -34,9 +34,7 @@ namespace CNTK
 
     inline DeviceDescriptor GetDeviceDescriptor(const CNTK_DeviceDescriptor* device)
     {
-        if (!device)
-            InvalidArgument("Device is not allowed to be null.");
-        if (device->kind == CNTK_DeviceKind_CPU)
+        if (!device || device->kind == CNTK_DeviceKind_CPU)
             return DeviceDescriptor::CPUDevice();
         if (device->kind == CNTK_DeviceKind_GPU)
             return DeviceDescriptor::GPUDevice(device->id);

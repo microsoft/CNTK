@@ -75,20 +75,25 @@ typedef enum CNTK_DeviceKind
 typedef struct CNTK_DeviceDescriptor
 {
     CNTK_DeviceKind kind;
-    uint32_t id;
+    uint32_t id; // CUDA device id, in case of GPU, always 0 for CPU.
 } CNTK_DeviceDescriptor;
 
 //
 // Returns all available devices.
 //
 // Parameters:
-//     modelFilePath [in]: a null-terminated path to a CNTK model file
-//     device [in]: a null-terminated string containing device name, currently only "cpu" is supported.
-//     model [out]: the resulting loaded model
+//     devices [in/out]: list of devices.
+//     size[out]: size of the list.
 //
 CNTK_API CNTK_StatusCode CNTK_AllDevices(
     /*[out]*/ CNTK_DeviceDescriptor** devices,
     /*[out]*/ uint32_t* size);
+
+//
+// Returns default device.
+//
+CNTK_API CNTK_StatusCode CNTK_DefaultDevice(
+    /*[in/out]*/ CNTK_DeviceDescriptor* device);
 
 //
 // Loads a model from the specified file and returns an opaque handle to the model
