@@ -959,7 +959,7 @@ public:
         freadOrDie(v, sz, f);
     }
     
-    bool CheckTag(char*& buffer, const std::string& expectedTag) {
+    bool CheckTag(const char*& buffer, const std::string& expectedTag) {
         std::string tag(buffer, expectedTag.length());
         if (tag != expectedTag)
             return false;
@@ -967,7 +967,7 @@ public:
         return true;
     }
     
-    int ReadTagFromBuffer(char*& buffer, const std::string& expectedTag, size_t expectedSize = SIZE_MAX)
+    int ReadTagFromBuffer(const char*& buffer, const std::string& expectedTag, size_t expectedSize = SIZE_MAX)
     {
         if (!CheckTag(buffer, expectedTag)) {
             // since lattice is packed densely by the reader, we may need to shift the buffer by 2 bytes.
@@ -983,12 +983,12 @@ public:
     }
 
     template <class T>
-    void ReadVectorFromBuffer(char*& buffer, const std::string& expectedTag, std::vector<T>& v, size_t expectedsize = SIZE_MAX)
+    void ReadVectorFromBuffer(const char*& buffer, const std::string& expectedTag, std::vector<T>& v, size_t expectedsize = SIZE_MAX)
     {
         int sz = ReadTagFromBuffer(buffer, expectedTag, expectedsize);
         v.resize(sz);
         for (size_t i = 0;i < sz;i++) {
-            T* element = reinterpret_cast<T*>(buffer);
+            const T* element = reinterpret_cast<const T*>(buffer);
             v[i] = *element;
             buffer += sizeof(T);
         }
@@ -1035,11 +1035,11 @@ public:
 
     // The same as fread above, but for buffer and only supporting lattice version 2.
     // Advances the buffer by reference.
-    void freadFromBuffer(char* buffer, const std::vector<unsigned int>& idmap, size_t spunit)
+    void freadFromBuffer(const char* buffer, const std::vector<unsigned int>& idmap, size_t spunit)
     {
         ReadTagFromBuffer(buffer, "LAT ", 2);
 
-        header_v1_v2* pInfo = reinterpret_cast<header_v1_v2*>(buffer);
+        const header_v1_v2* pInfo = reinterpret_cast<const header_v1_v2*>(buffer);
         info = *pInfo;
         buffer += sizeof(header_v1_v2);
 

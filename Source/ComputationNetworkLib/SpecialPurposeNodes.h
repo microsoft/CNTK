@@ -745,10 +745,11 @@ public:
         this->m_uids.clear();
         this->m_boundaries.clear();
         this->m_extraUttMap.clear();
-        
-        Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
-        
-        char* bufferStart = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->CopyToArray());
+
+        if (InputRef(3).ValuePtrRef()->GetDeviceId() != CPUDEVICE)
+            LogicError("Due to their size, lattices should be allocated on CPU memory");
+
+        const char* bufferStart = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->Data());
 
         let& labelMBLayout = InputRef(0).GetMBLayout();
         const auto& labelSequences = labelMBLayout->GetAllSequences();
@@ -757,10 +758,11 @@ public:
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
-        for (size_t i = 0;i<labelSequences.size();i++)
+        for (size_t i = 0; i < labelSequences.size(); i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
+
             auto& currentLabelSeq = labelSequences[i];
 
             // Fill up labels
@@ -776,7 +778,7 @@ public:
             // Fill up lattice
             auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
             std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
-            char * buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
+            const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
             latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
             this->m_lattices.push_back(latticePair);
@@ -825,7 +827,12 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         SequenceWithSoftmaxNode<ElemType>::Validate(isFinalValidationPass);
-        Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
+
+        if (isFinalValidationPass)
+        {
+            // Make sure lattices are pre allocated on CPU, due to their size.
+            Input(3)->ValuePtrRef()->TransferToDeviceIfNotThere(CPUDEVICE, true /*moving completely*/, true /*preserving no data*/);
+        }
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -850,7 +857,6 @@ public:
         SequenceWithSoftmaxNode<ElemType>::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
-        Input(3)->ValuePtrRef()->SetPreferredDeviceId(CPUDEVICE);
     }
 
 private: 
