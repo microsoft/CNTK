@@ -32,13 +32,16 @@ namespace CNTK
         }
     }
 
-    inline DeviceDescriptor GetDeviceDescriptor(const wchar_t* device)
+    inline DeviceDescriptor GetDeviceDescriptor(const CNTK_DeviceDescriptor* device)
     {
         if (!device)
             InvalidArgument("Device is not allowed to be null.");
-        if (std::wstring(L"cpu") != device)
-            RuntimeError("Device '%ls' is not supported. Currently only CPU device is supported.", device);
-        return DeviceDescriptor::CPUDevice();
+        if (device->kind == CNTK_DeviceKind_CPU)
+            return DeviceDescriptor::CPUDevice();
+        if (device->kind == CNTK_DeviceKind_GPU)
+            return DeviceDescriptor::GPUDevice(device->id);
+        else
+            RuntimeError("Invalid device kind. Currently only GPU and CPU devices are supported.");
     }
 
     inline NDShape ToNDShape(const CNTK_Shape& shape)
@@ -129,7 +132,7 @@ namespace CNTK
     class CNTKEvaluatorWrapper : public EvaluatorWrapper
     {
     public:
-        CNTKEvaluatorWrapper(const wchar_t* modelFilePath, const wchar_t* device);
+        CNTKEvaluatorWrapper(const wchar_t* modelFilePath, const CNTK_DeviceDescriptor* device);
         CNTKEvaluatorWrapper(const wchar_t* modelFilePath, DeviceDescriptor device);
         CNTKEvaluatorWrapper(FunctionPtr model, DeviceDescriptor device);
 

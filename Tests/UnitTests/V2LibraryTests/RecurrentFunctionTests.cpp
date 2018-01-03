@@ -420,11 +420,8 @@ BOOST_AUTO_TEST_CASE(RecurrentNetworkCreationInGPU)
         TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
 }
 
-BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
+void ParityCandCppLSTMModel(DeviceDescriptor device, CNTK_DeviceDescriptor cdevice)
 {
-    if (!ShouldRunOnCpu())
-        return;
-
     const size_t inputDim = 937;
     const size_t numLSTMLayers = 3;
     const size_t cellDim = 1024;
@@ -432,7 +429,7 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
     const size_t numOutputClasses = 9304;
 
     auto features = InputVariable({ inputDim }, AsDataType<float>(), L"features");
-    auto classifier = LSTMNet<float>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, DeviceDescriptor::CPUDevice(), L"classifierOutput");
+    auto classifier = LSTMNet<float>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
 
     auto output = classifier->Output();
 
@@ -452,11 +449,13 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
     // Run C++ forward.
     auto value = Value::CreateSequence(NDShape{ inputDim }, inputData, DeviceDescriptor::CPUDevice());
     std::unordered_map<Variable, ValuePtr> outputs{ { output, nullptr } };
-    classifier->Evaluate({ {features, value} }, outputs,  DeviceDescriptor::CPUDevice());
+    classifier->Evaluate({ { features, value } }, outputs, device);
 
     auto outputAsVector = [&output](std::unordered_map<Variable, ValuePtr>& outputs)
     {
-        const float* buf = outputs[output]->Data()->DataBuffer<float>();
+        NDArrayViewPtr o = std::make_shared<NDArrayView>(DataType::Float, outputs[output]->Shape(), DeviceDescriptor::CPUDevice());
+        o->CopyFrom(*(outputs[output]->Data()));
+        const float* buf = o->DataBuffer<float>();
         return std::vector<float>(buf, buf + outputs[output]->Shape().TotalSize());
     };
 
@@ -473,23 +472,23 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
     auto threeFramesValueWithReset = MakeSharedObject<Value>(threeFramesData, mask);
 
     // With reset.
-    outputs[output] =  nullptr;
-    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, DeviceDescriptor::CPUDevice());
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, device);
     auto result1 = outputAsVector(outputs);
 
     // Without reset.
     outputs[output] = nullptr;
-    classifier->Evaluate({ { features, threeFramesValue } }, outputs, DeviceDescriptor::CPUDevice());
+    classifier->Evaluate({ { features, threeFramesValue } }, outputs, device);
     auto result2 = outputAsVector(outputs);
 
     // With reset.
     outputs[output] = nullptr;
-    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, DeviceDescriptor::CPUDevice());
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, device);
     auto result3 = outputAsVector(outputs);
 
     // With reset.
     outputs[output] = nullptr;
-    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, DeviceDescriptor::CPUDevice());
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, device);
     auto result4 = outputAsVector(outputs);
 
     RequireClose(result1, result3, 0.00001f, 0.01f);
@@ -505,7 +504,7 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
 
     // Create the C model from the saved file.
     CNTK_ModelHandle model;
-    auto rc = CNTK_LoadModel(L"test.model", L"cpu", &model);
+    auto rc = CNTK_LoadModel(L"test.model", &cdevice, &model);
     BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
     if (_wunlink(tempModelPath.c_str()) != 0)
         BOOST_ERROR("Error deleting temp model file 'tempModelPath'");
@@ -585,7 +584,7 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
         BOOST_CHECK_EQUAL(rc.value, CNTK_SUCCESS);
 
         // Check that C and C++ results match.
-        outputShape =NDShape(std::vector<size_t>(clonedOutputValues[0].shape.value, clonedOutputValues[0].shape.value + clonedOutputValues[0].shape.size));
+        outputShape = NDShape(std::vector<size_t>(clonedOutputValues[0].shape.value, clonedOutputValues[0].shape.value + clonedOutputValues[0].shape.size));
         std::vector<float> c2(clonedOutputValues[0].data, clonedOutputValues[0].data + outputShape.TotalSize());
 
         for (uint32_t i = 0; i < numOutputs; i++)
@@ -685,6 +684,45 @@ BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
     for (uint32_t i = 0; i < numArguments; i++)
         CNTK_CleanVariable(&argumentInfos[i]);
     CNTK_ReleaseArray(argumentInfos);
+}
+
+BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
+{
+    CNTK_DeviceDescriptor* devices = nullptr;
+    uint32_t size = 0;
+    CNTK_AllDevices(&devices, &size);
+    BOOST_REQUIRE(size == DeviceDescriptor::AllDevices().size());
+
+    if (ShouldRunOnCpu())
+    {
+        CNTK_DeviceDescriptor cpu { CNTK_DeviceKind_CPU, 0 };
+        size_t count = 0;
+        for (size_t i = 0; i < size; ++i)
+            if (devices[i].kind == CNTK_DeviceKind_CPU)
+            {
+                cpu = devices[i];
+                count++;
+            }
+
+        BOOST_REQUIRE(count == 1);
+        ParityCandCppLSTMModel(DeviceDescriptor::CPUDevice(), cpu);
+    }
+
+    if (ShouldRunOnGpu())
+    {
+        size_t count = 0;
+        CNTK_DeviceDescriptor gpu{ CNTK_DeviceKind_GPU, 0 };
+        for (size_t i = 0; i < size; ++i)
+            if (devices[i].kind == CNTK_DeviceKind_GPU && devices[i].id == 0)
+            {
+                gpu = devices[i];
+                count++;
+            }
+        BOOST_REQUIRE(count == 1);
+        ParityCandCppLSTMModel(DeviceDescriptor::GPUDevice(0), gpu);
+    }
+
+    CNTK_ReleaseArray(devices);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
