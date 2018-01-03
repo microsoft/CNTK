@@ -3,9 +3,10 @@ import util as util
 import time
 from cntk.device import try_set_default_device, cpu
 import numpy as np
+import sys, os
 try_set_default_device(cpu())
 
-def get_initializer(init_method):
+def get_initializer(init_method, params):
     if init_method == 'tnormal':
         return C.initializer.truncated_normal(stdev=params['init_value'])
     elif init_method == 'uniform':
@@ -72,14 +73,14 @@ def nn_part(embedding, dnn_input, model_param, params, initializer):
     return nn_out
 
 
-def deepWide(lr_input, dnn_input, label, params):
+def buildNetWork(lr_input, dnn_input, label, params):
     model_param = []
     feature_cnt = params['feature_cnt']
     embedding_dim = params['embedding_dim']
     init_method = params['init_method']
     layer_l2 = params['layer_l2']
     embed_l2 = params['embed_l2']
-    global_initializer = get_initializer(init_method)
+    global_initializer = get_initializer(init_method, params)
     embedding = C.parameter(shape=(feature_cnt, embedding_dim), init=global_initializer)
     lr_out = linear_part(lr_input, feature_cnt, model_param, global_initializer)
     nn_out = nn_part(embedding, dnn_input, model_param, params, global_initializer)
@@ -123,7 +124,7 @@ def train(params):
     lr_input = C.input_variable((batch_size, feature_cnt), is_sparse=True)
     dnn_input = C.input_variable((batch_size, field_cnt * feature_cnt), is_sparse=True)
     label = C.input_variable((batch_size, 1), np.float32)
-    pred, loss, logloss = deepWide(lr_input, dnn_input, label, params)
+    pred, loss, logloss = buildNetWork(lr_input, dnn_input, label, params)
 
     lr_schedule = C.learning_rate_schedule(learning_rate, C.UnitType.minibatch)
     learner = C.momentum_sgd(pred.parameters, lr_schedule, momentum=0.9, use_mean_gradient=True)
@@ -132,6 +133,7 @@ def train(params):
     i = 0
     start = time.time()
     log_writer = open('./log.txt','w')
+    final_train_logloss = 0.0
     for epoch in range(n_epochs):
         aggregate_loss = 0.0
         for training_input_in_sp in util.load_data_cache(params['train_cache']):
@@ -140,22 +142,26 @@ def train(params):
                                      dnn_input: training_input_in_sp['dnn_input']})
             print_training_process(trainer, i, show_steps, verbose=1)
         train_info = eval(lr_input, dnn_input, label, trainer, params['train_cache'])
+        final_train_logloss = train_info
         eval_info = eval(lr_input, dnn_input, label, trainer, params['eval_cache'])
         print('epoch: {0}, train logloss: {1:.4f}, eval logloss: {2:.4f}'.format(epoch, train_info, eval_info))
         log_writer.write('epoch: {0}, train logloss: {1:.4f}, eval logloss: {2:.4f}'.format(epoch, train_info, eval_info)+'\n')
     log_writer.close()
     end = time.time()
     print('total used time:', end - start)
+    return final_train_logloss
 
 
-if __name__ == "__main__":
+def deepWide():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    data_path = os.path.join(abs_path, "..", "data", "deepWide")
     # parameter setting
     params = {
         'feature_cnt': 194081,
         'field_cnt': 33,
         'batch_size': 3,
-        'train_file': './data/train.entertainment.no_inter.norm.fieldwise.userid.txt',
-        'eval_file': './data/val.entertainment.no_inter.norm.fieldwise.userid.txt',
+        'train_file': '/train.entertainment.no_inter.norm.fieldwise.userid.txt',
+        'eval_file': '/val.entertainment.no_inter.norm.fieldwise.userid.txt',
         'embedding_dim': 10,
         'layer_l2': 0.1,
         'embed_l2': 0.1,
@@ -167,9 +173,15 @@ if __name__ == "__main__":
         'layer_sizes': [50],
         'layer_activations': ['relu']
     }
+    params['train_file'] = data_path + params['train_file']
+    params['eval_file'] = data_path + params['eval_file']
     # cache train data and eval data
     params['train_cache'] = params['train_file'].replace('.txt', '.pkl')
     params['eval_cache'] = params['eval_file'].replace('.txt', '.pkl')
     util.pre_build_data_cache(params['train_file'], params['train_cache'], params)
     util.pre_build_data_cache(params['eval_file'], params['eval_cache'], params)
-    train(params)
+    final_train_loglss = train(params)
+    return final_train_loglss
+
+if __name__ == "__main__":
+    final_train_loglss = deepWide()
