@@ -64,9 +64,15 @@ class CaffeValidCore(ValidCore):
                 continue
             gt_result = np.load(os.path.join(valid_dir, file_name))
             test_result = net.blobs[target].data
-            power_error = np.power(gt_result.flatten() - test_result.flatten(), 2).sum()
+            abs_diff = np.abs(gt_result.flatten() - test_result.flatten())
+            power_error = np.power(abs_diff, 2).sum()
+            maximum_error = np.max(abs_diff)
+            minimum_error = np.min(abs_diff)
             rsme_diff = np.sqrt(power_error / gt_result.size)
-            sys.__stdout__.write(('Validating %s with RMSE = %s, MAX = %s, MIN = %s\n' %
-                             (target, str(rsme_diff), str(gt_result.max()), str(gt_result.min()))))
+            mean = np.mean(gt_result)
+            sys.__stdout__.write(('Validating Node: %s\n \nRMSE = %s, MAX Error = %s, MIN Error = %s\n' %
+                             (target, str(rsme_diff), str(maximum_error), str(minimum_error))))
+            sys.__stdout__.write(('Average Value = %f, Maximum Value = %f, Minimum Value = %f\n' %
+                                  (np.mean(gt_result), np.max(gt_result), np.min(gt_result))))
         sys.__stdout__.write('Validation finished...\n')
         sys.__stdout__.flush()
