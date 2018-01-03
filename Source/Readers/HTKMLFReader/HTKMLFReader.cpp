@@ -469,8 +469,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         unigramsymbols["!sent_end"];
         unigramsymbols["!silence"];
         /* guoye: end */
-        unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
+        
+        /* guoye: debug */
+        // unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
 
+        /* guoye: end  */
+        
         silencewordid = unigramsymbols["!silence"]; // give this an id (even if not in the LM vocabulary)
         startwordid = unigramsymbols["<s>"];
         endwordid = unigramsymbols["</s>"];
