@@ -62,6 +62,10 @@ cudaStream_t MATH_API GetStream()
 {
     return t_stream;
 }
+/*//zhaorui for debug
+__device__ void dummy()
+{
+}*/
 
 // Helper macro patterns for elementwise methods
 #define DEF_ELEMWISE_INPLACE_FUNC(f)                                      \

@@ -5566,21 +5566,35 @@ __global__ void _assignAlphaScore(
                 if (phoneId != blankTokenId && (LONG64)(phoneSeq[labelid_1]) == blankTokenId && phoneId != (LONG64)(phoneSeq[labelid_2]))
                 {
                     x = logaddk(x, alphaScore[alphaId_2]);
+                   /* if (t == 43 && phoneSeqId == 4)
+                        printf("x:%f alphascore2:%f t:%d phoneseq2:%ld\n", x, alphaScore[alphaId_2], t, phoneSeqId);*/
                 }
             }
 
-            if (phoneSeqId > 1)
+            if (phoneSeqId > 1 )
             {
                 x = logaddk(x, alphaScore[alphaId_1]);
+               /* if (t == 43 && phoneSeqId == 4)
+                    printf("x:%f alphascore: %f t:%d phoneseq: %ld\n", x, alphaScore[alphaId_1],t, phoneSeqId);*/
             }
-
-            x = logaddk(x, alphaScore[alphaId_0]);
-
+            
+           /* if (t == 43 && phoneSeqId == 4)
+                printf("before 2 x:%f alphascore: %f t:%d phoneseq: %ld\n", x, alphaScore[alphaId_0], t, phoneSeqId);*/
+            if (phoneSeqId <= 1 || phoneId != (LONG64)(phoneSeq[labelid_1]))
+                x = logaddk(x, alphaScore[alphaId_0]);
+          /*  if (t == 43 && phoneSeqId == 4)
+                printf("2 x:%f alphascore: %f t:%d phoneseq: %ld\n", x, alphaScore[alphaId_0], t, phoneSeqId);*/
             if (phoneId != SIZE_MAX)
                 ascore = prob[probId]; // Probability of observing given label at given time
             else
                 ascore = 0;
             alphaScore[alphaId] = (ElemType)x + ascore;
+            //if (alphaScore[alphaId] > 0)
+         /*   if (t == 43 && phoneSeqId == 4)
+            {
+                printf("score x:%f score ascore:%f time %d, phoneid:%lu\n", x, ascore, t, phoneSeqId);
+                //printf("time %d, phoneid:%d\n", t, phoneSeqId);
+            }*/
             if (delayConstraint != -1 && phoneSeqId <= phoneNum - 2)
             {
                 //LONG64 labelid_r = labelid + 2;
@@ -5669,8 +5683,8 @@ __global__ void _assignBetaScore(
             {
                 x = logaddk(x, betaScore[betaid_1]);
             }
-
-            x = logaddk(x, betaScore[betaid_0]);
+            if (phoneSeqId >= phoneNum - 2 || phoneId != phoneSeq[labelid_1])
+                x = logaddk(x, betaScore[betaid_0]);
 
             if (phoneId != SIZE_MAX)
                 ascore = prob[probId];

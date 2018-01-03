@@ -394,9 +394,12 @@ public:
             fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[0]));
             matrixPhoneSeqs.Print("phone seq");
             matrixPhoneBounds.Print("phone bound");
+           
+            
         }
-        //alpha.Print("alpha");
-        //beta.Print("beta");
+        /*alpha.Print("alpha");
+        beta.Print("beta");
+        prob.Print("prob");*/
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
         rowSum.Resize(1, numCols);
 
