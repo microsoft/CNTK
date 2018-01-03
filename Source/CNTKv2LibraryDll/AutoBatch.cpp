@@ -4183,7 +4183,7 @@ public:
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
         ShowCudaStats();
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d gathers, %d views, and %d CSEs, in nominally %d+%ds ops (%d inlined) on %d known values\n",
+        fprintf(stderr, "BatchedForward:  %d fw calcs + %d gathers + %d views, %d CSEs, in nominally %d+%ds ops (%d inlined) on %d known values\n",
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated,
                 (int)m_stats.numOpNodes, (int)m_stats.numShortCircuitedNodes, (int)m_stats.numInlinedBlocks,
                 (int)m_stats.numLeafNodes);
@@ -4981,7 +4981,7 @@ public:
             kv.second = kv.first.m_dataFields->m_gradient;
         // note: we will leave the m_consumers fields dangling, and reset them upon next use
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedBackward: %d backprop computations and %d views besides %d gathers, %d scatters, %d set-zeroes, %d skipped matmuls for %d ops (total %d inputs)\n",
+        fprintf(stderr, "BatchedBackward: %d bp calcs + %d views + %d gathers + %d scatters + %d set-zeroes, %d skipped matmuls for %d ops (total %d inputs)\n",
                 (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBatchedBackpropToViews,
                 (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropSetZeroes, (int)m_stats.numAvoidedBackpropToMatrix,
                 (int)m_stats.numBackpropsThrough, (int)m_stats.numBackpropsToInputs);

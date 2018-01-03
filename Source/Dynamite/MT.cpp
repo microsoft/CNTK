@@ -1122,7 +1122,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             let timeDeleteGraph = partTimer.Elapsed();
             if (communicator->CurrentWorker().IsMain())
             {
-                fprintf(stderr, "%5d:  loss, PPL = ", (int)mbCount);
+                fprintf(stderr, "%5d:   loss, PPL = ", (int)mbCount);
                 if (isFinalPartialBatch)
                     fprintf(stderr, "[smoothed] %4.2f, ### %8.2f ### [this] ", smoothedLossVal, exp(smoothedLossVal), lossPerLabel, (int)numScoredLabels);
                 else
