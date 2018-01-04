@@ -877,6 +877,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     updateTimer.Restart();
     for (mbCount = startMbCount; ; mbCount++)
     {
+        let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         // checkpoint
         if (mbCount % saveEvery == 0 &&
             (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
@@ -928,10 +929,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         }
         //partTimer.Log("GetNextMinibatch", numLabels);
         let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
-        fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
-                (int)mbCount,
-                (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
-                lr0, learner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
+        if (logThisMb)
+            fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
+                    (int)mbCount,
+                    (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
+                    lr0, learner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
 #if 0       // log the sequences
         for (size_t n = 0; n < numSeq; n++)
         {
@@ -975,7 +977,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             continue;
         }
 
-        fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
+        if (logThisMb)
+            fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
         partTimer.Restart();
         let partialWorkerLoss = partialWorkerLossVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
         let timeForward = partTimer.Elapsed();
@@ -989,7 +992,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //partTimer.Log("ForwardProp", numLabels);
         // note: we must use numPartialWorkerScoredLabels here
         //fprintf(stderr, "{%.2f, %d-%d}\n", partialWorkerLoss->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
-        fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
+        if (logThisMb)
+            fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
         //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
         partTimer.Restart();
 
@@ -1099,7 +1103,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // log progress
         // Note: Without logging, there is no GPU-CPU transfer.
-        if (communicator->CurrentWorker().IsMain())
+        if (logThisMb && communicator->CurrentWorker().IsMain())
         {
             fprintf(stderr, "%5d:   loss, PPL = ", (int)mbCount);
             if (isFinalPartialBatch)
