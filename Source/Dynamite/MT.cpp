@@ -776,11 +776,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // (We ignore MB size ramp-up here, i.e. we use unnecessarily small MBs for a while.)
     let workerMinibatchSize = minibatchSize / numWorkers; // worker processes this many samples between model updates
     let numPartialBatchesPerWorker = CeilDiv(workerMinibatchSize, maxBatchSizePerWorker); // need to break local worker's minibatch if >1
-    let partialWorkerMinibatchSize = workerMinibatchSize / numPartialBatchesPerWorker; // local worker's MB size per 
-    fprintf(stderr, "Minibatch size = %d, per worker = %d, per fw/bw = %d for each of %d fw/bw, for each of %d workers\n",
-            (int)minibatchSize, (int)workerMinibatchSize, (int)partialWorkerMinibatchSize, (int)numPartialBatchesPerWorker, (int)numWorkers), fflush(stderr);
+    let partialMinibatchSize = minibatchSize / numPartialBatchesPerWorker; // partial MB size across all workers
+    fprintf(stderr, "Minibatch size = %d, per worker = %d, per fw/bw = %d across all for %d fw/bws, for each of %d workers\n",
+            (int)minibatchSize, (int)workerMinibatchSize, (int)partialMinibatchSize, (int)numPartialBatchesPerWorker, (int)numWorkers), fflush(stderr);
     AdditionalLearningOptions learnerOptions;
-    learnerOptions.gradientClippingThresholdPerSample = 0.2 / 4096;
+    learnerOptions.gradientClippingThresholdPerSample = 0.01 / 4096;
     LearnerPtr baseLearner;
     double lr0;
     if (learnerType == "sgd")
@@ -889,17 +889,17 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // get next minibatch
         partTimer.Restart();
-#if 1
+#if 0
         // dynamically adjust the MB size lower at the start to ramp up
-        let fullMbSizeAt = 1000000;
-        let lowMbSize = (isDebugging || runProfiling || startMbCount > 0) ? partialWorkerMinibatchSize : 750;//partialWorkerMinibatchSize / (numWorkers > 6 ? 8 : 16);
+        let fullMbSizeAt = 4000000;
+        let lowMbSize = (isDebugging || runProfiling || startMbCount > 0) ? partialMinibatchSize : 750;//partialMinibatchSize / (numWorkers > 6 ? 8 : 16);
         let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
-        let partialWorkerMinibatchSizeConsideringRampUp = clamp(lowMbSize + (partialWorkerMinibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, partialWorkerMinibatchSize);
+        let partialMinibatchSizeConsideringRampUp = clamp(lowMbSize + (partialMinibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, partialMinibatchSize);
 #else
-        let partialWorkerMinibatchSizeConsideringRampUp = partialWorkerMinibatchSize;
+        let partialMinibatchSizeConsideringRampUp = partialMinibatchSize;
 #endif
         if (mbCount % bucketingFactor == 0)
-            Dynamite::GetSubBatches(args, { L"src", L"tgt" }, bucketingFactor, /*shuffleSeed=*/mbCount, minibatchSource, partialWorkerMinibatchSizeConsideringRampUp,
+            Dynamite::GetSubBatches(args, { L"src", L"tgt" }, bucketingFactor, /*shuffleSeed=*/mbCount, minibatchSource, partialMinibatchSizeConsideringRampUp,
                                     numWorkers, workerId,
                                     /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
         let timeGetNextMinibatch = partTimer.Elapsed();
@@ -924,10 +924,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             maxLabels = max(maxLabels, len);
         }
         //partTimer.Log("GetNextMinibatch", numLabels);
+        let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
         fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
                 (int)mbCount,
                 (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
-                lr0, learner->LearningRate() / lr0, (int)partialWorkerMinibatchSizeConsideringRampUp);
+                lr0, learner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
 #if 0       // log the sequences
         for (size_t n = 0; n < numSeq; n++)
         {
@@ -952,8 +953,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //exit(1);
         //partTimer.Log("criterion_fn", numLabels);
         // backprop and model update
-        let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
-        fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
 
         // special code branch for profiling the forward operation
         if (runProfiling)
@@ -971,6 +970,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             continue;
         }
 
+        fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
         partTimer.Restart();
         let mbLossVal = mbLoss.Value(); // trigger computation
         let timeForward = partTimer.Elapsed();
