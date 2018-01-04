@@ -712,34 +712,36 @@ static wstring IntermediateModelPath(const wstring& modelPath, size_t currentMbC
     return modelPath + L"." + wstring(currentMbCountBuf, currentMbCountBuf + strlen(currentMbCountBuf)); // (simplistic string->wstring converter)
 };
 
-class SmoothedVar
+// helper to smooth a variable over time through a low-pass filter
+class SmoothedCriterion
 {
-    double smoothedNumer = 0; double smoothedDenom = 0;
-    const double smoothingTimeConstant = 409600; // smooth over 100 minibatches
-    double rateOfChange = 0;
+    NDArrayViewPtr smoothedNumer; // loss value is accumulated on the GPU
+    double smoothedDenom = 0;
+    const double smoothingTimeConstant = 409600; // e.g. smooth over 100 minibatches
 public:
-    double Update(double avgVal, size_t count)
+    // 'mbLoss' = sum over 'count' loss values
+    void Update(NDArrayViewPtr mbLoss, size_t count)
     {
-        let prevValue = Value();
-        // this smoothing will approximate 1.0 for the denominator
+        // first time we allocate the accumulator to match device etc. of the loss value
+        if (!smoothedNumer)
+            smoothedNumer = make_shared<NDArrayView>(0, mbLoss->GetDataType(), mbLoss->Shape(), mbLoss->Device(), /*readOnly=*/false);
+        // update smoothed numerator and denominator
+        // this smoothing will converge to 1.0 for the denominator
         // (actually a little higher since we add 'count' items instead of 1)
         let decay      =     exp(-(double)count / smoothingTimeConstant);
         let complement = 1 - exp(-1             / smoothingTimeConstant);
-        smoothedDenom = decay * smoothedDenom + complement * count;
-        smoothedNumer = decay * smoothedNumer + complement * count * avgVal;
-        let newValue = Value();
-        rateOfChange = (prevValue - newValue) / count;
-        return Value();
+        let alpha = complement;
+        let beta = decay;
+        smoothedDenom   = alpha * count  + beta * smoothedDenom;
+        //smoothedNumer = alpha * mbLoss + beta * smoothedNumer;
+        NDArrayView::NumericOperation({ mbLoss }, alpha, L"Copy", smoothedNumer, beta);
+        // TODO: when we have to rebuild GPUTensor, then change return val for invalid ops from 0 to NaN
     }
-    double Value() const
+    double RunningAverage() const
     {
-        return smoothedNumer / smoothedDenom;
+        return smoothedNumer->AsScalar<double>() / smoothedDenom;
     }
-    double RateOfChange() const
-    {
-        return rateOfChange;
-    }
-} smoothedLoss;
+};
 
 static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, size_t startMbCount)
 {
@@ -871,6 +873,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // MINIBATCH LOOP
     // BUGBUG: The minibatch loop actually runs over partial worker batches.
     //         In current code, the meaning of startMbCount is broken. mbCount should refer to full minibatches.
+    SmoothedCriterion smoothedLoss;
     updateTimer.Restart();
     for (mbCount = startMbCount; ; mbCount++)
     {
@@ -945,7 +948,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //criterion_fn(subBatchArgs[0], subBatchArgs[1]); // call it once before, to flush that thing that we otherwise also measure, whatever that is
         partTimer.Restart();
         // BUGBUG: In extreme cases, we can have 0 sentences. HANDLE THAT! Then we can use more GPUs.
-        auto mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+        auto partialWorkerLossVar = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
         let timeBuildGraph = partTimer.Elapsed();
         let numAPICalls = CountAPICalls(0) - numAPICalls0;
         numAPICalls;
@@ -955,11 +958,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // backprop and model update
 
         // special code branch for profiling the forward operation
+        // This code is presently not up-to-date.
         if (runProfiling)
         {
-            double lossPerLabel = mbLoss.Value()->AsScalar<float>() / numPartialWorkerScoredLabels, smoothedLossVal = 0;
+            double lossPerLabel = partialWorkerLossVar.Value()->AsScalar<float>() / numPartialWorkerScoredLabels, smoothedLossVal = 0;
             partTimer.Restart();
-            mbLoss = Variable(); // this destructs the entire graph
+            partialWorkerLossVar = Variable(); // this destructs the entire graph
             let timeDeleteGraph = partTimer.Elapsed();
             let elapsed = updateTimer.ElapsedSeconds(); // [sec]
             fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, d=%.0f ms\n",
@@ -973,25 +977,22 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
         partTimer.Restart();
-        let mbLossVal = mbLoss.Value(); // trigger computation
+        let partialWorkerLoss = partialWorkerLossVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
         let timeForward = partTimer.Elapsed();
-        //fprintf(stderr, "%.7f\n", mbLossVal->AsScalar<float>()), fflush(stderr);
+        //fprintf(stderr, "%.7f\n", partialWorkerLoss->AsScalar<float>()), fflush(stderr);
         //exit(1);
         partTimer.Restart();
 #if 0
-        mbLossVal->AsScalar<float>(); // wait for completion of computation  --don't do this unless we want time measurement
+        partialWorkerLoss->AsScalar<float>(); // wait for completion of computation  --don't do this unless we want time measurement
 #endif
-        let timeForwardGpu = partTimer.Elapsed();
+        let timeForwardGpu = partTimer.Elapsed(); // note: enable the #if above to see the remaining GPU time
         //partTimer.Log("ForwardProp", numLabels);
         // note: we must use numPartialWorkerScoredLabels here
-        //fprintf(stderr, "{%.2f, %d-%d}\n", mbLossVal->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
+        //fprintf(stderr, "{%.2f, %d-%d}\n", partialWorkerLoss->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
         fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
         //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
         partTimer.Restart();
-        // implement local gradient aggregation if the desired MB size does not fit into local GPU RAM
-        let isFirstPartialBatch = mbCount % numPartialBatchesPerWorker == 0;
-        let isFinalPartialBatch = mbCount % numPartialBatchesPerWorker == (numPartialBatchesPerWorker - 1);
-        double beta = isFirstPartialBatch ? 0 : 1; // partial batches except for first are aggregated into the existing gradient memory, without model update
+
 #if 0
         let LogGradByName = [&](const wstring& name)
         {
@@ -1002,7 +1003,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let logName = L"encode.[2].stepBwd.projectInput.W"s;
         LogGradByName(logName);
 #endif
-        mbLoss.Backward(gradients, beta);
+        // implement local gradient aggregation if the desired MB size does not fit into local GPU RAM
+        let isFirstPartialBatch = mbCount % numPartialBatchesPerWorker == 0;
+        let isFinalPartialBatch = mbCount % numPartialBatchesPerWorker == (numPartialBatchesPerWorker - 1);
+        double beta = isFirstPartialBatch ? 0 : 1; // partial batches except for first are aggregated into the existing gradient memory, without model update
+        partialWorkerLossVar.Backward(gradients, beta);
         //LogGradByName(logName);
         //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
         let timeBackward = partTimer.Elapsed();
@@ -1010,14 +1015,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         if (isFirstPartialBatch)
         {
             info.numberOfSamples = numPartialWorkerScoredLabels;
-            info.trainingLossValue->CopyFrom(*mbLossVal);
-            info.evalCriterionValue->CopyFrom(*mbLossVal);
+            info.trainingLossValue ->CopyFrom(*partialWorkerLoss);
+            info.evalCriterionValue->CopyFrom(*partialWorkerLoss);
         }
         else // statistics is aggregated over multiple partial batches
         {
             info.numberOfSamples += numPartialWorkerScoredLabels;
-            info.trainingLossValue += mbLossVal;
-            info.evalCriterionValue += mbLossVal;
+            info.trainingLossValue  += partialWorkerLoss; // note: these are GPU objects
+            info.evalCriterionValue += partialWorkerLoss;
         }
         //info.trainingLossValue->AsScalar<float>();
         //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
@@ -1040,13 +1045,22 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 p.Value()->LogToFile(p.Name(), stderr, 10);
         }
 #endif
-        // if we use partial batches then model update only happens for the last partial batch
+
+        // model update
         partTimer.Restart();
-        if (isFinalPartialBatch)
+        if (isFinalPartialBatch) // if partial batches then skip Update() for all but the last partial batch
         {
             learner->Update(gradients, info);
+            totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
         }
+        // keep track of loss
+        let mbLoss          = isFinalPartialBatch ? info.trainingLossValue : partialWorkerLoss;
+        let numScoredLabels = isFinalPartialBatch ? info.numberOfSamples   : numPartialWorkerScoredLabels;
+        if (isFinalPartialBatch) // TODO: only needed on the main thread which logs
+            smoothedLoss.Update(mbLoss, numScoredLabels); // note: this happens on the GPU; no GPU sync here
+        // TODO: if Update() is distributed, then the resulting NDArrayView should be allowed to be on the CPU (in case of no NCCL)
         let timePerUpdate = partTimer.Elapsed();
+
 #if 0       // weight normalization (hack for now, since I cannot configure it)
         let EndsWith = [](const wstring& s, const wstring& what)
         {
@@ -1078,54 +1092,38 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         }
 #endif
 
-        // model update
-        //partTimer.Log("Update", numLabels);
-        size_t numScoredLabels;
-        double lossPerLabel;
-        if (isFinalPartialBatch)
-        {
-            numScoredLabels = info.numberOfSamples;
-            lossPerLabel = info.trainingLossValue->AsScalar<float>() / numScoredLabels; // TODO: this does the GPU sync, so better do this on the GPU as well
-            totalLabels += numScoredLabels;
-        }
-        else
-        {
-            numScoredLabels = numPartialWorkerScoredLabels;
-            lossPerLabel = mbLossVal->AsScalar<float>() / numScoredLabels;
-        }
-
         // clean up
         partTimer.Restart();
-        mbLoss = Variable(); // this destructs the entire graph
+        partialWorkerLossVar = Variable(); // this destructs the entire graph
         let timeDeleteGraph = partTimer.Elapsed();
 
         // log progress
+        // Note: Without logging, there is no GPU-CPU transfer.
         if (communicator->CurrentWorker().IsMain())
         {
             fprintf(stderr, "%5d:   loss, PPL = ", (int)mbCount);
             if (isFinalPartialBatch)
             {
-                let smoothedLossVal = smoothedLoss.Update(lossPerLabel, numScoredLabels);
+                let smoothedLossVal = smoothedLoss.RunningAverage();
                 fprintf(stderr, "[smoothed] %4.2f, ### %8.2f ### [this] ", smoothedLossVal, exp(smoothedLossVal));
             }
             else
                 fprintf(stderr, "[partial] ");
+            let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
             fprintf(stderr, "%9.7f * %d, %6.3f, seenLabels=%d, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel), (int)totalLabels);
             if (isFinalPartialBatch)
             {
                 let elapsed = updateTimer.ElapsedSeconds(); // elapsed time between updates
-                updateTimer.Restart();
+                updateTimer.Restart();                      // restart timer right away so that we get a true end-to-end measurement including everything
                 fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numScoredLabels);
             }
             fprintf(stderr, "m=%.0f, g=%.0f, f=%.0f+%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
                     1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeForwardGpu, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
+            if (mbCount < 400 || mbCount % 5 == 0) // flush log
+                fflush(stderr);
+            if (std::isnan(lossPerLabel))
+                throw runtime_error("Loss is NaN.");
         }
-        // log
-        // Do this last, which forces a GPU sync and may avoid that "cannot resize" problem
-        if (mbCount < 400 || mbCount % 5 == 0)
-            fflush(stderr);
-        if (std::isnan(lossPerLabel))
-            throw runtime_error("Loss is NaN.");
         //if (mbCount == 11)
         //{
         //    let numAPICalls = CountAPICalls(0) - numAPICalls00;
