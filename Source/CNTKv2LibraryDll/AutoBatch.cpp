@@ -1362,7 +1362,7 @@ class InternalVariable::Memoizer
         size_t Pending() const { return m_queue.Size(); }
         void Join()
         {
-            fprintf(stderr, "### QUEUE SIZE=%d\n", (int)s_workerThread.Pending()), fflush(stderr);
+            //fprintf(stderr, "### QUEUE SIZE=%d\n", (int)s_workerThread.Pending()), fflush(stderr);
             NotifyWorkerOfStateChange();
             // wait until all done
             while (Pending() > 0)
