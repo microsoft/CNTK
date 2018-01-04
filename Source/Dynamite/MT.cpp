@@ -1106,7 +1106,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         {
             fprintf(stderr, "%5d:   loss, PPL = ", (int)mbCount);
             if (isFinalPartialBatch)
-                fprintf(stderr, "[smoothed] %4.2f, ### %8.2f ### [this] ", smoothedLossVal, exp(smoothedLossVal), lossPerLabel, (int)numScoredLabels);
+                fprintf(stderr, "[smoothed] %4.2f, ### %8.2f ### [this] ", smoothedLossVal, exp(smoothedLossVal));
             else
                 fprintf(stderr, "[partial] ");
             fprintf(stderr, "%9.7f * %d, %6.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f+%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
