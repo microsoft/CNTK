@@ -1357,7 +1357,7 @@ class InternalVariable::Memoizer
         void Submit(WorkItem&& item)
         {
             m_queue.EmplaceBack(move(item));
-            //NotifyWorkerOfStateChange();
+            NotifyWorkerOfStateChange();
         }
         size_t Pending() const { return m_queue.Size(); }
         void Join()
