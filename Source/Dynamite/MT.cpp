@@ -875,6 +875,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     //         In current code, the meaning of startMbCount is broken. mbCount should refer to full minibatches.
     SmoothedCriterion smoothedLoss;
     updateTimer.Restart();
+    size_t lastUpdateLogTotalLabels = totalLabels; // sample count for updateTimer
     for (mbCount = startMbCount; ; mbCount++)
     {
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
@@ -974,6 +975,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeDeleteGraph);
             totalLabels;
             updateTimer.Restart(); // BUGBUG: check this w.r.t. partial
+            lastUpdateLogTotalLabels = totalLabels;
             continue;
         }
 
@@ -1119,7 +1121,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             {
                 let elapsed = updateTimer.ElapsedSeconds(); // elapsed time between updates
                 updateTimer.Restart();                      // restart timer right away so that we get a true end-to-end measurement including everything
-                fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numScoredLabels);
+                let numTimedLabels = totalLabels - lastUpdateLogTotalLabels;
+                lastUpdateLogTotalLabels = totalLabels;
+                fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numTimedLabels / elapsed, 1000.0/*ms*/ * elapsed / numTimedLabels);
             }
             fprintf(stderr, "m=%.0f, g=%.0f, f=%.0f+%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
                     1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeForwardGpu, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
