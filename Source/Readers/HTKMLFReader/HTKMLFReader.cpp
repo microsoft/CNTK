@@ -463,9 +463,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     {
         // RuntimeError("should not come here.");
         /* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
-        
+        /*
         unigram.reset(new msra::lm::CMGramLM());
-		/*
+        
         unigramsymbols["!NULL"];
         unigramsymbols["<s>"];
         unigramsymbols["</s>"];
