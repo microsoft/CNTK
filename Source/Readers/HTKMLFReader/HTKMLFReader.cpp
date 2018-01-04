@@ -465,17 +465,17 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         /* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
         
         unigram.reset(new msra::lm::CMGramLM());
-        /*
+        
         unigramsymbols["!NULL"];
         unigramsymbols["<s>"];
         unigramsymbols["</s>"];
         unigramsymbols["!sent_start"];
         unigramsymbols["!sent_end"];
         unigramsymbols["!silence"];
-        */
+        
         /* guoye: end */
         
-        unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
+        // unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
 
         /* guoye: end  */
        
