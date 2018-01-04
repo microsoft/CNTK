@@ -819,7 +819,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
     vector<vector<vector<Variable>>> args; // [subMinibatchIndex, streamIndex, sequenceIndex]
     size_t totalLabels = 0;
-    Microsoft::MSR::CNTK::Timer timer;
+    Microsoft::MSR::CNTK::Timer updateTimer; // timer between Update() calls end-to-end
     class // helper for timing GPU-side operations
     {
         Microsoft::MSR::CNTK::Timer m_timer;
@@ -870,6 +870,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // MINIBATCH LOOP
     // BUGBUG: The minibatch loop actually runs over partial worker batches.
     //         In current code, the meaning of startMbCount is broken. mbCount should refer to full minibatches.
+    updateTimer.Restart();
     for (mbCount = startMbCount; ; mbCount++)
     {
         // checkpoint
@@ -885,7 +886,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //    param.Value()->SetValue(0.0);
             //model_fn.RestoreParameters(modelPathN);
         }
-        timer.Restart();
 
         // get next minibatch
         partTimer.Restart();
@@ -908,7 +908,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // We get 10 x the minibatch, sort it by source length, and then process it in consecutive chunks of 1/10, which form the actual minibatch for training
         let numAPICalls00 = CountAPICalls(0);
         let& subBatchArgs = args[mbCount % bucketingFactor];
-        timer.Restart();
         let numSeq = subBatchArgs[0].size();
         size_t numLabels = 0, numSamples = 0, maxSamples = 0, maxLabels = 0;
         for (let& seq : subBatchArgs[0])
@@ -961,12 +960,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             partTimer.Restart();
             mbLoss = Variable(); // this destructs the entire graph
             let timeDeleteGraph = partTimer.Elapsed();
-            let elapsed = timer.ElapsedSeconds(); // [sec]
+            let elapsed = updateTimer.ElapsedSeconds(); // [sec]
             fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, d=%.0f ms\n",
                 (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
                 numPartialWorkerScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numPartialWorkerScoredLabels,
                 1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeDeleteGraph);
             totalLabels;
+            updateTimer.Restart(); // BUGBUG: check this w.r.t. partial
             continue;
         }
 
@@ -1079,22 +1079,19 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // model update
         //partTimer.Log("Update", numLabels);
-        double lossPerLabel, smoothedLossVal;
         size_t numScoredLabels;
+        double lossPerLabel;
         if (isFinalPartialBatch)
         {
             numScoredLabels = info.numberOfSamples;
-            totalLabels += numScoredLabels;
             lossPerLabel = info.trainingLossValue->AsScalar<float>() / numScoredLabels; // TODO: this does the GPU sync, so better do this on the GPU as well
-            smoothedLossVal = smoothedLoss.Update(lossPerLabel, numScoredLabels);
+            totalLabels += numScoredLabels;
         }
         else
         {
             numScoredLabels = numPartialWorkerScoredLabels;
             lossPerLabel = mbLossVal->AsScalar<float>() / numScoredLabels;
-            smoothedLossVal = 0; // we can't report the smoothed loss here
         }
-        let elapsed = timer.ElapsedSeconds(); // [sec]
 
         // clean up
         partTimer.Restart();
@@ -1106,12 +1103,20 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         {
             fprintf(stderr, "%5d:   loss, PPL = ", (int)mbCount);
             if (isFinalPartialBatch)
+            {
+                let smoothedLossVal = smoothedLoss.Update(lossPerLabel, numScoredLabels);
                 fprintf(stderr, "[smoothed] %4.2f, ### %8.2f ### [this] ", smoothedLossVal, exp(smoothedLossVal));
+            }
             else
                 fprintf(stderr, "[partial] ");
-            fprintf(stderr, "%9.7f * %d, %6.3f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, f=%.0f+%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
-                    lossPerLabel, (int)numScoredLabels, exp(lossPerLabel), (int)totalLabels,
-                    numPartialWorkerScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numPartialWorkerScoredLabels,
+            fprintf(stderr, "%9.7f * %d, %6.3f, seenLabels=%d, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel), (int)totalLabels);
+            if (isFinalPartialBatch)
+            {
+                let elapsed = updateTimer.ElapsedSeconds(); // elapsed time between updates
+                updateTimer.Restart();
+                fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numScoredLabels);
+            }
+            fprintf(stderr, "m=%.0f, g=%.0f, f=%.0f+%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
                     1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeForwardGpu, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
         }
         // log
