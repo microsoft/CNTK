@@ -715,11 +715,11 @@ public:
 public:
     // TODO: implement this for gcc/unix if needed
     PCTimer() { } // count ticks per second
-    void Start() { clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start); }
+    void Start() { clock_gettime(CLOCK_REALTIME/*HREAD_CPUTIME_ID*/, &start); }
     double Stop() // each read gives time elapsed since start, in seconds
     {
         timespec present;
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &present);
+        clock_gettime(CLOCK_REALTIME/*THREAD_CPUTIME_ID*/, &present);
 	timespec temp;
 	if (present.tv_nsec < start.tv_nsec)
         {
@@ -1232,9 +1232,11 @@ class WorkerThread
             while (!m_terminateRequest)
             {
                 let hasWorkPending = MTDoWork(); // may throw
-                MTNotifyConsumerOfStateChange();
                 if (!hasWorkPending)
+                {
+                    MTNotifyConsumerOfStateChange();
                     MTWaitForConsumerStateChange();
+                }
             }
         }
         catch (...)
@@ -1243,7 +1245,7 @@ class WorkerThread
             m_exception = current_exception();
             m_hasException = true; // not sure if exception_ptr can be assigned atomically, so use this as a guard
             MTNotifyConsumerOfStateChange();
-            fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
+            //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
             // and finish the thread
         }
     }
@@ -1355,12 +1357,13 @@ class InternalVariable::Memoizer
         void Submit(WorkItem&& item)
         {
             m_queue.EmplaceBack(move(item));
-            NotifyWorkerOfStateChange();
+            //NotifyWorkerOfStateChange();
         }
         size_t Pending() const { return m_queue.Size(); }
         void Join()
         {
-            //fprintf(stderr, "### QUEUE SIZE=%d\n", (int)s_workerThread.Pending());
+            fprintf(stderr, "### QUEUE SIZE=%d\n", (int)s_workerThread.Pending()), fflush(stderr);
+            NotifyWorkerOfStateChange();
             // wait until all done
             while (Pending() > 0)
                 WaitForWorkerStateChange(); // note: This will re-throw any exception from the worker
@@ -1408,7 +1411,7 @@ private:
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
-        CudaStatsGuard cudaStatsGuardPrepare(PrimitiveOpType::Pooling, L"Memoize: MT prepare", 3, inputs.size());
+        CudaStatsGuard cudaStatsGuardPrepareI(PrimitiveOpType::Pooling, L"Memoize: MT prepare inputs", 3, inputs.size());
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -1419,6 +1422,8 @@ private:
             // fetch the m_value from the input
             inputValues[i] = MTCacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
         }
+        cudaStatsGuardPrepareI.Stop();
+        CudaStatsGuard cudaStatsGuardPrepareO(PrimitiveOpType::Log, L"Memoize: MT prepare output", 3, inputs.size());
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
@@ -1427,7 +1432,7 @@ private:
                 NDArrayViewPtr()
             /*else*/:
                 m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
-        cudaStatsGuardPrepare.Stop();
+        cudaStatsGuardPrepareO.Stop();
         // logging
         if (Memoizer::ShouldProfile(f))
             Memoizer::LogFunction(f, f.m_profiler);
@@ -4179,6 +4184,9 @@ public:
         Memoizer::MTCacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
         cudaStatsGuardCalc.Stop();
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
+        CudaStatsGuard cudaStatsGuardGPU(PrimitiveOpType::Exp/*misusing this for actual op*/, L"batched forward gpu", 3);
+        fields.m_value->AsScalar<float>();
+        cudaStatsGuardGPU.Stop();
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
         ShowCudaStats();
