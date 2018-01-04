@@ -786,7 +786,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     {
         let f = 1.0;
         lr0 = learningRate * f;
-        learnerOptions.gradientClippingThresholdPerSample = 0.001 / lr0 / 4096; // mimics Frantic but only before LR decay
+        learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096; // mimics Frantic but only before LR decay
         baseLearner = SGDLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0 / 2, lr0 / 4, lr0 / 8 }, epochSize), learnerOptions);
     }
     else if (learnerType == "adam")
@@ -798,7 +798,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let f = 1 / sqrt(4096/*minibatchSize*/)/*AdaGrad correction-correction*/;
         // ...TODO: Haven't I already added that to the base code?? Or is this only for compat with Jacob's parameters?
         lr0 = learningRate * f;
-        learnerOptions.gradientClippingThresholdPerSample = 0.001 / lr0 / 4096;
+        learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096;
         baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
                                   MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
                                   learnerOptions);
