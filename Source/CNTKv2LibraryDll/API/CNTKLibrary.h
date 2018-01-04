@@ -1160,6 +1160,9 @@ namespace CNTK
         //    TensorView<double> m_tensorViewDouble;
         //} m_tensorViews;
         //std::shared_ptr<void> m_tensorViewPtr; // Microsoft::MSR::CNTK::TensorView<ElemType>*
+    public:
+        // temporary debugging aid for identifying objects
+        unsigned int m_uniqueIdForDebugging = GetUniqueId(); static unsigned int GetUniqueId() { static unsigned int id = 0; return ++id; }
     };
 
     ///
@@ -2291,9 +2294,10 @@ namespace CNTK
 
         ///
         /// In a dynamic setting, this computes the gradient of this InternalVariable w.r.t. given leaves.
+        /// Beta can be 0 or 1. If 1, gradients are added to.
         /// TODO: Function::grad() allows to pass multiple roots. Does that ever make sense in this context?
         ///
-        CNTK_API void Backward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
+        CNTK_API void Backward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients, double beta = 0.0) const;
     protected:
         class AutoBatch;
         class Memoizer;

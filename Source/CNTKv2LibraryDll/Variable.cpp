@@ -326,9 +326,9 @@ namespace CNTK
         return m_dataFields->m_value;
     }
 
-    void InternalVariable::Backward(std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients) const
+    void InternalVariable::Backward(std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients, double beta) const
     {
-        OutputOwner()->BatchedBackward(gradients);
+        OutputOwner()->BatchedBackward(gradients, beta);
     }
 
     void InternalVariable::SetValue(const NDArrayViewPtr& value)

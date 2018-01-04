@@ -465,7 +465,7 @@ static UnaryModel ResidualNet(size_t outputDim)
     auto min   = Constant({ outputDim }, CurrentDataType(),  0.0, CurrentDevice(), L"min");
     auto max   = Constant({ outputDim }, CurrentDataType(), 10.0, CurrentDevice(), L"max");
     auto slope = Constant({ outputDim }, CurrentDataType(),  0.8, CurrentDevice(), L"slope");
-    auto skipScale = Parameter({ outputDim }, CurrentDataType(), 1.0f, CurrentDevice(), L"skipScale");
+    //auto skipScale = Parameter({ outputDim }, CurrentDataType(), 1.0f, CurrentDevice(), L"skipScale");
 
     // change ReLU to Softplus(4x)/4, hoping to improve the BN issue
     auto zero = Constant({ outputDim }, CurrentDataType(), 0.0, CurrentDevice(), L"zero");
@@ -476,10 +476,12 @@ static UnaryModel ResidualNet(size_t outputDim)
     let doResidualNet = StaticModel(/*isBasicBlock=*/false,
         [=](const Variable& x)
         {
-#if 0       // clipped ReLU version
+#if 1       // clipped ReLU version as in Frantic
+            // Note: skipScale not supported here. Not useful anyway.
             CountAPICalls(7);
-            let h = Clip((project1(x)                ), min, max, Named("hRes"));
-            let r = Clip((project2(h) + x * skipScale), min, max, Named("rRes"));
+            let h1 = project1(slope * x ); let h1Clipped = Clip(h1    , min, max, Named("hRes"));
+            let h2 = project2(slope * h1); let h2Clipped = Clip(h2 + x, min, max, Named("rRes"));
+            let r = h2Clipped;
             //let h = max - ReLU(max - ReLU(project1(x),     Named("hRes")));
             //let r = max - ReLU(max - ReLU(project2(h) + x, Named("rRes")));
 #else
@@ -495,7 +497,7 @@ static UnaryModel ResidualNet(size_t outputDim)
 #endif
             return r;
         }, Named("doResidualNet"));
-    return UnaryModel({ skipScale },
+    return UnaryModel({ /*skipScale*/ },
         {
             { L"project1", project1 },
             { L"project2", project2 },
