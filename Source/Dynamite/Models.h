@@ -74,7 +74,13 @@ static LayersOptions& CurrentOptions()
 };
 
 static inline DeviceDescriptor CurrentDevice()                                  { return CurrentOptions().device; }
-static inline void             SetCurrentDevice(const DeviceDescriptor& device) { CurrentOptions().device = device; }
+static inline void             SetCurrentDevice(const DeviceDescriptor& device)
+{
+    let succ = DeviceDescriptor::TrySetDefaultDevice(device);
+    if (!succ)
+        RuntimeError("Failed to set the default device.");
+    CurrentOptions().device = device;
+}
 static inline DataType         CurrentDataType()                                { return CurrentOptions().dataType; }
 static inline void             SetCurrentDataType(DataType dataType)            { CurrentOptions().dataType = dataType; }
 
