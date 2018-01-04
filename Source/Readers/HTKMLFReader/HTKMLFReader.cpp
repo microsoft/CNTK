@@ -464,7 +464,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         // RuntimeError("should not come here.");
         /* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
         
-        unigram.reset(new msra::lm::CMGramLM());
+        // unigram.reset(new msra::lm::CMGramLM());
         
         unigramsymbols["!NULL"];
         unigramsymbols["<s>"];
@@ -475,7 +475,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         
         /* guoye: end */
         
-        unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
+        // unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
 
         /* guoye: end  */
        
@@ -486,7 +486,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         
 
         /* guoye: start */
-        /*
+        
         specialwordids.clear();
         specialwordids.insert(unigramsymbols["<s>"]);
         specialwordids.insert(unigramsymbols["</s>"]);
@@ -511,7 +511,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         specialwordids.insert(unigramsymbols["[SPN/]"]);
         specialwordids.insert(unigramsymbols["[UNKNOWN/]"]);
         specialwordids.insert(unigramsymbols[".]"]);
-        */
+        
         /* guoye: end */
         
     }
