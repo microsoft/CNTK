@@ -458,32 +458,35 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     size_t startwordid = SIZE_MAX;
     size_t endwordid = SIZE_MAX;
     /* guoye: debug */
-    /*
     if (unigrampath != L"")
-    */
-    if(false)
+ //   if(true)
     {
-        RuntimeError("should not come here.");
-        unigram.reset(new msra::lm::CMGramLM());
+        // RuntimeError("should not come here.");
         /* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
-
+        /*
+        unigram.reset(new msra::lm::CMGramLM());
+        
         unigramsymbols["!NULL"];
         unigramsymbols["<s>"];
         unigramsymbols["</s>"];
         unigramsymbols["!sent_start"];
         unigramsymbols["!sent_end"];
         unigramsymbols["!silence"];
+        */
         /* guoye: end */
         
-        unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
+        // unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
 
         /* guoye: end  */
-        
+       
+        /*
         silencewordid = unigramsymbols["!silence"]; // give this an id (even if not in the LM vocabulary)
         startwordid = unigramsymbols["<s>"];
         endwordid = unigramsymbols["</s>"];
+        */
 
         /* guoye: start */
+        
         specialwordids.clear();
         specialwordids.insert(unigramsymbols["<s>"]);
         specialwordids.insert(unigramsymbols["</s>"]);
@@ -508,7 +511,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         specialwordids.insert(unigramsymbols["[SPN/]"]);
         specialwordids.insert(unigramsymbols["[UNKNOWN/]"]);
         specialwordids.insert(unigramsymbols[".]"]);
-
+        
         /* guoye: end */
         
     }
