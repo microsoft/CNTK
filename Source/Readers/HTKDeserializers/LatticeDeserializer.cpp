@@ -62,7 +62,8 @@ protected:
 
         // Make sure we always have 3 at the end for buffer overrun, i.e. 4 byte alignment
         m_buffer.resize(sizeInBytes + sizeof(float) - 1);
-        for (int fl = 0; fl < sizeof(float)-1; fl++) {
+        for (int fl = 0; fl < sizeof(float)-1; fl++)
+        {
             m_buffer[sizeInBytes + fl] = 0;
         }
 

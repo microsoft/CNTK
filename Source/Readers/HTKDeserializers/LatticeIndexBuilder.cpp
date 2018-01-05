@@ -62,8 +62,8 @@ namespace CNTK {
         size_t prevId{ 0 };
         bool firstLine = true;
         size_t prevSequenceStartOffset{ 0 };
-        for (string const& line : m_latticeToc) {
-
+        for (string const& line : m_latticeToc)
+        {
             if (line.empty())
                 continue;
 
@@ -80,20 +80,24 @@ namespace CNTK {
             sscanf(line.substr(openBracketLoc + 1, closeBracketLoc).c_str(), "%zu", &byteOffset);
             size_t fileStart = eqLoc + 1;
             string curLatticeFile = line.substr(fileStart, openBracketLoc - fileStart);
-            if (curLatticeFile.empty()) {
+            if (curLatticeFile.empty()) 
+            {
                 //This line should contain pointer to the lattice file
                 if (latticeFile.empty()) 
                     RuntimeError("The lattice TOC file is malformed. Reference to the binary lattice file is missing.");
             }
-            else {
+            else
+            {
                 latticeFile = curLatticeFile;
             }
             id = m_corpus->KeyToId(seqKey);
 
-            if (firstLine) {
+            if (firstLine)
+            {
                 firstLine = false;
             }
-            else {
+            else
+            {
                 auto seqSize = (uint32_t) (byteOffset - prevSequenceStartOffset);
                 if (seqSize % sizeof(float) == 0)
                     seqSize = seqSize / sizeof(float);

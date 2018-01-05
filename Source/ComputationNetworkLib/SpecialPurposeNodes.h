@@ -578,7 +578,6 @@ public:
                   Input(1)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
                   Input(0)->HasMBLayout() &&
                   Input(0)->GetMBLayout() == Input(1)->GetMBLayout())) 
-                //&& Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
             {
                 LogicError("The Matrix dimension in the SequenceWithSoftmaxNode operation does not match.");
             }
@@ -779,7 +778,7 @@ public:
             auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
             std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
             const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
-            latticePair->second.freadFromBuffer(buffer, m_idmap, m_idmap.back());
+            latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
             this->m_lattices.push_back(latticePair);
         }

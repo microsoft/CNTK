@@ -959,7 +959,8 @@ public:
         freadOrDie(v, sz, f);
     }
     
-    bool CheckTag(const char*& buffer, const std::string& expectedTag) {
+    bool CheckTag(const char*& buffer, const std::string& expectedTag) 
+    {
         std::string tag(buffer, expectedTag.length());
         if (tag != expectedTag)
             return false;
@@ -1035,7 +1036,7 @@ public:
 
     // The same as fread above, but for buffer and only supporting lattice version 2.
     // Advances the buffer by reference.
-    void freadFromBuffer(const char* buffer, const std::vector<unsigned int>& idmap, size_t spunit)
+    void ReadFromBuffer(const char* buffer, const std::vector<unsigned int>& idmap, size_t spunit)
     {
         ReadTagFromBuffer(buffer, "LAT ", 2);
 
@@ -1045,11 +1046,10 @@ public:
 
         ReadVectorFromBuffer(buffer, "NODS", nodes, info.numnodes);
         if (nodes.back().t != info.numframes)
-            RuntimeError("freadFromBuffer: mismatch between info.numframes and last node's time");
+            RuntimeError("ReadFromBuffer: mismatch between info.numframes and last node's time");
         ReadVectorFromBuffer(buffer, "EDGS", edges2, info.numedges); // uniqued edges
         ReadVectorFromBuffer(buffer, "ALNS", uniquededgedatatokens); // uniqued alignments
         CheckTag(buffer, "END ");
-        //fcheckTag(f, "END ");
         ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap);
     }
 
@@ -1057,21 +1057,18 @@ public:
     template <class IDMAP>
     void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap) {
         // check if we need to map
-#if 1                                                                                     // post-bugfix for incorrect inference of spunit
         if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
         {
-            fprintf(stderr, "fread: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int)info.impliedspunitid, (int)idmap.size());
-            RuntimeError("fread: out of bounds spunitid");
+            fprintf(stderr, "ProcessV2Lattice: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int)info.impliedspunitid, (int)idmap.size());
+            RuntimeError("ProcessV2Lattice: out of bounds spunitid");
         }
-#endif
+
         // This is critical--we have a buggy lattice set that requires no mapping where mapping would fail
         bool needsmapping = false;
         foreach_index(k, idmap)
         {
             if (idmap[k] != (size_t)k
-#if 1
                 && (k != (int)idmap.size() - 1 || idmap[k] != spunit) // that HACK that we add one more /sp/ entry at the end...
-#endif
                 )
             {
                 needsmapping = true;
@@ -1088,7 +1085,7 @@ public:
             std::vector<bool> isendworkaround;
             if (info.impliedspunitid != spunit)
             {
-                fprintf(stderr, "fread: lattice with broken spunit, using workaround to handle potentially broken zero-token edges\n");
+                fprintf(stderr, "ProcessV2Lattice: lattice with broken spunit, using workaround to handle potentially broken zero-token edges\n");
                 inferends(isendworkaround);
             }
 
@@ -1105,7 +1102,7 @@ public:
                     // this is a regular token: update it in-place
                     auto& ai = uniquededgedatatokens[k];
                     if (ai.unit >= idmap.size())
-                        RuntimeError("fread: broken-file heuristics failed");
+                        RuntimeError("ProcessV2Lattice: broken-file heuristics failed");
                     ai.updateunit(idmap); // updates itself
                     if (!ai.last)
                         continue;
@@ -1114,7 +1111,7 @@ public:
                 k += skipscoretokens;
                 uniquealignments++;
             }
-            fprintf(stderr, "fread: mapped %d unique alignments\n", (int)uniquealignments);
+            fprintf(stderr, "ProcessV2Lattice: mapped %d unique alignments\n", (int)uniquealignments);
         }
         if (info.impliedspunitid != spunit)
         {
@@ -1202,12 +1199,9 @@ public:
         // establish mapping of each entry to the corresponding id in 'symmap'; this should fail if the symbol is not found
         idmap.reserve(lines.size() + 1); // last entry is a fake entry to return the /sp/ unit
         std::string symstring, tosymstring;
-        symstring.reserve(100);
-        tosymstring.reserve(100);
         foreach_index(i, lines)
         {
-            char* line = lines[i];
-            char* sym = line;
+            char* sym = lines[i];
             // parse out a mapping  (log SPC phys)
             char* p = strchr(sym, ' ');
             if (p != NULL) // mapping: just verify that the supplied symmap has the same mapping
@@ -1217,12 +1211,12 @@ public:
                 symstring = sym; // (reusing existing object to avoid malloc)
                 tosymstring = tosym;
                 if (getid(symmap, symstring) != getid(symmap, tosymstring))
-                    RuntimeError("getcachedidmap: mismatching symbol id for %s vs. %s", sym, tosym);
+                    RuntimeError("getSymList: mismatching symbol id for %s vs. %s", sym, tosym);
             }
             else
             {
                 if ((size_t)i != idmap.size()) // non-mappings must come first (this is to ensure compatibility with pre-mapping files)
-                    RuntimeError("getcachedidmap: mixed up symlist file");
+                    RuntimeError("getSymList: mixed up symlist file");
                 symstring = sym; // (reusing existing object to avoid malloc)
                 idmap.push_back((unsigned int)getid(symmap, symstring));
             }

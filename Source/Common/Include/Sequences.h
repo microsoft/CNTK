@@ -181,7 +181,8 @@ public:
         // remember the dimensions
         m_numParallelSequences = numParallelSequences;
         m_numTimeSteps = numTimeSteps;
-        if (deepInit) {
+        if (deepInit) 
+        {
             m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps);
             m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps);
             m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
@@ -392,7 +393,8 @@ public:
         if (seqId == GAP_SEQUENCE_ID)
         {
             m_numGapFrames += (e - b);
-            if (initDistances) {
+            if (initDistances) 
+            {
                 for (size_t t = b; t < e; t++)
                 {
                     m_timeStepHasGap[t] = true;
@@ -401,7 +403,8 @@ public:
             }
         }
         else
-            if (initDistances) {
+            if (initDistances) 
+            {
                 for (size_t t = b; t < e; t++)
                 {
                     // update the nearest sentence boundaries, minimum over all parallel sequences

@@ -1025,7 +1025,8 @@ namespace CNTK
                     auto seqGammarWordPen = functionConfig[PrimitiveFunction::AttributeNameSeqGammarWordPen].Value<float>();
                     auto hSmoothingWeight = functionConfig[PrimitiveFunction::AttributeNameHSmoothingWeight].Value<float>();
 
-                    computationNodePtr = New<SequenceWithLatticeNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath, hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen);
+                    computationNodePtr = New<SequenceWithLatticeNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath, 
+                        hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen);
                     break;
                 }
                 case PrimitiveOpType::ForwardBackward:

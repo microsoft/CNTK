@@ -20,7 +20,9 @@
 namespace CNTK {
 using namespace Microsoft::MSR::CNTK;
 
-std::vector<DataDeserializerPtr> CreateDeserializers(const ConfigParameters& readerConfig, CorpusDescriptorPtr corpus)
+using namespace Microsoft::MSR::CNTK;
+
+std::vector<DataDeserializerPtr> CreateDeserializers(const ConfigParameters& readerConfig)
 {
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
@@ -32,6 +34,9 @@ std::vector<DataDeserializerPtr> CreateDeserializers(const ConfigParameters& rea
     {
         InvalidArgument("Network needs at least 1 feature specified.");
     }
+
+    bool useNumericSequenceKeys = readerConfig(L"useNumericSequenceKeys", false);
+    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
 
     std::vector<DataDeserializerPtr> featureDeserializers;
     std::vector<DataDeserializerPtr> labelDeserializers;
@@ -95,19 +100,16 @@ HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
     m_numParallelSequencesForAllEpochs =
         readerConfig(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));
 
-    bool useNumericSequenceKeys = readerConfig(L"useNumericSequenceKeys", false);
-    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
-
     ConfigHelper config(readerConfig);
     size_t window = config.GetRandomizationWindow();
-    auto deserializers = CreateDeserializers(readerConfig, corpus);
+    auto deserializers = CreateDeserializers(readerConfig);
     if (deserializers.empty())
     {
         LogicError("Please specify at least a single input stream.");
     }
 
     bool cleanse = readerConfig(L"checkData", true);
-    auto bundler = std::make_shared<Bundler>(readerConfig, corpus, deserializers[0], deserializers, cleanse);
+    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
     int verbosity = readerConfig(L"verbosity", 0);
     std::wstring readMethod = config.GetRandomizer();
 
