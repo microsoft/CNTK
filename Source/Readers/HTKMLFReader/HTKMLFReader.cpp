@@ -654,6 +654,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> labelsmulti;
     /* guoye: start */
     std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>> wordlabelsmulti;
+
+    /* debug to clean wordidmap */
+    wordidmap.clear();
     /* guoye: end */
     // std::vector<std::wstring> pagepath;
     foreach_index (i, mlfpathsmulti)
@@ -674,13 +677,13 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
                       "Type 'msra::asr::htkmlfreader' should be move constructible!");
 
         /* guoye: start */
-        // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
+        map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
         // guoye debug purpose
         fprintf(stderr, "debug to set wordlabels to empty");
-        map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels;
+        // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels;
         wordlabelsmulti.push_back(std::move(wordlabels));
         /* guoye: end */
-            labelsmulti.push_back(std::move(labels));
+        labelsmulti.push_back(std::move(labels));
     }
 
     if (EqualCI(readMethod, L"blockRandomize"))
