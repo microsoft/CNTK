@@ -294,8 +294,10 @@ bool DataReader::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::lattice
 bool DataReader::GetHmmData(msra::asr::simplesenonehmm* hmm)
 {
     bool bRet = true;
+    /*
     for (size_t i = 0; i < m_ioNames.size(); i++)
         bRet &= m_dataReaders[m_ioNames[i]]->GetHmmData(hmm);
+    */
     return bRet;
 }
 
