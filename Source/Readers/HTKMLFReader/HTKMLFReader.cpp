@@ -118,7 +118,7 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
         if (sscanf(buf, "%s %d", word, &dumid) != 2)
         {
             fprintf(stderr, "readwordidmap: reaching the end of line, with content = %s", buf);
-			break;
+            break;
         }
         if (wordidmap.find(std::string(buf)) == wordidmap.end())
         {
