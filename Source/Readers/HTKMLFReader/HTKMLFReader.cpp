@@ -108,7 +108,7 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
 {
     std::unordered_map<std::string, int>::iterator mp_itr;
     auto_file_ptr f(fopenOrDie(pathname, L"rbS"));
-    fprintf(stderr, "read: reading %ls", pathname.c_str());
+    fprintf(stderr, "readwordidmap: reading %ls \n", pathname.c_str());
     char buf[1024];
     char word[1024];
     int dumid;
@@ -117,7 +117,8 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
         fgetline(f, buf);
         if (sscanf(buf, "%s %d", word, &dumid) != 2)
         {
-            RuntimeError("readwordidmap: expect two columns in the line %s", buf);
+            fprintf(stderr, "readwordidmap: reaching the end of line, with content = %s", buf);
+			break;
         }
         if (wordidmap.find(std::string(buf)) == wordidmap.end())
         {
