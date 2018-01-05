@@ -112,17 +112,20 @@ sequenceTrain = [
     
     SGD = [
         epochSize = 81920
-        minibatchSize = 256
+        minibatchSize = 10
+        
         learningRatesPerSample = 0.000002
         momentumPerSample = 0.999589
         dropoutRate = 0.0
-		maxEpochs = 3
-		gradientClippingWithTruncation = true
-		clippingThresholdPerSample = 1.0
+        maxEpochs = 3
+        numMBsToShowResult = 10
+	gradientClippingWithTruncation = true
+	clippingThresholdPerSample = 1.0
     ]
 	reader = [
 			verbosity = 0
-			randomize = false
+			randomize = true
+                        maxErrors = 100
 			# A list of deserializers the reader uses.
 			deserializers = (
 				[
