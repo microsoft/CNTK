@@ -656,7 +656,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>> wordlabelsmulti;
 
     /* debug to clean wordidmap */
-    wordidmap.clear();
+    // wordidmap.clear();
     /* guoye: end */
     // std::vector<std::wstring> pagepath;
     foreach_index (i, mlfpathsmulti)
