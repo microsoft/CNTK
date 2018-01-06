@@ -1207,9 +1207,11 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                 /* guoye: start  */
                 // RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance %ls", key.c_str());
             {
+                /*
                 fprintf(stderr,
                     "Warning: parseentry: got state alignment but no word-level info, although being requested, for utterance %ls \n",
                     key.c_str());
+                    */
             }
 
             // post-process silence
