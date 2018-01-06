@@ -9,6 +9,12 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Marian">
+      <UniqueIdentifier>{f82cd974-3e6a-48c6-a673-98542c7fe613}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Marian\IRIS Example">
+      <UniqueIdentifier>{ebd327fb-f22a-4691-82a8-10deec4919ac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -19,6 +25,12 @@
     </ClCompile>
     <ClCompile Include="Tests.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="iris.cpp">
+      <Filter>Marian\IRIS Example</Filter>
+    </ClCompile>
+    <ClCompile Include="helper.h">
+      <Filter>Marian\IRIS Example</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -34,5 +46,13 @@
     <ClInclude Include="Models.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="marian-cntk.h">
+      <Filter>Marian</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="iris.data">
+      <Filter>Marian\IRIS Example</Filter>
+    </None>
   </ItemGroup>
 </Project>

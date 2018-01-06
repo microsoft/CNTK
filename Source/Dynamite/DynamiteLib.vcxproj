@@ -152,6 +152,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="helper.h" />
+    <ClCompile Include="iris.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MT.cpp" />
     <ClCompile Include="Tests.cpp" />
@@ -159,8 +161,12 @@
   <ItemGroup>
     <ClInclude Include="CNTKLibraryHelpers.h" />
     <ClInclude Include="Layers.h" />
+    <ClInclude Include="marian-cntk.h" />
     <ClInclude Include="Models.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="iris.data" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

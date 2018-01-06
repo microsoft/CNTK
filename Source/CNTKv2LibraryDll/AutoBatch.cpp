@@ -4185,7 +4185,8 @@ public:
         cudaStatsGuardCalc.Stop();
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
         CudaStatsGuard cudaStatsGuardGPU(PrimitiveOpType::Exp/*misusing this for actual op*/, L"batched forward gpu", 3);
-        fields.m_value->AsScalar<float>();
+        if (fields.m_shape.TotalSize() == 1) // BUGBUG: we use AsScalar() to force a GPU sync, but that won't work for logging intermediate results
+            fields.m_value->AsScalar<float>();
         cudaStatsGuardGPU.Stop();
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.

@@ -2,13 +2,12 @@
 
 #include <boost/filesystem.hpp>
 
-#include "common/config.h"
-#include "examples/iris/helper.cpp"
-#include "marian.h"
+#include "marian-cntk.h"
+#include "helper.h"
 
 using namespace marian;
-using namespace data;
-using namespace keywords;
+//using namespace data;
+//using namespace keywords;
 
 // Constants for Iris example
 const size_t MAX_EPOCHS = 200;
@@ -25,20 +24,28 @@ Expr buildIrisClassifier(Ptr<ExpressionGraph> graph,
 
   // Define the input layer
   auto x = graph->constant({N, NUM_FEATURES},
-                           init = inits::from_vector(inputData));
+                           /*init =*/ inits::from_vector(inputData));
+  x->log();
 
   // Define the hidden layer
   auto W1 = graph->param("W1", {NUM_FEATURES, 5}, init = inits::uniform());
   auto b1 = graph->param("b1", {1, 5}, init = inits::zeros);
   auto h = tanh(affine(x, W1, b1));
+  W1->log();
+  b1->log();
+  h->log();
 
   // Define the output layer
   auto W2 = graph->param("W2", {5, NUM_LABELS}, init = inits::uniform());
   auto b2 = graph->param("b2", {1, NUM_LABELS}, init = inits::zeros);
   auto o = affine(h, W2, b2);
+  W2->log();
+  b2->log();
+  o->log();
 
   if(train) {
-    auto y = graph->constant({N}, init = inits::from_vector(outputData));
+    auto y = graph->constant({N}, /*init =*/ inits::from_vector(outputData));
+    y->log();
     /* Define cross entropy cost on the output layer.
      * It can be also defined directly as:
      *   -mean(sum(logsoftmax(o) * y, axis=1), axis=0)
@@ -46,6 +53,7 @@ Expr buildIrisClassifier(Ptr<ExpressionGraph> graph,
      * ...] instead of [1, 0, 2, ...].
      */
     auto cost = mean(cross_entropy(o, y), axis = 0);
+    cost->log();
     return cost;
   } else {
     auto preds = logsoftmax(o);
@@ -53,12 +61,14 @@ Expr buildIrisClassifier(Ptr<ExpressionGraph> graph,
   }
 }
 
-int main() {
+//int main()
+int iris_main()
+{
   // Initialize global settings
-  createLoggers();
+  //createLoggers();
 
   // Disable randomness by setting a fixed seed for random number generator
-  Config::seed = 123456;
+  //Config::seed = 123456;
 
   // Get path do data set
   std::string dataPath
@@ -98,8 +108,7 @@ int main() {
       auto cost = buildIrisClassifier(graph, trainX, trainY, true);
 
       // Train classifier and update weights
-      graph->forward();
-      graph->backward();
+      graph->backprop(cost); // must break compat here
       opt->update(graph);
 
       if(epoch % 10 == 0)
@@ -115,11 +124,13 @@ int main() {
     // debug(probs, "Classifier probabilities")
 
     // Run classifier
-    graph->forward();
+    //graph->forward();
 
     // Extract predictions
     std::vector<float> preds(testY.size());
-    probs->val()->get(preds);
+    // TODO: add an overload "get" in place of CopyDataTo()
+    //probs->val()->get(preds);
+    probs->val()->CopyDataTo(preds);
 
     std::cout << "Accuracy: " << calculateAccuracy(preds, testY) << std::endl;
   }
