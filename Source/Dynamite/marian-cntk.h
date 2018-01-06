@@ -94,7 +94,7 @@ namespace marian
         ExpressionGraph() {}
         void clear() { }
         void reserveWorkspaceMB(size_t) { }
-        // TODO: what is the device id of the CPU?
+        // TODO: what is Marian's device id of the CPU?
         void setDevice(size_t device = 0)
         {
             Dynamite::SetCurrentDevice(CNTK::DeviceDescriptor::GPUDevice((unsigned int)device));
@@ -116,7 +116,7 @@ namespace marian
             }
             CNTK::InvalidArgument("BUGBUG: no public Constant() from ParameterInitializer?");
         }
-        // TODO: namespace; retrieval of parameter by name
+        // TODO: namespace; lots more
         Expr param(const std::string& name, const Shape& shape, const CNTK::ParameterInitializer& init)
         {
             auto viewShape = mappers::ToNDShape(shape); // convert to CNTK's column-major viewShape
@@ -131,7 +131,7 @@ namespace marian
             }
             else  // case 2: retrieve an existing parameter
             {
-                auto& p = iter->second;
+                const auto& p = iter->second;
                 if (p.Shape() != viewShape)
                     CNTK::InvalidArgument("marian::param: Requested shape for existing parameter '%s' does not match original shape", name.c_str());
                 return p;
@@ -141,8 +141,8 @@ namespace marian
         void forward() { }
         void forwardNext() { }
         // BREAKING CHANGE: must pass the root for backprop
-        void backward(Expr root) { backprop(root); }
-        void backprop(Expr root)
+        void backward(const Expr& root) { backprop(root); }
+        void backprop(const Expr& root)
         {
             root.Backward(m_allGradients);
         }
