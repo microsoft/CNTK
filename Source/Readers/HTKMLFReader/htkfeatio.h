@@ -1080,6 +1080,7 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         vector<typename WORDSEQUENCE::word>& wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo>& alignseqbuffer,
         const double htkTimeToFrame)
     {
+        wordidmap.clear();
         std::unordered_map<std::string, int>::const_iterator mp_itr;
 
         size_t idx = 0;
