@@ -1080,7 +1080,8 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         vector<typename WORDSEQUENCE::word>& wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo>& alignseqbuffer,
         const double htkTimeToFrame)
     {
-        wordidmap.clear();
+        // wordidmap.clear();
+        
         std::unordered_map<std::string, int>::const_iterator mp_itr;
 
         size_t idx = 0;
@@ -1184,8 +1185,10 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                     }
                     /*guoye: end */
                 }
+
                 if (unitmap)
                 {
+                    /*
                     if (toks.size() > 4)
                     {
                         const char* u = toks[4];      // the triphone name
@@ -1193,11 +1196,13 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                         if (iter == unitmap->end())
                             RuntimeError("parseentry: unknown unit %s in utterance %ls", u, key.c_str());
                         const size_t uid = iter->second;
-                        alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/));
+                        // alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/));
+                        /*
                     }
                     if (alignseqbuffer.empty())
                         RuntimeError("parseentry: lonely senone entry at start without phone/word entry found, for utterance %ls", key.c_str());
                     alignseqbuffer.back().frames += entries[i - s].numframes; // (we do not have an overflow check here, but should...)
+                    */
                 }
             }
         }
