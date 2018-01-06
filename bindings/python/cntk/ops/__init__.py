@@ -2491,7 +2491,7 @@ def splice(*inputs, **kw_axis_name):
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
 @typemap
-def element_max_pooling(*inputs, **kw_axis_name):
+def element_max_pooling(*inputs, name=''):
     '''
     Element-wise max regarding the number of elements.
 
@@ -2524,11 +2524,11 @@ def element_max_pooling(*inputs, **kw_axis_name):
         :class:`~cntk.ops.functions.Function`
     '''
 
-    #from cntk.cntk_py import element_max_pooling
+    from cntk.cntk_py import element_max_pooling
 
-    #inputs = [sanitize_input(x) for x in inputs]
+    inputs = [sanitize_input(x) for x in inputs]
 
-    #return element_max_pooling(inputs, name) # C++ projection expects inputs as a list
+    return element_max_pooling(inputs, name) # C++ projection expects inputs as a list
 
 @typemap
 def unpack_batch(x, name=''):
