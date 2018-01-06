@@ -1196,7 +1196,7 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                         if (iter == unitmap->end())
                             RuntimeError("parseentry: unknown unit %s in utterance %ls", u, key.c_str());
                         const size_t uid = iter->second;
-                        // alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/));
+                        alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/  /* )); */
                         /*
                     }
                     if (alignseqbuffer.empty())
@@ -1252,11 +1252,12 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
             // if (sentstart < 0 || sentend < 0 || silence < 0)
             //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent_end");
             // implant
-            /*
+            
+            
             auto& wordsequence = wordsequences[key]; // this creates the map entry
             wordsequence.words = wordseqbuffer;      // makes a copy
             wordsequence.align = alignseqbuffer;
-            */
+            
         }
     }
 
