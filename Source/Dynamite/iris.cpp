@@ -25,27 +25,27 @@ Expr buildIrisClassifier(Ptr<ExpressionGraph> graph,
   // Define the input layer
   auto x = graph->constant({N, NUM_FEATURES},
                            /*init =*/ inits::from_vector(inputData));
-  x->log();
+  //x->dump();
 
   // Define the hidden layer
   auto W1 = graph->param("W1", {NUM_FEATURES, 5}, init = inits::uniform());
   auto b1 = graph->param("b1", {1, 5}, init = inits::zeros);
   auto h = tanh(affine(x, W1, b1));
-  W1->log();
-  b1->log();
-  h->log();
+  //W1->dump();
+  //b1->dump();
+  //h->dump();
 
   // Define the output layer
   auto W2 = graph->param("W2", {5, NUM_LABELS}, init = inits::uniform());
   auto b2 = graph->param("b2", {1, NUM_LABELS}, init = inits::zeros);
   auto o = affine(h, W2, b2);
-  W2->log();
-  b2->log();
-  o->log();
+  //W2->dump();
+  //b2->dump();
+  //o->dump();
 
   if(train) {
     auto y = graph->constant({N}, /*init =*/ inits::from_vector(outputData));
-    y->log();
+    //y->dump();
     /* Define cross entropy cost on the output layer.
      * It can be also defined directly as:
      *   -mean(sum(logsoftmax(o) * y, axis=1), axis=0)
@@ -53,7 +53,7 @@ Expr buildIrisClassifier(Ptr<ExpressionGraph> graph,
      * ...] instead of [1, 0, 2, ...].
      */
     auto cost = mean(cross_entropy(o, y), axis = 0);
-    cost->log();
+    //cost->dump();
     return cost;
   } else {
     auto preds = logsoftmax(o);
@@ -108,7 +108,8 @@ int iris_main()
       auto cost = buildIrisClassifier(graph, trainX, trainY, true);
 
       // Train classifier and update weights
-      graph->backprop(cost); // must break compat here
+      graph->forward();
+      graph->backward(cost); // must break compat here
       opt->update(graph);
 
       if(epoch % 10 == 0)
@@ -124,7 +125,7 @@ int iris_main()
     // debug(probs, "Classifier probabilities")
 
     // Run classifier
-    //graph->forward();
+    graph->forward();
 
     // Extract predictions
     std::vector<float> preds(testY.size());

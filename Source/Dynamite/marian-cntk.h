@@ -7,6 +7,8 @@
 #include "Layers.h" // for some functions missing in main CNTK, e.g. LogSoftmax
 #include <vector>
 #include <algorithm>
+#include <memory>
+#include <map>
 
 namespace marian
 {
@@ -27,7 +29,7 @@ namespace marian
         float scalar() const { return val()->AsScalar<float>(); }
         // Marian accesses members by arrow, not dot. This is a bit of a hack.
         Expr* operator->() { return this; }
-        void log() const { Value()->LogToFile(Name()); }
+        void dump() const { Value()->LogToFile(Name()); }
     };
 
     // helpers for mapping stuff to and from CNTK
@@ -68,11 +70,11 @@ namespace marian
 
     namespace inits
     {
-        // TODO: Create a new initializer in here, it's just a Dictionary.
         CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData)
         {
-            return CNTK::Dictionary(
+            return CNTK::Dictionary( // initializers are just dictionaries
                 L"from_vector",
+                // wrap the CPU-side buffer in an NDArrayView object (by pointer, no data is copied)
                 CNTK::NDArrayView(CNTK::DataType::Float, CNTK::NDShape{ inputData.size() },
                                   (void*)inputData.data(), inputData.size() * sizeof(float),
                                   CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
@@ -90,7 +92,6 @@ namespace marian
     {
     public:
         ExpressionGraph() {}
-        // some graph functions do nothing in the CNTK Dynamite context
         void clear() { }
         void reserveWorkspaceMB(size_t) { }
         // TODO: what is the device id of the CPU?
@@ -100,11 +101,6 @@ namespace marian
         }
         size_t getDevice() { return Dynamite::CurrentDevice().Id(); }
         void setInference(bool inference) { m_inferenceOnly = inference; }
-        //Expr constant(const std::vector<size_t>& npShape, const CNTK::ParameterInitializer& init)
-        //{
-        //    return CNTK::Constant(mappers::ToNDShape(npShape), CNTK::DataType::Float, /*isVolatile=*/false, init, Dynamite::CurrentDevice());
-        //}
-        // TODO: use the same ParameterInitializer interface, by passing the vector via the Dictionary
         Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init)
         {
             auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
@@ -114,9 +110,9 @@ namespace marian
                 const auto& initData = init[L"from_vector"].Value<CNTK::NDArrayView>();
                 if (initData.Shape().TotalSize() != viewShape.TotalSize())
                     CNTK::InvalidArgument("marian::constant: vector size does not match viewShape");
-                // wrap the supplied CPU buffer into an NDArrayView (this does not copy the data)
-                // TODO: move this to from_vector, save the value
-                return CNTK::Constant(initData.AsShape(viewShape)->DeepClone(Dynamite::CurrentDevice(), /*readOnly=*/true), /*isVolatile=*/m_inferenceOnly); // copy it (possibly to a different device)
+                // copy the supplied CPU buffer, which may be a temporary, to a GPU-side NDArrayView
+                return CNTK::Constant(initData.AsShape(viewShape)->DeepClone(Dynamite::CurrentDevice(), /*readOnly=*/true),
+                                      /*isVolatile=*/m_inferenceOnly);
             }
             CNTK::InvalidArgument("BUGBUG: no public Constant() from ParameterInitializer?");
         }
@@ -142,7 +138,10 @@ namespace marian
             }
         }
         // forward/backward
-        // BREAKING CHANGE: must pass the root
+        void forward() { }
+        void forwardNext() { }
+        // BREAKING CHANGE: must pass the root for backprop
+        void backward(Expr root) { backprop(root); }
         void backprop(Expr root)
         {
             root.Backward(m_allGradients);
@@ -159,7 +158,7 @@ namespace marian
     class OptimizerWrapper
     {
     public:
-        // TODO: more parameters; schedules, lots
+        // TODO: more parameters; schedules, lots more
         OptimizerWrapper(float eta, AlgorithmType algorithmType)
         {
             switch (algorithmType)
@@ -173,14 +172,16 @@ namespace marian
                 };
                 break;
             case AlgorithmType::Adam:
+                CNTK::LogicError("Optimizer<Adam> not implemented yet");
                 break;
             }
         }
-        // TODO: sample count
+        // TODO: sample count?
         void update(const Ptr<ExpressionGraph>& graph)
         {
             if (!m_learner)
                 m_learner = m_LazyCreateLearner(graph);
+            // sample count 1 disables all rescaling, and expects the gradient as the user wants it
             m_learner->Update(graph->m_allGradients, /*trainingSampleCount=*/1);
         }
     private:
