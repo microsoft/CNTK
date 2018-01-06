@@ -1169,15 +1169,17 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                         )
                     {
                         // int wid = (*wordmap)[w]; // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
-                        /*
+                        
                         mp_itr = wordidmap.find(std::string(w));
                         int wid = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
-                        */
+                        
                         // debug
-                        int wid = -1;
+                        // int wid = -1;
 
                         size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t)wid;
-                        wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
+                        
+                        // guoye: debug
+                        // wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
                     }
                     /*guoye: end */
                 }
@@ -1218,11 +1220,11 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                 /*
                 mp_itr = wordidmap.find("!silence");
                 int silence = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
+                
                 */
-
                 // debug
                 int silence = -1;
-
+                
                 if (silence >= 0)
                 {
                     mp_itr = wordidmap.find("!sent_start");
