@@ -20,10 +20,18 @@ using namespace std;
 struct LatticeFloatSequenceData : DenseSequenceData
 {
     LatticeFloatSequenceData(void* data, unsigned int bufferSize, const NDShape& frameShape) :DenseSequenceData(bufferSize,true),
-        m_buffer(data), m_frameShape(frameShape)
+         m_frameShape(frameShape)
     {
+        //Ensure the sequence owns the data, since the chunk can be released before the sequence is released
+        size_t byteBufferSize = bufferSize * sizeof(float);
+        m_buffer = new char[byteBufferSize];
+        memcpy(m_buffer, data, byteBufferSize);
     }
 
+    ~LatticeFloatSequenceData() 
+    {
+        delete[] m_buffer;
+    }
     const void* GetDataBuffer() override
     {
         return m_buffer;
@@ -62,8 +70,7 @@ protected:
 
         // Make sure we always have 3 at the end for buffer overrun, i.e. 4 byte alignment
         m_buffer.resize(sizeInBytes + sizeof(float) - 1);
-        for (int fl = 0; fl < sizeof(float)-1; fl++)
-        {
+        for (int fl = 0; fl < sizeof(float)-1; fl++) {
             m_buffer[sizeInBytes + fl] = 0;
         }
 
