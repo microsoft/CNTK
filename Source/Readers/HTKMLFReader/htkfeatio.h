@@ -1080,7 +1080,6 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         vector<typename WORDSEQUENCE::word>& wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo>& alignseqbuffer,
         const double htkTimeToFrame)
     {
-        // wordidmap.clear();
         
         std::unordered_map<std::string, int>::const_iterator mp_itr;
 
@@ -1181,14 +1180,14 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                         size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t)wid;
                         
                         // guoye: debug
-                        // wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
+                        wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
                     }
                     /*guoye: end */
                 }
 
                 if (unitmap)
                 {
-                    /*
+                    
                     if (toks.size() > 4)
                     {
                         const char* u = toks[4];      // the triphone name
@@ -1196,13 +1195,13 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                         if (iter == unitmap->end())
                             RuntimeError("parseentry: unknown unit %s in utterance %ls", u, key.c_str());
                         const size_t uid = iter->second;
-                        alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/  /* )); */
-                        /*
+                        alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/   )); 
+                        
                     }
                     if (alignseqbuffer.empty())
                         RuntimeError("parseentry: lonely senone entry at start without phone/word entry found, for utterance %ls", key.c_str());
                     alignseqbuffer.back().frames += entries[i - s].numframes; // (we do not have an overflow check here, but should...)
-                    */
+                    
                 }
             }
         }
@@ -1213,11 +1212,11 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
                 /* guoye: start  */
                 // RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance %ls", key.c_str());
             {
-                /*
+                
                 fprintf(stderr,
                     "Warning: parseentry: got state alignment but no word-level info, although being requested, for utterance %ls \n",
                     key.c_str());
-                    */
+                
             }
 
             // post-process silence
@@ -1225,13 +1224,13 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
             //  - last !silence -> !sent_end
             else
             {
-                /*
+                
                 mp_itr = wordidmap.find("!silence");
                 int silence = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
                 
-                */
+                
                 // debug
-                int silence = -1;
+                // int silence = -1;
                 
                 if (silence >= 0)
                 {
@@ -1250,14 +1249,15 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
             }
             /* guoye: end */
             // if (sentstart < 0 || sentend < 0 || silence < 0)
-            //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent_end");
+            //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent/_end");
             // implant
             
             
+            /*
             auto& wordsequence = wordsequences[key]; // this creates the map entry
             wordsequence.words = wordseqbuffer;      // makes a copy
-            // wordsequence.align = alignseqbuffer;
-            
+            wordsequence.align = alignseqbuffer;
+            */
         }
     }
 
