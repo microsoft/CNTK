@@ -1252,12 +1252,13 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
             //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent/_end");
             // implant
             
-            
-            
+            wordseqbuffer.resize(0);
+            alignseqbuffer.resize(0);
+
             auto& wordsequence = wordsequences[key]; // this creates the map entry
                                                      
-            // wordsequence.words = wordseqbuffer;      // makes a copy
-            alignseqbuffer.resize(0);
+            wordsequence.words = wordseqbuffer;      // makes a copy
+            
         
             wordsequence.align = alignseqbuffer;
             
