@@ -1256,8 +1256,10 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
             
             auto& wordsequence = wordsequences[key]; // this creates the map entry
                                                      
-            // wordsequence.words = wordseqbuffer;      // makes a copy
-            wordsequence.align = alignseqbuffer;
+            wordsequence.words = wordseqbuffer;      // makes a copy
+            
+        
+            // wordsequence.align = alignseqbuffer;
             
         }
     }
