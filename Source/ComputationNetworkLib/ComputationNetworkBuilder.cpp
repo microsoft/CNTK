@@ -111,7 +111,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))              return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(SequenceWithLatticeNode))              return New<SequenceWithLatticeNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LatticeSequenceWithSoftmaxNode))       return New<LatticeSequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef COMING_SOON
     else if (nodeType == OperationNameOf(SequenceDecoderNode))                  return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
@@ -517,7 +517,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Seque
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeSequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const ComputationNodePtr lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LatticeSequenceWithSoftmaxeNode<ElemType>>(net.GetDeviceId(), nodeName, symListPath, phonePath, stateListPath, transProbPath, hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen), { label, prediction, loglikelihood, lattice });
+    return net.AddNodeToNetAndAttachInputs(New<LatticeSequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName, symListPath, phonePath, stateListPath, transProbPath, hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen), { label, prediction, loglikelihood, lattice });
 }
 
 template <class ElemType>

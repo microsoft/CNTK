@@ -460,7 +460,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(LogisticNode) ||
         nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
-        nodePtr->OperationName() == OperationNameOf(SequenceWithLatticeNode) ||
+        nodePtr->OperationName() == OperationNameOf(LatticeSequenceWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassificationErrorNode) ||

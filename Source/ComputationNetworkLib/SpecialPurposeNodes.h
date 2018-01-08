@@ -679,7 +679,7 @@ template class SequenceWithSoftmaxNode<float>;
 template class SequenceWithSoftmaxNode<double>;
 
 // -----------------------------------------------------------------------
-// SequenceWithLatticeNode (label, prediction, loglikelihood, lattice)
+// LatticeSequenceWithSoftmaxNode (label, prediction, loglikelihood, lattice)
 // Similar to the SequenceWithSoftmaxNode, but is using the new deserializer.
 //
 // -----------------------------------------------------------------------
@@ -724,7 +724,7 @@ public:
     }
 
     LatticeSequenceWithSoftmaxNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : SequenceWithLatticeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"),
+        : LatticeSequenceWithSoftmaxNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"),
             configp->Get(L"hSmoothingWeight"), configp->Get(L"frameDropThresh"), configp->Get(L"doReferenceAlign"), configp->Get(L"seqGammarUsesMBR"), configp->Get(L"seqGammarAMF"), configp->Get(L"seqGammarLMF"), configp->Get(L"seqGammarBMMIFactor"), configp->Get(L"seqGammarWordPen")
         )
     {
@@ -853,7 +853,7 @@ public:
 
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<SequenceWithLatticeNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<LatticeSequenceWithSoftmaxNode<ElemType>>(nodeP);
 
             if (node) 
             {

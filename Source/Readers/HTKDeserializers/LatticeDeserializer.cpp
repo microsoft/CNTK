@@ -69,6 +69,8 @@ protected:
         size_t sizeInBytes = descriptor.SizeInBytes();
 
         // Make sure we always have 3 at the end for buffer overrun, i.e. 4 byte alignment
+        // This is required because currently lattices are exposed as an array of floats, because CPUMatrix does not support chars.
+        // TODO: switch to char when possible.
         m_buffer.resize(sizeInBytes + sizeof(float) - 1);
         for (int fl = 0; fl < sizeof(float)-1; fl++) {
             m_buffer[sizeInBytes + fl] = 0;
