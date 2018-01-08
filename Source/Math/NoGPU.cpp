@@ -2196,6 +2196,11 @@ void GPUMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUMatrix<ElemT
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::BatchMatMul(ElemType beta, const GPUMatrix<ElemType>& a, const bool transposeA, const int m, const GPUMatrix<ElemType>& b, const bool transposeB, const int n, GPUMatrix<ElemType>& c, const bool isColWise)
+{
+}
+
+template <class ElemType>
 bool GPUMatrix<ElemType>::AreEqual(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, const ElemType threshold /*= 1e-8*/)
 {
     return false;

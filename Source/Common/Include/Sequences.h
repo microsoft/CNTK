@@ -781,6 +781,15 @@ public:
             (pMBLayout->GetNumParallelSequences() == 1 || seqIndex != SIZE_MAX);
     }
 
+    bool IsBatchMatmul(const shared_ptr<MBLayout> &pMBLayout) const
+    {
+        if (!pMBLayout)
+            return false;
+        else
+            return (pMBLayout->GetNumTimeSteps() > 1 && (IsAllFrames() || m_timeRange > 1)) ||
+            (pMBLayout->GetNumParallelSequences() > 1);
+    }
+
     // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
     // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed.
     // Really only used in RecurrentNodes(), where it will be replaced by FrameRange::WithDelay() which allows to access delayed frames through the FrameRange object.

@@ -456,6 +456,7 @@ public:
     static void InnerProduct(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
     static void ElementWisePower(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
+    static void BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& a, const bool transposeA, const int m, const CPUMatrix<ElemType>& b, const bool transposeB, const int n, CPUMatrix<ElemType>& c, const bool isColWise);
 
     static bool AreEqual(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 

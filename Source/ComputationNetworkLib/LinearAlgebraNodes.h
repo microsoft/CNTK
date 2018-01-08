@@ -439,6 +439,19 @@ protected:
         return TensorView<ElemType>(data, tensorShape);
     }
 
+    static std::pair<size_t, size_t> CalcOutputMatrixSize(const size_t leftRank , const size_t rightRank, const TensorShape& outShape)
+    {
+        size_t outRank = outShape.GetRank();
+        size_t m = 1;
+        size_t n = 1;
+        size_t firstReducedDim = leftRank - (leftRank + rightRank - outRank) / 2;
+        for (size_t i = 0; i < firstReducedDim; i++)
+            m *= outShape.GetDim(i);
+        for (size_t i = firstReducedDim; i < outRank; i++)
+            n *= outShape.GetDim(i);
+        return std::make_pair(m, n);
+    }
+
 private:
     // Check if TimesNodeBase could be simplified to ElementTimes to avoid unroll when:
     // 1. input0: is rank-1 and transposed, or is rank-2 with Dim(0)==1
@@ -663,6 +676,16 @@ public:
                 return;
             }
 
+            if (fr.IsBatchMatmul(inputMBLayout) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()))
+            {
+                auto mn = CalcOutputMatrixSize(InputRef(0).GetSampleLayout().GetRank(), InputRef(1).GetSampleLayout().GetRank(), GetSampleLayout());
+                Matrix<ElemType> value = ValueFor(fr);
+                Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
+                Matrix<ElemType> input1 = InputRef(1).ValueFor(fr);
+                Matrix<ElemType>::BatchMatMul(ElemType(0.0), input0, m_transpose, mn.first, input1, false, mn.second, value, true);
+                return;
+            }
+
             // recursively call ourselves for each individual time and sequence
 
             // note this is not performant, warn user about the slow path being used
@@ -725,6 +748,50 @@ public:
                 }
                 return;
             }
+
+            ElemType beta = Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType)0.0 : (ElemType)1.0;
+            if (inputIndex == 0)
+            {
+                if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) &&  fr.IsBatchMatmul(InputRef(1).GetMBLayout()))
+                {
+                    Matrix<ElemType> outputGradient = GradientFor(fr);
+                    Matrix<ElemType> input1 = InputRef(1).ValueFor(fr);
+                    Matrix<ElemType> input0Gradient = InputRef(0).GradientFor(fr);
+                    if (!m_transpose)
+                    {
+                        auto mn = CalcOutputMatrixSize(GetSampleLayout().GetRank(), InputRef(1).GetSampleLayout().GetRank(), InputRef(0).GetSampleLayout());
+                        Matrix<ElemType>::BatchMatMul(beta, outputGradient, false, mn.first, input1, true, mn.second, input0Gradient, true);
+                    }
+                    else
+                    {
+                        auto mn = CalcOutputMatrixSize(InputRef(1).GetSampleLayout().GetRank(), GetSampleLayout().GetRank(), InputRef(0).GetSampleLayout());
+                        Matrix<ElemType>::BatchMatMul(beta, input1, false, mn.first, outputGradient, true, mn.second, input0Gradient, true);
+                    }
+                    return;
+                }
+            }
+            else if (inputIndex == 1)
+            {
+                if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) &&  fr.IsBatchMatmul(InputRef(1).GetMBLayout()))
+                {
+                    auto mn = CalcOutputMatrixSize(InputRef(0).GetSampleLayout().GetRank(), GetSampleLayout().GetRank(), InputRef(1).GetSampleLayout());
+                    Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
+                    Matrix<ElemType> input1Gradient = InputRef(1).GradientFor(fr);
+                    Matrix<ElemType> outputGradient = GradientFor(fr);
+
+                    if (input1Gradient.GetMatrixType() == SPARSE)
+                    {
+                        input1Gradient.SwitchToMatrixType(DENSE, matrixFormatDense, !Input(inputIndex)->IsGradientInitializedBy(this));
+                    }
+                    InputRef(1).SetPreferredGradientMatrixType(DENSE);
+
+                    Matrix<ElemType>::BatchMatMul(beta, input0, !m_transpose, mn.first, outputGradient, false, mn.second, input1Gradient, true);
+                }
+            }
+
+            // note this is not performant, warn user about the slow path being used
+            if (Base::HasEnvironmentPtr() && Base::Environment().traceLevel > 0)
+                std::call_once(m_unrollWarningOnceFlag, [this] { fprintf(stderr, "WARNING: %ls %ls operation: being unrolled in backprop, execution may be slow\n", NodeName().c_str(), OperationName().c_str()); });
 
             auto timeRange     = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();

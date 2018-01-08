@@ -621,6 +621,7 @@ public:
     static void InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     static void ElementWisePower(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
+    static void BatchMatMul(ElemType beta, const Matrix<ElemType>& a, const bool transposeA, const int m, const Matrix<ElemType>& b, const bool transposeB, const int n, Matrix<ElemType>& c, const bool isColWise);
 
     static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
     static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);

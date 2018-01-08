@@ -5852,6 +5852,119 @@ void CPUMatrix<ElemType>::ElementWisePower(ElemType alpha, const CPUMatrix<ElemT
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& a, const bool transposeA, const int m, const CPUMatrix<ElemType>& b, const bool transposeB, const int n, CPUMatrix<ElemType>& c, const bool isColWise)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("BatchMatMul: one of the input matrices is empty.");
+
+    if (!isColWise)
+        LogicError("Only column wise is supported.");
+
+    const int aSampleElemNum = (int)a.GetNumRows();
+    const int aBatchSize = (int)a.GetNumCols();
+    const int bSampleElemNum = (int)b.GetNumRows();
+    const int bBatchSize = (int)b.GetNumCols();
+
+    assert(aSampleElemNum > 0 && aBatchSize > 0 && bSampleElemNum > 0 && bBatchSize > 0);
+    if (aBatchSize != bBatchSize)
+        InvalidArgument("BatchMatMul: Matrices a and b should have same batch size.");
+
+    int k = aSampleElemNum / m;
+    int kb = bSampleElemNum / n;
+    if (k != kb)
+        InvalidArgument("BatchMatMul: Matrices a's cols number should match Matrices b's rows number.");
+
+    size_t cSampleElemNum = m * n;
+
+    if (beta == 0)
+        c.RequireSize(cSampleElemNum, aBatchSize);
+    else
+        c.VerifySize(cSampleElemNum, aBatchSize); // Can't resize if beta != 0
+
+#if CNTK_UWP
+    int lda, ldb, ldc;
+    CBLAS_TRANSPOSE blasTransA;
+    CBLAS_TRANSPOSE blasTransB;
+    lda = transposeA ? k : m;
+    ldb = transposeB ? n : k;
+    blasTransA = transposeA ? CblasTrans : CblasNoTrans;
+    blasTransB = transposeB ? CblasTrans : CblasNoTrans;
+    ldc = m;
+    std::vector<const ElemType *> a_array;
+    std::vector<const ElemType *> b_array;
+    std::vector<ElemType *> c_array;
+    a_array.reserve(aBatchSize);
+    b_array.reserve(aBatchSize);
+    c_array.reserve(aBatchSize);
+    ElemType* aBufPtr = a.Data();
+    ElemType* bBufPtr = b.Data();
+    ElemType* cBufPtr = c.Data();
+    for (size_t i = 0; i < aBatchSize; i++)
+    {
+        a_array.push_back(aBufPtr + a.LocateColumn(i));
+        b_array.push_back(bBufPtr + b.LocateColumn(i));
+        c_array.push_back(cBufPtr + c.LocateColumn(i));
+    }
+    for (size_t i = 0; i < aBatchSize; i++)
+    {
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            double alpha = 1.0;
+            cblas_dgemm((CBLAS_ORDER)(int)MatrixOrder::ColMajor, blasTransA, blasTransB, m, n, k, alpha, reinterpret_cast<const double*>(a_array[i]), lda, reinterpret_cast<const double*>(b_array[i]), ldb, double(beta), reinterpret_cast<double*>(c_array[i]), ldc);
+        }
+        else
+        {
+            float alpha = 1.0f;
+            cblas_sgemm((CBLAS_ORDER)(int)MatrixOrder::ColMajor, blasTransA, blasTransB, m, n, k, alpha, reinterpret_cast<const float*>(a_array[i]), lda, reinterpret_cast<const float*>(b_array[i]), ldb, float(beta), reinterpret_cast<float*>(c_array[i]), ldc);
+        }
+    }
+
+#else
+    std::vector<int> m_array(aBatchSize, m);
+    std::vector<int> n_array(aBatchSize, n);
+    std::vector<int> k_array(aBatchSize, k);
+    std::vector<int> lda_array(aBatchSize, transposeA ? k : m);
+    std::vector<int> ldb_array(aBatchSize, transposeB ? n : k);
+    std::vector<int> ldc_array(aBatchSize, m);
+    std::vector<int> group_size(1, aBatchSize);
+    std::vector<CBLAS_TRANSPOSE> transa_array(aBatchSize, transposeA ? CblasTrans : CblasNoTrans);
+    std::vector<CBLAS_TRANSPOSE> transb_array(aBatchSize, transposeB ? CblasTrans : CblasNoTrans);
+    std::vector<const ElemType *> a_array;
+    std::vector<const ElemType *> b_array;
+    std::vector<ElemType *> c_array;
+    a_array.reserve(aBatchSize);
+    b_array.reserve(aBatchSize);
+    c_array.reserve(aBatchSize);
+    ElemType* aBufPtr = a.Data();
+    ElemType* bBufPtr = b.Data();
+    ElemType* cBufPtr = c.Data();
+    for (size_t i = 0; i < aBatchSize; i++)
+    {
+        a_array.push_back(aBufPtr + a.LocateColumn(i));
+        b_array.push_back(bBufPtr + b.LocateColumn(i));
+        c_array.push_back(cBufPtr + c.LocateColumn(i));
+    }
+
+    if (sizeof(ElemType) == sizeof(double))
+    {
+        std::vector<double> alpha_array(group_size[0], 1.0);
+        std::vector<double> beta_array(group_size[0], double(beta));
+        cblas_dgemm_batch(CblasColMajor, &transa_array[0], &transb_array[0], &m_array[0], &n_array[0], &k_array[0], &alpha_array[0],
+            reinterpret_cast<const double**>(&a_array[0]), &lda_array[0], reinterpret_cast<const double**>(&b_array[0]), &ldb_array[0], &beta_array[0],
+            reinterpret_cast<double**>(&c_array[0]), &ldc_array[0], 1, &group_size[0]);
+    }
+    else
+    {
+        std::vector<float> alpha_array(group_size[0], 1.0f);
+        std::vector<float> beta_array(group_size[0], float(beta));
+        cblas_sgemm_batch(CblasColMajor, &transa_array[0], &transb_array[0], &m_array[0], &n_array[0], &k_array[0], &alpha_array[0],
+            reinterpret_cast<const float**>(&a_array[0]), &lda_array[0], reinterpret_cast<const float**>(&b_array[0]), &ldb_array[0], &beta_array[0],
+            reinterpret_cast<float**>(&c_array[0]), &ldc_array[0], 1, &group_size[0]);
+    }
+#endif
+}
+
+template <class ElemType>
 bool CPUMatrix<ElemType>::AreEqual(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const ElemType threshold /*= 1e-8*/)
 {
     if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())

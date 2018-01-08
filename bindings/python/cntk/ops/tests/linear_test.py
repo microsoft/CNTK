@@ -230,6 +230,91 @@ def test_op_negate(operand, device_id, precision):
     _test_unary_op(precision, device_id, '-', operand,
                    expected_forward, expected_backward)
 
+
+BATCH_TIMES_PAIRS = list((np.reshape(np.arange(8), (2, 2, 2)), np.reshape(np.arange(8), (2, 2, 2))))
+@pytest.mark.parametrize("left_operand, right_operand", BATCH_TIMES_PAIRS)
+def test_op_batch_times(left_operand, right_operand, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+
+    a = AA(left_operand, dtype=dt_precision)
+    b = AA(right_operand, dtype=dt_precision)
+    
+    k, m, n = a.shape[0], a.shape[1], b.shape[2]
+    expected_forward = np.zeros((k, m, n))
+    for x in range(k):
+        expected_forward[x] = np.matmul(a[x], b[x])
+
+    left_backward = np.zeros_like(a)
+    for x in range(k):
+        left_backward[x, ...] = b[x].sum(axis=-1)
+
+    right_backward = np.zeros_like(b)
+    for x in range(k):
+        transpose_axes = list(np.roll(np.arange(len(b.shape[1:])), -1))
+        sum_axes = tuple(np.arange(0, len(a.shape) - len(b.shape) + 1))
+        right_backward[x, ...] = np.transpose(
+            AA([a[x].sum(axis=sum_axes)]), axes=transpose_axes)
+
+    expected_backward = {
+        'left_arg':  [left_backward],
+        'right_arg': [right_backward]
+    }
+
+    from cntk import times
+
+    _test_binary_op(precision, device_id, times,
+                    left_operand, right_operand, expected_forward, expected_backward, batch_size_greater_than_one=True)
+
+
+@pytest.mark.parametrize("left_operand, right_operand", BATCH_TIMES_PAIRS)
+def test_op_batch_times_with_inferred_axis(left_operand, right_operand, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+    a = AA(left_operand, dtype=dt_precision)
+    b = AA(right_operand, dtype=dt_precision)
+        
+    input1 = C.input_variable((2,2))
+    input2 = C.input_variable((C.InferredDimension,2))
+    z = C.times(input1, input2)
+    actual_forward = z.eval({input1: a, input2: b}, device=cntk_device(device_id))
+
+    expected_forward = np.ones((a.shape[0], a.shape[1], b.shape[2]))
+    k = a.shape[0]
+    for x in range(k):
+        expected_forward[x, ...] = a[x].dot(b[x])
+
+    assert np.allclose(actual_forward, expected_forward)
+
+
+@pytest.mark.parametrize("left_operand, right_operand", BATCH_TIMES_PAIRS)
+def test_op_batch_times_grad_with_beta_equals_to_one(left_operand, right_operand, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+    a = AA(left_operand, dtype=dt_precision)
+    b = AA(right_operand, dtype=dt_precision)
+    
+    root_gradient = np.ones_like(a)
+    
+    input1 = C.input_variable((2,2), needs_gradient=True)
+    input2 = C.input_variable((2,2), needs_gradient=True)
+    z = input1 + input2 + C.times(input1, input2)
+    state, actual_forward = z.forward({input1: a, input2: b}, [z.output], {z.output}, cntk_device(device_id))
+    actual_backwards = z.backward(state, {z.output: root_gradient}, [input1, input2])
+    
+    k = a.shape[0]
+    left_backward = np.ones_like(a)
+    for x in range(k):
+        left_backward[x, ...] += b[x].sum(axis=-1)
+    right_backward = np.ones_like(b)
+    for x in range(k):
+        transpose_axes = list(np.roll(np.arange(len(b.shape[1:])), -1))
+        sum_axes = tuple(np.arange(0, len(a.shape) - len(b.shape) + 1))
+        right_backward[x, ...] += np.transpose(
+            AA([a[x].sum(axis=sum_axes)]), axes=transpose_axes)
+
+    assert np.allclose(actual_backwards[input1], left_backward)
+    assert np.allclose(actual_backwards[input2], right_backward)
+
+
+
 # transpose_times currently only supports right operands of rank 1 or 2
 TRANSPOSE_TIMES_PAIRS = [
     ([[30.]], [[10.]]),

@@ -5626,6 +5626,26 @@ void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<Elem
 }
 
 template <class ElemType>
+void Matrix<ElemType>::BatchMatMul(ElemType beta, const Matrix<ElemType>& a, const bool transposeA, const int m, const Matrix<ElemType>& b, const bool transposeB, const int n, Matrix<ElemType>& c, const bool isColWise)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("BatchMatMul: one of the input matrix is empty.");
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (a.GetMatrixType() != DENSE || b.GetMatrixType() != DENSE) // only support a & b being dense
+        NOT_IMPLEMENTED;
+
+    c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+        &a,
+        CPUMatrix<ElemType>::BatchMatMul(beta, *a.m_CPUMatrix, transposeA, m, *b.m_CPUMatrix, transposeB, n, *c.m_CPUMatrix, isColWise),
+        GPUMatrix<ElemType>::BatchMatMul(beta, *a.m_GPUMatrix, transposeA, m, *b.m_GPUMatrix, transposeB, n, *c.m_GPUMatrix, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 ElemType Matrix<ElemType>::InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
 {
     if (a.IsEmpty() || b.IsEmpty())

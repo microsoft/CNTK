@@ -3590,6 +3590,14 @@ static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const double* al
 {
     return cublasDaxpy(handle, n, alpha, x, incx, y, incy);
 }
+static cublasStatus_t cublas_gemm_batched(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float *Aarray[], int lda, const float *Barray[], int ldb, const float *beta, float *Carray[], int ldc, int batchCount)
+{
+    return cublasSgemmBatched(handle, transa, transb, m, n, k, alpha, Aarray, lda, Barray, ldb, beta, Carray, ldc, batchCount);
+}
+static cublasStatus_t cublas_gemm_batched(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const double* alpha, const double *Aarray[], int lda, const double *Barray[], int ldb, const double *beta, double *Carray[], int ldc, int batchCount)
+{
+    return cublasDgemmBatched(handle, transa, transb, m, n, k, alpha, Aarray, lda, Barray, ldb, beta, Carray, ldc, batchCount);
+}
 
 template <class ElemType>
 void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB,
@@ -4209,6 +4217,77 @@ void GPUMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUMatrix<ElemT
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         _elementWisePowerOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.Data(), c.Data(), N);
     }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::BatchMatMul(ElemType beta, const GPUMatrix<ElemType>& a, const bool transposeA, const int m, const GPUMatrix<ElemType>& b, const bool transposeB, const int n, GPUMatrix<ElemType>& c, const bool isColWise)
+{
+    a.PrepareDevice();
+    if ((a.GetComputeDeviceId() != b.GetComputeDeviceId()) || (b.GetComputeDeviceId() != c.GetComputeDeviceId())) // different GPUs
+        InvalidArgument("All matrices must be on the same GPU");
+
+    if (!isColWise)
+        LogicError("Only column wise is supported.");
+
+    cublasHandle_t cuHandle = GetCublasHandle(b.GetComputeDeviceId());
+    cublasOperation_t transA = transposeA ? CUBLAS_OP_T : CUBLAS_OP_N;
+    cublasOperation_t transB = transposeB ? CUBLAS_OP_T : CUBLAS_OP_N;
+
+    const int aSampleElemNum = (int)a.GetNumRows();
+    const int aBatchSize = (int)a.GetNumCols();
+    const int bSampleElemNum = (int)b.GetNumRows();
+    const int bBatchSize = (int)b.GetNumCols();
+
+    if (!(aSampleElemNum > 0 && aBatchSize > 0 && bSampleElemNum > 0 && bBatchSize > 0))
+        RuntimeError("BatchMatMul: Matrices a and b's cols & rows number should > 0.");
+    if (aBatchSize != bBatchSize)
+        RuntimeError("BatchMatMul: Matrices a and b should have same batch size.");
+
+    int k = aSampleElemNum / m;
+    int kb = bSampleElemNum / n;
+    if (k != kb)
+        InvalidArgument("BatchMatMul: Matrices a's cols number should match Matrices b's rows number.");
+    size_t cSampleElemNum = m * n;
+
+    if (beta == 0)
+        c.RequireSize(cSampleElemNum, aBatchSize);
+    else
+        c.VerifySize(cSampleElemNum, aBatchSize); // Can't resize if beta != 0
+
+    const ElemType alpha = 1.0;
+
+    const int lda = transposeA ? k : m;
+    const int ldb = transposeB ? n : k;
+    const int ldc = m;
+    ElemType* aBufPtr = a.Data();
+    ElemType* bBufPtr = b.Data();
+    ElemType* cBufPtr = c.Data();
+    std::vector<const ElemType*> Aarray;
+    std::vector<const ElemType*> Barray;
+    std::vector<ElemType*> Carray;
+    Aarray.reserve(aBatchSize);
+    Barray.reserve(aBatchSize);
+    Carray.reserve(aBatchSize);
+    for (int i = 0; i < aBatchSize; i++)
+    {
+        Aarray.push_back(aBufPtr + a.LocateColumn(i));
+        Barray.push_back(bBufPtr + b.LocateColumn(i));
+        Carray.push_back(cBufPtr + c.LocateColumn(i));
+    }
+    ElemType** devAList = 0;
+    ElemType** devBList = 0;
+    ElemType** devCList = 0;
+    CUDA_CALL(cudaMalloc(&devAList, aBatchSize * sizeof(ElemType*)));
+    CUDA_CALL(cudaMalloc(&devBList, aBatchSize * sizeof(ElemType*)));
+    CUDA_CALL(cudaMalloc(&devCList, aBatchSize * sizeof(ElemType*)));
+    CUDA_CALL(cudaMemcpy(devAList, &Aarray[0], sizeof(ElemType*) * aBatchSize, cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(devBList, &Barray[0], sizeof(ElemType*) * aBatchSize, cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(devCList, &Carray[0], sizeof(ElemType*) * aBatchSize, cudaMemcpyHostToDevice));
+
+    CUBLAS_CALL(cublas_gemm_batched(cuHandle, transA, transB, m, n, k, &alpha, (const ElemType**)devAList, lda, (const ElemType**)devBList, ldb, &beta, devCList, ldc, aBatchSize));
+    CUDA_CALL(cudaFree(devAList));
+    CUDA_CALL(cudaFree(devBList));
+    CUDA_CALL(cudaFree(devCList));
 }
 
 template <class ElemType>
