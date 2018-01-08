@@ -36,7 +36,7 @@ namespace CNTK
                 auto profGradientAgg = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGradient);
 
                 if (info.IsEmpty())
-                    PrepaireZeroGradients(gradientValues, info);
+                    PrepaireZeroGradients(gradientValues);
 
                 ConvertToOrdered(gradientValues, m_gradientBuffer);
 
