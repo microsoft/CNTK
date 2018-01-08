@@ -816,6 +816,22 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
             master_label_files = [master_label_files]
         return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries)
 
+def LatticeDeserializer(lattice_index_file, streams):
+    '''
+    Configures a lattice reader
+    Args:
+        lattice_index_file (str): path to the file containing list of lattice TOC (table of content) files
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          a label stream.
+    '''
+    if len(streams) != 1:
+        raise ValueError("LatticeDeserializer only accepts a single stream")
+    for stream_name, stream in streams.items():
+        if stream.stream_alias is not None:
+            raise ValueError("LatticeDeserializer does not support stream names")
+        return cntk_py.htk_mlf_deserializer(stream_name, lattice_index_file)
+
 def _process_image_deserializer_args(filename, streams, deserializer):
     image_stream_name = None
 

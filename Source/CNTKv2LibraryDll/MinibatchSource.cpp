@@ -510,6 +510,18 @@ namespace CNTK
         return htk;
     }
 
+    Deserializer LatticeDeserializer(const std::wstring& streamName, const std::wstring& latticeIndexFile)
+    {
+        Deserializer lattice;
+        Dictionary stream;
+        Dictionary labels;
+        labels.Add(L"latticeIndexFile", latticeIndexFile);
+        stream[streamName] = labels;
+        lattice.Add(L"type", L"LatticeDeserializer", L"input", stream);
+        return lattice;
+    }
+
+
     namespace Internal
     {
         void Validate(const MinibatchSourceConfig& configuration)
@@ -574,6 +586,7 @@ namespace CNTK
                     { L"Base64ImageDeserializer",      L"ImageReader" },
                     { L"HTKFeatureDeserializer",       L"HTKDeserializers" },
                     { L"HTKMLFDeserializer",           L"HTKDeserializers" },
+                    { L"LatticeDeserializer",          L"HTKDeserializers" },
                 };
 
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();

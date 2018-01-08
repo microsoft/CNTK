@@ -757,6 +757,9 @@ public:
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
+        this->m_lattices.reserve(labelMBLayout->GetNumSequences());
+        size_t nonZeroSeqCount = 0;
+
         for (size_t i = 0; i < labelSequences.size(); i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
@@ -766,13 +769,22 @@ public:
 
             // Fill up labels
             auto columnIndices = labelMBLayout->GetColumnIndices(currentLabelSeq);
-            
+
             for (size_t ci = 0; ci < columnIndices.size(); ci++)
             {
                 size_t refId = (int)(*m_maxIndexes)(0, columnIndices[ci]);
                 this->m_uids.push_back(refId);
             }
             this->m_extraUttMap.push_back(labelSequences[i].s);
+        }
+
+#pragma omp parallel for
+        for (long i = 0; i < labelSequences.size(); i++)
+        {
+            if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+
+            auto& currentLabelSeq = labelSequences[i];
 
             // Fill up lattice
             auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
@@ -780,7 +792,8 @@ public:
             const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
             latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
-            this->m_lattices.push_back(latticePair);
+            this->m_lattices[nonZeroSeqCount] = latticePair;
+            nonZeroSeqCount++;
         }
         this->m_boundaries.resize(this->m_uids.size());
         std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);

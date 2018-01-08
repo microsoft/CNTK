@@ -529,6 +529,7 @@ IGNORE_FUNCTION CNTK::CTFDeserializer;
 IGNORE_FUNCTION CNTK::CBFDeserializer;
 IGNORE_FUNCTION CNTK::HTKFeatureDeserializer;
 IGNORE_FUNCTION CNTK::HTKMLFDeserializer;
+IGNORE_FUNCTION CNTK::LatticeDeserializer;
 IGNORE_FUNCTION CNTK::MomentumAsTimeConstantSchedule;
 IGNORE_CLASS CNTK::TrainingParameterSchedule;
 IGNORE_STRUCT CNTK::AdditionalLearningOptions;

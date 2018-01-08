@@ -44,7 +44,7 @@ struct LatticeFloatSequenceData : DenseSequenceData
 
 private:
     const NDShape& m_frameShape;
-    void* m_buffer;
+    char* m_buffer;
 };
 
 // Base class for chunks in frame and sequence mode.
