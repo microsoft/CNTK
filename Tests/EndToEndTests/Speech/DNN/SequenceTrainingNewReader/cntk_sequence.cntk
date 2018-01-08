@@ -183,7 +183,7 @@ sequenceTrain = [
 			
 			clonedmodel= featExt(features)
 			
-			cr = SequenceWithLattice(labels, clonedmodel.netEval, clonedmodel.scaledLogLikelihood, lattice, "$DataDir$/CY2SCH010061231_1369712653.numden.lats.symlist", "$DataDir$/model.overalltying", "$DataDir$/state.list", "$DataDir$/model.transprob", tag="criterion")  
+			cr = LatticeSequenceWithSoftmax(labels, clonedmodel.netEval, clonedmodel.scaledLogLikelihood, lattice, "$DataDir$/CY2SCH010061231_1369712653.numden.lats.symlist", "$DataDir$/model.overalltying", "$DataDir$/state.list", "$DataDir$/model.transprob", tag="criterion")  
 			
 			Err = ClassificationError(labels,clonedmodel.netEval,tag="evaluation");
 		
