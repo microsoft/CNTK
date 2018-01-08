@@ -92,16 +92,6 @@ def _verify_momentum_type(momentum):
                          % type(momentum))
 
 
-def _verify_weight_decay_type(weight_decay):
-    if not isinstance(weight_decay,
-                      cntk_py.training_double_parameter_schedule):
-
-        raise ValueError('weight decay type (%s) not supported. '
-                         'weight_decay must be a training schedule '
-                         '(output of weight_decay_schedule())'
-                         % type(momentum))
-
-
 class Learner(cntk_py.Learner):
 
     '''
@@ -678,7 +668,7 @@ def sgd(parameters, lr,
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
-        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        weight_decay (optional, float or output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
         (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
 
@@ -750,7 +740,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate and momentum. See also:  :func:`learning_parameter_schedule`
-        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        weight_decay (optional, float or output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
         (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
@@ -785,7 +775,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
              l1_regularization_weight=0.0, l2_regularization_weight=0.0,
              gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
              gradient_clipping_with_truncation=True, use_mean_gradient=None,
-             minibatch_size=None, epoch_size=None):
+             minibatch_size=None, epoch_size=None, weight_decay=0.0):
     '''nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates a Nesterov SGD learner instance to learn the parameters. This was
     originally proposed by Nesterov [1] in 1983 and then shown to work well in
@@ -821,7 +811,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate and momentum. See also:  :func:`learning_parameter_schedule`
-        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        weight_decay (optional, float or output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
         (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
@@ -864,7 +854,7 @@ def adadelta(parameters, lr=learning_parameter_schedule_per_sample(1), rho=0.95,
              l1_regularization_weight=0.0, l2_regularization_weight=0.0,
              gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
              gradient_clipping_with_truncation=True, use_mean_gradient=None,
-             minibatch_size=None, epoch_size=None):
+             minibatch_size=None, epoch_size=None, weight_decay=0.0):
     '''adadelta(parameters, lr, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an AdaDelta learner instance to learn the parameters. See [1] for
     more information.
@@ -897,7 +887,7 @@ def adadelta(parameters, lr=learning_parameter_schedule_per_sample(1), rho=0.95,
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
-        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        weight_decay (optional, float or output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
         (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
@@ -935,7 +925,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
             gradient_clipping_with_truncation=True, use_mean_gradient=None,
-            minibatch_size=None, epoch_size=None):
+            minibatch_size=None, epoch_size=None, weight_decay=0.0):
     '''adagrad(parameters, lr, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an AdaGrad learner instance to learn the parameters. See [1] for
     more information.
@@ -967,7 +957,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
-        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        weight_decay (optional, float or output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
         (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
@@ -1008,7 +998,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
               l1_regularization_weight=0.0, l2_regularization_weight=0.0,
               gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
               gradient_clipping_with_truncation=True, use_mean_gradient=None,
-              minibatch_size=None, epoch_size=None):
+              minibatch_size=None, epoch_size=None, weight_decay=0.0):
     '''fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_schedule_per_sample(0.9999986111120757), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an FSAdaGrad learner instance to learn the parameters.
 
@@ -1044,7 +1034,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate, momentum and variance_momentum. See also:  :func:`learning_parameter_schedule`
-        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        weight_decay (optional, float or output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
         (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
@@ -1085,7 +1075,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          l1_regularization_weight=0.0, l2_regularization_weight=0.0,
          gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
          gradient_clipping_with_truncation=True, use_mean_gradient=None, epsilon=1e-8, adamax=False,
-         minibatch_size=None, epoch_size=None):
+         minibatch_size=None, epoch_size=None, weight_decay=0.0):
     '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_schedule_per_sample(0.9999986111120757), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8, adamax=False, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
@@ -1171,7 +1161,7 @@ def rmsprop(parameters, lr,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
             gradient_clipping_with_truncation=True, use_mean_gradient=None,
-            minibatch_size=None, epoch_size=None):
+            minibatch_size=None, epoch_size=None, weihgt_decay=0.0):
     '''rmsprop(parameters, lr, gamma, inc, dec, max, min, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an RMSProp learner instance to learn the parameters.
 
@@ -1207,7 +1197,7 @@ def rmsprop(parameters, lr,
          if the learning rate schedule does not specify the minibatch_size, CNTK will set it to :attr:`IGNORE`. Setting minibatch_size to :attr:`IGNORE`
          will have the learner apply as it is preventing CNTK performing any hyper-parameter scaling. See also:  :func:`learning_parameter_schedule`
         epoch_size (optional, int): number of samples as a scheduling unit for learning rate. See also:  :func:`learning_parameter_schedule`
-        weight_decay (optional, float, output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
+        weight_decay (optional, float or output of :func:`weight_decay_schedule`): a weight decay factor as a float or weight decay schedule.
         (Note this does not make sense to use in conjunction with l2_regularization_weight. See https://arxiv.org/abs/1711.05101 for more details.)
 
     Returns:
