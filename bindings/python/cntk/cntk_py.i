@@ -117,7 +117,6 @@
 
 %rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
 %rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
-%rename(weight_decay) CNTK::AdditionalLearningOptions::weightDecay;
 %rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<double>::IgnoredMinibatchSize;
 %rename(ignored_minibatch_size) CNTK::TrainingParameterSchedule<std::size_t>::IgnoredMinibatchSize;
 %rename(_MINIBATCH_SIZE) CNTK::Learner::MinibatchSizeKey; // L"MinibatchSize"

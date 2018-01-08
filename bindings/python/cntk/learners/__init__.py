@@ -1161,7 +1161,7 @@ def rmsprop(parameters, lr,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
             gradient_clipping_with_truncation=True, use_mean_gradient=None,
-            minibatch_size=None, epoch_size=None, weihgt_decay=0.0):
+            minibatch_size=None, epoch_size=None, weight_decay=0.0):
     '''rmsprop(parameters, lr, gamma, inc, dec, max, min, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, use_mean_gradient=None, minibatch_size=None, epoch_size=None, weight_decay=0.0)
     Creates an RMSProp learner instance to learn the parameters.
 
