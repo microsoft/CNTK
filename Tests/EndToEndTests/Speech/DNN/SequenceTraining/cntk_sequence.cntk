@@ -142,7 +142,7 @@ sequenceTrain = [
         readMethod = "blockRandomize"
       
         frameMode = false
-        nbruttsineachrecurrentiter = 1
+        nbruttsineachrecurrentiter = 2
       
         miniBatchMode = "partial"
         randomize = "auto"
