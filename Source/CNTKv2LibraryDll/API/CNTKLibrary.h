@@ -4204,12 +4204,15 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the edit distance error for specified operands.
     ///
-    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
+    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, 
+        const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for sequence with lattice training (typically for speech).
     ///
-    CNTK_API FunctionPtr SequenceWithLattice(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring& name = L"");
+    CNTK_API FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symbolListPath, 
+        const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transitionProbabilityPath, float smoothingWeight, float frameDropThreshold, bool doReferenceAlign, bool gammarUsesMBR, 
+        float gammarAMF, float gammarLMF, float gammarBMMIFactor, float gammarWordPenalty, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the forwardbackward for specified operands.

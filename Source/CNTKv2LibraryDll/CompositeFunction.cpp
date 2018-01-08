@@ -1010,7 +1010,7 @@ namespace CNTK
                     computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
                     break;
                 }
-                case PrimitiveOpType::SequenceWithLattice:
+                case PrimitiveOpType::LatticeSequenceWithSoftmax:
                 {
                     auto symListPath = functionConfig[PrimitiveFunction::AttributeNameSymListPath].Value<wstring>();
                     auto phonePath = functionConfig[PrimitiveFunction::AttributeNamePhonePath].Value<wstring>();
@@ -1025,7 +1025,7 @@ namespace CNTK
                     auto seqGammarWordPen = functionConfig[PrimitiveFunction::AttributeNameSeqGammarWordPen].Value<float>();
                     auto hSmoothingWeight = functionConfig[PrimitiveFunction::AttributeNameHSmoothingWeight].Value<float>();
 
-                    computationNodePtr = New<SequenceWithLatticeNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath, 
+                    computationNodePtr = New<LatticeSequenceWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath,
                         hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen);
                     break;
                 }

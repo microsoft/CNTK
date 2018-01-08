@@ -685,22 +685,22 @@ template class SequenceWithSoftmaxNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SequenceWithLatticeNode : public SequenceWithSoftmaxNode<ElemType>, public NumInputs<4>
+class LatticeSequenceWithSoftmaxNode : public SequenceWithSoftmaxNode<ElemType>, public NumInputs<4>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
-        return L"SequenceWithLattice";
+        return L"LatticeSequenceWithSoftmax";
     }
 
 public:
-    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath,
+    LatticeSequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath,
         float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen)
         : SequenceWithSoftmaxNode<ElemType>(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath)
     {
         if (sizeof(ElemType) != sizeof(float))
-            LogicError("SequenceWithLatticeNode currently only supports floats.\n"); // due to the binary reader restrictions 
+            LogicError("LatticeSequenceWithSoftmaxNode currently only supports floats.\n"); // due to the binary reader restrictions 
 
         if (symListPath.size() == 0 || phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
@@ -718,12 +718,12 @@ public:
         this->SetGammarCalculationParam(seqGammarAMF, seqGammarLMF, seqGammarWordPen, seqGammarBMMIFactor, seqGammarUsesMBR);
     }
 
-    SequenceWithLatticeNode(DEVICEID_TYPE deviceId, const std::wstring& name)
+    LatticeSequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const std::wstring& name)
         : SequenceWithSoftmaxNode<ElemType>(deviceId, name)
     {
     }
 
-    SequenceWithLatticeNode(const ScriptableObjects::IConfigRecordPtr configp)
+    LatticeSequenceWithSoftmaxNode(const ScriptableObjects::IConfigRecordPtr configp)
         : SequenceWithLatticeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"),
             configp->Get(L"hSmoothingWeight"), configp->Get(L"frameDropThresh"), configp->Get(L"doReferenceAlign"), configp->Get(L"seqGammarUsesMBR"), configp->Get(L"seqGammarAMF"), configp->Get(L"seqGammarLMF"), configp->Get(L"seqGammarBMMIFactor"), configp->Get(L"seqGammarWordPen")
         )
@@ -778,7 +778,7 @@ public:
             this->m_extraUttMap.push_back(labelSequences[i].s);
         }
 
-#pragma omp parallel for
+//#pragma omp parallel for TODO: test this in philly and enable if performance is good.
         for (long i = 0; i < labelSequences.size(); i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
@@ -855,11 +855,14 @@ public:
         {
             auto node = dynamic_pointer_cast<SequenceWithLatticeNode<ElemType>>(nodeP);
 
-            node->m_idmap = m_idmap;
-            node->m_symListPath = m_symListPath;
-            node->m_phonePath = m_phonePath;
-            node->m_stateListPath = m_stateListPath;
-            node->m_stateListPath = m_transProbPath;
+            if (node) 
+            {
+                node->m_idmap = m_idmap;
+                node->m_symListPath = m_symListPath;
+                node->m_phonePath = m_phonePath;
+                node->m_stateListPath = m_stateListPath;
+                node->m_stateListPath = m_transProbPath;
+            }
         }
     }
 
@@ -884,12 +887,12 @@ private:
         LOGPRINTF(stderr, "Reading files\n %ls \n %ls \n %ls \n %ls \n", symListPath.c_str(), phonePath.c_str(), stateListPath.c_str(), transProbPath.c_str());
         this->m_hmm.loadfromfile(phonePath, stateListPath, transProbPath);
         auto symmap = this->m_hmm.getsymmap();
-        msra::lattices::archive::getSymList(m_idmap, symListPath, symmap);
+        msra::lattices::archive::GetSymList(m_idmap, symListPath, symmap);
     }
 };
 
-template class SequenceWithLatticeNode<float>;
-template class SequenceWithLatticeNode<double>;
+template class LatticeSequenceWithSoftmaxNode<float>;
+template class LatticeSequenceWithSoftmaxNode<double>;
 
 // -----------------------------------------------------------------------
 // DummyCriterionNode (objectiveValues, userSuppliedGradient, prediction)

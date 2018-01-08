@@ -1055,7 +1055,8 @@ public:
 
     // Helper method to process v2 Lattice format
     template <class IDMAP>
-    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap) {
+    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap) 
+    {
         // check if we need to map
         if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
         {
@@ -1192,8 +1193,8 @@ public:
     // set of phoneme mappings
     typedef std::vector<unsigned int> symbolidmapping;
     template <class SYMMAP>
-    static void getSymList(symbolidmapping& idmap, const std::wstring& symlistpath, const SYMMAP& symmap) {
-
+    static void GetSymList(symbolidmapping& idmap, const std::wstring& symlistpath, const SYMMAP& symmap) 
+    {
         std::vector<char> textbuffer;
         auto lines = msra::files::fgetfilelines(symlistpath, textbuffer);
         // establish mapping of each entry to the corresponding id in 'symmap'; this should fail if the symbol is not found
@@ -1211,12 +1212,12 @@ public:
                 symstring = sym; // (reusing existing object to avoid malloc)
                 tosymstring = tosym;
                 if (getid(symmap, symstring) != getid(symmap, tosymstring))
-                    RuntimeError("getSymList: mismatching symbol id for %s vs. %s", sym, tosym);
+                    RuntimeError("GetSymList: mismatching symbol id for %s vs. %s", sym, tosym);
             }
             else
             {
                 if ((size_t)i != idmap.size()) // non-mappings must come first (this is to ensure compatibility with pre-mapping files)
-                    RuntimeError("getSymList: mixed up symlist file");
+                    RuntimeError("GetSymList: mixed up symlist file");
                 symstring = sym; // (reusing existing object to avoid malloc)
                 idmap.push_back((unsigned int)getid(symmap, symstring));
             }
@@ -1261,7 +1262,7 @@ private:
             const std::wstring symlistpath = archivepaths[archiveindex] + L".symlist";
             if (verbosity > 0)
                 fprintf(stderr, "getcachedidmap: reading '%S'\n", symlistpath.c_str());
-            archive::getSymList(idmap, symlistpath, symmap);
+            archive::GetSymList(idmap, symlistpath, symmap);
 
         }
         return idmap;

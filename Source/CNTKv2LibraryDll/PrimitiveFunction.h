@@ -63,7 +63,7 @@ namespace CNTK
         {PrimitiveOpType::Convolution, L"Convolution"},
         {PrimitiveOpType::SquaredError, L"SquaredError"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
-        {PrimitiveOpType::SequenceWithLattice, L"SequenceWithLattice" },
+        {PrimitiveOpType::SequenceWithLattice, L"LatticeSequenceWithSoftmax" },
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
         {PrimitiveOpType::ForwardBackward, L"ForwardBackward" },

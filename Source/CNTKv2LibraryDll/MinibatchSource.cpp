@@ -515,6 +515,8 @@ namespace CNTK
         Deserializer lattice;
         Dictionary stream;
         Dictionary labels;
+        if (latticeIndexFile.empty())
+            LogicError("LatticeDeserializer: the lattice index file parameter is empty");
         labels.Add(L"latticeIndexFile", latticeIndexFile);
         stream[streamName] = labels;
         lattice.Add(L"type", L"LatticeDeserializer", L"input", stream);

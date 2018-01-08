@@ -1791,7 +1791,7 @@ TrainingCriterion ParseTrainingCriterionString(wstring s)
     // legacy/deprecated
     else if (EqualCI(s, L"classCrossEntropyWithSoftmax")) return TrainingCriterion::ClassCrossEntropyWithSoftmax;
     else if (EqualCI(s, L"sequenceWithSoftmax"))          return TrainingCriterion::SequenceWithSoftmax;
-    else if (EqualCI(s, L"sequencewithlattice"))          return TrainingCriterion::SequenceWithLattice;
+    else if (EqualCI(s, L"latticeSequenceWithSoftmax"))   return TrainingCriterion::LatticeSequenceWithSoftmax;
     else LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (crossEntropyWithSoftmax | squareError | logistic | classCrossEntropyWithSoftmax| sequenceWithSoftmax | sequenceWithLattice)");
 }
 

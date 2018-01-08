@@ -478,7 +478,7 @@ IGNORE_FUNCTION CNTK::BinaryCrossEntropy;
 IGNORE_FUNCTION CNTK::WeightedBinaryCrossEntropy;
 IGNORE_FUNCTION CNTK::SquaredError;
 IGNORE_FUNCTION CNTK::CrossEntropyWithSoftmax;
-IGNORE_FUNCTION CNTK::SequenceWithLattice;
+IGNORE_FUNCTION CNTK::LatticeSequenceWithSoftmax;
 IGNORE_FUNCTION CNTK::EditDistanceError;
 IGNORE_FUNCTION CNTK::ForwardBackward;
 IGNORE_FUNCTION CNTK::LabelsToGraph;

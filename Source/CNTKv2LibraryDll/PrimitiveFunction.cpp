@@ -110,7 +110,7 @@ namespace CNTK
             (op == PrimitiveOpType::ReduceElements &&  anyOfAxesInReduction([](const Axis& axis) { return axis == Axis::AllAxes(); })) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
-            (op == PrimitiveOpType::SequenceWithLattice) ||
+            (op == PrimitiveOpType::LatticeSequenceWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::ForwardBackward) ||
@@ -809,7 +809,7 @@ namespace CNTK
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::SquaredError:
                         case PrimitiveOpType::EditDistanceError:
-                        case PrimitiveOpType::SequenceWithLattice:
+                        case PrimitiveOpType::LatticeSequenceWithSoftmax:
                         case PrimitiveOpType::ClassificationError:
                         case PrimitiveOpType::NDCG:
                         {
