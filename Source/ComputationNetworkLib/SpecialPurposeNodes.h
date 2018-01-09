@@ -757,9 +757,6 @@ public:
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
-        this->m_lattices.reserve(labelMBLayout->GetNumSequences());
-        size_t nonZeroSeqCount = 0;
-
         for (size_t i = 0; i < labelSequences.size(); i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
@@ -778,6 +775,8 @@ public:
             this->m_extraUttMap.push_back(labelSequences[i].s);
         }
 
+        this->m_lattices.resize(labelMBLayout->GetNumSequences());
+        size_t nonZeroSeqCount = 0;
 //#pragma omp parallel for TODO: test this in philly and enable if performance is good.
         for (long i = 0; i < labelSequences.size(); i++)
         {

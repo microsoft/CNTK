@@ -19,19 +19,11 @@ using namespace std;
 // This class stores sequence data for HTK for floats.
 struct LatticeFloatSequenceData : DenseSequenceData
 {
-    LatticeFloatSequenceData(void* data, unsigned int bufferSize, const NDShape& frameShape) :DenseSequenceData(bufferSize,true),
-         m_frameShape(frameShape)
+    LatticeFloatSequenceData(void* data, unsigned int bufferSize, const NDShape& frameShape, shared_ptr<vector<char>> pParentBuffer) :DenseSequenceData(bufferSize,true),
+        m_buffer(data), m_frameShape(frameShape), m_pParentBuffer(pParentBuffer)
     {
-        //Ensure the sequence owns the data, since the chunk can be released before the sequence is released
-        size_t byteBufferSize = bufferSize * sizeof(float);
-        m_buffer = new char[byteBufferSize];
-        memcpy(m_buffer, data, byteBufferSize);
     }
 
-    ~LatticeFloatSequenceData() 
-    {
-        delete[] m_buffer;
-    }
     const void* GetDataBuffer() override
     {
         return m_buffer;
@@ -44,7 +36,8 @@ struct LatticeFloatSequenceData : DenseSequenceData
 
 private:
     const NDShape& m_frameShape;
-    char* m_buffer;
+    void* m_buffer;
+    shared_ptr<vector<char>> m_pParentBuffer;
 };
 
 // Base class for chunks in frame and sequence mode.
@@ -52,7 +45,7 @@ private:
 class LatticeDeserializer::ChunkBase : public Chunk
 {
 protected:
-    vector<char> m_buffer;   // Buffer for the whole chunk
+    shared_ptr<vector<char>> m_pBuffer; // Ptr to the buffer for the whole chunk
     vector<bool> m_valid;    // Bit mask whether the parsed sequence is valid.
 
     const LatticeDeserializer& m_deserializer;
@@ -71,15 +64,18 @@ protected:
         // Make sure we always have 3 at the end for buffer overrun, i.e. 4 byte alignment
         // This is required because currently lattices are exposed as an array of floats, because CPUMatrix does not support chars.
         // TODO: switch to char when possible.
-        m_buffer.resize(sizeInBytes + sizeof(float) - 1);
-        for (int fl = 0; fl < sizeof(float)-1; fl++) {
-            m_buffer[sizeInBytes + fl] = 0;
+        vector<char> buffer(sizeInBytes + sizeof(float) - 1);
+        for (int fl = 0; fl < sizeof(float) - 1; fl++)
+        {
+            buffer[sizeInBytes + fl] = 0;
         }
 
         // Seek and read chunk into memory.
         f.SeekOrDie(descriptor.StartOffset(), SEEK_SET);
 
-        f.ReadOrDie(m_buffer.data(), sizeInBytes, 1);
+        f.ReadOrDie(buffer.data(), sizeInBytes, 1);
+
+        m_pBuffer = make_shared<vector<char> >(move(buffer));
 
         // all sequences are valid by default.
         m_valid.resize(m_descriptor.NumberOfSequences(), true);
@@ -112,7 +108,7 @@ public:
         const auto& sequence = m_descriptor.Sequences()[sequenceIndex];
         
         // Deserialize the binary lattice graph and serialize it into a vector
-        SequenceDataPtr s = make_shared<LatticeFloatSequenceData>(m_buffer.data() + sequence.OffsetInChunk(), sequence.NumberOfSamples(), m_ndShape);
+        SequenceDataPtr s = make_shared<LatticeFloatSequenceData>(m_pBuffer->data() + sequence.OffsetInChunk(), sequence.NumberOfSamples(), m_ndShape, m_pBuffer);
 
         result.push_back(s);
     }
