@@ -160,6 +160,54 @@ def test_free_static_times():
     assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
 
 
+FREE_STATIC_AXIS_TIMES_FREE_STATIC_AXIS_DATA = [
+    (1, (C.FreeDimension, C.FreeDimension), np.asarray([[[0.5, 0.2], [0.35, 0.75]]], np.float32),
+     (C.FreeDimension, C.FreeDimension), np.asarray([[[0.7, 0.3], [0.7, 0.3]]], np.float32)),
+    (1, (C.FreeDimension, C.FreeDimension, C.FreeDimension), np.asarray([[[[2.5, 4.5], [10.5, 12.5]]]], np.float32),
+     (C.FreeDimension, C.FreeDimension, C.FreeDimension), np.asarray([[[[5.], [13.]], [[7.], [ 15.]]]], np.float32)),
+    (2, (C.FreeDimension, C.FreeDimension, C.FreeDimension), np.asarray([[[[2.5, 4.5], [10.5, 12.5]]]], np.float32),
+     (C.FreeDimension, C.FreeDimension, C.FreeDimension), np.asarray([[[[5.], [13.]], [[7.], [15.]]]], np.float32)),
+]
+
+@pytest.mark.parametrize("output_rank, x_input_shape, x_data, y_input_shape, y_data", FREE_STATIC_AXIS_TIMES_FREE_STATIC_AXIS_DATA)
+def test_free_static_axis_times_free_static_axis(output_rank, x_input_shape, x_data, y_input_shape, y_data):
+    x = C.input_variable(x_input_shape)
+    y = C.input_variable(y_input_shape)
+    t = C.times(x, y, output_rank=output_rank)
+    cntk_result = t.eval({x: x_data, y: y_data})[0]
+    np_result = []
+    for x_item, y_item in zip(x_data, y_data): #zip over the batch axis
+        item_res = np.tensordot(x_item, y_item, axes=len(x_item.shape) - output_rank)
+        np_result.append(item_res)
+    np_result = np.vstack(np_result)
+    np.testing.assert_allclose(np_result, cntk_result)
+
+
+FREE_UPPACK_AXIS_TIMES_UPPACK_AXIS_DATA = [
+    (1, (2), np.asarray([[0.5, 0.2], [0.35, 0.75]], np.float32),
+     (2), np.asarray([[0.7, 0.3], [0.7, 0.3]], np.float32)),
+    (1, (2, 3), np.reshape(np.arange(3 * 2 * 3, dtype=np.float32), (-1, 2, 3)),
+      (3, 2), np.reshape(np.arange(3 * 2 * 3, dtype=np.float32), (-1, 3, 2))),
+    (1, (2, 3, 4), np.reshape(np.arange(3 * 2 * 3 * 4, dtype=np.float32), (-1, 2, 3, 4)),
+     (4, 3, 2), np.reshape(np.arange(3 * 4 * 3 * 2, dtype=np.float32), (-1, 4, 3, 2))),
+    (2, (2, 3, 4), np.reshape(np.arange(5 * 2 * 3 * 4, dtype=np.float32), (-1, 2, 3, 4)), #5 elements in batch axis
+     (2, 4, 3), np.reshape(np.arange(5 * 2 * 4 * 3, dtype=np.float32), (-1, 2, 4, 3))), #5 elements in batch axis
+]
+
+@pytest.mark.parametrize("output_rank, x_input_shape, x_data, y_input_shape, y_data", FREE_UPPACK_AXIS_TIMES_UPPACK_AXIS_DATA)
+def test_unpack_axis_times_transpose_unpack_axis(output_rank, x_input_shape, x_data, y_input_shape, y_data):
+    #test free axis times from unpack batch
+    x = C.input_variable(x_input_shape)
+    y = C.input_variable(y_input_shape)
+    xx = C.unpack_batch(x)
+    yy = C.unpack_batch(y)
+    yyy = C.transpose(yy, range(len(yy.shape))[::-1])
+    t = C.times(xx, yyy, output_rank=output_rank)
+    cntk_result = t.eval({x: x_data, y: y_data})
+    np_result = np.tensordot(x_data, np.transpose(y_data), axes = len(x_data.shape) - output_rank)
+    np.testing.assert_allclose(np_result, cntk_result)
+
+
 FREE_STATIC_AXES_POOLING_DATA = [
     ((C.FreeDimension, C.FreeDimension, C.FreeDimension),
      C.AVG_POOLING,
