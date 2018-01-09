@@ -658,6 +658,12 @@ namespace CNTK
                 foreach (var seq in seqVec)
                 {
                     var seqList = seq as IList<T>;
+                    bool t = false;
+                    if (t)
+                    {
+                        T f = seqList[0];
+                    }
+
                     if (seqList == null)
                         throw new TypeAccessException("Cannot convert to the value type.");
                     // It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.

@@ -281,6 +281,7 @@ public:
 
     CPUMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
 
+	void PrintElements() const;
     ElemType SumOfAbsElements() const; // sum of all abs(elements)
     ElemType SumOfElements() const;    // sum of all elements
     CPUMatrix<ElemType>& AssignSumOfElements(const CPUMatrix<ElemType>& a);

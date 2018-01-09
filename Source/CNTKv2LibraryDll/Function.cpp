@@ -455,7 +455,29 @@ namespace CNTK
                             std::unordered_map<Variable, ValuePtr>& outputs,
                             const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        Forward(arguments, outputs, computeDevice, {});
+		{
+			Variable variable = arguments.begin()->first;
+			ValuePtr value = arguments.begin()->second;
+			std::vector<std::vector<float>> sequences;
+			value->CopyVariableValueTo<float>(variable, sequences);
+			std::cout.unsetf(std::ios::floatfield);
+			std::cout.precision(10);
+			for (int i = 0; i < sequences[0].size(); i++)
+				std::cout << sequences[0][i] << "---";
+			std::cout << std::endl;
+		}
+		Forward(arguments, outputs, computeDevice, {});
+		{
+			Variable variable = outputs.begin()->first;
+			ValuePtr value = outputs.begin()->second;
+			std::vector<std::vector<float>> sequences;
+			value->CopyVariableValueTo<float>(variable, sequences);
+
+			std::cout.unsetf(std::ios::floatfield);
+			std::cout.precision(10);
+
+			std::cout << sequences[0][0] << "::" << sequences[0][1] << std::endl;
+		}
     }
 
     void Function::Save(std::vector<char> &vectorBuf)

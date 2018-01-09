@@ -3101,6 +3101,22 @@ ElemType CPUMatrix<ElemType>::SumOfAbsElements() const
     }
 }
 
+template <class ElemType>
+void CPUMatrix<ElemType>::PrintElements() const
+{
+	long m = (long)GetNumElements(); // note: OpenMP requires loop indices to be long, not size_t
+
+	ElemType* bufPtr = Data();
+	auto nCols = GetNumCols();
+	for (long i = 0; i < m; i++)
+	{
+		if (i % nCols == 0) 
+			fprintf(stderr, "\n");
+		fprintf(stderr, "%9.9f\t", bufPtr[i]);
+	}
+	fprintf(stderr, "\n");
+}
+
 //sum of all elements
 template <class ElemType>
 ElemType CPUMatrix<ElemType>::SumOfElements() const
@@ -5057,6 +5073,13 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
         {
 #pragma warning(suppress : 4244)
             cblas_sgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
+			a.PrintElements();
+			fprintf(stderr, "::%9.9f\n", a.SumOfElements());
+			b.PrintElements();
+			fprintf(stderr, "::%9.9f\n", b.SumOfElements());
+			c.PrintElements();
+			fprintf(stderr, "::%9.9f\n", c.SumOfElements());
+
         }
     }
     else

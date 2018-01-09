@@ -94,7 +94,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
             bool createRes = false;
             if (createRes)
             {
-                System.IO.StreamReader file = new System.IO.StreamReader(@"E:\LiqunWA\CNTKIssues\TLC\CNTKCSharp4Jignesh\CNTKCSharp4Jignesh\breast-cancer-15k-noheader.txt");
+                System.IO.StreamReader file = new System.IO.StreamReader(@"..\TLC\CNTKCSharp4Jignesh\CNTKCSharp4Jignesh\breast-cancer-15k-noheader.txt");
                 while ((line = file.ReadLine()) != null)
                 {
                     //System.Console.WriteLine(line);
@@ -127,6 +127,8 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                 dictEvalResults = (List<EvaResult>)serializer.Deserialize(myFileStream);
             }
 
+            // CNTKLib.PrintGraphEx(modelFunc.RootFunction, 0);
+
             for (int i = 0; i < 20; i++)
             {
                 foreach (var l in dictEvalResults)
@@ -135,6 +137,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                     if (outputData[0][0] != l.d0|| outputData[0][1] != l.d1)
                     {
                         Console.WriteLine($"Eval mismatch: {String.Format("{0:F20}", outputData[0][0])} != {String.Format("{0:F20}", l.d0)} --- {String.Format("{0:F20}", outputData[0][1])} != {String.Format("{0:F20}", l.d1)}");
+                        EvalOneLine(inputDim, device, modelFunc, inputVar, outputVar, l.line);
                     }
                 }
                 Console.WriteLine($"Pass {i}");
