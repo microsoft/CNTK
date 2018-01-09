@@ -794,10 +794,20 @@ namespace CNTK
 
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
 
-        const auto franksAsIfFactor = sqrt(m_franksAsIfSmoothedCount); // correction term since denominator uses sum instead of av, so it makes things sqrt(N) too small
+        // CNTK gradients are minibatch sums, not averages. Hence, compared to the original Adam formula,
+        // the gradients are by a factor of N larger (N=#samples in minibatch).
+        // To compensate, CNTK learning rates are N times smaller.
+        // We are accumulating gradient sqr, and divide by it.
+        //  smoothMom[idx] = mom * smoothMom[idx] + unitGainFactor * g;                 --> N x larger
+        //  smoothAda[idx] = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;   --> N^2 x larger
+        //  val[idx] -= lr * smoothMom[idx] * adaMul / (sqrt(smoothAda[idx]) + epsilon);
+        //   N x smaller^^   ^^N x larger               ^^^^^^^^^^^^^^^^^^^ N x larger
+        // Hence, the update is N x smaller than in the original Adam formula.
+        //const auto franksAsIfFactor = trainingSampleCount;
+        // TODO: do this properly!
 
-        smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_smoothedCount, learningRate     * franksAsIfFactor,
-                                           momentum, varMomentum, (ElementType)m_epsilon, unitGainFactor, m_adamax);
+        smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_smoothedCount, /*learnRatePerSample=*/learningRate   /*  * franksAsIfFactor*/,
+                                           /*meanMomentum=*/momentum, varMomentum, (ElementType)m_epsilon, unitGainFactor, m_adamax);
     }
 
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
