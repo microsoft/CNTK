@@ -39,7 +39,7 @@ namespace CNTK
         //
         // A list of predecessors for a given node.
         //
-        virtual const std::vector<TNode>& Predecessors(const TNode& node) const = 0;
+        virtual std::vector<TNode> Predecessors(const TNode& node) const = 0;
 
         //
         // A list of root nodes used as starting points for graph traversal.
@@ -174,7 +174,7 @@ namespace CNTK
             const DirectedGraph<TNode>& graph,
             const TNode& node,
             std::stack<TNode>& nodeStack,
-            size_t& index,
+            int& index,
             std::map<TNode, Internal::StrongComponentNodeState>& state,
             std::vector<StrongComponent<TNode>>& strongComponents)
         {
@@ -314,7 +314,7 @@ namespace CNTK
         std::map<TNode, Internal::StrongComponentNodeState> state;
         std::vector<StrongComponent<TNode>> result;
         std::stack<TNode> nodeStack;
-        size_t index = 0;
+        int index = 0;
         for (auto& root : graph.Roots())
         {
             if (state[root].m_visited)

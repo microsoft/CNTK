@@ -547,6 +547,44 @@ class Function(cntk_py.Function):
         value = _to_cntk_dict_value(value)
         return super(Function, self).set_attribute(name, value)
 
+    def _get_or_reset_custom_attributes(self, reset):
+        '''
+        Internal non-property version of custom attribute
+        Note that composite function does not have custom attributes, so the property returns its root_function's custom_attributes.
+
+        Args:
+            reset (bool): whether to reset the dictionary
+        '''
+        if self.is_composite:
+            return self.root_function._get_or_reset_custom_attributes(reset)
+        else:
+            if reset:
+                super(Function, self).reset_custom_attributes()
+            return super(Function, self).get_custom_attributes()
+
+    @property
+    def custom_attributes(self):
+        '''
+        Get function custom attributes in cntk_py.Dictionary for both read and write.
+        '''
+        return self._get_or_reset_custom_attributes(reset=False)
+
+    @custom_attributes.setter
+    def custom_attributes(self, values):
+        '''
+        Set function custom attributes in a batch, and drops old attributes
+
+        Args:
+            values (dict): a dictionary of new custom attributes
+        '''
+        values = values or {}
+        if not isinstance(values, dict):
+            raise TypeError("values must be a dictionary")
+
+        custom_attr = self._get_or_reset_custom_attributes(reset=True)
+        for key in values.keys():
+            custom_attr[key] = values[key]
+
     @typemap
     def clone(self, method, substitutions=None):
         '''

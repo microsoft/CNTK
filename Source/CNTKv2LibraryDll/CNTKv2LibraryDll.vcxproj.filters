@@ -122,6 +122,7 @@
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="BackCompat.h" />
     <ClInclude Include="CompositeFunction.h" />
+    <ClInclude Include="PrimitiveFunctionAttributes.h" />
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="DataParallelDistributedLearner.h" />

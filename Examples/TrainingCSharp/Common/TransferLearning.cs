@@ -167,12 +167,15 @@ namespace CNTK.CSTrainingExamples
                 while (GetImageAndLabelMinibatch(trainingDataMap, batchSize, batchCount++,
                     imageDims, animalModelNumClasses, device, out imageBatch, out labelBatch))
                 {
+                    //TODO: sweepEnd should be set properly.
+#pragma warning disable 618
                     trainer.TrainMinibatch(new Dictionary<Variable, Value>() {
-                        { imageInput, imageBatch },
+                    { imageInput, imageBatch },
                         { labelInput, labelBatch } }, device);
+#pragma warning restore 618
                     TestHelper.PrintTrainingProgress(trainer, minibatchCount, 1);
                 }
-            }
+            }                       
 
             // save the trained model
             transferLearningModel.Save(animalsModelFile);
@@ -182,6 +185,9 @@ namespace CNTK.CSTrainingExamples
                                 imageDims, animalModelNumClasses, device);
             Console.WriteLine(error);
         }
+
+        static float[] batchImageBuf = null;
+        static float[] batchLabelBuf = null;
 
         /// <summary>
         /// With trainin/evaluation data in memory, this method returns minibatch data 
@@ -212,7 +218,7 @@ namespace CNTK.CSTrainingExamples
             {
                 // randomize 
                 int n = trainingDataMap.Count;
-                Random random = new Random();
+                Random random = new Random(0);
                 while (n > 1)
                 {
                     n--;
@@ -224,8 +230,12 @@ namespace CNTK.CSTrainingExamples
             }
 
             int imageSize = imageDims[0] * imageDims[1] * imageDims[2];
-            float[] batchImageBuf = new float[actualBatchSize * imageSize];
-            float[] batchLabelBuf = new float[actualBatchSize * numClasses];
+            if (batchImageBuf == null)
+            {
+                batchImageBuf = new float[actualBatchSize * imageSize];
+                batchLabelBuf = new float[actualBatchSize * numClasses];
+            }
+
             for (int i = 0; i < actualBatchSize; i++)
             {
                 int index = i + batchSize * batchCount;
@@ -278,14 +288,11 @@ namespace CNTK.CSTrainingExamples
 
             Variable oldFeatureNode = baseModel.Arguments.Single(a => a.Name == featureNodeName);
             Function lastNode = baseModel.FindByName(hiddenNodeName);
-            Variable newFeatureNode = CNTKLib.PlaceholderVariable(featureNodeName);
 
             // Clone the desired layers with fixed weights
             Function clonedLayer = CNTKLib.AsComposite(lastNode).Clone(
                 ParameterCloningMethod.Freeze,
-                new Dictionary<Variable, Variable>() { { oldFeatureNode, newFeatureNode } });
-
-            clonedLayer.ReplacePlaceholders(new Dictionary<Variable, Variable>() { { newFeatureNode, normalizedFeatureNode } });
+                new Dictionary<Variable, Variable>() { { oldFeatureNode, normalizedFeatureNode } });
 
             // Add new dense layer for class prediction
             Function clonedModel = TestHelper.Dense(clonedLayer, numClasses, device, Activation.None, outputNodeName);

@@ -172,7 +172,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 
         static void Main(string[] args)
         {
-            TestEval();
+            // TestEval();
             //int input_dim = 784, HiddenLayerCount = 2, HiddenLayerDimension = 400, OutputClassesCount = 10;
             //var Input = Variable.InputVariable(new int[] { input_dim }, DataType.Float);
             //Function d_model = CreateModel(DeviceDescriptor.CPUDevice, HiddenLayerCount, HiddenLayerDimension, OutputClassesCount, Input);
@@ -229,6 +229,15 @@ namespace CNTK.CNTKLibraryCSTrainingTest
             //    new Dictionary<Variable, Value>() { { x, v} },
             //    o, 
             //    DeviceDescriptor.CPUDevice);
+
+            //Parameter weights = new Parameter(
+            //    new NDArrayView(new int[] { 2, 3 }, 
+            //    new float[]{ 1, 2, 3, 4, 5, 6 }, 
+            //    DeviceDescriptor.CPUDevice));
+            var xVals = Value.CreateSequence<float>(new int[] { 2 }, new float[] { 1, 2, 3, 4, 5, 6 }, DeviceDescriptor.CPUDevice);
+            NDArrayView v = xVals.Data;
+            v.
+            IList<IList<float>> data = xVals.GetDenseData<float>(Variable.InputVariable(new int[] { 2, 3 }, DataType.Float));
 
 #if CPUONLY
             Console.WriteLine("======== Train model using CPUOnly build ========");

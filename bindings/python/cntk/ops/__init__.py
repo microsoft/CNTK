@@ -474,7 +474,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=5000, blend_time_constant=0,
-                        epsilon=0.00001, use_cudnn_engine=False, name='', running_count=None):
+                        epsilon=0.00001, use_cudnn_engine=False, disable_regularization=False, name='', running_count=None):
     # TODO: running_count should be right after running_inv_std; no need for upwards compat
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
@@ -501,6 +501,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
         use_cudnn_engine(bool, default True):
         name (str, optional): the name of the Function instance in the network
+        disable_regularization(bool, default False): turn off regularization in batch normalization
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -515,12 +516,21 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     operand = sanitize_input(operand)
     return batch_normalization(operand, scale, bias, running_mean, running_inv_std, running_count, spatial,
                                normalization_time_constant, blend_time_constant,
-                               epsilon, use_cudnn_engine, name)
+                               epsilon, use_cudnn_engine, disable_regularization, name)
 
 @typemap
 def local_response_normalization(operand, depth_radius, bias, alpha, beta, name=''):
     '''
-    Local Response Normalization layer.
+    Local Response Normalization layer. See Section 3.3 of the paper:
+
+    https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+
+    The mathematical equation is:
+
+    ``b_{x,y}^i=a_{x,y}^i/(bias+\alpha\sum_{j=max(0,i-depth_radius)}^{min(N-1, i+depth_radius)}(a_{x,y}^j)^2)^\beta``
+
+    where a_{x,y}^i is the activity of a neuron computed by applying kernel i at position (x,y)
+    N is the total number of kernels, depth_radius is half normalization width.
 
     Args:
         operand: input of the Local Response Normalization.
@@ -1466,6 +1476,28 @@ def tanh(x, name=''):
     return tanh(x, name)
 
 @typemap
+def atanh(x, name=''):
+    '''
+    Computes the element-wise atanh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.atanh([[0.9,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 1.47222,  0.54931],
+               [-0.25541, -0.97296]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import atanh
+    x = sanitize_input(x)
+    return atanh(x, name)
+
+@typemap
 def sin(x, name=''):
     '''
     Computes the element-wise sine of ``x``:
@@ -1596,6 +1628,28 @@ def cosh(x, name=''):
     from cntk.cntk_py import cosh
     x = sanitize_input(x)
     return cosh(x, name)
+
+@typemap
+def asinh(x, name=''):
+    '''
+    Computes the element-wise asinh of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.asinh([[1,0.5],[-0.25,-0.75]]).eval(),5)
+        array([[ 0.88137,  0.48121],
+               [-0.24747, -0.69315]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import asinh
+    x = sanitize_input(x)
+    return asinh(x, name)
 
 
 @typemap

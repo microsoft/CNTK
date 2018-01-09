@@ -25,6 +25,33 @@ z = create_model(x)
 z.save(<path of where to save your ONNX model>, format=C.ModelFormat.ONNX)
 ```
 
+If you want to try ONNX, you can build from master or `pip install` one of the below wheel that matches you Python environment.
+
+For Windows CPU-Only:
+* Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp27-cp27m-win_amd64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp34-cp34m-win_amd64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp35-cp35m-win_amd64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp36-cp36m-win_amd64.whl
+
+For Windows GPU:
+* Python 2.7: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp27-cp27m-win_amd64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp34-cp34m-win_amd64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp35-cp35m-win_amd64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp36-cp36m-win_amd64.whl
+
+Linux CPU-Only:
+* Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp27-cp27mu-linux_x86_64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp34-cp34m-linux_x86_64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp35-cp35m-linux_x86_64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp36-cp36m-linux_x86_64.whl
+
+Linux GPU:
+* Python 2.7: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp27-cp27mu-linux_x86_64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp34-cp34m-linux_x86_64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp35-cp35m-linux_x86_64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp36-cp36m-linux_x86_64.whl
+
+
 ***2017-09-25.*** CNTK September interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2410).
 
 ***2017-09-24.*** CNTK R-binding now available [here](https://github.com/Microsoft/CNTK-R).

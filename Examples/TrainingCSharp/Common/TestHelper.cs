@@ -59,10 +59,11 @@ namespace CNTK.CSTrainingExamples
                     CNTKLib.SentinelValueForInferParamInitRank, 1),
                 device, "timesParam");
             var timesFunction = CNTKLib.Times(timesParam, input, "times");
+            return timesFunction;
 
-            int[] s2 = { outputDim };
-            var plusParam = new Parameter(s2, 0.0f, device, "plusParam");
-            return CNTKLib.Plus(plusParam, timesFunction, outputName);
+            //int[] s2 = { outputDim };
+            //var plusParam = new Parameter(s2, 0.0f, device, "plusParam");
+            //return CNTKLib.Plus(plusParam, timesFunction, outputName);
         }
 
         public static float ValidateModelWithMinibatchSource(

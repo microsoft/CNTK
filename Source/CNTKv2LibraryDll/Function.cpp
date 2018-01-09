@@ -480,7 +480,7 @@ namespace CNTK
 		}
     }
 
-    void Function::Save(std::vector<char> &vectorBuf)
+    void Function::Save(std::vector<unsigned char> &vectorBuf)
     {
         Dictionary model = Serialize();
         std::ostringstream stream;
@@ -701,12 +701,52 @@ namespace CNTK
         return this->shared_from_this();
     }
 
+    FunctionPtr Function::FlattenFunction(const FunctionPtr& clonee, const std::vector<Variable>& clonedInputs)
+    {
+        FunctionPtr clonedFunction;
+        const BlockFunction* blockFunction = dynamic_cast<const BlockFunction*>(clonee.get());
+        if (!blockFunction)
+            return clonee->Clone(clonedInputs);
+
+        std::unordered_map<Variable, Variable> cloneeToClonedInputMap;
+        auto cloneeInputs = clonee->Inputs();
+        std::transform(cloneeInputs.begin(), cloneeInputs.end(), clonedInputs.begin(),
+            std::inserter(cloneeToClonedInputMap, cloneeToClonedInputMap.end()),
+            std::make_pair<const Variable&, const Variable&>);
+
+        auto cloneeComposite = blockFunction->Composite();
+        auto cloneeCompositeInputs = cloneeComposite->Inputs();
+        std::unordered_map<Variable, Variable> cloneeCompositeReplacements;
+
+        // Make sure we that during cloning we substitue all block arguments with the corresponding
+        // cloned inputs.
+        for (auto cloneeArgumentMapping : blockFunction->BlockArgumentsMapping())
+            cloneeCompositeReplacements.insert({ cloneeArgumentMapping.first, cloneeToClonedInputMap.at(cloneeArgumentMapping.second) });
+
+        for (size_t i = 0; i < clonedInputs.size(); ++i)
+        {
+            const auto& cloneeInput = cloneeInputs[i];
+            const auto& clonedInput = clonedInputs[i];
+            if ((cloneeInput != clonedInput) && (cloneeInput.IsParameter() || cloneeInput.IsConstant()))
+            {
+                auto iter = std::find(cloneeCompositeInputs.begin(), cloneeCompositeInputs.end(), cloneeInput);
+                if (iter != cloneeCompositeInputs.end())
+                {
+                    auto cloneeCompositeInput = *iter;
+                    cloneeCompositeReplacements.insert({ cloneeCompositeInput, clonedInput });
+                }
+            }
+        }
+        return cloneeComposite->CloneImpl(ParameterCloningMethod::Share, cloneeCompositeReplacements, FlattenFunction);
+    }
+
     FunctionPtr Function::Clone(const FunctionPtr& clonee,
                                 ParameterCloningMethod parameterCloneMethod,
                                 const std::unordered_map<Variable, Variable>& replacements,
                                 std::unordered_map<const Function*, FunctionPtr>& cloneMap,
                                 std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
-                                std::unordered_map<Variable, Variable>& placeholderReplacements)
+                                std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&)> clone)
     {
         if (cloneMap.find(clonee.get()) != cloneMap.end())
             LogicError("Function::Clone: Cloning an already visited Function '%S'.", clonee->AsString().c_str());
@@ -800,7 +840,7 @@ namespace CNTK
                     }
                     else
                     {
-                        auto clonedFunction = Clone(cloneeInput.Owner(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
+                        auto clonedFunction = Clone(cloneeInput.Owner(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements, clone);
                         clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.Owner(), clonedFunction);
                     }
                 }
@@ -810,9 +850,26 @@ namespace CNTK
             cloneeToClonedInputMap.insert({cloneeInput, clonedInput});
         }
 
+        FunctionPtr clonedFunction = clone(clonee, inputs);
+        cloneMap[clonee.get()] = clonedFunction;
+        return clonedFunction;
+    }
+
+    FunctionPtr Function::CloneFunction(const FunctionPtr& clonee, const std::vector<Variable>& clonedInputs)
+    {
+        auto inputs = clonedInputs;
+        auto cloneeInputs = clonee->Inputs();
+
         FunctionPtr clonedFunction;
         const BlockFunction* blockFunction = dynamic_cast<const BlockFunction*>(clonee.get());
-        if (blockFunction)
+        if (!blockFunction)
+            return clonee->Clone(inputs);
+
+        std::unordered_map<Variable, Variable> cloneeToClonedInputMap;
+        std::transform(cloneeInputs.begin(), cloneeInputs.end(), clonedInputs.begin(),
+            std::inserter(cloneeToClonedInputMap, cloneeToClonedInputMap.end()),
+            std::make_pair<const Variable&, const Variable&>);
+
         {
             auto cloneeComposite = blockFunction->Composite();
             auto cloneeCompositeInputs = cloneeComposite->Inputs();
@@ -873,18 +930,28 @@ namespace CNTK
             auto clonedFunctionInputs = clonedFunction->Inputs();
             if (clonedFunctionInputs != inputs)
                 LogicError("Block Function '%S': Inputs '%S' of the new clone do not match the cloned inputs '%S' of the clonee Block Function.",
-                            clonedFunction->AsString().c_str(),
-                            NamedListString(clonedFunctionInputs).c_str(),
-                            NamedListString(inputs).c_str());
+                    clonedFunction->AsString().c_str(),
+                    NamedListString(clonedFunctionInputs).c_str(),
+                    NamedListString(inputs).c_str());
         }
-        else
-            clonedFunction = clonee->Clone(inputs);
 
-        cloneMap[clonee.get()] = clonedFunction;
         return clonedFunction;
     }
 
     FunctionPtr Function::Clone(ParameterCloningMethod parameterCloneMethod, const std::unordered_map<Variable, Variable>& replacements) const
+    {
+        return CloneImpl(parameterCloneMethod, replacements, CloneFunction);
+    }
+
+    FunctionPtr Function::CloneFlattened(ParameterCloningMethod parameterCloneMethod) const
+    {
+        return CloneImpl(parameterCloneMethod, {}, FlattenFunction);
+    }
+
+    FunctionPtr Function::CloneImpl(
+        ParameterCloningMethod parameterCloneMethod, 
+        const std::unordered_map<Variable, Variable>& replacements,
+        std::function<FunctionPtr(const FunctionPtr&, const std::vector<Variable>&)> clone) const
     {
         const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
         if (compositeFunction == nullptr)
@@ -924,7 +991,7 @@ namespace CNTK
         std::unordered_map<const Function*, FunctionPtr> cloneMap;
         std::unordered_map<Variable, Variable> leafVariablesCloneMap;
         std::unordered_map<Variable, Variable> placeholderReplacements;
-        auto clonedRootFunction = Function::Clone(compositeRootFunction, parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
+        auto clonedRootFunction = Function::Clone(compositeRootFunction, parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements, clone);
 
         // Patch the values in the placeholderReplacements map with newly cloned Variables where applicable
         std::unordered_set<FunctionPtr> replacementClones;
@@ -961,7 +1028,7 @@ namespace CNTK
                     if (!cloningReplacementsForPlaceholderReplacement.empty())
                     {
                         auto replacementToClone = AsComposite(varPair.second.Owner());
-                        auto replacementClone = replacementToClone->Clone(parameterCloneMethod, cloningReplacementsForPlaceholderReplacement);
+                        auto replacementClone = replacementToClone->CloneImpl(parameterCloneMethod, cloningReplacementsForPlaceholderReplacement, clone);
                         replacementClones.insert(replacementClone);
                         placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.Owner(), replacementClone->RootFunction());
                     }
@@ -1079,6 +1146,20 @@ namespace CNTK
         }
     }
 
+    Dictionary& Function::GetCustomAttributes()
+    {
+        if (!m_attributes.Contains(PrimitiveFunction::AttributeNameCustomAttributes))
+        {
+            ResetCustomAttributes();
+        }
+        return m_attributes[PrimitiveFunction::AttributeNameCustomAttributes].Value<Dictionary>();
+    }
+
+    void Function::ResetCustomAttributes()
+    {
+        m_attributes[PrimitiveFunction::AttributeNameCustomAttributes] = Dictionary();
+    }
+
     FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands{};
@@ -1099,6 +1180,11 @@ namespace CNTK
     FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::StableSigmoid, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Atanh(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Atanh, operand, Dictionary(), name);
     }
 
     FunctionPtr Tanh(const Variable& operand, const std::wstring& name)
@@ -1129,6 +1215,11 @@ namespace CNTK
     FunctionPtr Cosh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Cosh, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Asinh(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Asinh, operand, Dictionary(), name);
     }
 
     FunctionPtr Sinh(const Variable& operand, const std::wstring& name)
@@ -1434,9 +1525,49 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Reshape, operand, std::move(additionalProperties), name);
     }
 
+    std::vector<Variable> AutoBroadcastSequence(PrimitiveOpType op, const Variable& left, const Variable& right)
+    {
+        auto left_axis = left.DynamicAxes();
+        int left_num_seqs = (int)std::count_if(left_axis.begin(), left_axis.end(), [](Axis a) {return a.IsSequenceAxis(); });
+        auto right_axis = right.DynamicAxes();
+        int right_num_seqs = (int)std::count_if(right_axis.begin(), right_axis.end(), [](Axis a) {return a.IsSequenceAxis(); });
+
+        vector<Variable> result;
+        if ( op != PrimitiveOpType::PastValue &&
+             op != PrimitiveOpType::FutureValue &&
+             op != PrimitiveOpType::ToSequence &&
+             op != PrimitiveOpType::ToSequenceLike &&
+             left_axis.size() > 0 &&
+             right_axis.size() > 0 &&
+            (left_num_seqs + right_num_seqs) == 1)
+        {
+            if (left_num_seqs == 1)
+            {
+                auto new_right = CNTK::Sequence::BroadcastAs(right, left);
+                result.push_back(left);
+                result.push_back(new_right);
+            }
+            else
+            {
+                auto new_left = CNTK::Sequence::BroadcastAs(left, right);
+                result.push_back(new_left);
+                result.push_back(right);
+
+            }
+        }
+        else
+        {
+            result.push_back(left);
+            result.push_back(right);
+        }
+
+        return result;
+
+    }
+
     FunctionPtr BinaryOp(PrimitiveOpType op, const Variable& leftOperand, const Variable& rightOperand, Dictionary&& opConfig, const std::wstring& name)
     {
-        std::vector<Variable> operands = { leftOperand, rightOperand };
+        std::vector<Variable> operands = AutoBroadcastSequence(op, leftOperand, rightOperand);
         return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
@@ -2025,6 +2156,7 @@ namespace CNTK
                                    double blendTimeConstant,
                                    double epsilon,
                                    bool useCuDNNEngine,
+                                   bool disableRegularization,
                                    const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -2033,6 +2165,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameBlendTimeConstant] = blendTimeConstant;
         additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
         additionalProperties[PrimitiveFunction::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
+        additionalProperties[PrimitiveFunction::AttributeNameDisableRegularization] = disableRegularization;
 
         std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
