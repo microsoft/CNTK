@@ -199,7 +199,16 @@ namespace marian
                 };
                 break;
             case AlgorithmType::Adam:
-                CNTK::LogicError("Optimizer<Adam> not implemented yet");
+                m_LazyCreateLearner = [=](const Ptr<ExpressionGraph>& graph)
+                {
+                    return CNTK::AdamLearner(graph->m_allParameters,
+                                            CNTK::LearningRateSchedule(std::vector<double>{ eta }, CNTK::TrainingParameterSchedule<float>::FullDataSweep, 1),
+                                            CNTK::MomentumSchedule(std::vector<double>{ 0.9 }, CNTK::TrainingParameterSchedule<float>::FullDataSweep, 1),
+                                            /*unitGain=*/true,
+                                            CNTK::MomentumSchedule(std::vector<double>{ 0.999 }, CNTK::TrainingParameterSchedule<float>::FullDataSweep, 1),
+                                            /*epsilon=*/1e-8, /*adamax=*/false/*
+                                            AdditionalLearningOptions additionalOptions = AdditionalLearningOptions()*/);
+                };
                 break;
             }
         }
