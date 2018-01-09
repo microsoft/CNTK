@@ -109,8 +109,8 @@ int iris_main()
     graph->reserveWorkspaceMB(128);
 
     // Choose optimizer (Sgd, Adagrad, Adam) and initial learning rate
-    //auto opt = Optimizer<Adam>(0.005);
-    auto opt = Optimizer<Sgd>(0.005*20); // [fseide] using default SGD to minimize differences
+    auto opt = Optimizer<Adam>(0.005);
+    //auto opt = Optimizer<Sgd>(0.005*20); // [fseide] using default SGD to minimize differences
 
     for(size_t epoch = 1; epoch <= MAX_EPOCHS; ++epoch) {
       // Shuffle data in each epochs
