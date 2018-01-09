@@ -414,6 +414,8 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         raise NotImplementedError("Convolution: sharing option currently must be True")
     if (groups <= 0):
         raise ValueError("Convolution: groups must be strictly positive, i.e. groups > 0.")
+    if (groups > 1):
+        raise ValueError("Convolution: groups > 1, is not currently supported by Convolution layer. For group convolution with groups > 1, use CNTK's low-level convolution node (cntk.convolution).")
     # The convolution() function currently requires exactly one input and one output depth axis.
     # So we emulate those dimensions on this level. TODO: Once this is suppored by the C++ code, remove the emulation here.
     emulating_output_depth = num_filters == ()
