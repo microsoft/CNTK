@@ -120,6 +120,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(StableSigmoidNode))                    return New<StableSigmoidNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(StochasticBinaryNode))                 return New<StochasticBinaryNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(AnnealTanhNode))                       return New<AnnealTanhNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SinNode))                              return New<SinNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SinhNode))                             return New<SinhNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SliceNode))                            return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
@@ -631,6 +632,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Atanh(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<AtanhNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::AnnealTanh(const ComputationNodePtr a, float annealRate, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<AnnealTanhNode<ElemType>>(net.GetDeviceId(), nodeName, annealRate), { a });
 }
 
 template <class ElemType>

@@ -773,7 +773,69 @@ protected:
 template class StochasticBinaryNode<float>;
 template class StochasticBinaryNode<double>;
 
+// -----------------------------------------------------------------------
+// AnnealTanhNode (tensor)
+// -----------------------------------------------------------------------
+// This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
+// The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
+// not been clipped, and 0 if the value has been clipped.
 
+template <class ElemType>
+class AnnealTanhNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"AnnealTanh"; }
+public:
+    AnnealTanhNode(DEVICEID_TYPE deviceId, const wstring& name, const float annealRate = 1.0)
+        : Base(deviceId, name), m_annealRate(annealRate)
+    {
+    }
+    AnnealTanhNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : AnnealTanhNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"annealRate"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        m_annealSlope *= m_annealRate;
+        Matrix<ElemType> result = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+        Matrix<ElemType>::AnnealTanhForward(inputm, result, m_annealSlope);
+    }
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //NOT_IMPLEMENTED;
+        Matrix<ElemType> gradient = GradientFor(fr);
+        Matrix<ElemType> output = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+        Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
+        Matrix<ElemType>::AnnealTanhBackward(inputm, output, gradient, inputGrad, m_annealSlope);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_annealRate;
+        fstream << m_annealSlope;
+    }
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_annealRate;
+        fstream >> m_annealSlope;
+    }
+
+protected:
+    float m_annealRate = 1.0;
+    float m_annealSlope = 1.0;
+};
+template class AnnealTanhNode<float>;
+template class AnnealTanhNode<double>;
 
 // -----------------------------------------------------------------------
 // ElementMax (input0, input1, ...)

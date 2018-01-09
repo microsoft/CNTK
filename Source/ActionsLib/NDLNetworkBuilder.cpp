@@ -249,6 +249,18 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.StochasticBinary(NULL, t_neuronST, t_RFAdjusted, t_passThrough, t_annealRate, name);
         } 
     }
+    else if (cnNodeType == OperationNameOf(AnnealTanhNode))
+    {
+        if (parameter.size() != 1)
+            RuntimeError("AnnealTanh Usage: AnnealTanh(NodeName, annealRate=1.0).");
+        nodeParamCount = 1;
+        nodeParamStart = 0;
+        if (pass == ndlPassInitial)
+        {
+            float t_annealRate = node->GetOptionalParameter("annealRate", "1.0");
+            nodePtr = builder.AnnealTanh(NULL, t_annealRate, name);
+        }
+    }
     else if (cnNodeType == OperationNameOf(DiagonalNode))
     {
         if (parameter.size() != 1)

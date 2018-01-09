@@ -592,6 +592,8 @@ public:
     // stochastic binary node
     static void StochasticBinaryForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope);
     static void StochasticBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope);
+    static void AnnealTanhForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope);
+    static void AnnealTanhBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const float annealSlope);
 
     // assign the element wise max of matrix a and matrix b to matrix a
     static void DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, const size_t InputIndex, const Matrix<ElemType>& nWords);
