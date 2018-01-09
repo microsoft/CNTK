@@ -2,6 +2,9 @@
 
 #pragma once
 
+#ifndef __MARIAN_CNTK
+#define __MARIAN_CNTK
+
 #include "CNTKLibrary.h"
 #include "Models.h" // for the helper functions
 #include "Layers.h" // for some functions missing in main CNTK, e.g. LogSoftmax
@@ -76,7 +79,6 @@ namespace marian
             return CNTK::Dictionary( // initializers are just dictionaries
                 L"from_vector",
                 // wrap the CPU-side buffer in an NDArrayView object (by pointer, no data is copied)
-                // TODO: MUST copy it, since DeepClone() is async (??)
                 CNTK::NDArrayView(CNTK::DataType::Float, CNTK::NDShape{ inputData.size() },
                                   (void*)inputData.data(), inputData.size() * sizeof(float),
                                   CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
@@ -86,6 +88,11 @@ namespace marian
         CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
         static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
     }
+
+    namespace Config
+    {
+        __declspec(selectany) size_t seed;
+    };
 
     static CNTK::ParameterInitializer init; // to allow to say init=...
     static int axis;
@@ -213,3 +220,5 @@ namespace marian
         return New<OptimizerWrapper>(eta, algorithmType);
     }
 }
+
+#endif // __MARIAN_CNTK

@@ -152,7 +152,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="helper.h" />
     <ClCompile Include="iris.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MT.cpp" />
@@ -160,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CNTKLibraryHelpers.h" />
+    <ClInclude Include="helper.h" />
     <ClInclude Include="Layers.h" />
     <ClInclude Include="marian-cntk.h" />
     <ClInclude Include="Models.h" />

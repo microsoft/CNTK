@@ -29,9 +29,6 @@
     <ClCompile Include="iris.cpp">
       <Filter>Marian\IRIS Example</Filter>
     </ClCompile>
-    <ClCompile Include="helper.h">
-      <Filter>Marian\IRIS Example</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Layers.h">
@@ -48,6 +45,9 @@
     </ClInclude>
     <ClInclude Include="marian-cntk.h">
       <Filter>Marian</Filter>
+    </ClInclude>
+    <ClInclude Include="helper.h">
+      <Filter>Marian\IRIS Example</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

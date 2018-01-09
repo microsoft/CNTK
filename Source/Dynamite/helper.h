@@ -1,3 +1,5 @@
+#include "marian-cntk.h"
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -45,9 +47,8 @@ static void shuffleData(std::vector<float>& features, std::vector<float>& labels
     indeces.push_back(i);
 
   // Shuffle indeces
-  //std::srand(marian::Config::seed);
-  std::srand(0);
-  //std::random_shuffle(indeces.begin(), indeces.end());
+  //std::mt19937 g(marian::Config::seed);
+  //std::shuffle(indeces.begin(), indeces.end(), g);
 
   std::vector<float> featuresTemp;
   featuresTemp.reserve(features.size());

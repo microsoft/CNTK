@@ -37,9 +37,9 @@ Expr buildIrisClassifier(Ptr<ExpressionGraph> graph,
       0.03341367f,  -0.01632787f,  -0.02254462f,   0.09251592f,  -0.08494499f  }));
   auto b1 = graph->param("b1", {1, 5}, init = inits::zeros);
   auto h = tanh(affine(x, W1, b1));
-  W1->dump();
-  b1->dump();
-  h->dump();
+  //W1->dump();
+  //b1->dump();
+  //h->dump();
 
   // Define the output layer
   //auto W2 = graph->param("W2", {5, NUM_LABELS}, init = inits::uniform());
@@ -51,9 +51,9 @@ Expr buildIrisClassifier(Ptr<ExpressionGraph> graph,
         -0.00225300f,  -0.06619012f,  -0.05738446f  }));
   auto b2 = graph->param("b2", {1, NUM_LABELS}, init = inits::zeros);
   auto o = affine(h, W2, b2);
-  W2->dump();
-  b2->dump();
-  o->dump();
+  //W2->dump();
+  //b2->dump();
+  //o->dump();
 
   if(train) {
     auto y = graph->constant({N}, init = inits::from_vector(outputData));
@@ -80,7 +80,7 @@ int iris_main()
   //createLoggers();
 
   // Disable randomness by setting a fixed seed for random number generator
-  //Config::seed = 123456;
+  Config::seed = 123456;
 
   // Get path do data set
   std::string dataPath
