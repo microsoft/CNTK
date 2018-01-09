@@ -2713,6 +2713,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
 def gather(reference, indices, axis=None, name=''):
     '''
     Retrieves the elements of indices in the tensor reference.
+    Let indices_shape = indices.dynamic_axes + indices.shape, then the output shape is indices_shape + reference.shape[1:].
 
     Example:
         >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
