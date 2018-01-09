@@ -45,6 +45,7 @@ namespace marian
         {
             const auto& viewShape = x.Shape();
             auto rank = viewShape.Rank();
+            // TODO: negative axes
             if (axisIndex >= rank)
                 CNTK::InvalidArgument("marian::ToCNTKAxis: axis out of range");
             return CNTK::Axis(rank - 1 - (size_t)axisIndex);
@@ -75,14 +76,15 @@ namespace marian
             return CNTK::Dictionary( // initializers are just dictionaries
                 L"from_vector",
                 // wrap the CPU-side buffer in an NDArrayView object (by pointer, no data is copied)
+                // TODO: MUST copy it, since DeepClone() is async (??)
                 CNTK::NDArrayView(CNTK::DataType::Float, CNTK::NDShape{ inputData.size() },
                                   (void*)inputData.data(), inputData.size() * sizeof(float),
                                   CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
             );
         }
         // TODO: check that the scaling is the same
-        CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(1.0); }
-        static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer();
+        CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
+        static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
     }
 
     static CNTK::ParameterInitializer init; // to allow to say init=...
@@ -123,11 +125,28 @@ namespace marian
             auto iter = m_allParametersMap.find(name);
             if (iter == m_allParametersMap.end()) // case 1: create a new parameter
             {
-                auto p = CNTK::Parameter(viewShape, CNTK::DataType::Float, init, Dynamite::CurrentDevice(), std::wstring(name.begin(), name.end())); // copy it (possibly to a different device)
-                m_allParametersMap.insert(std::make_pair(name, p));
-                m_allParameters.push_back(p);
-                m_allGradients[p] = nullptr;
-                return p;
+                if (init.Contains(L"from_vector")) // our fake 
+                {
+                    // BUGBUG: This keeps a reference to the vector, not a copy, which only works inside a single expression, if at all.
+                    const auto& initData = init[L"from_vector"].Value<CNTK::NDArrayView>();
+                    if (initData.Shape().TotalSize() != viewShape.TotalSize())
+                        CNTK::InvalidArgument("marian::constant: vector size does not match viewShape");
+                    // copy the supplied CPU buffer, which may be a temporary, to a GPU-side NDArrayView
+                    auto initVal = initData.AsShape(viewShape)->DeepClone(Dynamite::CurrentDevice(), /*readOnly=*/false);
+                    auto p = CNTK::Parameter(initVal);
+                    m_allParametersMap.insert(std::make_pair(name, p));
+                    m_allParameters.push_back(p);
+                    m_allGradients[p] = nullptr;
+                    return p;
+                }
+                else
+                {
+                    auto p = CNTK::Parameter(viewShape, CNTK::DataType::Float, init, Dynamite::CurrentDevice(), std::wstring(name.begin(), name.end())); // copy it (possibly to a different device)
+                    m_allParametersMap.insert(std::make_pair(name, p));
+                    m_allParameters.push_back(p);
+                    m_allGradients[p] = nullptr;
+                    return p;
+                }
             }
             else  // case 2: retrieve an existing parameter
             {

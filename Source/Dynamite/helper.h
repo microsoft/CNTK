@@ -47,7 +47,7 @@ static void shuffleData(std::vector<float>& features, std::vector<float>& labels
   // Shuffle indeces
   //std::srand(marian::Config::seed);
   std::srand(0);
-  std::random_shuffle(indeces.begin(), indeces.end());
+  //std::random_shuffle(indeces.begin(), indeces.end());
 
   std::vector<float> featuresTemp;
   featuresTemp.reserve(features.size());
