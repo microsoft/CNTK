@@ -91,6 +91,7 @@ namespace marian
 
     namespace Config
     {
+        // TODO: need an equivalent for gcc
         __declspec(selectany) size_t seed;
     };
 
