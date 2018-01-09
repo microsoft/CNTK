@@ -651,9 +651,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
     double htktimetoframe = 100000.0; // default is 10ms
     // std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
-    std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> labelsmulti;
-    /* guoye: start */
-    std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>> wordlabelsmulti;
+        /* guoye: start */
+        // std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> labelsmulti;
+    std::vector<std::map<std::wstring, std::pair<std::vector<msra::asr::htkmlfentry>, std::vector<unsigned int>>>> labelsmulti;
+    // std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>> wordlabelsmulti;
 
     /* debug to clean wordidmap */
     // wordidmap.clear();
@@ -668,7 +669,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string, size_t>*) NULL, htktimetoframe); // label MLF
         */
         msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>
-            labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, (map<string, size_t>*) NULL, htktimetoframe); // label MLF
+        // msra::asr::htkmlfreader<msra::asr::htkmlfentry>
+            labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, htktimetoframe); // label MLF
+        // labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, (map<string, size_t>*) NULL, htktimetoframe); // label MLF
         /* guoye: end */
         // get the temp file name for the page file
 
@@ -677,11 +680,11 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
                       "Type 'msra::asr::htkmlfreader' should be move constructible!");
 
         /* guoye: start */
-        map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
+        // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
         // guoye debug purpose
         fprintf(stderr, "debug to set wordlabels to empty");
         // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels;
-        wordlabelsmulti.push_back(std::move(wordlabels));
+        // wordlabelsmulti.push_back(std::move(wordlabels));
         /* guoye: end */
         labelsmulti.push_back(std::move(labels));
     }
@@ -697,7 +700,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         bool useMersenneTwisterRand = readerConfig(L"useMersenneTwisterRand", false);
         /* guoye: start */
         // m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
-        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, wordlabelsmulti, specialwordids, m_featDims, m_labelDims,
+        // m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, wordlabelsmulti, specialwordids, m_featDims, m_labelDims,
+        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti,  specialwordids, m_featDims, m_labelDims,
         /* guoye: end */
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 

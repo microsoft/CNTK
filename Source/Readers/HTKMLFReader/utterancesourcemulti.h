@@ -961,8 +961,10 @@ public:
     /* guoye: start */
 
     // minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels, 
-    minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
-    const std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>>& wordlabels, std::set<int>& specialwordids,
+    // minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
+    minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::pair<std::vector<msra::asr::htkmlfentry>, std::vector<unsigned int>>>> &labels,
+    // const std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>>& wordlabels, 
+       std::set<int>& specialwordids,
     /* guoye: end */
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                                   const latticesource &lattices, const std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt,
@@ -1184,7 +1186,10 @@ public:
                             // first verify that all the label files have the proper duration
                             foreach_index (j, labels)
                             {
-                                const auto &labseq = labels[j].find(key)->second;
+                                /* guoye: start */
+                                // const auto &labseq = labels[j].find(key)->second;
+                                const auto &labseq = labels[j].find(key)->second.first;
+                                /* guoye: end */
                                 // check if durations match; skip if not
                                 size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size() - 1].firstframe + labseq[labseq.size() - 1].numframes);
                                 if (labframes != uttframes)
@@ -1205,7 +1210,12 @@ public:
                                 // then parse each mlf if the durations are consistent
                                 foreach_index (j, labels)
                                 {
-                                    const auto &labseq = labels[j].find(key)->second;
+                                    /* guoye: start */
+                                    // const auto &labseq = labels[j].find(key)->second;
+                                    const auto & seqs = labels[j].find(key)->second;
+                                    // const auto &labseq = labels[j].find(key)->second.first;
+                                    const auto &labseq = seqs.first;
+                                    /* guoye: end */
                                     // expand classid sequence into flat array
                                     foreach_index (i2, labseq)
                                     {
@@ -1253,12 +1263,27 @@ public:
                                         LogicError("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %ls", key.c_str());
                                     assert(labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size() + 1);
                                     /* guoye: end */
+
+                                    const auto &wordlabseq = seqs.second;
+                                   
+                                    if (j == 0)
+                                        utterance.setnumwords(short(wordlabseq.size()));
+
+                                    foreach_index(i2, wordlabseq)
+                                    {
+                                        const auto &e = wordlabseq[i2];
+                                        if (e != (WORDIDTYPE)e)
+                                            RuntimeError("WORDIDTYPE has too few bits");
+
+                                        wordids[j]->push_back(e);
+                                    }
+                                    wordids[j]->push_back((WORDIDTYPE)-1);      // append a boundary marker marker for checking
                                 }
 
                                 /* guoye: start */
 
                                 /* mask for guoye debug */
-                                /* 
+                                /*
                                 foreach_index(j, wordlabels)
                                 {
                                     const auto &wordlabseq = wordlabels[j].find(key)->second.words;
@@ -1279,7 +1304,7 @@ public:
                                     
                                 }
                                 */
-                                wordlabels;
+                               
                                 /* guoye: end */
                                 utteranceset.push_back(std::move(utterance));
 
