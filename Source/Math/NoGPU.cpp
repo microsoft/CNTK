@@ -2063,6 +2063,15 @@ void GPUMatrix<ElemType>::AnnealTanhBackward(const GPUMatrix<ElemType>& a, const
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::AnnealBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope) {
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AnnealBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope) {
+}
+
+
+template <class ElemType>
 void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t InputIndex, const GPUMatrix<ElemType>& nWords)
 {
 }

@@ -709,6 +709,7 @@ __global__ void _annealtanhForward(const ElemType* a, ElemType* b, CUDA_LONG N, 
         return;
     b[id] = tanh_(a[id] * annealSlope);
 }
+
 template <class ElemType>
 __global__ void _annealtanhBackward(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N, const float annealSlope) {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -717,6 +718,25 @@ __global__ void _annealtanhBackward(const ElemType* a, const ElemType* output, E
     ElemType tanhx = tanh_(a[id] * annealSlope);
     ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
 }
+
+template <class ElemType>
+__global__ void _annealbinaryForward(const ElemType* a, ElemType* b, CUDA_LONG N, const float annealSlope) {
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    b[id] = a[id] <= 0 ? -1 : 1;
+    //b[id] = tanh_(a[id] * annealSlope);
+}
+
+template <class ElemType>
+__global__ void _annealbinaryBackward(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N, const float annealSlope) {
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    ElemType tanhx = tanh_(a[id] * annealSlope);
+    ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
+}
+
 template <class ElemType>
 __global__ void _doElementMaxOf(
     ElemType *a,

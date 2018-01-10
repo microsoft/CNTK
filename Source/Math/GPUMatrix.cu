@@ -3693,6 +3693,39 @@ void GPUMatrix<ElemType>::AnnealTanhBackward(const GPUMatrix<ElemType>& a, const
     _annealtanhBackward<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::AnnealBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope) {
+    a.PrepareDevice();
+    if (a.GetComputeDeviceId() != b.GetComputeDeviceId()) {// different GPUs
+        InvalidArgument("Matrices must be on the same GPU");    }
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols()) {
+        RuntimeError("Matrices should be in the same shape");    }
+    size_t m = a.GetNumRows();
+    size_t n = a.GetNumCols();
+    CUDA_LONG N = (CUDA_LONG)(m*n);
+    size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _annealbinaryForward<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), b.Data(), N, annealSlope);
+}
+template <class ElemType>
+void GPUMatrix<ElemType>::AnnealBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope) {
+    a.PrepareDevice();
+    if (a.GetComputeDeviceId() != outgrad.GetComputeDeviceId()) {// different GPUs
+        InvalidArgument("Matrices must be on the same GPU");    }
+    if (a.GetNumRows() != outgrad.GetNumRows() || a.GetNumCols() != outgrad.GetNumCols()) {
+        RuntimeError("Matrices should be in the same shape");
+    }
+
+    if (annealSlope < 0.0) {        RuntimeError("Anneal Rate should be a positive number.");    }
+
+    size_t m = a.GetNumRows();
+    size_t n = a.GetNumCols();
+    CUDA_LONG N = (CUDA_LONG)(m*n);
+    size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _annealbinaryBackward<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
+}
+
 #pragma region Static BLAS Functions
 // float/double overloads of cublasSgemm()/cublasDgemm()
 static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float* A, int lda, const float* B, int ldb, const float* beta, float* C, int ldc)

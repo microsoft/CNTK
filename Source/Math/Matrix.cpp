@@ -5030,6 +5030,19 @@ void Matrix<ElemType>::AnnealTanhBackward(const Matrix<ElemType>& a, const Matri
     else { GPUMatrix<ElemType>::AnnealTanhBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix, annealSlope); }
 }
 
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AnnealBinaryForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope) {
+    if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
+    else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
+    else { GPUMatrix<ElemType>::AnnealBinaryForward(*a.m_GPUMatrix, *b.m_GPUMatrix, annealSlope); }
+}
+template <class ElemType>
+void Matrix<ElemType>::AnnealBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const float annealSlope) {
+    if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
+    else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
+    else { GPUMatrix<ElemType>::AnnealBinaryBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix, annealSlope); }
+}
+
 // assign the element wise max of matrix a and matrix b to matrix a
 template <class ElemType>
 /*static*/ void Matrix<ElemType>::DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, const size_t InputIndex, const Matrix<ElemType>& nWords)
