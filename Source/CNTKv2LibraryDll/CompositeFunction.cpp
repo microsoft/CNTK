@@ -1016,7 +1016,7 @@ namespace CNTK
                     auto phonePath = functionConfig[PrimitiveFunction::AttributeNamePhonePath].Value<wstring>();
                     auto stateListPath = functionConfig[PrimitiveFunction::AttributeNameStateListPath].Value<wstring>();
                     auto transProbPath =  functionConfig[PrimitiveFunction::AttributeNameTransProbPath].Value<wstring>();
-                    auto frameDropThresh = functionConfig[PrimitiveFunction::AttributeNameTransProbPath].Value<float>();
+                    auto frameDropThresh = functionConfig[PrimitiveFunction::AttributeNameFrameDropThresh].Value<float>();
                     auto doReferenceAlign = functionConfig[PrimitiveFunction::AttributeNameDoReferenceAlign].Value<bool>();
                     auto seqGammarUsesMBR = functionConfig[PrimitiveFunction::AttributeNameSeqGammarUsesMBR].Value<bool>();
                     auto seqGammarAMF = functionConfig[PrimitiveFunction::AttributeNameSeqGammarAMF].Value<float>();
