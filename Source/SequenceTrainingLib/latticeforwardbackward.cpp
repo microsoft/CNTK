@@ -572,7 +572,7 @@ double lattice::forwardbackwardlattice(const std::vector<float> &edgeacscores, p
         const double totalfwacc = logaccalphas.back();
         if (islogzero(totalfwscore))
         {
-            fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+            fprintf(stderr, "forwardbackward: line 575 WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
             return LOGZERO; // failed, do not use resulting matrix
         }
 
@@ -632,7 +632,7 @@ double lattice::forwardbackwardlattice(const std::vector<float> &edgeacscores, p
     const double totalfwscore = logalphas.back();
     if (islogzero(totalfwscore))
     {
-        fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+        fprintf(stderr, "forwardbackward: WARNING: line 635, no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
         return LOGZERO; // failed, do not use resulting matrix
     }
 
@@ -724,7 +724,7 @@ double lattice::backwardlatticeEMBR(const std::vector<float> &edgeacscores, para
 
     if (islogzero(totalbwscore))
     {
-        fprintf(stderr, "backwardlatticeEMBR: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int)nodes.size(), (int)edges.size());
+        fprintf(stderr, "backwardlatticeEMBR: WARNING: line 727, no path found in lattice (%d nodes/%d edges)\n", (int)nodes.size(), (int)edges.size());
         return LOGZERO; // failed, do not use resulting matrix
     }
 
@@ -853,7 +853,7 @@ double lattice::bestpathlattice(const std::vector<float> &edgeacscores, std::vec
     const double totalfwscore = logalphas.back();
     if (islogzero(totalfwscore))
     {
-        fprintf(stderr, "bestpathlattice: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+        fprintf(stderr, "bestpathlattice: WARNING: line 856, no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
         return LOGZERO; // failed, do not use resulting matrix
     }
 
@@ -1914,7 +1914,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 #endif
     if (islogzero(totalfwscore))
     {
-        fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+        fprintf(stderr, "forwardbackward: WARNING: line 1917, no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
         return LOGZERO; // failed, do not use resulting matrix
     }
 
