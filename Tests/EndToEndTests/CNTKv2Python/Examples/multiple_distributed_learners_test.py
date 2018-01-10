@@ -58,8 +58,7 @@ if __name__=='__main__':
             if learner.total_number_of_samples_seen != expected_number_of_samples:
                 print("Completed with exception.")
                 raise ValueError("%d samples expected, got %d" % (expected_number_of_samples, learner.total_number_of_samples_seen))
-    avg = trainer.previous_minibatch_evaluation_average
-    print(avg)
+
     trainer.train_minibatch(arguments, outputs=[z_output])
     check_samples(dist_learners, 2)
 
