@@ -120,9 +120,9 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
             fprintf(stderr, "readwordidmap: reaching the end of line, with content = %s", buf);
             break;
         }
-        if (wordidmap.find(std::string(buf)) == wordidmap.end())
+        if (wordidmap.find(std::string(word)) == wordidmap.end())
         {
-            wordidmap.insert(pair<std::string, int>(string(buf),start_id++));
+            wordidmap.insert(pair<std::string, int>(string(word),start_id++));
         }
     }
 

@@ -352,15 +352,15 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 6 \n");
+       // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 6 \n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 7 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 7 \n");
         /* guoye: end */
         RequestMatrixFromPool(m_leftDivRight, matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 8 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 8 \n");
         /* guoye: end */
     }
 
@@ -454,15 +454,15 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
     /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 9 \n");
+       // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 9 \n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 10 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 10 \n");
         /* guoye: end */
         RequestMatrixFromPool(m_gradientOfL1Norm, matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 11 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 11 \n");
         /* guoye: end */
     }
 
@@ -2934,23 +2934,23 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 1 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 1 \n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 2 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 2 \n");
         /* guoye: end */
         RequestMatrixFromPool(m_dDataDummy, matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 3 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 3 \n");
         /* guoye: end */
         RequestMatrixFromPool(m_dScale, matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 4 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 4 \n");
         /* guoye: end */
         RequestMatrixFromPool(m_dBias, matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 5 \n");
+        // fprintf(stderr, "\n TrainingNodes.h: RequestMatricesBeforeBackprop: debug 5 \n");
         /* guoye: end */
     }
 

@@ -250,7 +250,7 @@ template <class CHAR, size_t n>
 CHAR* fgetline(FILE* f, CHAR(&buf)[n])
 {
     /* guoye: start */
-    fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
+    // fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
     return fgetline(f, buf, n);
     /* guoye: end */
 }

@@ -63,19 +63,19 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         /* guoye: start */
-        fprintf(stderr, "\n rnnnodes.h: RequestMatricesBeforeBackprop: debug 1 \n");
+        // fprintf(stderr, "\n rnnnodes.h: RequestMatricesBeforeBackprop: debug 1 \n");
         /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n rnnnodes.h: RequestMatricesBeforeBackprop: debug 2 \n");
+        // fprintf(stderr, "\n rnnnodes.h: RequestMatricesBeforeBackprop: debug 2 \n");
         /* guoye: end */
         RequestMatrixFromPool(m_transposedDInput, matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n rnnnodes.h: RequestMatricesBeforeBackprop: debug 3 \n");
+        // fprintf(stderr, "\n rnnnodes.h: RequestMatricesBeforeBackprop: debug 3 \n");
         /* guoye: end */
         RequestMatrixFromPool(m_transposedDOutput, matrixPool);
         /* guoye: start */
-        fprintf(stderr, "\n rnnnodes.h: RequestMatricesBeforeBackprop: debug 4 \n");
+        // fprintf(stderr, "\n rnnnodes.h: RequestMatricesBeforeBackprop: debug 4 \n");
         /* guoye: end */
     }
 

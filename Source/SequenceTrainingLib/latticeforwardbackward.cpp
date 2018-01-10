@@ -1894,7 +1894,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         if (EMBR)
         {
             //compute Beta only, 
-            fprintf(stderr, "\nforwardbackward: start backwardlatticeEMBR \n");
+            //fprintf(stderr, "\nforwardbackward: start backwardlatticeEMBR \n");
             totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetas, lmf, wp, amf);
             totalfwscore = totalbwscore; // to make the existing code happy
         }
@@ -1931,7 +1931,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     {
         std::vector<vector<size_t>> vt_paths;
         // Do path sampling
-        fprintf(stderr, "\n forwardbackward: start EMBRsamplepaths \n");
+        // fprintf(stderr, "\n forwardbackward: start EMBRsamplepaths \n");
         EMBRsamplepaths(edgelogbetas, logbetas, numPathsEMBR, vt_paths);
         
         vector<double> edge_weights(edges.size(), 0.0);
@@ -1944,7 +1944,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
 
         
-        fprintf(stderr, "\n forwardbackward: average WER for an utterance is %f, #words = %d \n", avg_wer, int(wids.size()));
+        // fprintf(stderr, "\n forwardbackward: average WER for an utterance is %f, #words = %d \n", avg_wer, int(wids.size()));
 
         return avg_wer;
     }
