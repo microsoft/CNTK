@@ -2145,9 +2145,11 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameDoReferenceAlign] = doReferenceAlign;
         additionalProperties[PrimitiveFunction::AttributeNameSeqGammarUsesMBR] = seqGammarUsesMBR;
         additionalProperties[PrimitiveFunction::AttributeNameSeqGammarAMF] = seqGammarAMF;
+        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarLMF] = seqGammarLMF;
         additionalProperties[PrimitiveFunction::AttributeNameSeqGammarBMMIFactor] = seqGammarBMMIFactor;
         additionalProperties[PrimitiveFunction::AttributeNameSeqGammarWordPen] = seqGammarWordPen;
         std::vector<Variable> operands = { labels, prediction, scaledLogLikelihood, lattice };
+
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::LatticeSequenceWithSoftmax, operands, std::move(additionalProperties), name), name);
     }
 
