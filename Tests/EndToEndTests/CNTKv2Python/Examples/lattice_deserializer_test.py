@@ -19,7 +19,13 @@ def test_lattice_deserializer(device_id):
         pytest.skip('test only runs on GPU')
     try_set_default_device(cntk_device(device_id))
 
-    data_dir = 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ
+    data_dir = ''
+    if 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ:
+        data_dir = os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY']
+    else:
+        print('CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY environment variable is not defined')
+
+    print(data_dir)
     data_dir = os.path.join(data_dir, "Speech", "AN4Corpus", "v0")
     os.chdir(data_dir)
     feature_dimension = 33
@@ -64,8 +70,6 @@ def test_lattice_deserializer(device_id):
 
     criteria = C.lattice_sequence_with_softmax(label, z, z, lattice, symListPath, phonePath, stateListPath, transProbPath)
     err = C.classification_error(label,z)
-    # Learning rate parameter schedule per sample:
-    # Use 0.01 for the first 3 epochs, followed by 0.001 for the remaining
     lr = C.learning_parameter_schedule_per_sample([(3, .01), (1,.001)])
     mm = C.momentum_schedule([(1000, 0.9), (0, 0.99)], mbsize)
     learner = C.momentum_sgd(z.parameters, lr, mm)
@@ -77,12 +81,10 @@ def test_lattice_deserializer(device_id):
 
     for epoch in range(max_epochs):
         for mb in range(mbs_per_epoch):
-    #        import pdb;pdb.set_trace()
             minibatch = train_data_reader.next_minibatch(mbsize, input_map = train_input_map)
             trainer.train_minibatch(minibatch)
             progress_printer.update_with_trainer(trainer, with_metric = True)
 
-        print('Trained on a total of ' + str(trainer.total_number_of_samples_seen) + ' frames')
         progress_printer.epoch_summary(with_metric = True)
 
     assert np.allclose(trainer.previous_minibatch_evaluation_average, 0.15064, atol=TOLERANCE_ABSOLUTE)
