@@ -19,8 +19,9 @@ def test_lattice_deserializer(device_id):
         pytest.skip('test only runs on GPU')
     try_set_default_device(cntk_device(device_id))
 
-    data_dir = r"D:\users\vadimma\cntk_tut_deprecated\CNTK\Tests\EndToEndTests\Speech\Data\AN4Corpus\v0"
-
+    data_dir = 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ
+    data_dir = os.path.join(data_dir, "Speech", "AN4Corpus", "v0")
+    os.chdir(data_dir)
     feature_dimension = 33
     feature = C.sequence.input_variable(feature_dimension)
 
