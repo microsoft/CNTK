@@ -161,7 +161,7 @@
     <ClInclude Include="CNTKLibraryHelpers.h" />
     <ClInclude Include="helper.h" />
     <ClInclude Include="Layers.h" />
-    <ClInclude Include="marian-cntk.h" />
+    <ClInclude Include="marian.h" />
     <ClInclude Include="Models.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
   </ItemGroup>

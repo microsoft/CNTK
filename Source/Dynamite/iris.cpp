@@ -2,7 +2,7 @@
 
 #include <boost/filesystem.hpp>
 
-#include "marian-cntk.h"
+#include "marian.h"
 #include "helper.h"
 
 using namespace marian;

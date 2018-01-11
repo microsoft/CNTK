@@ -15,6 +15,9 @@
     <Filter Include="Marian\IRIS Example">
       <UniqueIdentifier>{ebd327fb-f22a-4691-82a8-10deec4919ac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Marian\Include">
+      <UniqueIdentifier>{d5ebe776-85b0-4af5-b9e8-98b569ca1bc3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -43,11 +46,11 @@
     <ClInclude Include="Models.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="marian-cntk.h">
-      <Filter>Marian</Filter>
-    </ClInclude>
     <ClInclude Include="helper.h">
       <Filter>Marian\IRIS Example</Filter>
+    </ClInclude>
+    <ClInclude Include="marian.h">
+      <Filter>Marian\Include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

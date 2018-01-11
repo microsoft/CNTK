@@ -1,4 +1,4 @@
-#include "marian-cntk.h"
+#include "marian.h"
 
 #include <algorithm>
 #include <fstream>
