@@ -131,7 +131,6 @@ namespace marian
 
     namespace keywords // to allow to say init=... etc
     {
-        // note: this only works if the keyword is just passed on as a function argument, while the arg to TempRef is still alive
         namespace Internal
         {
             template<typename T> struct KeywordPassThrough
@@ -139,10 +138,13 @@ namespace marian
                 const T& operator=(const T& other) { return other; } // just pass on the ref
             };
         };
-        static Internal::KeywordPassThrough<CNTK::ParameterInitializer> init;
-        static Internal::KeywordPassThrough<int> axis;
-        static Internal::KeywordPassThrough<Expr> mask;
-        static Internal::KeywordPassThrough<bool> fixed;
+#pragma push_macro("DEFINE_KEYWORD")  
+#define DEFINE_KEYWORD(type, name) typedef type name##_k; static Internal::KeywordPassThrough<type> name
+        DEFINE_KEYWORD(CNTK::ParameterInitializer, init);
+        DEFINE_KEYWORD(int,                        axis);
+        DEFINE_KEYWORD(Expr,                       mask);
+        DEFINE_KEYWORD(bool,                       fixed);
+#pragma pop_macro("DEFINE_KEYWORD")  
     };
 
     namespace Config
@@ -501,11 +503,11 @@ namespace marian
     static inline Expr transpose(const Expr& a) { return CNTK::Transpose(a); }
     static inline Expr transpose(const Expr& a, const std::vector<int>& axes) { return CNTK::Transpose(a, mappers::ToCNTKAxes(a, axes)); }
 
-    static inline Expr concatenate(const std::vector<Expr>& concats, /*keywords::axis_k*/int ax = 0)
+    static inline Expr concatenate(const std::vector<Expr>& concats, keywords::axis_k ax = 0)
     {
         return CNTK::Splice(mappers::ToVariableVector(concats), mappers::ToCNTKAxis(concats.front(), ax));
     }
-    static inline Expr repeat(const Expr& a, size_t repeats, /*keywords::axis_k*/int ax = 0)
+    static inline Expr repeat(const Expr& a, size_t repeats, keywords::axis_k ax = 0)
     {
         // TODO: This is not efficient. We just need to broadcast into a new axis, then Reshape, but there is no CNTK op that allows tat.
         if (repeats == 1)
@@ -556,7 +558,7 @@ namespace marian
         return InternalOps::NotImplemented("select");
     }
 
-    static inline Expr sum(const Expr& a, /*keywords::axis_k*/int ax = 0) { return CNTK::ReduceSum(a, mappers::ToCNTKAxis(a, ax)); }
+    static inline Expr sum(const Expr& a, keywords::axis_k ax = 0) { return CNTK::ReduceSum(a, mappers::ToCNTKAxis(a, ax)); }
 
     static inline Expr softmax(const Expr& a) { return Dynamite::Softmax(a, CNTK::Axis(0)); }
     static inline Expr softmax(const Expr& a, Expr mask)
@@ -567,7 +569,7 @@ namespace marian
 
     static inline Expr logsoftmax(const Expr& x) { return Dynamite::LogSoftmax(x, CNTK::Axis(0), L"LogSoftmax(" + x.Name() + L",Axis(0))"); }
 
-    static inline Expr mean(const Expr& a, /*keywords::axis_k*/int ax = 0) { return CNTK::ReduceMean(a, mappers::ToCNTKAxis(a, ax)); }
+    static inline Expr mean(const Expr& a, keywords::axis_k ax = 0) { return CNTK::ReduceMean(a, mappers::ToCNTKAxis(a, ax)); }
 
     // o = unnormalized log prob; y = label as an index, not one-hot
     // o: (3,120); y: (120,)
@@ -580,9 +582,9 @@ namespace marian
 
     static inline Expr affine(const Expr& x, const Expr& W, const Expr& b) { Expr y = CNTK::Times(W, x) + b; return Alias(y, L"Times(" + W.Name() + L"," + x.Name() + L")+(" + b.Name() + L")"); }
 
-    static inline Expr scalar_product(const Expr& a, Expr b, /*keywords::axis_k*/int ax = 0) { return CNTK::InnerProduct(a, b, mappers::ToCNTKAxis(a, ax)); }
+    static inline Expr scalar_product(const Expr& a, Expr b, keywords::axis_k ax = 0) { return CNTK::InnerProduct(a, b, mappers::ToCNTKAxis(a, ax)); }
 
-    static inline Expr weighted_average(const Expr& in, Expr weights, /*keywords::axis_k*/int ax = 0)
+    static inline Expr weighted_average(const Expr& in, Expr weights, keywords::axis_k ax = 0)
     {
         Expr numer = CNTK::ReduceSum(in * weights, mappers::ToCNTKAxis(in, ax));
         Expr denom = CNTK::ReduceSum(     weights, mappers::ToCNTKAxis(in, ax));
