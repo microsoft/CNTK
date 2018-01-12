@@ -6,7 +6,8 @@
 #include <sstream>
 #include <vector>
 
-#include "common/logging.h"
+//#include "common/logging.h"
+#define ABORT_IF(c,m,a,b) if (c) CNTK::InvalidArgument(m); /* ignoring a and b for now */
 
 namespace marian {
 
@@ -106,6 +107,12 @@ struct Shape {
 
     auto end() -> decltype(shape_.end()) { return shape_.end(); }
     auto end() const -> decltype(shape_.end()) { return shape_.end(); }
+
+    auto rbegin() -> decltype(shape_.rbegin()) { return shape_.rbegin(); }
+    auto rbegin() const -> decltype(shape_.rbegin()) { return shape_.rbegin(); }
+
+    auto rend() -> decltype(shape_.rend()) { return shape_.rend(); }
+    auto rend() const -> decltype(shape_.rend()) { return shape_.rend(); }
 
     bool operator==(const Shape& other) const {
       return size() == other.size() && std::equal(begin(), end(), other.begin());

@@ -13,6 +13,8 @@
 #include <memory>
 #include <map>
 
+#include "shape.h"
+
 namespace marian
 {
     // -----------------------------------------------------------------------
@@ -23,6 +25,35 @@ namespace marian
     using Ptr = std::shared_ptr<T>;
     template <class T, typename... Args> Ptr<T> New(Args&&... args) { return Ptr<T>(new T(std::forward<Args>(args)...)); }
     template <class T> Ptr<T> New(Ptr<T> p) { return Ptr<T>(p); }
+
+    // -----------------------------------------------------------------------
+    // Shape
+    // -----------------------------------------------------------------------
+
+    class ShapeProxy // Expr->shape() returns this, which performs direct translation without copying
+    {
+        const CNTK::NDShape& m_viewShape;
+    public:
+        ShapeProxy(const CNTK::NDShape& viewShape) : m_viewShape(viewShape) {}
+        int operator[](int index) const // flips axis order, and interprets negative numbers
+        {
+            size_t rank = m_viewShape.Rank();
+            if (index < 0)
+                return m_viewShape[(size_t)(-(index + 1))];
+            else
+                return m_viewShape[rank - (size_t)(index + 1)];
+        }
+        const CNTK::NDShape& GetNDShape() const { return m_viewShape; }
+        operator Shape() const // assigning to an actual vector object
+        {
+            size_t rank = m_viewShape.Rank();
+            Shape shape; shape.resize(rank);
+            for (size_t i = 0; i < rank; i++)
+                shape.set(i, m_viewShape[rank - 1 - i]);
+            return shape;
+        }
+        int elements() const { return (int)m_viewShape.TotalSize(); }
+    };
 
     // -----------------------------------------------------------------------
     // Expr (<=> CNTK::Variable)
@@ -41,6 +72,7 @@ namespace marian
         float scalar() const { return val()->AsScalar<float>(); }
         // Marian accesses members by arrow, not dot. This is a bit of a hack.
         Expr* operator->() { return this; }
+        ShapeProxy shape() const { return Shape(); }
         void dump() const { Value()->LogToFile(Name()); }
     };
 
@@ -48,7 +80,6 @@ namespace marian
     // helpers for mapping stuff to and from CNTK
     // -----------------------------------------------------------------------
 
-    typedef std::vector<int> Shape; // TODO: We could use Marian's Shape class directly
     namespace mappers
     {
         static inline CNTK::NDShape ToNDShape(const Shape& shape)
@@ -88,6 +119,7 @@ namespace marian
     {
         static CNTK::ParameterInitializer init;
         static int axis;
+        static Expr mask(CNTK::Variable);
     };
 
     namespace Config
@@ -117,9 +149,8 @@ namespace marian
 
         // this is not efficient, but all we can do presently
         static inline Expr Scalar(float x) { return CNTK::Constant::Scalar(CNTK::DataType::Float, x, Dynamite::CurrentDevice()); }
-        static inline Expr Constant(const Shape& npShape, const CNTK::ParameterInitializer& init, bool isVolatile = false)
+        static inline Expr Constant(const CNTK::NDShape& viewShape, const CNTK::ParameterInitializer& init, bool isVolatile = false)
         {
-            auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
             if (init.Contains(L"from_vector"))
             {
                 // BUGBUG: This keeps a reference to the vector, not a copy, which only works inside a single expression, if at all.
@@ -131,6 +162,11 @@ namespace marian
             }
             CNTK::InvalidArgument("BUGBUG: no public Constant() from ParameterInitializer?");
         }
+        static inline Expr Constant(const Shape& npShape, const CNTK::ParameterInitializer& init, bool isVolatile = false)
+        {
+            auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
+            return Constant(viewShape, init, isVolatile);
+        }
         CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<float>& inputData)
         {
             return CNTK::Dictionary( // initializers are just dictionaries
@@ -141,6 +177,21 @@ namespace marian
                     CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
             );
         }
+        std::vector<float> DropoutMask(size_t n, float prob)
+        {
+            // PERF BUGBUG: For now, we determine the dropout mask on the CPU. Instead, we should get the rand op to work under Dynamite.
+            static int seed = 1;
+            srand(seed++);
+            float preScale = 1 / (1 - prob);
+            float RAND_MAXxProb = prob * RAND_MAX;
+            std::vector<float> mask(CNTK::Transform(CNTK::NumericRangeSpan<size_t>(n), [&](size_t)
+            {
+                return preScale * (rand() < RAND_MAXxProb);
+            }));
+            return mask;
+        }
+        Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+        Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
     };
 
     static inline Expr operator-(const Expr& a) { return CNTK::Negate(a); }
@@ -215,7 +266,13 @@ namespace marian
     {
         return CNTK::Splice(mappers::ToVariableVector(concats), mappers::ToCNTKAxis(concats.front(), ax));
     }
-    static inline Expr repeat(const Expr& a, size_t repeats, /*keywords::axis_k*/int ax = 0);
+    static inline Expr repeat(const Expr& a, size_t repeats, /*keywords::axis_k*/int ax = 0)
+    {
+        // TODO: This is not efficient. We just need to broadcast into a new axis, then Reshape, but there is no CNTK op that allows tat.
+        if (repeats == 1)
+            return a;
+        return concatenate(std::vector<Expr>(repeats, a), ax);
+    }
 
     static inline Expr reshape(const Expr& a, Shape ndShape) { return CNTK::Reshape(a, mappers::ToNDShape(ndShape)); }
 
@@ -248,7 +305,7 @@ namespace marian
             CNTK::InvalidArgument("rows: data must be a matrix");
         size_t numClasses = viewShape.Dimensions().front();
         std::vector<float> indicesFloat(CNTK::Transform(indices, [](size_t index) { return (float)index; }));
-        auto indicesVar = InternalOps::Constant({ (int)indices.size() }, InternalOps::WrappedVectorInitializer(indicesFloat));
+        auto indicesVar = InternalOps::Constant(CNTK::NDShape{ indices.size() }, InternalOps::WrappedVectorInitializer(indicesFloat));
         auto indicesOneHot = CNTK::OneHotOp(indicesVar, numClasses, /*outputSparse=*/true, CNTK::Axis(0));
         return CNTK::Times(a, indicesOneHot);
     }
@@ -381,6 +438,7 @@ namespace marian
         // TODO: check that the scaling is the same
         static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
         static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
+        static CNTK::ParameterInitializer ones  = CNTK::ConstantInitializer(1);
     }
 
     // -----------------------------------------------------------------------
@@ -439,6 +497,8 @@ namespace marian
                 return p;
             }
         }
+        Expr dropout(float prob, const Shape& shape)      { return InternalOps::DropoutMask(prob, shape); }
+        Expr dropout(float prob, const ShapeProxy& shape) { return InternalOps::DropoutMask(prob, shape); }
         // forward/backward
         void forward() { }
         void forwardNext() { }
