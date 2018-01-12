@@ -15,10 +15,18 @@
 
 namespace marian
 {
+    // -----------------------------------------------------------------------
+    // basic types (Ptr, New)
+    // -----------------------------------------------------------------------
+
     template<typename T>
     using Ptr = std::shared_ptr<T>;
     template <class T, typename... Args> Ptr<T> New(Args&&... args) { return Ptr<T>(new T(std::forward<Args>(args)...)); }
     template <class T> Ptr<T> New(Ptr<T> p) { return Ptr<T>(p); }
+
+    // -----------------------------------------------------------------------
+    // Expr (<=> CNTK::Variable)
+    // -----------------------------------------------------------------------
 
     class Expr : public CNTK::Variable
     {
@@ -26,6 +34,7 @@ namespace marian
     public:
         Expr(const CNTK::Variable& v) : Base(v) { }
         Expr(CNTK::Variable&& v) : Base(std::move(v)) { }
+        Expr(const CNTK::FunctionPtr& f) : Base(f) { }
         // ...assignments
         //std::cout << "Epoch: " << epoch << " Cost: " << cost->scalar()
         CNTK::NDArrayViewPtr val() const { return Value(); }
@@ -35,16 +44,19 @@ namespace marian
         void dump() const { Value()->LogToFile(Name()); }
     };
 
+    // -----------------------------------------------------------------------
     // helpers for mapping stuff to and from CNTK
+    // -----------------------------------------------------------------------
+
     typedef std::vector<int> Shape; // TODO: We could use Marian's Shape class directly
     namespace mappers
     {
-        CNTK::NDShape ToNDShape(const Shape& shape)
+        static inline CNTK::NDShape ToNDShape(const Shape& shape)
         {
             // order of axes is reverse in Marian
             return CNTK::NDShape(shape.rbegin(), shape.rend());
         }
-        CNTK::Axis ToCNTKAxis(const Expr& x, int axisIndex)
+        static inline CNTK::Axis ToCNTKAxis(const Expr& x, int axisIndex)
         {
             const auto& viewShape = x.Shape();
             auto rank = viewShape.Rank();
@@ -53,15 +65,214 @@ namespace marian
                 CNTK::InvalidArgument("marian::ToCNTKAxis: axis out of range");
             return CNTK::Axis(rank - 1 - (size_t)axisIndex);
         }
+        template<typename V>
+        static inline std::vector<CNTK::Axis> ToCNTKAxes(const Expr& x, const V/*collection<int>*/& axisIndices)
+        {
+            std::vector<CNTK::Axis> res(CNTK::Transform(axisIndices, [&](int axisIndex) { return ToCNTKAxis(x, axisIndex); }));
+            std::reverse(res.begin(), res.end());
+            return res;
+        }
+        template<typename V>
+        static inline std::vector<CNTK::Variable> ToVariableVector(const V/*collection<Expr>*/& xs)
+        {
+            return std::vector<CNTK::Variable>(xs.begin(), xs.end());
+            //return CNTK::TransformingSpan(xs, [&](const Expr& x) -> CNTK::Variable { return x; });
+        }
     }
 
-    static inline Expr affine(const Expr& x, const Expr& W, const Expr& b) { Expr y = CNTK::Times(W, x) + b; return Alias(y, L"Times(" + W.Name() + L"," + x.Name() + L")+(" + b.Name() + L")"); }
-    static inline Expr tanh(const Expr& x) { return CNTK::Tanh(x, L"Tanh(" + x.Name() + L")"); }
-    static inline Expr mean(const Expr& x, int axisIndex)
+    // -----------------------------------------------------------------------
+    // configuration (incl. keywords emulation)
+    // -----------------------------------------------------------------------
+
+    namespace keywords // to allow to say init=... etc
     {
-        auto axis = mappers::ToCNTKAxis(x, axisIndex);
-        return CNTK::ReduceMean(x, axis, L"ReduceMean(" + x.Name() + L",Axis(" + std::to_wstring(axis.StaticAxisIndex()) + L"))");
+        static CNTK::ParameterInitializer init;
+        static int axis;
+    };
+
+    namespace Config
+    {
+        // TODO: need an equivalent for gcc
+        __declspec(selectany) size_t seed;
+    };
+
+    // -----------------------------------------------------------------------
+    // ops
+    // Most are direct mappings onto the corresponding CNTK operations.
+    // -----------------------------------------------------------------------
+
+    namespace InternalOps // helper functions that are not actually part of the Marian API
+    {
+        static inline Expr NotImplemented(const char* s) { CNTK::LogicError(s); return CNTK::Variable(); }
+
+        static inline Expr plus(const std::vector<Expr>::const_iterator& b, const std::vector<Expr>::const_iterator& e) // TODO: use fused Gather/ReduceSum?
+        {
+            size_t n = e - b;
+            auto mid = b + n / 2;
+            if (mid == b)
+                return *b;
+            else
+                return CNTK::Plus(plus(b, mid), plus(mid, e));
+        }
+
+        // this is not efficient, but all we can do presently
+        static inline Expr Scalar(float x) { return CNTK::Constant::Scalar(CNTK::DataType::Float, x, Dynamite::CurrentDevice()); }
+        static inline Expr Constant(const Shape& npShape, const CNTK::ParameterInitializer& init, bool isVolatile = false)
+        {
+            auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
+            if (init.Contains(L"from_vector"))
+            {
+                // BUGBUG: This keeps a reference to the vector, not a copy, which only works inside a single expression, if at all.
+                const auto& initData = init[L"from_vector"].Value<CNTK::NDArrayView>();
+                if (initData.Shape().TotalSize() != viewShape.TotalSize())
+                    CNTK::InvalidArgument("marian::constant: vector size does not match viewShape");
+                // copy the supplied CPU buffer, which may be a temporary, to a GPU-side NDArrayView
+                return CNTK::Constant(initData.AsShape(viewShape)->DeepClone(Dynamite::CurrentDevice(), /*readOnly=*/true), isVolatile);
+            }
+            CNTK::InvalidArgument("BUGBUG: no public Constant() from ParameterInitializer?");
+        }
+        CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<float>& inputData)
+        {
+            return CNTK::Dictionary( // initializers are just dictionaries
+                L"from_vector",
+                // wrap the CPU-side buffer in an NDArrayView object (by pointer, no data is copied)
+                CNTK::NDArrayView(CNTK::DataType::Float, CNTK::NDShape{ inputData.size() },
+                (void*)inputData.data(), inputData.size() * sizeof(float),
+                    CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
+            );
+        }
+    };
+
+    static inline Expr operator-(const Expr& a) { return CNTK::Negate(a); }
+
+    static inline Expr operator+(const Expr& a, const Expr& b) { return CNTK::Plus(a, b); }
+    static inline Expr operator-(const Expr& a, const Expr& b) { return CNTK::Minus(a, b); }
+    static inline Expr operator*(const Expr& a, const Expr& b) { return CNTK::ElementTimes(a, b); }
+    static inline Expr operator/(const Expr& a, const Expr& b) { return CNTK::ElementDivide(a, b); }
+
+    static inline Expr operator+(float a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
+    static inline Expr operator+(const Expr& a, float b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
+
+    static inline Expr operator-(float a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
+    static inline Expr operator-(const Expr& a, float b) { return b == 0 ?  a : a - InternalOps::Scalar(b); }
+
+    static inline Expr operator*(float a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
+    static inline Expr operator*(const Expr& a, float b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
+
+    static inline Expr operator/(float a, const Expr& b) { return InternalOps::Scalar(a) / b; }
+    static inline Expr operator/(const Expr& a, float b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
+
+    static inline Expr debug(const Expr& a, const std::string& message = "") { message; return a; } // not implemented presently
+
+    static inline Expr plus(const std::vector<Expr>& xs) { return InternalOps::plus(xs.begin(), xs.end()); }
+
+    static inline Expr logit(const Expr& a) { return CNTK::Sigmoid(a); }
+    static inline Expr logit(const std::vector<Expr>& xs) { return logit(plus(xs)); }
+
+    static inline Expr swish(const Expr& a) { return a * CNTK::Sigmoid(a); }
+    static inline Expr swish(const std::vector<Expr>& xs) { return swish(plus(xs)); }
+
+    static inline Expr tanh(const std::vector<Expr>& xs) { return CNTK::Tanh(plus(xs)); }
+    template <typename... Args>
+    static inline Expr tanh(Args... args) {
+        std::vector<Expr> nodes{ args... };
+        return tanh(nodes);
     }
+    static inline Expr tanh(const Expr& x) { return CNTK::Tanh(x, L"Tanh(" + x.Name() + L")"); }
+
+    static inline Expr relu(const Expr& a) { return CNTK::ReLU(a); }
+    static inline Expr relu(const std::vector<Expr>& xs) { return relu(plus(xs)); }
+
+    static inline Expr leakyrelu(const Expr& a) { a; return InternalOps::NotImplemented("leakyrelu"); }
+    static inline Expr leakyrelu(const std::vector<Expr>& xs) { return leakyrelu(plus(xs)); }
+
+    static inline Expr prelu(const Expr& a, float alpha = 0.01) { a, alpha; return InternalOps::NotImplemented("prelu"); }
+    static inline Expr prelu(const std::vector<Expr>& xs, float alpha = 0.01) { return prelu(plus(xs), alpha); }
+
+    static inline Expr log(const Expr& a) { return CNTK::Log(a); }
+
+    static inline Expr exp(const Expr& a) { return CNTK::Exp(a); }
+
+    // Expr pow(const Expr& a, Expr b);
+    // Expr pow(float a, Expr b);
+    // Expr pow(const Expr& a, float b);
+
+    static inline Expr dot(const Expr& a, const Expr& b, bool transA = false, bool transB = false, float scalar = 1.f)
+    {
+        a, b, transA, transB, scalar;
+        return InternalOps::NotImplemented("dot");
+    }
+    static inline Expr bdot(const Expr& a, const Expr& b, bool transA = false, bool transB = false, float scalar = 1.f)
+    {
+        a, b, transA, transB, scalar;
+        return InternalOps::NotImplemented("bdot");
+    }
+
+    static inline Expr transpose(const Expr& a) { return CNTK::Transpose(a); }
+    static inline Expr transpose(const Expr& a, const std::vector<int>& axes) { return CNTK::Transpose(a, mappers::ToCNTKAxes(a, axes)); }
+
+    static inline Expr concatenate(const std::vector<Expr>& concats, /*keywords::axis_k*/int ax = 0)
+    {
+        return CNTK::Splice(mappers::ToVariableVector(concats), mappers::ToCNTKAxis(concats.front(), ax));
+    }
+    static inline Expr repeat(const Expr& a, size_t repeats, /*keywords::axis_k*/int ax = 0);
+
+    static inline Expr reshape(const Expr& a, Shape ndShape) { return CNTK::Reshape(a, mappers::ToNDShape(ndShape)); }
+
+    static inline Expr atleast_nd(const Expr& a, size_t dims)
+    {
+        const auto& viewShape = a.Shape();
+        if (viewShape.Rank() >= dims)
+            return a;
+        else
+            return CNTK::Reshape(a, viewShape.AppendAxis(dims -1, 1)); // pad with ones at end
+    }
+    static inline Expr atleast_1d(const Expr& a) { return atleast_nd(a, 1); }
+    static inline Expr atleast_2d(const Expr& a) { return atleast_nd(a, 2); }
+    static inline Expr atleast_3d(const Expr& a) { return atleast_nd(a, 3); }
+    static inline Expr atleast_4d(const Expr& a) { return atleast_nd(a, 4); }
+
+    static inline Expr flatten(const Expr& a) { return CNTK::Reshape(a, { a.Shape().TotalSize() }); }
+    static inline Expr flatten_2d(const Expr& a)
+    {
+        const auto& viewShape = a.Shape();
+        size_t I = viewShape.Dimensions().front();
+        size_t J = viewShape.TotalSize() / I; // all except first NDShape axis get flattened
+        return CNTK::Reshape(a, { I, J });
+    }
+
+    static inline Expr rows(const Expr& a, const std::vector<size_t>& indices)
+    {
+        const auto& viewShape = a.Shape();
+        if (viewShape.Rank() != 2)
+            CNTK::InvalidArgument("rows: data must be a matrix");
+        size_t numClasses = viewShape.Dimensions().front();
+        std::vector<float> indicesFloat(CNTK::Transform(indices, [](size_t index) { return (float)index; }));
+        auto indicesVar = InternalOps::Constant({ (int)indices.size() }, InternalOps::WrappedVectorInitializer(indicesFloat));
+        auto indicesOneHot = CNTK::OneHotOp(indicesVar, numClasses, /*outputSparse=*/true, CNTK::Axis(0));
+        return CNTK::Times(a, indicesOneHot);
+    }
+    static inline Expr cols(const Expr& a, const std::vector<size_t>& indices) { return CNTK::Transpose(rows(CNTK::Transpose(a), indices)); } // note: not efficient
+
+    static inline Expr select(const Expr& a, int axis, const std::vector<size_t>& indices)
+    {
+        a, axis, indices; // TODO: find out the semantics
+        return InternalOps::NotImplemented("select");
+    }
+
+    static inline Expr sum(const Expr& a, /*keywords::axis_k*/int ax = 0) { return CNTK::ReduceSum(a, mappers::ToCNTKAxis(a, ax)); }
+
+    static inline Expr softmax(const Expr& a) { return Dynamite::Softmax(a, CNTK::Axis(0)); }
+    static inline Expr softmax(const Expr& a, Expr mask)
+    {
+        a, mask; // TODO: find out the semantics
+        return InternalOps::NotImplemented("softmax");
+    }
+
+    static inline Expr logsoftmax(const Expr& x) { return Dynamite::LogSoftmax(x, CNTK::Axis(0), L"LogSoftmax(" + x.Name() + L",Axis(0))"); }
+
+    static inline Expr mean(const Expr& a, /*keywords::axis_k*/int ax = 0) { return CNTK::ReduceMean(a, mappers::ToCNTKAxis(a, ax)); }
+
     // o = unnormalized log prob; y = label as an index, not one-hot
     // o: (3,120); y: (120,)
     static inline Expr cross_entropy(const Expr& o, const Expr& y)
@@ -70,33 +281,111 @@ namespace marian
         auto yOneHot = CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0));
         return Alias(Dynamite::CrossEntropyWithSoftmax(o, yOneHot, CNTK::Axis(0)), L"CrossEntropyWithSoftmax(" + o.Name() + L",OneHot(" + y.Name() + L",)" + std::to_wstring(numClasses) + L")");
     }
-    static inline Expr logsoftmax(const Expr& x) { return Dynamite::LogSoftmax(x, CNTK::Axis(0), L"LogSoftmax(" + x.Name() + L",Axis(0))"); }
+
+    static inline Expr affine(const Expr& x, const Expr& W, const Expr& b) { Expr y = CNTK::Times(W, x) + b; return Alias(y, L"Times(" + W.Name() + L"," + x.Name() + L")+(" + b.Name() + L")"); }
+
+    static inline Expr scalar_product(const Expr& a, Expr b, /*keywords::axis_k*/int ax = 0) { return CNTK::InnerProduct(a, b, mappers::ToCNTKAxis(a, ax)); }
+
+    static inline Expr weighted_average(const Expr& in, Expr weights, /*keywords::axis_k*/int ax = 0)
+    {
+        Expr numer = CNTK::ReduceSum(in * weights, mappers::ToCNTKAxis(in, ax));
+        Expr denom = CNTK::ReduceSum(     weights, mappers::ToCNTKAxis(in, ax));
+        return numer / denom;
+    }
+
+    static inline Expr step(const Expr& a, int step, int axis)
+    {
+        a, axis, step; // TODO: find out the semantics
+        return InternalOps::NotImplemented("step");
+    }
+
+    static inline Expr sqrt(const Expr& a, float eps = 0.f) { return CNTK::Sqrt(a + eps); }
+    static inline Expr square(const Expr& a) { return a * a; }
+
+    static inline Expr layer_norm(const Expr& x, Expr gamma, Expr beta = CNTK::Variable(), float eps = 1e-9)
+    {
+        x, gamma, beta, eps; // TODO: find out the precise semantics
+        return InternalOps::NotImplemented("layer_norm");
+    }
+
+    static inline Expr highway(const Expr& y, Expr x, Expr t)
+    {
+        y, x, t; // TODO: find out the semantics
+        return InternalOps::NotImplemented("highway");
+    }
+    static inline Expr highway(const std::string prefix, Expr x)
+    {
+        prefix, x; // TODO: find out the semantics w.r.t. prefix
+        return InternalOps::NotImplemented("highway");
+    }
+
+    template <typename... Args>
+    static inline Expr dropout(const Expr& x, Args... args)
+    {
+        // ... for now, implement it with a CPU-side random mask. Maybe good occasion to get the random generator nodes to work in Dynamite?
+        args;
+        return x;
+        //auto mask = Get(keywords::mask, nullptr, args...);
+        //float dropout_prob = Get(keywords::dropout_prob, 0.0f, args...);
+        //
+        //ABORT_IF(!mask && !dropout_prob, "Neither mask nor dropout prob given");
+        //if (!mask) {
+        //    auto graph = x->graph();
+        //    mask = graph->dropout(dropout_prob, x->shape());
+        //}
+        //return x * mask;
+    }
+
+    static inline Expr shift(Expr, Shape)
+    {
+        return InternalOps::NotImplemented("shift");
+    }
+
+    static inline Expr convert2cudnnFormat(const Expr& x)
+    {
+        x; // TODO: find out the semantics
+        return InternalOps::NotImplemented("convert2cudnnFormat");
+    }
+
+    static inline Expr convertFromcudnnFormat(const Expr& x)
+    {
+        x; // TODO: find out the semantics
+        return InternalOps::NotImplemented("convertFromcudnnFormat");
+    }
+
+    static inline Expr avg_pooling(const Expr& x, int height, int width, int padHeight = 0, int padWidth = 0, int strideHeight = 1, int strideWidth = 1)
+    {
+        x, height, width, padHeight, padWidth, strideHeight, strideWidth; // TODO: implement these in CNTK Dynamite
+        return InternalOps::NotImplemented("avg_pooling");
+    }
+
+    static inline Expr max_pooling(const Expr& x, int height, int width, int padHeight = 0, int padWidth = 0, int strideHeight = 1, int strideWidth = 1)
+    {
+        x, height, width, padHeight, padWidth, strideHeight, strideWidth; // TODO: implement these in CNTK Dynamite
+        return InternalOps::NotImplemented("max_pooling");
+    }
+
+    static inline Expr pooling_with_masking(const Expr& x, Expr mask, int width, bool isEven = false)
+    {
+        x, mask, width, isEven; // TODO: implement these in CNTK Dynamite
+        return InternalOps::NotImplemented("pooling_with_masking");
+    }
+
+    // -----------------------------------------------------------------------
+    // inits (initializers)
+    // -----------------------------------------------------------------------
 
     namespace inits
     {
-        CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData)
-        {
-            return CNTK::Dictionary( // initializers are just dictionaries
-                L"from_vector",
-                // wrap the CPU-side buffer in an NDArrayView object (by pointer, no data is copied)
-                CNTK::NDArrayView(CNTK::DataType::Float, CNTK::NDShape{ inputData.size() },
-                                  (void*)inputData.data(), inputData.size() * sizeof(float),
-                                  CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
-            );
-        }
+        static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return InternalOps::WrappedVectorInitializer(inputData); }
         // TODO: check that the scaling is the same
-        CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
+        static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
         static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
     }
 
-    namespace Config
-    {
-        // TODO: need an equivalent for gcc
-        __declspec(selectany) size_t seed;
-    };
-
-    static CNTK::ParameterInitializer init; // to allow to say init=...
-    static int axis;
+    // -----------------------------------------------------------------------
+    // ExpressionGraph
+    // -----------------------------------------------------------------------
 
     class ExpressionGraph
     {
@@ -111,21 +400,7 @@ namespace marian
         }
         size_t getDevice() { return Dynamite::CurrentDevice().Id(); }
         void setInference(bool inference) { m_inferenceOnly = inference; }
-        Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init)
-        {
-            auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
-            if (init.Contains(L"from_vector"))
-            {
-                // BUGBUG: This keeps a reference to the vector, not a copy, which only works inside a single expression, if at all.
-                const auto& initData = init[L"from_vector"].Value<CNTK::NDArrayView>();
-                if (initData.Shape().TotalSize() != viewShape.TotalSize())
-                    CNTK::InvalidArgument("marian::constant: vector size does not match viewShape");
-                // copy the supplied CPU buffer, which may be a temporary, to a GPU-side NDArrayView
-                return CNTK::Constant(initData.AsShape(viewShape)->DeepClone(Dynamite::CurrentDevice(), /*readOnly=*/true),
-                                      /*isVolatile=*/m_inferenceOnly);
-            }
-            CNTK::InvalidArgument("BUGBUG: no public Constant() from ParameterInitializer?");
-        }
+        Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) const { return InternalOps::Constant(npShape, init, /*isVolatile=*/m_inferenceOnly); }
         // TODO: namespace; lots more
         Expr param(const std::string& name, const Shape& shape, const CNTK::ParameterInitializer& init)
         {

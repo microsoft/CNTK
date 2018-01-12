@@ -7,7 +7,7 @@
 
 using namespace marian;
 //using namespace data;
-//using namespace keywords;
+using namespace keywords;
 
 // Constants for Iris example
 const size_t MAX_EPOCHS = 200;
