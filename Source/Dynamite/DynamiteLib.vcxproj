@@ -166,6 +166,7 @@
     <ClInclude Include="Models.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
     <ClInclude Include="shape.h" />
+    <ClInclude Include="states.h" />
     <ClInclude Include="transformer.h" />
   </ItemGroup>
   <ItemGroup>

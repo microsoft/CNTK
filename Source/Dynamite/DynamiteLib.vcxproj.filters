@@ -64,6 +64,9 @@
     <ClInclude Include="encdec.h">
       <Filter>Marian\Models</Filter>
     </ClInclude>
+    <ClInclude Include="states.h">
+      <Filter>Marian\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="iris.data">
