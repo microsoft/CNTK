@@ -76,8 +76,7 @@ namespace marian
         Expr(const CNTK::FunctionPtr& f) : Base(f) { }
         Expr(const std::nullptr_t&) : Base(CNTK::Variable()) { }
         Expr() : Base(CNTK::Variable()) { }
-        Expr& operator=(const Expr& other) { Base::operator=(other); }
-        //Expr& operator=(Expr*& other) { Base::operator=(std::move(other)); }
+        Expr& operator=(const Expr& other) { Base::operator=(other); return *this; }
         // Marian accesses members by arrow, not dot. This is a bit of a hack.
         Expr* operator->() { return this; }
         const Expr* operator->() const { return this; }
@@ -145,41 +144,69 @@ namespace marian
     class Options : public CNTK::Dictionary
     {
         typedef CNTK::Dictionary Base;
+        template<class T> struct get_return { typedef const T& type; };
+        template<>        struct get_return<std::string> { typedef std::string type; };
+        template<>        struct get_return<std::vector<int>> { typedef std::vector<int> type; };
+        static std::wstring widen(const std::string& s) { return std::wstring(s.begin(), s.end()); }
+        static std::string narrow(const std::wstring& s) { return std::string(s.begin(), s.end()); } // note: simplistic conversion that only works for 7-bit ASCII
     public:
         std::string str() { CNTK::LogicError("Option serialization not supported"); }
         template<typename T>
-        void set(const char* key, const T& value)
+        void set(const std::string& key, const T& value)
         {
-            Base::operator=[](key) = value;
+            Base::operator[](widen(key)) = value;
         }
-        bool has(const char* key) const
+        template<>
+        void set<std::string>(const std::string& key, const std::string& value)
         {
-            std::wstring wkey(key, key + strlen(key));
-            return Base::Contains(wkey);
+            Base::operator[](widen(key)) = widen(value);
+        }
+        template<>
+        void set<const char*>(const std::string& key, const char* const& value)
+        {
+            Base::operator[](widen(key)) = widen(value);
+        }
+        bool has(const std::string& key) const
+        {
+            return Base::Contains(widen(key));
         }
         template<typename T>
-        const T& get(const char* key) const
+        typename get_return<T>::type get(const std::string& key) const
         {
-            std::wstring wkey(key, key + strlen(key));
-            return Base::operator[](key).Value<T>();
+            return Base::operator[](widen(key)).Value<T>();
         }
         template<typename T>
-        const T& get(const char* key, const T& deflt) const
+        typename get_return<T>::type get(const std::string& key, const T& deflt) const
         {
-            std::wstring wkey(key, key + strlen(key));
-            return Base::GetOrElse(key, deflt);
+            return Base::GetOrElse(widen(key), deflt);
         }
-        // Marian uses narrow strings
-        std::string get(const char* key, const std::string& deflt) const
+        // Marian uses narrow strings  --inefficient, involves conversion and copy
+        template<>
+        typename get_return<std::string>::type get<std::string>(const std::string& key) const
         {
-            std::wstring wkey(key, key + strlen(key));
-            if (Base::Contains(wkey))
-            {
-                const auto& wstr = Base::operator[](wkey).Value<std::wstring>();
-                return std::string(wstr.begin(), wstr.end()); // note: simplistic conversion that only works for 7-bit ASCII
-            }
+            const auto& wstr = Base::operator[](widen(key)).Value<std::wstring>();
+            return narrow(wstr);
+        }
+        template<>
+        typename get_return<std::string>::type get<std::string>(const std::string& key, const std::string& deflt) const
+        {
+            if (Base::Contains(widen(key))) // (inefficient due to double conversion, but keeps code simple)
+                return get<std::string>(key);
             else
                 return deflt;
+        }
+        // vector<int>  --inefficient, involves conversion and copy
+        template<>
+        typename get_return<std::vector<int>>::type get<std::vector<int>>(const std::string& key) const
+        {
+            const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
+            return std::vector<int>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return v.Value<int>(); }));
+        }
+        template<>
+        typename get_return<std::vector<std::string>>::type get<std::vector<std::string>>(const std::string& key) const
+        {
+            const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
+            return std::vector<std::string>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return narrow(v.Value<std::wstring>()); }));
         }
     };
 
@@ -215,7 +242,7 @@ namespace marian
             std::vector<Word> m_indices;
             std::vector<float> m_mask;
         };
-        class CorpusBatch // TODO: probably we need to pull in the Marian lib for this
+        class CorpusBatch : public Batch // TODO: probably we need to pull in the Marian lib for this
         {
         public:
             CorpusBatch() {}
@@ -490,7 +517,7 @@ namespace marian
 
     static inline Expr step(const Expr& a, int step, int axis)
     {
-        a, axis, step; // TODO: find out the semantics
+        a, axis, step; // TODO: find out the semantics. Seems to be just Slice().
         return InternalOps::NotImplemented("step");
     }
 
