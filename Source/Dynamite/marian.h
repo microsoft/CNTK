@@ -155,6 +155,12 @@ namespace marian
     public:
         Options() {}
         Options(const CNTK::Dictionary& dict) : Base(dict) { }
+        template<typename T>
+        static std::vector<CNTK::DictionaryValue> VectorOf(const std::initializer_list<T>& v)
+        {
+            auto res = std::vector<CNTK::DictionaryValue>(CNTK::Transform(v, [](const T& val) -> DictionaryValue { return val; }));
+            return res;
+        }
         std::string str() { CNTK::LogicError("Option serialization not supported"); }
         void merge(const Ptr<Options>& other) // add all items from 'other' to 'this' unless an item already exists
         {
