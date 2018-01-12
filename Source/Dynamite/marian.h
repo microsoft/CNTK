@@ -152,6 +152,14 @@ namespace marian
         static std::string narrow(const std::wstring& s) { return std::string(s.begin(), s.end()); } // note: simplistic conversion that only works for 7-bit ASCII
     public:
         std::string str() { CNTK::LogicError("Option serialization not supported"); }
+        void merge(const Ptr<Options>& other) // add all items from 'other' to 'this' unless an item already exists
+        {
+            for (const auto& key : other->Keys())
+            {
+                if (!Contains(key))
+                    Base::operator[](key) = other->operator[](key); // BUGBUG: DictionaryValues cannot be copied. Will leave double-freed references.
+            }
+        }
         template<typename T>
         void set(const std::string& key, const T& value)
         {
@@ -268,7 +276,7 @@ namespace marian
         static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
         namespace InternalInitializers
         {
-            CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<float>& inputData)
+            static inline CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<float>& inputData)
             {
                 return CNTK::Dictionary( // initializers are just dictionaries
                     L"from_vector",
@@ -279,7 +287,7 @@ namespace marian
                 );
             }
             template<typename T>
-            CNTK::ParameterInitializer CastVectorInitializer(const std::vector<T>& inputData)
+            static inline CNTK::ParameterInitializer CastVectorInitializer(const std::vector<T>& inputData)
             {
                 // this version does make a copy, since a type cast is required
                 CNTK::NDArrayView view(CNTK::DataType::Float, CNTK::StorageFormat::Dense, CNTK::NDShape{ inputData.size() }, CNTK::DeviceDescriptor::CPUDevice());
@@ -336,7 +344,7 @@ namespace marian
             auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
             return Constant(viewShape, init, isVolatile);
         }
-        std::vector<float> DropoutMask(size_t n, float prob)
+        static inline std::vector<float> DropoutMask(size_t n, float prob)
         {
             // PERF BUGBUG: For now, we determine the dropout mask on the CPU. Instead, we should get the rand op to work under Dynamite.
             static int seed = 1;
@@ -349,8 +357,8 @@ namespace marian
             }));
             return mask;
         }
-        Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              inits::InternalInitializers::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
-        Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), inits::InternalInitializers::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+        static inline Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              inits::InternalInitializers::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+        static inline Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), inits::InternalInitializers::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
     };
 
     static inline Expr operator-(const Expr& a) { return CNTK::Negate(a); }
@@ -555,7 +563,6 @@ namespace marian
     static inline Expr dropout(const Expr& x, Args... args)
     {
         // ... for now, implement it with a CPU-side random mask. Maybe good occasion to get the random generator nodes to work in Dynamite?
-        args;
         return x;
         //auto mask = Get(keywords::mask, nullptr, args...);
         //float dropout_prob = Get(keywords::dropout_prob, 0.0f, args...);
@@ -603,7 +610,7 @@ namespace marian
         return InternalOps::NotImplemented("pooling_with_masking");
     }
 
-    Expr guidedAlignmentCost(Ptr<ExpressionGraph> graph, Ptr<data::CorpusBatch> batch, Ptr<Options> options, Expr att) // (nearly direct copy)
+    static inline Expr guidedAlignmentCost(Ptr<ExpressionGraph> graph, Ptr<data::CorpusBatch> batch, Ptr<Options> options, Expr att) // (nearly direct copy)
     {
         using namespace keywords;
 
@@ -777,5 +784,6 @@ namespace marian
 #include "generic.h"
 #include "model_base.h"
 #include "encdec.h"
+#include "constructors.h"
 
 #endif // __MARIAN_CNTK

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "layers/factory.h"
-#include "layers/generic.h"
+//#include "layers/factory.h"
+//#include "layers/generic.h"
 
 namespace marian {
 namespace mlp {
