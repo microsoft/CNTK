@@ -147,6 +147,11 @@ namespace marian
         typedef CNTK::Dictionary Base;
     public:
         std::string str() { CNTK::LogicError("Option serialization not supported"); }
+        template<typename T>
+        void set(const char* key, const T& value)
+        {
+            Base::operator=[](key) = value;
+        }
         bool has(const char* key) const
         {
             std::wstring wkey(key, key + strlen(key));
@@ -184,6 +189,21 @@ namespace marian
 
     namespace data
     {
+        class Batch // (this is a direct copy from batch.h)
+        {
+        public:
+            virtual size_t size() const = 0;
+            virtual size_t words() const { return 0; };
+            virtual void debug() {};
+
+            virtual std::vector<Ptr<Batch>> split(size_t n) = 0;
+
+            const std::vector<size_t>& getSentenceIds() const { return sentenceIds_; }
+            void setSentenceIds(const std::vector<size_t>& ids) { sentenceIds_ = ids; }
+
+        protected:
+            std::vector<size_t> sentenceIds_;
+        };
         class SubBatch
         {
         public:
@@ -197,13 +217,56 @@ namespace marian
         };
         class CorpusBatch // TODO: probably we need to pull in the Marian lib for this
         {
-            std::vector<Ptr<SubBatch>> m_subBatches;
         public:
             CorpusBatch() {}
             const Ptr<SubBatch>& operator[](size_t index) const { return m_subBatches[index]; }
             const Ptr<SubBatch>& front() const { return m_subBatches.front(); }
+            const std::vector<float>& getGuidedAlignment() { return m_guidedAlignment; }
+        private:
+            std::vector<Ptr<SubBatch>> m_subBatches;
+            std::vector<float> m_guidedAlignment;
         };
     };
+
+    // -----------------------------------------------------------------------
+    // inits (initializers)
+    // -----------------------------------------------------------------------
+
+    namespace inits
+    {
+        static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
+        static CNTK::ParameterInitializer ones = CNTK::ConstantInitializer(1);
+        static CNTK::ParameterInitializer glorot_uniform = CNTK::GlorotUniformInitializer(1.0); // TODO: check the scaling
+        static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
+        namespace InternalInitializers
+        {
+            CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<float>& inputData)
+            {
+                return CNTK::Dictionary( // initializers are just dictionaries
+                    L"from_vector",
+                    // wrap the CPU-side buffer in an NDArrayView object (by pointer, no data is copied)
+                    CNTK::NDArrayView(CNTK::DataType::Float, CNTK::NDShape{ inputData.size() },
+                                      (void*)inputData.data(), inputData.size() * sizeof(float),
+                                      CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
+                );
+            }
+            template<typename T>
+            CNTK::ParameterInitializer CastVectorInitializer(const std::vector<T>& inputData)
+            {
+                // this version does make a copy, since a type cast is required
+                CNTK::NDArrayView view(CNTK::DataType::Float, CNTK::StorageFormat::Dense, CNTK::NDShape{ inputData.size() }, CNTK::DeviceDescriptor::CPUDevice());
+                auto* p = view.WritableDataBuffer<float>();
+                for (auto v : inputData)
+                    *p++ = (float)v;
+                return CNTK::Dictionary(L"from_vector", std::move(view));
+            }
+        };
+        template<typename T>
+        static inline CNTK::ParameterInitializer from_vector(const std::vector<T>&     inputData) { return InternalInitializers::CastVectorInitializer(inputData); }
+        static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return InternalInitializers::WrappedVectorInitializer(inputData); }
+        static inline CNTK::ParameterInitializer from_value(float value) { return CNTK::ConstantInitializer(value); }
+        static inline CNTK::ParameterInitializer from_word2vec(const std::string& file, int dimVoc, int dimEmb, bool normalize = false) { file, dimVoc, dimEmb, normalize; CNTK::LogicError("from_word2vec: not implemented"); }
+    }
 
     // -----------------------------------------------------------------------
     // ops
@@ -244,25 +307,6 @@ namespace marian
             auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
             return Constant(viewShape, init, isVolatile);
         }
-        CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<float>& inputData)
-        {
-            return CNTK::Dictionary( // initializers are just dictionaries
-                L"from_vector",
-                // wrap the CPU-side buffer in an NDArrayView object (by pointer, no data is copied)
-                CNTK::NDArrayView(CNTK::DataType::Float, CNTK::NDShape{ inputData.size() },
-                                  (void*)inputData.data(), inputData.size() * sizeof(float),
-                                  CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
-            );
-        }
-        CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<size_t>& inputData)
-        {
-            // this version does make a copy, since a type cast is required
-            CNTK::NDArrayView view(CNTK::DataType::Float, CNTK::StorageFormat::Dense, CNTK::NDShape{ inputData.size() }, CNTK::DeviceDescriptor::CPUDevice());
-            auto* p = view.WritableDataBuffer<float>();
-            for (auto v : inputData)
-                *p++ = (float)v;
-            return CNTK::Dictionary(L"from_vector", std::move(view));
-        }
         std::vector<float> DropoutMask(size_t n, float prob)
         {
             // PERF BUGBUG: For now, we determine the dropout mask on the CPU. Instead, we should get the rand op to work under Dynamite.
@@ -276,8 +320,8 @@ namespace marian
             }));
             return mask;
         }
-        Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
-        Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+        Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              inits::InternalInitializers::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+        Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), inits::InternalInitializers::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
     };
 
     static inline Expr operator-(const Expr& a) { return CNTK::Negate(a); }
@@ -399,7 +443,7 @@ namespace marian
             CNTK::InvalidArgument("rows: data must be a matrix");
         size_t numClasses = viewShape.Dimensions().front();
         std::vector<float> indicesFloat(CNTK::Transform(indices, [](size_t index) { return (float)index; }));
-        auto indicesVar = InternalOps::Constant(CNTK::NDShape{ indices.size() }, InternalOps::WrappedVectorInitializer(indicesFloat));
+        auto indicesVar = InternalOps::Constant(CNTK::NDShape{ indices.size() }, inits::InternalInitializers::WrappedVectorInitializer(indicesFloat));
         auto indicesOneHot = CNTK::OneHotOp(indicesVar, numClasses, /*outputSparse=*/true, CNTK::Axis(0));
         return CNTK::Times(a, indicesOneHot);
     }
@@ -522,20 +566,36 @@ namespace marian
         return InternalOps::NotImplemented("pooling_with_masking");
     }
 
-    // -----------------------------------------------------------------------
-    // inits (initializers)
-    // -----------------------------------------------------------------------
-
-    namespace inits
+    Expr guidedAlignmentCost(Ptr<ExpressionGraph> graph, Ptr<data::CorpusBatch> batch, Ptr<Options> options, Expr att) // (nearly direct copy)
     {
-        static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
-        static CNTK::ParameterInitializer ones  = CNTK::ConstantInitializer(1);
-        static CNTK::ParameterInitializer glorot_uniform = CNTK::GlorotUniformInitializer(1.0); // TODO: check the scaling
-        static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
-        static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return InternalOps::WrappedVectorInitializer(inputData); }
-        static inline CNTK::ParameterInitializer from_vector(const std::vector<Word>& inputData) { return InternalOps::WrappedVectorInitializer(inputData); }
-        static inline CNTK::ParameterInitializer from_value(float value) { return CNTK::ConstantInitializer(value); }
-        static inline CNTK::ParameterInitializer from_word2vec(const std::string& file, int dimVoc, int dimEmb, bool normalize = false) { file, dimVoc, dimEmb, normalize; CNTK::LogicError("from_word2vec: not implemented"); }
+        using namespace keywords;
+
+        int dimBatch = att->shape()[0];
+        int dimSrc = att->shape()[2];
+        int dimTrg = att->shape()[3];
+
+        auto aln = InternalOps::Constant(Shape({ dimBatch, 1, dimSrc, dimTrg }), keywords::init = inits::from_vector(batch->getGuidedAlignment()));
+
+        std::string guidedCostType
+            = options->get<std::string>("guided-alignment-cost");
+
+        Expr alnCost;
+        float eps = 1e-6;
+        if (guidedCostType == "mse") {
+            alnCost = sum(flatten(square(att - aln))) / (2 * dimBatch);
+        }
+        else if (guidedCostType == "mult") {
+            alnCost = -log(sum(flatten(att * aln)) + eps) / dimBatch;
+        }
+        else if (guidedCostType == "ce") {
+            alnCost = -sum(flatten(aln * log(att + eps))) / dimBatch;
+        }
+        else {
+            ABORT_IF(true, "Unknown alignment cost type");
+        }
+
+        float guidedScalar = options->get<float>("guided-alignment-weight");
+        return guidedScalar * alnCost;
     }
 
     // -----------------------------------------------------------------------
@@ -678,6 +738,7 @@ namespace marian
 #include "states.h"
 #include "factory.h"
 #include "generic.h"
+#include "model_base.h"
 #include "encdec.h"
 
 #endif // __MARIAN_CNTK

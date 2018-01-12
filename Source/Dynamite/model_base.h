@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "data/batch.h"
-#include "graph/expression_graph.h"
+//#include "data/batch.h"
+//#include "graph/expression_graph.h"
 
 namespace marian {
 namespace models {
@@ -22,9 +22,9 @@ public:
                      bool clearGraph = true)
       = 0;
 
-  virtual Ptr<data::BatchStats> collectStats(Ptr<ExpressionGraph> graph,
-                                             size_t multiplier = 1)
-      = 0;
+  //virtual Ptr<data::BatchStats> collectStats(Ptr<ExpressionGraph> graph,
+  //                                           size_t multiplier = 1)
+  //    = 0;
 
   virtual void clear(Ptr<ExpressionGraph> graph) = 0;
 };

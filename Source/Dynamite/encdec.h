@@ -198,6 +198,7 @@ protected:
 
   std::vector<std::string> modelFeatures_;
 
+#if 0
   void saveModelParameters(const std::string& name) {
     YAML::Node modelParams;
     for(auto& key : modelFeatures_)
@@ -225,9 +226,10 @@ protected:
     OutputFileStream out(name + ".decoder.yml");
     (std::ostream&)out << decoder;
   }
+#endif
 
 public:
-  typedef data::Corpus dataset_type;
+  //typedef data::Corpus dataset_type;
 
   EncoderDecoder(Ptr<Options> options)
       : options_(options),
@@ -269,6 +271,7 @@ public:
 
   void push_back(Ptr<DecoderBase> decoder) { decoders_.push_back(decoder); }
 
+#if 0
   virtual void load(Ptr<ExpressionGraph> graph, const std::string& name) {
     graph->load(name, !opt<bool>("ignore-model-config"));
   }
@@ -283,6 +286,7 @@ public:
     if(saveTranslatorConfig)
       createDecoderConfig(name);
   }
+#endif
 
   virtual void clear(Ptr<ExpressionGraph> graph) {
     graph->clear();
@@ -364,6 +368,7 @@ public:
     return build(graph, corpusBatch, clearGraph);
   }
 
+#if 0
   Ptr<data::BatchStats> collectStats(Ptr<ExpressionGraph> graph,
                                      size_t multiplier = 1) {
     auto stats = New<data::BatchStats>();
@@ -390,6 +395,7 @@ public:
     }
     return stats;
   }
+#endif
 
   template <typename T>
   T opt(const std::string& key) {
