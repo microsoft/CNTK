@@ -159,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CNTKLibraryHelpers.h" />
+    <ClInclude Include="encdec.h" />
     <ClInclude Include="helper.h" />
     <ClInclude Include="Layers.h" />
     <ClInclude Include="marian.h" />
