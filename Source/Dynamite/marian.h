@@ -22,7 +22,7 @@ static inline void ABORT_IF(bool cond, const char* msg, Args&&... ignoredArgs) {
 namespace marian
 {
     // -----------------------------------------------------------------------
-    // basic types (Ptr, New)
+    // basic types (Ptr, New, stuff, constants)
     // -----------------------------------------------------------------------
 
     template<typename T>
@@ -32,6 +32,7 @@ namespace marian
     class ExpressionGraph;
     typedef size_t Word;
     typedef std::vector<Word> Words;
+    const float NEMATUS_LN_EPS = 1e-5;
 
     // -----------------------------------------------------------------------
     // Shape
@@ -79,6 +80,7 @@ namespace marian
         //Expr& operator=(Expr*& other) { Base::operator=(std::move(other)); }
         // Marian accesses members by arrow, not dot. This is a bit of a hack.
         Expr* operator->() { return this; }
+        const Expr* operator->() const { return this; }
         // Marian member functions
         CNTK::NDArrayViewPtr val() const { return Value(); }
         float scalar() const { return val()->AsScalar<float>(); }
@@ -131,6 +133,7 @@ namespace marian
         static CNTK::ParameterInitializer init;
         static int axis;
         static Expr mask = nullptr;
+        static bool fixed;
     };
 
     namespace Config
@@ -143,6 +146,7 @@ namespace marian
     {
         typedef CNTK::Dictionary Base;
     public:
+        std::string str() { CNTK::LogicError("Option serialization not supported"); }
         bool has(const char* key) const
         {
             std::wstring wkey(key, key + strlen(key));
@@ -246,9 +250,18 @@ namespace marian
                 L"from_vector",
                 // wrap the CPU-side buffer in an NDArrayView object (by pointer, no data is copied)
                 CNTK::NDArrayView(CNTK::DataType::Float, CNTK::NDShape{ inputData.size() },
-                (void*)inputData.data(), inputData.size() * sizeof(float),
-                    CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
+                                  (void*)inputData.data(), inputData.size() * sizeof(float),
+                                  CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
             );
+        }
+        CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<size_t>& inputData)
+        {
+            // this version does make a copy, since a type cast is required
+            CNTK::NDArrayView view(CNTK::DataType::Float, CNTK::StorageFormat::Dense, CNTK::NDShape{ inputData.size() }, CNTK::DeviceDescriptor::CPUDevice());
+            auto* p = view.WritableDataBuffer<float>();
+            for (auto v : inputData)
+                *p++ = (float)v;
+            return CNTK::Dictionary(L"from_vector", std::move(view));
         }
         std::vector<float> DropoutMask(size_t n, float prob)
         {
@@ -515,11 +528,14 @@ namespace marian
 
     namespace inits
     {
-        static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return InternalOps::WrappedVectorInitializer(inputData); }
-        static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
         static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
         static CNTK::ParameterInitializer ones  = CNTK::ConstantInitializer(1);
         static CNTK::ParameterInitializer glorot_uniform = CNTK::GlorotUniformInitializer(1.0); // TODO: check the scaling
+        static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
+        static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return InternalOps::WrappedVectorInitializer(inputData); }
+        static inline CNTK::ParameterInitializer from_vector(const std::vector<Word>& inputData) { return InternalOps::WrappedVectorInitializer(inputData); }
+        static inline CNTK::ParameterInitializer from_value(float value) { return CNTK::ConstantInitializer(value); }
+        static inline CNTK::ParameterInitializer from_word2vec(const std::string& file, int dimVoc, int dimEmb, bool normalize = false) { file, dimVoc, dimEmb, normalize; CNTK::LogicError("from_word2vec: not implemented"); }
     }
 
     // -----------------------------------------------------------------------
@@ -541,7 +557,7 @@ namespace marian
         void setInference(bool inference) { m_inferenceOnly = inference; }
         Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) const { return InternalOps::Constant(npShape, init, /*isVolatile=*/m_inferenceOnly); }
         // TODO: namespace; lots more
-        Expr param(const std::string& name, const Shape& shape, const CNTK::ParameterInitializer& init)
+        Expr param(const std::string& name, const Shape& shape, const CNTK::ParameterInitializer& init, bool fixed = false)
         {
             auto viewShape = mappers::ToNDShape(shape); // convert to CNTK's column-major viewShape
             auto iter = m_allParametersMap.find(name);
@@ -577,6 +593,16 @@ namespace marian
                     CNTK::InvalidArgument("marian::param: Requested shape for existing parameter '%s' does not match original shape", name.c_str());
                 return p;
             }
+        }
+        Expr get(std::string name) const
+        {
+            //if (!namespace_.empty())
+            //    name = namespace_ + "::" + name;
+            auto iter = m_allParametersMap.find(name);
+            if (iter != m_allParametersMap.end())
+                return iter->second;
+            else
+                return nullptr;
         }
         Expr dropout(float prob, const Shape& shape)      { return InternalOps::DropoutMask(prob, shape); }
         Expr dropout(float prob, const ShapeProxy& shape) { return InternalOps::DropoutMask(prob, shape); }
@@ -650,6 +676,8 @@ namespace marian
 // we have a few more #includes here, since the original Marian header also
 // pulls in a few convenience classes that require the core declarations
 #include "states.h"
+#include "factory.h"
+#include "generic.h"
 #include "encdec.h"
 
 #endif // __MARIAN_CNTK

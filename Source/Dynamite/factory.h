@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/options.h"
-#include "graph/expression_graph.h"
+//#include "common/options.h"
+//#include "graph/expression_graph.h"
 
 namespace marian {
 
@@ -46,25 +46,25 @@ public:
     return *this;
   }
 
-  Accumulator& operator()(const std::string& yaml) {
-    Factory::getOptions()->parse(yaml);
-    return *this;
-  }
+  //Accumulator& operator()(const std::string& yaml) {
+  //  Factory::getOptions()->parse(yaml);
+  //  return *this;
+  //}
 
-  Accumulator& operator()(YAML::Node yaml) {
-    Factory::getOptions()->merge(yaml);
-    return *this;
-  }
+  //Accumulator& operator()(YAML::Node yaml) {
+  //  Factory::getOptions()->merge(yaml);
+  //  return *this;
+  //}
 
   Accumulator& operator()(Ptr<Options> options) {
     Factory::getOptions()->merge(options);
     return *this;
   }
 
-  Accumulator& operator()(Ptr<Config> config) {
-    Factory::getOptions()->merge(config->get());
-    return *this;
-  }
+  //Accumulator& operator()(Ptr<Config> config) {
+  //  Factory::getOptions()->merge(config->get());
+  //  return *this;
+  //}
 
   Accumulator<Factory> clone() {
     return Accumulator<Factory>(Factory::clone());

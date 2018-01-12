@@ -1,11 +1,11 @@
 #pragma once
 
-#include "common/definitions.h"
-#include "common/options.h"
-#include "graph/expression_graph.h"
-#include "graph/expression_operators.h"
-#include "layers/factory.h"
-#include "layers/param_initializers.h"
+//#include "common/definitions.h"
+//#include "common/options.h"
+//#include "graph/expression_graph.h"
+//#include "graph/expression_operators.h"
+//#include "layers/factory.h"
+//#include "layers/param_initializers.h"
 
 namespace marian {
 namespace mlp {
@@ -13,7 +13,7 @@ enum struct act : int { linear, tanh, logit, ReLU, LeakyReLU, PReLU, swish };
 }
 }
 
-YAML_REGISTER_TYPE(marian::mlp::act, int)
+//YAML_REGISTER_TYPE(marian::mlp::act, int)
 
 namespace marian {
 namespace mlp {
@@ -208,7 +208,8 @@ struct EmbeddingFactory : public Factory {
 
     bool fixed = opt<bool>("fixed", false);
 
-    std::function<void(Tensor)> initFunc = inits::glorot_uniform;
+    //std::function<void(Tensor)> initFunc = inits::glorot_uniform;
+    auto initFunc = inits::glorot_uniform;
     if(options_->has("embFile")) {
       std::string file = opt<std::string>("embFile");
       if(!file.empty()) {
