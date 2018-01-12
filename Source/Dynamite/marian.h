@@ -13,8 +13,8 @@
 #include <memory>
 #include <map>
 
-template <typename... Args>
-static inline void ABORT_IF(bool cond, const char* msg, Args&&... ignoredArgs) { if (cond) CNTK::InvalidArgument(msg); } // ignoring additional args for now
+template <typename... Args> static inline void ABORT_IF(bool cond, const char* msg, Args&&... ignoredArgs) { if (cond) CNTK::InvalidArgument(msg); } // ignoring additional args for now
+template <typename... Args> static inline void ABORT(const char* msg, Args&&... ignoredArgs) { CNTK::InvalidArgument(msg); } // ignoring additional args for now
 
 #include "shape.h"
 // Note: more #includes at the end
@@ -60,6 +60,7 @@ namespace marian
                 shape.set(i, m_viewShape[rank - 1 - i]);
             return shape;
         }
+        size_t size() const { return m_viewShape.Rank(); }
         int elements() const { return (int)m_viewShape.TotalSize(); }
     };
 
@@ -108,15 +109,15 @@ namespace marian
                 CNTK::InvalidArgument("marian::ToCNTKAxis: axis out of range");
             return CNTK::Axis(rank - 1 - (size_t)axisIndex);
         }
-        template<typename V>
-        static inline std::vector<CNTK::Axis> ToCNTKAxes(const Expr& x, const V/*collection<int>*/& axisIndices)
+        template<typename Vector>
+        static inline std::vector<CNTK::Axis> ToCNTKAxes(const Expr& x, const Vector/*collection<int>*/& axisIndices)
         {
             std::vector<CNTK::Axis> res(CNTK::Transform(axisIndices, [&](int axisIndex) { return ToCNTKAxis(x, axisIndex); }));
             std::reverse(res.begin(), res.end());
             return res;
         }
-        template<typename V>
-        static inline std::vector<CNTK::Variable> ToVariableVector(const V/*collection<Expr>*/& xs)
+        template<typename Vector>
+        static inline std::vector<CNTK::Variable> ToVariableVector(const Vector/*collection<Expr>*/& xs)
         {
             return std::vector<CNTK::Variable>(xs.begin(), xs.end());
             //return CNTK::TransformingSpan(xs, [&](const Expr& x) -> CNTK::Variable { return x; });
@@ -315,7 +316,8 @@ namespace marian
         }
 
         // this is not efficient, but all we can do presently
-        static inline Expr Scalar(float x) { return CNTK::Constant::Scalar(CNTK::DataType::Float, x, Dynamite::CurrentDevice()); }
+        template<typename Number>
+        static inline Expr Scalar(Number x) { return CNTK::Constant::Scalar(CNTK::DataType::Float, (float)x, Dynamite::CurrentDevice()); }
         static inline Expr Constant(const CNTK::NDShape& viewShape, const CNTK::ParameterInitializer& init, bool isVolatile = false)
         {
             if (init.Contains(L"from_vector"))
@@ -358,25 +360,33 @@ namespace marian
     static inline Expr operator*(const Expr& a, const Expr& b) { return CNTK::ElementTimes(a, b); }
     static inline Expr operator/(const Expr& a, const Expr& b) { return CNTK::ElementDivide(a, b); }
 
-    static inline Expr operator+(float a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
-    static inline Expr operator+(int   a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
-    static inline Expr operator+(const Expr& a, float b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
-    static inline Expr operator+(const Expr& a, int   b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
+    static inline Expr operator+(float  a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
+    static inline Expr operator+(int    a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
+    static inline Expr operator+(double a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
+    static inline Expr operator+(const Expr& a, float  b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
+    static inline Expr operator+(const Expr& a, int    b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
+    static inline Expr operator+(const Expr& a, double b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
 
-    static inline Expr operator-(float a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
-    static inline Expr operator-(int   a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
-    static inline Expr operator-(const Expr& a, float b) { return b == 0 ?  a : a - InternalOps::Scalar(b); }
-    static inline Expr operator-(const Expr& a, int   b) { return b == 0 ? a : a - InternalOps::Scalar(b); }
+    static inline Expr operator-(float  a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
+    static inline Expr operator-(int    a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
+    static inline Expr operator-(double a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
+    static inline Expr operator-(const Expr& a, float  b) { return b == 0 ?  a : a - InternalOps::Scalar(b); }
+    static inline Expr operator-(const Expr& a, int    b) { return b == 0 ? a : a - InternalOps::Scalar(b); }
+    static inline Expr operator-(const Expr& a, double b) { return b == 0 ? a : a - InternalOps::Scalar(b); }
 
-    static inline Expr operator*(float a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
-    static inline Expr operator*(int   a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
-    static inline Expr operator*(const Expr& a, float b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
-    static inline Expr operator*(const Expr& a, int   b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
+    static inline Expr operator*(float  a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
+    static inline Expr operator*(int    a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
+    static inline Expr operator*(double a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
+    static inline Expr operator*(const Expr& a, float  b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
+    static inline Expr operator*(const Expr& a, int    b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
+    static inline Expr operator*(const Expr& a, double b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
 
-    static inline Expr operator/(float a, const Expr& b) { return InternalOps::Scalar(a) / b; }
-    static inline Expr operator/(int   a, const Expr& b) { return InternalOps::Scalar(a) / b; }
-    static inline Expr operator/(const Expr& a, float b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
-    static inline Expr operator/(const Expr& a, int   b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
+    static inline Expr operator/(float  a, const Expr& b) { return InternalOps::Scalar(a) / b; }
+    static inline Expr operator/(int    a, const Expr& b) { return InternalOps::Scalar(a) / b; }
+    static inline Expr operator/(double a, const Expr& b) { return InternalOps::Scalar(a) / b; }
+    static inline Expr operator/(const Expr& a, float  b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
+    static inline Expr operator/(const Expr& a, int    b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
+    static inline Expr operator/(const Expr& a, double b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
 
     static inline Expr debug(const Expr& a, const std::string& message = "") { message; return a; } // not implemented presently
 
