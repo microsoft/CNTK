@@ -21,12 +21,12 @@ protected:
     int dimEmb = srcEmbeddings->shape()[-1];
     int dimWords = subBatch->batchWidth();
 
-    auto graph = srcEmbeddings->graph();
+    //auto graph = srcEmbeddings->graph();
     auto chosenEmbeddings = rows(srcEmbeddings, subBatch->indices());
 
     auto batchEmbeddings
         = reshape(chosenEmbeddings, {dimWords, dimBatch, dimEmb});
-    auto batchMask = graph->constant(
+    auto batchMask = /*graph->*/constant(
         {dimWords, dimBatch, 1}, init = inits::from_vector(subBatch->mask()));
 
     return std::make_tuple(batchEmbeddings, batchMask);

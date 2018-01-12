@@ -477,8 +477,8 @@ int main(int argc, char *argv[])
 #endif
     try
     {
-        extern int iris_main();
-        iris_main();
+        //extern int iris_main();
+        //iris_main();
         RunDynamiteTests();
 #if 1
         return mt_main(argc, argv);

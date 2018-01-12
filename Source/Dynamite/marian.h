@@ -131,10 +131,18 @@ namespace marian
 
     namespace keywords // to allow to say init=... etc
     {
-        static CNTK::ParameterInitializer init;
-        static int axis;
-        static Expr mask = nullptr;
-        static bool fixed;
+        // note: this only works if the keyword is just passed on as a function argument, while the arg to TempRef is still alive
+        namespace Internal
+        {
+            template<typename T> struct KeywordPassThrough
+            {
+                const T& operator=(const T& other) { return other; } // just pass on the ref
+            };
+        };
+        static Internal::KeywordPassThrough<CNTK::ParameterInitializer> init;
+        static Internal::KeywordPassThrough<int> axis;
+        static Internal::KeywordPassThrough<Expr> mask;
+        static Internal::KeywordPassThrough<bool> fixed;
     };
 
     namespace Config
@@ -321,7 +329,7 @@ namespace marian
         static CNTK::ParameterInitializer ones = CNTK::ConstantInitializer(1);
         static CNTK::ParameterInitializer glorot_uniform = CNTK::GlorotUniformInitializer(1.0); // TODO: check the scaling
         static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
-        namespace InternalInitializers
+        namespace Internal
         {
             static inline CNTK::ParameterInitializer WrappedVectorInitializer(const std::vector<float>& inputData)
             {
@@ -345,8 +353,8 @@ namespace marian
             }
         };
         template<typename T>
-        static inline CNTK::ParameterInitializer from_vector(const std::vector<T>&     inputData) { return InternalInitializers::CastVectorInitializer(inputData); }
-        static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return InternalInitializers::WrappedVectorInitializer(inputData); }
+        static inline CNTK::ParameterInitializer from_vector(const std::vector<T>&     inputData) { return Internal::CastVectorInitializer(inputData); }
+        static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return Internal::WrappedVectorInitializer(inputData); }
         static inline CNTK::ParameterInitializer from_value(float value) { return CNTK::ConstantInitializer(value); }
         static inline CNTK::ParameterInitializer from_word2vec(const std::string& file, int dimVoc, int dimEmb, bool normalize = false) { file, dimVoc, dimEmb, normalize; CNTK::LogicError("from_word2vec: not implemented"); }
     }
@@ -391,21 +399,22 @@ namespace marian
             auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
             return Constant(viewShape, init, isVolatile);
         }
-        static inline std::vector<float> DropoutMask(size_t n, float prob)
+        static inline std::vector<float> DropoutMask(size_t n, float dropProb)
         {
             // PERF BUGBUG: For now, we determine the dropout mask on the CPU. Instead, we should get the rand op to work under Dynamite.
             static int seed = 1;
             srand(seed++);
-            float preScale = 1 / (1 - prob);
-            float RAND_MAXxProb = prob * RAND_MAX;
+            float keepProb = 1 - dropProb;
+            float RAND_MAXxP = keepProb * RAND_MAX;
+            float invKeepProb = 1 / keepProb;
             std::vector<float> mask(CNTK::Transform(CNTK::NumericRangeSpan<size_t>(n), [&](size_t)
             {
-                return preScale * (rand() < RAND_MAXxProb);
+                return (rand() < RAND_MAXxP) ? invKeepProb : 0;
             }));
             return mask;
         }
-        static inline Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              inits::InternalInitializers::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
-        static inline Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), inits::InternalInitializers::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+        static inline Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              inits::Internal::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+        static inline Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), inits::Internal::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
     };
 
     static inline Expr operator-(const Expr& a) { return CNTK::Negate(a); }
@@ -533,9 +542,9 @@ namespace marian
         const auto& viewShape = a.Shape();
         if (viewShape.Rank() != 2)
             CNTK::InvalidArgument("rows: data must be a matrix");
-        size_t numClasses = viewShape.Dimensions().front();
+        size_t numClasses = viewShape.Dimensions().back();
         std::vector<float> indicesFloat(CNTK::Transform(indices, [](size_t index) { return (float)index; }));
-        auto indicesVar = InternalOps::Constant(CNTK::NDShape{ indices.size() }, inits::InternalInitializers::WrappedVectorInitializer(indicesFloat));
+        auto indicesVar = InternalOps::Constant(CNTK::NDShape{ indices.size() }, inits::Internal::WrappedVectorInitializer(indicesFloat));
         auto indicesOneHot = CNTK::OneHotOp(indicesVar, numClasses, /*outputSparse=*/true, CNTK::Axis(0));
         return CNTK::Times(a, indicesOneHot);
     }
@@ -606,20 +615,12 @@ namespace marian
         return InternalOps::NotImplemented("highway");
     }
 
-    template <typename... Args>
-    static inline Expr dropout(const Expr& x, Args... args)
+    static inline Expr dropout(const Expr& x, const Expr& mask) { return x * mask; }
+    static inline Expr dropout(const Expr& x, float dropProb)
     {
-        // ... for now, implement it with a CPU-side random mask. Maybe good occasion to get the random generator nodes to work in Dynamite?
-        return x;
-        //auto mask = Get(keywords::mask, nullptr, args...);
-        //float dropout_prob = Get(keywords::dropout_prob, 0.0f, args...);
-        //
-        //ABORT_IF(!mask && !dropout_prob, "Neither mask nor dropout prob given");
-        //if (!mask) {
-        //    auto graph = x->graph();
-        //    mask = graph->dropout(dropout_prob, x->shape());
-        //}
-        //return x * mask;
+        // untested. Check the dimension stuff.
+        auto mask = InternalOps::DropoutMask(dropProb, x.shape());
+        return dropout(x, mask);
     }
 
     static inline Expr shift(Expr, Shape)
@@ -696,6 +697,9 @@ namespace marian
 
         return cost;
     }
+
+    // added for CNTK: same as graph->constant() without the graph
+    static inline Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) { return InternalOps::Constant(npShape, init, /*isVolatile=*/false); }
 
     static inline Expr guidedAlignmentCost(Ptr<ExpressionGraph> graph, Ptr<data::CorpusBatch> batch, Ptr<Options> options, Expr att) // (nearly direct copy)
     {
@@ -795,8 +799,8 @@ namespace marian
             else
                 return nullptr;
         }
-        Expr dropout(float prob, const Shape& shape)      { return InternalOps::DropoutMask(prob, shape); }
-        Expr dropout(float prob, const ShapeProxy& shape) { return InternalOps::DropoutMask(prob, shape); }
+        Expr dropout(float dropProb, const Shape& shape)      { return InternalOps::DropoutMask(dropProb, shape); }
+        Expr dropout(float dropProb, const ShapeProxy& shape) { return InternalOps::DropoutMask(dropProb, shape); }
         // forward/backward
         void forward() { }
         void forwardNext() { }
