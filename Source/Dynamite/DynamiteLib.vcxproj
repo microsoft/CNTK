@@ -164,6 +164,7 @@
     <ClInclude Include="marian.h" />
     <ClInclude Include="Models.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
+    <ClInclude Include="shape.h" />
     <ClInclude Include="transformer.h" />
   </ItemGroup>
   <ItemGroup>

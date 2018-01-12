@@ -58,6 +58,9 @@
     <ClInclude Include="transformer.h">
       <Filter>Marian\Models</Filter>
     </ClInclude>
+    <ClInclude Include="shape.h">
+      <Filter>Marian\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="iris.data">
