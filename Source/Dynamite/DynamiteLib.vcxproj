@@ -168,6 +168,7 @@
     <ClInclude Include="marian.h" />
     <ClInclude Include="Models.h" />
     <ClInclude Include="model_base.h" />
+    <ClInclude Include="model_factory.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
     <ClInclude Include="shape.h" />
     <ClInclude Include="states.h" />

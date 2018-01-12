@@ -82,6 +82,9 @@
     <ClInclude Include="constructors.h">
       <Filter>Marian\Models</Filter>
     </ClInclude>
+    <ClInclude Include="model_factory.h">
+      <Filter>Marian\Models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="iris.data">
