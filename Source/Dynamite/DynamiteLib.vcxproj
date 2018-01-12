@@ -159,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CNTKLibraryHelpers.h" />
+    <ClInclude Include="constructors.h" />
     <ClInclude Include="encdec.h" />
     <ClInclude Include="factory.h" />
     <ClInclude Include="generic.h" />
