@@ -157,7 +157,7 @@ namespace marian
             for (const auto& key : other->Keys())
             {
                 if (!Contains(key))
-                    Base::operator[](key) = other->operator[](key); // BUGBUG: DictionaryValues cannot be copied. Will leave double-freed references.
+                    Base::operator[](key) = other->operator[](key);
             }
         }
         template<typename T>
