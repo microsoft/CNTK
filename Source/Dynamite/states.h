@@ -1,9 +1,10 @@
 #pragma once
 
-#include "common/definitions.h"
-#include "data/corpus.h"
-#include "graph/expression_graph.h"
-#include "rnn/types.h"
+//#include "common/definitions.h"
+//#include "data/corpus.h"
+//#include "graph/expression_graph.h"
+//#include "rnn/types.h"
+#include "types.h"
 
 namespace marian {
 

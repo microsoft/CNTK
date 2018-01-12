@@ -7,7 +7,6 @@
 #include <vector>
 
 //#include "common/logging.h"
-#define ABORT_IF(c,m,a,b) if (c) CNTK::InvalidArgument(m); /* ignoring a and b for now */
 
 namespace marian {
 

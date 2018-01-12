@@ -13,7 +13,11 @@
 #include <memory>
 #include <map>
 
+template <typename... Args>
+static inline void ABORT_IF(bool cond, const char* msg, Args&&... ignoredArgs) { if (cond) CNTK::InvalidArgument(msg); } // ignoring additional args for now
+
 #include "shape.h"
+// Note: more #includes at the end
 
 namespace marian
 {
@@ -25,6 +29,9 @@ namespace marian
     using Ptr = std::shared_ptr<T>;
     template <class T, typename... Args> Ptr<T> New(Args&&... args) { return Ptr<T>(new T(std::forward<Args>(args)...)); }
     template <class T> Ptr<T> New(Ptr<T> p) { return Ptr<T>(p); }
+    class ExpressionGraph;
+    typedef size_t Word;
+    typedef std::vector<Word> Words;
 
     // -----------------------------------------------------------------------
     // Shape
@@ -77,6 +84,7 @@ namespace marian
         float scalar() const { return val()->AsScalar<float>(); }
         ShapeProxy shape() const { return Shape(); }
         void dump() const { Value()->LogToFile(Name()); }
+        Ptr<ExpressionGraph> graph() const { return nullptr; } // TODO: We need a placeholder for this. Or maybe only allow one graph?
     };
 
     // -----------------------------------------------------------------------
@@ -135,13 +143,62 @@ namespace marian
     {
         typedef CNTK::Dictionary Base;
     public:
+        bool has(const char* key) const
+        {
+            std::wstring wkey(key, key + strlen(key));
+            return Base::Contains(wkey);
+        }
         template<typename T>
         const T& get(const char* key) const
         {
             std::wstring wkey(key, key + strlen(key));
-            const auto& val = Base::operator[](key);
-            return val.Value<T>();
+            return Base::operator[](key).Value<T>();
         }
+        template<typename T>
+        const T& get(const char* key, const T& deflt) const
+        {
+            std::wstring wkey(key, key + strlen(key));
+            return Base::GetOrElse(key, deflt);
+        }
+        // Marian uses narrow strings
+        std::string get(const char* key, const std::string& deflt) const
+        {
+            std::wstring wkey(key, key + strlen(key));
+            if (Base::Contains(wkey))
+            {
+                const auto& wstr = Base::operator[](wkey).Value<std::wstring>();
+                return std::string(wstr.begin(), wstr.end()); // note: simplistic conversion that only works for 7-bit ASCII
+            }
+            else
+                return deflt;
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    // data namespace
+    // -----------------------------------------------------------------------
+
+    namespace data
+    {
+        class SubBatch
+        {
+        public:
+            int batchSize()  const { return 1; } // #sequences
+            int batchWidth() const { return 1; } // max #words
+            const std::vector<Word>& indices() const { return m_indices; }
+            const std::vector<float>& mask() const { return m_mask; }
+        private:
+            std::vector<Word> m_indices;
+            std::vector<float> m_mask;
+        };
+        class CorpusBatch // TODO: probably we need to pull in the Marian lib for this
+        {
+            std::vector<Ptr<SubBatch>> m_subBatches;
+        public:
+            CorpusBatch() {}
+            const Ptr<SubBatch>& operator[](size_t index) const { return m_subBatches[index]; }
+            const Ptr<SubBatch>& front() const { return m_subBatches.front(); }
+        };
     };
 
     // -----------------------------------------------------------------------
@@ -589,5 +646,10 @@ namespace marian
         return New<OptimizerWrapper>(eta, algorithmType);
     }
 }
+
+// we have a few more #includes here, since the original Marian header also
+// pulls in a few convenience classes that require the core declarations
+#include "states.h"
+#include "encdec.h"
 
 #endif // __MARIAN_CNTK

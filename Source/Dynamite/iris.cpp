@@ -6,7 +6,7 @@
 #include "helper.h"
 
 using namespace marian;
-//using namespace data;
+using namespace data;
 using namespace keywords;
 
 // Constants for Iris example
