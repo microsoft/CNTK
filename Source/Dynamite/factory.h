@@ -31,8 +31,9 @@ public:
   }
 };
 
-template <class Factory>
-class Accumulator : public Factory {
+template <class BaseFactory>
+class Accumulator : public BaseFactory {
+  typedef BaseFactory Factory;
 public:
   Accumulator() : Factory(nullptr) {}
   Accumulator(Ptr<ExpressionGraph> graph) : Factory(graph) {}
