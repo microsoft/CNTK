@@ -92,6 +92,3 @@ def test_lattice_deserializer(device_id):
     assert (trainer.previous_minibatch_sample_count == 218)
     assert (trainer.total_number_of_samples_seen == 5750)
     print("Completed successfully.")
-
-if __name__=='__main__':
-    test_lattice_deserializer(0)
