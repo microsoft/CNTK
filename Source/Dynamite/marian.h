@@ -66,12 +66,15 @@ namespace marian
         Expr(const CNTK::Variable& v) : Base(v) { }
         Expr(CNTK::Variable&& v) : Base(std::move(v)) { }
         Expr(const CNTK::FunctionPtr& f) : Base(f) { }
-        // ...assignments
-        //std::cout << "Epoch: " << epoch << " Cost: " << cost->scalar()
-        CNTK::NDArrayViewPtr val() const { return Value(); }
-        float scalar() const { return val()->AsScalar<float>(); }
+        Expr(const std::nullptr_t&) : Base(CNTK::Variable()) { }
+        Expr() : Base(CNTK::Variable()) { }
+        Expr& operator=(const Expr& other) { Base::operator=(other); }
+        //Expr& operator=(Expr*& other) { Base::operator=(std::move(other)); }
         // Marian accesses members by arrow, not dot. This is a bit of a hack.
         Expr* operator->() { return this; }
+        // Marian member functions
+        CNTK::NDArrayViewPtr val() const { return Value(); }
+        float scalar() const { return val()->AsScalar<float>(); }
         ShapeProxy shape() const { return Shape(); }
         void dump() const { Value()->LogToFile(Name()); }
     };
@@ -119,13 +122,26 @@ namespace marian
     {
         static CNTK::ParameterInitializer init;
         static int axis;
-        static Expr mask(CNTK::Variable);
+        static Expr mask = nullptr;
     };
 
     namespace Config
     {
         // TODO: need an equivalent for gcc
         __declspec(selectany) size_t seed;
+    };
+
+    class Options : public CNTK::Dictionary
+    {
+        typedef CNTK::Dictionary Base;
+    public:
+        template<typename T>
+        const T& get(const char* key) const
+        {
+            std::wstring wkey(key, key + strlen(key));
+            const auto& val = Base::operator[](key);
+            return val.Value<T>();
+        }
     };
 
     // -----------------------------------------------------------------------
@@ -202,16 +218,24 @@ namespace marian
     static inline Expr operator/(const Expr& a, const Expr& b) { return CNTK::ElementDivide(a, b); }
 
     static inline Expr operator+(float a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
+    static inline Expr operator+(int   a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
     static inline Expr operator+(const Expr& a, float b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
+    static inline Expr operator+(const Expr& a, int   b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
 
     static inline Expr operator-(float a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
+    static inline Expr operator-(int   a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
     static inline Expr operator-(const Expr& a, float b) { return b == 0 ?  a : a - InternalOps::Scalar(b); }
+    static inline Expr operator-(const Expr& a, int   b) { return b == 0 ? a : a - InternalOps::Scalar(b); }
 
     static inline Expr operator*(float a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
+    static inline Expr operator*(int   a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
     static inline Expr operator*(const Expr& a, float b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
+    static inline Expr operator*(const Expr& a, int   b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
 
     static inline Expr operator/(float a, const Expr& b) { return InternalOps::Scalar(a) / b; }
+    static inline Expr operator/(int   a, const Expr& b) { return InternalOps::Scalar(a) / b; }
     static inline Expr operator/(const Expr& a, float b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
+    static inline Expr operator/(const Expr& a, int   b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
 
     static inline Expr debug(const Expr& a, const std::string& message = "") { message; return a; } // not implemented presently
 
@@ -359,7 +383,7 @@ namespace marian
     static inline Expr sqrt(const Expr& a, float eps = 0.f) { return CNTK::Sqrt(a + eps); }
     static inline Expr square(const Expr& a) { return a * a; }
 
-    static inline Expr layer_norm(const Expr& x, Expr gamma, Expr beta = CNTK::Variable(), float eps = 1e-9)
+    static inline Expr layer_norm(const Expr& x, Expr gamma, Expr beta = nullptr, float eps = 1e-9)
     {
         x, gamma, beta, eps; // TODO: find out the precise semantics
         return InternalOps::NotImplemented("layer_norm");
@@ -435,10 +459,10 @@ namespace marian
     namespace inits
     {
         static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return InternalOps::WrappedVectorInitializer(inputData); }
-        // TODO: check that the scaling is the same
         static inline CNTK::ParameterInitializer uniform() { return CNTK::UniformInitializer(0.1); }
         static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
         static CNTK::ParameterInitializer ones  = CNTK::ConstantInitializer(1);
+        static CNTK::ParameterInitializer glorot_uniform = CNTK::GlorotUniformInitializer(1.0); // TODO: check the scaling
     }
 
     // -----------------------------------------------------------------------
