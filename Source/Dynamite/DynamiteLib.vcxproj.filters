@@ -18,6 +18,9 @@
     <Filter Include="Marian\Include">
       <UniqueIdentifier>{d5ebe776-85b0-4af5-b9e8-98b569ca1bc3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Marian\Models">
+      <UniqueIdentifier>{dbf88615-10b3-4ecb-8807-fdebc19c5efe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -51,6 +54,9 @@
     </ClInclude>
     <ClInclude Include="marian.h">
       <Filter>Marian\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="transformer.h">
+      <Filter>Marian\Models</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
