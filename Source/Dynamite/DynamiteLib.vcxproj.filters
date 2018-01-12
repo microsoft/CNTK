@@ -64,10 +64,13 @@
     <ClInclude Include="encdec.h">
       <Filter>Marian\Models</Filter>
     </ClInclude>
-    <ClInclude Include="states.h">
-      <Filter>Marian\Include</Filter>
-    </ClInclude>
     <ClInclude Include="types.h">
+      <Filter>Marian\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="states.h">
+      <Filter>Marian\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="factory.h">
       <Filter>Marian\Models</Filter>
     </ClInclude>
   </ItemGroup>
