@@ -151,6 +151,8 @@ namespace marian
         static std::wstring widen(const std::string& s) { return std::wstring(s.begin(), s.end()); }
         static std::string narrow(const std::wstring& s) { return std::string(s.begin(), s.end()); } // note: simplistic conversion that only works for 7-bit ASCII
     public:
+        Options() {}
+        Options(const CNTK::Dictionary& dict) : Base(dict) { }
         std::string str() { CNTK::LogicError("Option serialization not supported"); }
         void merge(const Ptr<Options>& other) // add all items from 'other' to 'this' unless an item already exists
         {

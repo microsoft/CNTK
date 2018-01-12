@@ -12,6 +12,10 @@
 #include "Layers.h"
 #include "TimerUtility.h"
 
+#include "marian.h"
+#include "transformer.h"
+using namespace marian;
+
 #include <cstdio>
 #include <map>
 #include <set>
@@ -751,6 +755,18 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
+
+#if 0 // CONTINUE HERE
+    auto moptions = Dictionary
+    (
+        (L"type1", L"transformer"),
+        (L"type2", 13)
+    );
+    auto mmodel = models::encoder_decoder()(New<Options>(moptions))
+        .push_back(models::encoder()("type", "transformer"))
+        .push_back(models::decoder()("type", "transformer"))
+        .construct();
+#endif
 
     // data
     if (runProfiling) // if profiling then use small files so we don't measure the load time
