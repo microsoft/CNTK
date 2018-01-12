@@ -747,6 +747,53 @@ public:
     }
 };
 
+namespace marian { namespace models {
+    // direct copy from Marian
+    Ptr<EncoderBase> EncoderFactory::construct() {
+        //if (options_->get<std::string>("type") == "s2s")
+        //    return New<EncoderS2S>(options_);
+        //if (options_->get<std::string>("type") == "char-s2s")
+        //    return New<CharS2SEncoder>(options_);
+        if (options_->get<std::string>("type") == "transformer")
+            return New<EncoderTransformer>(options_);
+
+        ABORT("Unknown encoder type");
+    }
+
+    Ptr<DecoderBase> DecoderFactory::construct() {
+        //if (options_->get<std::string>("type") == "s2s")
+        //    return New<DecoderS2S>(options_);
+        if (options_->get<std::string>("type") == "transformer")
+            return New<DecoderTransformer>(options_);
+        //if (options_->get<std::string>("type") == "hard-att")
+        //    return New<DecoderHardAtt>(options_);
+        //if (options_->get<std::string>("type") == "hard-soft-att")
+        //    return New<DecoderHardAtt>(options_);
+
+        ABORT("Unknown decoder type");
+    }
+
+    Ptr<EncoderDecoder> EncoderDecoderFactory::construct() {
+        Ptr<EncoderDecoder> encdec;
+
+        //if (options_->get<std::string>("type") == "amun")
+        //    encdec = New<Amun>(options_);
+        //if (options_->get<std::string>("type") == "nematus")
+        //    encdec = New<Nematus>(options_);
+        //
+        if (!encdec)
+            encdec = New<EncoderDecoder>(options_);
+
+        for (auto& ef : encoders_)
+            encdec->push_back(ef(options_).construct());
+
+        for (auto& df : decoders_)
+            encdec->push_back(df(options_).construct());
+
+        return encdec;
+    }
+} }
+
 static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, size_t startMbCount)
 {
     let numWorkers = communicator->Workers().size();
@@ -766,6 +813,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         .push_back(models::encoder()("type", "transformer"))
         .push_back(models::decoder()("type", "transformer"))
         .construct();
+    // run through once to create all params, so that we can pull them out
+    auto graph = New<ExpressionGraph>();
+    auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1);
+    mmodel->build(graph, fakeBatch);
 #endif
 
     // data
