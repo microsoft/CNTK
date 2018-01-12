@@ -168,6 +168,7 @@
     <ClInclude Include="shape.h" />
     <ClInclude Include="states.h" />
     <ClInclude Include="transformer.h" />
+    <ClInclude Include="types.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="iris.data" />
