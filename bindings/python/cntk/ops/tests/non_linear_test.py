@@ -87,6 +87,22 @@ def test_op_sigmoid(operand, device_id, precision):
 
 
 @pytest.mark.parametrize("operand", TENSORS)
+def test_op_swish(operand, device_id, precision):
+    x = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+    sigmoid_x = 1 / (1.0 + np.exp(-x))
+    swish_x = x * sigmoid_x
+    expected_forward = AA([swish_x])
+
+    expected_backward = {
+        'arg': [swish_x + sigmoid_x * (1 - swish_x)],
+    }
+
+    from .. import swish
+    _test_unary_op(precision, device_id, swish, operand,
+                   expected_forward, expected_backward)
+
+
+@pytest.mark.parametrize("operand", TENSORS)
 def test_op_softplus(operand, device_id, precision):
     s = np.logaddexp(0, (AA(operand, dtype=PRECISION_TO_TYPE[precision])))
     # BUGBUG: The inner implementation is a tiny bit less accurate than numpy, so we manually replace the values
