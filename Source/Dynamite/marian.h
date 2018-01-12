@@ -13,8 +13,8 @@
 #include <memory>
 #include <map>
 
-template <typename... Args> static inline void ABORT_IF(bool cond, const char* msg, Args&&... ignoredArgs) { if (cond) CNTK::InvalidArgument(msg); } // ignoring additional args for now
-template <typename... Args> static inline void ABORT(const char* msg, Args&&... ignoredArgs) { CNTK::InvalidArgument(msg); } // ignoring additional args for now
+template <typename... Args> __declspec(noreturn) static inline void ABORT_IF(bool cond, const char* msg, Args&&... ignoredArgs) { if (cond) CNTK::InvalidArgument(msg); } // ignoring additional args for now
+template <typename... Args> __declspec(noreturn) static inline void ABORT(const char* msg, Args&&... ignoredArgs) { CNTK::InvalidArgument(msg); } // ignoring additional args for now
 
 #include "shape.h"
 // Note: more #includes at the end
@@ -148,6 +148,7 @@ namespace marian
         template<class T> struct get_return { typedef const T& type; };
         template<>        struct get_return<std::string> { typedef std::string type; };
         template<>        struct get_return<std::vector<int>> { typedef std::vector<int> type; };
+        template<>        struct get_return<std::vector<std::string>> { typedef std::vector<std::string> type; };
         static std::wstring widen(const std::string& s) { return std::wstring(s.begin(), s.end()); }
         static std::string narrow(const std::wstring& s) { return std::string(s.begin(), s.end()); } // note: simplistic conversion that only works for 7-bit ASCII
     public:
@@ -610,6 +611,46 @@ namespace marian
     {
         x, mask, width, isEven; // TODO: implement these in CNTK Dynamite
         return InternalOps::NotImplemented("pooling_with_masking");
+    }
+
+    static inline Expr Cost(Expr logits, Expr indices, Expr mask, std::string costType, float smoothing) // (direct copy)
+    {
+        using namespace keywords;
+
+        auto ce = cross_entropy(logits, indices);
+
+        if (smoothing > 0) {
+            // @TODO: add this to CE kernels instead
+            auto ceq = mean(logsoftmax(logits), axis = -1);
+            ce = (1 - smoothing) * ce - smoothing * ceq;
+        }
+
+        if (mask)
+            ce = ce * mask;
+
+        Expr cost;
+        if (costType == "ce-mean" || costType == "cross-entropy") {
+            cost = mean(sum(ce, axis = -3), axis = -2);
+        }
+        else if (costType == "ce-mean-words") {
+            cost
+                = sum(sum(ce, axis = -3), axis = -2) / sum(sum(mask, axis = -3), axis = -2);
+        }
+        else if (costType == "ce-sum") {
+            cost = sum(sum(ce, axis = -3), axis = -2);
+        }
+        else if (costType == "perplexity") {
+            cost = exp(sum(sum(ce, axis = -3), axis = -2)
+                / sum(sum(mask, axis = -3), axis = -2));
+        }
+        else if (costType == "ce-rescore") {
+            cost = -sum(ce, axis = -3);
+        }
+        else {  // same as ce-mean
+            cost = mean(sum(ce, axis = -3), axis = -2);
+        }
+
+        return cost;
     }
 
     static inline Expr guidedAlignmentCost(Ptr<ExpressionGraph> graph, Ptr<data::CorpusBatch> batch, Ptr<Options> options, Expr att) // (nearly direct copy)
