@@ -785,5 +785,6 @@ namespace marian
 #include "model_base.h"
 #include "encdec.h"
 #include "constructors.h"
+#include "model_factory.h"
 
 #endif // __MARIAN_CNTK

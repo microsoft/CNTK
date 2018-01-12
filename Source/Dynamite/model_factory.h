@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common/definitions.h"
-#include "layers/factory.h"
-#include "models/encdec.h"
+//#include "common/definitions.h"
+//#include "layers/factory.h"
+//#include "models/encdec.h"
 
 namespace marian {
 
@@ -54,6 +54,6 @@ Ptr<ModelBase> by_type(std::string type, Ptr<Options> options);
 
 Ptr<ModelBase> from_options(Ptr<Options> options);
 
-Ptr<ModelBase> from_config(Ptr<Config> config);
+//Ptr<ModelBase> from_config(Ptr<Config> config);
 }
 }
