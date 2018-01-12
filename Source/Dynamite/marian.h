@@ -104,8 +104,9 @@ namespace marian
         {
             const auto& viewShape = x.Shape();
             auto rank = viewShape.Rank();
-            // TODO: negative axes
-            if (axisIndex >= rank)
+            if (axisIndex < 0)
+                axisIndex += rank;
+            if (axisIndex < 0 || axisIndex >= rank)
                 CNTK::InvalidArgument("marian::ToCNTKAxis: axis out of range");
             return CNTK::Axis(rank - 1 - (size_t)axisIndex);
         }
@@ -228,7 +229,7 @@ namespace marian
 
     namespace data
     {
-        class Batch // (this is a direct copy from batch.h)
+        /*interface*/ class Batch // (this is a direct copy from batch.h)
         {
         public:
             virtual size_t size() const = 0;
@@ -243,27 +244,64 @@ namespace marian
         protected:
             std::vector<size_t> sentenceIds_;
         };
-        class SubBatch
+        class SubBatch // represents a batch of sentences of one data stream
         {
         public:
-            int batchSize()  const { return 1; } // #sequences
-            int batchWidth() const { return 1; } // max #words
+            SubBatch(int size, int width) : // create an empty batch (all mask values 0) of given dimensions
+                m_indices(size * width, 0), m_mask(size * width, 0), m_totalNumTokens(0),
+                m_numSequences(size), m_maxSequenceLength(width)
+            {
+            }
+            int batchSize()  const { return m_numSequences;  }
+            int batchWidth() const { return m_maxSequenceLength; }
+            int batchWords() const { return m_totalNumTokens; }
+            void setWords(size_t words) { m_totalNumTokens = words; }
+            std::vector<Word>& indices() { return m_indices; }
+            std::vector<float>& mask()   { return m_mask; }
             const std::vector<Word>& indices() const { return m_indices; }
-            const std::vector<float>& mask() const { return m_mask; }
+            const std::vector<float>& mask()   const { return m_mask; }
         private:
-            std::vector<Word> m_indices;
-            std::vector<float> m_mask;
+            size_t m_numSequences;       // number of sequences
+            size_t m_maxSequenceLength;  // max sequence length
+            size_t m_totalNumTokens;     // number of non-0 entries in m_mask
+            // Sentence data is stored as a concatenation of all sequences, which have been padded
+            // to m_maxSequenceLength. The resulting data can be reshaped to a column-major [T x S] tensor.
+            // The mask is 1 for valid entries, and 0 for padding entries.
+            std::vector<Word> m_indices; // [positionInSequence * m_numSequences + sequenceIndex] word indices as a flattened [m_maxSequenceLength x m_numSequences] tensor
+            std::vector<float> m_mask;   // 1/0 mask of same size
         };
-        class CorpusBatch : public Batch // TODO: probably we need to pull in the Marian lib for this
+        class CorpusBatch : public Batch // represents a set of data streams, e.g. source and target
         {
         public:
             CorpusBatch() {}
-            const Ptr<SubBatch>& operator[](size_t index) const { return m_subBatches[index]; }
-            const Ptr<SubBatch>& front() const { return m_subBatches.front(); }
+            CorpusBatch(const std::vector<Ptr<SubBatch>>& streams) : m_streams(streams) {}
+            CorpusBatch(std::vector<Ptr<SubBatch>>&& streams) : m_streams(std::move(streams)) {}
+            size_t sets()  const { return m_streams.size(); }                                // get number of streams
+            const Ptr<SubBatch>& operator[](size_t index) const { return m_streams[index]; } // get one stream
+            const Ptr<SubBatch>& front() const { return m_streams.front(); }                 // get first stream (this would be source)
+            const Ptr<SubBatch>& back()  const { return m_streams.back(); }                  // get last stream (this would be target)
+            size_t size()  const { return front()->batchSize();  }                           // get number of sentences in first sub-batch
+            size_t words() const { return front()->batchWords(); }                           // get #total present tokens in first stream (source)
             const std::vector<float>& getGuidedAlignment() { return m_guidedAlignment; }
+            void setGuidedAlignment(const std::vector<float>& aln) { m_guidedAlignment = aln; }
+            virtual std::vector<Ptr<Batch>> split(size_t n) override { CNTK::LogicError("CorpusBatch::split not implemented"); }
+            // helper for the initial run
+            static Ptr<CorpusBatch> fakeBatch(std::vector<size_t>& lengths, size_t batchSize, bool guidedAlignment = false)
+            {
+                auto batch = New<CorpusBatch>(std::vector<Ptr<SubBatch>>(CNTK::Transform(lengths, [&](size_t len)
+                {
+                    auto sb = New<SubBatch>(batchSize, len);
+                    std::fill(sb->mask().begin(), sb->mask().end(), 1.0f);
+                    sb->setWords(sb->mask().size());
+                    return sb;
+                })));
+                if (guidedAlignment)
+                    batch->setGuidedAlignment(std::vector<float>(batchSize * lengths.front() * lengths.back(), 0.f));
+                return batch;
+            }
         private:
-            std::vector<Ptr<SubBatch>> m_subBatches;
-            std::vector<float> m_guidedAlignment;
+            std::vector<Ptr<SubBatch>> m_streams; // e.g. { source, target }
+            std::vector<float> m_guidedAlignment; // [size() * front().batchWidth() * back().batchWidth()]
         };
     };
 
@@ -536,10 +574,10 @@ namespace marian
         return numer / denom;
     }
 
-    static inline Expr step(const Expr& a, int step, int axis)
+    static inline Expr step(const Expr& a, int step, int ax)
     {
-        a, axis, step; // TODO: find out the semantics. Seems to be just Slice().
-        return InternalOps::NotImplemented("step");
+        // TODO: can 'step' be negative as well?
+        return Slice(a, mappers::ToCNTKAxis(a, ax), step, step + 1);
     }
 
     static inline Expr sqrt(const Expr& a, float eps = 0.f) { return CNTK::Sqrt(a + eps); }
