@@ -803,7 +803,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
-#if 1 // CONTINUE HERE
+#if 0 // CONTINUE HERE
     auto moptions = Dictionary
     (
         // These are all options given in the log. Not all are used inside the model.
@@ -842,7 +842,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         L"guided-alignment-weight",       1,    
         L"ignore-model-config",           false,    
         L"keep-best",                     false,    
-        L"label-smoothing",               0.1,    
+        L"label-smoothing",               0.1f,
         L"layer-normalization",           false,    
         L"learn-rate",                    0.0003,    
         L"log",                           L"model/train.log",    
@@ -914,6 +914,31 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto graph = New<ExpressionGraph>();
     auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1);
     mmodel->build(graph, fakeBatch);
+    auto mparamsVector = graph->GetAllParameters();
+    auto mparams = Dynamite::ModelParameters(mparamsVector, {});
+    mparams.LogParameters();
+#if 0 // next steps: finish shift() (use convolution??), then wrap it in a Dynamite Model
+    // Issue: This is the criterion function with Cost(). We want it without, and separate them.
+    auto mmodel_fn = BinaryModel(mparams,
+            [=](const Variable& xFwd, const Variable& xBwd) -> Variable
+    {
+        // the first layer has different inputs for forward and backward
+        auto h = layers[0](xFwd, xBwd);
+        for (size_t i = 1; i < numLayers; i++)
+        {
+            // before each additional layer, so batch norm
+            h = bns[i - 1](h);
+            // do another layer
+            h = layers[i](h, h);
+            //// after each additional layer, so batch norm
+            //// BUGBUG: Why not the first? Seems like a bug.
+            //// But BN after this does not help, so probably it should be between those layers, not after.
+            ////h = bns[i - 1](h);
+        }
+        //DOLOG(h);
+        return h;
+    });
+#endif
 #endif
 
     // data

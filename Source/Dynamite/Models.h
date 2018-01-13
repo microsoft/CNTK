@@ -184,6 +184,7 @@ public:
             // for debugging, implant the full name. This way, the full name will show up in AutoBatch log output.
             const_cast<Parameter&>(kv.second).DebugUpdateName(name);
         }
+        fflush(stderr);
     }
 };
 typedef ModelParameters::ModelParametersPtr ModelParametersPtr;

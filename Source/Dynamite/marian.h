@@ -552,7 +552,7 @@ namespace marian
         return c;
     }
 
-    static inline Expr transpose(const Expr& a) { return CNTK::Transpose(a); }
+    static inline Expr transpose(const Expr& a) { return CNTK::TransposeAxes(a, CNTK::Axis(0), CNTK::Axis(1)); }
     static inline Expr transpose(const Expr& a, const std::vector<int>& axes) { return CNTK::Transpose(a, mappers::ToCNTKAxes(a, axes)); }
 
     static inline Expr concatenate(const std::vector<Expr>& concats, keywords::axis_k ax = 0)
@@ -686,9 +686,12 @@ namespace marian
         return dropout(x, mask);
     }
 
-    static inline Expr shift(Expr, Shape)
+    static inline Expr shift(const Expr& x, Shape)
     {
-        return InternalOps::NotImplemented("shift");
+        // BUGBUG: Complete this. Marian cannot take views, so this is unnecessarily complex.
+        // The cheapest would be a convolution with a kernel shifted by 1.
+        return x; // for now just return the input, so we can do the next ones
+        //return InternalOps::NotImplemented("shift");
     }
 
     static inline Expr convert2cudnnFormat(const Expr& x)
@@ -873,6 +876,8 @@ namespace marian
         {
             root.Backward(m_allGradients);
         }
+        // API addition for Dynamite:
+        const std::vector<CNTK::Parameter>& GetAllParameters() const { return m_allParameters; }
     private:
         std::map<std::string, CNTK::Parameter> m_allParametersMap;
         std::vector<CNTK::Parameter> m_allParameters;
