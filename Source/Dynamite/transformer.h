@@ -294,7 +294,7 @@ public:
     auto opsPre = options->get<std::string>("transformer-preprocess");
     auto output = PreProcess(graph, prefix + "_Wo", opsPre, input, dropProb);
 
-    int heads = options->get<float>("transformer-heads");
+    int heads = options->get<int>("transformer-heads");
 
     // multi-head self-attention over previous input
     output = MultiHead(graph,

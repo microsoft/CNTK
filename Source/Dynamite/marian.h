@@ -494,10 +494,62 @@ namespace marian
         a, b, transA, transB, scalar;
         return InternalOps::NotImplemented("dot");
     }
-    static inline Expr bdot(const Expr& a, const Expr& b, bool transA = false, bool transB = false, float scalar = 1.f)
+    static inline Expr bdot(const Expr& aMarian, const Expr& bMarian, bool transAMarian = false, bool transBMarian = false, float scalar = 1.f)
     {
-        a, b, transA, transB, scalar;
-        return InternalOps::NotImplemented("bdot");
+        // We operate on the internal CNTK notation which has all axes reversed in order.
+        // For matrix products, we also need to swap the argument order.
+        // TODO: The transposition could be free, but currently is not. At least pass an optimization hint that it does not need to make it dense?
+        auto transA = transBMarian;
+        auto transB = transAMarian;
+        const auto& a = !transA ? bMarian : TransposeAxes(bMarian, CNTK::Axis(0), CNTK::Axis(1));
+        const auto& b = !transB ? aMarian : TransposeAxes(aMarian, CNTK::Axis(0), CNTK::Axis(1));
+        // This version is hard-coded for 2+ dimensions.
+        const auto& aShape = a.Shape();
+        const auto& bShape = b.Shape();
+        size_t rank = aShape.Rank();
+        if (rank < 2 || rank != bShape.Rank())
+            CNTK::InvalidArgument("bdot: batch dimension(s) must match between arguments");
+        const auto& aDims = aShape.Dimensions();
+        const auto& bDims = bShape.Dimensions();
+        auto I  = aDims[0];
+        auto J  = aDims[1];
+        auto J2 = bDims[0];
+        auto K  = bDims[1];
+        if (J != J2)
+            CNTK::InvalidArgument("bdot: inner matrix dimensions must match between arguments");
+        auto mapDimsBegin = aDims.begin() + 2; // Marian semantics is hard-coded strictly for matrices (2D tensors)
+        auto mapDimsEnd   = aDims.end();
+        // The matrix product is implemented as an InnerProduct after Reshape.
+        //   a[I x J x B...] * b[J x K x B...] gets rewritten as:
+        // = a[I x J x 1 x B...]
+        // * b[1 x J x K x B...]
+        // >> sum ^^^
+        // ->c[I x 1 x K x B...
+        // >> drop^^^
+        // insert the axis
+        CNTK::NDShapeDimensions aShapeExtended(rank + 1, 0);
+        aShapeExtended[0] = I;
+        aShapeExtended[1] = J;
+        aShapeExtended[2] = 1;
+        std::copy(mapDimsBegin, mapDimsEnd, aShapeExtended.begin() + 3);
+        CNTK::NDShapeDimensions bShapeExtended = aShapeExtended;
+        bShapeExtended[0] = 1;
+        bShapeExtended[1] = J;
+        bShapeExtended[2] = K;
+        auto aExtended = CNTK::Reshape(a, CNTK::NDShape(std::move(aShapeExtended))); // this is free in Dynamite
+        auto bExtended = CNTK::Reshape(b, CNTK::NDShape(std::move(bShapeExtended)));
+        // perform the matrix product
+        auto cExtended = CNTK::InnerProduct(aExtended, bExtended, CNTK::Axis(1));
+        // remove the extra axis
+        CNTK::NDShapeDimensions cShape(rank, 0);
+        cShape[0] = I;
+        cShape[1] = K;
+        std::copy(mapDimsBegin, mapDimsEnd, cShape.begin() + 2);
+        auto c = CNTK::Reshape(cExtended, CNTK::NDShape(std::move(cShape)));
+        // final scaling
+        if (scalar != 1)
+            c = c * scalar;
+        return c;
     }
 
     static inline Expr transpose(const Expr& a) { return CNTK::Transpose(a); }
