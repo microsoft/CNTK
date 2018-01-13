@@ -819,11 +819,9 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
 def LatticeDeserializer(lattice_index_file, streams):
     '''
     Configures a lattice deserializer
+
     Args:
         lattice_index_file (str): path to the file containing list of lattice TOC (table of content) files
-        streams: any dictionary-like object that contains a mapping from stream
-          names to :class:`StreamDef` objects. Each StreamDef object configures
-          a label stream.
     '''
     if len(streams) != 1:
         raise ValueError("LatticeDeserializer only accepts a single stream")
