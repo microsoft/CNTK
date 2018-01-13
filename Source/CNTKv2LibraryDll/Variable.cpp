@@ -15,18 +15,18 @@ namespace CNTK
     Variable::Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid) :
         InternalVariable(shape, varType, dataType, value, needsGradient, dynamicAxes, isSparse, /*isVolatile=*/false, name, uid)
     {
-        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     }
     Variable::Variable(NDShape&& shape, VariableKind varType, ::CNTK::DataType dataType, bool needsGradient, bool isSparse) :
         InternalVariable(std::move(shape), varType, dataType, needsGradient, isSparse, /*isVolatile=*/false)
     {
-        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     }
 
     Variable::Variable(const FunctionPtr& function) :
         Variable(function->Output())
     {
-        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     }
 
     // move-constructor variant, for Dynamite only
@@ -63,12 +63,12 @@ namespace CNTK
     Variable::Variable(const InternalVariable& other, const ConstFunctionPtr& composite, const ConstPrimitiveFunctionPtr& primitive) :
         InternalVariable(other), m_outputComposite(composite), m_acyclicOutputPrimitiveReference(primitive)
     {
-        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     }
     Variable::Variable(const InternalVariable& other, ConstFunctionPtr&& composite, const ConstPrimitiveFunctionPtr& primitive) :
         InternalVariable(other), m_outputComposite(std::move(composite)), m_acyclicOutputPrimitiveReference(primitive)
     {
-        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     }
 
     const NDShape& InternalVariable::Shape() const
@@ -177,7 +177,7 @@ namespace CNTK
 //        result.m_outputComposite = composite;
 //        result.m_dataFields = m_dataFields;
 //        result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
-//        result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
+//        result.m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
 //        return result;
 //#endif
 //    }
@@ -192,7 +192,7 @@ namespace CNTK
 //        //result.m_outputComposite = move(composite);
 //        //result.m_dataFields = m_dataFields;
 //        //result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
-//        //result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
+//        //result.m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
 //        //return result;
 //    }
 //
@@ -204,7 +204,7 @@ namespace CNTK
 //        //// This must copy all data members except m_outputComposite.
 //        //result.m_dataFields = m_dataFields;
 //        //result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
-//        //result.m_shapeDims = &m_dataFields->m_shape.Dimensions();
+//        //result.m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
 //        //return result;
 //#else
 //        Variable copy = *this;
@@ -221,7 +221,7 @@ namespace CNTK
     //{
     //    if (IsOutput())
     //        LogicError("Variable '%S' from InternalVariable: Should not be applied to Outputs.", AsString().c_str());
-    //    m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    //    m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     //}
     //
     //Variable::Variable(InternalVariable&& other) :
@@ -229,7 +229,7 @@ namespace CNTK
     //{
     //    if (IsOutput())
     //        LogicError("Variable '%S' from InternalVariable: Should not be applied to Outputs.", AsString().c_str());
-    //    m_shapeDims = &m_dataFields->m_shape.Dimensions();
+    //    m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     //}
 
     // special version. Use this for all places where Variable and InternalVariable cannot be easily disentangled.
@@ -237,12 +237,12 @@ namespace CNTK
     Variable::Variable(const InternalVariable& other, bool) :
         InternalVariable(other)
     {
-        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     }
     Variable::Variable(InternalVariable&& other, bool) :
         InternalVariable(std::move(other))
     {
-        m_shapeDims = &m_dataFields->m_shape.Dimensions();
+        m_shapeDims = (decltype(m_shapeDims))&m_dataFields->m_shape.Dimensions().front();
     }
     Variable::Variable(const Parameter& other) : Variable(other, true) { }
     Variable::Variable(Parameter&& other) : Variable(std::move(other), true) { }

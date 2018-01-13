@@ -2522,7 +2522,7 @@ namespace CNTK
         friend class InternalVariable::AutoBatch; // TODO: remove this, and instead have the correct constructor that sets this field up automatically
         ConstPrimitiveFunctionPtr m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
         // for debugging:
-        const NDShapeDimensionsSpan* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
+        const struct { NDShapeDimension dims[4]; }* m_shapeDims = nullptr; // keep a reference to underlying VariableFields that shows nicely in the debugger
     };
 
     // TODO: Variable equality should be based on uids.
