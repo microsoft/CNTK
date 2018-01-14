@@ -54,14 +54,13 @@ namespace CNTK {
         if (!m_corpus)
             RuntimeError("LatticeIndexBuilder: corpus descriptor was not specified.");
 
-
-        size_t id = 0;
         IndexedSequence sequence;
         string latticeFile = "";
 
         size_t prevId{ 0 };
         bool firstLine = true;
         size_t prevSequenceStartOffset{ 0 };
+        bool prevValidSeq = true;
         for (string const& line : m_latticeToc)
         {
             if (line.empty())
@@ -90,7 +89,6 @@ namespace CNTK {
             {
                 latticeFile = curLatticeFile;
             }
-            id = m_corpus->KeyToId(seqKey);
 
             if (firstLine)
             {
@@ -98,32 +96,46 @@ namespace CNTK {
             }
             else
             {
-                auto seqSize = (uint32_t) (byteOffset - prevSequenceStartOffset);
-                if (seqSize % sizeof(float) == 0)
-                    seqSize = seqSize / sizeof(float);
-                else
-                    seqSize = seqSize / sizeof(float)+1;
+                if (prevValidSeq)
+                {
+                    auto seqSize = (uint32_t)(byteOffset - prevSequenceStartOffset);
+                    if (seqSize % sizeof(float) == 0)
+                        seqSize = seqSize / sizeof(float);
+                    else
+                        seqSize = seqSize / sizeof(float) + 1;
 
-                sequence.SetKey(prevId)
-                    .SetNumberOfSamples(seqSize)
-                    .SetOffset(prevSequenceStartOffset)
-                    .SetSize(byteOffset - prevSequenceStartOffset);
-                index->AddSequence(sequence);
+                    sequence.SetKey(prevId)
+                        .SetNumberOfSamples(seqSize)
+                        .SetOffset(prevSequenceStartOffset)
+                        .SetSize(byteOffset - prevSequenceStartOffset);
+                    index->AddSequence(sequence);
+                }
             }
-            prevId = id;
+            if (m_corpus->m_keyToIdMap.Contains(seqKey))
+            {
+                prevValidSeq = true;
+                prevId = m_corpus->KeyToId(seqKey);
+            }
+            else
+            {
+                prevValidSeq = false;
+            }
             prevSequenceStartOffset = byteOffset;
         }
-        size_t fileSize = filesize(m_input.File());
-        auto seqSize = (uint32_t)(fileSize - prevSequenceStartOffset);
-        if (seqSize % sizeof(float) == 0)
-            seqSize = seqSize / sizeof(float);
-        else
-            seqSize = seqSize / sizeof(float) + 1;
-        sequence.SetKey(prevId)
-            .SetNumberOfSamples(seqSize)
-            .SetOffset(prevSequenceStartOffset)
-            .SetSize(fileSize - prevSequenceStartOffset);
-        index->AddSequence(sequence);
+        if (prevValidSeq)
+        {
+            size_t fileSize = filesize(m_input.File());
+            auto seqSize = (uint32_t)(fileSize - prevSequenceStartOffset);
+            if (seqSize % sizeof(float) == 0)
+                seqSize = seqSize / sizeof(float);
+            else
+                seqSize = seqSize / sizeof(float) + 1;
+            sequence.SetKey(prevId)
+                .SetNumberOfSamples(seqSize)
+                .SetOffset(prevSequenceStartOffset)
+                .SetSize(fileSize - prevSequenceStartOffset);
+            index->AddSequence(sequence);
+        }
     }
 
 }
