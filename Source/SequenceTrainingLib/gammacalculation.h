@@ -124,6 +124,11 @@ public:
     {
         // check total frame number to be added ?
         // int deviceid = loglikelihood.GetDeviceId();
+        /* guoye: start */
+        for (size_t i = 0; i < lattices.size(); i++)
+        {
+            fprintf(stderr, "calgammaformb: i = %d, utt = %ls \n", int(i), lattices[0]->second.key.c_str());
+        }
         size_t boundaryframenum;
         std::vector<size_t> validframes; // [s] cursor pointing to next utterance begin within a single parallel sequence [s]
         validframes.assign(samplesInRecurrentStep, 0);
