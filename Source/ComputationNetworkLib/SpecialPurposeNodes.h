@@ -549,6 +549,14 @@ public:
 
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
+        // guoye: start 
+        // fprintf(stderr, "guoye debug: calgammaformb, m_m_nws.size() = %d \n", int(m_nws.size()));
+        for (size_t i = 0; i < m_nws.size(); i++)
+        {
+            // fprintf(stderr, "guoye debug: calgammaformb, i = %d, m_nws[i] = %d \n", int(i), int(m_nws[i]));
+        }
+        // guoye: end
+
         m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
                                         Input(0)->Value() /*labels*/, *m_gammaFromLattice,
             /* guoye: start */

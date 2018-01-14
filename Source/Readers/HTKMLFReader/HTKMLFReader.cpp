@@ -682,7 +682,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         /* guoye: start */
         // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
         // guoye debug purpose
-        fprintf(stderr, "debug to set wordlabels to empty");
+        // fprintf(stderr, "debug to set wordlabels to empty");
         // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels;
         // wordlabelsmulti.push_back(std::move(wordlabels));
         /* guoye: end */

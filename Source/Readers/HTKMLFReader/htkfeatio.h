@@ -1275,8 +1275,11 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
             {
                 
                 fprintf(stderr,
-                    "Warning: parseentry: got state alignment but no word-level info, although being requested, for utterance %ls \n",
+                    "Warning: parseentry: got state alignment but no word-level info, although being requested, for utterance %ls. Ignoring this utterance for EMBR \n",
                     key.c_str());
+                // delete this item
+                (*this).erase(key);
+                return;
                 
             }
 
