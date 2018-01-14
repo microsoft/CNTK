@@ -777,12 +777,13 @@ def HTKFeatureDeserializer(streams):
         scp_file = stream['scp']
         broadcast = stream['broadcast'] if 'broadcast' in stream else False
         defines_mb_size = stream.get('defines_mb_size', False)
+        max_sequence_length = stream.get('max_sequence_length', 65535)
         left_context, right_context = stream.context if 'context' in stream\
                                                      else (0, 0)
         htk_config = cntk_py.HTKFeatureConfiguration(stream_name, scp_file,
                                                      dimension, left_context,
                                                      right_context, broadcast,
-                                                     defines_mb_size)
+                                                     defines_mb_size, max_sequence_length)
         feat.append(htk_config)
 
     if len(feat) == 0:
@@ -1007,6 +1008,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
           ivectors with HTK)
         defines_mb_size (`bool`, defaults to False): whether this stream defines
           the minibatch size.
+        max_sequence_length (`int`, defaults to 65535): the upper limit on the length of consumed sequences. Sequence of larger size are skipped.
     '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
     if shape is not None:
@@ -1023,6 +1025,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
     if broadcast is not None:
         config['broadcast'] = broadcast
     config['defines_mb_size'] = True if defines_mb_size else False
+    config['max_sequence_length'] = True if max_sequence_length else False
 
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension

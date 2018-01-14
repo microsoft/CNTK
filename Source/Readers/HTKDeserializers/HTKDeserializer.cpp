@@ -51,6 +51,8 @@ HTKDeserializer::HTKDeserializer(
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
 
+    m_maxSequenceSize = input(L"maxSequenceSize", SIZE_MAX);
+
     InitializeChunkInfos(config);
     InitializeStreams(inputName, input(L"definesMBSize", false));
     InitializeFeatureInformation();
@@ -86,7 +88,7 @@ HTKDeserializer::HTKDeserializer(
     {
         InvalidArgument("Cannot expand utterances of the primary stream %ls, please change your configuration.", featureName.c_str());
     }
-
+    m_maxSequenceSize = feature(L"maxSequenceSize", SIZE_MAX);
     InitializeChunkInfos(config);
     InitializeStreams(featureName, feature(L"definesMBSize", false));
     InitializeFeatureInformation();
@@ -145,18 +147,20 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
                 RuntimeError("Expanded stream should only contain sequences of length 1, utterance '%s' has %zu",
                     key.c_str(),
                     numberOfFrames);
-
-            totalNumberOfFrames += numberOfFrames;
-            size_t id = m_corpus->KeyToId(key);
-            description.SetId(id);
-            if (uniqueIds.find(id) == uniqueIds.end())
+            if (numberOfFrames <= m_maxSequenceSize)
             {
-                utterances.push_back(std::move(description));
-                uniqueIds.insert(id);
-            }
-            else
-            {
-                duplicates[id].push_back(key);
+                totalNumberOfFrames += numberOfFrames;
+                size_t id = m_corpus->KeyToId(key);
+                description.SetId(id);
+                if (uniqueIds.find(id) == uniqueIds.end())
+                {
+                    utterances.push_back(std::move(description));
+                    uniqueIds.insert(id);
+                }
+                else
+                {
+                    duplicates[id].push_back(key);
+                }
             }
         }
     }

@@ -5751,8 +5751,8 @@ namespace CNTK
 
     struct HTKFeatureConfiguration
     {
-        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast, bool definesMbSize = false)
-            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast), m_definesMbSize(definesMbSize)
+        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast, bool definesMbSize = false, size_t maxSequenceLength = SIZE_MAX)
+            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast), m_definesMbSize(definesMbSize), m_maxSequenceLength(maxSequenceLength)
         {}
 
         std::wstring m_streamName;
@@ -5762,6 +5762,7 @@ namespace CNTK
         size_t m_right;
         bool m_broadcast;
         bool m_definesMbSize;
+        size_t m_maxSequenceLength;
     };
 
     typedef Dictionary ImageTransform;
