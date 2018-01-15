@@ -62,6 +62,7 @@ namespace CNTK {
         size_t prevId{ 0 };
         bool firstLine = true;
         size_t prevSequenceStartOffset{ 0 };
+        string prevSeqKey = "";
         for (string const& line : m_latticeToc)
         {
             if (line.empty())
@@ -99,16 +100,23 @@ namespace CNTK {
             else
             {
                 auto seqSize = (uint32_t) (byteOffset - prevSequenceStartOffset);
-                if (seqSize % sizeof(float) == 0)
-                    seqSize = seqSize / sizeof(float);
-                else
-                    seqSize = seqSize / sizeof(float)+1;
+                if (seqSize < 1073741824)
+                {
+                    if (seqSize % sizeof(float) == 0)
+                        seqSize = seqSize / sizeof(float);
+                    else
+                        seqSize = seqSize / sizeof(float) + 1;
 
-                sequence.SetKey(prevId)
-                    .SetNumberOfSamples(seqSize)
-                    .SetOffset(prevSequenceStartOffset)
-                    .SetSize(byteOffset - prevSequenceStartOffset);
-                index->AddSequence(sequence);
+                    sequence.SetKey(prevId)
+                        .SetNumberOfSamples(seqSize)
+                        .SetOffset(prevSequenceStartOffset)
+                        .SetSize(byteOffset - prevSequenceStartOffset);
+                    index->AddSequence(sequence);
+                }
+                else
+                {
+                    fprintf(stderr, "WARNING: Lattice with the key '%s' inside the TOC file '%ls' more than 1GB. Skipping it...\n", prevSeqKey.c_str(), m_input.Filename().c_str());
+                }
             }
             prevId = id;
             prevSequenceStartOffset = byteOffset;
@@ -116,15 +124,22 @@ namespace CNTK {
         if (m_lastChunkInTOC) {
             size_t fileSize = filesize(m_input.File());
             auto seqSize = (uint32_t)(fileSize - prevSequenceStartOffset);
-            if (seqSize % sizeof(float) == 0)
-                seqSize = seqSize / sizeof(float);
+            if (seqSize < 1073741824)
+            {
+                if (seqSize % sizeof(float) == 0)
+                    seqSize = seqSize / sizeof(float);
+                else
+                    seqSize = seqSize / sizeof(float) + 1;
+                sequence.SetKey(prevId)
+                    .SetNumberOfSamples(seqSize)
+                    .SetOffset(prevSequenceStartOffset)
+                    .SetSize(fileSize - prevSequenceStartOffset);
+                index->AddSequence(sequence);
+            }
             else
-                seqSize = seqSize / sizeof(float) + 1;
-            sequence.SetKey(prevId)
-                .SetNumberOfSamples(seqSize)
-                .SetOffset(prevSequenceStartOffset)
-                .SetSize(fileSize - prevSequenceStartOffset);
-            index->AddSequence(sequence);
+            {
+                fprintf(stderr, "WARNING: Lattice with the key '%s' inside the TOC file '%ls' more than 1GB. Skipping it...\n", prevSeqKey.c_str(), m_input.Filename().c_str());
+            }
         }
     }
 
