@@ -19,6 +19,7 @@ namespace CNTK {
 
     private:
         virtual void Populate(std::shared_ptr<Index>& index) override;
+        void AddSequence(std::shared_ptr<Index>& index, size_t id, size_t byteOffset, size_t prevSequenceStartOffset, const std::string& seqKey);
         std::vector<std::string> m_latticeToc;
         bool m_lastChunkInTOC;
     };

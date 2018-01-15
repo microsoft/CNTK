@@ -211,7 +211,6 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
         string prevLatticePath;
         while (std::getline(tocFileStream, tocLine))
         {
-            tocLine.erase(tocLine.find_last_not_of(" \n\r\t") + 1);
             size_t start = tocLine.find("=") + 1;
             size_t end = tocLine.find("[");
             string latticePath = tocLine.substr(start, end - start);
