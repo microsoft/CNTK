@@ -55,9 +55,7 @@ namespace CNTK {
             RuntimeError("LatticeIndexBuilder: corpus descriptor was not specified.");
 
 
-        size_t id = 0;
         IndexedSequence sequence;
-        string latticeFile = "";
 
         size_t prevId{ 0 };
         bool firstLine = true;
@@ -65,6 +63,7 @@ namespace CNTK {
         string prevSeqKey = "";
         for (string const& line : m_latticeToc)
         {
+            fprintf(stderr, "Reading line '%s'\n", line.c_str());
             if (line.empty())
                 continue;
 
@@ -79,19 +78,6 @@ namespace CNTK {
             
             size_t byteOffset;
             sscanf(line.substr(openBracketLoc + 1, closeBracketLoc).c_str(), "%zu", &byteOffset);
-            size_t fileStart = eqLoc + 1;
-            string curLatticeFile = line.substr(fileStart, openBracketLoc - fileStart);
-            if (curLatticeFile.empty()) 
-            {
-                //This line should contain pointer to the lattice file
-                if (latticeFile.empty()) 
-                    RuntimeError("The lattice TOC file is malformed. Reference to the binary lattice file is missing.");
-            }
-            else
-            {
-                latticeFile = curLatticeFile;
-            }
-            id = m_corpus->KeyToId(seqKey);
 
             if (firstLine)
             {
@@ -100,6 +86,7 @@ namespace CNTK {
             else
             {
                 auto seqSize = (uint32_t) (byteOffset - prevSequenceStartOffset);
+                fprintf(stderr, "SeqKey '%s', byteOffset '%zu', prevSequenceStartOffset '%zu' \n", seqKey.c_str(), byteOffset, prevSequenceStartOffset);
                 if (byteOffset - prevSequenceStartOffset < 1073741824)
                 {
                     if (seqSize % sizeof(float) == 0)
@@ -116,14 +103,16 @@ namespace CNTK {
                 else
                 {
                     fprintf(stderr, "WARNING: Lattice with the key '%s' inside the TOC file '%ls' more than 1GB. Skipping it...\n", prevSeqKey.c_str(), m_input.Filename().c_str());
+                    LogicError("Breaking...");
                 }
             }
-            prevId = id;
+            prevId = m_corpus->KeyToId(seqKey);
             prevSequenceStartOffset = byteOffset;
         }
         if (m_lastChunkInTOC) {
             size_t fileSize = filesize(m_input.File());
             auto seqSize = (uint32_t)(fileSize - prevSequenceStartOffset);
+            fprintf(stderr, "Last line: byteOffset '%zu', prevSequenceStartOffset '%zu' \n", fileSize, prevSequenceStartOffset);
             if (fileSize - prevSequenceStartOffset < 1073741824)
             {
                 if (seqSize % sizeof(float) == 0)
@@ -139,6 +128,7 @@ namespace CNTK {
             else
             {
                 fprintf(stderr, "WARNING: Lattice with the key '%s' inside the TOC file '%ls' more than 1GB. Skipping it...\n", prevSeqKey.c_str(), m_input.Filename().c_str());
+                LogicError("Breaking2...");
             }
         }
     }
