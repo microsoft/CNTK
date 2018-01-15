@@ -3,16 +3,17 @@
   <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
     <CudaVersion />
+    <CudaVersion Condition="Exists('$(CUDA_PATH_V9_0)') And '$(CudaVersion)' == ''">9.0</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
 
     <NvmlInclude />
     <NvmlInclude Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
-    <NvmlInclude Condition="'$(CudaVersion)' == '8.0'" />
+    <NvmlInclude Condition="'$(CudaVersion)' == '8.0' Or '$(CudaVersion)' == '9.0'" />
 
     <NvmlLibPath />
     <NvmlLibPath Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
-    <NvmlLibPath Condition="'$(CudaVersion)' == '8.0'" />
+    <NvmlLibPath Condition="'$(CudaVersion)' == '8.0' Or '$(CudaVersion)' == '9.0'" />
 
     <NvmlDll>%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml.dll</NvmlDll>
     <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>
@@ -107,6 +108,18 @@
     <ProtobufLibPath>$(PROTOBUF_PATH)\lib;</ProtobufLibPath>
     <ProtobufLib Condition="$(ReleaseBuild)">libprotobuf.lib</ProtobufLib>
     <ProtobufLib Condition="$(DebugBuild)">libprotobufd.lib</ProtobufLib>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(CudaVersion)' == '9.0'">
+    <CudaPath>$(CUDA_PATH_V9_0)</CudaPath>
+    <CudaRuntimeDll>cudart64_90.dll</CudaRuntimeDll>
+    <CudaDlls>cublas64_90.dll;cusparse64_90.dll;curand64_90.dll;$(CudaRuntimeDll)</CudaDlls>
+
+    <NvidiaCompute Condition="$(DebugBuild)">$(CNTK_CUDA_CODEGEN_DEBUG)</NvidiaCompute>
+    <NvidiaCompute Condition="$(DebugBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30</NvidiaCompute>
+
+    <NvidiaCompute Condition="$(ReleaseBuild)">$(CNTK_CUDA_CODEGEN_RELEASE)</NvidiaCompute>
+    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_60,sm_60;compute_61,sm_61</NvidiaCompute>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CudaVersion)' == '8.0'">
