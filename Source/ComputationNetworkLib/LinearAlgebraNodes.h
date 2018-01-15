@@ -676,7 +676,7 @@ public:
                 return;
             }
 
-            if (fr.IsBatchMatmul(inputMBLayout) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()))
+            if (fr.IsBatchMatmul(inputMBLayout) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()) && !hasSparse)
             {
                 auto mn = CalcOutputMatrixSize(InputRef(0).GetSampleLayout().GetRank(), InputRef(1).GetSampleLayout().GetRank(), GetSampleLayout());
                 Matrix<ElemType> value = ValueFor(fr);
@@ -752,7 +752,7 @@ public:
             ElemType beta = Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType)0.0 : (ElemType)1.0;
             if (inputIndex == 0)
             {
-                if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) &&  fr.IsBatchMatmul(InputRef(1).GetMBLayout()))
+                if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()) && !hasSparse)
                 {
                     Matrix<ElemType> outputGradient = GradientFor(fr);
                     Matrix<ElemType> input1 = InputRef(1).ValueFor(fr);
@@ -772,20 +772,15 @@ public:
             }
             else if (inputIndex == 1)
             {
-                if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) &&  fr.IsBatchMatmul(InputRef(1).GetMBLayout()))
+                if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()) && !hasSparse)
                 {
                     auto mn = CalcOutputMatrixSize(InputRef(0).GetSampleLayout().GetRank(), GetSampleLayout().GetRank(), InputRef(1).GetSampleLayout());
                     Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
                     Matrix<ElemType> input1Gradient = InputRef(1).GradientFor(fr);
                     Matrix<ElemType> outputGradient = GradientFor(fr);
 
-                    if (input1Gradient.GetMatrixType() == SPARSE)
-                    {
-                        input1Gradient.SwitchToMatrixType(DENSE, matrixFormatDense, !Input(inputIndex)->IsGradientInitializedBy(this));
-                    }
-                    InputRef(1).SetPreferredGradientMatrixType(DENSE);
-
                     Matrix<ElemType>::BatchMatMul(beta, input0, !m_transpose, mn.first, outputGradient, false, mn.second, input1Gradient, true);
+                    return;
                 }
             }
 

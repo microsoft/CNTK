@@ -231,33 +231,33 @@ def test_op_negate(operand, device_id, precision):
                    expected_forward, expected_backward)
 
 
-BATCH_TIMES_PAIRS = list((np.reshape(np.arange(8), (2, 2, 2)), np.reshape(np.arange(8), (2, 2, 2))))
+BATCH_TIMES_PAIRS = [(np.reshape(np.arange(8), (2, 2, 2)), np.reshape(np.arange(8), (2, 2, 2)))]
 @pytest.mark.parametrize("left_operand, right_operand", BATCH_TIMES_PAIRS)
 def test_op_batch_times(left_operand, right_operand, device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
-    a = AA(left_operand, dtype=dt_precision)
-    b = AA(right_operand, dtype=dt_precision)
+    aa = AA(left_operand, dtype=dt_precision)
+    bb = AA(right_operand, dtype=dt_precision)
     
-    k, m, n = a.shape[0], a.shape[1], b.shape[2]
+    k, m, n = aa.shape[0], aa.shape[1], bb.shape[2]
     expected_forward = np.zeros((k, m, n))
     for x in range(k):
-        expected_forward[x] = np.matmul(a[x], b[x])
+        expected_forward[x] = np.matmul(aa[x], bb[x])
 
-    left_backward = np.zeros_like(a)
+    left_backward = np.zeros_like(aa)
     for x in range(k):
-        left_backward[x, ...] = b[x].sum(axis=-1)
+        left_backward[x, ...] = bb[x].sum(axis=-1)
 
-    right_backward = np.zeros_like(b)
+    right_backward = np.zeros_like(bb)
     for x in range(k):
-        transpose_axes = list(np.roll(np.arange(len(b.shape[1:])), -1))
-        sum_axes = tuple(np.arange(0, len(a.shape) - len(b.shape) + 1))
+        transpose_axes = list(np.roll(np.arange(len(bb.shape[1:])), -1))
+        sum_axes = tuple(np.arange(0, len(aa.shape) - len(bb.shape) + 1))
         right_backward[x, ...] = np.transpose(
-            AA([a[x].sum(axis=sum_axes)]), axes=transpose_axes)
+            AA([aa[x].sum(axis=sum_axes)]), axes=transpose_axes)
 
     expected_backward = {
-        'left_arg':  [left_backward],
-        'right_arg': [right_backward]
+        'left_arg':  left_backward,
+        'right_arg': right_backward
     }
 
     from cntk import times
