@@ -28,7 +28,7 @@ namespace CNTK {
             UtteranceFrames
         };
 
-        inline bool TryParseSequenceKey(const std::string& line, size_t& id, std::function<size_t(const std::string&)> keyToId, const StringToIdMap& strToIdMap);
+        inline bool TryParseSequenceKey(const std::string& line, size_t& id, std::function<size_t(const std::string&)> keyToId);
     };
 
 } // namespace

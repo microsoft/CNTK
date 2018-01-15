@@ -42,7 +42,7 @@ private:
     // Initialization functions.
     void InitializeChunkInfos(CorpusDescriptorPtr corpus, ConfigHelper& config);
     void InitializeStreams(const std::wstring& featureName);
-    size_t RecordChunk(const string& latticePath, const vector<string>& tocLines, CorpusDescriptorPtr corpus, bool enableCaching);
+    size_t RecordChunk(const string& latticePath, const vector<string>& tocLines, CorpusDescriptorPtr corpus, bool enableCaching, bool lastChunkInTOC);
 
     CorpusDescriptorPtr m_corpus;
 

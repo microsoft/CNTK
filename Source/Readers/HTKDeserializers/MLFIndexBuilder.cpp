@@ -104,7 +104,7 @@ namespace CNTK {
                 lastNonEmptyLine.clear();
 
                 sequenceStartOffset = offset;
-                isValid = TryParseSequenceKey(line, id, m_corpus->KeyToId, m_corpus->m_keyToIdMap);
+                isValid = TryParseSequenceKey(line, id, m_corpus->KeyToId);
                 currentState = State::UtteranceFrames;
             }
             break;
@@ -157,7 +157,7 @@ namespace CNTK {
 
     // Tries to parse sequence key
     // In MLF a sequence key should be in quotes. During parsing the extension should be removed.
-    bool MLFIndexBuilder::TryParseSequenceKey(const string& line, size_t& id, function<size_t(const string&)> keyToId, const StringToIdMap& strToIdMap)
+    bool MLFIndexBuilder::TryParseSequenceKey(const string& line, size_t& id, function<size_t(const string&)> keyToId)
     {
         id = 0;
 
@@ -174,8 +174,7 @@ namespace CNTK {
 
         // Remove extension if specified.
         key = key.substr(0, key.find_last_of("."));
-        if (!strToIdMap.Contains(key))
-            return false;
+
         id = keyToId(key);
         return true;
     }

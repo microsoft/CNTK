@@ -90,14 +90,13 @@ public:
 
     std::function<size_t(const std::string&)> KeyToId;
     std::function<std::string(size_t)> IdToKey;
-    StringToIdMap m_keyToIdMap;
 
 private:
     DISABLE_COPY_AND_MOVE(CorpusDescriptor);
     bool m_numericSequenceKeys;
     bool m_useHash;
 
-    
+    StringToIdMap m_keyToIdMap;
 };
 
 typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;

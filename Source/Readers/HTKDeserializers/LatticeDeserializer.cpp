@@ -142,14 +142,14 @@ LatticeDeserializer::LatticeDeserializer(
     InitializeChunkInfos(corpus, config);
 }
 
-size_t LatticeDeserializer::RecordChunk(const string& latticePath, const vector<string>& tocLines, CorpusDescriptorPtr corpus, bool enableCaching)
+size_t LatticeDeserializer::RecordChunk(const string& latticePath, const vector<string>& tocLines, CorpusDescriptorPtr corpus, bool enableCaching, bool lastChunkInTOC)
 {
     size_t totalNumSequences = 0;
     wstring latticePathW;
     latticePathW.assign(latticePath.begin(), latticePath.end());
-    attempt(5, [this, latticePathW, tocLines, enableCaching, corpus]()
+    attempt(5, [this, latticePathW, tocLines, enableCaching, corpus, lastChunkInTOC]()
     {
-        LatticeIndexBuilder builder(FileWrapper(latticePathW, L"rbS"), tocLines, corpus);
+        LatticeIndexBuilder builder(FileWrapper(latticePathW, L"rbS"), tocLines, corpus, lastChunkInTOC);
         builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
         m_indices.emplace_back(builder.Build());
     });
@@ -218,7 +218,8 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                 if (firstIndex)
                     firstIndex = false;
                 else {
-                    totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching);
+                    tocLines.push_back(tocLine);
+                    totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching, false);
                     tocLines.clear();
                 }
 
@@ -227,7 +228,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                 
             tocLines.push_back(tocLine);
         }
-        totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching);
+        totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching, true);
     }
     latticeIndexStream.close();
 
