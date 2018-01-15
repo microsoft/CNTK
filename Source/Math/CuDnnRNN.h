@@ -63,6 +63,7 @@ private:
     cudnnRNNDescriptor_t m_rnnDesc;
     CuDnnDropout m_dropout;
     RnnAttributes m_rnnAttributes;
+    CuDnn::ptr_t m_cudnn;
 
     cudnnRNNMode_t GetMode()
     {
@@ -76,16 +77,18 @@ private:
 public:
     CuDnnRNN(const RnnAttributes& rnnAttributes)
         : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnAttributes(rnnAttributes),
-        m_dataType(CuDnnTensor::GetDataType<ElemType>())
+        m_dataType(CuDnnTensor::GetDataType<ElemType>()), m_cudnn(CuDnn::Instance())
     {
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
-        CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
+        CUDNN_CALL(cudnnSetRNNDescriptor(*m_cudnn,
+            m_rnnDesc,
             (int)m_rnnAttributes.m_hiddenSize,
             (int)m_rnnAttributes.m_numLayers,
             m_dropout,
             CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
             m_rnnAttributes.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
             GetMode(),
+            CUDNN_RNN_ALGO_STANDARD,
             m_dataType));
     }
 
