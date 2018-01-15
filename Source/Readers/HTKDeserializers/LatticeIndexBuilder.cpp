@@ -100,7 +100,7 @@ namespace CNTK {
             else
             {
                 auto seqSize = (uint32_t) (byteOffset - prevSequenceStartOffset);
-                if (seqSize < 1073741824)
+                if (byteOffset - prevSequenceStartOffset < 1073741824)
                 {
                     if (seqSize % sizeof(float) == 0)
                         seqSize = seqSize / sizeof(float);
@@ -124,7 +124,7 @@ namespace CNTK {
         if (m_lastChunkInTOC) {
             size_t fileSize = filesize(m_input.File());
             auto seqSize = (uint32_t)(fileSize - prevSequenceStartOffset);
-            if (seqSize < 1073741824)
+            if (fileSize - prevSequenceStartOffset < 1073741824)
             {
                 if (seqSize % sizeof(float) == 0)
                     seqSize = seqSize / sizeof(float);
