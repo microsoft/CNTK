@@ -283,7 +283,7 @@ namespace marian
             // Sentence data is stored as a concatenation of all sequences, which have been padded
             // to m_maxSequenceLength. The resulting data can be reshaped to a column-major [T x S] tensor.
             // The mask is 1 for valid entries, and 0 for padding entries.
-            std::vector<Word> m_indices; // [positionInSequence * m_numSequences + sequenceIndex] word indices as a flattened [m_maxSequenceLength x m_numSequences] tensor
+            std::vector<Word> m_indices; // [positionInSequence * m_numSequences + sequenceIndex] word indices as interleaved batch like CNTK
             std::vector<float> m_mask;   // 1/0 mask of same size
         };
         class CorpusBatch : public Batch // represents a set of data streams, e.g. source and target
@@ -307,6 +307,9 @@ namespace marian
                 auto batch = New<CorpusBatch>(std::vector<Ptr<SubBatch>>(CNTK::Transform(lengths, [&](size_t len)
                 {
                     auto sb = New<SubBatch>(batchSize, len);
+                    float i = 0;
+                    for (auto& v : sb->indices())
+                        v = i++;
                     std::fill(sb->mask().begin(), sb->mask().end(), 1.0f);
                     sb->setWords(sb->mask().size());
                     return sb;
@@ -686,12 +689,28 @@ namespace marian
         return dropout(x, mask);
     }
 
-    static inline Expr shift(const Expr& x, Shape)
+    static inline Expr shift(const Expr& x, const Shape& npShape)
     {
         // BUGBUG: Complete this. Marian cannot take views, so this is unnecessarily complex.
         // The cheapest would be a convolution with a kernel shifted by 1.
-        return x; // for now just return the input, so we can do the next ones
-        //return InternalOps::NotImplemented("shift");
+        int mustBeDim = 1;
+        for (auto dim : npShape)
+        {
+            if (dim != mustBeDim)
+                CNTK::InvalidArgument("marian::shift support is limited to shifting rows by 1");
+            mustBeDim = 0;
+        }
+        const auto& shape = x.Shape();
+        size_t rank = shape.Rank();
+        size_t len = shape[rank - 1];
+        if (rank == 0)
+            CNTK::InvalidArgument("marian::shift cannot shift scalars");
+        auto remaining = CNTK::Slice(x, CNTK::Axis(rank-1), 0, len-1);
+        auto inserted = CNTK::Constant(shape.SubShape(0, rank-1), Dynamite::CurrentDataType(), 0.0, Dynamite::CurrentDevice());
+        Expr res = CNTK::Splice({ inserted, remaining }, CNTK::Axis(rank-1));
+        //x.Value()->LogToFile(L"x");
+        //res.Value()->LogToFile(L"shift(x)");
+        return res;
     }
 
     static inline Expr convert2cudnnFormat(const Expr& x)
