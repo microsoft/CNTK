@@ -9,9 +9,14 @@ import re
 import sys
 import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","Detection","FastRCNN", "BrainScript", "CNTK_FastRCNN_Eval.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","Detection","FastRCNN", "BrainScript", "CNTK_FastRCNN_Eval.ipynb")
+   
+    return notebook
 
+abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
 
 from nb_helper import get_output_stream_from_cell

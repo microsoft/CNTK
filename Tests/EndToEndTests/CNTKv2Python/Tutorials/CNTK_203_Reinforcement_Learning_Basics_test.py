@@ -7,6 +7,14 @@
 import os
 import re
 import sys
+import pytest
+
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_203_Reinforcement_Learning_Basics.ipynb")
+   
+    return notebook
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
@@ -14,7 +22,6 @@ sys.path.append(abs_path)
 from nb_helper import get_output_stream_from_cell
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_203_Reinforcement_Learning_Basics.ipynb")
 notebook_timeoutSeconds = 450
 
 def test_cntk_203_reinforcement_learning_basics_noErrors(nb):

@@ -7,9 +7,14 @@
 import os
 import re
 import numpy as np
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb")
+    
+    return notebook
 
 def test_cntk_103d_mnist_convolutionalneuralnetwork_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
