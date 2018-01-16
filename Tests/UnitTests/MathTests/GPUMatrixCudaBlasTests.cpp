@@ -32,6 +32,25 @@ BOOST_FIXTURE_TEST_CASE(GPUBlasMultiplyAndWeightedAdd, RandomSeedFixture)
     BOOST_CHECK(m2.IsEqualTo(mr, c_epsilonFloatE4));
 }
 
+BOOST_FIXTURE_TEST_CASE(GPUBlasBatchMatMul, RandomSeedFixture)
+{
+
+    GPUMatrix<float> m0(6, 5, c_deviceIdZero);
+    m0.SetValue(1.0f);
+    GPUMatrix<float> m1(6, 5, c_deviceIdZero);
+    m1.SetValue(1.0f);
+    GPUMatrix<float> m2(4, 5, c_deviceIdZero);
+    m2.SetValue(std::nanf(""));
+    GPUMatrix<float>::BatchMatMul(0.0f, m0, false, 2, m1, false, 2, m2, true);
+    GPUMatrix<float> mr(4, 5, c_deviceIdZero);
+    mr.SetValue(3.0f);
+    BOOST_CHECK(m2.IsEqualTo(mr, c_epsilonFloatE4));
+
+    GPUMatrix<float>::BatchMatMul(1.0f, m0, false, 2, m1, false, 2, m2, true);
+    mr.SetValue(6.0f);
+    BOOST_CHECK(m2.IsEqualTo(mr, c_epsilonFloatE4));
+}
+
 BOOST_FIXTURE_TEST_CASE(GPUBlasScale, RandomSeedFixture)
 {
     const float scale = 0.5f;

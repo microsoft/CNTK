@@ -1,5 +1,6 @@
 # deviceId = -1 for CPU, >= 0 for GPU devices
 deviceId = -1
+defMBSize=false
 
 1x1 = [
     precision = "double"
@@ -14,6 +15,8 @@ deviceId = -1
         input = [
              features = [
                 alias = "F"
+                definesMbSize=$defMBSize$
+                
                 dim = 10000
                 format = "dense"
             ]
@@ -32,6 +35,7 @@ deviceId = -1
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 100
                 format = "dense"
@@ -51,6 +55,7 @@ deviceId = -1
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 10
                 format = "dense"
@@ -76,6 +81,7 @@ deviceId = -1
         input = [
 
              features1 = [
+                definesMbSize=$defMBSize$
                 alias = "F1"
                 dim = 1
                 format = "dense"
@@ -127,6 +133,7 @@ deviceId = -1
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 5
                 format = "dense"
@@ -158,6 +165,7 @@ deviceId = -1
             ]
             
             labels = [
+                definesMbSize=$defMBSize$
                 alias = "L"
                 dim = 100
                 format = "dense"
@@ -186,6 +194,7 @@ MNIST = [
             ]
             
             labels = [
+                definesMbSize=$defMBSize$
                 alias = "L"
                 dim = 10
                 format = "dense"
@@ -205,6 +214,7 @@ Simple = [
         input = [
 
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F"
                 dim = 2
                 format = "dense"
@@ -231,6 +241,7 @@ Simple_single_stream = [
         input = [
 
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F"
                 dim = 2
                 format = "dense"
@@ -251,6 +262,7 @@ Simple_single_stream = [
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 3
                 format = "dense"
@@ -271,6 +283,7 @@ Simple_single_stream = [
 
         input = [
              features1 = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 10
                 format = "dense"

@@ -1,0 +1,1017 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 12
+    Total Memory: 264106968 kB
+-------------------------------------------------------------------
+mkdir: cannot create directory '/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/DataSets/ImageNet': File exists
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_ImageNet/ResNet152_ImageNet/../../../../../../../Examples/Image/Classification/ResNet/BrainScript/ResNet152_ImageNet1K.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/DataSets/ImageNet RunDir=/tmp/cntk-test-20170518085359.94009/Examples/Image/Classification/ResNet_ImageNet_ResNet152_ImageNet@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/DataSets/ImageNet ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_ImageNet/ResNet152_ImageNet/../../../../../../../Examples/Image/Classification/ResNet/BrainScript OutputDir=/tmp/cntk-test-20170518085359.94009/Examples/Image/Classification/ResNet_ImageNet_ResNet152_ImageNet@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true traceLevel=0 stderr=- TrainNetwork=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1,learningRatesPerMB=0.01]] BNStatistics=[minibatchSize=2,itersPerNode=1] Eval=[minibatchSize=2]
+CNTK 2.0rc2+ (HEAD 431a9e, May 17 2017 16:38:22) on 5e7fd7c6732f at 2017/05/18 08:54:00
+
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_ImageNet/ResNet152_ImageNet/../../../../../../../Examples/Image/Classification/ResNet/BrainScript/ResNet152_ImageNet1K.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/DataSets/ImageNet  RunDir=/tmp/cntk-test-20170518085359.94009/Examples/Image/Classification/ResNet_ImageNet_ResNet152_ImageNet@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/DataSets/ImageNet  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_ImageNet/ResNet152_ImageNet/../../../../../../../Examples/Image/Classification/ResNet/BrainScript  OutputDir=/tmp/cntk-test-20170518085359.94009/Examples/Image/Classification/ResNet_ImageNet_ResNet152_ImageNet@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  traceLevel=0  stderr=-  TrainNetwork=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1,learningRatesPerMB=0.01]]  BNStatistics=[minibatchSize=2,itersPerNode=1]  Eval=[minibatchSize=2]
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/DataSets/ImageNet
+ping [requestnodes (before change)]: 1 nodes pinging each other
+ping [requestnodes (after change)]: 1 nodes pinging each other
+requestnodes [MPIWrapperMpi]: using 1 out of 1 MPI nodes on a single host (1 requested); we (0) are in (participating)
+ping [mpihelper]: 1 nodes pinging each other
+05/18/2017 08:54:00: Redirecting stderr to file -_TrainNetwork_BNStatistics_Eval.logrank0
+CNTK 2.0rc2+ (HEAD 431a9e, May 17 2017 16:38:22) on 5e7fd7c6732f at 2017/05/18 08:54:00
+
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_ImageNet/ResNet152_ImageNet/../../../../../../../Examples/Image/Classification/ResNet/BrainScript/ResNet152_ImageNet1K.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/DataSets/ImageNet  RunDir=/tmp/cntk-test-20170518085359.94009/Examples/Image/Classification/ResNet_ImageNet_ResNet152_ImageNet@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/DataSets/ImageNet  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/Classification/ResNet_ImageNet/ResNet152_ImageNet/../../../../../../../Examples/Image/Classification/ResNet/BrainScript  OutputDir=/tmp/cntk-test-20170518085359.94009/Examples/Image/Classification/ResNet_ImageNet_ResNet152_ImageNet@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  traceLevel=0  stderr=-  TrainNetwork=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1,learningRatesPerMB=0.01]]  BNStatistics=[minibatchSize=2,itersPerNode=1]  Eval=[minibatchSize=2]
+05/18/2017 08:54:00: -------------------------------------------------------------------
+05/18/2017 08:54:00: Build info: 
+
+05/18/2017 08:54:00: 		Built time: May 17 2017 16:36:17
+05/18/2017 08:54:00: 		Last modified date: Wed May 17 16:02:00 2017
+05/18/2017 08:54:00: 		Build type: release
+05/18/2017 08:54:00: 		Build target: GPU
+05/18/2017 08:54:00: 		With 1bit-SGD: no
+05/18/2017 08:54:00: 		With ASGD: yes
+05/18/2017 08:54:00: 		Math lib: mkl
+05/18/2017 08:54:00: 		CUDA_PATH: /usr/local/cuda-8.0
+05/18/2017 08:54:00: 		CUB_PATH: /usr/local/cub-1.4.1
+05/18/2017 08:54:00: 		CUDNN_PATH: /usr/local/cudnn-5.1
+05/18/2017 08:54:00: 		Build Branch: HEAD
+05/18/2017 08:54:00: 		Build SHA1: 431a9e4e669a1f5d141a9de4524f67c7dbce787c
+05/18/2017 08:54:00: 		Built by Source/CNTK/buildinfo.h$$0 on 1a055313a787
+05/18/2017 08:54:00: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+05/18/2017 08:54:00: 		MPI distribution: Open MPI
+05/18/2017 08:54:00: 		MPI version: 1.10.3
+05/18/2017 08:54:00: -------------------------------------------------------------------
+05/18/2017 08:54:00: -------------------------------------------------------------------
+05/18/2017 08:54:00: GPU info:
+
+05/18/2017 08:54:00: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; total memory = 3020 MB; free memory = 3018 MB
+05/18/2017 08:54:00: -------------------------------------------------------------------
+05/18/2017 08:54:00: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+05/18/2017 08:54:00: ##############################################################################
+05/18/2017 08:54:00: #                                                                            #
+05/18/2017 08:54:00: # TrainNetwork command (train action)                                        #
+05/18/2017 08:54:00: #                                                                            #
+05/18/2017 08:54:00: ##############################################################################
+
+Node 'model.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [7 x 7 x 3 x 64].
+Node 'model.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'model.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 64 x 64].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 64 x 256].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '___z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 64 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.s.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.s.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 64].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 64 x 256].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 64].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 64 x 256].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 128].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 128 x 512].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '__z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.x.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 512].
+Node 'z.x.x.x.x.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.x.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.x.x.x.x.s.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.x.x.x.x.s.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 128].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 128 x 512].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 128].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 128 x 512].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 128].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 128 x 512].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 128].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 128 x 512].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 128].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 128 x 512].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 128].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 128 x 512].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 128].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 128 x 512].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 256].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 1024].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 256].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 256 x 1024].
+Node 'z.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [1024 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 512].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 2048].
+Node '_z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 1024 x 2048].
+Node 'z.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.x.s.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.x.s.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 2048 x 512].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 2048].
+Node 'z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 2048 x 512].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 1].
+Node 'z.x.x.b.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 512 x 2048].
+Node 'z.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'z.x.x.b.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [2048 x 1].
+Node 'model.arrayOfFunctions[11].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1000 x 1 x 1 x 2048].
+05/18/2017 08:54:05: 
+Model has 1453 nodes. Using GPU 0.
+
+05/18/2017 08:54:05: Training criterion:   ce = CrossEntropyWithSoftmax
+05/18/2017 08:54:05: Evaluation criterion: errs = ClassificationError
+
+05/18/2017 08:54:05: Training 60192808 parameters in 467 parameter tensors.
+
+05/18/2017 08:54:09: Finished Epoch[ 1 of 2]: [Training] ce = 7.77159977 * 4; errs = 100.000% * 4; totalSamplesSeen = 4; learningRatePerSample = 0.0049999999; epochTime=1.52835s
+05/18/2017 08:54:32: Final Results: Minibatch[1-513]: ce = 251109.56031799 * 1024; perplexity = inf; errs = 100.000% * 1024
+05/18/2017 08:54:32: Finished Epoch[ 1 of 2]: [Validate] ce = 251109.56031799 * 1024; errs = 100.000% * 1024
+05/18/2017 08:54:38: Finished Epoch[ 2 of 2]: [Training] ce = 6.56637859 * 4; errs = 100.000% * 4; totalSamplesSeen = 8; learningRatePerSample = 0.0049999999; epochTime=0.612918s
+05/18/2017 08:55:01: Final Results: Minibatch[1-513]: ce = 44973401.76367188 * 1024; perplexity = inf; errs = 99.902% * 1024
+05/18/2017 08:55:01: Finished Epoch[ 2 of 2]: [Validate] ce = 44973401.76367188 * 1024; errs = 99.902% * 1024
+
+
+05/18/2017 08:55:06: ##############################################################################
+05/18/2017 08:55:06: #                                                                            #
+05/18/2017 08:55:06: # BNStatistics command (bnstat action)                                       #
+05/18/2017 08:55:06: #                                                                            #
+05/18/2017 08:55:06: ##############################################################################
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+05/18/2017 08:55:12: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> ___z.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> ___z.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> ___z.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.s
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> __z.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> z.x.x.x.x.x.x.x.s
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> _z.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> z.x.x.x.x.x.s
+05/18/2017 08:55:12: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:12: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:12: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:12: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:13: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:14: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.x.b
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:15: Estimating Statistics --> z.x.x.x.x.x.x.x.b
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.x.x.b.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.x.x.b
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.x.b.x.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.x.b.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.x.b
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.b.x.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.b.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.x.b
+05/18/2017 08:55:16: Estimating Statistics --> _z.x.x.x.b.x.x._
+05/18/2017 08:55:16: Estimating Statistics --> _z.x.x.x.b.x._
+05/18/2017 08:55:16: Estimating Statistics --> _z.x.x.x.b
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.s
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.b.x.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.b.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.x.b
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.b.x.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.b.x._
+05/18/2017 08:55:16: Estimating Statistics --> z.x.x.b
+
+
+05/18/2017 08:55:19: ##############################################################################
+05/18/2017 08:55:19: #                                                                            #
+05/18/2017 08:55:19: # Eval command (test action)                                                 #
+05/18/2017 08:55:19: #                                                                            #
+05/18/2017 08:55:19: ##############################################################################
+
+05/18/2017 08:55:48: Final Results: Minibatch[1-513]: errs = 100.000% * 1024; top5Errs = 99.609% * 1024
+
+05/18/2017 08:55:48: __COMPLETED__

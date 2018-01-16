@@ -438,7 +438,7 @@ public:
     //  - (NDLScript)
     //  - more to be added
     // stringParse - string to parse
-    // pos - postion to start parsing at
+    // pos - position to start parsing at
     // m_separator - extra separator character between tokens, typically ';' (in addition to comma and newline)
     void Parse(const std::string& stringParse, std::string::size_type pos = 0)
     {

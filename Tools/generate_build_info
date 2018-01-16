@@ -7,7 +7,7 @@
 # ==============================================================================
 #
 # Description: this script is used to generated buildinfo.h in Source/CNTK
-# which will contain the following infomation to be displayed at runtime:
+# which will contain the following information to be displayed at runtime:
 #   BUILDTYPE       (release/debug)
 #   BUILDTYPE       (GPU/CPU-only)
 #   WITH_1BITSGD    (whether 1bit-SGD support was enabled)

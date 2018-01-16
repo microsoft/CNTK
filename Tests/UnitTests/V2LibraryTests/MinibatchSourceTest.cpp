@@ -2,11 +2,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
 
 using namespace CNTK;
+
+namespace CNTK { namespace Test {
 
 // Mock communicator to simulate MPI run
 class MockCommunicator : public DistributedCommunicator
@@ -54,6 +56,10 @@ public:
         const std::unordered_set<DistributedWorkerDescriptor>&) override
     {}
 
+    virtual void AllReduceSparseBlockColumn(
+        std::vector<NDArrayViewPtr>&) override
+    {}
+
     virtual void Aggregate(
         const std::vector<NDArrayViewPtr>&,
         std::vector<NDArrayViewPtr>&,
@@ -83,43 +89,6 @@ public:
     }
 };
 
-MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize, bool randomize, size_t chunkSizeInBytes)
-{
-    ::CNTK::Dictionary minibatchSourceConfiguration;
-    minibatchSourceConfiguration[L"epochSize"] = epochSize;
-
-    if (randomize)
-        minibatchSourceConfiguration[L"randomize"] = true;
-    else
-        minibatchSourceConfiguration[L"randomize"] = false;
-
-    ::CNTK::Dictionary deserializerConfiguration;
-    deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-    deserializerConfiguration[L"file"] = dataFilePath;
-
-    ::CNTK::Dictionary inputStreamsConfig;
-    for (auto streamConfig : streamConfigs)
-    {
-        std::wstring streamName = streamConfig.m_streamName;
-        size_t streamDim = streamConfig.m_dim;
-        bool isSparse = streamConfig.m_isSparse;
-        std::wstring streamAlias = streamConfig.m_streamAlias;
-
-        ::CNTK::Dictionary inputStreamConfig;
-        inputStreamConfig[L"dim"] = streamDim;
-        inputStreamConfig[L"format"] = isSparse ? L"sparse" : L"dense";
-        if (!streamAlias.empty())
-            inputStreamConfig[L"alias"] = streamAlias;
-
-        inputStreamsConfig[streamName] = inputStreamConfig;
-    }
-
-    deserializerConfiguration[L"input"] = inputStreamsConfig;
-    deserializerConfiguration[L"chunkSizeInBytes"] = chunkSizeInBytes;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
-    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
-}
-
 void TestMinibatchSourceWarmStart(size_t minibatchSize, size_t warmStartSamples, bool randomize, size_t chunkSizeInBytes, bool expectNoData = false)
 {
     // TODO: Currently this test is based on the number of samples.
@@ -132,23 +101,19 @@ void TestMinibatchSourceWarmStart(size_t minibatchSize, size_t warmStartSamples,
 
     const size_t numberOfSamplesInSweep = 10000;
 
+    auto  ctf = CTFDeserializer(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim },{ labelsStreamName, numOutputClasses } });
+    ctf[L"chunkSizeInBytes"] = chunkSizeInBytes;
+    MinibatchSourceConfig config({ ctf }, randomize);
+    config.maxSamples = numberOfSamplesInSweep;
+    
+
     // Let's create two workers.
-    auto minibatchSource = TextFormatMinibatchSource(
-        L"SimpleDataTrain_cntk_text.txt",
-        { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },
-        numberOfSamplesInSweep,
-        randomize,
-        chunkSizeInBytes);
+    auto minibatchSource = CreateCompositeMinibatchSource(config);
 
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
-    auto minibatchSource2 = TextFormatMinibatchSource(
-        L"SimpleDataTrain_cntk_text.txt",
-        { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },
-        numberOfSamplesInSweep,
-        randomize,
-        chunkSizeInBytes);
+    auto minibatchSource2 = CreateCompositeMinibatchSource(config);
 
     size_t totalSamples = 0;
     bool hasData = true;
@@ -217,18 +182,22 @@ void TestMinibatchSourceWarmStart(size_t minibatchSize, size_t warmStartSamples,
                       (int)totalSamples);
 }
 
+
 void TestEndOfSweepFlag(size_t maxSamples, size_t mbSize, bool randomize)
 {
     const size_t sweepSize = 603;
-    auto ctfInput = L"SimpleDataTest_cntk_text.txt"; 
-    std::vector<StreamConfiguration> streamConfig { { L"features", 2 } };
-    auto cpuDevice = DeviceDescriptor::CPUDevice();    
-    auto src = TextFormatMinibatchSource(ctfInput, streamConfig, maxSamples, randomize);
+    auto ctfInput = L"SimpleDataTest_cntk_text.txt";
+    std::vector<StreamConfiguration> streamConfig{ { L"features", 2 } };
+
+    MinibatchSourceConfig config({ CTFDeserializer(ctfInput, streamConfig) }, randomize);
+    config.maxSamples = maxSamples;
+    auto src = CreateCompositeMinibatchSource(config);
 
     maxSamples = (maxSamples == MinibatchSource::FullDataSweep) ? sweepSize : maxSamples;
 
     bool reachedEndOfEpoch = false;
     size_t sampleCount = 0;
+    auto cpuDevice = DeviceDescriptor::CPUDevice();
 
     while (sampleCount < maxSamples)
     {
@@ -246,10 +215,8 @@ void TestEndOfSweepFlag(size_t maxSamples, size_t mbSize, bool randomize)
             bool expectedEndOfSweep = ((sampleCount + numSamplesInMinibatch) % sweepSize) == 0;
             expectedEndOfSweep |= ((sampleCount) / sweepSize) < ((sampleCount + numSamplesInMinibatch) / sweepSize);
 
-
             reachedEndOfEpoch = (sampleCount + mbSize >= maxSamples);
             size_t expectedNumSamples = reachedEndOfEpoch ? (maxSamples - sampleCount) : mbSize;
-            
 
             if (streamData.second.sweepEnd != expectedEndOfSweep)
             {
@@ -271,10 +238,105 @@ void TestEndOfSweepFlag(size_t maxSamples, size_t mbSize, bool randomize)
     }
 
     auto& emptyDataMap = src->GetNextMinibatch(mbSize, cpuDevice);
-    assert(emptyDataMap.empty());
+    BOOST_TEST(emptyDataMap.empty());
 }
 
-void TestThatEndOfSweepFlagIsSetCorrectly()
+void TestMaxSweeps(size_t maxSweeps, size_t mbSize, bool randomize)
+{
+    const size_t sweepSize = 603;
+    auto ctfInput = L"SimpleDataTest_cntk_text.txt";
+    std::vector<StreamConfiguration> streamConfig{ { L"features", 2 } };
+
+    MinibatchSourceConfig config({ CTFDeserializer(ctfInput, streamConfig) }, randomize);
+    config.maxSweeps = maxSweeps;
+    auto src = CreateCompositeMinibatchSource(config);
+
+    auto maxSamples = sweepSize * maxSweeps;
+
+    size_t sampleCount = 0;
+    size_t sweepCount = 0;
+    auto cpuDevice = DeviceDescriptor::CPUDevice();
+
+    while (sampleCount < maxSamples)
+    {
+        const auto& dataMap = src->GetNextMinibatch(mbSize, cpuDevice);
+        const auto& data = dataMap.at(src->StreamInfo(L"features"));
+
+        sampleCount += data.numberOfSamples;
+        if (data.sweepEnd)
+            sweepCount++;
+    }
+
+    BOOST_TEST(sampleCount == maxSamples);
+    BOOST_TEST(sweepCount == maxSweeps);
+
+    auto& emptyDataMap = src->GetNextMinibatch(mbSize, cpuDevice);
+    BOOST_TEST(emptyDataMap.empty());
+}
+
+
+void TestCBFDeserializers()
+{
+    auto cbf = CreateCompositeMinibatchSource(
+        MinibatchSourceConfig({ CBFDeserializer(L"Simple_dense.bin") }, false));
+
+    std::unordered_set<std::wstring> names{ L"features", L"labels" };
+    for (const auto& info : cbf->StreamInfos())
+    {
+       BOOST_TEST(!(names.find(info.m_name) == names.end()));
+       names.erase(info.m_name);
+    }
+
+    BOOST_TEST(names.size() == 0);
+
+    for (const auto& name : { L"features", L"labels" })
+    {
+        BOOST_TEST((cbf->StreamInfo(name).m_storageFormat == StorageFormat::Dense));
+        BOOST_TEST((cbf->StreamInfo(name).m_elementType == DataType::Float));
+        BOOST_TEST((cbf->StreamInfo(name).m_sampleLayout.TotalSize() == 2));
+    }
+}
+
+
+void CompareCBFAndCTFDeserializers(size_t maxSamples, size_t mbSize, bool randomize)
+{
+    // Simple_dense.bin was created by transcoding SimpleDataTrain_cntk_text.txt into CBF.
+    auto cbf = CreateCompositeMinibatchSource(
+        MinibatchSourceConfig({ CBFDeserializer(L"Simple_dense.bin") }, randomize));
+
+    std::vector<StreamConfiguration> streamConfig{ { L"features", 2 },{ L"labels", 2 } };
+
+    auto ctf = CreateCompositeMinibatchSource(
+        MinibatchSourceConfig({ CTFDeserializer(L"SimpleDataTrain_cntk_text.txt", streamConfig) }, randomize));
+
+    
+    size_t sampleCount = 0;
+    auto cpuDevice = DeviceDescriptor::CPUDevice();
+
+    while (sampleCount < 2*maxSamples)
+    {
+        const auto& ctf_dataMap = ctf->GetNextMinibatch(mbSize, cpuDevice);
+        const auto& cbf_dataMap = cbf->GetNextMinibatch(mbSize, cpuDevice);
+
+        for (const auto& name : { L"features", L"labels" })
+        {
+            const auto& ctf_data = ctf_dataMap.at(ctf->StreamInfo(name));
+            const auto& cbf_data = cbf_dataMap.at(cbf->StreamInfo(name));
+
+            BOOST_TEST(ctf_data.numberOfSamples == cbf_data.numberOfSamples);
+            BOOST_TEST(ctf_data.numberOfSequences == cbf_data.numberOfSequences);
+            BOOST_TEST(ctf_data.sweepEnd == cbf_data.sweepEnd);
+
+            BOOST_TEST(Internal::AreEqual(*ctf_data.data, *cbf_data.data));
+            
+            sampleCount += ctf_data.numberOfSamples;
+        }
+    }
+}
+
+BOOST_AUTO_TEST_SUITE(MinibatchSourceSuite)
+
+BOOST_AUTO_TEST_CASE(TestThatEndOfSweepFlagIsSetCorrectly)
 {
     for (auto randomize : { false, true })
     {
@@ -288,28 +350,69 @@ void TestThatEndOfSweepFlagIsSetCorrectly()
     }
 }
 
-void MinibatchSourceTests()
+BOOST_AUTO_TEST_CASE(TestSettingMaximumNumberOfSweepsToRead)
 {
-    TestThatEndOfSweepFlagIsSetCorrectly();
+    for (auto randomize : { false, true })
+    {
+        TestMaxSweeps(2, 100, randomize);
+        TestMaxSweeps(2, 603, randomize);
+        TestMaxSweeps(2, 1000, randomize);
 
-    // Test no-randomize minibatch source with small data chunks
+        TestMaxSweeps(3, 30, randomize);
+        TestMaxSweeps(3, 500, randomize);
+        TestMaxSweeps(3, 301, randomize);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(NoRandomizedMinibatchSourceWarmStart)
+{
     TestMinibatchSourceWarmStart(64, 128, false, 1024);
     TestMinibatchSourceWarmStart(64, 0, false, 1024);
     TestMinibatchSourceWarmStart(64, 100, false, 1024);
+}
 
-    // Test no-randomized minibatch source with a single chunk
+BOOST_AUTO_TEST_CASE(NoRandomizedMinibatchSourceWithSingleChunk)
+{
     size_t chunk32MB = 1024 * 1024 * 32;
     TestMinibatchSourceWarmStart(64, 128, false, chunk32MB);
     TestMinibatchSourceWarmStart(64, 0, false, chunk32MB);
     TestMinibatchSourceWarmStart(64, 100, false, chunk32MB);
+}
 
-    // Test randomized minibatch source with small data chunks
+BOOST_AUTO_TEST_CASE(RandomizedMinibatchSourceWithSmallChunks)
+{
     TestMinibatchSourceWarmStart(64, 0, true, 1024);
     TestMinibatchSourceWarmStart(64, 128, true, 1024);
+}
 
-    // Test randomized minibatch source with no data for one of the workers 
-    // due to decimation based on chunks
+BOOST_AUTO_TEST_CASE(RandomizedMinibatchSourceWithNoData)
+{
+    size_t chunk32MB = 1024 * 1024 * 32;
     bool expectNoData = true;
     TestMinibatchSourceWarmStart(64, 0, true, chunk32MB, expectNoData);
     TestMinibatchSourceWarmStart(64, 128, true, chunk32MB, expectNoData);
 }
+
+
+BOOST_AUTO_TEST_CASE(CBFDeserializer)
+{
+    TestCBFDeserializers();
+}
+
+
+BOOST_AUTO_TEST_CASE(CompareDeserializers)
+{
+    for (auto randomize : { true, false }) 
+    {
+        CompareCBFAndCTFDeserializers(10, 10, randomize);
+        CompareCBFAndCTFDeserializers(100, 10, randomize);
+        CompareCBFAndCTFDeserializers(1000, 10, randomize);
+        CompareCBFAndCTFDeserializers(1000, 100, randomize);
+        CompareCBFAndCTFDeserializers(2000, 500, randomize);
+    }
+}
+
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

@@ -15,7 +15,9 @@
 #include <omp.h>
 #include "TransformController.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // TODO: This class should go away eventually.
 // TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
@@ -47,7 +49,10 @@ ImageReader::ImageReader(const ConfigParameters& config)
     {
         // We do not do io prefetching, because chunks are single images currently.
         bool ioPrefetch = false;
-        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, ioPrefetch, multithreadedGetNextSequences);
+        randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, ioPrefetch, multithreadedGetNextSequences,
+            /*maxNumberOfInvalidSequences =*/ 0, // default
+            /*sampleBasedRandomizationWindow =*/ true, // default
+            GetRandomSeed(config));
     }
     else
     {
@@ -55,7 +60,7 @@ ImageReader::ImageReader(const ConfigParameters& config)
     }
 
     // Create transformations for a single feature stream.
-    std::wstring featureName = m_streams[configHelper.GetFeatureStreamId()]->m_name;
+    std::wstring featureName = m_streams[configHelper.GetFeatureStreamId()].m_name;
     ConfigParameters featureStream = config(featureName);
 
     std::vector<Transformation> transformations;
@@ -83,10 +88,10 @@ ImageReader::ImageReader(const ConfigParameters& config)
         useLocalTimeline);
 }
 
-std::vector<StreamDescriptionPtr> ImageReader::GetStreamDescriptions()
+std::vector<StreamInformation> ImageReader::GetStreamDescriptions()
 {
     assert(!m_streams.empty());
     return m_streams;
 }
 
-} } }
+}

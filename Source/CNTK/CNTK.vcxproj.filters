@@ -181,6 +181,9 @@
     <ClInclude Include="..\Common\Include\basetypes.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\Common\Include\EnvironmentUtil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">

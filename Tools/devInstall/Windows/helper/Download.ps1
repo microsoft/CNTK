@@ -51,8 +51,9 @@ function Download(
     $func = $table["Function"]
     $source = $table["Source"]
     $method = GetTableDefaultString -table $table -entryName "Method" -defaultValue "WebRequest"
+    $userAgent = GetTableDefaultString -table $table -entryName "UserAgent" -defaultValue = "InternetExplorer"
     $destination = $table["Destination"]
-    $expectedHash = GetTableDefaultInt -table $table -entryName "expectedHash" -defaultValue ""
+    $expectedHash = GetTableDefaultString -table $table -entryName "expectedHash" -defaultValue ""
 
     if (test-path $destination -PathType Leaf) {
         Write-Host File [$destination] already exists
@@ -60,7 +61,7 @@ function Download(
     }
 
     if ($method -eq "WebRequest") {
-        DownloadFileWebRequest -SourceFile $source -OutFile $destination -expectedHash $expectedHash
+        DownloadFileWebRequest -SourceFile $source -OutFile $destination -UserAgent $userAgent -expectedHash $expectedHash
     }
     else {
         DownloadFileWebClient -SourceFile $source -OutFile $destination -expectedHash $expectedHash
@@ -118,10 +119,10 @@ function DownloadAndExtract(
     ExtractAllFromZip $outFileName $targetPathRoot
 }
 
-
 function DownloadFileWebRequest (
     [string] $SourceFile,
     [string] $OutFile,
+    [string] $userAgent,
     [string] $expectedHash)
 {
     Write-Host "Downloading [$SourceFile], please be patient...."
@@ -137,7 +138,7 @@ function DownloadFileWebRequest (
 
     $TempFile = [System.IO.Path]::GetTempFileName()
     try {
-        $response = Invoke-WebRequest -Uri $SourceFile -OutFile $TempFile -TimeoutSec 120 
+        $response = Invoke-WebRequest -Uri $SourceFile -OutFile $TempFile -UserAgent $userAgent -TimeoutSec 120 
     } 
     catch {
       $errorCode = $_.Exception.Response.StatusCode.Value__
@@ -256,16 +257,6 @@ function DownloadFileWebClient(
     }
 
     throw "Download $SourceFile Failed!"
-}
-
-function PlatformMatching(
-    [string] $regExprPlatform)
-{
-    $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
-    $isMatching = ($runningOn -match $regExprPlatform) 
-
-    Write-Verbose "Function [PlatformMatching]: $runningOn -match on platform [$regExprPlatform] = [$isMatching]"
-    return $isMatching
 }
 
 function CheckHash(

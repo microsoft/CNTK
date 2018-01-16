@@ -21,6 +21,42 @@ using namespace std;
 // -----------------------------------------------------------------------
 // subroutines for evaluation
 // -----------------------------------------------------------------------
+// lazy resetting of gradient
+// This performs the actual zeroing out.
+template<class ElemType>
+void ComputationNode<ElemType>::LazyZeroGradient(const ComputationNodeBase* gradientInitializedBy)
+{
+    if (!m_needsGradient)
+        LogicError("%ls %ls operation: LazyZeroGradient() called although this node needs no gradient.", NodeName().c_str(), OperationName().c_str());
+
+    if (gradientInitializedBy == nullptr)
+        LogicError("%ls %ls operation: LazyZeroGradient() called without gradientInitializedBy.", NodeName().c_str(), OperationName().c_str());
+
+    if (m_gradientInitializedBy != nullptr)
+        return;
+
+    // gradient optimization to allow parent to overwrite/be reused by non-looping child's gradient instead of accumulating
+    // We cannot enable the gradient overwrite/reuse optimization if this node's parent
+    // has this same node as multiple of its inputs since, in that case the
+    // gradients will flow back from multiple paths of the same parent into the input
+    // nor can we apply gradient optimization for nodes in loop as the gradient needs to be accumulated through time steps
+
+    const auto& inputs = gradientInitializedBy->GetInputs();
+
+    if (Globals::ShouldOptimizeGradientAccumulation() &&
+        !IsPartOfLoop() &&
+        gradientInitializedBy->ImplementsGradientOptimization(this) != ParentGradientOptimization::None &&
+        1 == std::count_if(inputs.begin(), inputs.end(), [this](ComputationNodeBasePtr p) { return &*p == this; }))
+    {
+        UpdateDataSize(Gradient(), ParentGradientReused());
+        m_gradientInitializedBy = gradientInitializedBy;
+    }
+    else
+    {
+        UpdateDataSize(Gradient());
+        ResetGradient(0);
+    }
+}
 
 template<class ElemType>
 void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
@@ -41,7 +77,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     }
 #endif
     if (m_needsGradient)
-        LazyZeroGradient(); // set gradient to 0 if this is the first time
+        LazyZeroGradient(this); // set gradient to 0 if this is the first time
 #endif
 
     if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
@@ -60,7 +96,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 #if DUMPOUTPUT
             fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
-            child->LazyZeroGradient(); // set gradient to 0 if this is the first time
+            child->LazyZeroGradient(this); // set gradient to 0 if this is the first time
 
             // If we propagate from a loop to a node that is outside the loop, we are not efficient.
             // This case is handled by SEQTraversalFlowControlNode::Backprop().
@@ -70,6 +106,9 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
                 LogicError("Backprop: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
                            NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
             }
+
+            // before backprop, verify gradient optimization info
+            Input(i)->VerifyGradientOptimization(this);
 
             // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
             BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
@@ -82,6 +121,160 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 #endif
     }
 }
+
+template<class ElemType>
+/*static*/ TensorView<ElemType> ComputationNode<ElemType>::Unpack(const TensorShape& sampleShape,
+                                                                  const Matrix<ElemType>& packedData,
+                                                                  const MBLayoutPtr& layout,
+                                                                  const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
+                                                                  const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                                                  const std::shared_ptr<Matrix<char>>& tempMaskStorage,
+                                                                  bool batchMajor,
+                                                                  const ElemType* gapPadValue)
+{
+    size_t maxNumTimeSteps = 1;
+    size_t numSequences = 1;
+    TensorShape unpackedShape = sampleShape;
+    if (layout != nullptr)
+    {
+        maxNumTimeSteps = layout->GetNumTimeSteps();
+        numSequences = layout->GetNumSequences();
+        size_t i = unpackedShape.GetRank();
+        unpackedShape = unpackedShape.AppendInPlace(i++, batchMajor ? numSequences : maxNumTimeSteps);
+        unpackedShape = unpackedShape.AppendInPlace(i++, batchMajor ? maxNumTimeSteps : numSequences);
+    }
+
+    std::shared_ptr<Matrix<ElemType>> unpackedData;
+    if ((maxNumTimeSteps == 1) || (numSequences == 1) || (batchMajor && (layout->GetNumParallelSequences() == layout->GetNumSequences())))
+    {
+        unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
+        if (gapPadValue && layout && layout->HasGaps())
+            MaskMissingColumnsTo<ElemType>(*unpackedData, layout, FrameRange(layout), *gapPadValue);
+    }
+    else
+    {
+        unpackedData = unpackedDataStorage;
+        if (!unpackedData)
+            unpackedData = std::make_shared<Matrix<ElemType>>(packedData.GetNumRows(), maxNumTimeSteps * numSequences, packedData.GetDeviceId(), packedData.GetMatrixType(), packedData.GetFormat());
+        else
+        {
+            unpackedData->SwitchToMatrixType(packedData.GetMatrixType(), packedData.GetFormat(), /*keepValues=*/false);
+            unpackedData->Resize(packedData.GetNumRows(), maxNumTimeSteps * numSequences);
+        }
+
+        size_t i = 0;
+        auto& layoutSequences = layout->GetAllSequences();
+        int numLayoutSequences = (int)layoutSequences.size();
+        std::vector<ElemType> scatterIndicesVector(layout->GetNumCols(), -1);
+        std::vector<char> columnsValidityMask;
+        if (gapPadValue)
+            columnsValidityMask.resize(numSequences * maxNumTimeSteps, 1);
+        for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
+        {
+            auto sequenceInfo = layoutSequences[layoutSequenceIdx];
+            if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+            {
+                size_t targetParallelStreamIdx = sequenceInfo.s;
+                auto currentSequenceBeginIdx = std::max<ptrdiff_t>(0, sequenceInfo.tBegin);
+                auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
+                size_t currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
+
+                for (size_t j = 0; j < maxNumTimeSteps; ++j)
+                {
+                    auto targetIdx = (batchMajor ? ((j * numSequences) + i) : ((i * maxNumTimeSteps) + j));
+                    if (j < currentSequenceLength)
+                        scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElemType)targetIdx;
+                    else
+                    {
+                        if (gapPadValue)
+                            columnsValidityMask[targetIdx] = 0;
+                    }
+                }
+
+                i++;
+            }
+        }
+
+        auto scatterIdxMatrix = tempIndicesStorage;
+        if (!scatterIdxMatrix)
+            scatterIdxMatrix = std::make_shared<Matrix<ElemType>>(1, layout->GetNumCols(), scatterIndicesVector.data(), packedData.GetDeviceId());
+        else
+            scatterIdxMatrix->SetValue(1, layout->GetNumCols(), packedData.GetDeviceId(), scatterIndicesVector.data());
+
+        // DoScatterColumnsOf for sparse matrices requires the output to be pre-fileed with 0s
+        if (gapPadValue && (*gapPadValue == 0) && (unpackedData->GetMatrixType() == MatrixType::SPARSE))
+            unpackedData->SetValue(*gapPadValue);
+
+        unpackedData->DoScatterColumnsOf(0, *scatterIdxMatrix, packedData, 1);
+
+        // DoScatterColumnsOf fills the target with 0 before scattering if passed beta == 0. 
+        // This we need to mask only if the gapPadValue != 0
+        if (gapPadValue && (*gapPadValue != 0))
+        {
+            auto columnsValidityMaskMatrix = tempMaskStorage;
+            if (!columnsValidityMaskMatrix)
+                columnsValidityMaskMatrix = std::make_shared<Matrix<char>>(1, columnsValidityMask.size(), columnsValidityMask.data(), packedData.GetDeviceId());
+            else
+                columnsValidityMaskMatrix->SetValue(1, columnsValidityMask.size(), packedData.GetDeviceId(), columnsValidityMask.data());
+
+            unpackedData->MaskColumnsValue(*columnsValidityMaskMatrix, *gapPadValue, unpackedData->GetNumCols() / columnsValidityMaskMatrix->GetNumCols());
+        }
+    }
+
+    return TensorView<ElemType>(unpackedData, unpackedShape);
+}
+
+template<class ElemType>
+/*static*/ void ComputationNode<ElemType>::BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
+                                                             const MBLayoutPtr& inputLayout,
+                                                             ElemType beta,
+                                                             Matrix<ElemType>& broadcastTo,
+                                                             const FrameRange& targetFrameRange,
+                                                             const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage)
+{
+    auto targetLayout = targetFrameRange.m_pMBLayout;
+    
+    // Generate the gather indices
+    std::vector<ElemType> gatherIndicesVector(broadcastTo.GetNumCols(), -1);
+    auto& layoutSequences = targetLayout->GetAllSequences();
+    int numLayoutSequences = (int)layoutSequences.size();
+
+    // 2-way thread parallelism is sufficient for the memory bound
+    // operation of just setting the values of an array.
+    const unsigned NUM_THREADS = 2;
+    UNUSED(NUM_THREADS); // in case OMP is turned off.
+#pragma omp parallel for num_threads(NUM_THREADS)
+    for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
+    {
+        auto sequenceInfo = layoutSequences[layoutSequenceIdx];
+
+        if ((sequenceInfo.seqId != GAP_SEQUENCE_ID) && 
+            (targetFrameRange.IsAllFrames() || ((sequenceInfo.tBegin <= (ptrdiff_t)(targetFrameRange.timeIdxInSeq + targetFrameRange.m_timeOffset)) && (sequenceInfo.tEnd > (targetFrameRange.timeIdxInSeq + targetFrameRange.m_timeOffset)))))
+        {
+            auto srcSequenceInfo = inputLayout->FindSequence(sequenceInfo.seqId);
+            auto gatherFromIndex = inputLayout->GetColumnIndex(srcSequenceInfo, 0);
+            std::vector<size_t> currentSequenceColumnIndices;
+            if (targetFrameRange.IsAllFrames())
+                currentSequenceColumnIndices = targetLayout->GetColumnIndices(sequenceInfo);
+            else
+                currentSequenceColumnIndices.push_back(sequenceInfo.s);
+
+            for (auto i : currentSequenceColumnIndices)
+                gatherIndicesVector[i] = (ElemType)gatherFromIndex;
+        }
+    }
+
+    auto gatherIdxMatrix = tempIndicesStorage;
+    if (!gatherIdxMatrix)
+        gatherIdxMatrix = std::make_shared<Matrix<ElemType>>(1, broadcastTo.GetNumCols(), gatherIndicesVector.data(), broadcastTo.GetDeviceId());
+    else
+        gatherIdxMatrix->SetValue(1, broadcastTo.GetNumCols(), broadcastTo.GetDeviceId(), gatherIndicesVector.data());
+
+    broadcastTo.DoGatherColumnsOf(beta, *gatherIdxMatrix, dataToBroadcast, 1);
+}
+
+/*static*/ const std::wstring ComputationNodeBase::DefaultDynamicAxisName = L"*";
+/*static*/ const std::wstring ComputationNodeBase::DefaultNoSequenceAxisName = L"__noSequenceAxis";
 
 // -----------------------------------------------------------------------
 // subroutines for Validate() implementations
@@ -258,12 +451,12 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
 }
 
 // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
-void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
+void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass, bool keepDimensions)
 {
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
-    SetDims(TensorShape(1), false);
+    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : (TensorShape::Scalar(Environment().IsV2Library())), false);
 }
 
 // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -291,7 +484,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
             LogicError("%ls: Expected MBLayout in Input 1.", NodeDescription().c_str());
         // Shape of the MBLayouts is checked at runtime.
     }
-    SetDims(TensorShape(1), false);
+    SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
 }
 
 // helper function for validation
@@ -482,6 +675,98 @@ const std::string ComputationNodeBase::ShapeDescription() const
 }
 
 template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginForwardProp()
+{
+    Base::BeginForwardProp();
+
+    if (NeedsDynamicValidation())
+        Validate(/*isFinalValidationPass =*/ true);
+
+    // update the actual m_value allocation
+    if ((!IsLeaf() || Is<RandomDistributionNode<ElemType>>()) && !RequiresPreCompute()) // TODO: guard this through overrides instead
+        UpdateFunctionValuesSize();
+
+    // give nodes a chance to update their internal state that may also have to match MB size
+    UpdateFunctionMBSize();
+
+    // and make sure dimensions are what we expect
+    VerifyDataSize(Value());
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndForwardProp()
+{
+    Base::EndForwardProp();
+
+    if (HasEnvironmentPtr() && Environment().trackGapNans)
+    {
+        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+        if (Value().HasNan("EndForwardProp"))
+            LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
+
+        InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
+    }
+
+    // tracing
+    Trace();
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginBackprop()
+{
+    Base::BeginBackprop();
+
+    if (NeedsGradient())
+    {
+        // Verify that the shapes of the output/input Value matrices that the gradient backprop for this node needs
+        // are intact and have not been erroneously reshaped due to incorrect memory sharing
+        auto VerifyValueShape = [](const ComputationNode<ElemType>& node) {
+            size_t rows, cols;
+            node.DetermineDataSize(rows, cols);
+
+            auto& valueMatrix = node.Value();
+            if ((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols))
+            {
+                LogicError("%ls %ls operation found to have incorrect Value() matrix shape %lu x %lu during backprop; expected shape is %lu x %lu. "
+                    "This may be due to incorrect memory sharing.",
+                    node.NodeName().c_str(), node.OperationName().c_str(), valueMatrix.GetNumRows(), valueMatrix.GetNumCols(), rows, cols);
+            }
+        };
+
+        if (IsOutputNeededDuringBackprop())
+            VerifyValueShape(*this);
+
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            if (InputUsedInComputingInputNodesGradients(i))
+                VerifyValueShape(InputRef(i));
+        }
+    }
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndBackprop()
+{
+    Base::EndBackprop();
+
+    if (HasEnvironmentPtr() && Environment().trackGapNans)
+    {
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            ComputationNodePtr child = Input(i);
+            if (child->m_needsGradient)
+            {
+                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+                if (child->Gradient().HasNan("EndBackprop"))
+                {
+                    LogicError("%ls %ls operation unexpectedly produced NaN gradients on its input %ls.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str());
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, const bool printMetadata, File& fstream) const
 {
     if (printMetadata)
@@ -506,14 +791,16 @@ template <class ElemType>
 // 'transpose' means print one row per sample (non-transposed is one column per sample).
 // 'isSparse' will print all non-zero values as one row (non-transposed, which makes sense for one-hot) or column (transposed).
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr,
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
+                                                             const FrameRange& fr,
                                                              size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
                                                              const vector<string>& labelMapping, const string& sequenceSeparator, 
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
                                                              string valueFormatString,
                                                              bool outputGradient,
-                                                             bool onlyShowAbsSumForDense) const
+                                                             bool onlyShowAbsSumForDense,
+                                                             std::function<std::string(size_t)> getKeyById) const
 {
     // get minibatch matrix -> matData, matRows, matStride
     const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
@@ -545,6 +832,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
     bool sampleSeparatorHasShape  = sampleSeparator.find("%x")  != sampleSeparator.npos;
     bool sequencePrologueHasSeqId = sequencePrologue.find("%d") != sequencePrologue.npos;
     bool sampleSeparatorHasSeqId  = sampleSeparator.find("%d")  != sampleSeparator.npos;
+    bool sequencePrologueHasSeqKey = sequencePrologue.find("%k") != sequencePrologue.npos;
+    bool sampleSeparatorHasSeqKey = sampleSeparator.find("%k") != sampleSeparator.npos;
 
     for (size_t s = 0; s < sequences.size(); s++)
     {
@@ -594,8 +883,17 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
                 sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%d", sh);
         }
 
+        if (getKeyById)
+        {
+            if (sequencePrologueHasSeqKey)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%k", getKeyById(seqInfo.seqId));
+            if (sampleSeparatorHasSeqKey)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%k", getKeyById(seqInfo.seqId));
+        }
+
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
+
         fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification

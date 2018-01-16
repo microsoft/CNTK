@@ -6,3 +6,4 @@
 //
 #define BOOST_TEST_MODULE ReaderTests
 #include "stdafx.h"
+#include "V2Dependencies.h"

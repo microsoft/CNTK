@@ -1,0 +1,14 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+if [ "$OS" == "Windows_NT" ]; then
+  $TEST_BIN_DIR/CNTKLibraryCSTrainingTest.exe LSTMSequenceClassifierTest
+else
+  echo Cannot run CNTKLibraryCSTrainingTest on Linux.
+  exit 1
+fi
+
+ExitCode=$?
+
+exit $ExitCode

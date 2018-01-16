@@ -7,51 +7,48 @@
 import numpy as np
 import os
 import sys
-from cntk.ops.tests.ops_test_utils import cntk_device
-from cntk.cntk_py import DeviceKind_GPU
-from cntk.device import set_default_device
-from cntk.io import FULL_DATA_SWEEP
-from cntk import distributed
 import pytest
 import subprocess
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
+example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python")
+sys.path.append(example_dir)
 sys.path.append(abs_path)
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python"))
+
+from distributed_common import mpiexec_test
 from prepare_test_data import prepare_CIFAR10_data
-from TrainResNet_CIFAR10_Distributed import resnet_cifar10
 
-#TOLERANCE_ABSOLUTE = 2E-1
+base_path = prepare_CIFAR10_data()
+# change dir to locate data.zip correctly
+os.chdir(base_path)
 
-def test_cifar_resnet_distributed_error(device_id, is_1bit_sgd):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU')
-    set_default_device(cntk_device(device_id))
+script_under_test = os.path.join(example_dir, "TrainResNet_CIFAR10_Distributed.py")
 
-    if not is_1bit_sgd:
-        pytest.skip('test only runs in 1-bit SGD')
+mpiexec_params = [ "-n", "2"]
 
-    base_path = prepare_CIFAR10_data()
-    # change dir to locate data.zip correctly
-    os.chdir(base_path)
+def test_cifar_resnet_distributed(device_id):
+    params = [ "-e", "2",
+               "-datadir", base_path,
+               "-q", "32",
+               "-es", "512",
+               "-r",
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.86, False, 3)
 
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1)
-    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
-    #force_deterministic_algorithms()
-    # TODO: do the above; they lead to slightly different results, so not doing it for now
+def test_cifar_resnet_distributed_1bitsgd(device_id):
+    params = [ "-e", "2",
+               "-datadir", base_path,
+               "-q", "1",
+               "-es", "512",
+               "-r",
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.86, False, 3)
 
-    train_data=os.path.join(base_path, 'train_map.txt')
-    test_data=os.path.join(base_path, 'test_map.txt')
-    mean_data=os.path.join(base_path, 'CIFAR-10_mean.xml')
-
-    test_error = resnet_cifar10(train_data, test_data, mean_data, 'resnet20', epoch_size=512, max_epochs=2)
-
-# We are removing tolerance in error because running small epoch size has huge variance in accuracy. Will add
-# tolerance back once convolution operator is determinsitic. 
-
-#    expected_test_error = 0.282
-
-#    assert np.allclose(test_error, expected_test_error,
-#                       atol=TOLERANCE_ABSOLUTE)
-    distributed.Communicator.finalize()
+def test_cifar_resnet_distributed_block_momentum(device_id):
+    params = [ "-e", "2",
+               "-datadir", base_path,
+               "-b", "3200",
+               "-es", "512",
+               "-r",
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.89, False, 5)

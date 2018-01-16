@@ -70,7 +70,7 @@ EOF
 ## training command ##
 $cn_gpu configFile=${expdir}/Base.config configFile=${expdir}/CNTK2.cntk DeviceNumber=0 action=TrainDNN ndlfile=$ndlfile
 
-echo "$0 successfuly finished.. $dir"
+echo "$0 successfully finished.. $dir"
 
 fi
 

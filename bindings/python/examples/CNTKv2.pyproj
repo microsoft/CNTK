@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1a078fc2-21c0-4f42-9a5b-0e84e944bc74}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>CifarConvNet\CifarConvNet.py</StartupFile>
+    <SearchPath>$(RepoRootPath)$(Platform)\$(Configuration);$(RepoRootPath)bindings\python;$(RepoRootPath)bindings\python\examples</SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>{51b3a70c-2ea2-4fe4-aeba-ff2cea35103f}</InterpreterId>
+    <InterpreterVersion>3.4</InterpreterVersion>
+    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
+    <IsWindowsApplication>False</IsWindowsApplication>
+    <Environment>PYTHONPATH=$(SolutionDir)bindings\python;$(SolutionDir)bindings\python\examples</Environment>
+    <InterpreterPath>
+    </InterpreterPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release_NoOpt' ">
+    <OutputPath>bin\Release_NoOpt\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="CifarConvNet\CifarConvNet.py" />
+    <Compile Include="CifarResNet\CifarResNet.py" />
+    <Compile Include="common\layers.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="common\nn.py" />
+    <Compile Include="common\__init__.py" />
+    <Compile Include="LanguageUnderstanding\LanguageUnderstanding.py" />
+    <Compile Include="MNIST\SimpleMNIST.py" />
+    <Compile Include="NumpyInterop\FeedForwardNet.py" />
+    <Compile Include="Sequence2Sequence\Sequence2Sequence.py" />
+    <Compile Include="SequenceClassification\SequenceClassification.py" />
+    <Compile Include="test\cifar_resnet_test.py" />
+    <Compile Include="test\cifar_convnet_test.py" />
+    <Compile Include="test\feed_forward_net_test.py" />
+    <Compile Include="test\language_understanding_test.py" />
+    <Compile Include="test\sequence_classification_test.py" />
+    <Compile Include="test\sequence_to_sequence_test.py" />
+    <Compile Include="test\simple_mnist_test.py" />
+    <Compile Include="__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="CifarConvNet\" />
+    <Folder Include="CifarResNet" />
+    <Folder Include="common" />
+    <Folder Include="LanguageUnderstanding\" />
+    <Folder Include="MNIST" />
+    <Folder Include="NumpyInterop" />
+    <Folder Include="Sequence2Sequence" />
+    <Folder Include="SequenceClassification" />
+    <Folder Include="test\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="{51b3a70c-2ea2-4fe4-aeba-ff2cea35103f}\3.4" />
+  </ItemGroup>
+  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+</Project>

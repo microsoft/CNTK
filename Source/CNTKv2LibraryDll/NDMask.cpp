@@ -30,7 +30,7 @@ namespace CNTK
         : NDMask(shape, AllocateMatrix(shape, device))
     {
         if (shape.Rank() > 2)
-            LogicError("NDMask instances with more than 2 axes are currently unsupported");
+            LogicError("NDMask instance shaped '%S' with more than 2 axes is currently unsupported.", shape.AsString().c_str());
 
         Clear();
     }
@@ -44,10 +44,10 @@ namespace CNTK
         // GPU invocations for each MaskSection call.
 
         if (sectionOffset.size() > m_maskShape.Rank())
-            LogicError("NDMask::MaskSection: The sectionOffset cannot have dimensionality higher than the rank of 'this' mask");
+            LogicError("NDMask::MaskSection: The sectionOffset dimensionality (%d) must be <= rank (%d) of 'this' mask.", (int)sectionOffset.size(), (int)m_maskShape.Rank());
 
         if (sectionShape.Rank() > m_maskShape.Rank())
-            LogicError("NDMask::MaskSection: The section shape cannot have an axes count higher than the rank of 'this' mask");
+            LogicError("NDMask::MaskSection: The section shape '%S' rank (%d) must be <= rank (%d) of 'this' mask.", sectionShape.AsString().c_str(), (int)sectionShape.Rank(), (int)m_maskShape.Rank());
 
         std::vector<size_t> offset(m_maskShape.Rank(), 0);
         for (size_t i = 0; i < sectionOffset.size(); ++i)
@@ -106,7 +106,7 @@ namespace CNTK
     void NDMask::CopyFrom(const NDMask& source)
     {
         if (source.Shape() != Shape())
-            InvalidArgument("NDMask::CopyFrom: The 'source' mask's shape must be same as the shape of this NDMask");
+            InvalidArgument("NDMask::CopyFrom: The source mask's shape '%S' must be same as this NDMask's shape '%S'.", source.Shape().AsString().c_str(), Shape().AsString().c_str());
 
         GetMatrix()->AssignValuesOf(*source.GetMatrix());
     }

@@ -51,9 +51,35 @@ using namespace std;
 // -----------------------------------------------------------------------
 // ThrowFormatted() - template function to throw a std::exception with a formatted error string
 // -----------------------------------------------------------------------
+template <class E>
+__declspec_noreturn static inline void ThrowFormattedVA(const char* format, va_list args)
+{
+    // Note: The call stack will skip 2 levels to suppress this function and its call sites (XXXError()).
+    //       If more layers are added here, it would have to be adjusted.
+    auto callstack = DebugUtil::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true);
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
+    va_list args_copy;
+    va_copy(args_copy, args);
+    auto size = vsnprintf(nullptr, 0, format, args) + 1;
+
+    string buffer("Unknown error.");
+    if (size > 0)
+    {
+        buffer = string(size, ' ');
+        if (vsnprintf(&buffer[0], size, format, args_copy) < 0)
+        {
+            buffer = string("Unknown error.");
+        }
+    }
+    
+    va_end(args_copy);
+
+#ifdef _DEBUG // print this to log, so we can see what the error is before throwing
+    fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer.c_str());
+#endif
+    throw ExceptionWithCallStack<E>(buffer, callstack);
+}
+
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
 template <class E>
 __declspec_noreturn void ThrowFormatted(const char* format, ...) __attribute__((format(printf, 1, 2)));
@@ -65,25 +91,9 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
-
-    char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
-    int written = vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
-    // TODO: In case of EILSEQ error, choose between just outputting the raw format itself vs. continuing the half-completed buffer
-    //if (written < 0) // an invalid wide-string conversion may lead to EILSEQ
-    //    strncpy(buffer, format, _countof(buffer)
-    UNUSED(written); // pre-VS2015 vsnprintf() returns -1 in case of overflow, instead of the #characters written
-    if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
-        sprintf(buffer + _countof(buffer) - 4, "...");
-#ifdef _DEBUG // print this to log, so we can see what the error is before throwing
-    fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
-#endif
-    //Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::PrintCallStack();
-    // Note: The call stack will skip 2 levels to suppress this function and its call sites (XXXError()).
-    //       If more layers are added here, it would have to be adjusted.
-    // TODO: Change ExceptionWithCallStack to take a parameter how many levels to skip.
-    throw ExceptionWithCallStack<E>(buffer, ExceptionWithCallStack<E>::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true));
+    ThrowFormattedVA<E>(format, args);
+    va_end(args);
 };
-#pragma warning(pop)
 
 // RuntimeError - throw a std::runtime_error with a formatted error string
 #ifndef _MSC_VER // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route
@@ -124,6 +134,7 @@ static inline void Warning(const char* format, ...)
 
     va_start(args, format);
     vsprintf(buffer, format, args);
+    va_end(args);
 };
 #pragma warning(pop)
 static inline void Warning(const string& message)
@@ -140,6 +151,11 @@ static inline void Warning(const string& message)
     \
 }
 #endif
+
+
+// Computes the smallest multiple of k greater or equal to n
+inline size_t AsMultipleOf(size_t n, size_t k) { return n + (k - n % k) % k; }
+
 }}}
 
 #ifndef _MSC_VER
@@ -203,6 +219,7 @@ struct _strprintf : public std::basic_string<_T>
             std::vector<_T> varbuf(n + 1); // incl. '\0'
             this->assign(_sprintf(&varbuf[0], varbuf.size(), format, args), n);
         }
+        va_end(args);
     }
 
 private:
@@ -210,7 +227,7 @@ private:
     inline size_t _cprintf(const wchar_t* format, va_list args)
     {
 #ifdef _MSC_VER
-        return vswprintf(nullptr, 0, format, args);
+        return _vscwprintf(format, args);
 #elif defined(__UNIX__)
         // TODO: Really??? Write to file in order to know the length of a string?
         FILE* dummyf = fopen("/dev/null", "w");
@@ -666,24 +683,18 @@ public:
     {
     }
     template <class STRING> // accepts char (UTF-8) and wide string
-    FARPROC Load(const STRING& plugin, const std::string& proc)
+    FARPROC Load(const STRING& plugin, const std::string& proc, bool isCNTKPlugin = true)
     {
-        m_dllName = msra::strfun::utf16(plugin);
-        m_dllName += L".dll";
-        m_hModule = LoadLibrary(m_dllName.c_str());
-        if (m_hModule == NULL)
-            RuntimeError("Plugin not found: '%ls'", m_dllName.c_str());
-        // create a variable of each type just to call the proper templated version
-        FARPROC entryPoint = GetProcAddress(m_hModule, proc.c_str());
-        if (entryPoint == nullptr)
-            RuntimeError("Symbol '%s' not found in plugin '%ls'", proc.c_str(), m_dllName.c_str());
-        return entryPoint;
+        return LoadInternal(msra::strfun::utf16(plugin), proc, isCNTKPlugin);
     }
     ~Plugin()
     {
     }
     // we do not unload because this causes the exception messages to be lost (exception vftables are unloaded when DLL is unloaded)
     // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
+
+private:
+    FARPROC LoadInternal(const std::wstring& plugin, const std::string& proc, bool isCNTKPlugin);
 };
 #else
 class Plugin
@@ -697,17 +708,9 @@ public:
     {
     }
     template <class STRING> // accepts char (UTF-8) and wide string
-    void* Load(const STRING& plugin, const std::string& proc)
+    void *Load(const STRING& plugin, const std::string& proc, bool isCNTKPlugin = true)
     {
-        string soName = msra::strfun::utf8(plugin);
-        soName = soName + ".so";
-        void* handle = dlopen(soName.c_str(), RTLD_LAZY);
-        if (handle == NULL)
-            RuntimeError("Plugin not found: '%s' (error: %s)", soName.c_str(), dlerror());
-        void* entryPoint = dlsym(handle, proc.c_str());
-        if (entryPoint == nullptr)
-            RuntimeError("Symbol '%s' not found in plugin '%s'", proc.c_str(), soName.c_str());
-        return entryPoint;
+        return LoadInternal(msra::strfun::utf8(plugin), proc, isCNTKPlugin);
     }
     ~Plugin()
     {
@@ -720,6 +723,9 @@ public:
             }
         }
     }
+
+private:
+    void *LoadInternal(const std::string& plugin, const std::string& proc, bool isCNTKPlugin);
 };
 #endif
 

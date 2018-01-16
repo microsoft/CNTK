@@ -24,6 +24,7 @@
 // Forward declarations
 namespace CNTK
 {
+    class NDArrayView;
     class Value;
 }
 
@@ -58,6 +59,7 @@ struct /*interface*/ MATH_API MatrixBase
     virtual int GetDeviceId() const = 0;
     virtual MatrixType GetMatrixType() const = 0;
     virtual MatrixFormat GetFormat() const = 0;
+    virtual void CastAssignValuesOf(const MatrixBase& other) = 0; // allows for mixed assignment with conversion
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
 };
@@ -68,6 +70,7 @@ typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
 template <class ElemType>
 class MATH_API Matrix : public MatrixBase
 {
+    friend class ::CNTK::NDArrayView;
     friend class ::CNTK::Value;
 
     typedef MatrixBase Base;
@@ -86,9 +89,6 @@ private:
     mutable size_t m_numTimesMatrixTypeChanged;
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
  
-    // whether to use cached memory Resize() or not
-    static bool m_useCachedResize;
-
     // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
     void _transferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
     // Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
@@ -109,7 +109,7 @@ public:
 #if 0
     Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
 #endif
-    Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
+    Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense, const size_t nnz = 0);
     // TODO: Rewrite this constructor to eliminate the external buffers flag. Make a separate construction mechanism for Matrix objects that don't own their storage.
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
     Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
@@ -141,8 +141,6 @@ public:
     {
         SetDataLocation(GetDeviceId() < 0 ? CurrentDataLocation::CPU : CurrentDataLocation::GPU, GetMatrixType());
     }
-
-    static void UseCachedResizeOrNot(bool useCachedResize);
 
 private:
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix
@@ -183,6 +181,7 @@ public:
     bool IsEmpty() const;
     size_t BufferSize() const;
     ElemType* Data() const;
+    bool IsView() const;
 
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
@@ -207,21 +206,31 @@ public:
     void AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
 
     void SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRatePerSample);
-    void MomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
-    void NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
+    void MomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, ElemType unitGainFactor);
+    void NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, ElemType unitGainFactor);
 
     ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
-    void FSAdagradUpdate(size_t mbSize,
-                         Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
-                         const double learnRatePerSample, const double targetAdagradAvDenom,
-                         const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
-    ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
+    void FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
+                         const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor);
 
-    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
+    void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
+        const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax = false);
+
+    ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier, const bool initialized);
+
+    void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp);
+    void AdaDeltaFlushState(size_t stride, ElemType rho, int* timestamps, int currentTimestamp);
+
+    void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true, bool keepValue = false); // by default we only reallocate if need to grow
     void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?
     {
         Resize(other.GetNumRows(), other.GetNumCols());
     }
+    void Resize(const size_t numRows, const size_t numCols, bool keepValue)
+    {
+        Resize(numRows, numCols, 10000, true, keepValue);
+    }
+
     void VerifySize(size_t rows, size_t cols)
     {
         m_baseMatrix->VerifySize(rows, cols);
@@ -272,6 +281,7 @@ public:
         assert(vals.size() == numRows * numCols);
         SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor);
     }
+    void CastAssignValuesOf(const MatrixBase& other) override; // allows for mixed assignment with conversion
     static ElemType MakeNan(size_t payload);
     void Invalidate()
     {
@@ -280,16 +290,22 @@ public:
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer = nullptr);
 
-    void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const ElemType val, size_t colInd);
     void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);
 
+    void AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const Matrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high);
+    void SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev);
+    void SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     Matrix<ElemType>& AssignNoiseContrastiveEstimation(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias, Matrix<ElemType>& tmp);
@@ -297,6 +313,10 @@ public:
     Matrix<ElemType>& AssignNCEDerivative(const Matrix<ElemType>& tmp, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, size_t inputIndex);
     Matrix<ElemType>& AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax);
     Matrix<ElemType>& AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias);
+
+    Matrix<ElemType>& AssignOneHot(const Matrix<ElemType>& a, vector<size_t>& shape, size_t axis, bool is_sparse);
+    Matrix<ElemType>& GatherFromTarget(const Matrix<ElemType>& indices, const Matrix<ElemType>& target, size_t row_elements);
+    Matrix<ElemType>& ScatterToIndices(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, size_t row_elements);
 
     Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
@@ -367,6 +387,9 @@ public:
     Matrix<ElemType>& InplaceTanh();
     Matrix<ElemType>& AssignTanhOf(const Matrix<ElemType>& a);
 
+    Matrix<ElemType>& InplaceAtanh();
+    Matrix<ElemType>& AssignAtanhOf(const Matrix<ElemType>& a);
+
     Matrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     Matrix<ElemType>& AssignLogSoftmaxOf(const Matrix<ElemType>& a, const bool isColWise);
 
@@ -376,6 +399,11 @@ public:
     // sequence training
     Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType& threshhold);
     Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
+
+    Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType>& totalScore,
+        const vector<size_t> & extraUttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep,
+        const size_t mbSize, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);
 
@@ -390,6 +418,21 @@ public:
 
     Matrix<ElemType>& InplaceNegativeSine();
     Matrix<ElemType>& AssignNegativeSineOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceAcos();
+    Matrix<ElemType>& AssignAcosOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceAsin();
+    Matrix<ElemType>& AssignAsinOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceCosh();
+    Matrix<ElemType>& AssignCoshOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceSinh();
+    Matrix<ElemType>& AssignSinhOf(const Matrix<ElemType>& a);
+
+    Matrix<ElemType>& InplaceAsinh();
+    Matrix<ElemType>& AssignAsinhOf(const Matrix<ElemType>& a);
 
     Matrix<ElemType>& InplaceLog10();
     Matrix<ElemType>& AssignLog10Of(const Matrix<ElemType>& a);
@@ -516,18 +559,18 @@ public:
     void MaxPoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
     void MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
                             const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
-                            Matrix<ElemType>& grad) const;
+                            Matrix<ElemType>& grad, bool accumulateGradient) const;
 
-    void ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                           const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output, Matrix<ElemType>& argmax) const;
+    void MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                              const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output, Matrix<ElemType>& argmax, double spatialScale) const;
 
-    void ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                            const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, Matrix<ElemType>& argmax) const;
+    void MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                               const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, Matrix<ElemType>& argmax, double spatialScale) const;
 
     void MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, const Matrix<ElemType>& poolInput, Matrix<ElemType>& input) const;
 
-    void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
-    void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const;
+    void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output, const bool poolIncludePad) const;
+    void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const;
 
     void BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
                                    Matrix<ElemType>& runMean, Matrix<ElemType>& runVariance, Matrix<ElemType>& out, double epsilon,
@@ -558,6 +601,8 @@ public:
     static void Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c);
     static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
 
+    static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& v, ElemType beta, Matrix<ElemType>& c);
+
     static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
     static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c);
     static void AddScaledDifference(const ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
@@ -576,6 +621,7 @@ public:
     static void InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     static void ElementWisePower(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
+    static void BatchMatMul(ElemType beta, const Matrix<ElemType>& a, const bool transposeA, const int m, const Matrix<ElemType>& b, const bool transposeB, const int n, Matrix<ElemType>& c, const bool isColWise);
 
     static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
     static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
@@ -594,6 +640,11 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+    void TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
+                     const std::array<size_t, 2>& offsets,
+                     const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                     const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
 public:
     void Read(File& stream);

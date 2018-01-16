@@ -11,8 +11,9 @@
 
 #include "PackerBase.h"
 #include "ReaderUtil.h"
+#include <set>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using namespace std;
 
@@ -57,13 +58,15 @@ void PackerBase::SetConfiguration(const ReaderConfiguration& config, const std::
         LogicError("Minibatch size cannot be zero.");
 }
 
-PackerBase::PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
-    const std::vector<StreamDescriptionPtr>& streams,
+PackerBase::PackerBase(CorpusDescriptorPtr corpus,
+    SequenceEnumeratorPtr sequenceEnumerator,
+    const std::vector<StreamInformation>& streams,
     size_t numberOfBuffers) :
     m_sequenceEnumerator(sequenceEnumerator),
     m_outputStreamDescriptions(streams),
     m_numberOfBuffers(numberOfBuffers),
-    m_currentBufferIndex(0)
+    m_currentBufferIndex(0),
+    m_corpus(corpus)
 {
     assert(m_numberOfBuffers >= 1);
     m_inputStreamDescriptions = sequenceEnumerator->GetStreamDescriptions();
@@ -72,6 +75,8 @@ PackerBase::PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
 
     m_checkSampleShape.resize(m_outputStreamDescriptions.size(), false);
 
+    CheckNameUniqueness(m_inputStreamDescriptions);
+
     // Sanity checks:
     for (size_t i = 0; i < m_outputStreamDescriptions.size(); ++i)
     {
@@ -79,43 +84,85 @@ PackerBase::PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
         UNUSED(stream);
 
         // Check the input.
-        if(m_inputStreamDescriptions[i]->m_elementType != ElementType::tdouble &&
-            m_inputStreamDescriptions[i]->m_elementType != ElementType::tfloat)
+        if(m_inputStreamDescriptions[i].m_elementType != DataType::Double &&
+            m_inputStreamDescriptions[i].m_elementType != DataType::Float)
         {
-            RuntimeError("Please specify the type of the '%ls' stream. You can use 'Cast' transform for that.", m_inputStreamDescriptions[i]->m_name.c_str());
+            RuntimeError("Please specify the type of the '%ls' stream. You can use 'Cast' transform for that.", m_inputStreamDescriptions[i].m_name.c_str());
         }
 
         // Input and output should match in everything except for sparse/dense storage type.
-        assert(stream->m_elementType == ElementType::tfloat || stream->m_elementType == ElementType::tdouble);
-        assert(stream->m_name == m_inputStreamDescriptions[i]->m_name);
-        assert(stream->m_id == m_inputStreamDescriptions[i]->m_id);
+        assert(stream.m_elementType == DataType::Float || stream.m_elementType == DataType::Double);
+        assert(stream.m_name == m_inputStreamDescriptions[i].m_name);
+        assert(stream.m_id == m_inputStreamDescriptions[i].m_id);
 
-        if (m_inputStreamDescriptions[i]->m_sampleLayout == nullptr)
+        if (m_inputStreamDescriptions[i].m_sampleLayout.IsUnknown())
         {
             // Have to check shapes for each and every sequence.
             m_checkSampleShape[i] = true;
         }
+
         // Shape the same for complete stream, checking only input/output stream shape.
         else if (GetSampleSize(m_inputStreamDescriptions[i]) != GetSampleSize(stream))
         {
-            RuntimeError("Packer cannot unify samples of different dimensions for stream '%ls'.", m_inputStreamDescriptions[i]->m_name.c_str());
+            RuntimeError("Packer cannot unify samples of different dimensions for stream '%ls'.", m_inputStreamDescriptions[i].m_name.c_str());
         }
 
-        if (m_inputStreamDescriptions[i]->m_storageType == StorageType::dense &&
-            stream->m_storageType == StorageType::sparse_csc)
+        if (m_inputStreamDescriptions[i].m_storageFormat == StorageFormat::Dense &&
+            stream.m_storageFormat == StorageFormat::SparseCSC)
         {
             RuntimeError("Dense to sparse re-packing requested for stream '%ls' is not supported.",
-                stream->m_name.c_str());
+                stream.m_name.c_str());
         }
     }
 }
 
-// Gets samples size in bytes.
-size_t PackerBase::GetSampleSize(StreamDescriptionPtr stream)
+void PackerBase::CheckNameUniqueness(const vector<StreamInformation>& streams)
 {
-    assert(stream != nullptr);
-    size_t elementSize = GetSizeByType(stream->m_elementType);
-    return stream->m_sampleLayout->GetNumElements() * elementSize;
+    set<wstring> names;
+    for (const auto& s : streams)
+    {
+        if (names.find(s.m_name) != names.end())
+            RuntimeError("Two streams with the same name '%ls' have been found. Please rename the duplicate.", s.m_name.c_str());
+        else
+            names.insert(s.m_name);
+    }
 }
 
-}}}
+// Gets samples size in bytes.
+size_t PackerBase::GetSampleSize(const StreamInformation& stream)
+{
+    size_t elementSize = DataTypeSize(stream.m_elementType);
+    return stream.m_sampleLayout.TotalSize() * elementSize;
+}
+
+void PackerBase::EstablishIdToKey(Minibatch& minibatch, const Sequences& sequences)
+{
+    if (m_corpus == nullptr)
+    {
+        minibatch.m_getKeyById = [](size_t)
+        {
+            RuntimeError("Sequence Id mapping is not available for old style configurations. Please use deserializers.");
+            return "";
+        };
+        return;
+    }
+
+    auto& layout = minibatch.m_data.front()->m_layout;
+    const auto& batch = sequences.m_data.front();
+
+    std::vector<size_t> localSequenceIdToGlobal;
+    localSequenceIdToGlobal.reserve(layout->GetAllSequences().size());
+
+    for (auto& s : layout->GetAllSequences())
+    {
+        if (s.seqId == GAP_SEQUENCE_ID)
+            continue;
+
+        localSequenceIdToGlobal.resize(s.seqId + 1);
+        localSequenceIdToGlobal[s.seqId] = batch[s.seqId]->m_key.m_sequence;
+    }
+
+    minibatch.m_getKeyById = [this, localSequenceIdToGlobal](const size_t i) { return m_corpus->IdToKey(localSequenceIdToGlobal[i]); };
+}
+
+}

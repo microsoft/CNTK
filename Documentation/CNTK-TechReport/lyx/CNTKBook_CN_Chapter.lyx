@@ -10194,7 +10194,7 @@ reference "fig:CN-WithDelayNode"
 .
  Different from the CN without a directed loop, a CN with a loop cannot
  be computed for a sequence of samples as a batch since the next sample's
- value depends on the the previous samples.
+ value depends on the previous samples.
  A simple way to do forward computation and backpropagation in a recurrent
  network is to unroll all samples in the sequence over time.
  Once unrolled, the graph is expanded into a DAG and the forward computation

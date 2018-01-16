@@ -21,6 +21,14 @@
       <Configuration>Release_CpuOnly</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_UWP|x64">
+      <Configuration>Debug_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_UWP|x64">
+      <Configuration>Release_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}</ProjectGuid>
@@ -39,6 +47,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <TargetName>Cntk.ComputationNetwork$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\SequenceTrainingLib;$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude)</AdditionalIncludeDirectories>
@@ -49,8 +60,8 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(NvmlLib)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Math.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
+      <AdditionalDependencies>Cntk.Math-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -78,8 +89,15 @@
       <DelayLoadDLLs>%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" "$(TargetDir)"</Command>
+      <Command>if exist "$(NvmlDll)" xcopy /I /D /Y "$(NvmlDll)" "$(TargetDir)"</Command>
       <Message>Copying NVidia GDK extension DLL to target folder</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="$(IsUWP)">
+    <PostBuildEvent>
+      <Command>
+        xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -96,6 +114,7 @@
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\Math\Matrix.h" />
     <ClInclude Include="ComputationEnvironment.h" />
+    <ClInclude Include="ComputationGraphAlgorithms.h" />
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkBuilder.h" />
     <ClInclude Include="ComputationNode.h" />
@@ -103,6 +122,7 @@
     <ClInclude Include="DeprecatedNodes.h" />
     <ClInclude Include="PreComputeNodes.h" />
     <ClInclude Include="RNNNodes.h" />
+    <ClInclude Include="SequenceReshapeNodes.h" />
     <ClInclude Include="SpecialPurposeNodes.h" />
     <ClInclude Include="EvaluationNodes.h" />
     <ClInclude Include="InputAndParamNodes.h" />
@@ -138,6 +158,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Error Condition="!$(HasBoost)" Text="ComputationalNetworkLib requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+    <Error Condition="!$(HasBoost)" Text="ComputationalNetworkLib requires the Boost library to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>

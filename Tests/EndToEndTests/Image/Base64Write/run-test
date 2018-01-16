@@ -1,0 +1,36 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# This test uses a large dataset which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+  exit 1
+fi
+
+EvalModelDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/PreTrainedModels/EvalModels
+
+echo $EvalModelDir
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun EvalNetOnImages.cntk EvalModelDir=$EvalModelDir
+ExitCode=$?
+
+if [ $ExitCode == 0 ]; then
+  echo Write succeeded.
+
+  OUTPUT_DIFF=$TEST_RUN_DIR/Diff.OutputNodes
+  OUTPUT_CURRENT=$TEST_RUN_DIR/Actual.OutputNodes.z
+  OUTPUT_BASELINE=$TEST_DIR/ExpectedOutputNodes.txt
+
+  awk -f $TEST_DIR/Comparator.awk $OUTPUT_BASELINE $OUTPUT_CURRENT > $OUTPUT_DIFF || exit $?
+
+  if [ -s $OUTPUT_DIFF ]; then
+    echo "Error: Output of write command does not match baseline output within specified tolerance:"
+    cat $OUTPUT_DIFF 
+    exit 1
+  fi
+fi
+
+exit $ExitCode

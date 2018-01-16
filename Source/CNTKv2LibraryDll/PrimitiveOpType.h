@@ -70,9 +70,39 @@ namespace CNTK
         Unpooling = 58,
         LambdaRank = 59,
         NDCG = 60,
-        EditDistanceError = 61
-        // New op types should only be appended to the end of this list.
+        EditDistanceError = 61,
+        NoOp = 62,
+        LabelsToGraph = 63,
+        StopGradient = 64,
+        ELU = 65,
+        ForwardBackward = 66,
+        CosDistanceWithNegativeSamples = 67,
+        OneHot = 68,
+        Pow = 69,
+        ToSequence = 70,
+        ToSequenceLike = 71,
+        UnpackSequence = 72,
+        Assign = 73,
+        Gather = 74,
+        StableSigmoid = 75,
+        RandomDistribution = 76,
+        Sinh = 77,
+        Cosh = 78,
+        UnpackBatch = 79,
+        ToBatch = 80,
+        Asin = 81,
+        Acos = 82,
+        Pad = 83,
+        Crop = 84,
+        Atanh = 85,
+        Asinh = 86,
+        TopK = 87,
+        Squeeze = 88,
+        ConstantOp = 89,
+        // New op types should only be appended to the end of this list 
+        UnknownOP
+        // and UnknownOP should always be last.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)
-        // and bump up PrimitiveFunction::s_serializationVersion and update PrimitiveFunction::Deserialize
+        // and bump up PrimitiveFunction::s_serializationVersion
     };
 }

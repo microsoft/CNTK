@@ -11,24 +11,33 @@
 #pragma warning(pop)
 
 #include "Utils.h"
+#include "Basics.h"
 
-namespace CNTK
+namespace CNTK 
 {
-    namespace Internal
+    namespace Internal 
     {
         typedef google::protobuf::Map<std::string, tensorflow::AttrValue> AttrMap;
         typedef std::pair<Variable, std::wstring> VariableWithScope;
 
         template<typename Ptr>
-        static const std::wstring& GetName(const Ptr& obj)
+        static std::wstring GetName(const Ptr& obj)
         {
-            return (obj->Name().empty()) ? obj->Uid() : obj->Name();
+            std::wstring result = (obj->Name().empty()) ? obj->Uid() : obj->Name();
+            // TensorBoard cannot properly handle node names containing '.' (the graph is not displayed at all).
+            // Some CNTK node names (especially for the models converted from V1 format) contain that character,
+            // e.g. 'z.x._._.x._._.x._._.x'.
+            // In principle, we could have used '/' as a replacement for '.', since it is used in TensorBoard to
+            // separate parts in a hierarchical name. However, in practice, it makes very hard to visualize the graph,
+            // due to hierarchy becoming very deep. We therefore use a different character '-' instead.
+            std::replace_if(result.begin(), result.end(), [](wchar_t c) { return c == L'.'; }, L'-');
+            return result;
         }
 
         template<typename Ptr>
         static std::wstring GetScopedName(const std::wstring& scope, const Ptr& obj)
         {
-            return (scope.empty()) ? GetName(obj) : scope + L"/" + GetName(obj);
+            return (scope.empty()) ? GetName(obj) : scope + L'/' + GetName(obj);
         }
 
         static tensorflow::DataType GetDataType(DataType dataType)
@@ -91,7 +100,7 @@ namespace CNTK
 
         static void PopulateNodeDef(const std::wstring& scope, const FunctionPtr& src, tensorflow::NodeDef& dst)
         {
-            PopulateNodeDef(GetScopedName(scope, src), src->OpName(), src->Output().GetDataType(), src->Outputs(), dst);
+            PopulateNodeDef(GetScopedName(scope, src), src->OpName(), src->Outputs()[0].GetDataType(), src->Outputs(), dst);
         }
 
         static void PopulateNodeDef(const std::wstring& scope, const Variable& src, tensorflow::NodeDef& dst)
@@ -120,28 +129,28 @@ namespace CNTK
             std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope>& placeholders,
             std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
             const std::wstring& scope)
-        {
-            auto iter = variableNodes.find(src);
-            if (iter != variableNodes.end())
             {
-                return iter->second;
-            }
+                auto iter = variableNodes.find(src);
+                if (iter != variableNodes.end())
+                {
+                    return iter->second;
+                }
 
-            tensorflow::NodeDef* result = nullptr;
-            if (src.IsOutput())
-            {
-                result = CreateFunctionNode(src.Owner(), dst, functionNodes, variableNodes, placeholders,
-                    placeholderInputs, scope);
-            }
-            else
-            {
-                result = dst.add_node();
-                Internal::PopulateNodeDef(scope, src, *result);
-            }
+                tensorflow::NodeDef* result = nullptr;
+                if (src.IsOutput())
+                {
+                    result = CreateFunctionNode(src.Owner(), dst, functionNodes, variableNodes, placeholders,
+                                                placeholderInputs, scope);
+                }
+                else
+                {
+                    result = dst.add_node();
+                    PopulateNodeDef(scope, src, *result);
+                    variableNodes.emplace(src, result);
+                }
 
-            variableNodes.emplace(src, result);
-            return result;
-        }
+                return result;
+            }
 
         static tensorflow::NodeDef* CreateFunctionNode(
             const FunctionPtr& src,
@@ -151,111 +160,125 @@ namespace CNTK
             std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope>& placeholders,
             std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
             const std::wstring& scope)
-        {
-            auto iter = functionNodes.find(src);
-            if (iter != functionNodes.end())
             {
-                return iter->second;
-            }
-
-            // Create a function node.
-            tensorflow::NodeDef* functionNode = nullptr;
-            if (src->IsBlock())
-            {
-                std::wstring newScope = Internal::GetScopedName(scope, src);
-                functionNode = CreateFunctionNode(src->BlockRoot(), dst, functionNodes,
-                    variableNodes, placeholders, placeholderInputs, newScope);
-            }
-            else
-            {
-                functionNode = dst.add_node();
-                Internal::PopulateNodeDef(scope, src, *functionNode);
-            }
-
-            // Note that we map the block function to its root node here (on purpose).
-            functionNodes.emplace(src, functionNode);
-
-            // Make sure that all of the function's input nodes are created and registered as the 
-            // function node's inputs.
-            for (const auto& input : src->Inputs())
-            {
-                tensorflow::NodeDef* inputNode = nullptr;
-                if (!input.IsPlaceholder())
+                auto iter = functionNodes.find(src);
+                if (iter != functionNodes.end())
                 {
-                    // We don't create placeholders immediately, just register them so we can later trace the actual
-                    // input.
-                    inputNode = CreateVariableNode(input, dst, functionNodes, variableNodes, placeholders,
-                        placeholderInputs, scope);
+                    return iter->second;
                 }
 
-                if (!src->IsBlock())
+                // Create a function node.
+                tensorflow::NodeDef* functionNode = nullptr;
+                if (src->IsBlock())
                 {
-                    if (inputNode != nullptr)
+                    std::wstring newScope = GetScopedName(scope, src);
+                    functionNode = CreateFunctionNode(src->BlockRoot(), dst, functionNodes,
+                                                      variableNodes, placeholders, placeholderInputs, newScope);
+                }
+                else
+                {
+                    functionNode = dst.add_node();
+                    PopulateNodeDef(scope, src, *functionNode);
+                }
+
+                // Note that we map the block function to its root node here (on purpose).
+                functionNodes.emplace(src, functionNode);
+
+                // Make sure that all of the function's input nodes are created and registered as the 
+                // function node's inputs.
+                for (const auto& input : src->Inputs())
+                {
+                    tensorflow::NodeDef* inputNode = nullptr;
+                    if (!input.IsPlaceholder())
                     {
-                        functionNode->add_input(inputNode->name());
+                        // We don't create placeholders immediately, just register them so we can later trace the actual
+                        // input.
+                        inputNode = CreateVariableNode(input, dst, functionNodes, variableNodes, placeholders,
+                                                       placeholderInputs, scope);
                     }
-                    else
+
+                    if (!src->IsBlock())
                     {
-                        placeholders.emplace(functionNode, std::make_pair(input, scope));
-                    }
-                }
-            }
-
-            if (src->IsBlock())
-            {
-                // Remember placeholder->input mapping, so that we can later use it to map function to their inputs
-                // directly (avoiding placeholder chains).
-                for (const auto& mapping : src->BlockArgumentsMapping())
-                {
-                    placeholderInputs.emplace(mapping.first, std::make_pair(mapping.second, scope));
-                }
-            }
-
-            return functionNode;
-        }
-
-        namespace TensorBoardUtils
-        {
-            void CreateGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
-            {
-                // For each function/variable visited, contains a matching tensorflow node.
-                std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;
-                std::unordered_map<Variable, tensorflow::NodeDef*> variableNodes;
-
-                // For each (function, placeholder input) found, contains (tensorflow_node, (placeholder, scope)).
-                std::unordered_multimap<tensorflow::NodeDef*, Internal::VariableWithScope> placeholders;
-                // For each placeholder found, contains a (placeholder, (replacement variable, scope)).
-                std::unordered_map<Variable, Internal::VariableWithScope> placeholderInputs;
-
-                // Create all nodes in the graph, except placeholders.
-                Internal::CreateFunctionNode(src, dst, functionNodes, variableNodes,
-                                             placeholders, placeholderInputs, L"");
-
-                // For each function that had a placeholder as its input, add a link to the actual input if it was
-                // found.
-                for (auto placeholder : placeholders)
-                {
-                    // Follow the placeholder chain until the end.
-                    Internal::VariableWithScope* finalValue = &placeholder.second;
-
-                    do
-                    {
-                        auto nextInput = placeholderInputs.find(finalValue->first);
-                        if (nextInput == placeholderInputs.end())
+                        if (inputNode != nullptr)
                         {
-                            break;
+                            functionNode->add_input(inputNode->name());
                         }
-
-                        finalValue = &nextInput->second;
-                    } while (true);
-
-                    // Create a node for the finalValue and add it as an input of the function.
-                    tensorflow::NodeDef* inputNode = Internal::CreateVariableNode(
-                        finalValue->first, dst, functionNodes, variableNodes, placeholders, placeholderInputs,
-                        finalValue->second);
-                    placeholder.first->add_input(inputNode->name());
+                        else
+                        {
+                            placeholders.emplace(functionNode, std::make_pair(input, scope));
+                        }
+                    }
                 }
+
+                if (src->IsBlock())
+                {
+                    // Remember placeholder->input mapping, so that we can later use it to map function to their inputs
+                    // directly (avoiding placeholder chains).
+                    for (const auto& mapping : src->BlockArgumentsMapping())
+                    {
+                        placeholderInputs.emplace(mapping.first, std::make_pair(mapping.second, scope));
+                    }
+                }
+
+                return functionNode;
+            }
+
+        void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
+        {
+            // For each function/variable visited, contains a matching tensorflow node.
+            std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;
+            std::unordered_map<Variable, tensorflow::NodeDef*> variableNodes;
+
+            // For each (function, placeholder input) found, contains (tensorflow_node, (placeholder, scope)).
+            std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope> placeholders;
+            // For each placeholder found, contains a (placeholder, (replacement variable, scope)).
+            std::unordered_map<Variable, VariableWithScope> placeholderInputs;
+
+            // Create all nodes in the graph, except placeholders.
+            CreateFunctionNode(src, dst, functionNodes, variableNodes, placeholders, placeholderInputs, L"");
+
+            // For each function that had a placeholder as its input, add a link to the actual input if it was
+            // found.
+            for (auto placeholder : placeholders)
+            {
+                // Follow the placeholder chain until the end.
+                VariableWithScope* finalValue = &placeholder.second;
+
+                do
+                {
+                    auto nextInput = placeholderInputs.find(finalValue->first);
+                    if (nextInput == placeholderInputs.end())
+                    {
+                        break;
+                    }
+
+                    finalValue = &nextInput->second;
+                } while (true);
+
+                // Create a node for the finalValue and add it as an input of the function.
+                tensorflow::NodeDef* inputNode = CreateVariableNode(
+                    finalValue->first, dst, functionNodes, variableNodes, placeholders, placeholderInputs,
+                    finalValue->second);
+                placeholder.first->add_input(inputNode->name());
             }
         }
+
+    #ifndef CNTK_UWP
+
+        void WriteImageToBuffer(void* matrix, DataType dtype, int height, int width, int depth, std::vector<unsigned char>& buffer)
+        {
+            typedef void(*EncodeImageAsPNG)(void* matrix, DataType dtype, int height, int width, int depth, std::vector<unsigned char>& buffer);
+            static EncodeImageAsPNG encodeImageAsPNG = nullptr;
+
+            if (encodeImageAsPNG == nullptr)
+            {
+                Microsoft::MSR::CNTK::Plugin plugin;
+                encodeImageAsPNG = (EncodeImageAsPNG)plugin.Load(L"ImageWriter", "EncodeImageAsPNG");
+            }
+
+            encodeImageAsPNG(matrix, dtype, height, width, depth, buffer);
+        }
+
+    #endif // !CNTK_UWP
     }
 }

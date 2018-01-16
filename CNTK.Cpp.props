@@ -1,29 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
-    <!-- Note: SolutionDir / RepoRootPath are the same in current setup -->
-    <RepoRootPath>$(MSBuildThisFileDirectory)</RepoRootPath>
-    <RelativeProjectPath>$(MSBuildProjectDirectory.Substring($(MSBuildThisFileDirectory.Length)))</RelativeProjectPath>
-
-    <OutDir>$(RepoRootPath)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(RepoRootPath)$(Platform)\.build\$(Configuration)\$(RelativeProjectPath)\</IntDir>
-
-    <DebugBuild>false</DebugBuild>
-    <DebugBuild Condition="$(Configuration.StartsWith('Debug'))">true</DebugBuild>
-
-    <ReleaseBuild>false</ReleaseBuild>
-    <ReleaseBuild Condition="!$(DebugBuild)">true</ReleaseBuild>
-
-    <GpuBuild>true</GpuBuild>
-    <GpuBuild Condition="$(Configuration.EndsWith('_CpuOnly'))">false</GpuBuild>
-
-    <CpuOnlyBuild>true</CpuOnlyBuild>
-    <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
-
-    <NoOptBuild>false</NoOptBuild>
-    <NoOptBuild Condition="$(Configuration.Contains('NoOpt'))">true</NoOptBuild>
-
-    <CudaVersion/>
+    <CudaVersion />
     <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
 
@@ -34,6 +13,9 @@
     <NvmlLibPath />
     <NvmlLibPath Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
     <NvmlLibPath Condition="'$(CudaVersion)' == '8.0'" />
+
+    <NvmlDll>%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml.dll</NvmlDll>
+    <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>
 
     <HasOpenCv>false</HasOpenCv>
     <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
@@ -50,38 +32,50 @@
     <HasMultiverso>false</HasMultiverso>
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
-    <HasSwig>false</HasSwig>
-    <HasSwig Condition="Exists('$(SWIG_PATH)\swig.exe')">true</HasSwig>
+    <IsUWP>false</IsUWP>
+    <IsUWP Condition="'$(Configuration)'=='Debug_UWP' Or '$(Configuration)'=='Release_UWP'">true</IsUWP>
+    <OutputSuffix Condition="!$(IsUWP)"/>
 
-    <!-- If an executable links ReaderLib.lib, it has dependency on Common.dll, Math.dll and PerformanceProfilerDll.dll -->
-    <ReaderLibs>ReaderLib.lib;Common.lib;Math.lib;PerformanceProfilerDll.lib</ReaderLibs>
+  </PropertyGroup>
 
+  <PropertyGroup Condition="$(IsUWP)">
+    <MathLibrary>OpenBLAS</MathLibrary>
+    <CNTKCustomOpenBLASVersion>2</CNTKCustomOpenBLASVersion>
+    <MathLibraryName>OpenBLAS library (Version: $(CNTKCustomOpenBLASVersion))</MathLibraryName>
+    <CNTKCustomOpenBLASPath>$(CNTK_OPENBLAS_PATH)\$(CNTKCustomOpenBLASVersion)</CNTKCustomOpenBLASPath>    
+    <MathIncludePath>$(CNTKCustomOpenBLASPath)</MathIncludePath>
+    <MathLibraryPath>$(CNTKCustomOpenBLASPath)\lib\x64\RELEASE</MathLibraryPath>
+    <MathDefine>USE_OPENBLAS;OS_WINNT;ARCH_X86_64;C_MSVC</MathDefine>
+    <MathLinkLibrary>libopenblas.lib</MathLinkLibrary>
+    <MathDelayLoad>libopenblas.dll</MathDelayLoad>
+    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+    <OutputSuffix>_app</OutputSuffix>
+    <AppContainerApplication>true</AppContainerApplication>
+    <ApplicationType>Windows Store</ApplicationType>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10586.0</WindowsTargetPlatformMinVersion>
+    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+    <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
 
   <PropertyGroup>
-    <MathLibrary>MKL</MathLibrary>
-    <CNTKCustomMKLVersion>3</CNTKCustomMKLVersion>
-    <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
-    <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
-    <MathDefine>USE_MKL</MathDefine>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' != '1'">
-    <MathLibraryName>CNTK custom MKL Parallel (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
-    <MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
-    <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
-    <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
-    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
-    <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' == '1'">
-    <MathLibraryName>CNTK custom MKL Sequential (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
-    <MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
-    <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
-    <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
-    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
-    <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
+    <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
+    <ReaderLibs>Cntk.Reader$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).lib;</ReaderLibs>
   </PropertyGroup>
 
+  <PropertyGroup Condition="!$(IsUWP)">
+    <MathLibrary>MKL</MathLibrary>
+    <MathIncludePath>$(MKLML_PATH)\include</MathIncludePath>
+    <MathDefine>USE_MKL</MathDefine>
+    <!-- Only non-UWP configurations consume PerformanceProfiler -->
+    <ReaderLibs>Cntk.PerformanceProfiler-$(CntkComponentVersion).lib;$(ReaderLibs)</ReaderLibs>
+    <MathLibraryName>MKL-ML Library</MathLibraryName>
+    <MathLibraryPath>$(MKLML_PATH)\lib</MathLibraryPath>
+    <MathLinkLibrary>mklml.lib</MathLinkLibrary>
+    <MathDelayLoad>mklml.dll</MathDelayLoad>
+    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+    <UnitTestDlls>$(OutDir)mklml.lib;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+  </PropertyGroup>
   <PropertyGroup Condition="$(UseZip)">
     <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
     <ZipDefine>USE_ZIP</ZipDefine>
@@ -119,18 +113,35 @@
     <CudaPath>$(CUDA_PATH_V8_0)</CudaPath>
     <CudaRuntimeDll>cudart64_80.dll</CudaRuntimeDll>
     <CudaDlls>cublas64_80.dll;cusparse64_80.dll;curand64_80.dll;$(CudaRuntimeDll)</CudaDlls>
+
+<!-- Use NvidiaCompute to define nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
+    In debug mode we only include cubin/PTX for 30 and rely on PTX / JIT to generate the required native cubin format
+    http://docs.nvidia.com/cuda/pascal-compatibility-guide/index.html#building-applications-with-pascal-support -->
+    <NvidiaCompute Condition="$(DebugBuild)">$(CNTK_CUDA_CODEGEN_DEBUG)</NvidiaCompute>
+    <NvidiaCompute Condition="$(DebugBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30</NvidiaCompute>
+ 
+    <NvidiaCompute Condition="$(ReleaseBuild)">$(CNTK_CUDA_CODEGEN_RELEASE)</NvidiaCompute>
+    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_60,sm_60;compute_61,sm_61</NvidiaCompute>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
     <CudaPath>$(CUDA_PATH_V7_5)</CudaPath>
     <CudaRuntimeDll>cudart64_75.dll</CudaRuntimeDll>
     <CudaDlls>cublas64_75.dll;cusparse64_75.dll;curand64_75.dll;$(CudaRuntimeDll)</CudaDlls>
+
+    <NvidiaCompute Condition="$(DebugBuild)">$(CNTK_CUDA_CODEGEN_DEBUG)</NvidiaCompute>
+    <NvidiaCompute Condition="$(DebugBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30</NvidiaCompute>
+ 
+    <NvidiaCompute Condition="$(ReleaseBuild)">$(CNTK_CUDA_CODEGEN_RELEASE)</NvidiaCompute>
+    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50</NvidiaCompute>
   </PropertyGroup>
 
   <PropertyGroup>
     <CudaLibs>cudart.lib;cublas.lib;cusparse.lib;curand.lib</CudaLibs>
     <CudaInclude>$(CudaPath)\include</CudaInclude>
     <CudaLibPath>$(CudaPath)\lib\$(Platform)</CudaLibPath>
+
+    <CudaMsbuildPath Condition="'$(CudaMsbuildPath)' == ''">$(VCTargetsPath)\BuildCustomizations</CudaMsbuildPath>
   </PropertyGroup>
 
   <!-- TODO warn if ConfigurationType not (yet) defined -->
@@ -142,6 +153,27 @@
     <WholeProgramOptimization>$(ReleaseBuild)</WholeProgramOptimization>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
   </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)"</PreprocessorDefinitions>
+      <!-- UWP does not use MPI -->
+      <PreprocessorDefinitions Condition="!$(IsUWP)">%(PreprocessorDefinitions);HAS_MPI=1</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="$(IsUWP)">
+    <ClCompile>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <PreprocessorDefinitions>CNTK_UWP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link Condition="$(ReleaseBuild)">
+      <AdditionalOptions>/nodefaultlib:vccorlib /nodefaultlib:msvcrt vccorlib.lib msvcrt.lib %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <Link Condition="$(DebugBuild)">
+      <AdditionalOptions>/nodefaultlib:vccorlibd /nodefaultlib:msvcrtd vccorlibd.lib msvcrtd.lib %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
 
   <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <ClCompile>

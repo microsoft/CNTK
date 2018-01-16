@@ -5,7 +5,7 @@ We provide the Visual Studio debug command arguments for the 'Examples' end-to-e
 
  python TestDriver.py run -n Image/QuickE2E 
 
-(For more details on using the TestDriver see https://github.com/Microsoft/CNTK/wiki/How-to-Test#end-to-end-tests ). From the output of the above command you simply copy the 'VS debugging command args' to the command arguments of the CNTK project in Visual Studio (Right click on CNTK project -> Properties -> Configuration Properties -> Debugging -> Command Arguments). Start debugging the CNTK project.
+(For more details on using the TestDriver see https://docs.microsoft.com/en-us/cognitive-toolkit/How-to-Test#end-to-end-tests ). From the output of the above command you simply copy the 'VS debugging command args' to the command arguments of the CNTK project in Visual Studio (Right click on CNTK project -> Properties -> Configuration Properties -> Debugging -> Command Arguments). Start debugging the CNTK project.
 
 Note: Below, the current dir is sometimes set to be the data directory. This allows for local paths in data scripts.
 

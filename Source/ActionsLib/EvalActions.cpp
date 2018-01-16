@@ -256,9 +256,10 @@ void DoWriteOutput(const ConfigParameters& config)
     else if (config.Exists("outputPath"))
     {
         wstring outputPath = config(L"outputPath");
+        bool writeSequenceKey = config(L"writeSequenceKey", false);
         WriteFormattingOptions formattingOptions(config);
         bool nodeUnitTest = config(L"nodeUnitTest", "false");
-        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest);
+        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest, writeSequenceKey);
     }
     else
         InvalidArgument("write command: You must specify either 'writer'or 'outputPath'");

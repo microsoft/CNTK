@@ -6,6 +6,7 @@
 //
 
 using System;
+using System.Threading.Tasks;
 using CNTK;
 
 namespace CNTKLibraryCSEvalExamples
@@ -14,19 +15,123 @@ namespace CNTKLibraryCSEvalExamples
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("======== Evaluate model using C# ========");
+            // Todo: move to a separate unit test.
+            Console.WriteLine("Test Utils");
 
-            CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.CPUDevice);
-            CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
-            //TODO: Add examples with OneHot.
-            //EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
-            //EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
+            int maxThreads = Utils.GetMaxNumCPUThreads();
+            Utils.SetMaxNumCPUThreads(2);
+            Console.WriteLine("MaxNumCPUThreads: before: " + maxThreads + ", after " + Utils.GetMaxNumCPUThreads());
+            Utils.SetMaxNumCPUThreads(maxThreads);
+            Console.WriteLine("reset MaxNumCPuThreads to " + Utils.GetMaxNumCPUThreads());
 
-            // TODO: using GPU.
-            //EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
-            //EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
+            var level = Utils.GetTraceLevel();
+            Utils.SetTraceLevel(TraceLevel.Info);
+            Console.WriteLine("TraceLevel: before: " + level + ", after " + Utils.GetTraceLevel());
+            Utils.SetTraceLevel(level);
+            Console.WriteLine("reset TraceLevel to " + Utils.GetTraceLevel());
+
+            Console.WriteLine(Utils.DataTypeName(DataType.Float));
+            Console.WriteLine(Utils.DataTypeSize(DataType.Double));
+            Console.WriteLine(Utils.DeviceKindName(DeviceDescriptor.CPUDevice.Type));
+            Console.WriteLine(Utils.DeviceKindName(DeviceKind.GPU));
+            Console.WriteLine(Utils.IsSparseStorageFormat(StorageFormat.Dense));
+            Console.WriteLine(Utils.IsSparseStorageFormat(StorageFormat.SparseCSC));
+            Console.WriteLine(Utils.IsSparseStorageFormat(StorageFormat.SparseBlockCol));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Constant));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Placeholder));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Input));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Output));
+            Console.WriteLine(Utils.VariableKindName(VariableKind.Parameter));
+
+#if CPUONLY
+            Console.WriteLine("======== Evaluate model on CPU using CPUOnly build ========");
+#else
+            Console.WriteLine("======== Evaluate model on CPU using GPU build ========");
+#endif
+
+            if (ShouldRunOnCpu())
+            {
+                var device = DeviceDescriptor.CPUDevice;
+
+                CNTKLibraryManagedExamples.EvaluationSingleImage(device);
+
+                // Run memory tests.
+                MemoryTests.ValidateObjectReferences(device);
+
+                CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
+
+                MemoryTests.WriteOutputs();
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallelAsync(device).Wait();
+
+                // Run memory tests again.
+                MemoryTests.ValidateObjectReferences(device);
+
+                Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(device);
+                evalTask.Wait();
+
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
+                CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(device);
+                // It is sufficient to test loading model from memory buffer only on CPU.
+                CNTKLibraryManagedExamples.LoadModelFromMemory(device);
+
+                MemoryTests.WriteOutputs();
+
+                MemoryTests.ValueCopyToSparseCSCTest<float>(device);
+                MemoryTests.ValueCopyToSparseCSCTest<double>(device);
+
+                CNTKLibraryManagedExamples.EvaluateIntermediateLayer(device);
+                CNTKLibraryManagedExamples.EvaluateCombinedOutputs(device);
+            }
+
+            if (ShouldRunOnGpu())
+            {
+                Console.WriteLine(" ====== Evaluate model on GPU =====");
+                var device = DeviceDescriptor.GPUDevice(0);
+                // Run memory tests.
+                MemoryTests.ValidateObjectReferences(device);
+                CNTKLibraryManagedExamples.EvaluationSingleImage(device);
+                CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallelAsync(device).Wait();
+                // Run memory tests.
+                MemoryTests.ValidateObjectReferences(device);
+
+                Task evalTask = CNTKLibraryManagedExamples.EvaluationSingleImageAsync(device);
+                evalTask.Wait();
+
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
+                CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(device);
+
+                // Run memory tests again.
+                MemoryTests.WriteOutputs();
+
+                MemoryTests.ValueCopyToSparseCSCTest<float>(device);
+                MemoryTests.ValueCopyToSparseCSCTest<double>(device);
+
+                CNTKLibraryManagedExamples.EvaluateIntermediateLayer(device);
+                CNTKLibraryManagedExamples.EvaluateCombinedOutputs(device);
+            }
 
             Console.WriteLine("======== Evaluation completes. ========");
+        }
+
+        static bool ShouldRunOnGpu()
+        {
+#if CPUONLY
+            return false;
+#else
+            string testDeviceSetting = Environment.GetEnvironmentVariable("TEST_DEVICE");
+
+            return (string.IsNullOrEmpty(testDeviceSetting) || string.Equals(testDeviceSetting.ToLower(), "gpu"));
+#endif
+        }
+
+        static bool ShouldRunOnCpu()
+        {
+            string testDeviceSetting = Environment.GetEnvironmentVariable("TEST_DEVICE");
+
+            return (string.IsNullOrEmpty(testDeviceSetting) || string.Equals(testDeviceSetting.ToLower(), "cpu"));
         }
     }
 }

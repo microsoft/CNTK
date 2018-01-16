@@ -14,17 +14,97 @@
 #include <thread>
 #include "GPUMatrix.h"
 #include "Globals.h"
+#include "PerformanceProfiler.h"
+#include "MPIWrapper.h"
+#include "EnvironmentUtil.h"
+#include "Basics.h"
+#include "ProgressTracing.h"
+#include "buildinfo.h"
+#include "Constants.h"
 
 extern bool g_shareNodeValueMatrices;
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    std::atomic<bool> s_checkedMode(false);
+    void SetCheckedMode(bool enable)
+    {
+        s_checkedMode.store(enable);
+    }
+
+    bool GetCheckedMode()
+    {
+        return s_checkedMode.load();
+    }
+
     namespace Internal
     {
-        static std::atomic<unsigned long long> s_nextUniqueId(0);
+
+        template <typename E>
+        using SparseCSCDataTuple = std::tuple<const E*, const SparseIndexType*, const SparseIndexType*, size_t, NDArrayViewPtr>;
+
+        static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
         size_t NewUniqueId()
         {
             return s_nextUniqueId++;
+        }
+        static std::mutex s_fixedSeedMutex;
+        static bool s_fixedRandomSeed = false;
+        static std::atomic_ullong s_currentRandomSeed = ATOMIC_VAR_INIT(0);
+
+        unsigned long GetRandomSeed()
+        {
+            return static_cast<unsigned long>(s_currentRandomSeed.load());
+        }
+
+        void SetFixedRandomSeed(unsigned long value)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            s_currentRandomSeed.store(value);
+            s_fixedRandomSeed = true;
+        }
+
+        bool IsRandomSeedFixed()
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            return s_fixedRandomSeed;
+        }
+
+        void ResetRandomSeed(unsigned long value)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            s_currentRandomSeed.store(value);
+            s_fixedRandomSeed = false;
+        }
+
+        // This is used to generate a default seed value for random parameter initializer and also 
+        // for stateful nodes (dropout, and both flavors of random sample). The 'perWorkerLocalValue' flag
+        // indicates if the generated value should be identical across individual workers in distributed 
+        // setting or if each worker should get a different seed value.        
+        size_t GenerateRandomSeed(bool perWorkerLocalValue /*= false*/)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            
+            if (s_fixedRandomSeed)
+                return s_currentRandomSeed;
+            
+
+            if (!perWorkerLocalValue)
+                return s_currentRandomSeed++;
+
+            static size_t numWorkers = 1, rank = 0;
+            static bool initialized = false;
+            if (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1 && !initialized)
+            {
+                DistributedCommunicatorPtr communicator = MPICommunicator();
+                numWorkers = communicator->Workers().size();
+                rank = communicator->CurrentWorker().m_globalRank;
+                assert(numWorkers > 1);
+            }
+
+            initialized = true;
+            return (numWorkers * s_currentRandomSeed++) + rank;
         }
 
         std::atomic<bool> s_reverseTensorShapesInErrorMessages(false);
@@ -81,16 +161,6 @@ namespace CNTK
             Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ false);
         }
 
-        void EnableHyperMemoryCompress()
-        {
-            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ true);
-        }
-
-        void DisableHyperMemoryCompress()
-        {
-            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ false);
-        }
-
         void EnableGradientAccumulationOptimization()
         {
             Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ true);
@@ -99,6 +169,45 @@ namespace CNTK
         void DisableGradientAccumulationOptimization()
         {
             Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ false);
+        }
+
+        void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
+        {
+#ifndef CNTK_UWP
+            std::wstring logSuffix = L"";
+            auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
+            if (mpi)
+            {
+                logSuffix = std::to_wstring(mpi->CurrentNodeRank());
+            }
+
+            Microsoft::MSR::CNTK::ProfilerInit(
+                profilerDir,
+                profilerBufferSize,
+                logSuffix,
+                profilerSyncGpu);
+#endif
+        }
+
+        void EnableProfiler()
+        {
+#ifndef CNTK_UWP
+            Microsoft::MSR::CNTK::ProfilerEnable(true);
+#endif
+        }
+
+        void DisableProfiler()
+        {
+#ifndef CNTK_UWP
+            Microsoft::MSR::CNTK::ProfilerEnable(false);
+#endif
+        }
+
+        void StopProfiler()
+        {
+#ifndef CNTK_UWP
+            Microsoft::MSR::CNTK::ProfilerClose();
+#endif
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -203,7 +312,7 @@ namespace CNTK
             {
                 auto firstValue = data1[i];
                 auto secondValue = data2[i];
-                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * firstValue));
+                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
                 if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
             }
@@ -212,15 +321,79 @@ namespace CNTK
         }
 
         template <typename ElementType>
+        bool AreEqual(const SparseCSCDataTuple<ElementType>& t1, const SparseCSCDataTuple<ElementType>& t2, double relativeTolerance, double absoluteTolerance)
+        {
+            if (std::get<3>(t1) != std::get<3>(t2))
+                return false;
+            
+            auto nnzCount = std::get<3>(t1);
+            auto values1 = std::get<0>(t1);
+            auto values2 = std::get<0>(t2);
+
+            for (size_t i = 0; i < nnzCount; ++i)
+            {
+                auto firstValue = values1[i];
+                auto secondValue = values2[i];
+                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
+                if (std::abs(firstValue - secondValue) > allowedTolerance)
+                    return false;
+            }
+
+            auto rowIndices1 = std::get<2>(t1);
+            auto rowIndices2 = std::get<2>(t2);
+
+            if (memcmp(rowIndices1, rowIndices2, nnzCount * sizeof(SparseIndexType)) != 0)
+                return false;
+            
+            auto colIndices1 = std::get<1>(t1);
+            auto colIndices2 = std::get<1>(t2);
+
+            for (size_t i = 0; i < nnzCount; ++i)
+            {
+                if (colIndices1[i] != colIndices2[i])
+                    return false;
+                if (colIndices1[i] == nnzCount)
+                    break;
+            }
+
+            return true;
+        }
+
+        template <typename ElementType>
         std::pair<ElementType*, NDArrayViewPtr> GetCPUDataPtr(const NDArrayView& view) 
         {
-            if (view.Device().Type() == DeviceKind::CPU)
+            auto deviceType = view.Device().Type();
+
+            if (deviceType == DeviceKind::CPU)
                 return{ const_cast<ElementType*>(view.DataBuffer<ElementType>()), nullptr };
-            else
+            
+            if (deviceType == DeviceKind::GPU) 
             {
                 auto tempCPUDataView = view.DeepClone(DeviceDescriptor::CPUDevice());
                 return{ tempCPUDataView->WritableDataBuffer<ElementType>(), tempCPUDataView };
             }
+            
+            LogicError("Invalid device type (%u).", (unsigned int)deviceType);
+        }
+
+        template <typename ElementType>
+        SparseCSCDataTuple<ElementType> GetSparseCSCCPUDataPtr(const NDArrayView& view)
+        {
+            auto deviceType = view.Device().Type();
+
+            if (deviceType == DeviceKind::CPU)
+                return std::tuple_cat(view.SparseCSCDataBuffers<ElementType>(), std::make_tuple(nullptr));
+
+            if (deviceType == DeviceKind::GPU)
+            {
+                auto tempCPUDataView = view.DeepClone(view.Device());
+                tempCPUDataView->ChangeDevice(DeviceDescriptor::CPUDevice());
+                auto result = GetSparseCSCCPUDataPtr<ElementType>(*tempCPUDataView);
+                std::get<4>(result) = tempCPUDataView;
+                return result;
+            }
+
+            LogicError("Invalid device type (%u).", (unsigned int)deviceType);
         }
 
         template <typename ElementType> 
@@ -232,19 +405,29 @@ namespace CNTK
             }
 
             if (view1.GetDataType() != view2.GetDataType() ||
-                view1.Shape() != view2.Shape())
+                view1.Shape() != view2.Shape() ||
+                view1.IsSparse() != view2.IsSparse())
             {
                 return false;
             }
 
-            CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
-            ElementType* data1;
-            ElementType* data2;
-            std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(view1);
-            std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(view2);
+            if (!view1.IsSparse()) 
+            {
+                CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
+                ElementType* data1;
+                ElementType* data2;
+                std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(view1);
+                std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(view2);
 
-            size_t numElements = view1.Shape().TotalSize();
-            return AreEqual(data1, data2, numElements, relativeTolerance, absoluteTolerance);
+                size_t numElements = view1.Shape().TotalSize();
+                return AreEqual(data1, data2, numElements, relativeTolerance, absoluteTolerance);
+            }
+            else 
+            {
+                auto data1 = GetSparseCSCCPUDataPtr<ElementType>(view1);
+                auto data2 = GetSparseCSCCPUDataPtr<ElementType>(view2);
+                return AreEqual(data1, data2, relativeTolerance, absoluteTolerance);
+            }
         }
 
         bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
@@ -255,8 +438,9 @@ namespace CNTK
             if (view1.GetDataType() == DataType::Double)
                 return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
 
-            LogicError("Unknown DataType");
+            LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }
+
 
         std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
         {
@@ -339,7 +523,7 @@ namespace CNTK
             if (value1.GetDataType() == DataType::Double)
                 return AreEqual<double>(value1, value2, relativeTolerance, absoluteTolerance);
 
-            LogicError("Unknown DataType");
+            LogicError("AreEqual(Value): Unknown DataType.");
         }
 
         std::atomic<int> s_computationNetworkTraceLevel(0);
@@ -358,6 +542,11 @@ namespace CNTK
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
         }
 
+        void SetMathLibTraceLevel(int traceLevel)
+        {
+            Microsoft::MSR::CNTK::SetMathLibTraceLevel(traceLevel);
+        }
+
         void ForceDeterministicAlgorithms()
         {
             Microsoft::MSR::CNTK::Globals::ForceDeterministicAlgorithms();
@@ -368,89 +557,216 @@ namespace CNTK
             return Microsoft::MSR::CNTK::Globals::ShouldForceDeterministicAlgorithms();
         }
 
+        void EnableSynchronousGPUKernelExecution()
+        {
+            SyncGuard::EnableSync();
+        }
+
+        bool IsSynchronousGPUKernelExecutionEnabled()
+        {
+            return SyncGuard::IsSyncEnabled();
+        }
+
+#ifdef CPUONLY
+        // CPU SBC aggregation not implemented yet, so fall back to conversion of sparse to dense 
+        std::atomic<bool> s_useSparseGradientAggregationInDataParallelSGD(false);
+#else
+        std::atomic<bool> s_useSparseGradientAggregationInDataParallelSGD(true);
+#endif
+
+        void UseSparseGradientAggregationInDataParallelSGD(bool enable)
+        {
+            s_useSparseGradientAggregationInDataParallelSGD = enable;
+        }
+
+        bool ShouldUseSparseGradientAggregationInDataParallelSGD()
+        {
+            return s_useSparseGradientAggregationInDataParallelSGD;
+        }
+
         static std::atomic<bool> s_threadsAreSet(false);
         bool MaxNumCPUThreadsSet()
         {
             return s_threadsAreSet;
         }
+
+        size_t DefaultPackThresholdSizeInBytes()
+        {
+            return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
+        }
     }
 
-    /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
-
-    /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
-    /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice;
-    /*static*/ std::shared_ptr<std::vector<DeviceDescriptor>> DeviceDescriptor::s_allDevices;
-
-    static std::once_flag s_initDefaultDeviceFlag, s_initAllDevicesFlag;
-
-    /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
+    std::atomic<TraceLevel> s_traceLevel(TraceLevel::Warning);
+    void SetTraceLevel(TraceLevel value)
     {
-        std::call_once(s_initDefaultDeviceFlag, []
+        using namespace Internal;
+
+        auto previousValue = s_traceLevel.exchange(value);
+
+        if (previousValue == value)
+            return;
+
+        if (value == TraceLevel::Info)
         {
-            s_defaultDevice.reset(new DeviceDescriptor(DeviceDescriptor::BestDevice()));
-        });
-        return *s_defaultDevice;
+            // V1 does not have an intermediate trace level,
+            // the logging is either disabled (trace level = 0)
+            // or enabled (trace level != 0);
+            SetComputationNetworkTraceLevel(int(value));
+            SetMathLibTraceLevel(int(value));
+        }
+        else if (previousValue == TraceLevel::Info)
+        {
+            SetComputationNetworkTraceLevel(0);
+            SetMathLibTraceLevel(0);
+        }
+    }
+
+    TraceLevel GetTraceLevel()
+    {
+        return s_traceLevel.load();
+    }
+
+    /*static*/ std::mutex DeviceDescriptor::s_mutex;
+    /*static*/ bool DeviceDescriptor::s_defaultDeviceFrozen(false);
+    /*static*/ std::unique_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(nullptr);
+    /*static*/ std::vector<DeviceDescriptor> DeviceDescriptor::s_excludedDevices;
+    /*static*/ std::vector<DeviceDescriptor> DeviceDescriptor::s_allDevices;
+    /*static*/ std::vector<GPUProperties> DeviceDescriptor::s_gpuProperties;
+
+    static std::once_flag s_initAllDevicesFlag;
+
+    /*static*/ void DeviceDescriptor::Reset()
+    {
+        DeviceDescriptor::s_defaultDevice.reset(nullptr);
+        DeviceDescriptor::s_defaultDeviceFrozen = false;
+        DeviceDescriptor::s_excludedDevices.clear();
+    }
+
+    bool DeviceDescriptor::IsLocked() const
+    {
+        return Microsoft::MSR::CNTK::IsLocked(AsCNTKImplDeviceId(*this));
     }
 
     /*static*/ DeviceDescriptor DeviceDescriptor::UseDefaultDevice()
     {
-        bool alreadyFrozen = s_defaultDeviceFrozen.exchange(true);
-        auto selectedDevice = DefaultDevice();
-        if (!alreadyFrozen)
+        std::unique_lock<std::mutex> lock(s_mutex);
+
+        if (!s_defaultDeviceFrozen && s_defaultDevice == nullptr)
         {
-            Microsoft::MSR::CNTK::OnDeviceSelected(AsCNTKImplDeviceId(selectedDevice));
+            if (GetTraceLevel() >= TraceLevel::Info) 
+            {
+                fprintf(stderr, "Auto-selecting process wide default device.\n");
+            }
+
+            // This will both initialize the list of available devices and log the device stats
+            // (including the info on which devices are compatible and eligible for selection).
+            const auto& allDevices = AllDevices();
+            UNUSED(allDevices);
+
+            vector<int> excludedIds;
+            for (auto device : s_excludedDevices)
+            {
+                excludedIds.push_back(AsCNTKImplDeviceId(device));
+            }
+
+            auto id = Microsoft::MSR::CNTK::GetBestDevice(excludedIds);
+            auto selectedDevice = id >= 0 ? DeviceDescriptor::GPUDevice(id) : DeviceDescriptor::CPUDevice();
+            s_defaultDevice.reset(new DeviceDescriptor(selectedDevice));
         }
-        return selectedDevice;
+
+        if (!s_defaultDeviceFrozen)
+        {
+            fprintf(stderr, "Selected %S as the process wide default device.\n", s_defaultDevice->AsString().c_str());
+        }
+
+        s_defaultDeviceFrozen = true;
+
+        return *s_defaultDevice;
     }
 
-    /*static*/ void DeviceDescriptor::SetDefaultDevice(const DeviceDescriptor& newDefaultDevice)
+    /*static*/ bool DeviceDescriptor::TrySetDefaultDevice(const DeviceDescriptor& newDefaultDevice, bool acquireDeviceLock)
     {
-        if (newDefaultDevice == DefaultDevice())
-            return;
+        std::unique_lock<std::mutex> lock(s_mutex);
+
+        if (s_defaultDevice != nullptr && newDefaultDevice == *s_defaultDevice)
+            return !acquireDeviceLock || Microsoft::MSR::CNTK::TryLock(AsCNTKImplDeviceId(newDefaultDevice));
 
         // As a testing backdoor we allow changing the default device even after being "used/frozen"
-        if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
-            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
-
-        std::call_once(s_initDefaultDeviceFlag, []
+        if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen)
+            // TODO: alternatively, print a warning and return false.
         {
-            // do nothing. This will set the flag above, in case when DefaultDevice() was never called before.
-        });
+            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used "
+                         "as the default device in a CNTK API call; Current default = %S, New default = %S.",
+                         s_defaultDevice->AsString().c_str(), newDefaultDevice.AsString().c_str());
+        }
+
+        if (std::find(s_excludedDevices.begin(), s_excludedDevices.end(), newDefaultDevice) != s_excludedDevices.end())
+            return false;
+
+        if (acquireDeviceLock && !Microsoft::MSR::CNTK::TryLock(AsCNTKImplDeviceId(newDefaultDevice)))
+            return false;
 
         s_defaultDevice.reset(new DeviceDescriptor(newDefaultDevice));
-    }
-    
-    /*static*/ DeviceDescriptor DeviceDescriptor::BestDevice()
-    {
-        //TODO: BestDevice remains locked if UseDefaultDevice is never executed
-        // or if BestDevice() is invoked after UseDefaultDevice(). 
-        // Should we do anything about it?
-        auto id = Microsoft::MSR::CNTK::GetBestDevice();
-        return id >= 0 ? DeviceDescriptor::GPUDevice(id) : DeviceDescriptor::CPUDevice();
+
+        if (!acquireDeviceLock)
+            Microsoft::MSR::CNTK::ReleaseLock();
+
+        return true;
     }
 
+    /*static*/ void DeviceDescriptor::SetExcludedDevices(const std::vector<DeviceDescriptor>& excluded)
+    {
+        std::unique_lock<std::mutex> lock(s_mutex);
+        s_excludedDevices = excluded;
+    }
+    
     /*static*/ const std::vector<DeviceDescriptor>& DeviceDescriptor::AllDevices()
     {
         using namespace Microsoft::MSR::CNTK;
 
-        std::call_once(s_initAllDevicesFlag, []
+        std::call_once(s_initAllDevicesFlag, [&]
         {
-           s_allDevices.reset(new std::vector<DeviceDescriptor>());
 #ifndef CPUONLY
-           auto allGpusData = GetAllGpusData();
+            auto allGpusData = GetAllGpusData();
+
+            if (GetTraceLevel() >= TraceLevel::Info)
+            {
+                Internal::PrintGpuInfo(allGpusData);
+            }
 
             for (const auto& gpuData : allGpusData)
             {
                 if (gpuData.validity == GpuValidity::Valid)
                 {
-                    s_allDevices->push_back(DeviceDescriptor((unsigned int) gpuData.deviceId, DeviceKind::GPU));
+                    s_allDevices.push_back(DeviceDescriptor((unsigned int) gpuData.deviceId, DeviceKind::GPU));
+                    s_gpuProperties.push_back(
+                    {
+                        (unsigned int)gpuData.deviceId, 
+                        gpuData.versionMajor,
+                        gpuData.versionMinor,
+                        gpuData.cudaCores,
+                        gpuData.name,
+                        gpuData.totalMemory,
+                    });
                 }
             }
 #endif
-            s_allDevices->push_back(DeviceDescriptor::CPUDevice());
+            s_allDevices.push_back(DeviceDescriptor::CPUDevice());
         });
 
-        return *s_allDevices;
+        return s_allDevices;
+    }
+
+    std::wstring DeviceDescriptor::AsString() const
+    {
+        std::wstring str = DeviceKindName(Type());
+        if (Type() == DeviceKind::GPU)
+        {
+            auto props = GetGPUProperties(*this);
+            std::wstring wname(props.name.begin(), props.name.end());
+            str = str + L"[" + std::to_wstring(Id()) + L"] " + wname;
+        }
+        return str;
     }
 
     /*static*/ DeviceDescriptor DeviceDescriptor::GPUDevice(unsigned int deviceId) 
@@ -465,13 +781,32 @@ namespace CNTK
         return { deviceId, DeviceKind::GPU };
     }
 
-    /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
+    /*static*/ const GPUProperties& DeviceDescriptor::GetGPUProperties(const DeviceDescriptor& device)
+    {
+        if (device.Type() == DeviceKind::CPU) 
+            InvalidArgument("GPU properties cannot be obtained for a CPU device.");
+
+        // Now, make sure that the device vectores are initialized.
+        const auto& allDevices = AllDevices();
+        UNUSED(allDevices);
+
+        auto result = std::find_if(s_gpuProperties.begin(), s_gpuProperties.end(),
+            [&device](const GPUProperties& props) { return device.Id() == props.deviceId; });
+
+        if (result == s_gpuProperties.end())
+            InvalidArgument("Could not find properties for the specified GPU device (id=%u).", device.Id());
+
+        return *result;
+    }
+
+    /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxisIdx=";
 
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForDynamicAxes = std::numeric_limits<int>::max();
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
-    
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
+
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
     bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
@@ -527,6 +862,12 @@ namespace CNTK
         return s_defaultDynamicAxis;
     }
 
+    /*static*/ const Axis& Axis::OperandSequenceAxis()
+    {
+        static const Axis s_operandSequenceAxis(L"__operandSequenceAxis");
+        return s_operandSequenceAxis;
+    }
+
     /*static*/ const Axis& Axis::DefaultBatchAxis()
     {
         static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
@@ -539,9 +880,25 @@ namespace CNTK
         return s_allStaticAxes;
     }
 
+    /*static*/ const Axis& Axis::AllAxes()
+    {
+        static const Axis s_allAxes(SentinelStaticAxisIndexValueForAllAxes);
+        return s_allAxes;
+    }
+
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
+    }
+
+    std::wstring Axis::AsString() const
+    {
+        std::wstringstream wss;
+        wss << "Axis('";
+        wss << m_name;
+        wss << "')";
+
+        return wss.str();
     }
 
     void SetMaxNumCPUThreads(size_t numCPUThreads)
@@ -566,4 +923,100 @@ namespace CNTK
     {
         s_defaultUnitGainValue.store(value);
     }
+
+    template <class E>
+    __declspec_noreturn void ThrowFormatted(const char* format, ...)
+    {
+        va_list args;
+        va_start(args, format);
+        Microsoft::MSR::CNTK::ThrowFormattedVA<E>(format, args);
+        va_end(args);
+    }
+
+    namespace Internal
+    {
+        void ExtractCUDAVersion(int version, int& major, int& minor, int& patch_level)
+        {
+            //e.g. #define CUDNN_VERSION    (CUDNN_MAJOR * 1000 + CUDNN_MINOR * 100 + CUDNN_PATCHLEVEL)
+            major = version / 1000;
+            minor = (version - major * 1000) / 100;
+            patch_level = version % 100;
+        }
+
+        void PrintBuiltInfo()
+        {
+            LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+            LOGPRINTF(stderr, "Build info: \n\n");
+            LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
+            LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
+#ifdef _BUILDTYPE_
+            LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+#endif
+#ifdef _BUILDTARGET_
+            LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+#endif
+#ifdef _WITH_1BITSGD_
+            LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+#endif
+#ifdef _WITH_ASGD_
+            LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
+#endif
+#ifdef _MATHLIB_
+            LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
+#endif
+#ifdef _CUDA_PATH_
+            int cudaVersion = 0;
+            if (cudaDriverGetVersion(&cudaVersion) == cudaSuccess)
+            {
+                int major = 0, minor = 0, patchLevel = 0;
+                ExtractCUDAVersion(cudaVersion, major, minor, patchLevel);
+                LOGPRINTF(stderr, "\t\tCUDA version: %d.%d.%d\n", major, minor, patchLevel);
+            }
+#endif
+#ifdef _CUDNN_PATH_
+            size_t cudnnVersion = GetCUDNNVersion();
+            int cudnnMajor = 0, cudnnMinor = 0, cudnnPatchLevel = 0;
+            ExtractCUDAVersion(cudnnVersion, cudnnMajor, cudnnMinor, cudnnPatchLevel);
+            LOGPRINTF(stderr, "\t\tCUDNN version: %d.%d.%d\n", cudnnMajor, cudnnMinor, cudnnPatchLevel);
+#endif
+#ifdef _GIT_EXIST
+            LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
+            LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
+#endif
+#ifdef _MPI_NAME_
+            LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
+#endif
+#ifdef _MPI_VERSION_
+            LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
+#endif
+            LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+        }
+
+        // print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; total memory = 8192 MB; free memory = 8192 MB)
+        void PrintGpuInfo(const std::vector<Microsoft::MSR::CNTK::GpuData>& gpusData)
+        {
+#ifndef CPUONLY
+            if (gpusData.empty())
+            {
+                LOGPRINTF(stderr, "No GPUs found\n");
+                return;
+            }
+
+            LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+            LOGPRINTF(stderr, "GPU info:\n\n");
+
+            for (const GpuData& data : gpusData)
+            {
+                LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; total memory = %lu MB; free memory = %lu MB\n",
+                    data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory, (unsigned long)data.freeMemory);
+            }
+            LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+#endif
+        }
+    }
+
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::runtime_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::logic_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::invalid_argument>(const char* format, ...);
 }
+

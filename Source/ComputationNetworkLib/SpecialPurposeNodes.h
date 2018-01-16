@@ -7,6 +7,7 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "gammacalculation.h"
+#include "NonlinearityNodes.h"
 
 #include <map>
 #include <string>
@@ -457,7 +458,7 @@ public:
     {
     }
 
-    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // auto t_start_time = Timer::MilliSecondElapsed();
@@ -611,7 +612,7 @@ public:
         RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
     }
 
-    // request matrices needed to do node function value evaluation
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
@@ -722,10 +723,7 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
@@ -764,5 +762,391 @@ public:
 
 template class DummyCriterionNode<float>;
 template class DummyCriterionNode<double>;
+
+// -----------------------------------------------------------------------
+// ForwardBackwardNode (graph, prediction, delayConstraint)
+// CTC training criterion, primarily based on the paper "Connectionist Temporal Classification: Labelling Unsegmented
+// Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
+// blankTokenId (input): id of the blank token. If specified as SIZE_MAX, will be replaced with (numberOfLabels - 1)
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. 
+//      This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+//      Setting this parameter smaller will result in shorter delay between label output during decoding, yet may hurt accuracy.
+//      delayConstraint=-1 means no constraint
+// -----------------------------------------------------------------------
+
+template<class ElemType>
+class ForwardBackwardNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ForwardBackward";
+    }
+public:
+    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankTokenId=SIZE_MAX, int delayConstraint=-1) :
+        Base(deviceId, name), m_blankTokenId(blankTokenId), m_delayConstraint(delayConstraint)
+    {
+    }
+
+    ForwardBackwardNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ForwardBackwardNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"), configp->Get(L"delayConstraint"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        // Left node must be a scalar
+        if (inputIndex == 0)  //left derivative
+        {
+            BackpropToLeft(*m_logSoftmaxOfRight, InputRef(inputIndex).Gradient(), Gradient());
+        }
+        else if (inputIndex == 1)
+        {
+            FrameRange frameRange(InputRef(0).GetMBLayout());
+            BackpropToRight(*m_softmaxOfRight, InputRef(inputIndex).Gradient(), Gradient(), *m_CTCposterior);
+            InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
+        }
+        else
+           RuntimeError("ForwardBackwardNode criterion expects only two inputs: labels and network output.");
+    }
+
+    void BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
+        const Matrix<ElemType>& gradientValues)
+    {
+#if DUMPOUTPUT
+        logSoftmaxOfRight.Print("ForwardBackwardNode Partial-logSoftmaxOfRight");
+        gradientValues.Print("ForwardBackwardNode Partial-gradientValues");
+        inputGradientValues.Print("ForwardBackwardNode Partial-Left-in");
+#endif
+
+        Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
+
+#if DUMPOUTPUT
+        inputGradientValues.Print("ForwardBackwardNode Partial-Left-out");
+#endif
+    }
+
+    void BackpropToRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+        const Matrix<ElemType> &CTCposterior)
+    {
+#if DUMPOUTPUT
+        softmaxOfRight.Print("ForwardBackwardNode Partial-softmaxOfRight");
+        inputFunctionValues.Print("ForwardBackwardNode Partial-inputFunctionValues");
+        gradientValues.Print("ForwardBackwardNode Partial-gradientValues");
+        inputGradientValues.Print("ForwardBackwardNode Partial-Right-in");
+#endif  
+        // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
+        Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues); 
+
+#if DUMPOUTPUT
+        inputGradientValues.Print("ForwardBackwardNode Partial-Right");
+#endif
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputRef(1).Value(), true);
+        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+        m_softmaxOfRight->InplaceExp();
+
+        m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
+        m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
+
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
+        // compute CTC score
+        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, InputRef(0).GetMBLayout(), m_blankTokenId, m_delayConstraint);
+
+#if NANCHECK
+        functionValues.HasNan("ForwardBackwardNode");
+#endif
+#if DUMPOUTPUT
+        functionValues.Print("ForwardBackwardNode");
+#endif
+    }
+
+    virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr; // no layout
+
+        if (isFinalValidationPass) 
+        {
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match vector dimension
+                Input(0)->HasMBLayout() &&
+                Input(0)->GetMBLayout() == Input(1)->GetMBLayout()))
+            {
+                LogicError("The Matrix dimension in the ForwardBackwardNode operation does not match.");
+            }
+
+            auto leftNode = dynamic_pointer_cast<LabelsToGraphNode<ElemType>>(Input(0));
+            if (!leftNode)
+                LogicError("ForwardBackwardNode: Please pass LabelsToGraph(labels) for second argument");
+        }
+
+        SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<ForwardBackwardNode<ElemType>>(nodeP);
+
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+            node->m_CTCposterior->SetValue(*m_CTCposterior);
+            node->m_maxIndexes->SetValue(*m_maxIndexes);
+            node->m_maxValues->SetValue(*m_maxValues);
+            node->m_delayConstraint = m_delayConstraint;
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_CTCposterior, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_CTCposterior, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+
+        size_t cols = Input(0)->Value().GetNumCols();
+        m_maxIndexes->Resize(1, cols);
+        m_maxValues->Resize(1, cols);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_delayConstraint;
+        fstream << m_blankTokenId;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_delayConstraint;
+        fstream >> m_blankTokenId;
+    }
+
+    int DelayConstraint() { return m_delayConstraint; }
+    size_t BlankTokenId() { return m_blankTokenId; }
+
+protected:
+    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_CTCposterior;
+    shared_ptr<Matrix<ElemType>> m_maxIndexes;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
+
+    msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+    size_t m_blankTokenId;
+    int m_delayConstraint;
+};
+
+template class ForwardBackwardNode<float>;
+template class ForwardBackwardNode<double>;
+
+// -----------------------------------------------------------------------
+// StopGradientNode (Input)
+// Outputs its input as it and prevents any gradient contribution from its output to its input.
+// TODO: This could be more easily implemented as a unary operation, like PassNode.
+// -----------------------------------------------------------------------
+template <class ElemType>
+class StopGradientNode : public UnaryElementWiseNode<ElemType>
+{
+    typedef UnaryElementWiseNode<ElemType> Base; 
+    UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"StopGradient"; }
+public:
+    DeclareConstructorFromConfigWithNumInputs(StopGradientNode);
+    StopGradientNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto result = ValueFor(fr);
+        auto inputValue = InputRef(0).ValueFor(fr);
+        // TODO:@Amit Due to current limitation of the network builder, we can't bypass the memory copy operation at this step. 
+        // But idealy, we should just pass the value of input as this node's output
+        result.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // Do nothing to short circuit the gradient backward propagation
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+};
+
+template class StopGradientNode<float>;
+template class StopGradientNode<double>;
+
+// -----------------------------------------------------------------------
+// AssignNode (RefInput, Input)
+// -----------------------------------------------------------------------
+template <class ElemType>
+class AssignNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Assign"; }
+
+    shared_ptr<Matrix<ElemType>> m_result;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(AssignNode);
+    AssignNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_result->Resize(Input(0)->Value());
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& result = Value();
+        auto& inputValue = InputRef(1).Value();
+
+        if (inputValue.GetNumElements() != result.GetNumElements())
+        {
+            InvalidArgument("%ls %ls operation: unexpected dimension mismatch", NodeName().c_str(), OperationName().c_str());
+        }
+
+        m_result->AssignValuesOf(inputValue);
+        result.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ PostForwardAndBackProp() override
+    {
+        auto& refValue = InputRef(0).Value();
+        refValue.AssignValuesOf(*m_result);
+
+        // We update Input(0) so bump the timestamp for the new data.
+        Input(0)->BumpEvalTimeStamp();
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (inputIndex == 1)
+            Input(1)->Gradient() += Gradient();
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryZip(isFinalValidationPass, false);
+
+        if (Input(0)->HasMBLayout() || Input(1)->HasMBLayout())
+            InvalidArgument("AssignNode: None of the inputs can have dynamic axes.");
+        //only check layout in final pass, as there may be free dimension axis
+        if (isFinalValidationPass && Input(0)->GetSampleLayout() != Input(1)->GetSampleLayout())
+            InvalidArgument("AssignNode: All inputs should have same sample layout.");
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_result, matrixPool);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+};
+
+template class AssignNode<float>;
+template class AssignNode<double>;
+
+// -----------------------------------------------------------------------
+// OutputMultiplexerNode(userDefinedV2FunctionNode, outputIndex)
+// ComputationNode for selecting one of the multiple outputs of UserDefinedV2FunctionNode
+// This is needed since the CNTK computation engin natively does not support
+// nodes with multiple outputs and hence, we need a separate node to multiplex 
+// the additional outputs.
+// -----------------------------------------------------------------------
+
+// TODO: We currently only support external nodes that cannot be part of CNTK recurrent loops
+template <class ElemType>
+class OutputMultiplexerNode final : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"OutputMultiplexer"; }
+
+public:
+    OutputMultiplexerNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputIndex = 0)
+        : Base(deviceId, name), m_outputIndex(outputIndex)
+    {
+        if (outputIndex == 0)
+            LogicError("OutputMultiplexerNode ctor must not be instantiated with outputIndex == 0");
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        // TODO: We should avoid this copy but that requires carefully managing the 
+        // lifetimes of the Value objects since to be able to directly use the 
+        // input Value as its output, we have to make sure that the input's Value
+        // is not reused until all dependents of this node are finished.
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        Value().AssignValuesOf(*inputNode->m_outputsValue[m_outputIndex]);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        // TODO: We should avoid this copy but that requires carefully managing the 
+        // lifetimes of the Gradient objects since to be able to directly use the 
+        // Gradient as input's gradient, we have to make sure that the Gradient
+        // is not reused until all the inputs are finished backpropagating to their inputs.
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        inputNode->m_outputsGradient[m_outputIndex]->SetValue(Gradient());
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        m_pMBLayout = inputNode->m_outputsMBLayout[m_outputIndex];
+        SetDims(inputNode->m_outputsShape[m_outputIndex], HasMBLayout());
+    }
+
+private:
+    size_t m_outputIndex;
+};
+
+template class OutputMultiplexerNode<float>;
+template class OutputMultiplexerNode<double>;
 
 } } }

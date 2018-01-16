@@ -23,3 +23,7 @@ We give examples for both Python and BrainScript. Compared to the original AlexN
 ### [Python](./Python)
 
 ### [BrainScript](./BrainScript)
+
+## Pre-trained Models
+
+Pre-trained AlexNet models can be found [here](../../../../PretrainedModels/Image.md#alexnet). 

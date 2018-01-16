@@ -27,7 +27,14 @@ void LearnableParameter<ElemType>::InitShape(const TensorShape& shape)
     Value().Invalidate();
 }
 
-static pair<bool/*uniform*/, double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut = 1, size_t fanIn = 1);
+enum DistributionType
+{
+    Uniform = 0,
+    Normal = 1,
+    TruncNormal = 2,
+};
+
+static pair<DistributionType, double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut = 1, size_t fanIn = 1);
 
 // constructor from config
 // Parameterization is a little wicked. An older version required to specify the type of initialization
@@ -112,6 +119,10 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         m_initString = initString;
         m_initValue = initValue;
     }
+    else if (initString == L"bilinear")
+    {
+        m_initString = initString;
+    }
     // non-deferred variants
     // For the dimensions are always known at this point, so we don't need/want to have to save all those parameters.
     else if (initString == L"fromValueArray") // from 'initValue' which has array form
@@ -121,13 +132,6 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         if (initFromFilePath.empty())
             RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
         InitFromFile(initFromFilePath);
-        m_initString.clear();
-    }
-    else if (initString == L"bilinear")
-    {
-        const size_t kernelWidth = configp->Get(L"kernelWidth");
-        const size_t kernelHeight = configp->Get(L"kernelHeight");
-        InitBilinear(kernelWidth, kernelHeight);
         m_initString.clear();
     }
     // legacy
@@ -147,7 +151,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         m_initString.clear();
     }
     else
-        RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
+        RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile | bilinear ]");
 
     // initialize
     // This will be repeated if the matrix gets resized due to dimension inference.
@@ -213,19 +217,21 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
 //  glorotUniform: sqrt(6 / (fanin+fanout))
 //  heNormal:      sqrt(2 / fanin)
 //  heUniform:     sqrt(6 / fanin)
-// returns (*,0) for unrecognized string
-static pair<bool/*uniform*/,double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut /* = 1*/, size_t fanIn /*= 1*/)
+//  TruncNormal: 1.0    
+// returns (Normal,0) for unrecognized string
+static pair<DistributionType, double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut /* = 1*/, size_t fanIn /*= 1*/)
 {
-    if      (type == UniformBSInitializerTypeName)     return make_pair(true, 0.05f);
-    if      (type == UniformInitializerTypeName)       return make_pair(true, 1.0f); 
-    else if (type == GaussianInitializerTypeName)      return make_pair(false, 0.2 / sqrt(fanIn));
-    else if (type == NormalInitializerTypeName)        return make_pair(false, 1.0f);
-    else if (type == XavierInitializerTypeName)        return make_pair(true, sqrt(3.0 / fanIn));
-    else if (type == GlorotUniformInitializerTypeName) return make_pair(true,  sqrt(6.0 / (fanIn + fanOut)));
-    else if (type == GlorotNormalInitializerTypeName)  return make_pair(false, sqrt(2.0 / (fanIn + fanOut)));
-    else if (type == HeUniformInitializerTypeName)     return make_pair(true,  sqrt(6.0 / fanIn));
-    else if (type == HeNormalInitializerTypeName)      return make_pair(false, sqrt(2.0 / fanIn));
-    else                                               return make_pair(false, 0.0);
+    if      (type == UniformBSInitializerTypeName)     return make_pair(Uniform,     0.05f);
+    else if (type == UniformInitializerTypeName)       return make_pair(Uniform,     1.0f);
+    else if (type == GaussianInitializerTypeName)      return make_pair(Normal,      0.2 / sqrt(fanIn));
+    else if (type == NormalInitializerTypeName)        return make_pair(Normal,      1.0f);
+    else if (type == XavierInitializerTypeName)        return make_pair(Uniform,     sqrt(3.0 / fanIn));
+    else if (type == GlorotUniformInitializerTypeName) return make_pair(Uniform,     sqrt(6.0 / (fanIn + fanOut)));
+    else if (type == GlorotNormalInitializerTypeName)  return make_pair(Normal,      sqrt(2.0 / (fanIn + fanOut)));
+    else if (type == HeUniformInitializerTypeName)     return make_pair(Uniform,     sqrt(6.0 / fanIn));
+    else if (type == HeNormalInitializerTypeName)      return make_pair(Normal,      sqrt(2.0 / fanIn));
+    else if (type == TruncNormalInitializerTypeName)   return make_pair(TruncNormal, 1.0);
+    else                                               return make_pair(Normal,      0.0);
 }
 
 // initialize with random numbers
@@ -265,7 +271,6 @@ std::tuple<size_t, size_t, ElemType> LearnableParameter<ElemType>::InitRandom(Ma
     size_t fanOut = numElements * filterSize / fanIn;
 
     let opts = ParseRandomizationType(type, fanOut, fanIn);
-    let isUniform = opts.first;
     ElemType range = (ElemType)opts.second;
     if (range == 0)
         LogicError("InitRandom: Invalid initialization type '%ls'", type.c_str());
@@ -275,10 +280,14 @@ std::tuple<size_t, size_t, ElemType> LearnableParameter<ElemType>::InitRandom(Ma
     // the random seed offset is set via the "randomSeedOffset" parameter in config
     if (initOnCPUOnly)
         valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, true);
-    if (isUniform)
+    if (opts.first == DistributionType::Uniform)
         valueMatrix.SetUniformRandomValue(-range, range, randomSeed);
-    else
+    else if (opts.first == DistributionType::Normal)
         valueMatrix.SetGaussianRandomValue(0, range, randomSeed);
+    else if (opts.first == DistributionType::TruncNormal)
+        valueMatrix.SetTruncatedNormalRandomValue(0, range, randomSeed);
+    else
+        LogicError("InitRandom: Unknown distribution type '%d'", opts.first);
     if (initOnCPUOnly)
         valueMatrix.TransferToDeviceIfNotThere(deviceId, true);
 
@@ -296,11 +305,11 @@ void LearnableParameter<ElemType>::InitBilinear(Matrix<ElemType>& valueMatrix, c
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, true);
 
     const SmallVector<size_t>& dims = sampleShape.GetDims();
-    assert(dims.size() == 2);
-    const size_t kernelCount = dims[0];
-    const size_t kernelWeightCount = dims[1];
-    assert(kernelWeightCount % (kernelWidth * kernelHeight) == 0);
-    const size_t channels = kernelWeightCount / (kernelWidth * kernelHeight);
+    assert(dims.size() >= 4);
+    assert(dims[0] == kernelWidth);
+    assert(dims[1] == kernelHeight);
+    const size_t kernelCount = dims[2];
+    const size_t channels = dims[3];
     if (kernelCount != channels)
         LogicError("Number of input and output channels of filter for bilinear interpolation must be equal.");
 
@@ -548,6 +557,13 @@ void LearnableParameter<ElemType>::LazyInitParameters()
         let randomSeed = Globals::ShouldForceConstantRandomSeed() ? 1UL : m_randomSeed; // debugging feature to enforce identical results across NDL, BrainScript, and V2 API/Python
         InitRandom(m_initString, randomSeed, m_initValueScale, m_initFilterRank, m_initOutputRank, m_initOnCPUOnly);
     }
+    else if (m_initString == L"bilinear")
+    {
+        const TensorShape shape = GetSampleLayout();
+        const size_t kernelWidth = shape[0];
+        const size_t kernelHeight = shape[1];
+        InitBilinear(kernelWidth, kernelHeight);
+    }
     else
         LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization for %ls.", m_initString.c_str(), NodeDescription().c_str());
     // and remember that we are done
@@ -565,12 +581,12 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
     const auto& thisShape = GetSampleLayout();
 
     // see where we stand with our shape
-    bool hasMissingDims = thisShape.GetRank() == 0 || thisShape.GetNumElements() == 0;
+    bool hasMissingDims = thisShape.GetNumElements() == 0;
     if (!hasMissingDims) // all there--nothing to infer
         return;
     
     // infer at least one dimension
-    if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
+    if (otherShape.GetNumElements() == 0)
         return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
 
     if (m_initString.empty())

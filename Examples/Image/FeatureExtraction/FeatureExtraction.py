@@ -7,32 +7,19 @@
 from __future__ import print_function
 import os
 import numpy as np
-from cntk import load_model, graph
-from cntk.ops import combine
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk import graph
-
-
-# helper to print all node names
-def print_all_node_names(model_file, is_BrainScript=True):
-    loaded_model = load_model(model_file)
-    if is_BrainScript:
-        loaded_model = combine([loaded_model.outputs[0]])
-    node_list = graph.depth_first_search(loaded_model, lambda x: isinstance(x, Function))
-    print("printing node information in the format")
-    for node in node_list: 
-        print("Node name:", node.name)
-        for out in node.outputs: 
-            print("Output name and shape:", out.name, out.shape)
-
+import cntk as C
+from cntk import load_model, combine
+import cntk.io.transforms as xforms
+from cntk.logging import graph
+from cntk.logging.graph import get_node_outputs
 
 def create_mb_source(image_height, image_width, num_channels, map_file):
-    transforms = [ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
-    return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-        features=StreamDef(field='image', transforms=transforms),  # first column in map file is referred to as 'image'
-        labels=StreamDef(field='label', shape=1000))),             # and second as 'label'. TODO: add option to ignore labels
+    transforms = [xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
+    return C.io.MinibatchSource(
+        C.io.ImageDeserializer(map_file, C.io.StreamDefs(
+            features=C.io.StreamDef(field='image', transforms=transforms),
+            labels=C.io.StreamDef(field='label', shape=1000))),
         randomize=False)
-
 
 def eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects):
     # load model and pick desired node as output
@@ -49,15 +36,15 @@ def eval_and_write(model_file, node_name, output_file, minibatch_source, num_obj
             output = output_nodes.eval(mb[features_si])
 
             # write results to file
-            out_values = output[0,0].flatten()
+            out_values = output[0].flatten()
             np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
 
 if __name__ == '__main__':
     # define location of model and data and check existence
     base_folder = os.path.dirname(os.path.abspath(__file__))
-    model_file  = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
-    map_file    = os.path.join(base_folder, "..", "DataSets", "grocery", "test.txt")
-    os.chdir(os.path.join(base_folder, "..", "DataSets", "grocery"))
+    model_file  = os.path.join(base_folder, "..", "..", "..", "PretrainedModels", "ResNet18_ImageNet_CNTK.model")
+    map_file    = os.path.join(base_folder, "..", "DataSets", "Grocery", "test.txt")
+    os.chdir(os.path.join(base_folder, "..", "DataSets", "Grocery"))
     if not (os.path.exists(model_file) and os.path.exists(map_file)):
         print("Please run 'python install_data_and_model.py' first to get the required data and model.")
         exit(0)
@@ -69,7 +56,8 @@ if __name__ == '__main__':
     minibatch_source = create_mb_source(image_height, image_width, num_channels, map_file)
 
     # use this to print all node names of the model (and knowledge of the model to pick the correct one)
-    # print_all_node_names(model_file)
+    # node_outputs = get_node_outputs(load_model(model_file))
+    # for out in node_outputs: print("{0} {1}".format(out.name, out.shape))
 
     # use this to get 1000 class predictions (not yet softmaxed!)
     # node_name = "z"

@@ -1,0 +1,20 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
+    Hardware threads: 12
+    Total Memory: 33474872 kB
+-------------------------------------------------------------------
+/tmp/cntk-test-20170206115841.400885/CNTKv2Library_Distribution@release_gpu/TestData /cygdrive/c/repos/CNTK/Tests/EndToEndTests/CNTKv2Library/Distribution
+=== Running C:\Program Files\Microsoft MPI\Bin\/mpiexec.exe -n 2 -l C:\repos\CNTK\x64\release\V2LibraryEndToEndTests.exe Distribution C:\cygwin64\tmp\cntk-test-20170206115841.400885\CNTKv2Library_Distribution@release_gpu/v2library.log
+[1]requestnodes [MPIWrapper]: using 2 out of 2 MPI nodes on a single host (2 requested); we (1) are in (participating)
+[0]requestnodes [MPIWrapper]: using 2 out of 2 MPI nodes on a single host (2 requested); we (0) are in (participating)
+[1]Run tests using GPU build.
+[0]Run tests using GPU build.
+MPI Rank 0: Training loop thru samples with simple.
+MPI Rank 0: Training loop thru samples with simple.
+MPI Rank 0: 
+MPI Rank 0: CNTKv2Library-Distribution tests: Passed
+MPI Rank 1: Training loop thru samples with simple.
+MPI Rank 1: Training loop thru samples with simple.
+MPI Rank 1: 
+MPI Rank 1: CNTKv2Library-Distribution tests: Passed
+/cygdrive/c/repos/CNTK/Tests/EndToEndTests/CNTKv2Library/Distribution

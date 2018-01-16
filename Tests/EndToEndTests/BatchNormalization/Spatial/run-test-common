@@ -20,7 +20,7 @@ if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/Train_cntk_text.txt || ! -e $TE
         cp -R $DataSourceDir/*_cntk_text.txt $DataDir || exit $?
         Copied=1
     else
-        echo Error: cannot find data. Please see Examples/Image/Miscellaneous/CIFAR-10/README.md for instructions to get it.
+        echo Error: cannot find data. Please see Examples/Image/DataSets/CIFAR-10/README.md for instructions to get it.
         exit 1
     fi
 fi

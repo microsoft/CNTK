@@ -257,7 +257,7 @@ public:
     }
     std::pair<size_t, size_t> range() const
     {
-        return make_pair(epochstartframe, epochendframe);
+        return std::make_pair(epochstartframe, epochendframe);
     }
 
     // return the current minibatch frames as a matrix ref into the feature buffer

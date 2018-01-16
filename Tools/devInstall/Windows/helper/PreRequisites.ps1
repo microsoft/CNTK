@@ -39,7 +39,7 @@ function PrereqInfoVS15(
 
 Installation of Visual Studio 2015 Update 3 is a pre-requisite before installation can continue.
 Please check 
-  https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows
+  https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows
 for more details.
 "
 }
@@ -53,7 +53,7 @@ function PrereqInfoCuda8(
 
 Installation of NVidia CUDA 8.0 is a pre-requisite before installation can continue.
 Please check 
-  https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows
+  https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows
 for more details.
 "
 }

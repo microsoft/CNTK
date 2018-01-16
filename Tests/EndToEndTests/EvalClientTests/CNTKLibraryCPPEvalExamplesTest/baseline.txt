@@ -1,0 +1,291 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
+    Hardware threads: 12
+    Total Memory: 33474872 kB
+-------------------------------------------------------------------
++ [[ C:\CNTKTestData == '' ]]
++ [[ ! -d C:\CNTKTestData ]]
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -au 'C:\CNTKTestData'
++ TEST_DATA_DIR=/cygdrive/c/CNTKTestData
++ LocalTestDir=/tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData
++ mkdir /tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData
++ '[' cpu == cpu ']'
++ export CUDA_VISIBLE_DEVICES=-1
++ CUDA_VISIBLE_DEVICES=-1
++ echo Use pre-trained eval models in 'C:\CNTKTestData' for cpp eval tests.
+Use pre-trained eval models in C:\CNTKTestData for cpp eval tests.
++ cp /cygdrive/c/CNTKTestData/PreTrainedModels/EvalModels/01_OneHidden.model /tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData/01_OneHidden.model
++ cp /cygdrive/c/CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn /tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData/resnet20.dnn
++ cp /cygdrive/c/CNTKTestData/PreTrainedModels/EvalModels/atis.dnn /tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData/atis.dnn
++ cp /cygdrive/c/repos/ThirdCNTK/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl /tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData/query.wl
++ cp /cygdrive/c/repos/ThirdCNTK/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl /tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData/slots.wl
++ pushd /tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData
+/tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData /cygdrive/c/repos/ThirdCNTK/Tests/EndToEndTests/EvalClientTests/CNTKLibraryCPPEvalExamplesTest
++ '[' Windows_NT == Windows_NT ']'
++ /cygdrive/c/repos/ThirdCNTK/x64/release/CNTKLibraryCPPEvalExamplesTest.exe
+
+##### Test CPPEval samples on CPU device. #####
+
+===== Evaluate single sample using dense format.
+The batch contains 1 sequences.
+Sequence 0 contains 1 samples.
+    sample 0: 2.784544, 2.258028, -0.253707, 2.223094, -3.174539, -1.431938, -1.481088, -3.174907, 1.350909, 0.903016.
+
+===== Evaluate batch of samples using dense format.
+The batch contains 3 sequences.
+Sequence 0 contains 1 samples.
+    sample 0: 2.784545, 2.258028, -0.253708, 2.223094, -3.174539, -1.431939, -1.481088, -3.174907, 1.350909, 0.903017.
+Sequence 1 contains 1 samples.
+    sample 0: 5.640748, 3.034741, -0.655203, 2.712542, -4.132360, -2.585585, -3.404921, -4.179915, 2.686388, 0.879486.
+Sequence 2 contains 1 samples.
+    sample 0: 3.997461, 4.642735, 0.845104, 2.094089, -4.255864, -1.791972, -2.881375, -4.643809, 1.214328, 0.780322.
+
+===== Evaluate multiple requests in parallel.
+thread 0 joined.
+thread 1 joined.
+thread 2 joined.
+
+===== Evaluate single sequence using one-hot vector.
+            BOS ---- O
+              i ---- O
+          would ---- O
+           like ---- O
+             to ---- O
+           find ---- O
+              a ---- O
+         flight ---- O
+           from ---- O
+      charlotte ---- B-fromloc.city_name
+             to ---- O
+            las ---- B-toloc.city_name
+          vegas ---- I-toloc.city_name
+           that ---- O
+          makes ---- O
+              a ---- O
+           stop ---- O
+             in ---- O
+            st. ---- B-stoploc.city_name
+          louis ---- B-arrive_time.time_relative
+            EOS ---- O
+
+
+===== Evaluate batch of sequences with variable length using one-hot vector.
+The number of sequences in the batch: 2
+Sequence 0:
+            BOS ---- O
+              i ---- O
+          would ---- O
+           like ---- O
+             to ---- O
+           find ---- O
+              a ---- O
+         flight ---- O
+           from ---- O
+      charlotte ---- B-fromloc.city_name
+             to ---- O
+            las ---- B-toloc.city_name
+          vegas ---- I-toloc.city_name
+           that ---- O
+          makes ---- O
+              a ---- O
+           stop ---- O
+             in ---- O
+            st. ---- B-stoploc.city_name
+          louis ---- B-arrive_time.time_relative
+            EOS ---- O
+
+Sequence 1:
+            BOS ---- O
+        flights ---- O
+           from ---- O
+            new ---- B-fromloc.city_name
+           york ---- I-fromloc.city_name
+             to ---- O
+        seattle ---- B-toloc.city_name
+            EOS ---- O
+
+
+===== Evaluate single sequence using sparse input.
+            BOS ---- O
+              i ---- O
+          would ---- O
+           like ---- O
+             to ---- O
+           find ---- O
+              a ---- O
+         flight ---- O
+           from ---- O
+      charlotte ---- B-fromloc.city_name
+             to ---- O
+            las ---- B-toloc.city_name
+          vegas ---- I-toloc.city_name
+           that ---- O
+          makes ---- O
+              a ---- O
+           stop ---- O
+             in ---- O
+            st. ---- B-stoploc.city_name
+          louis ---- B-arrive_time.time_relative
+            EOS ---- O
+
+
+##### Test MultiThreadsEvaluation CPU device. #####
+
+##### Run evaluation on CPU device with 2 parallel evaluation thread(s). #####
+
+##### Run evaluation using new function on CPU. #####
+thread 0 joined.
+thread 1 joined.
+
+##### Run evaluation using clone function on CPU. #####
+Function 'classifierOutput': Input Variables (count=1)
+    name=features, kind=0
+Function 'classifierOutput': Output Variables (count=1)
+    name=classifierOutput, kind=1
+MultiThreadsEvaluationWithClone on device=0
+Evaluation result:
+Iteration:0, Sample 0:
+    8.719499 -7.649824 1.461357 10.811009 1.258002 -4.332583 7.601730 -16.948837 -0.582021 2.418953 ...
+Iteration:0, Sample 1:
+    8.720922 -7.647464 1.459087 10.812464 1.261330 -4.335119 7.599889 -16.945734 -0.579114 2.423536 ...
+Iteration:0, Sample 2:
+    8.720100 -7.650048 1.464657 10.805371 1.262745 -4.333430 7.598026 -16.944080 -0.584620 2.424258 ...
+Evaluation result:
+Iteration:0, Sample 0:
+    8.719499 -7.649824 1.461357 10.811009 1.258002 -4.332583 7.601730 -16.948837 -0.582021 2.418953 ...
+Iteration:0, Sample 1:
+    8.720922 -7.647464 1.459087 10.812464 1.261330 -4.335119 7.599889 -16.945734 -0.579114 2.423536 ...
+Iteration:0, Sample 2:
+    8.720100 -7.650048 1.464657 10.805371 1.262745 -4.333430 7.598026 -16.944080 -0.584620 2.424258 ...
+Evaluation result:
+Iteration:1, Sample 0:
+    8.722195 -7.648002 1.462350 10.806680 1.262483 -4.338805 7.599278 -16.944553 -0.582074 2.421458 ...
+Iteration:1, Sample 1:
+    8.721126 -7.647966 1.461311 10.808912 1.260600 -4.335733 7.599218 -16.943220 -0.586526 2.423216 ...
+Iteration:1, Sample 2:
+    8.721636 -7.650586 1.460604 10.809491 1.258408 -4.334564 7.597913 -16.943571 -0.585630 2.419630 ...
+Evaluation result:
+Iteration:1, Sample 0:
+    8.722195 -7.648002 1.462350 10.806680 1.262483 -4.338805 7.599278 -16.944553 -0.582074 2.421458 ...
+Iteration:1, Sample 1:
+    8.721126 -7.647966 1.461311 10.808912 1.260600 -4.335733 7.599218 -16.943220 -0.586526 2.423216 ...
+Iteration:1, Sample 2:
+    8.721636 -7.650586 1.460604 10.809491 1.258408 -4.334564 7.597913 -16.943571 -0.585630 2.419630 ...
+Evaluation result:
+Iteration:2, Sample 0:
+    8.718333 -7.646465 1.462744 10.808577 1.257758 -4.337018 7.599608 -16.946207 -0.582566 2.423581 ...
+Iteration:2, Sample 1:
+    8.717912 -7.645286 1.460469 10.811042 1.261215 -4.332682 7.599174 -16.947752 -0.583365 2.425624 ...
+Iteration:2, Sample 2:
+    8.721033 -7.649396 1.462294 10.806743 1.261737 -4.334637 7.599154 -16.942791 -0.578653 2.420604 ...
+Evaluation result:
+Iteration:2, Sample 0:
+    8.718333 -7.646465 1.462744 10.808577 1.257758 -4.337018 7.599608 -16.946207 -0.582566 2.423581 ...
+Iteration:2, Sample 1:
+    8.717912 -7.645286 1.460469 10.811042 1.261215 -4.332682 7.599174 -16.947752 -0.583365 2.425624 ...
+Iteration:2, Sample 2:
+    8.721033 -7.649396 1.462294 10.806743 1.261737 -4.334637 7.599154 -16.942791 -0.578653 2.420604 ...
+Evaluation result:
+Iteration:3, Sample 0:
+    8.721188 -7.648074 1.462249 10.810592 1.259941 -4.337050 7.599345 -16.945051 -0.579847 2.421400 ...
+Iteration:3, Sample 1:
+    8.717767 -7.650074 1.461809 10.807857 1.261626 -4.334464 7.604057 -16.942709 -0.579220 2.419601 ...
+Iteration:3, Sample 2:
+    8.721833 -7.648919 1.460830 10.811456 1.260108 -4.334238 7.596704 -16.946079 -0.579708 2.423071 ...
+thread 0 joined.
+Evaluation result:
+Iteration:3, Sample 0:
+    8.721188 -7.648074 1.462249 10.810592 1.259941 -4.337050 7.599345 -16.945051 -0.579847 2.421400 ...
+Iteration:3, Sample 1:
+    8.717767 -7.650074 1.461809 10.807857 1.261626 -4.334464 7.604057 -16.942709 -0.579220 2.419601 ...
+Iteration:3, Sample 2:
+    8.721833 -7.648919 1.460830 10.811456 1.260108 -4.334238 7.596704 -16.946079 -0.579708 2.423071 ...
+thread 1 joined.
+
+##### Run evaluation using pre-trained model on CPU. #####
+Function '': Input Variables (count=2)
+    name=features, kind=0
+    name=labels, kind=0
+Function '': Output Variables (count=3)
+    name=ce, kind=1
+    name=errs, kind=1
+    name=out.z, kind=1
+MultiThreadsEvaluationWithLoadModel on device=0
+Evaluation result:
+Iteration:0, Sample 0:
+Output:-1.631962 -7.887448 1.684969 8.685357 -7.478977 9.775093 -6.652484 0.383906 2.626894 -2.976902 
+Iteration:0, Sample 1:
+Output:-2.957949 -7.711860 -2.918236 5.793887 -8.211493 11.805773 -2.283456 -2.504362 3.462196 0.227575 
+Iteration:0, Sample 2:
+Output:-4.195490 -8.739225 -3.749012 6.490619 -7.863690 12.338904 -0.816265 -2.759349 3.292670 1.272151 
+Evaluation result:
+Iteration:1, Sample 0:
+Output:-1.631962 -7.887448 1.684969 8.685357 -7.478977 9.775093 -6.652484 0.383906 2.626894 -2.976902 
+Iteration:1, Sample 1:
+Output:-2.957949 -7.711860 -2.918236 5.793887 -8.211493 11.805773 -2.283456 -2.504362 3.462196 0.227575 
+Iteration:1, Sample 2:
+Output:-4.195490 -8.739225 -3.749012 6.490619 -7.863690 12.338904 -0.816265 -2.759349 3.292670 1.272151 
+Evaluation result:
+Iteration:2, Sample 0:
+Output:-1.631962 -7.887448 1.684969 8.685357 -7.478977 9.775093 -6.652484 0.383906 2.626894 -2.976902 
+Iteration:2, Sample 1:
+Output:-2.957949 -7.711860 -2.918236 5.793887 -8.211493 11.805773 -2.283456 -2.504362 3.462196 0.227575 
+Iteration:2, Sample 2:
+Output:-4.195490 -8.739225 -3.749012 6.490619 Evaluation result:
+-7.863690 12.338904 -0.816265 -2.759349 3.292670 Iteration:0, Sample 0:
+Output:-1.631962 -7.887448 1.684969 8.685357 -7.478977 9.775093 -6.652484 0.383906 2.626894 -2.976902 
+Iteration:0, Sample 1:
+Output:-2.957949 -7.711860 -2.918236 5.793887 -8.211493 1.272151 
+11.805773 -2.283456 -2.504362 3.462196 0.227575 
+Iteration:0, Sample 2:
+Output:-4.195490 -8.739225 -3.749012 6.490619 -7.863690 12.338904 -0.816265 -2.759349 3.292670 1.272151 
+Evaluation result:
+Iteration:3, Sample 0:
+Output:-1.631962 -7.887448 1.684969 8.685357 -7.478977 9.775093 -6.652484 0.383906 2.626894 -2.976902 
+Iteration:3, Sample 1:
+Output:-2.957949 -7.711860 -2.918236 5.793887 -8.211493 11.805773 -2.283456 -2.504362 3.462196 0.227575 
+Iteration:3, Sample 2:
+Output:-4.195490 -8.739225 -3.749012 6.490619 Evaluation result:
+-7.863690 12.338904 -0.816265 -2.759349 3.292670 1.272151 
+Iteration:1, Sample 0:
+Output:-1.631962 -7.887448 1.684969 8.685357 -7.478977 9.775093 -6.652484 0.383906 2.626894 -2.976902 
+Iteration:1, Sample 1:
+Output:-2.957949 -7.711860 -2.918236 5.793887 -8.211493 11.805773 -2.283456 -2.504362 3.462196 0.227575 
+Iteration:1, Sample 2:
+Output:-4.195490 -8.739225 -3.749012 6.490619 -7.863690 12.338904 -0.816265 -2.759349 3.292670 1.272151 
+thread 0 joined.
+Evaluation result:
+Iteration:2, Sample 0:
+Output:-1.631962 -7.887448 1.684969 8.685357 -7.478977 9.775093 -6.652484 0.383906 2.626894 -2.976902 
+Iteration:2, Sample 1:
+Output:-2.957949 -7.711860 -2.918236 5.793887 -8.211493 11.805773 -2.283456 -2.504362 3.462196 0.227575 
+Iteration:2, Sample 2:
+Output:-4.195490 -8.739225 -3.749012 6.490619 -7.863690 12.338904 -0.816265 -2.759349 3.292670 1.272151 
+Evaluation result:
+Iteration:3, Sample 0:
+Output:-1.631962 -7.887448 1.684969 8.685357 -7.478977 9.775093 -6.652484 0.383906 2.626894 -2.976902 
+Iteration:3, Sample 1:
+Output:-2.957949 -7.711860 -2.918236 5.793887 -8.211493 11.805773 -2.283456 -2.504362 3.462196 0.227575 
+Iteration:3, Sample 2:
+Output:-4.195490 -8.739225 -3.749012 6.490619 -7.863690 12.338904 -0.816265 -2.759349 3.292670 1.272151 
+thread 1 joined.
+
+===== Evaluate intermediate layer =====
+The batch contains 1 sequences.
+Sequence 0 contains 1 samples.
+    sample 0: 0.674033, 0.000000, 0.109044, 0.397623, 0.440187, 0.000000, 0.042737, 0.018471, 0.016952, 0.005611, 0.393881, 0.001275, 0.294192, 0.023059, 0.852816, 0.519126, 0.304926, 0.003931, 0.061081, 0.200880, 0.593306, 0.056079, 0.011282, 0.315629, 0.134917, 0.096884, 0.000000, 0.350360, 0.000000, 0.015231, 0.003045, 0.402462, 0.047899, 0.625825, 0.000000, 0.000000, 0.000000, 0.151889, 0.185796, 0.000000, 0.023398, 0.043338, 0.123514, 0.000000, 0.000000, 0.000000, 0.001660, 0.029734, 0.208211, 0.265516, 0.011518, 0.056297, 0.225230, 0.000000, 0.000000, 0.452441, 0.171762, 0.509325, 0.328891, 0.244234, 0.011638, 0.026650, 0.496360, 0.000000.
+
+===== Evaluate combined outputs =====
+The batch contains 1 sequences.
+Sequence 0 contains 1 samples.
+    sample 0: 2.784544, 2.258028, -0.253707, 2.223094, -3.174539, -1.431938, -1.481088, -3.174907, 1.350909, 0.903016.
+The batch contains 1 sequences.
+Sequence 0 contains 1 samples.
+    sample 0: 0.674033, 0.000000, 0.109044, 0.397623, 0.440187, 0.000000, 0.042737, 0.018471, 0.016952, 0.005611, 0.393881, 0.001275, 0.294192, 0.023059, 0.852816, 0.519126, 0.304926, 0.003931, 0.061081, 0.200880, 0.593306, 0.056079, 0.011282, 0.315629, 0.134917, 0.096884, 0.000000, 0.350360, 0.000000, 0.015231, 0.003045, 0.402462, 0.047899, 0.625825, 0.000000, 0.000000, 0.000000, 0.151889, 0.185796, 0.000000, 0.023398, 0.043338, 0.123514, 0.000000, 0.000000, 0.000000, 0.001660, 0.029734, 0.208211, 0.265516, 0.011518, 0.056297, 0.225230, 0.000000, 0.000000, 0.452441, 0.171762, 0.509325, 0.328891, 0.244234, 0.011638, 0.026650, 0.496360, 0.000000.
+Evaluation complete.
++ ExitCode=0
++ popd
+/cygdrive/c/repos/ThirdCNTK/Tests/EndToEndTests/EvalClientTests/CNTKLibraryCPPEvalExamplesTest
++ rm -rf /tmp/cntk-test-20170907134534.169127/EvalClientTests_CNTKLibraryCPPEvalExamplesTest@release_cpu/TestData
++ exit 0

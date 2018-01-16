@@ -1,0 +1,29 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Classification/VGG/BrainScript
+
+if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/val1024.zip || ! -e $TEST_DATA_DIR/train_map.txt ]]; then
+    # Cannot find test data locally.
+    # Try external test data directory (not part of the CNTK repository) as an alternative.
+    if [[ -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+        if [ "$OS" == "Windows_NT" ]; then
+            DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/ImageNet/2012/v0
+        else
+            DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/ImageNet/2012/v0
+        fi
+
+        # Copy the test data to the test run directory
+        DataDir=$TEST_ROOT_DIR/../../Examples/Image/DataSets/ImageNet
+        mkdir $DataDir
+        cp -R $DataSourceDir/val1024.zip $DataDir || exit $?
+        cp -R $DataSourceDir/val1024_map.txt $DataDir/train_map.txt || exit $?
+        cp -R $DataSourceDir/val1024_map.txt $DataDir/val_map.txt || exit $?
+        Copied=1
+    else
+        echo Error: cannot find data. Please see Examples/Image/DataSets/ImageNet/README.md for instructions to get it.
+        exit 1
+    fi
+fi
+

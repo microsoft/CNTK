@@ -8,6 +8,8 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "PrimitiveFunction.h"
+#include "Utils.h"
+#include "Variable.h"
 
 namespace CNTK
 {
@@ -32,7 +34,7 @@ namespace CNTK
             for (auto argument : arguments)
             {
                 if (argument.BlockFunctionVariableMapping() == Variable())
-                    LogicError("BlockFunction (%S) with OpName (%S) does not have a mapping for argument (%S)", Name().c_str(), OpName().c_str(), argument.Name().c_str());
+                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
 
                 argumentsMap.push_back({ argument, argument.BlockFunctionVariableMapping() });
             }
@@ -58,7 +60,7 @@ namespace CNTK
             for (auto output : outputs)
             {
                 if (output.BlockFunctionVariableMapping() == Variable())
-                    LogicError("BlockFunction (%S) with OpName (%S) does not have a mapping for output (%S)", Name().c_str(), OpName().c_str(), output.Name().c_str());
+                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for output '%S'", AsString().c_str(), OpName().c_str(), output.AsString().c_str());
 
                 outputsMap[output] = output.BlockFunctionVariableMapping();
             }
@@ -72,22 +74,35 @@ namespace CNTK
         {
             // Substitute any placeholder replacements in the arguments map
             auto arguments = m_composite->Arguments();
+            std::unordered_map<Variable, Variable> blockCompositePlaceholderReplacements;
             for (auto argument : arguments)
             {
                 if (replacedPlaceholders.find(argument.BlockFunctionVariableMapping()) != replacedPlaceholders.end())
-                    argument.m_dataFields->m_blockFunctionVariableMapping = placeholderReplacements.at(argument.BlockFunctionVariableMapping());
+                {
+                    auto replacement = placeholderReplacements.at(argument.BlockFunctionVariableMapping());
+                    if (IsArgument(replacement))
+                        argument.m_dataFields->m_blockFunctionVariableMapping = replacement;
+                    else
+                        blockCompositePlaceholderReplacements.insert({ argument,  replacement });
+                }
             }
+
+            m_composite->ReplacePlaceholders(blockCompositePlaceholderReplacements);
+
+            // Because some placeholders were replaced in the composite, the inputs of the block became stale,
+            // so we need to update them to match the underlying composite function.
+            m_inputs = DetermineInputs(m_composite, CompositeArgumentsMap(), Name());
         }
 
     private:
-        static std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName)
+        /*static*/ std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName) const
         {
             std::unordered_map<Variable, Variable> argumentsMappingAsMap;
             for (auto argumentMapping : argumentsMap)
             {
                 auto wasInserted = argumentsMappingAsMap.insert(argumentMapping).second;
                 if (!wasInserted)
-                    InvalidArgument("CNTK::AsBlock: Multiple mappings provided for the argument (%S) of the block composite", argumentMapping.first.Name().c_str());
+                    InvalidArgument("Multiple mappings provided for argument '%S' of the Block composite '%S'", argumentMapping.first.AsString().c_str(), composite->AsString().c_str());
             }
 
             std::vector<Variable> blockFunctionInputs;
@@ -103,9 +118,9 @@ namespace CNTK
                 {
                     if (!compositeInput.IsPlaceholder())
                     {
-                        InvalidArgument("The composite implementing block (%S) has an argument (%S) which is not a placeholder. "
-                            "All arguments of the composite underlying a block must be placeholders",
-                            blockName.c_str(), compositeInput.Name().c_str());
+                        InvalidArgument("The composite implementing Block '%S' has an argument '%S' which is not a placeholder. "
+                                        "All arguments of the composite underlying a Block must be placeholders",
+                                        blockName.c_str(), compositeInput.AsString().c_str());
                     }
 
                     // Verify that a mapping was provided for each argument of the composite
@@ -116,8 +131,8 @@ namespace CNTK
 
             if (!unmappedArguments.empty())
             {
-                auto unmappedArgumentsNames = NamedListString(unmappedArguments);
-                InvalidArgument("%d arguments (%S) of the underlying composite Function of block (%S) have not been mapped when encapsulating the composite as a block", (int)unmappedArguments.size(), unmappedArgumentsNames.c_str(), blockName.c_str());
+                InvalidArgument("%zu of the arguments '%S' of the underlying composite Function of Block '%S' have not been mapped when encapsulating the composite as a Block.",
+                                unmappedArguments.size(), NamedListString(unmappedArguments).c_str(), blockName.c_str());
             }
 
             // We now append the mapped arguments of the composite to the block inputs in the order of the map
@@ -131,7 +146,7 @@ namespace CNTK
             return blockFunctionInputs;
         }
 
-        virtual std::vector<Variable> InferOutputs() override
+        void InferOutputs(std::vector<Variable>& outputs) override
         {
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
@@ -140,7 +155,7 @@ namespace CNTK
             for (auto currentArgument : currentArguments)
             {
                 auto currentArgumentMapping = currentArgument.BlockFunctionVariableMapping();
-                auto newArgument = PlaceholderVariable(currentArgumentMapping.Shape(), currentArgumentMapping.GetDataType(), currentArgumentMapping.Name(), currentArgumentMapping.DynamicAxes());
+                auto newArgument = PlaceholderLike(currentArgumentMapping);
                 newArgument.m_dataFields->m_blockFunctionVariableMapping = currentArgumentMapping;
 
                 replacementMap.insert({ currentArgument, newArgument });
@@ -148,17 +163,14 @@ namespace CNTK
 
             m_composite->ReplacePlaceholders(replacementMap);
 
-            std::vector<Variable> blockFunctionOutputs;
             auto compositeOutputs = m_composite->RawOutputs();
             for (auto compositeOutput : compositeOutputs)
             {
-                auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), Name());
+                auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), compositeOutput.NeedsGradient(), Name());
                 output.m_dataFields->m_blockFunctionVariableMapping = compositeOutput;
 
-                blockFunctionOutputs.push_back(output);
+                outputs.push_back(output);
             }
-
-            return blockFunctionOutputs;
         }
 
     private:

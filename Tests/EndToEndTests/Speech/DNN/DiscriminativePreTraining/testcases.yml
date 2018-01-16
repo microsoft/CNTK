@@ -7,6 +7,7 @@ tags:
      # is being disabled on the CPU until the retirement of those machines
      - bvt-s (build_sku == 'gpu') and (device == 'gpu') and ((flavor == 'debug') ^ (os == 'windows'))
      - nightly-s (build_sku == 'gpu') and (device == 'gpu')
+     - weekly-s (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   CNTK Run must be completed:

@@ -23,7 +23,7 @@
 // custom events, ProfilerSyncGpu() can be called to sync the GPU.
 //
 // When there is a need to profile I/O bandwidth (or throughput), the ProfilerThroughputBegin()
-// and ProfilerThroughputBegin() calls should be used. The throughput APIs can only be used
+// and ProfilerThroughputEnd() calls should be used. The throughput APIs can only be used
 // with fixed events.
 //
 // CNTK specifics
@@ -33,6 +33,12 @@
 //
 
 #pragma once
+
+#ifdef CNTK_UWP // UWP does not support performance profiler
+
+#define PROFILE_SCOPE(eventId)      /*nothing*/
+
+#else
 
 #include <string>
 
@@ -175,3 +181,5 @@ private:
 #define THROUGHPUT_SCOPE(eventId, bytes)    ScopeThroughput __st##eventId(eventId, bytes);
 
 }}}
+
+#endif // CNTK_UWP

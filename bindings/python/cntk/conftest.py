@@ -9,6 +9,8 @@ import pytest
 
 _DEFAULT_DEVICE_ID = -1
 
+# ignore crosstalk/crosstalk_tensorflow.py to make tensorflow optional
+collect_ignore = ["contrib/crosstalk/crosstalk_tensorflow.py"]
 
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],
@@ -61,10 +63,16 @@ import numpy
 # Because of difference in precision across platforms, we restrict the output
 # precision and don't write in scientific notation
 numpy.set_printoptions(precision=6, suppress=True)
+
+import cntk.debugging
+cntk.debugging.set_checked_mode(True)
+
 import cntk
-
-
 @pytest.fixture(autouse=True)
 def add_namespace(doctest_namespace):
     doctest_namespace['np'] = numpy
     doctest_namespace['C'] = cntk
+
+@pytest.fixture(autouse=True)
+def reset_random_seed():
+    cntk.cntk_py.reset_random_seed(0)

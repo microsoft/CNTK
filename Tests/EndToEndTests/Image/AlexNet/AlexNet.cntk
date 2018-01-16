@@ -10,8 +10,8 @@ Train=[
         randomize=Auto
         features=[
             # Below are the required parameters.
-            width=224
-            height=224
+            width=227
+            height=227
             channels=3
             # Below are the optional parameters.
             # Possible values: Center, Random. Default: Center
@@ -26,8 +26,6 @@ Train=[
             # Interpolation to use when scaling image to width x height size.
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
             interpolations=linear
-            # Stores mean values for each pixel in OpenCV matrix XML format.
-            meanFile=$ConfigDir$/ImageNet1K_mean.xml
         ]
         labels=[
             labelDim=1000
@@ -41,11 +39,10 @@ Test=[
         file=$ConfigDir$/val_map.txt
         randomize=None
         features=[
-            width=224
-            height=224
+            width=227
+            height=227
             channels=3
             cropType=Center
-            meanFile=$ConfigDir$/ImageNet1K_mean.xml
         ]
         labels=[
             labelDim=1000

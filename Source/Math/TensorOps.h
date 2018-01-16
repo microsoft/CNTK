@@ -48,8 +48,58 @@ OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
 OverloadUnaryMathFns(floor);
+OverloadUnaryMathFns(log1p);
+OverloadUnaryMathFns(asin);
+OverloadUnaryMathFns(acos);
+OverloadUnaryMathFns(sinh);
+OverloadUnaryMathFns(cosh);
+OverloadUnaryMathFns(asinh);
+OverloadUnaryMathFns(atanh);
 
 #pragma pop_macro("OverloadUnaryMathFns")
+
+#pragma push_macro("OverloadBinaryMathFns")
+#define OverloadBinaryMathFns(x)         \
+    DECL float x##_(float f, float y)    \
+    {                                    \
+        return x##f(f, y);               \
+    }                                    \
+    DECL double x##_(double f, double y) \
+    {                                    \
+        return x(f, y);                  \
+    }
+
+// Because we compile with fast math the following produces nan for negative numbers raised to integer power.
+// To avoid this we define safepow_ further below.
+// Is there an nvcc pragma to disable fast math temporarily? Something like 
+// #pragma fast-math push
+// #pragma fast-math off
+// OverloadBinaryMathFns(pow);
+// #pragma fast-math pop
+OverloadBinaryMathFns(pow);
+
+template<typename T>
+DECL T safepow_(T base, T exponent)        
+{
+    if (exponent == 0) 
+        return T(1);
+    if (base == 0)
+        return T(0);
+    else if (base > 0)
+        return pow_(base, exponent);
+    else 
+    {
+        int exp_as_int = static_cast<int>(exponent);
+        if (exponent != exp_as_int)
+            return T(NAN);
+        else
+            return pow_(fabs_(base), exponent) * (1 - 2 * (exp_as_int & 1));
+    }
+}                                    
+
+#pragma pop_macro("OverloadBinaryMathFns")
+
+
 
 // -----------------------------------------------------------------------
 // additional functions that are standard in our context
@@ -84,6 +134,19 @@ DECL ElemType Sigmoid(ElemType z)
 #endif
 }
 
+// Numerically stable Sigmoid, we can't remove the old one due to Speech dependency.
+template <class ElemType>
+DECL ElemType StableSigmoid(ElemType z)
+{
+    ElemType q = exp_(-fabs_(z));
+    ElemType numer;
+    if (z > 0) // q = exp(-z)
+        numer = 1;
+    else // q = exp(z)
+        numer = q;
+    return numer / (1 + q);
+}
+
 template <class ElemType>
 DECL ElemType SigmoidDerivative(ElemType z)
 {
@@ -92,9 +155,22 @@ DECL ElemType SigmoidDerivative(ElemType z)
 }
 
 template <class ElemType>
+DECL ElemType StableSigmoidDerivative(ElemType z)
+{
+    ElemType v = StableSigmoid(z);
+    return v * (1 - v);
+}
+
+template <class ElemType>
 DECL ElemType LinearRectifierDerivative(ElemType z)
 {
     return z > 0 ? (ElemType) 1 : 0;
+}
+
+template <class ElemType>
+DECL ElemType ExponentialLinearUnitDerivative(ElemType z)
+{
+    return z >= 0 ? (ElemType)1 : exp_(z);
 }
 
 template <class ElemType>
@@ -140,22 +216,15 @@ DECL ElemType ClippedQuotient(ElemType a, ElemType b)
 template <typename ElemType>
 DECL ElemType LogAdd(ElemType x, ElemType y)
 {
+    // The reason that we don't use std::swap, is because this code is used in Cuda and not just cpu.
     if (x < y)
     {
         ElemType temp = x;
         x = y;
         y = temp;
     }
-    ElemType diff = y - x;
-    if (diff < (ElemType) MINLOGEXP)
-    {
-        return (x < (ElemType) LSMALL) ? (ElemType) LZERO : x;
-    }
-    else
-    {
-        ElemType z = exp_(diff);
-        return x + log_((ElemType) 1.0 + z);
-    }
+
+    return x + log1p_(exp_(y - x));
 }
 
 // IndexElement reindexes a tensor along one dimension.
@@ -206,6 +275,14 @@ DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
+DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (exp_(a)-1));
+DefUnaryOp(StableSigmoid, StableSigmoid(a));
+DefUnaryOp(Asin, asin_(a));
+DefUnaryOp(Acos, acos_(a));
+DefUnaryOp(Sinh, sinh_(a));
+DefUnaryOp(Cosh, cosh_(a));
+DefUnaryOp(Asinh, asinh_(a));
+DefUnaryOp(Atanh, atanh_(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -223,6 +300,7 @@ DefBinaryOp(Difference, a - b);
 DefBinaryOp(ElementwiseProduct, a* b);
 DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
+DefBinaryOp(Pow, safepow_(a, b));
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
 DefBinaryOp(Equal, a == b);
@@ -241,10 +319,17 @@ DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > 0 ? a
 DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput, a* exp_(-b));
 DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b)); // note: b = input for cos()
 DefBinaryOp(ElementwiseProductWithSinDerivative, a * cos_(b)); // note: b = input for sin()
+DefBinaryOp(ElementwiseProductWithAsinDerivative, a / sqrt_(1 - b * b)); // note: b = input for asin()
+DefBinaryOp(ElementwiseProductWithAcosDerivative, -a / sqrt_(1 - b * b)); // note: b = input for acos()
 DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input for abs()
 DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
+DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >= 0 ? a : a*(1+b)); // b = output;
+DefBinaryOp(ElementwiseProductWithSinhDerivative, a * cosh_(b)); // note: b = input for sinh()
+DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = input for cosh()
+DefBinaryOp(ElementwiseProductWithAsinhDerivative, a / sqrt_(1 + b * b)); // note: b = input for asinh()
+DefBinaryOp(ElementwiseProductWithAtanhDerivative, a / (1 - b * b)); // note: b = input for atanh()
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")
@@ -260,11 +345,14 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
 DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
 DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
-DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
+DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * StableSigmoid(c - b));
 DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
-
+DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
+DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? 0 : a * b * log_(c)); // same behavior as other toolkits
+DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
 
 #pragma pop_macro("DefTernaryOp")
+
 }}}
 #pragma pop_macro("DECL")
 #pragma pop_macro("TENSOR_OPS_DECL")

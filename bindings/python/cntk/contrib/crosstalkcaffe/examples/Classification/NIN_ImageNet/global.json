@@ -1,0 +1,20 @@
+{
+	"SourceSolver" : {
+	    "Source": "Caffe",
+	    "ModelPath": "./Classification/NIN_ImageNet/NIN_deploy.prototxt",
+	    "WeightsPath": "./Classification/NIN_ImageNet/nin_imagenet.caffemodel",
+    	"PHASE": 1
+	},
+    "ModelSolver": {
+    	"CNTKModelPath": "./Classification/NIN_ImageNet/NIN_ImageNet.cntkmodel"
+    },
+	"ValidSolver": {
+		"SavePath": "./Classification/NIN_ImageNet/Valid",
+		"ValInputs": {
+			"data": [[0, 255], []]
+		},
+		"ValNodes": {
+			"loss": "loss"
+		}
+	}
+}

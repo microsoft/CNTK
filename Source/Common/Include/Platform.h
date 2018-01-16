@@ -125,7 +125,7 @@ inline int _fseeki64(FILE *file, int64_t offset, int origin)
     return fseeko(file, offset, origin);
 }
 
-inline int _ftelli64(FILE *file)
+inline int64_t _ftelli64(FILE *file)
 {
     return ftello(file);
 }

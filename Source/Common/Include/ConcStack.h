@@ -28,12 +28,17 @@ public:
 
     value_type pop_or_create(std::function<value_type()> factory)
     {
-        std::lock_guard<std::mutex> g(m_locker);
-        if (m_stack.size() == 0)
-            return factory();
-        auto res = std::move(m_stack.top());
-        m_stack.pop();
-        return res;
+        {
+            std::lock_guard<std::mutex> g(m_locker);
+            if (m_stack.size() != 0)
+            {
+                auto res = std::move(m_stack.top());
+                m_stack.pop();
+                return res;
+            }
+        }
+
+        return factory();
     }
 
     void push(const value_type& item)

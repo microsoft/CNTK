@@ -8,5 +8,5 @@ Microsoft 1-bit Stochastic Gradient Descent for the Computational Network Toolki
 
 Both Licenses are included in this folder.
 
-See the descriptions of the Licenses listed above in CNTK Wiki at https://github.com/microsoft/cntk/wiki/CNTK-1bit-SGD-License
+See the descriptions of the licenses listed above in documentation: https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-1bit-SGD-License
 

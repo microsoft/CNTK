@@ -25,6 +25,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <glob.h>
+#include <dirent.h>
+#include <sys/sendfile.h>
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -421,6 +423,7 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
     va_list arg_ptr;
     va_start(arg_ptr, fmt);
     int rc = vfprintf(f, fmt, arg_ptr);
+    va_end(arg_ptr);
     if (rc < 0)
     {
         RuntimeError("error writing to file: %s", strerror(errno));
@@ -650,8 +653,13 @@ void renameOrDie(const std::string& from, const std::string& to)
     if (fexists(to.c_str()) && !DeleteFileA(to.c_str()))
         RuntimeError("error deleting file: '%s': %d", to.c_str(), GetLastError());
 
+#if CNTK_UWP
+    to;
+    RuntimeError("error renaming file '%s': Not supported in UWP", from.c_str());
+#else
     if (!MoveFileA(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
+#endif
 #else
     // Delete destination file if it exists
     // WORKAROUND: "rename" should do this but this is a workaround
@@ -671,12 +679,49 @@ void renameOrDie(const std::wstring& from, const std::wstring& to)
     // deleting destination file if exits (to match Linux semantic)
     if (fexists(to.c_str()) && !DeleteFileW(to.c_str()))
         RuntimeError("error deleting file '%ls': %d", to.c_str(), GetLastError());
-
+#if CNTK_UWP
+    to;
+    RuntimeError("error renaming file '%ls': Not supported in UWP", from.c_str());
+#else
     if (!MoveFileW(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%ls': %d", from.c_str(), GetLastError());
+#endif
 #else
     renameOrDie(wtocharpath(from.c_str()).c_str(), wtocharpath(to.c_str()).c_str());
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// copyOrDie(): copy file with error handling.
+// ----------------------------------------------------------------------------
+
+void copyOrDie(const string& from, const string& to)
+{
+    // Call wide string implementation.
+    copyOrDie(s2ws(from), s2ws(to));
+}
+
+void copyOrDie(const wstring& from, const wstring& to)
+{
+    const wstring tempTo = to + L".tmp";
+#ifdef _WIN32
+#ifdef CNTK_UWP
+    to;
+    RuntimeError("error copying file 'l%s' to '%ls' : Not supported in UWP", from.c_str(), tempTo.c_str());
+#else
+    const BOOL succeeded = CopyFile(from.c_str(), tempTo.c_str(), FALSE);
+    if (!succeeded)
+        RuntimeError("error copying file '%ls' to '%ls': %d", from.c_str(), tempTo.c_str(), GetLastError());
+#endif // CNTK_UWP
+#else
+    FILE* fromFile = fopenOrDie(from, L"rb");
+    FILE* tempToFile = fopenOrDie(tempTo, L"wb");
+    const size_t fromFileSize = filesize(fromFile);
+    sendfile(fileno(tempToFile), fileno(fromFile), 0, fromFileSize);
+    fcloseOrDie(fromFile);
+    fcloseOrDie(tempToFile);
+#endif
+    renameOrDie(tempTo, to);
 }
 
 // ----------------------------------------------------------------------------
@@ -1952,6 +1997,54 @@ void msra::files::make_intermediate_dirs(const wstring& filepath)
             subpath += L"/";
         subpath += p;
     }
+}
+
+std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::wstring& directory)
+{
+    std::vector<std::wstring> result;
+#ifdef _WIN32
+    WIN32_FIND_DATA ffd = {};
+    HANDLE hFind = FindFirstFile((directory + L"/*").c_str(), &ffd);
+    if (INVALID_HANDLE_VALUE == hFind)
+        RuntimeError("Cannot get information about directory '%ls'.", directory.c_str());
+
+    do
+    {
+        if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            result.push_back(ffd.cFileName);
+        }
+    } while (FindNextFile(hFind, &ffd) != 0);
+
+    auto dwError = GetLastError();
+    FindClose(hFind);
+
+    if (dwError != ERROR_NO_MORE_FILES)
+        RuntimeError("Error iterating directory '%ls'", directory.c_str());
+#else
+    std::string d = msra::strfun::utf8(directory);
+    auto dirp = opendir(d.c_str());
+    dirent *dp = nullptr;
+    struct stat st = {};
+    while ((dp = readdir(dirp)) != NULL)
+    {
+        const std::string fileName = dp->d_name;
+        const std::string fullFileName = d + "/" + fileName;
+
+        if (fileName == "." || fileName == "..")
+            continue;
+
+        if (stat(fullFileName.c_str(), &st) == -1)
+            continue;
+
+        if ((st.st_mode & S_IFDIR) != 0)
+            continue;
+
+        result.push_back(msra::strfun::utf16(fileName));
+    }
+    closedir(dirp);
+#endif
+    return result;
 }
 
 // ----------------------------------------------------------------------------

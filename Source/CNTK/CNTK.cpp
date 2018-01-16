@@ -26,6 +26,7 @@
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
+#include "EnvironmentUtil.h"
 #include "Config.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
@@ -36,6 +37,7 @@
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
 #include "PerformanceProfiler.h"
+#include "CNTKLibrary.h"
 
 #include <string>
 #include <chrono>
@@ -83,11 +85,12 @@ void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& con
     }
 }
 
-void RedirectStdErr(wstring logpath)
+void RedirectStdErr(wstring logpath, bool appendLogFile = false)
 {
     // TODO: if there is already a file, rename it
     LOGPRINTF(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
-    auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
+    auto fileOption = appendLogFile ? fileOptionsAppend : fileOptionsWrite;
+    auto f = make_shared<File>(logpath.c_str(), fileOption | fileOptionsText);
     if (dup2(fileno(*f), 2) == -1)
     {
         RuntimeError("unexpected failure to redirect stderr to log file");
@@ -117,7 +120,7 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 // TODO: Clarify how a single thread restriction can be lifted.
 void ForceDeterministicAlgorithmsOnCPU()
 {
-    LOGPRINTF(stderr, "WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
+    LOGPRINTF(stderr, "WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
     CPUMatrix<float /*any type will do*/>::SetNumThreads(1);
     CPUMatrix<float /*any type will do*/>::SetCompatibleMode();
 }
@@ -252,9 +255,6 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             ProgressTracing::SetStepOffset(fullEpochsOffset); // this is the epoch number that SGD will log relative to
         }
 
-        if (Globals::ShouldEnableHyperCompressMemory())
-            Matrix<ElemType>::UseCachedResizeOrNot(true);
-
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
@@ -372,55 +372,6 @@ std::string TimeDateStamp()
     return buf;
 }
 
-void PrintBuiltInfo()
-{
-    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-    LOGPRINTF(stderr, "Build info: \n\n");
-    LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
-    LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
-#ifdef _BUILDTYPE_
-    LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
-#endif
-#ifdef _BUILDTARGET_
-    LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
-#endif
-#ifdef _WITH_1BITSGD_
-    LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
-#endif
-#ifdef _WITH_ASGD_
-    LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
-#endif
-#ifdef _MATHLIB_
-    LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
-#endif
-#ifdef _CUDA_PATH_
-    LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
-#endif
-#ifdef _CUB_PATH_
-    LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
-#endif
-#ifdef _CUDNN_PATH_
-    LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
-#endif
-#ifdef _GIT_EXIST
-    LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
-    LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
-#endif
-#ifdef _BUILDER_
-    LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
-#endif
-#ifdef _BUILDPATH_
-    LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
-#endif
-#ifdef _MPI_NAME_
-    LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
-#endif
-#ifdef _MPI_VERSION_
-    LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
-#endif
-    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-}
-
 void PrintUsageInfo()
 {
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
@@ -428,30 +379,6 @@ void PrintUsageInfo()
     LOGPRINTF(stderr, "For detailed information please consult the CNTK book\n");
     LOGPRINTF(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-}
-
-// print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB)
-void PrintGpuInfo()
-{
-#ifndef CPUONLY
-    std::vector<GpuData> gpusData = GetAllGpusData();
-
-    if (gpusData.empty())
-    {
-        LOGPRINTF(stderr, "No GPUs found\n");
-        return;
-    }
-
-    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-    LOGPRINTF(stderr, "GPU info:\n\n");
-
-    for (GpuData& data : gpusData)
-    {
-        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory);
-    }
-    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -576,7 +503,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
     // 'false' otherwise.
-    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+    bool paralleltrain = config(L"parallelTrain", (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1));
 
     if (paralleltrain)
     {
@@ -585,7 +512,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
     Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
-    Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -596,13 +522,15 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         if (paralleltrain && mpi->CurrentNodeRank() != 0)
             logpath += msra::strfun::wstrprintf(L".rank%d", (int) mpi->CurrentNodeRank());
 
-        RedirectStdErr(logpath);
+        RedirectStdErr(logpath, config(L"appendLogFile", false));
         LOGPRINTF(stderr, "%ls\n", startupMessage.c_str());
-        PrintBuiltInfo();
+        ::CNTK::Internal::PrintBuiltInfo();
     }
 
     // echo gpu info to log
-    PrintGpuInfo();
+#ifndef CPUONLY
+    ::CNTK::Internal::PrintGpuInfo(GetAllGpusData());
+#endif
 
     // Setup profiling
     ProfilerContext profilerContext;
@@ -657,6 +585,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
+    // In case of success, finalizing the mpi if necessary.
+    if (mpi)
+        mpi->Finalize();
     return EXIT_SUCCESS;
 }
 
@@ -666,12 +597,12 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0.beta9.0+ (");
+    fprintf(stderr, "CNTK 2.3.1+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
     fprintf(stderr, "%s %s", __DATE__, __TIME__); // build time
-    fprintf(stderr, ") on %s at %s\n\n", GetHostName().c_str(), timestamp.c_str());
+    fprintf(stderr, ") at %s\n\n", timestamp.c_str());
     for (int i = 0; i < argc; i++)
         fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
     fprintf(stderr, "\n");
@@ -720,7 +651,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     
     // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
     // 'false' otherwise.
-    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+    bool paralleltrain = config(L"parallelTrain", (EnvironmentUtil::GetTotalNumberOfMPINodes() > 1));
 
     if (paralleltrain)
     {
@@ -729,7 +660,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
     Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
-    Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -758,14 +688,16 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         // for MPI workers except main, append .rankN
         if (paralleltrain && mpi->CurrentNodeRank() != 0)
             logpath += msra::strfun::wstrprintf(L".rank%d", mpi->CurrentNodeRank());
-        RedirectStdErr(logpath);
+        RedirectStdErr(logpath, config(L"appendLogFile", false));
         if (traceLevel == 0)
             PrintBanner(argc, argv, timestamp); // repeat simple banner into log file
     }
 
     // full config info
-    PrintBuiltInfo();
-    PrintGpuInfo();
+    ::CNTK::Internal::PrintBuiltInfo();
+#ifndef CPUONLY
+    ::CNTK::Internal::PrintGpuInfo(GetAllGpusData());
+#endif
 
 #ifdef _DEBUG
     if (traceLevel > 0)
@@ -834,6 +766,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, "COMPLETED.\n");
     fflush(stderr);
 
+    if (mpi)
+        mpi->Finalize();
     return EXIT_SUCCESS;
 }
 
@@ -857,7 +791,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     {        
         if (argc <= 1)
         {
-            PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
+            ::CNTK::Internal::PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
             LOGPRINTF(stderr, "No command-line argument given.\n");
             PrintUsageInfo();
             fflush(stderr);

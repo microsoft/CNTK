@@ -1,0 +1,7 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Classification/GoogLeNet/BN-Inception/BrainScript
+
+cntkrun BN-Inception.cntk "forceDeterministicAlgorithms=true traceLevel=0 stderr=- Train=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1]] Eval=[minibatchSize=2]"

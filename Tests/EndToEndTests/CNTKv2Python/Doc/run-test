@@ -12,7 +12,7 @@ DOC_DIR=$TEST_ROOT_DIR/../../bindings/python/doc
 pushd $DOC_DIR || exit $?
 echo Current dir: $PWD
 
-py.test --deviceid $TEST_DEVICE
+py.test --verbose --deviceid $TEST_DEVICE
 
 if [ "$?" -eq "0" ]; then
   echo "__COMPLETED__"

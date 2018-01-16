@@ -15,8 +15,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects { struct IConf
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-using namespace std;
-
 #ifndef CPUONLY
 enum class GpuValidity
 {
@@ -34,8 +32,9 @@ struct GpuData
     GpuValidity validity;
     string name;
     size_t totalMemory;
-    GpuData(int versionMajor, int versionMinor, int deviceId, int cudaCores, GpuValidity validity, const string& name, size_t totalMemory)
-        :versionMajor(versionMajor), versionMinor(versionMinor), deviceId(deviceId), cudaCores(cudaCores), validity(validity), name(name), totalMemory(totalMemory)
+    size_t freeMemory;
+    GpuData(int versionMajor, int versionMinor, int deviceId, int cudaCores, GpuValidity validity, const string& name, size_t totalMemory, size_t freeMemory)
+        :versionMajor(versionMajor), versionMinor(versionMinor), deviceId(deviceId), cudaCores(cudaCores), validity(validity), name(name), totalMemory(totalMemory), freeMemory(freeMemory)
     {
     }
 
@@ -51,20 +50,33 @@ DEVICEID_TYPE DeviceFromConfig(const ScriptableObjects::IConfigRecord& config);
 // Returns an id of the best available (not exclusively locked) GPU device,
 // if no GPU is available, defaults to the CPU device. Additionally, it acquires
 // a lock on the selected GPU device.
-DEVICEID_TYPE GetBestDevice();
+DEVICEID_TYPE GetBestDevice(const vector<int>& excluded);
 
-// Releases previously held lock on the best GPU device, if the specified device id
-// is different from the best GPU id.
-void OnDeviceSelected(DEVICEID_TYPE deviceId);
+void ReleaseLock();
+bool TryLock(int deviceId);
+bool IsLocked(int deviceId);
 
 #else
 
-static inline DEVICEID_TYPE GetBestDevice()
+static inline DEVICEID_TYPE GetBestDevice(const vector<int>& excluded)
 {
+    if (std::find(excluded.begin(), excluded.end(), CPUDEVICE) != excluded.end())
+        RuntimeError("Device selection: No eligible device found.");
+
     return CPUDEVICE;
 }
 
-static inline void OnDeviceSelected(DEVICEID_TYPE) {}
+static inline bool TryLock(int /*deviceId*/) 
+{
+    return false;
+}
+
+static inline bool IsLocked(int /*deviceId*/)
+{
+    return false;
+}
+
+static inline void ReleaseLock() {}
 
 template <class ConfigRecordType>
 static inline DEVICEID_TYPE DeviceFromConfig(const ConfigRecordType& /*config*/)

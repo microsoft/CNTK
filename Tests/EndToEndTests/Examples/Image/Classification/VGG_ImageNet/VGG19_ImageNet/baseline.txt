@@ -1,0 +1,96 @@
+CPU info:
+    CPU Model Name: Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+    Hardware threads: 8
+    Total Memory: 33417320 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/Users/mahilleb/Repos/CNTK3/x64/release/cntk.exe configFile=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\Classification\VGG\BrainScript/VGG19_ImageNet.cntk currentDirectory=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\DataSets\ImageNet RunDir=C:\cygwin64\tmp\cntk-test-20170520222022.706379\Examples\Image\Classification\VGG_ImageNet_VGG19_ImageNet@release_gpu DataDir=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\DataSets\ImageNet ConfigDir=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\Classification\VGG\BrainScript OutputDir=C:\cygwin64\tmp\cntk-test-20170520222022.706379\Examples\Image\Classification\VGG_ImageNet_VGG19_ImageNet@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true traceLevel=0 stderr=- Train=[SGD=[epochSize=4,minibatchSize=1,maxEpochs=2,numMBsToShowResult=1,learningRatesPerMB=0.01]] Test[minibatchSize=1]
+CNTK 2.0rc2+ (mahilleb/SphinxUpd2 246fc1, May 18 2017 14:34:08) on mahilleb42 at 2017/05/20 21:20:24
+
+C:\Users\mahilleb\Repos\CNTK3\x64\release\cntk.exe  configFile=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\Classification\VGG\BrainScript/VGG19_ImageNet.cntk  currentDirectory=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\DataSets\ImageNet  RunDir=C:\cygwin64\tmp\cntk-test-20170520222022.706379\Examples\Image\Classification\VGG_ImageNet_VGG19_ImageNet@release_gpu  DataDir=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\DataSets\ImageNet  ConfigDir=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\Classification\VGG\BrainScript  OutputDir=C:\cygwin64\tmp\cntk-test-20170520222022.706379\Examples\Image\Classification\VGG_ImageNet_VGG19_ImageNet@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  traceLevel=0  stderr=-  Train=[SGD=[epochSize=4,minibatchSize=1,maxEpochs=2,numMBsToShowResult=1,learningRatesPerMB=0.01]]  Test[minibatchSize=1]
+Changed current directory to C:\Users\mahilleb\Repos\CNTK3\Examples\Image\DataSets\ImageNet
+ping [requestnodes (before change)]: 1 nodes pinging each other
+ping [requestnodes (after change)]: 1 nodes pinging each other
+requestnodes [MPIWrapperMpi]: using 1 out of 1 MPI nodes on a single host (1 requested); we (0) are in (participating)
+ping [mpihelper]: 1 nodes pinging each other
+05/20/2017 21:20:24: Redirecting stderr to file -_Train_Test.logrank0
+CNTK 2.0rc2+ (mahilleb/SphinxUpd2 246fc1, May 18 2017 14:34:08) on mahilleb42 at 2017/05/20 21:20:24
+
+C:\Users\mahilleb\Repos\CNTK3\x64\release\cntk.exe  configFile=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\Classification\VGG\BrainScript/VGG19_ImageNet.cntk  currentDirectory=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\DataSets\ImageNet  RunDir=C:\cygwin64\tmp\cntk-test-20170520222022.706379\Examples\Image\Classification\VGG_ImageNet_VGG19_ImageNet@release_gpu  DataDir=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\DataSets\ImageNet  ConfigDir=C:\Users\mahilleb\Repos\CNTK3\Examples\Image\Classification\VGG\BrainScript  OutputDir=C:\cygwin64\tmp\cntk-test-20170520222022.706379\Examples\Image\Classification\VGG_ImageNet_VGG19_ImageNet@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  traceLevel=0  stderr=-  Train=[SGD=[epochSize=4,minibatchSize=1,maxEpochs=2,numMBsToShowResult=1,learningRatesPerMB=0.01]]  Test[minibatchSize=1]
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May 18 2017 14:27:33
+		Last modified date: Thu May 18 14:23:48 2017
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		With ASGD: yes
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: C:\R\cub-1.4.1
+		CUDNN_PATH: c:\R\cudnn-8.0-windows10-x64-v5.1\cuda
+		Build Branch: mahilleb/SphinxUpd2
+		Build SHA1: 246fc1547ea384e55274197294a362a4704375d2
+		Built by mahilleb on mahilleb42
+		Build Path: C:\Users\mahilleb\Repos\CNTK3\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.1.12437.25
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 960; computeCapability = 5.0; type = "Quadro M2000M"; total memory = 4096 MB; free memory = 4062 MB
+-------------------------------------------------------------------
+05/20/2017 21:20:24: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+05/20/2017 21:20:24: ##############################################################################
+05/20/2017 21:20:24: #                                                                            #
+05/20/2017 21:20:24: # Train command (train action)                                               #
+05/20/2017 21:20:24: #                                                                            #
+05/20/2017 21:20:24: ##############################################################################
+
+Node 'model.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 3 x 64].
+Node 'model.arrayOfFunctions[2].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'model.arrayOfFunctions[5].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 128].
+Node 'model.arrayOfFunctions[7].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 128].
+Node 'model.arrayOfFunctions[10].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 128 x 256].
+Node 'model.arrayOfFunctions[12].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'model.arrayOfFunctions[14].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'model.arrayOfFunctions[16].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 256].
+Node 'model.arrayOfFunctions[19].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 256 x 512].
+Node 'model.arrayOfFunctions[21].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'model.arrayOfFunctions[23].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'model.arrayOfFunctions[25].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'model.arrayOfFunctions[28].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'model.arrayOfFunctions[30].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'model.arrayOfFunctions[32].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'model.arrayOfFunctions[34].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 512 x 512].
+Node 'model.arrayOfFunctions[37].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 7 x 7 x 512].
+Node 'model.arrayOfFunctions[39].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 4096].
+Node 'model.arrayOfFunctions[41].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1000 x 4096].
+05/20/2017 21:20:29: 
+Model has 112 nodes. Using GPU 0.
+
+05/20/2017 21:20:29: Training criterion:   ce = CrossEntropyWithSoftmax
+05/20/2017 21:20:29: Evaluation criterion: errs = ClassificationError
+
+05/20/2017 21:20:29: Training 143667240 parameters in 38 parameter tensors.
+
+Setting dropout rate to 0.5.
+05/20/2017 21:20:40: Finished Epoch[ 1 of 2]: [Training] ce = 6.91352880 * 4; errs = 100.000% * 4; totalSamplesSeen = 4; learningRatePerSample = 0.0099999998; epochTime=3.88347s
+05/20/2017 21:21:58: Final Results: Minibatch[1-1025]: ce = 6.91178400 * 1024; perplexity = 1004.03685026; errs = 99.805% * 1024
+05/20/2017 21:21:58: Finished Epoch[ 1 of 2]: [Validate] ce = 6.91178400 * 1024; errs = 99.805% * 1024
+05/20/2017 21:22:14: Finished Epoch[ 2 of 2]: [Training] ce = 6.65930891 * 4; errs = 100.000% * 4; totalSamplesSeen = 8; learningRatePerSample = 0.0099999998; epochTime=1.91079s
+05/20/2017 21:23:33: Final Results: Minibatch[1-1025]: ce = 6.94041768 * 1024; perplexity = 1033.20167585; errs = 99.805% * 1024
+05/20/2017 21:23:33: Finished Epoch[ 2 of 2]: [Validate] ce = 6.94041768 * 1024; errs = 99.805% * 1024
+
+
+05/20/2017 21:23:46: ##############################################################################
+05/20/2017 21:23:46: #                                                                            #
+05/20/2017 21:23:46: # Test command (test action)                                                 #
+05/20/2017 21:23:46: #                                                                            #
+05/20/2017 21:23:46: ##############################################################################
+
+05/20/2017 21:25:15: Final Results: Minibatch[1-1025]: errs = 99.805% * 1024; top5Errs = 99.023% * 1024
+
+05/20/2017 21:25:15: __COMPLETED__

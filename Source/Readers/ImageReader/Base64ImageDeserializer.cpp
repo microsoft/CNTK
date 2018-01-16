@@ -10,105 +10,113 @@
 #include "Base64ImageDeserializer.h"
 #include "ImageTransformers.h"
 #include "ReaderUtil.h"
+#include "Index.h"
+#include "IndexBuilder.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+    using namespace Microsoft::MSR::CNTK;
 
-    class Base64ImageDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
+    class Base64ImageDeserializerImpl::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
     {
         ChunkDescriptor m_descriptor;
         size_t m_chunkOffset;
-        Base64ImageDeserializer& m_deserializer;
+        Base64ImageDeserializerImpl& m_deserializer;
         // TODO: Could probably be a memory mapped region.
         std::vector<char> m_buffer;
 
     public:
-        ImageChunk(const ChunkDescriptor& descriptor, Base64ImageDeserializer& parent)
+        ImageChunk(const ChunkDescriptor& descriptor, Base64ImageDeserializerImpl& parent)
             : m_descriptor(descriptor), m_deserializer(parent)
         {
             // Let's see if the open descriptor has problems.
             if (ferror(m_deserializer.m_dataFile.get()) != 0)
                 m_deserializer.m_dataFile.reset(fopenOrDie(m_deserializer.m_fileName.c_str(), L"rbS"), [](FILE* f) { if (f) fclose(f); });
 
-            if (descriptor.m_sequences.empty() || !descriptor.m_byteSize)
+            if (descriptor.Sequences().empty() || !descriptor.SizeInBytes())
                 LogicError("Empty chunks are not supported.");
 
-            m_buffer.resize(descriptor.m_byteSize + 1);
+            m_buffer.resize(descriptor.SizeInBytes() + 1);
 
             // Make sure we always have 0 at the end for buffer overrun.
-            m_buffer[descriptor.m_byteSize] = 0;
-            m_chunkOffset = descriptor.m_sequences.front().m_fileOffsetBytes;
+            m_buffer[descriptor.SizeInBytes()] = 0;
+            m_chunkOffset = descriptor.StartOffset();
 
             // Read chunk into memory.
             int rc = _fseeki64(m_deserializer.m_dataFile.get(), m_chunkOffset, SEEK_SET);
             if (rc)
                 RuntimeError("Error seeking to position '%" PRId64 "' in the input file '%ls', error code '%d'", m_chunkOffset, m_deserializer.m_fileName.c_str(), rc);
 
-            freadOrDie(m_buffer.data(), descriptor.m_byteSize, 1, m_deserializer.m_dataFile.get());
+            freadOrDie(m_buffer.data(), descriptor.SizeInBytes(), 1, m_deserializer.m_dataFile.get());
         }
 
         std::string KeyOf(const SequenceDescriptor& s) const
         {
-            return m_deserializer.m_corpus->IdToKey(s.m_key.m_sequence);
+            return m_deserializer.m_corpus->IdToKey(s.m_key);
         }
 
-        void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
+        void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
         {
-            size_t innerSequenceId = m_deserializer.m_multiViewCrop ? sequenceId / ImageDeserializerBase::NumMultiViewCopies : sequenceId;
-            const auto& sequence = m_descriptor.m_sequences[innerSequenceId];
-            size_t offset = sequence.m_fileOffsetBytes - m_chunkOffset;
+            const size_t innerSequenceIndex = m_deserializer.m_multiViewCrop ? sequenceIndex / ImageDeserializerBase::NumMultiViewCopies : sequenceIndex;
+            const size_t copyId = m_deserializer.m_multiViewCrop ? sequenceIndex % ImageDeserializerBase::NumMultiViewCopies : 0;
 
-            // Let's parse the string
-            char* next_token = nullptr;
-            char* token = strtok_s(&m_buffer[0] + offset, "\t", &next_token);
-            bool hasSequenceKey = m_deserializer.m_indexer->HasSequenceIds();
-            if (hasSequenceKey) // Skip sequence key.
+            const auto& sequence = m_descriptor.Sequences()[innerSequenceIndex];
+            const size_t offset = sequence.OffsetInChunk();
+
+            // m_buffer always end on 0, so no overrun can happen.
+            const char* currentSequence = &m_buffer[0] + offset;
+
+            if (m_deserializer.m_hasSequenceIds) // Skip sequence key.
             {
-                token = strtok_s(nullptr, "\t", &next_token);
-                assert(!std::string(token).empty());
-            }
+                currentSequence = strchr(currentSequence, '\t');
 
-            // Let's get the label.
-            if (!token)
-                RuntimeError("Empty label value for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
+                // Let's check the sequence id.
+                if (!currentSequence)
+                    RuntimeError("Empty label value for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
+
+                currentSequence++;
+            }
 
             char* eptr = nullptr;
             errno = 0;
-            size_t classId = strtoull(token, &eptr, 10);
-            if (token == eptr || errno == ERANGE)
+            size_t classId = strtoull(currentSequence, &eptr, 10);
+            if (currentSequence == eptr || errno == ERANGE)
                 RuntimeError("Cannot parse label value for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
 
             size_t labelDimension = m_deserializer.m_labelGenerator->LabelDimension();
             if (classId >= labelDimension)
                 RuntimeError(
-                    "Image with id '%s' has invalid class id '%" PRIu64 "'. It is exceeding the label dimension of '%" PRIu64,
+                    "Image with id '%s' has invalid class id '%zu'. It is exceeding the label dimension of '%zu'",
                     KeyOf(sequence).c_str(), classId, labelDimension);
 
+            // Let's find the end of the label, we still expect to find the data afterwards.
+            currentSequence = strstr(currentSequence, "\t");
+            if (!currentSequence)
+                RuntimeError("No data found for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
+
+            currentSequence++;
+
             // Let's get the image.
-            token = strtok_s(nullptr, "\n", &next_token);
-            if (!token)
+            const char* imageStart = currentSequence;
+            currentSequence = strstr(currentSequence, "\n");
+            if (!currentSequence)
                 RuntimeError("Empty image for sequence '%s'", KeyOf(sequence).c_str());
 
-            // Find line end or end of buffer.
-            char* endToken = strchr(token, 0);
-            if (!endToken)
-                RuntimeError("Cannot find the end of the image for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
-
             // Remove non base64 characters at the end of the string (tabs/spaces)
-            while (endToken > token &&  !IsBase64Char(*(endToken - 1)))
-                endToken--;
+            while (currentSequence > imageStart &&  !IsBase64Char(*(currentSequence - 1)))
+                currentSequence--;
 
             std::vector<char> decodedImage;
             cv::Mat image;
-            if (!DecodeBase64(token, endToken, decodedImage))
+            if (!DecodeBase64(imageStart, currentSequence, decodedImage))
             {
-                fprintf(stderr, "WARNING: Cannot decode sequence with id %" PRIu64 " in the input file '%ls'\n", sequence.m_key.m_sequence, m_deserializer.m_fileName.c_str());
+                fprintf(stderr, "WARNING: Cannot decode sequence with id %zu in the input file '%ls'\n", sequence.m_key, m_deserializer.m_fileName.c_str());
             }
             else
             {
                 image = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
             }
 
-            m_deserializer.PopulateSequenceData(image, classId, sequenceId, result);
+            m_deserializer.PopulateSequenceData(image, classId, copyId, { sequence.m_key, 0 }, result);
         }
     };
 
@@ -132,82 +140,79 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
-    Base64ImageDeserializer::Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool isPrimary) : ImageDeserializerBase(corpus, config)
+    Base64ImageDeserializerImpl::Base64ImageDeserializerImpl(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary) : ImageDeserializerBase(corpus, config, primary)
     {
         auto mapFile = config(L"file");
-        bool hasSequenceKeys = HasSequenceKeys(mapFile);
+        m_hasSequenceIds = HasSequenceKeys(mapFile);
         m_fileName.assign(mapFile.begin(), mapFile.end());
 
-        attempt(5, [this, hasSequenceKeys, corpus, isPrimary]()
+        bool cacheIndex = config(L"cacheIndex", false);
+
+        attempt(5, [this, cacheIndex, corpus]()
         {
             if (!m_dataFile || ferror(m_dataFile.get()) != 0)
                 m_dataFile.reset(fopenOrDie(m_fileName, L"rbS"), [](FILE* f) { if (f) fclose(f); });
 
-            m_indexer = make_unique<Indexer>(m_dataFile.get(), isPrimary, !hasSequenceKeys);
-            m_indexer->Build(corpus);
+            m_index = TextInputIndexBuilder(FileWrapper(m_fileName, m_dataFile.get()))
+                .SetSkipSequenceIds(!m_hasSequenceIds)
+                .SetPrimary(m_primary)
+                .SetCorpus(corpus)
+                .SetCachingEnabled(cacheIndex)
+                .Build();
         });
     }
 
-    ChunkDescriptions Base64ImageDeserializer::GetChunkDescriptions()
+    std::vector<ChunkInfo> Base64ImageDeserializerImpl::ChunkInfos()
     {
-        const auto& index = m_indexer->GetIndex();
         // In case of multi crop the deserializer provides the same sequence NumMultiViewCopies times.
         size_t sequencesPerInitialSequence = m_multiViewCrop ? ImageDeserializerBase::NumMultiViewCopies : 1;
-        ChunkDescriptions result;
-        result.reserve(index.m_chunks.size() * sequencesPerInitialSequence);
-        for (auto const& chunk : index.m_chunks)
+        std::vector<ChunkInfo> result;
+        result.reserve(m_index->NumberOfChunks() * sequencesPerInitialSequence);
+        for(uint32_t i = 0; i < m_index->NumberOfChunks(); ++i)
         {
-            auto c = std::make_shared<ChunkDescription>();
-            c->m_id = chunk.m_id;
-            assert(chunk.m_numberOfSamples == chunk.m_numberOfSequences);
-            c->m_numberOfSamples = c->m_numberOfSequences = chunk.m_numberOfSequences * sequencesPerInitialSequence;
+            const auto& chunk = m_index->Chunks()[i];
+            ChunkInfo c;
+            c.m_id = i;
+            assert(chunk.NumberOfSamples() == chunk.NumberOfSequences());
+            c.m_numberOfSamples = c.m_numberOfSequences = chunk.NumberOfSequences() * sequencesPerInitialSequence;
             result.push_back(c);
         }
         return result;
     }
 
-    void Base64ImageDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
+    void Base64ImageDeserializerImpl::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)
     {
-        const auto& index = m_indexer->GetIndex();
-        const auto& chunk = index.m_chunks[chunkId];
-        size_t sequencesPerInitialSequence = m_multiViewCrop ? 10 : 1;
-        result.reserve(sequencesPerInitialSequence * chunk.m_sequences.size());
+        const auto& chunk = m_index->Chunks()[chunkId];
+        size_t sequenceCopies = m_multiViewCrop ? NumMultiViewCopies : 1;
+        result.reserve(sequenceCopies * chunk.NumberOfSequences());
         size_t currentId = 0;
-        for (auto const& s : chunk.m_sequences)
+        for (uint32_t indexInChunk = 0; indexInChunk < chunk.NumberOfSequences(); ++indexInChunk)
         {
-            assert(currentId / sequencesPerInitialSequence == s.m_id);
-            for (size_t i = 0; i < sequencesPerInitialSequence; ++i)
+            auto const& s = chunk[indexInChunk];
+            assert(currentId / sequenceCopies == indexInChunk);
+            for (size_t i = 0; i < sequenceCopies; ++i)
             {
                 result.push_back(
                 {
                     currentId,
                     s.m_numberOfSamples,
-                    s.m_chunkId,
-                    s.m_key
+                    chunkId,
+                    { s.m_key, 0 }
                 });
+
                 currentId++;
             }
         }
     }
 
-    ChunkPtr Base64ImageDeserializer::GetChunk(ChunkIdType chunkId)
+    ChunkPtr Base64ImageDeserializerImpl::GetChunk(ChunkIdType chunkId)
     {
-        const auto& chunkDescriptor = m_indexer->GetIndex().m_chunks[chunkId];
+        const auto& chunkDescriptor = m_index->Chunks()[chunkId];
         return make_shared<ImageChunk>(chunkDescriptor, *this);
     }
 
-    bool Base64ImageDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+    bool Base64ImageDeserializerImpl::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& r)
     {
-        const auto& index = m_indexer->GetIndex();
-
-        const auto& keys = index.m_keyToSequenceInChunk;
-        auto sequenceLocation = keys.find(key.m_sequence);
-        if (sequenceLocation == keys.end())
-            return false;
-
-        const auto& chunks = index.m_chunks;
-        result = chunks[sequenceLocation->second.first].m_sequences[sequenceLocation->second.second];
-        return true;
+        return DataDeserializerBase::GetSequenceInfoByKey(*m_index, key, r);
     }
-
-}}}
+}

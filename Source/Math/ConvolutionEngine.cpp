@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "ConvolutionEngine.h"
 #include "CuDnnFactories.h"
+#include "Mkl2017DnnCommon.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -86,7 +87,7 @@ void ConvolutionEngine<ElemType>::ForwardPooling(const Mat& in, Mat& out)
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad)
+void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
@@ -104,7 +105,7 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
 
     EnsureCompatible();
     EnsurePoolingInitialized();
-    BackwardPoolingCore(out, srcGrad, in, grad);
+    BackwardPoolingCore(out, srcGrad, in, grad, accumulateGradient);
 }
 
 template <class ElemType>
@@ -141,10 +142,12 @@ public:
     using typename Base::Mat;
 
 public:
-    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
+    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad),
+        m_isConvGeometryComputed(geometry->ComputeConvGeometryExplicit()), // IMP NOTE: m_isConvGeometryComputed MUST be initialized before m_mpRowCol here in this list.
         m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
+        assert(m_isConvGeometryComputed);
     }
 
 protected:
@@ -153,6 +156,7 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
+    using Base::m_poolIncludePad;
 
     void EnsureCompatible() override
     {
@@ -209,22 +213,22 @@ protected:
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            in.AveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
+            in.AveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out, m_poolIncludePad);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
 
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
     {
         if (m_poolKind == PoolKind::Max)
         {
-            srcGrad.MaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
+            srcGrad.MaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad, accumulateGradient);
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
+            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad, m_poolIncludePad, accumulateGradient);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -243,7 +247,10 @@ protected:
 
 protected:
     using IntMatPtr = std::unique_ptr<Matrix<int>>;
-
+    // IMP NOTE: Make sure that in the declaration below m_isConvGeometryComputed is declared
+    // before m_mpRowCol. This ordering is required to ensure the right order of initialization
+    // in the initializer list in the ctor (above) of this class.
+    bool m_isConvGeometryComputed;  
     Matrix<int> m_mpRowCol;
     // Convolution-specific maps.
     IntMatPtr m_mpRowIwht;
@@ -265,8 +272,8 @@ public:
     using typename Base::Mat;
 
 public:
-    LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
+    LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad), 
         m_inT(m_geometry->InputShape(), ImageLayoutKind::CHW), m_outT(m_geometry->OutputShape(), ImageLayoutKind::CHW),
         m_kernelT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
     {
@@ -279,6 +286,7 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
+    using Base::m_poolIncludePad;
 
     void EnsureCompatible() override
     {
@@ -506,8 +514,11 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
     {
+        if (!accumulateGradient)
+            grad.SetValue(0);
+
         if (m_poolKind == PoolKind::Max)
         {
             grad.AddMaxPoolingGradient(srcGrad, in, out,
@@ -560,8 +571,8 @@ public:
     using typename Base::Mat;
 
 public:
-    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind)
+    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad)
     {
     }
 
@@ -574,6 +585,7 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
+    using Base::m_poolIncludePad;
 
     using Base::m_mpRowCol;
     using Base::m_mpRowIwht;
@@ -609,6 +621,10 @@ protected:
     //    In case minibatch size == 1 this step is not required and step 2 writes results directly to output (out).
     void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
     {
+#ifdef USE_MKL2017DNN
+        if (ForwardCoreMKL(in, kernel, out)) return;
+#endif
+
         size_t batchSize = in.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
 
@@ -678,8 +694,14 @@ protected:
     //    [KXY x NWH]^T * [KXY x C] -> [NWH x C]
     // 4. Reshape and transpose outputs (grad): [NWH x C] -> [N x WHC]^T -> [WHC x N]
     //    In case minibatch size == 1 this step is not required and step 3 writes results directly to output (grad).
-    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool /*accumulateGradient*/, Mat& workspace) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) override
     {
+#ifdef USE_MKL2017DNN
+        if (BackwardDataMKL(srcGrad, kernel, grad, accumulateGradient, workspace)) return;
+#else
+        UNUSED(accumulateGradient);
+#endif
+
         size_t batchSize = srcGrad.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
 
@@ -771,8 +793,14 @@ protected:
     // 2. Unrolling convolution input (in) into a matrix of [NW'H' x WHC] layout.
     // 3. Performing matrix multiplication of unrolled input with transposed output:
     //    [NW'H' x WHC]^T * [NW'H' x K] -> [WHC x K] - kernel gradients.
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace) override
     {
+#ifdef USE_MKL2017DNN
+        if (BackwardKernelMKL(srcGrad, in, kernelGrad, accumulateGradient, workspace)) return;
+#else
+        UNUSED(accumulateGradient);
+#endif
+
         size_t batchSize = srcGrad.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
 
@@ -838,7 +866,253 @@ protected:
             // 3. Multiply.
             Mat::MultiplyAndAdd(unrolledInputSlice, true, srcGradSlice, false, kernGrad);
         }
-}
+    }
+
+#ifdef USE_MKL2017DNN
+    class MKLConvolutionContext
+    {
+    public:
+        enum ContextIndex
+        {
+            ContextIndex_Forward = 0,
+            ContextIndex_BackwardData,
+            ContextIndex_BackwardFilter,
+            ContextIndex_Total
+        };
+
+    private:
+        const ConvolveGeometry* m_prevGeometry = nullptr;
+        size_t m_prevBatchSize = 0;
+        int m_contextFlags = 0;
+
+        // fixed dimension for MKL for now
+        static const int m_dimension = 4;
+
+        static const int NumInputs = 2;
+
+        struct PrimitiveContext
+        {
+            MKLDnnResourceAdapter<ElemType> inputs[NumInputs];
+            MKLDnnResourceAdapter<ElemType> output;
+
+            dnnPrimitive_t primitive = nullptr;
+            dnnPrimitiveAttributes_t attributes = nullptr;
+
+            void Clear()
+            {
+                if (primitive) { dnnDelete<ElemType>(primitive); primitive = nullptr; }
+                for (auto& i : inputs) i.Clear();
+                output.Clear();
+                if (attributes) { dnnPrimitiveAttributesDestroy<ElemType>(attributes); attributes = nullptr; }
+            }
+
+            ~PrimitiveContext()
+            {
+                Clear();
+            }
+        } m_context[ContextIndex_Total];
+
+        static void GetSizesAndStrides(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount = 0)
+        {
+            sizes = shape.GetDims();
+            if (mapCount)
+            {
+                if (mapCount != shape.GetDim(shape.GetRank() - 1))
+                    RuntimeError("Mismatching outputShape and mapCount");
+
+                // for outputShape, pad 1 before mapCount (the last dim in shape)
+                sizes.pop_back();
+                while (sizes.size() < m_dimension - 2) sizes.push_back(1);
+                sizes.push_back(mapCount);
+            }
+            else
+            {
+                while (sizes.size() < m_dimension - 1) sizes.push_back(1);
+            }
+            sizes.push_back(lastDim);
+            strides.clear();
+            strides.push_back(1);
+            for (int i = 1; i <= sizes.size(); i++)
+            {
+                strides.push_back(sizes[i - 1] * strides[i - 1]);
+            }
+        }
+
+        static void GetInputOffsets(const ConvolveGeometry* geometry, SmallVector<int>& inputOffset)
+        {
+            size_t dim_size = geometry->InputShape().GetRank();
+            for (size_t i = 0; i < dim_size; i++)
+            {
+                inputOffset.push_back(-geometry->GetLowerPad(i));
+            }
+        }
+
+    public:
+        MKLConvolutionContext() :
+            m_prevBatchSize(0),
+            m_prevGeometry(nullptr)
+        {}
+
+        bool Supported(const ConvolveGeometry* geometry, bool forward)
+        {
+            //MKL2017 does not support asymmetric padding yet
+            if (geometry->IsAsymmetricPadding()) return false;
+
+            //MKL-DNN calls does not support 4th dimention now, we will update the code once MKL release the update.
+            return forward ? (geometry->InputShape().GetRank() < m_dimension) : (geometry->OutputShape().GetRank() < m_dimension);
+        }
+
+        void Prepare(size_t batchSize, const ConvolveGeometry* geometry, ContextIndex contextIndex)
+        {
+            int flag = (1 << contextIndex);
+            bool sameGeometryAndBatchSize = (geometry == m_prevGeometry && batchSize == m_prevBatchSize);
+            if (sameGeometryAndBatchSize && !!(m_contextFlags & flag)) return;
+
+            if (!sameGeometryAndBatchSize)
+                m_contextFlags = 0;
+
+            if (m_contextFlags)
+            {
+                if (m_prevGeometry != geometry || m_prevBatchSize != batchSize)
+                    RuntimeError("Inconsistent convolution geometry or batch size between forward and backward");
+            }
+            else
+            {
+                m_prevGeometry = geometry;
+                m_prevBatchSize = batchSize;
+            }
+            m_contextFlags |= flag;
+
+            size_t mapCount = geometry->GetMapCount(geometry->KernelShape().GetRank() - 1);
+
+            SmallVector<size_t> outputSize, outputStrides, filterSize, filterStrides, inputSize,  inputStrides;
+            SmallVector<int>    inputOffset;
+
+            GetSizesAndStrides(geometry->OutputShape(), batchSize, outputSize, outputStrides, mapCount);
+            GetSizesAndStrides(geometry->KernelShape(), mapCount, filterSize, filterStrides);
+            GetSizesAndStrides(geometry->InputShape(), batchSize, inputSize, inputStrides);
+            GetInputOffsets(geometry, inputOffset);
+
+            const auto& convolutionStride = geometry->Stride().GetDims();
+
+            auto& ctx = m_context[contextIndex];
+            ctx.Clear();
+
+            dnnLayout_t ltUserInputs[NumInputs], ltPrimInputs[NumInputs];
+            dnnLayout_t ltUserOutput, ltPrimOutput;
+            dnnResourceType_t inputTypes[NumInputs];
+            dnnResourceType_t outputType;
+            switch (contextIndex)
+            {
+            case ContextIndex_Forward:
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, inputSize.begin(), inputStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, outputSize.begin(), outputStrides.begin()));
+                CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
+                CHECK_MKL(dnnConvolutionCreateForward<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                inputTypes[0] = dnnResourceSrc;
+                inputTypes[1] = dnnResourceFilter;
+                outputType = dnnResourceDst;
+                break;
+            case ContextIndex_BackwardData:
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, outputSize.begin(), outputStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, inputSize.begin(), inputStrides.begin()));
+                CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
+                CHECK_MKL(dnnConvolutionCreateBackwardData<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                inputTypes[0] = dnnResourceDiffDst;
+                inputTypes[1] = dnnResourceFilter;
+                outputType = dnnResourceDiffSrc;
+                break;
+            case ContextIndex_BackwardFilter:
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, outputSize.begin(), outputStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, inputSize.begin(), inputStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
+                CHECK_MKL(dnnConvolutionCreateBackwardFilter<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                inputTypes[0] = dnnResourceDiffDst;
+                inputTypes[1] = dnnResourceSrc;
+                outputType = dnnResourceDiffFilter;
+                break;
+            default:
+                RuntimeError("Unexpected context type %d", (int)contextIndex);
+            }
+
+            for (int i = 0; i < NumInputs; i++)
+            {
+                CHECK_MKL(dnnLayoutCreateFromPrimitive<ElemType>(&ltPrimInputs[i], ctx.primitive, inputTypes[i]));
+                ctx.inputs[i].Create(ltUserInputs[i], ltPrimInputs[i], inputTypes[i], true);
+            }
+
+            CHECK_MKL(dnnLayoutCreateFromPrimitive<ElemType>(&ltPrimOutput, ctx.primitive, outputType));
+            ctx.output.Create(ltUserOutput, ltPrimOutput, outputType, false);
+        }
+
+        void Execute(void* userInput0, void* userInput1, void* userOutput, ContextIndex contextIndex)
+        {
+            auto& ctx = m_context[contextIndex];
+            void* userInputs[] = { userInput0, userInput1 };
+            void* resources[dnnResourceNumber] = { 0 };
+
+            for(int i = 0; i < NumInputs; i++)
+                ctx.inputs[i].PrepareForExecution(userInputs[i], resources);
+
+            ctx.output.PrepareForExecution(userOutput, resources);
+
+            CHECK_MKL(dnnExecute<ElemType>(ctx.primitive, resources));
+
+            ctx.output.ConvertOutput(userOutput);
+        }
+    };
+
+    MKLConvolutionContext m_mklContext;
+
+    // convolution implementation with MKL 2017 DNN functions
+    bool ForwardCoreMKL(const Mat& in, const Mat& kernel, Mat& out)
+    {
+        if (!m_mklContext.Supported(m_geometry.get(), true)) return false;
+        
+        m_mklContext.Prepare(in.GetNumCols(), m_geometry.get(), MKLConvolutionContext::ContextIndex_Forward);
+        m_mklContext.Execute(in.Data(), kernel.Data(), out.Data(), MKLConvolutionContext::ContextIndex_Forward);
+
+        return true;
+    }
+
+    bool BackwardDataMKL(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace)
+    {
+        if (!m_mklContext.Supported(m_geometry.get(), false)) return false;
+
+        m_mklContext.Prepare(srcGrad.GetNumCols(), m_geometry.get(), MKLConvolutionContext::ContextIndex_BackwardData);
+
+        if (accumulateGradient)
+            workspace.AssignValuesOf(grad);
+
+        m_mklContext.Execute(srcGrad.Data(), kernel.Data(), grad.Data(), MKLConvolutionContext::ContextIndex_BackwardData);
+
+        if (accumulateGradient)
+            grad.AssignSumOf(grad, workspace);
+
+        return true;
+    }
+
+    bool BackwardKernelMKL(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, Mat& workspace)
+    {
+        if (!m_mklContext.Supported(m_geometry.get(), false)) return false;
+
+        m_mklContext.Prepare(srcGrad.GetNumCols(), m_geometry.get(), MKLConvolutionContext::ContextIndex_BackwardFilter);
+
+        if (accumulateGradient)
+            workspace.AssignValuesOf(kernelGrad);
+
+        m_mklContext.Execute(srcGrad.Data(), in.Data(), kernelGrad.Data(), MKLConvolutionContext::ContextIndex_BackwardFilter);
+
+        if (accumulateGradient)
+            kernelGrad.AssignSumOf(kernelGrad, workspace);
+
+        return true;
+    }
+
+#endif
 
 public:
     static bool IsSupported(DEVICEID_TYPE deviceId, ConvolveGeometryPtr geometry)
@@ -851,7 +1125,9 @@ public:
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
-                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix, bool forceDeterministicAlgorithms)
+                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix, 
+                                                                                 bool forceDeterministicAlgorithms, bool poolIncludePad,
+                                                                                 bool inputHasFreeDimension)
 {
     if (!logPrefix.empty())
         logPrefix += L": ";
@@ -870,7 +1146,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing legacy convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-        return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+        return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
     }
 
     // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
@@ -880,7 +1156,8 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, forceDeterministicAlgorithms);
+        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, 
+                                                               forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
     }
 
     if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
@@ -888,16 +1165,16 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
-        RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
+        RuntimeError("Reference convolution is disabled and no other engine supports such configuration (or disabled).");
 
     if (GetMathLibTraceLevel() > 0)
-        fprintf(stderr, "%lsusing reference convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
+        fprintf(stderr, "%lsusing reference convolution engine for geometry, could be VERY SLOW: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
 }
 
 template class ConvolutionEngine<float>;

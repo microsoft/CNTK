@@ -8,7 +8,7 @@
 # 1) SRILM 
 # 2) 
 
-#1) some setings
+#1) some settings
 #do not change this, it's for ctr-c ctr-v of training commands between ihm, sdm and mdm
 mic=ihm
 #path where AMI whould be downloaded or where is locally available

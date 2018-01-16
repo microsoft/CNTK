@@ -30,7 +30,14 @@
 #include <unordered_map>
 #include <set>
 
+#include "ComputationGraphAlgorithms.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+inline std::wstring ToString(const ComputationNodeBasePtr& node)
+{
+    return node->NodeName();
+}
 
 // ===========================================================================
 // ComputationNetwork -- computation graph and operations
@@ -52,7 +59,7 @@ public:
         m_randomSeedOffset(0),
         m_isCompiled(false),
         m_areMatricesAllocated(false),
-        m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, L"*")),
+        m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultDynamicAxisName)),
         m_environment(make_shared<ComputationEnvironment>())
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
@@ -88,15 +95,15 @@ public:
     // -----------------------------------------------------------------------
     // (de-)serialization
     // -----------------------------------------------------------------------
-
     template <class ElemType>
-    void ReadPersistableParameters(File& fstream, bool create);
+    void ReadPersistableParameters(size_t modelVersion, File& fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
     template <class ElemType>
     void RereadPersistableParameters(const std::wstring& fileName)
     {
         File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-        ReadPersistableParameters<ElemType>(fstream, false);
+        auto modelVersion = GetModelVersion(fstream);
+        ReadPersistableParameters<ElemType>(modelVersion, fstream, false);
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
@@ -123,6 +130,8 @@ public:
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
+    
+    static size_t GetModelVersion(File& fstream);
 
 public:
 
@@ -133,19 +142,84 @@ public:
     // main entry point for forward prop
     void ForwardProp(const ComputationNodeBasePtr rootNode);
 
+    // main entry point for post forward and backward prop
+    void PostForwardAndBackProp(const ComputationNodeBasePtr rootNode);
+
     // main entry point for backprop
     void Backprop(const ComputationNodeBasePtr rootNode);
 
     template <class NODESET> // version that takes multiple nodes
+    void TravserseInSortedGlobalEvalOrder(const NODESET& nodes, const std::function<void(const ComputationNodeBasePtr&)>& action)
+    {
+        // Create a composite evaluation order for all the nodes
+        std::vector<ComputationNodeBasePtr> combinedEvalOrder;
+        for (auto node : nodes)
+        {
+            auto currentNodeEvalOrder = GetEvalOrder(node);
+            combinedEvalOrder.insert(combinedEvalOrder.end(), currentNodeEvalOrder.begin(), currentNodeEvalOrder.end());
+        }
+
+        combinedEvalOrder = SortByGlobalEvalOrder(combinedEvalOrder);
+        set<ComputationNodeBasePtr> completedSEQNodes;
+        for (auto& node : combinedEvalOrder)
+        {
+            if (node->IsPartOfLoop())
+            {
+                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, node);
+                assert(recInfo != nullptr);
+                if (completedSEQNodes.insert(recInfo).second)
+                    node = recInfo;
+                else
+                    node = nullptr;
+            }
+
+            if (node)
+                action(node);
+        }
+    }
+
+    template <class NODESET> // version that takes multiple nodes
     void ForwardProp(const NODESET& nodes)
     {
-        auto nodesSortedByGlobalEvalOrder = SortByGlobalEvalOrder(nodes);
-        for (auto& node : nodesSortedByGlobalEvalOrder)
-            ForwardProp(node);
+        TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
+            PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        });
+    }
+
+    template <class NODESET> // version that takes multiple nodes
+    void PostForwardAndBackProp(const NODESET& nodes)
+    {
+        TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
+            PARTraversalFlowControlNode::PostForwardAndBackProp(node);
+        });
+    }
+
+    template <class NODESET_FROM, class NODESET_TO> // version that takes both initial and final set of nodes
+    void ForwardPropFromTo(const NODESET_FROM& nodesFrom, const NODESET_TO& nodesTo)
+    {
+        // Compute the set of nodes to do forward on.
+        std::set<ComputationNodeBasePtr> nodesToForward;
+        TravserseInSortedGlobalEvalOrder(nodesTo, [&](const ComputationNodeBasePtr& node) {
+            for (const ComputationNodeBasePtr& input : node->GetInputs())
+            {
+                if (std::find(nodesFrom.begin(), nodesFrom.end(), input) != nodesFrom.end()
+                    || nodesToForward.find(input) != nodesToForward.end())
+                {
+                    nodesToForward.insert(node);
+                }
+            }
+        });
+
+        // Perform forward on resulting nodes in global evaluation order.
+        for (const auto& node : SortByGlobalEvalOrder(nodesToForward))
+        {
+            ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        }
     }
 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
     void ResetEvalTimeStamps();
+    void SetEvalTimeStampsOutdatedWithRegardToAll();
 
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr& rootNode) // (ugly name; meant to be unique so we can rename if needed)
@@ -173,9 +247,9 @@ public:
     // -----------------------------------------------------------------------
 
     void CompileNetwork(); // call this after creation, Load(), and any modification
+    void ValidateNetwork();
 
 private:
-    void ValidateNetwork();
     size_t ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass);
     bool ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const;
     void MarkValueNonSharableNodes();
@@ -198,7 +272,6 @@ public:
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
     void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>>& parentsMap);
-    void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
 public:
     // -----------------------------------------------------------------------
@@ -208,16 +281,9 @@ public:
     void FormNestedNetwork(const ComputationNodeBasePtr& rootNode);
     ComputationNodeBasePtr GetNestedNetwork(const ComputationNodeBasePtr& rootNode);
 
-    // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
-    // TODO: Can this be moved to a separate class?
 private:
-    // This is part of the FormRecurrentLoops() process, and only called from there.
-    void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
-    void DetermineSCCs(const ComputationNodeBasePtr& rootNode);
-    void DetermineSCCsR(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);
-    void DetermineLoopForwardOrderR(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
-    void GatherLoopNodesR(const ComputationNodeBasePtr& rootNode, std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult, std::list<ComputationNodeBasePtr>& noRecurrentResult);
-    void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr>& /*noRecurrentNodes*/);
+    // The method below determines evaluation order, which is tricky in presence of recurrent loops.
+    void FormRecurrentLoops();
 
 public:
     // -----------------------------------------------------------------------
@@ -239,13 +305,14 @@ public:
         }
 
         std::list<ComputationNodeBasePtr> evalOrder;
-        if (!rootNode) // this creates the global one
+        ExecutionGraph graph(m_allRoots);
+        if (!rootNode) // this creates the global list of nodes
         {
-            evalOrder = ComputationNodeBase::EnumerateNodes(m_allRoots);
+            evalOrder = ::CNTK::PostOrderTraversal(graph, m_allRoots);
         }
         else // this creates a subset of the global eval order of all nodes that rootNode depends on
         {
-            auto rawTraversalForRoot = ComputationNodeBase::EnumerateNodes({ rootNode }); // traverse to find the set (we ignore the order)
+            auto rawTraversalForRoot = ::CNTK::PostOrderTraversal(graph, { rootNode });// traverse to find the set (we ignore the order)
             set<ComputationNodeBasePtr> rawSet(rawTraversalForRoot.begin(), rawTraversalForRoot.end());
             for (const auto& node : GetEvalOrder(nullptr)) // iterate over global one and pull out everything that is included in the set for rootNode
             {
@@ -277,7 +344,7 @@ public:
 
     // replace an existing eval order with an updated one
     // This is meant to be used by FormRecurrentLoops().  TODO: Hopefully this can be not done anymore some day.
-    void UpdateEvalOrder(const ComputationNodeBasePtr& rootNode, std::list<ComputationNodeBasePtr>& nodes)
+    void UpdateEvalOrder(const ComputationNodeBasePtr& rootNode, const std::list<ComputationNodeBasePtr>& nodes)
     {
         GetEvalOrder(rootNode); // verify that there is already an entry for rootNode
         m_evalOrders[rootNode] = nodes;
@@ -466,10 +533,8 @@ public:
     // -----------------------------------------------------------------------
 
     // TODO: Why are all these static, but then take a network as the first argument? --> make them class members
-    template <class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 
-    template <class ElemType>
     static void SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
     
     template <class ElemType>
@@ -712,6 +777,17 @@ public:
         return GetNodesWhere(predicate, rootNode);
     }
 
+    template <typename T>
+    std::list<ComputationNodeBasePtr> GetNodesWithType(const ComputationNodeBasePtr& rootNode = nullptr) const
+    {
+        std::function<bool(const ComputationNodeBasePtr&)> predicate = [](const ComputationNodeBasePtr& node) 
+        { 
+            return (dynamic_cast<T*>(node.get()) != nullptr); 
+        };
+
+        return GetNodesWhere(predicate, rootNode);
+    }
+
     // Get the eval nodes with names
     // if evalNodeNames are not specified, return all the default evalnodes and training criterion nodes.
     std::vector<ComputationNodeBasePtr> GetEvalNodesWithName(const std::vector<wstring> evalNodeNames)
@@ -719,7 +795,7 @@ public:
         // determine nodes to evaluate
         std::vector<ComputationNodeBasePtr> evalNodes;
 
-        set<ComputationNodeBasePtr> criteriaLogged; // (keeps track ot duplicates to avoid we don't double-log critera)
+        set<ComputationNodeBasePtr> criteriaLogged; // (keeps track ot duplicates to avoid we don't double-log criteria)
         if (evalNodeNames.size() == 0)
         {
             fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
@@ -879,6 +955,18 @@ public:
     // -----------------------------------------------------------------------
     // diagnostics
     // -----------------------------------------------------------------------
+
+    void SetTrackGapNans(bool enable)
+    {
+        m_environment->trackGapNans = enable;
+    }
+    bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
+
+    void SetIsV2Library(bool enable)
+    {
+        m_environment->isV2Library = enable;
+    }
+    bool GetIsV2Library() const { return m_environment->isV2Library; }
 
     void SetTraceLevel(int traceLevel)
     {
@@ -1093,23 +1181,23 @@ protected:
         {
             return L"PARTraversalFlowControlNode";
         }
-        virtual void BeginForwardProp() override
-        {
-        }
+
+        static void ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr);
+        static void PostForwardAndBackProp(const ComputationNodeBasePtr& node);
+
+        virtual void BeginForwardProp() override {}
         virtual void ForwardProp(const FrameRange&) override;
-        virtual void EndForwardProp() override
-        {
-        }
-        virtual void BeginBackprop() override
-        {
-        }
+        virtual void EndForwardProp() override {}
+
+        virtual void PostForwardAndBackProp() override;
+
+        virtual void BeginBackprop() override {}
         virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
         {
             NOT_IMPLEMENTED;
         } // ugh, call Backprop() instead
-        virtual void EndBackprop() override
-        {
-        }
+        virtual void EndBackprop() override {}
+
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
@@ -1195,6 +1283,25 @@ private:
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
+
+    // Implementation of a graph based on ComputationNodes.
+    class ExecutionGraph : public ::CNTK::DirectedGraph<ComputationNodeBasePtr>
+    {
+        std::vector<ComputationNodeBasePtr> m_roots;
+
+    public:
+        ExecutionGraph(const std::vector<ComputationNodeBasePtr>& roots) : m_roots(roots) {}
+
+        std::vector<ComputationNodeBasePtr> Predecessors(const ComputationNodeBasePtr& node) const override
+        {
+            return node->GetInputs();
+        }
+
+        const std::vector<ComputationNodeBasePtr>& Roots() const override
+        {
+            return m_roots;
+        }
+    };
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 

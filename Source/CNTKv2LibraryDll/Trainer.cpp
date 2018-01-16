@@ -7,65 +7,110 @@
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Learner.h"
+#include "PerformanceProfiler.h"
+#include "CompositeFunction.h"
+#include "Serialization.h"
+
 namespace
 {
+    const std::wstring versionPropertyName = L"Version";
     const std::wstring learnersPropertyName = L"Learners";
     const std::wstring externalStatePropertyName = L"ExternalState";
+    const std::wstring distributedStatePropertyName = L"DistributedState";
+
+    // Version history:
+    // 0 -- a version number before the versioning was introduced for the trainer's checkpoints.
+    // 1 -- initial version: added a key-value pair for the checkpoint version info, added
+    //      distributed state key to save all local state collected from distributed workers.
+    static const size_t trainerCheckpointVersion = 1;
 }
 
 namespace CNTK
 {
-    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners)
-        : Trainer(model, lossFunction, nullptr, parameterLearners)
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction,
+                     const std::vector<LearnerPtr>& parameterLearners,
+                     const std::vector<ProgressWriterPtr>& progressWriters)
+        : Trainer(model, lossFunction, nullptr, parameterLearners, progressWriters)
     {}
 
-    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
-        : m_model(model),
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction,
+                     const std::vector<LearnerPtr>& parameterLearners,
+                    const std::vector<ProgressWriterPtr>& progressWriters) 
+        : Evaluator(evaluationFunction, progressWriters, false),
+          m_model(model),
           m_lossFunction(lossFunction),
-          m_evaluationFunction(evaluationFunction),
           m_parameterLearners(std::make_shared<Learners>(parameterLearners)),
-          m_prevMinibatchNumSamples(1),
-          m_distributed(false)
+          m_prevMinibatchNumSamples(0),
+          m_distributed(false),
+          m_aggregatedTrainingLossValue(std::make_shared<Accumulator>()),
+          m_aggregatedTrainingEvalCriterionValue(),
+          m_prevDistributedTotalNumSamples(0)
     {
-        // By default we set the number of threads to hardware concurrency.
-        if (!Internal::MaxNumCPUThreadsSet())
-            SetMaxNumCPUThreads(std::thread::hardware_concurrency());
+        std::vector<Variable> combinedFunctionArgs;
+        if (m_model) // model is optional, since it may not be adding any information on top of lossFunction
+            combinedFunctionArgs = m_model->Outputs();
 
-        std::vector<Variable> combinedFunctionArgs = { m_model, m_lossFunction };
+        combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
-            m_aggregatedLossFunction = ReduceSum(lossFunction);
+            m_aggregatedLossFunction = ReduceSum(lossFunction, Axis::AllAxes(), L"aggregateLoss");
             combinedFunctionArgs.push_back(m_aggregatedLossFunction);
             m_trainingSampleCountVar = m_lossFunction;
         }
         else
         {
             m_aggregatedLossFunction = m_lossFunction;
-            m_trainingSampleCountVar = m_lossFunction->RootFunction()->Inputs()[0];
-            if (model->Output() != m_trainingSampleCountVar)
+
+            std::function<std::pair<Variable, bool>(const FunctionPtr& root)> FindTrainingSampleCountVar;
+            FindTrainingSampleCountVar = [&FindTrainingSampleCountVar](const FunctionPtr& root) -> std::pair<Variable, bool> {
+                const auto& outputs = root->Outputs();
+                auto firstOutputWithDynamicAxes = std::find_if(outputs.begin(), outputs.end(), [](const Variable& var) { return !var.DynamicAxes().empty(); });
+                if (firstOutputWithDynamicAxes != outputs.end())
+                    return std::make_pair(*firstOutputWithDynamicAxes, true);
+
+                const auto& inputs = root->Inputs();
+                for (const auto& input : inputs)
+                {
+                    if (!input.DynamicAxes().empty())
+                        return std::make_pair(input, true);
+
+                    if (input.IsOutput())
+                    {
+                        auto retVal = FindTrainingSampleCountVar(input.Owner());
+                        if (retVal.second)
+                            return retVal;
+                    }
+                }
+
+                return std::make_pair(Variable(), false);
+            };
+
+            auto findTrainingSampleCountVarRetVal = FindTrainingSampleCountVar(m_lossFunction->RootFunction());
+            if (!findTrainingSampleCountVarRetVal.second)
+                InvalidArgument("Trainer: Failed to find a variable underlying the graph rooted at specified loss function '%S', from which the training sample count can be determined.", m_lossFunction->RootFunction()->AsString().c_str());
+
+            m_trainingSampleCountVar = findTrainingSampleCountVarRetVal.first;
+            if (GetTraceLevel() >= TraceLevel::Info)
+                fprintf(stderr, "Info: Trainer loss Function '%S' output does not have a batch axis; the first Variable '%S' with a batch axis found in the graph underlying the scalar "
+                                "loss Function will be used to determine minibatch training sample count.\n", m_lossFunction->AsString().c_str(), m_trainingSampleCountVar.AsString().c_str());
+
+            if (std::find(combinedFunctionArgs.begin(), combinedFunctionArgs.end(), m_trainingSampleCountVar) == combinedFunctionArgs.end())
                 combinedFunctionArgs.push_back(m_trainingSampleCountVar);
         }
 
-        if (m_evaluationFunction)
+        if (evaluationFunction)
         {
-            combinedFunctionArgs.push_back(m_evaluationFunction);
+            auto evalArgs = GetCombinedEvalFunctionArgs();
+            combinedFunctionArgs.insert(combinedFunctionArgs.end(), evalArgs.begin(), evalArgs.end());
 
-            if (!m_evaluationFunction->Output().DynamicAxes().empty())
-            {
-                m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction);
-                combinedFunctionArgs.push_back(m_aggregatedEvaluationFunction);
-                m_testSampleCountVar = m_evaluationFunction;
-            }
-            else
-            {
-                m_aggregatedEvaluationFunction = m_evaluationFunction;
-                m_testSampleCountVar = m_evaluationFunction->RootFunction()->Inputs()[0];
-                if ((m_testSampleCountVar != m_trainingSampleCountVar) && (model->Output() != m_testSampleCountVar))
-                    combinedFunctionArgs.push_back(m_testSampleCountVar);
-            }
+            m_aggregatedTrainingEvalCriterionValue = std::make_shared<Accumulator>();
         }
 
+        // create a default eval value in case there's no criterion
+        m_prevMinibatchAggregateEvalCriterionValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(0, m_aggregatedLossFunction->Output().GetDataType(), NDShape{}, DeviceDescriptor::CPUDevice()));
+
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
+        SetCombinedEvalFunction(m_combinedTrainingFunction);
 
         auto modelParameters = m_combinedTrainingFunction->Parameters();
         m_learnerParameters = m_parameterLearners->GetParameters();
@@ -84,89 +129,21 @@ namespace CNTK
         }
 
         if (!learnerParametersNotPartOfModel.empty())
-            InvalidArgument("Trainer ctor: %d of the learner parameters are not part of the model specified", (int)learnerParametersNotPartOfModel.size());
+            InvalidArgument("Trainer ctor: %d of the learner parameters '%S' are not part of the model specified", 
+                            (int)learnerParametersNotPartOfModel.size(), NamedListString(learnerParametersNotPartOfModel).c_str());
 
         if (!m_modelParametersNotCoveredByLearners.empty())
             fprintf(stderr, "[Note:] Trainer ctor: %d of the model parameters are not covered by any of the specified Learners; these parameters will not be learned\n", (int)m_modelParametersNotCoveredByLearners.size());
 
         m_distributed = m_parameterLearners->IsDistributed();
-    }
 
-    static double GetScalarValue(const ValuePtr& value)
-    {
-        if (value->Mask())
-            LogicError("Scalar Value object cannot have an associated mask");
+        if (m_distributed)
+            Evaluator::SetCommunicator(dynamic_cast<DistributedLearner*>(m_parameterLearners->ParameterLearners()[0].get())->GetCommunicator());
 
-        auto scalarData = value->Data();
-        if (scalarData->Shape().TotalSize() != 1)
-            LogicError("Scalar Value object's has a size > 1");
-
-        double scalar = std::numeric_limits<double>::quiet_NaN();
-        NDArrayViewPtr cpuData;
-        if (scalarData->Device() == DeviceDescriptor::CPUDevice())
-            cpuData = scalarData;
-        else
+        for (auto& learner : m_parameterLearners->ParameterLearners())
         {
-            cpuData = std::make_shared<NDArrayView>(scalarData->GetDataType(), scalarData->Shape(), CNTK::DeviceDescriptor::CPUDevice());
-            cpuData->CopyFrom(*scalarData);
+            learner->AddProgressWriters(progressWriters);
         }
-
-        if (scalarData->GetDataType() == DataType::Float)
-            scalar = *(cpuData->DataBuffer<float>());
-        else if (scalarData->GetDataType() == DataType::Double)
-            scalar = *(cpuData->DataBuffer<double>());
-        else
-            LogicError("Unsupported DataType of training loss value");
-
-        return scalar;
-    }
-
-    static size_t GetSampleCount(const Variable& var, const ValuePtr& value)
-    {
-        auto valueDataShape = value->Shape();
-        size_t numMaskedSamples = value->MaskedCount();
-        size_t numSamplesInDataArrayView = valueDataShape.SubShape(var.Shape().Rank()).TotalSize();
-        if (numMaskedSamples > numSamplesInDataArrayView)
-            LogicError("Number of masked values cannot exceed the number of samples that the Value object's Data NDArrayView can hold");
-
-        return (numSamplesInDataArrayView - numMaskedSamples);
-    }
-
-    static std::unordered_map<Variable, ValuePtr> GetInputs(const std::unordered_map<Variable, MinibatchData>& arguments)
-    {
-        std::unordered_map<Variable, ValuePtr> inputs(arguments.size());
-        for (const auto& kv : arguments)
-        {
-            inputs[kv.first] = kv.second.data;
-        }
-        return inputs;
-    }
-
-    static bool IsAtSweepEnd(const std::unordered_map<Variable, MinibatchData>& arguments)
-    {
-        return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const Variable, MinibatchData>& kv)
-        {
-            return kv.second.sweepEnd;
-        });
-    }
-
-    double Trainer::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
-    {
-        return TestMinibatch(GetInputs(arguments), computeDevice);
-    }
-
-    double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
-    {
-        if (!m_aggregatedEvaluationFunction)
-            InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
-
-        // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
-
-        m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
-
-        auto sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
-        return (GetScalarValue(outputs[m_aggregatedEvaluationFunction]) / sampleCount);
     }
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
@@ -177,32 +154,57 @@ namespace CNTK
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        if (!m_distributed)
-            return TrainLocalMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice);
-        return TrainDistributedMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice);
+#ifndef  CNTK_UWP
+        auto profMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainMinibatch);
+#endif
+
+        bool result = (!m_distributed) ?
+            TrainLocalMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice) :
+            TrainDistributedMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice);
+
+        // TODO: exclude updating progress writers from profiling?
+        UpdateTrainingProgress(m_prevMinibatchNumSamples, m_prevMinibatchAggregateTrainingLossValue,
+                               m_prevMinibatchAggregateEvalCriterionValue, computeDevice);
+        return result;
     }
 
-    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, bool isSweepEndInArguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
-        return TrainMinibatch(arguments, outputsToFetch, computeDevice);
+        return TrainMinibatch(arguments, isSweepEndInArguments, outputsToFetch, computeDevice);
     }
 
-    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, bool isSweepEndInArguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        if (!m_distributed)
-            return TrainLocalMinibatch(arguments, outputsToFetch, false, computeDevice);
-        return TrainDistributedMinibatch(arguments, outputsToFetch, false, computeDevice);
+#ifndef  CNTK_UWP
+        auto profMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainMinibatch);
+#endif
+
+        bool result = (!m_distributed) ?
+            TrainLocalMinibatch(arguments, outputsToFetch, isSweepEndInArguments, computeDevice) :
+            TrainDistributedMinibatch(arguments, outputsToFetch, isSweepEndInArguments, computeDevice);
+
+        // TODO: exclude updating progress writers from profiling?
+        UpdateTrainingProgress(m_prevMinibatchNumSamples, m_prevMinibatchAggregateTrainingLossValue,
+                               m_prevMinibatchAggregateEvalCriterionValue, computeDevice);
+        return result;
     }
 
     bool Trainer::TrainLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         bool emptyMinibatch = arguments.empty() || (arguments.begin()->second == nullptr);
         if (emptyMinibatch) // Nothing to train with.
+        {
+            m_prevMinibatchNumSamples = 0;
             return false;
+        }
 
         std::unordered_map<Variable, ValuePtr> parameterGradients;
         ExecuteForwardBackward(arguments, outputsToFetch, computeDevice, parameterGradients);
+
+#ifndef  CNTK_UWP
+        auto profWeights = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainWeights);
+#endif
 
         std::unordered_map<Parameter, NDArrayViewPtr> gradients;
         for (const auto& parameter : m_learnerParameters)
@@ -236,6 +238,9 @@ namespace CNTK
             evalCriterion = m_prevMinibatchAggregateEvalCriterionValue->Data();
         }
 
+        auto currentWorkerNumSamples = m_prevMinibatchNumSamples;
+        auto prevTotalNumSamples = TotalNumberOfSamplesSeen();
+
         MinibatchInfo info{ arguments.empty(), sweepEnd, m_prevMinibatchNumSamples, trainingLoss, evalCriterion };
         bool updated = m_parameterLearners->Update(gradients, info);
         m_prevMinibatchNumSamples = info.numberOfSamples;
@@ -247,11 +252,89 @@ namespace CNTK
             m_prevMinibatchAggregateEvalCriterionValue = std::make_shared<Value>(info.evalCriterionValue);
             m_prevMinibatchAggregateTrainingLossValue = std::make_shared<Value>(info.trainingLossValue);
         }
+
+        // Did we do a distributed sync?
+        // We determine this by checking if the increase in total #samples is > #samples processed by local worker
+        auto currentTotalNumSamples = TotalNumberOfSamplesSeen();
+        if ((currentTotalNumSamples - prevTotalNumSamples) > currentWorkerNumSamples)
+        {
+            for (auto& progressWriter : m_progressWriters)
+                progressWriter->UpdateDistributedSync(currentTotalNumSamples - m_prevDistributedTotalNumSamples, nullptr);
+
+            m_prevDistributedTotalNumSamples = currentTotalNumSamples;
+        }
+
         return updated;
+    }
+
+    void Trainer::UpdateTrainingProgress(size_t numSamples, const ValuePtr& loss, const ValuePtr& evalCriterion,
+                                         const DeviceDescriptor& computeDevice)
+    {
+        if (numSamples == 0)
+        {
+            return;
+        }
+
+        m_aggregatedTrainingLossValue->Update(loss, computeDevice);
+     
+        if (m_aggregatedTrainingEvalCriterionValue)
+        {
+            m_aggregatedTrainingEvalCriterionValue->Update(evalCriterion, computeDevice);
+        }
+
+        for (auto& progressWriter : m_progressWriters)
+        {
+            progressWriter->UpdateTraining(numSamples, m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
+        }
+    }
+
+    void Trainer::SummarizeTrainingProgress()
+    {
+        // Aggregate across workers training loss and eval criteria. Needed for BMUF like learner which don't aggregate after every minibatch.
+        if (m_parameterLearners->DoAggregateMetricsIfNeededLambda)
+        {
+            NDArrayViewPtr localLossValue = nullptr;
+            if (m_aggregatedTrainingLossValue && m_aggregatedTrainingLossValue->IsInitialized())
+            {
+                localLossValue = m_aggregatedTrainingLossValue->Data();
+            }
+
+            NDArrayViewPtr localEvalCriterion = nullptr;
+            if (m_aggregatedTrainingEvalCriterionValue && m_aggregatedTrainingEvalCriterionValue->IsInitialized())
+            {
+                localEvalCriterion = m_aggregatedTrainingEvalCriterionValue->Data();
+            }
+
+            m_parameterLearners->DoAggregateMetricsIfNeededLambda(localLossValue, localEvalCriterion);
+        }
+
+        for (auto& progressWriter : m_progressWriters)
+        {
+            progressWriter->WriteTrainingSummary(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
+        }
+
+        m_aggregatedTrainingLossValue->Reset();
+
+        if (m_aggregatedTrainingEvalCriterionValue)
+        {
+            m_aggregatedTrainingEvalCriterionValue->Reset();
+        }
+    }
+
+    void Trainer::AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters)
+    {
+        for (auto& learner : m_parameterLearners->ParameterLearners()) 
+        {
+            learner->AddProgressWriters(progressWriters);
+        }
+        m_progressWriters.insert(progressWriters.begin(), progressWriters.end());
     }
 
     void Trainer::ExecuteForwardBackward(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, std::unordered_map<Variable, ValuePtr>& parameterGradients)
     {
+#ifndef  CNTK_UWP
+        auto profForwardBackward = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainFB);
+#endif
         std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedLossFunction, nullptr }, { m_trainingSampleCountVar, nullptr } };
         if (m_aggregatedEvaluationFunction)
             outputs.insert({ m_aggregatedEvaluationFunction, nullptr });
@@ -300,15 +383,22 @@ namespace CNTK
     void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, Dictionary externalState)
     {
         auto learnersState = m_parameterLearners->CreateCheckpoint();
+
         if (!m_distributed)
             return Save(modelFilePath, learnersState, externalState);
+
+        auto compositeFunction = dynamic_cast<CompositeFunction*>(m_combinedTrainingFunction.get());
+
+        Dictionary state;
+        state[internalWorkerStateKey] = compositeFunction->GetInternalState(); // this is the local worker's state.
+        state[externalWorkerStateKey] = externalState;
 
         // Collect distrbuted external state.
         DistributedCommunicatorPtr communicator = MPICommunicator();
         communicator->Barrier();
 
         std::vector<DictionaryPtr> remoteState;
-        communicator->Gather(externalState, remoteState, communicator->Workers());
+        communicator->Gather(state, remoteState, communicator->Workers());
 
         Dictionary aggregatedState;
         for (const auto& w : communicator->Workers())
@@ -317,26 +407,29 @@ namespace CNTK
         }
 
         if (communicator->CurrentWorker().IsMain())
-            Save(modelFilePath, learnersState, aggregatedState);
+            Save(modelFilePath, learnersState, externalState, aggregatedState);
 
         // all workers need to sync up after saving model to avoid read-after-write hazard
         // i.e. one worker is in the middle of write while another tries to read
         communicator->Barrier();
     }
 
-    void Trainer::Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState)
+    void Trainer::Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState, const Dictionary& distributedState)
     {
         std::wstring tempModelFile = modelFilePath + L".tmp";
         Dictionary state;
+        state[versionPropertyName] = trainerCheckpointVersion;
         state[learnersPropertyName] = learnerState;
         state[externalStatePropertyName] = externalState;
+        state[distributedStatePropertyName] = distributedState;
 
-        m_combinedTrainingFunction->SaveModel(tempModelFile);
+        m_combinedTrainingFunction->Save(tempModelFile);
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         std::wstring tempCheckpointFile = trainerStateCheckpointFilePath + L".tmp";
 
         state.Save(tempCheckpointFile);
 
+        // The return value is ignored here.
         _wunlink(modelFilePath.c_str());
         _wunlink(trainerStateCheckpointFilePath.c_str());
 
@@ -347,34 +440,70 @@ namespace CNTK
     Dictionary Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
         // Restore the model's parameters
-        m_combinedTrainingFunction->RestoreModel(modelFilePath);
+        m_combinedTrainingFunction->Restore(modelFilePath);
 
         Dictionary checkpoint = Dictionary::Load(GetTrainerStateCheckpointFilePath(modelFilePath));
 
+        size_t version = 0;
+
+        if (checkpoint.Contains(versionPropertyName))
+            version = checkpoint[versionPropertyName].Value<size_t>();
+        
         auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>();
         auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
 
+        m_parameterLearners->RestoreFromCheckpoint(learnerState);
+
         if (!m_distributed)
         {
-            m_parameterLearners->RestoreFromCheckpoint(learnerState);
             return externalState;
         }
 
-        m_parameterLearners->RestoreFromCheckpoint(learnerState);
+        // this ensures that nobody will start writing to the model/checkpoint files, until
+        // everybody is done reading them.
         DistributedCommunicatorPtr communicator = MPICommunicator();
         communicator->Barrier();
 
-        auto key = std::to_wstring(communicator->CurrentWorker().m_globalRank);
+        auto mainWorkerId = std::to_wstring(0);
+        auto localWorkerId = std::to_wstring(communicator->CurrentWorker().m_globalRank);
 
-        if (externalState.Contains(key))
+        // before version 1, there was no distributed state per se. Instead, the external state
+        // contained a dictionary of worker-specific external states.
+        if (version == 0)
+        {
+            auto key = externalState.Contains(localWorkerId) ? localWorkerId : mainWorkerId;
             return externalState[key].Value<Dictionary>();
-        else
-            return externalState[std::to_wstring(0)].Value<Dictionary>();
+        }
+
+        Dictionary distributedState = checkpoint[distributedStatePropertyName].Value<Dictionary>();
+
+        if (communicator->CurrentWorker().IsMain() || !distributedState.Contains(localWorkerId))
+        {
+            return externalState;
+        }
+        
+        // the checkpoint contains internal state for this worker.
+        Dictionary localState = distributedState[localWorkerId].Value<Dictionary>();
+
+        auto internalState = localState[internalWorkerStateKey].Value<Dictionary>();
+        auto compositeFunction = std::dynamic_pointer_cast<CompositeFunction>(m_combinedTrainingFunction);
+        if (compositeFunction == nullptr)
+            RuntimeError("Combined training function is not a CompositeFunction.");
+            
+        // this assumes the compositeFunction (restored form a checkpoint made by the main node) and 
+        // the internal worker state both have identical UIDs.
+        compositeFunction->SetInternalState(internalState);
+        
+        return localState[externalWorkerStateKey].Value<Dictionary>();
     }
 
     double Trainer::PreviousMinibatchLossAverage() const
     {
-        return (GetScalarValue(m_prevMinibatchAggregateTrainingLossValue) / m_prevMinibatchNumSamples);
+        // TODO: better return 0; it is then still valid to compute lossAverage * numSamples
+        if (m_prevMinibatchNumSamples == 0)
+            RuntimeError("There was no preceeding call to TrainMinibatch or the minibatch was empty.");
+
+        return m_prevMinibatchAggregateTrainingLossValue->AsScalar<double>() / m_prevMinibatchNumSamples;
     }
 
     double Trainer::PreviousMinibatchEvaluationAverage() const
@@ -382,7 +511,10 @@ namespace CNTK
         if (!m_evaluationFunction)
             InvalidArgument("Trainer::PreviousMinibatchEvaluationAverage: Cannot get evaluation criterion value when no evaluation function was specified during 'this' trainer's construction");
 
-        return (GetScalarValue(m_prevMinibatchAggregateEvalCriterionValue) / m_prevMinibatchNumSamples);
+        if (m_prevMinibatchNumSamples == 0)
+            RuntimeError("There was no preceeding call to TrainMinibatch or the minibatch was empty.");
+
+        return m_prevMinibatchAggregateEvalCriterionValue->AsScalar<double>() / m_prevMinibatchNumSamples;
     }
 
     const std::vector<LearnerPtr>& Trainer::ParameterLearners() const
@@ -395,13 +527,33 @@ namespace CNTK
         return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
     }
 
-    TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners)
+    size_t Trainer::TotalNumberOfUnitsSeen(DataUnit unit) const
     {
-        return MakeSharedObject<Trainer>(model, lossFunction, parameterLearners);
+        switch (unit)
+        {
+        case DataUnit::Minibatch:
+            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfMinibatchesSeen();
+            break;
+        case DataUnit::Sweep:
+            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSweepsSeen();
+            break;
+        case DataUnit::Sample:
+            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
+        default:
+            //should not be here; whenever a new data unit is defined, there should be a new case in this function.
+            LogicError("Unsupported data unit: %d", unit);
+        }
     }
 
-    TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
+    TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners,
+                             const std::vector<ProgressWriterPtr>& progressWriters)
     {
-        return MakeSharedObject<Trainer>(model, lossFunction, evaluationFunction, parameterLearners);
+        return MakeSharedObject<Trainer>(model, lossFunction, parameterLearners, progressWriters);
+    }
+
+    TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners,
+                             const std::vector<ProgressWriterPtr>& progressWriters)
+    {
+        return MakeSharedObject<Trainer>(model, lossFunction, evaluationFunction, parameterLearners, progressWriters);
     }
 }

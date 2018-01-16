@@ -22,10 +22,10 @@ trainNetwork = {
     BrainScriptNetworkBuilder = {
         cMap = 1
         model = inputFeatures => {
-            conv1   = ConvolutionalLayer {cMap, (5:5), pad = true, activation=ReLU}(inputFeatures)
+            conv1   = ConvolutionalLayer {cMap, (5:5), pad=true, activation=ReLU}(inputFeatures)
             pool1   = MaxPoolingLayer {(4:4), stride=(4:4)}(conv1)
             unpool1 = MaxUnpoolingLayer {(4:4), stride=(4:4)}(pool1, conv1)
-            deconv1 = DeconvLayer {1, (5:5), cMap, lowerPad=(2:2:0), upperPad=(2:2:0), bias=false}(unpool1)
+            deconv1 = ConvolutionTransposeLayer {1, (5:5), cMap, pad=true, bias=false}(unpool1)
         }.deconv1
 
         # inputs

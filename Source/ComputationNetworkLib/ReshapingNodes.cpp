@@ -22,6 +22,9 @@
 #include <assert.h>
 #include <stack>
 #include <unordered_map>
+#include <numeric>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -36,10 +39,11 @@ template <class ElemType>
     if (flags & CopyNodeFlags::copyNodeValue)
     {
         auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
-        node->m_axis        = m_axis;
+        node->m_axes        = m_axes;
         node->m_operation   = m_operation;
         node->m_reductionOp = m_reductionOp;
         node->m_scale       = m_scale;
+        node->m_keepDimensions = m_keepDimensions;
     }
 }
 
@@ -47,7 +51,22 @@ template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Load(File& fstream, size_t modelVersion) /*override*/
 {
     Base::Load(fstream, modelVersion);
-    fstream >> m_axis >> m_operation;
+    m_axes.clear();
+    int num_axes = 1; //emulate old version in which only 1 axis is supported
+    if (modelVersion >= CNTK_MODEL_VERSION_27)
+        fstream >> num_axes;
+    for (int i = 0; i < num_axes; ++i)
+    {
+        int axis; 
+        fstream >> axis;
+        m_axes.push_back(axis);
+    }
+    fstream >> m_operation;
+    if (modelVersion >= CNTK_MODEL_VERSION_24)
+        fstream >> m_keepDimensions;
+    else
+        m_keepDimensions = DefaultKeepDimensionsSetting(m_axes);
+
     ValidateOp();
 }
 
@@ -55,20 +74,76 @@ template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Save(File& fstream) const /*override*/
 {
     Base::Save(fstream);
-    fstream << m_axis << m_operation; // note: we serialize the string and not the opcode, since opcodes may change
+    fstream << ((int) m_axes.size());
+    for (int i = 0; i < m_axes.size(); ++i)
+    {
+        fstream << m_axes[i];
+    }
+    fstream << m_operation; // note: we serialize the string and not the opcode, since opcodes may change
+    fstream << m_keepDimensions;
 }
 
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
+    // We are mixing two kinds of operations here; elementwise and whole-batch or sequence reduction (ReduceAllAxes()).
+    // In the latter case, we must mimic the behavior of ComputationNodeNonLooping.
+    if ((ReduceAllAxes() || ReduceSequenceAxis() || ReduceBatchAxis()) && !fr.IsAllFrames())
+        LogicError("%ls: %s node should never be in a loop when reducing over all static and dynamic axes or just the sequence axis.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+    const auto frInput = (ReduceAllAxes() || ReduceBatchAxis()) ? FrameRange(InputRef(0).GetMBLayout()) : fr; // can't use 'fr' for ReduceAllAxes() and ReduceBatchAxis() as it refers to the result (same as for training criteria)
+
+    // when reducing all, we must mask gaps
+    if (ReduceAllAxes() || ReduceBatchAxis())
+    {
+        InputRef(0).MaskMissingValueColumnsTo(frInput, NeutralValue(m_reductionOp));
+        if (IsMean())
+        {
+            // In mean reduction for all axes or batch axis, we need to carefully compute the scaling factor
+            auto actual_samples = InputRef(0).HasMBLayout() ? InputRef(0).GetMBLayout()->GetActualNumSamples() : 1;
+            m_scale = ElemType(1.0 / actual_samples);
+            if (ReduceAllAxes())
+                m_scale /= ElemType(GetInputSampleLayout(0).GetNumElements());
+        }
+    }
+
+    // Create a new layout if we are reducing the sequence axis
+    if (ReduceSequenceAxis())
+    {
+        auto inputMBLayout = InputRef(0).GetMBLayout();
+        if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
+            LogicError("%ls: %s node cannot perform sequence axis reduction for truncated sequence.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+        GetMBLayout()->InitAsFrameMode(inputMBLayout->GetNumSequences());
+        UpdateFunctionValuesSize();
+    }
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
-    auto result =             ValueTensorFor(rank, fr);
-    auto input  = InputRef(0).ValueTensorFor(rank, fr);
+    TensorView<ElemType> input;
+    if (ReduceSequenceAxis())
+    {
+        ElemType gapPadValue = NeutralValue(m_reductionOp);
+        input = ComputationNode<ElemType>::Unpack(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ true, &gapPadValue);
+    }
+    else
+        input = InputRef(0).ValueTensorFor(rank, frInput);
 
-    // the actual operation is a Copy with reduction, where the magic is in the reduction op
-    // For "Mean", m_scale is 1/#elements, and 1 otherwise.
-    result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+    auto result = ReduceAllAxes() ? TensorView<ElemType>(ValuePtr(), GetSampleLayout()) : ValueTensorFor(rank, fr);
+
+    switch (m_reductionOp)
+    {
+    case ElementWiseOperator::opArgmin:
+    case ElementWiseOperator::opArgmax:
+        if (m_axes.size() > 1)
+            LogicError("%ls: %s node cannot perform argmin or argmax operator over multiple axes.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+        result.DoArgReductionOpOf(input, m_reductionOp);
+        break;
+    default:
+        // the actual operation is a Copy with reduction, where the magic is in the reduction op
+        // For "Mean", m_scale is 1/#elements, and 1 otherwise.
+        result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+    }
 }
 
 template <class ElemType>
@@ -76,54 +151,89 @@ template <class ElemType>
 {
     assert(inputIndex == 0), inputIndex;
 
-    // get the args
-    size_t rank = DetermineElementwiseTensorRank();
-    auto sliceOutputGrad =             GradientTensorFor(rank, fr); // propagate from this one...
-    auto sliceInputGrad  = InputRef(0).GradientTensorFor(rank, fr); // ...to this one
-
-    // gradients are not as simple as passing an op-code, unfortunately
-    switch (m_reductionOp)
+    bool accumulateGradient = !InputRef(inputIndex).IsGradientInitializedBy(this);
+    if (ReduceSequenceAxis())
     {
-    case ElementWiseOperator::opSum:
-        // "Sum":  broadcast the gradient
-        // "Mean": same as "Sum" with scaling by 1/#dims
-        sliceInputGrad.AddCopyOf(sliceOutputGrad, m_scale);
-        break;
+        // Broadcast along the sequence
+        auto result = ValueFor(fr);
+        ComputationNode<ElemType>::BroadcastToPacked(Gradient(), GetMBLayout(), /*beta =*/ accumulateGradient ? (ElemType)1 : (ElemType)0, InputRef(0).Gradient(), FrameRange(InputRef(0).GetMBLayout()), m_tempGatherIndices);
+    }
+    else
+    {
+        const auto frInput = (ReduceAllAxes() || ReduceBatchAxis()) ? FrameRange(InputRef(0).GetMBLayout()) : fr; // can't use 'fr' for ReduceAllAxes() as it refers to the result (same as for training criteria)
+                                                                                        // get the args
+        size_t rank = DetermineElementwiseTensorRank();
+        auto sliceOutputGrad = ReduceAllAxes() ? TensorView<ElemType>(GradientPtr(), GetSampleLayout()) : GradientTensorFor(rank, fr); // propagate from this one...
+        auto sliceInputGrad = InputRef(0).GradientTensorFor(rank, frInput); // ...to this one
 
-    case ElementWiseOperator::opLogSum:
+        // gradients are not as simple as passing an op-code, unfortunately
+        switch (m_reductionOp)
         {
-            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
+        case ElementWiseOperator::opSum:
+            // "Sum":  broadcast the gradient
+            // "Mean": same as "Sum" with scaling by 1/#dims
+            if (accumulateGradient)
+                sliceInputGrad.AddCopyOf(sliceOutputGrad, m_scale);
+            else
+                sliceInputGrad.AssignCopyOf(sliceOutputGrad, m_scale);
+            break;
+
+        case ElementWiseOperator::opLogSum:
+        {
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
             auto output = ValueTensorFor(rank, fr.AllowBroadcast());
             // Let: f(x, y, z) = log(exp x + exp y + exp z)
             // For the derivative we get:
             // df / dx = exp(x)/exp(f)
-            //         = exp(x – f)
-            sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
-    }
+            //         = exp(x - f)
+            if (accumulateGradient)
+                sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
+            else
+                sliceInputGrad.AssignElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
+        }
         break;
 
-    case ElementWiseOperator::opMin:
-    case ElementWiseOperator::opMax:
-        auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
-        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+        case ElementWiseOperator::opMin:
+        case ElementWiseOperator::opMax:
+        {
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
-        // POTENTIAL PROBLEM:
-        // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
-        // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
-        // In these cases there is no correct gradient.The question is if this could lead to any problems.
-        // Let's look at two scenarios where this might happen:
-        //
-        // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
-        //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
-        //
-        // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
-        //
-        // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
-        // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
-        sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+            // POTENTIAL PROBLEM:
+            // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
+            // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
+            // In these cases there is no correct gradient.The question is if this could lead to any problems.
+            // Let's look at two scenarios where this might happen:
+            //
+            // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
+            //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
+            //
+            // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
+            //
+            // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
+            // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
+            if (accumulateGradient)
+                sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+            else
+                sliceInputGrad.AssignCopyIfEqualOf(input, output, sliceOutputGrad);
+        }
         break;
+        case ElementWiseOperator::opElementwiseProduct:
+        {
+            auto input  = InputRef(inputIndex).ValueTensorFor(rank, frInput);
+            auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
+            if (accumulateGradient)
+                sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
+            else
+                sliceInputGrad.AssignElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
+            break;
+        }
+        case ElementWiseOperator::opArgmin:
+        case ElementWiseOperator::opArgmax:
+            break;
 
-        // more coming
+            // more coming
+        }
     }
 }
 
@@ -132,10 +242,13 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum:    return false;
-    case ElementWiseOperator::opLogSum: return true;
-    case ElementWiseOperator::opMin:    return true;
-    case ElementWiseOperator::opMax:    return true;
+    case ElementWiseOperator::opSum:                   return false;
+    case ElementWiseOperator::opLogSum:                return true;
+    case ElementWiseOperator::opMin:                   return true;
+    case ElementWiseOperator::opMax:                   return true;
+    case ElementWiseOperator::opElementwiseProduct:    return true;
+    case ElementWiseOperator::opArgmin:                return false;
+    case ElementWiseOperator::opArgmax:                return false;
     }
     LogicError("Should not get here.");
 }
@@ -145,10 +258,13 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum:    return false;
-    case ElementWiseOperator::opLogSum: return true;
-    case ElementWiseOperator::opMin:    return true;
-    case ElementWiseOperator::opMax:    return true;
+    case ElementWiseOperator::opSum:                   return false;
+    case ElementWiseOperator::opLogSum:                return true;
+    case ElementWiseOperator::opMin:                   return true;
+    case ElementWiseOperator::opMax:                   return true;
+    case ElementWiseOperator::opElementwiseProduct:    return true;
+    case ElementWiseOperator::opArgmin:                return false;
+    case ElementWiseOperator::opArgmax:                return false;
     }
     LogicError("Should not get here.");
 }
@@ -157,52 +273,102 @@ template <class ElemType>
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
-#if 1 // legacy with initial experiments, delete this soon
-    if (m_operation == L"Plus") m_reductionOp = ElementWiseOperator::opSum;
-    else
-#endif
-    if      (m_operation == L"Sum")    m_reductionOp = ElementWiseOperator::opSum;
-    else if (m_operation == L"Mean")   m_reductionOp = ElementWiseOperator::opSum;
-    else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
-    else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
-    else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
-
-    // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min'.", NodeDescription().c_str(), m_operation.c_str());
+    m_reductionOp = ReductionOpEnumValue(m_operation);
 }
 
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Validate(bool isFinalValidationPass) /*override*/
 {
-    Base::Validate(isFinalValidationPass);
-    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-
     // validate the opcode (in case we got instantiated empty and never updated)
     ValidateOp();
 
-    let shape = Input(0)->GetSampleLayout();
-    auto dims = shape.GetDims();
-    size_t reducedDim = 0; // (init to keep compiler happy)
-    if (m_axis == 0)
+    m_scale = (ElemType)1;
+    if (ReduceAllAxes())
+        Base::ValidateUnaryReduce(isFinalValidationPass, m_keepDimensions);
+    else if (ReduceSequenceAxis())
     {
-        reducedDim = shape.GetNumElements();
-        dims = { 1 };                       // entire sample is reduced to a scalar
-    }
-    else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
-    {
-        reducedDim = dims[m_axis - 1];
-        dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
-    }
-    else if (isFinalValidationPass)
-        InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
+        Base::Validate(isFinalValidationPass);
 
-    // for "Mean", we must divide by #elements
-    if (isFinalValidationPass && m_operation == L"Mean")
-        m_scale = (ElemType)(1.0 / reducedDim);
+        // we generate its own MBLayout
+        if (isFinalValidationPass && !Input(0)->HasMBLayout())
+            InvalidArgument("%ls %ls operation can perform sequence axis reduction only on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+
+        if ((m_operation != L"Sum") && (m_operation != L"Plus"))
+            InvalidArgument("%ls %ls operation can perform sequence axis reduction only for the 'sum' reduction operation, specified operation %ls.", NodeName().c_str(), OperationName().c_str(), m_operation.c_str());
+
+        if (!m_pMBLayout)
+        {
+            m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+            m_pMBLayout->SetUniqueAxisName(ComputationNodeBase::DefaultNoSequenceAxisName);
+        }
+
+        SetDims(Input(0)->GetSampleLayout(), HasMBLayout());
+    }
+    else if (ReduceBatchAxis())
+    {
+        Base::Validate(isFinalValidationPass);
+        if (isFinalValidationPass && !Input(0)->HasMBLayout())
+            InvalidArgument("%ls %ls operation can perform batch axis reduction only on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+
+        SetDims(Input(0)->GetSampleLayout(), false);
+    }
     else
-        m_scale = (ElemType)1;
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-    SetDims(TensorShape(dims), Input(0)->HasMBLayout());
+        let shape = Input(0)->GetSampleLayout();
+        auto dims = shape.GetDims();
+        size_t reducedDimProd = 1; 
+        if (ReduceAllStaticAxes())
+        {
+            reducedDimProd = shape.GetNumElements();
+            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : (Environment().IsV2Library() ? SmallVector<size_t>({}) : SmallVector<size_t>({ 1 })); // entire sample is reduced to a scalar
+        }
+        else if (!m_axes.empty() 
+                && std::all_of(m_axes.begin(), 
+                                m_axes.end(), 
+                                [&dims](int axis) { return axis - 1 >= 0 && axis - 1 < dims.size(); }))
+        {
+            //Accumulate the number of elements for reduce_mean
+            reducedDimProd = std::accumulate(m_axes.begin(),
+                                                m_axes.end(), 
+                                                1, 
+                                                [&dims](size_t acc, int& axis) { return acc * dims[axis - 1]; });
+
+            // axes reduced to a scalar
+            if (m_keepDimensions)
+                std::for_each(m_axes.begin(),
+                    m_axes.end(),
+                    [&dims](int axis) {dims[axis - 1] = 1; }
+                 );
+            else
+            {
+                SmallVector<size_t> reducedDims(dims.size() - m_axes.size());
+                for (size_t i = 0, j = 0; i < dims.size(); ++i)
+                {
+                    if (Contains(m_axes, i + 1)) //note that axis = (i + 1) --- starting from 1 instead of 0
+                        continue;
+                    reducedDims[j] = dims[i];
+                    j++;
+                }
+                dims = reducedDims;
+            }
+        }
+        else if (isFinalValidationPass) 
+        {
+            InvalidArgument("The shape of %ls [%ls] can not be reduced along axes [%ls]",
+                NodeDescription().c_str(),
+                wstring(shape).c_str(),
+                boost::algorithm::join(m_axes | boost::adaptors::transformed([](int axis) { return std::to_wstring(axis); }), ", ").c_str()
+            );
+        }
+        // for "Mean", we must divide by #elements
+        if (isFinalValidationPass && IsMean())
+            m_scale = (ElemType)(1.0 / reducedDimProd);
+
+        SetDims(TensorShape(dims), Input(0)->HasMBLayout());
+    }
 }
 
 template class ReduceElementsNode<float>;
@@ -253,10 +419,22 @@ template <class ElemType>
         if (seq.seqId == GAP_SEQUENCE_ID)
             continue;
         auto& indexSequence = indexSequences[i];
+        // create index map for one sequence
+        // this is the condition check that this node performs; the meat
         indexSequence.clear();
+        double desiredCount = 0.0;
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
-            if (input(0, inMBLayout->GetColumnIndex(seq, t))) // this is the condition check that this node performs; the meat
+        {
+            double delta = input(0, inMBLayout->GetColumnIndex(seq, t)); // how many frames the current time step should expand into
+            desiredCount += delta; // this is now how many frames we should have
+            // use a margin against round-off errors, so that we get non-binary ratios like 1/3 and 1/5 right
+            // This really means generate a frame if too few, unless we are within machine accuracy of the target.
+            // The assumption is that the delta has this error, while accumulation (in double) has no error.
+            ElemType relativeMargin = 1 - std::numeric_limits<ElemType>::epsilon();
+            while ((indexSequence.empty() && desiredCount > 0)  // no margin for the first frame (always include unless flag is 0)
+                   || indexSequence.size() < desiredCount * relativeMargin)
                 indexSequence.push_back(t);
+        }
         // Note: The above accesses m_value directly on the CPU, putting it into BOTH state, possibly for other consumers as well.
     }
     input.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
@@ -307,7 +485,7 @@ template <class ElemType>
     // we map scalars to scalars
     if (isFinalValidationPass && Input(0)->GetSampleLayout().GetNumElements() != 1)
         InvalidArgument("%ls %ls operation can only operate on scalar input.", NodeName().c_str(), OperationName().c_str());
-    SetDims(TensorShape(1), true);
+    SetDims(TensorShape::Scalar(Environment().IsV2Library()), true);
 }
 
 template class WhereNode<float>;
@@ -323,7 +501,7 @@ template <class ElemType>
     let& sourceMBLayout = InputRef(SOURCEDATA).GetMBLayout(); // only used for index conversion
     let& indexMBLayout  = InputRef(INDEXDATA).GetMBLayout();
     let&  index  = InputRef(INDEXDATA).Value(); // per-seq index values that are to be mapped
-    auto& result =                   Value(); // packed index values as mapped to sourceData's layout
+    auto& result =                     Value(); // packed index values as mapped to sourceData's layout
     // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
     // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
@@ -333,8 +511,8 @@ template <class ElemType>
         let& sourceSeq = sourceSequences[i];
         if (sourceSeq.seqId == GAP_SEQUENCE_ID)
             continue;
-        let& indexSeq = indexMBLayout->FindSequence(sourceSeq.seqId);          // find corresponding entry in indexMBLayout
-        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++) // map all index values in index sequence
+        let& indexSeq = indexMBLayout->FindMatchingSequence(sourceSequences, i); // find corresponding entry in indexMBLayout
+        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++)   // map all index values in index sequence
         {
             let jIndex  = indexMBLayout->GetColumnIndex(indexSeq, tIndex);    // map time index to actual location in the matrix storage object
             let tSource = (size_t)index(0, jIndex);                           // the new time location (relative to source sequence)
@@ -384,7 +562,20 @@ template <class ElemType>
     InputRef(INDEXDATA).MaskMissingValueColumnsTo(FrameRange(InputRef(INDEXDATA).GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
     let&  index  = InputRef(INDEXDATA) .Value(); // column indices to copy from
     let&  source = InputRef(SOURCEDATA).Value(); // source data to copy
-    auto& output =                      Value(); // output goes here
+
+#ifdef _MSC_VER
+    auto& outputValuePtrRef = ValuePtrRef();
+#else
+    auto& outputValuePtrRef = this->template ValuePtrRef();
+#endif
+    if ((source.GetMatrixType() == SPARSE) && (outputValuePtrRef->GetMatrixType() != SPARSE))
+        outputValuePtrRef = std::make_shared<Matrix<ElemType>>(outputValuePtrRef->GetNumRows(),
+                                                               outputValuePtrRef->GetNumCols(),
+                                                               outputValuePtrRef->GetPreferredDeviceId(),
+                                                               source.GetMatrixType(),
+                                                               source.GetFormat());
+
+    auto& output = Value(); // output goes here
     output.DoGatherColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
 }
 
@@ -445,6 +636,19 @@ template <class ElemType>
     InputRef(INDEXDATA).MaskMissingValueColumnsTo(FrameRange(InputRef(INDEXDATA).GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
     let&  index  = InputRef(INDEXDATA) .Value(); // column indices to copy from
     let&  source = InputRef(SOURCEDATA).Value(); // source data to copy
+
+#ifdef _MSC_VER
+    auto& outputValuePtrRef = ValuePtrRef();
+#else
+    auto& outputValuePtrRef = this->template ValuePtrRef();
+#endif
+    if ((source.GetMatrixType() == SPARSE) && (outputValuePtrRef->GetMatrixType() != SPARSE))
+        outputValuePtrRef = std::make_shared<Matrix<ElemType>>(outputValuePtrRef->GetNumRows(),
+                                                               outputValuePtrRef->GetNumCols(),
+                                                               outputValuePtrRef->GetPreferredDeviceId(),
+                                                               source.GetMatrixType(),
+                                                               source.GetFormat());
+
     auto& output =                      Value(); // output goes here
     output.DoScatterColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
 }

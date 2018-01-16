@@ -70,7 +70,7 @@ long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, s
         {
             if (canMultiplePassData)
             {
-                ParseReset(); // restart from the corpus begining
+                ParseReset(); // restart from the corpus beginning
                 continue;
             }
             else

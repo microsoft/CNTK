@@ -23,6 +23,7 @@
 #include "tensorboard/tensorboard.pb.h"
 #pragma warning(pop)
 
+#include "BackCompat.h"
 #include "fileutil.h"
 #include "hostname.h"
 #include "tensorboard/TensorBoardUtils.h"
@@ -81,10 +82,16 @@ namespace CNTK
         {
         }
 
+        TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir,
+                                                     const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize)
+            : TensorBoardFileWriter(dir, ConvertFromLegacyModel(modelToVisualize))
+        {
+        }
+
         void TensorBoardFileWriter::Init()
         {
             time_t time = std::time(0);
-            std::wstring filePath = Internal::GetNewFilePath(m_dir, time);
+            std::wstring filePath = GetNewFilePath(m_dir, time);
 
             msra::files::make_intermediate_dirs(filePath);
 
@@ -114,7 +121,7 @@ namespace CNTK
             summaryValue->set_tag(ToString(name));
             summaryValue->set_simple_value(value);
 
-            WriteRecord(Internal::Serialize(event));
+            WriteRecord(Serialize(event));
         }
 
         void TensorBoardFileWriter::WriteModel()
@@ -123,7 +130,7 @@ namespace CNTK
 
             // Convert the model to tensorflow GraphDef first.
             tensorflow::GraphDef graph;
-            TensorBoardUtils::CreateGraph(m_model->RootFunction(), graph);
+            CreateTensorBoardGraph(m_model->RootFunction(), graph);
 
             std::string graphStr;
             graph.AppendToString(&graphStr);
@@ -133,7 +140,7 @@ namespace CNTK
             event.set_wall_time(static_cast<double>(std::time(0)));
             event.set_graph_def(graphStr);
 
-            WriteRecord(Internal::Serialize(event));
+            WriteRecord(Serialize(event));
         }
 
         void TensorBoardFileWriter::WriteRecord(const std::string& data)
@@ -145,12 +152,12 @@ namespace CNTK
 
             // Header: record length (uint64_t) + masked CRC of that (uint32_t).
             char header[sizeof(uint64_t) + sizeof(uint32_t)];
-            Internal::Encode(header, static_cast<uint64_t>(data.size()));
-            Internal::Encode(header + sizeof(uint64_t), Internal::GetMaskedCrc(header, sizeof(uint64_t)));
+            Encode(header, static_cast<uint64_t>(data.size()));
+            Encode(header + sizeof(uint64_t), GetMaskedCrc(header, sizeof(uint64_t)));
 
             // Footer: marked CRC of the actual record.
             char footer[sizeof(uint32_t)];
-            Internal::Encode(footer, Internal::GetMaskedCrc(data.data(), data.size()));
+            Encode(footer, GetMaskedCrc(data.data(), data.size()));
 
             try
             {
@@ -171,6 +178,67 @@ namespace CNTK
             }
         }
 
+#ifndef CNTK_UWP
+
+        void TensorBoardFileWriter::WriteImage(const std::wstring& name, NDArrayViewPtr imageData, uint64_t step)
+        {
+            assert(imageData != nullptr);
+            tensorflow::Event event;
+            event.set_wall_time(static_cast<double>(std::time(0)));
+            tensorflow::Summary* summary = event.mutable_summary();
+
+            std::vector<size_t> dimensions = imageData->Shape().Dimensions();
+            const size_t batch_size = dimensions.at(3);
+            const size_t depth = dimensions.at(2);
+            const size_t width = dimensions.at(1);
+            const size_t height = dimensions.at(0);
+            const DataType dtype = imageData->GetDataType();
+
+            std::vector<size_t> start(4, 0);
+            std::vector<size_t> extent;
+            extent.push_back(height);
+            extent.push_back(width);
+            extent.push_back(depth);
+            extent.push_back(1);
+            
+            const std::vector<size_t> imageDim({height, width, depth});
+
+            for (size_t i = 0; i < batch_size; i++) {
+                tensorflow::Summary::Value* summaryValue = summary->add_value();
+                summaryValue->set_tag(ToString(name) + "/image/" + std::to_string(i));
+
+                tensorflow::Summary::Image* summaryImage = summaryValue->mutable_image();
+                summaryImage->set_height(height);
+                summaryImage->set_width(width);
+                summaryImage->set_colorspace(depth);
+                start.back() = static_cast<size_t>(i);
+                auto image = imageData->SliceView(start, extent)->AsShape(imageDim);
+                vector<unsigned char> buffer;
+
+                switch (dtype)
+                {
+                case DataType::Float:
+                    WriteImageToBuffer(image->WritableDataBuffer<float>(), dtype, height, width, depth, buffer);
+                    break;
+                
+                case DataType::Double:
+                    WriteImageToBuffer(image->WritableDataBuffer<double>(), dtype, height, width, depth, buffer);
+                    break;
+
+                default:
+                    fprintf(stderr, "TensorBoardFileWriter: Unsupported data type: %d ", static_cast<int>(dtype));
+                    break;
+                }
+
+                string str(buffer.begin(), buffer.end());
+                summaryImage->set_encoded_image_string(str);
+            }
+            
+            WriteRecord(Serialize(event));
+        }
+
+#endif // !CNTK_UWP
+
         void TensorBoardFileWriter::WriteVersion(time_t time)
         {
             // Version string present in the first entry of every event file.
@@ -178,7 +246,7 @@ namespace CNTK
             event.set_wall_time(static_cast<double>(time));
             event.set_file_version("brain.Event:2");
 
-            WriteRecord(Internal::Serialize(event));
+            WriteRecord(Serialize(event));
         }
 
         bool TensorBoardFileWriter::Flush()

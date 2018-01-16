@@ -32,6 +32,31 @@ using namespace std;
 
 namespace CNTK
 {
+    CNTK_API const std::wstring Learner::MinibatchSizeKey = L"MinibatchSize";
+    ///
+    /// A special value that can be used for the minibatchSize to indicate that the reference minibatch size is not specified.
+    ///
+    CNTK_API const size_t Learner::IgnoredMinibatchSize = TrainingParameterSchedule<double>::IgnoredMinibatchSize;
+
+  
+    // This method completely replaces the current schedule with the new schedule. However, since
+    // the new schedule starts at time 0 and the current time (in terms of the number of elapsed
+    // samples or sweeps) t can be greater than 0, we need to adjust the new schedule by t time
+    // units, so that it takes effect from the current point in time onwards.
+    CNTK_API void Learner::ResetLearningRate(const LearningRateSchedule& learningRateSchedule)
+    {
+        m_learningRateSchedule.m_schedule.clear();
+        m_learningRateSchedule.m_epochSize = learningRateSchedule.m_epochSize;
+
+        // copy the new schedule over, adjusting for the current varlue of the corresponding unit
+        // (samples or sweeps) count.
+        auto currentCount = m_learningRateSchedule.IsSweepBased() ? m_sweepCount : m_sampleCount;
+        for (const auto& kv : learningRateSchedule.m_schedule) 
+        {
+            m_learningRateSchedule.m_schedule[currentCount + kv.first] = kv.second;
+        }
+    }
+
     template <typename ElementType>
     /*static*/ shared_ptr<const Matrix<ElementType>> LearnerBase::GetMatrix(const NDArrayViewPtr& arrayView)
     {
@@ -97,7 +122,9 @@ namespace CNTK
     {
         if (m_additionalOptions.gradientClippingThresholdPerSample != numeric_limits<double>::infinity())
         {
-            double maxGradientPerMB = m_additionalOptions.gradientClippingThresholdPerSample * actualMBSize;
+            double gradientClippingThresholdPerSample = m_additionalOptions.gradientClippingThresholdPerSample;
+            // when using compatible mode, no need to scale up the maxGradientPerMB as it is the mean gradient already
+            double maxGradientPerMB = IsCompatibleMode() ? gradientClippingThresholdPerSample : gradientClippingThresholdPerSample * actualMBSize;
             if (m_additionalOptions.gradientClippingWithTruncation)
                 gradient.InplaceTruncate(ElementType(maxGradientPerMB));
             else
@@ -120,6 +147,12 @@ namespace CNTK
     {
         const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
 
+        // get mean gradient if needed
+        if (IsCompatibleMode())
+        {
+            Matrix<ElementType>::Scale((ElementType)1.0 / actualMBSize, *gradientMatrix);
+        }
+
         // clipping gradients to prevent outliers
         ClipGradient<ElementType>(*gradientMatrix, actualMBSize);
 
@@ -127,7 +160,7 @@ namespace CNTK
         if (m_additionalOptions.l2RegularizationWeight > 0)
         {
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-            const auto weight = m_additionalOptions.l2RegularizationWeight * actualMBSize;
+            const auto weight = m_additionalOptions.l2RegularizationWeight * (IsCompatibleMode() ? 1 : actualMBSize);
             const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>();
             Matrix<ElementType>::ScaleAndAdd(ElementType(weight), *parameterMatrix, *gradientMatrix);
         }
@@ -143,17 +176,10 @@ namespace CNTK
         const auto gaussianNoiseInjectionStdDev = GetCurrentTrainingParameterValue(m_additionalOptions.gaussianNoiseInjectionStdDev);
         if (gaussianNoiseInjectionStdDev > 0)
         {
-            const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
+            const auto& sgdUpdateNoise = Matrix<ElementType>::RandomGaussian(parameterMatrix->GetNumRows(), parameterMatrix->GetNumCols(),
+                CPUDEVICE, ElementType(0.0), ElementType(gaussianNoiseInjectionStdDev), m_noiseInjectionSeed++);
 
-            Matrix<ElementType> sgdUpdateNoise((DEVICEID_TYPE)parameterMatrix->GetDeviceId());
-
-            // get the gradient structure since gradient is sparse
-            sgdUpdateNoise.SetValue(*gradientMatrix);
-
-            const auto noiseStdDev = gaussianNoiseInjectionStdDev;
-
-            // reset its value to random
-            sgdUpdateNoise.SetGaussianRandomValue(ElementType(0.0), ElementType(noiseStdDev));
+            sgdUpdateNoise.TransferToDeviceIfNotThere(parameterMatrix->GetDeviceId(), true);
 
             Matrix<ElementType>::ScaleAndAdd(ElementType(1.0), sgdUpdateNoise, *parameterMatrix);
         }
@@ -163,7 +189,8 @@ namespace CNTK
         {
             const auto learningRate = LearningRate(actualMBSize);
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-            const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * actualMBSize;
+            // don't need to scale to actualMBSize if we are already taking averaged gradient
+            const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * (IsCompatibleMode() ? 1 : actualMBSize);
             parameterValue->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(ElementType(weight));
         }
     }
@@ -178,16 +205,16 @@ namespace CNTK
                              const LearningRateSchedule& learningRateSchedule,
                              AdditionalLearningOptions additionalOptions,
                              bool allocateSmoothGradients /* = true */)
-                             : Learner(parameters, learningRateSchedule),
-                             m_minibatchCount(0),
-                             m_additionalOptions(additionalOptions)
+                             : Learner(parameters, learningRateSchedule, additionalOptions),
+                             m_noiseInjectionSeed(Internal::GenerateRandomSeed())
     {
+        if (parameters.empty())
+            InvalidArgument("The parameters list specified to a Learner must not be empty.");
+
         std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());
 
         if (uniqueParameters.size() != parameters.size())
-        {
-            LogicError("Learner parameters contain duplicates.");
-        }
+            InvalidArgument("Learner's parameters list must not contain duplicates.");
 
         if (allocateSmoothGradients)
         {
@@ -227,6 +254,8 @@ namespace CNTK
 
     /*virtual*/ bool LearnerBase::Update(unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd) /*override*/
     {
+        ReportTrainingParameterValue(m_learningRateSchedule, L"Learning rate");
+
         if (LearningRate(trainingSampleCount) == 0.0)
         {
             return false;
@@ -234,9 +263,9 @@ namespace CNTK
 
         // make sure trainingSampleCount is a valid value
         if (trainingSampleCount == 0)
-        {
-            InvalidArgument("Learner::Update(): cannot perform an update with an empty minibatch.");
-        }
+            InvalidArgument("Learner::Update() cannot perform an update with an empty minibatch.");
+
+        UpdateOnMinibatch(trainingSampleCount);
 
         for (const auto& parameter : Parameters())
         {
@@ -286,7 +315,7 @@ namespace CNTK
 
     template <typename ElementType>
     void LearnerBase::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
-                             const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+                             const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount)
     {
         const auto& parameterValue = parameter.Value();
         PreProcess<ElementType>(parameterValue, gradientValue, trainingSampleCount);
@@ -312,25 +341,22 @@ namespace CNTK
         checkpoint[typeKey] = s_learnerTypeValue;
         checkpoint[sampleCountKey] = m_sampleCount;
         checkpoint[minibatchCountKey] = m_minibatchCount;
+        checkpoint[sweepCountKey] = m_sweepCount;
         checkpoint[learningRateScheduleKey] = m_learningRateSchedule.Serialize();
+        checkpoint[noiseInjectionSeedKey] = m_noiseInjectionSeed;
 
         // TODO: should we also save momentum schedule into the checkpoint?
-        // If that is the case, need to be able to override this method in subclasses,
-        // TODO: we now store mapping from UID to Parameter value in the checkpoint,
-        // if uids turn out to be too fragile, this can be easily changed to a vector
-        // of parameters, so that in restore we don't have to lookup based on uids, 
-        // and simply restore parameters one by one in the original (dfs) order.
+        // If that is the case, need to be able to override this method in subclasses.
+        std::vector<DictionaryValue> serializedSmoothedGradients(Parameters().size());
+        size_t i = 0;
         for (const auto& parameter : Parameters())
         {
-            if (checkpoint.Contains(parameter.Uid()))
-            {
-                LogicError("Parameter uids must be unique");
-            }
-
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
-            checkpoint[parameter.Uid()] = *smoothedGradientValue;
+            serializedSmoothedGradients[i++] = *smoothedGradientValue;
         }
 
+        checkpoint[smoothedGradientsKey] = serializedSmoothedGradients;
+        //TODO: additional options are not serialized. This was not done when AdditionalOption was introduced.
         return checkpoint;
     }
 
@@ -338,40 +364,103 @@ namespace CNTK
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, sampleCountKey, minibatchCountKey, learningRateScheduleKey };
 
-        ValidateDictionary<LearnerBase>(checkpoint, s_requiredDictionaryKeys, s_learnerTypeValue, CurrentVersion());
+        auto version = ValidateDictionary<LearnerBase>(checkpoint, s_requiredDictionaryKeys, s_learnerTypeValue, CurrentVersion());
+
+        if (version >= 2) 
+        {
+            ValidateDictionary<LearnerBase>(checkpoint, { smoothedGradientsKey }, s_learnerTypeValue, CurrentVersion());
+        }
+
+        if (version >= 3)
+        {
+            ValidateDictionary<LearnerBase>(checkpoint, { sweepCountKey }, s_learnerTypeValue, CurrentVersion());
+            m_sweepCount = checkpoint[sweepCountKey].Value<size_t>();
+        }
+        else
+        {
+            //version 2 should have already set m_sweepCount however it was not implemented so  set to 0 for now.
+            m_sweepCount = 0; 
+        }
 
         m_sampleCount = checkpoint[sampleCountKey].Value<size_t>();
         m_minibatchCount = checkpoint[minibatchCountKey].Value<size_t>();
+
+        if (checkpoint.Contains(noiseInjectionSeedKey)) 
+        {
+            m_noiseInjectionSeed = checkpoint[noiseInjectionSeedKey].Value<size_t>();
+        }
+
         // TODO: which learning rate schedule should take precedence here? 
         // The one given at construction time or the one loaded from a checkpoint?
         m_learningRateSchedule = TrainingParameterSchedule<double>::Deserialize(checkpoint[learningRateScheduleKey].Value<Dictionary>());
 
-        const auto parameters = Parameters();
+        const auto& parameters = Parameters();
 
-        for (const auto& parameter : parameters)
+        auto getSmoothedGradValue = [version, &checkpoint] (size_t i, const Parameter& parameter) -> const DictionaryValue&
         {
-            if (!checkpoint.Contains(parameter.Uid()))
+            const auto& uid = parameter.Uid();
+
+            if (version >= 2)
             {
-                LogicError("Checkpoint does not contain state for parameter %ls", parameter.Uid().c_str());
+                const auto& values = checkpoint[smoothedGradientsKey].Value<vector<DictionaryValue>>();
+                
+                if (values.size() <= i)
+                    LogicError("Checkpoint does not contain smoothed gradient value for parameter '%S' (uid=%S).", 
+                        parameter.AsString().c_str(), uid.c_str());
+                
+
+                return values.at(i);
             }
+            
+            if (!checkpoint.Contains(uid))
+                LogicError("Checkpoint does not contain smoothed gradient value for parameter '%S' (uid=%S).", 
+                    parameter.AsString().c_str(), uid.c_str());
+
+            return checkpoint[uid];
+        };
+
+        for (auto i = 0; i < parameters.size(); i++)
+        {
+            const auto& parameter = parameters.at(i);
+            const auto& uid = parameter.Uid();
+            const NDArrayView& checkpointedValue = getSmoothedGradValue(i, parameter).Value<NDArrayView>();
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
 
-            const NDArrayView& checkpointedValue = checkpoint[parameter.Uid()].Value<NDArrayView>();
-
             if (smoothedGradientValue->GetDataType() != checkpointedValue.GetDataType())
-            {
-                LogicError("A value restored from a checkpoint for the smoothed gradient data type for parameter %ls does not match the expected value",
-                           parameter.Uid().c_str());
-            }
+                LogicError("DataType of the smoothed gradient value restored from checkpoint for the parameter '%S' (uid = %ls) does not match the expected value.",
+                            parameter.AsString().c_str(), uid.c_str());
 
             if (smoothedGradientValue->Shape() != checkpointedValue.Shape())
-            {
-                LogicError("A value restored from a checkpoint for the smoothed gradient shape for parameter %ls does not match the expected value",
-                           parameter.Uid().c_str());
-            }
+                LogicError("Shape '%S' of the smoothed gradient value restored from checkpoint for the parameter '%S' (uid = %ls) does not match the expected value.",
+                           smoothedGradientValue->Shape().AsString().c_str(), parameter.AsString().c_str(),uid.c_str());
 
             smoothedGradientValue->CopyFrom(checkpointedValue);
+        }
+        //TODO: additional options are not deserialized. This was not done when AdditionalOption was introduced.
+
+    }
+
+    void LearnerBase::ReportTrainingParameterValue(const TrainingParameterSchedule<double>& schedule, const wstring& name) const
+    {
+        double value = GetCurrentTrainingParameterValue(schedule);
+
+        auto iter = m_trainingParametersMap.find(name);
+        if (iter == m_trainingParametersMap.end() || iter->second != value)
+        {
+            m_trainingParametersMap[name] = value;
+
+            wstringstream stream;
+            stream << name;
+
+            if (IsCompatibleMode(schedule))
+                stream << L" per minibatch";
+            else
+                stream << L" per " << schedule.GetMinibatchSize() << " samples";
+            wstring prefix = stream.str();
+
+            for (auto& writer : m_progressWriters)
+                writer->Write(prefix, value);
         }
     }
 
@@ -393,7 +482,7 @@ namespace CNTK
     }
 
     /*virtual*/ void LearnerSGD::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
-                                        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+                                        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
     {
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
     }
@@ -412,17 +501,19 @@ namespace CNTK
 
     double LearnerMomentumSGD::MomentumValueForMB(const MomentumSchedule& schedule, size_t minibatchSize) const
     {
+        //TODO: The unit gain term (1-beta) should stay as it is (currentMomentum) instead of using the following scaled term.
         double currentMomentum = GetCurrentTrainingParameterValue(schedule);
-        if (schedule.Unit() == MomentumSchedule::UnitType::Minibatch)
-        {
+        if (IsCompatibleMode(schedule))
             return currentMomentum;
-        }
-        return std::pow(currentMomentum, minibatchSize);
+        else 
+            return std::pow(currentMomentum, (double) minibatchSize / (double) schedule.GetMinibatchSize());
     }
 
     /*virtual*/ void LearnerMomentumSGD::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
-                                                const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+                                                const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
     {
+        ReportTrainingParameterValue(m_momentumSchedule, L"Momentum");
+
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
     }
 
@@ -431,16 +522,41 @@ namespace CNTK
                                     const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
         GET_WRITABLE_MATRICES;
-
+        /*
+        Let
+            u_t = \beta_1 u_{t-1} + \bar{\beta_1}  g_t 
+        With our scaling, the correct momentum update rule should be: 
+        \begin{itemize}
+        \item For classic momentum SGD, $\bar{\beta_1} = 1$
+        \item For unit gain momentum SGD, $\bar{\beta_1} = 1 - \beta_1$
+        \end{itemize}
+        The model update at time step $t$  is
+        \begin{align}
+        w_{t+1} &= w_{t} - \eta u_{t} \\
+        &= w_{t} - \bar{\beta_1} \sum_{j=1}^t \beta_1^{t - j} \sum_{x_i \in B_j} \frac{\eta}{M}\nabla_{w_{t}} l(w_{t}, x_i)\\
+        &= w_0 -  \sum_{k=0}^{T}[j(T) - j(k) + 1]\frac{\eta  \bar{\beta_1} \beta_1^{j(T) - j(k)} }{M}  \nabla_{w} l(w_{j(k)}, x_k)   \\
+        &= w_0 -  \sum_{k=0}^{T}(\lfloor \frac{T - k}{M} \rfloor + 1)\frac{\eta  \bar{\beta_1} \beta_1^{j(T) - j(k)} }{M}  \nabla_{w} l(w_{j(k)}, x_k)       \\
+        &= w_0 -  \sum_{k=0}^{T}(\lfloor \frac{T - k}{M} \rfloor + 1)\beta_1^{\lfloor \frac{T - k}{M} \rfloor}  \left[\frac{\eta  \bar{\beta_1} }{M}  \nabla_{w} l(w_{j(k)}, x_k) \right]
+        \end{align}
+        As a result, for variable size minibatches we can see the momentum can be expressed as: 
+        \begin{align}
+            u_t &=  \sum_{k=1}^{T}\frac{1}{|B_{j(k)}|} \bar{\beta_1} \left[\prod_{l=1}^{j(T) - j(k)}(\beta_1^{\frac{|B_{j(K)}|}{M}})\right]  \nabla_{w} l(w_{j(k)}, x_k)
+        \end{align}
+        Therefore,  we can adjust the momentum $\beta_1$ designed for minibatch size $M$ adapting to the encountered individual minibatch $B_j$ as the following:
+        \begin{align}
+            \beta_j &=  \beta_1 ^{\frac{|B_j|}{M}}
+        \end{align}
+        *Note that the \beta_1 should not be scaled according to the minibatch size for the unit gain factor*.
+        */
         const auto learningRate = ElementType(LearningRate(trainingSampleCount));
         const auto momentum = ElementType(MomentumValueForMB(trainingSampleCount));
-
+        const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
         parameterMatrix->MomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
-                                           learningRate, momentum, UseUnitGainMomentum());
+                                           learningRate, momentum, unitGainFactor);
     }
 
     /*virtual*/ void LearnerNesterov::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
-                                             const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+                                             const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
     {
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
     }
@@ -453,9 +569,10 @@ namespace CNTK
 
         const auto learningRate = ElementType(LearningRate(trainingSampleCount));
         const auto momentum = ElementType(MomentumValueForMB(trainingSampleCount));
+        const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
 
         parameterMatrix->NesterovAcceleratedMomentumSGDUpdate(*gradientMatrix, *smoothedGradientMatrix,
-                                                              learningRate, momentum, UseUnitGainMomentum());
+                                                              learningRate, momentum, unitGainFactor);
     }
 
     LearnerAdaGrad::LearnerAdaGrad(const std::vector<Parameter>& parameters,
@@ -482,7 +599,7 @@ namespace CNTK
     }
 
     /*virtual*/ void LearnerAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
-                                            const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+                                            const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
     {
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
     }
@@ -499,6 +616,129 @@ namespace CNTK
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
+    LearnerAdaDelta::LearnerAdaDelta(
+        const std::vector<Parameter>& parameters,
+        const LearningRateSchedule& learningRateSchedule,
+        double rho, double epsilon,
+        AdditionalLearningOptions additionalOptions)
+        : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
+        m_rho(rho), m_epsilon(epsilon)
+    {
+        for (const auto& parameter : parameters)
+        {
+            const auto shape = GetMatrixShape(parameter);
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
+            m_smoothedGradientValues.emplace(parameter, view);
+        }
+    }
+
+    /*virtual*/ void LearnerAdaDelta::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
+    {
+        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    // When the gradients are sparse, we update the corresponding internal buffers of adadelta in a sparse way
+    // and we maintain some additional timestamps. We periodically perform some dense work to prevent 
+    // a) the timestamps overflowing and b) big differences between this implementation and an equivalent dense
+    // implementation due to numerical issues with floating point numbers.
+    // TODO: consider exposing this somehow so that it is easy to test by setting it to small value.
+    /* static */ const int LearnerAdaDelta::s_SyncInterval = 1 << 20;
+
+    template <typename ElementType>
+    void LearnerAdaDelta::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount)
+    {
+        GET_WRITABLE_MATRICES
+
+        const auto learningRate = LearningRate(trainingSampleCount);
+
+        int* timestamps = nullptr;
+        int currentTimestamp = 0;
+        if (gradientValue->IsSparse())
+        {
+            // When the gradient is sparse (block sparse column) we maintain a timestamp for every column
+            // The timestamp is allocated here and initialized to 0, meaning that at time 0 everything was
+            // up to date. We also maintain a currentTime variable that is incremented with each update.
+            // When we perform the update, for every non-zero column we first use the timestamp and the 
+            // current time to apply all updates that a dense implementation would have applied to that column
+            // and then update the timestamp for that column with the current time. 
+            const auto numCols = gradientMatrix->GetNumCols();
+            const auto search = m_lastUpdateTime.find(parameter);
+            if (search == m_lastUpdateTime.end())
+            {
+                // create timestamps and current time
+                // NDArrayView only supports Float and Double and the following assert prevents surprises in non-standard platforms
+                static_assert(sizeof(int) <= sizeof(float), "Buffer for timestamps is not big enough on this platform");
+                const auto view = MakeSharedObject<NDArrayView>(float(0.0), NDShape({ numCols }), gradientValue->Device());
+                const auto itBoolPair = m_lastUpdateTime.emplace(make_pair(parameter, view));
+                assert(itBoolPair.second); // insertion took place
+                timestamps = reinterpret_cast<int*>(const_cast<float*>(itBoolPair.first->second->DataBuffer<float>()));
+                m_currentTime[parameter] = 0;
+            }
+            else
+            {
+                // retrieve timestamps and current time
+                timestamps = reinterpret_cast<int*>(const_cast<float*>(search->second->DataBuffer<float>()));
+                currentTimestamp = m_currentTime[parameter];
+            }
+            if (currentTimestamp >= LearnerAdaDelta::s_SyncInterval)
+            {
+                // Once in a while sync the state and reset the timestamps and current time to 0
+                smoothedGradientMatrix->AdaDeltaFlushState(numCols, (ElementType)m_rho, timestamps, currentTimestamp);
+                m_currentTime[parameter] = currentTimestamp = 0;
+            }
+            currentTimestamp += 1;
+            m_currentTime[parameter] = currentTimestamp;
+        }
+
+        smoothedGradientMatrix->AdaDeltaUpdate(*gradientMatrix, *parameterMatrix, (ElementType)learningRate, (ElementType)m_rho, (ElementType)m_epsilon, timestamps, currentTimestamp);
+    }
+
+    /*virtual*/ Dictionary LearnerAdaDelta::CreateCheckpoint() /*override*/
+    {
+        // Before checkpointing we need to sync the state so that our lazy implementation 
+        // for sparse gradients with timestamps is transparent to the user
+        for (const auto& parameter : Parameters())
+        {
+            const auto search = m_lastUpdateTime.find(parameter);
+            if (search == m_lastUpdateTime.end())
+                continue;
+            int* timestamps = reinterpret_cast<int*>(const_cast<float*>(search->second->DataBuffer<float>()));
+            int currentTimestamp = m_currentTime[parameter];
+            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+            if (parameter.GetDataType() == CNTK::DataType::Float)
+            {
+                const auto numCols = GetMatrix<float>(parameter.Value())->GetNumCols();
+                const auto& smoothedGradientMatrix = GetWritableMatrix<float>(smoothedGradientValue);
+                smoothedGradientMatrix->AdaDeltaFlushState(numCols, (float)m_rho, timestamps, currentTimestamp);
+            }
+            else
+            {
+                const auto numCols = GetMatrix<double>(parameter.Value())->GetNumCols();
+                const auto& smoothedGradientMatrix = GetWritableMatrix<double>(smoothedGradientValue);
+                smoothedGradientMatrix->AdaDeltaFlushState(numCols, (double)m_rho, timestamps, currentTimestamp);
+            }
+            m_currentTime[parameter] = 0;
+        }
+        return LearnerBase::CreateCheckpoint();
+    }
+
+    /*virtual*/ void LearnerAdaDelta::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
+    {
+        LearnerBase::RestoreFromCheckpoint(checkpoint);
+        // After restoring from a checkpoint we need to reset all timestamps and the current time for
+        // parameters that have sparse gradients.
+        for (const auto& parameter : Parameters())
+        {
+            const auto search = m_lastUpdateTime.find(parameter);
+            if (search == m_lastUpdateTime.end())
+                continue;
+            m_currentTime[parameter] = 0;
+            search->second->SetValue(0.0f);
+        }
+    }
+
     /*static*/ const double LearnerFSAdaGrad::s_targetAdagradAvDenom = 1.0;
 
     LearnerFSAdaGrad::LearnerFSAdaGrad(const vector<Parameter>& parameters,
@@ -509,21 +749,54 @@ namespace CNTK
                                        AdditionalLearningOptions additionalOptions)
                                        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, 
                                                             unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
-                                       m_varianceMomentumSchedule(varianceMomentumSchedule)
+                                       m_varianceMomentumSchedule(varianceMomentumSchedule),
+                                       m_smoothedCount(0.0)
     {
         for (const auto& parameter : parameters)
         {
             const auto shape = GetMatrixShape(parameter);
             NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
             m_smoothedGradientValues.emplace(parameter, view);
-            m_smoothedCounts.emplace(parameter, 0.0);
         }
     }
 
+    /*virtual*/ Dictionary LearnerFSAdaGrad::CreateCheckpoint() /*override*/
+    {
+        auto dict = LearnerBase::CreateCheckpoint();
+        dict[smoothedCountKey] = m_smoothedCount;
+        return dict;
+    }
+
+    /*virtual*/ void LearnerFSAdaGrad::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
+    {
+        LearnerBase::RestoreFromCheckpoint(checkpoint);
+        m_smoothedCount = checkpoint[smoothedCountKey].Value<double>();
+    }
+
+    /*virtual*/ void LearnerFSAdaGrad::ResetSmoothedGradients() /*override*/
+    {
+        LearnerBase::ResetSmoothedGradients();
+        m_smoothedCount = 0.0;
+    }
+
     /*virtual*/ void LearnerFSAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
-                                              const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+                                              const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
     {
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    /*virtual*/ void LearnerFSAdaGrad::UpdateOnMinibatch(size_t trainingSampleCount)
+    {
+        const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+
+        // keep track on how many samples have been accumulated into the g^2 accumulator
+        m_smoothedCount = varMomentum * m_smoothedCount + (1.0 - varMomentum) * trainingSampleCount;
+
+        // update the numerator and then do the meanMomentum-based model update
+        // Each AdaGrad-normalized gradient value is multiplied by the following, which
+        //  - makes up for general scaling (targetAdagradAvDenom, a constant chosen by the user that should resemble the typical value range of gradients)
+        //  - sqrt(1/#samples accumulated) to turn the sqr sum into an average
+        m_targetAdagradAvDenom_x_sqrtAdagradSqrFrames = s_targetAdagradAvDenom * sqrt(m_smoothedCount);
     }
 
     template <typename ElementType>
@@ -534,13 +807,85 @@ namespace CNTK
 
         const auto learningRate = LearningRate(trainingSampleCount);
         const auto momentum = MomentumValueForMB(trainingSampleCount);
+        const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+        const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
+
+        smoothedGradientMatrix->FSAdagradUpdate(*gradientMatrix, *parameterMatrix, m_targetAdagradAvDenom_x_sqrtAdagradSqrFrames, learningRate,
+                                                momentum, varMomentum, unitGainFactor);
+    }
+
+    LearnerAdam::LearnerAdam(const vector<Parameter>& parameters,
+        const LearningRateSchedule& learningRateSchedule,
+        const MomentumSchedule& momentumSchedule,
+        bool unitGain,
+        const MomentumSchedule& varianceMomentumSchedule,
+        double epsilon,
+        bool adamax,
+        AdditionalLearningOptions additionalOptions)
+        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule,
+            unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
+          m_varianceMomentumSchedule(varianceMomentumSchedule), m_epsilon(epsilon),
+          m_adamax(adamax)
+    {
+
+        if (m_epsilon < 0.0)
+        {
+            InvalidArgument("Epsilon should be non-negative. You are trying to set it to %g.", m_epsilon);
+        }
+
+        for (const auto& parameter : parameters)
+        {
+            const auto shape = GetMatrixShape(parameter);
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, {shape[0], 2 * shape[1]});
+            m_smoothedGradientValues.emplace(parameter, view);
+        }
+        m_smoothedCount = 0.0;
+    }
+
+    /*virtual*/ Dictionary LearnerAdam::CreateCheckpoint() /*override*/
+    {
+        auto dict = LearnerBase::CreateCheckpoint();
+        dict[smoothedCountKey] = m_smoothedCount;
+        return dict;
+    }
+
+    /*virtual*/ void LearnerAdam::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
+    {
+        LearnerBase::RestoreFromCheckpoint(checkpoint);
+        m_smoothedCount = checkpoint[smoothedCountKey].Value<double>();
+    }
+
+    /*virtual*/ void LearnerAdam::ResetSmoothedGradients() /*override*/
+    {
+        LearnerBase::ResetSmoothedGradients();
+        m_smoothedCount = 0.0;
+    }
+
+    /*virtual*/ void LearnerAdam::UpdateOnMinibatch(size_t trainingSampleCount)
+    {
+        m_smoothedCount += 1.0;
+    }
+
+    /*virtual*/ void LearnerAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
+    {
+        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    template <typename ElementType>
+    void LearnerAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        GET_WRITABLE_MATRICES;
+
+        const auto learningRate = LearningRate(trainingSampleCount);
+        const auto momentum = MomentumValueForMB(trainingSampleCount);
+        const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
 
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
 
-        double& smoothedCount = m_smoothedCounts.at(parameter);
-
-        smoothedGradientMatrix->FSAdagradUpdate(trainingSampleCount, *gradientMatrix, *parameterMatrix, smoothedCount, learningRate, 
-                                                s_targetAdagradAvDenom, momentum, varMomentum, UseUnitGainMomentum());
+        smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_smoothedCount, learningRate,
+                                           momentum, varMomentum, (ElementType)m_epsilon, unitGainFactor, m_adamax);
     }
 
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
@@ -551,6 +896,22 @@ namespace CNTK
                                    : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
                                    m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min), m_needAveMultiplier(needAveMultiplier)
     {
+        // validation of learner settings
+        if (gamma <= 0 || gamma >= 1)
+            LogicError("RMSProp gamma must be in range (0.0, 1.0)");
+
+        if (inc <= 1.0)
+            LogicError("RMSProp inc must be greater than 1");
+
+        if (dec <= 0 || dec >= 1)
+            LogicError("RMSProp dec must be in range (0.0, 1.0)");
+
+        if (max <= 0 || max <= min)
+            LogicError("RMSProp max must be greater than zero and greater than min");
+
+        if (min <= 0)
+            LogicError("RMSProp min must be greater than zero");
+
         for (const auto& parameter : parameters)
         {
             // When needAveMultiplier == true, CPU and GPU implementations of RMSProp require different number of columns.
@@ -565,12 +926,37 @@ namespace CNTK
 
             m_smoothedGradientValues.emplace(parameter, view);
         }
+        m_smoothedCount = 0.0;
     }
 
     /*virtual*/ void LearnerRMSProp::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
-                                            const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+                                            const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
     {
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    /*virtual*/ Dictionary LearnerRMSProp::CreateCheckpoint() /*override*/
+    {
+        auto dict = LearnerBase::CreateCheckpoint();
+        dict[smoothedCountKey] = m_smoothedCount;
+        return dict;
+    }
+
+    /*virtual*/ void LearnerRMSProp::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
+    {
+        LearnerBase::RestoreFromCheckpoint(checkpoint);
+        m_smoothedCount = checkpoint[smoothedCountKey].Value<double>();
+    }
+
+    /*virtual*/ void LearnerRMSProp::ResetSmoothedGradients() /*override*/
+    {
+        LearnerBase::ResetSmoothedGradients();
+        m_smoothedCount = 0.0;
+    }
+
+    /*virtual*/ void LearnerRMSProp::UpdateOnMinibatch(size_t trainingSampleCount)
+    {
+        m_smoothedCount += 1.0;
     }
 
     template <typename ElementType>
@@ -587,7 +973,9 @@ namespace CNTK
                                                                    ElementType(m_max),
                                                                    ElementType(m_dec),
                                                                    ElementType(m_min),
-                                                                   m_needAveMultiplier);
+                                                                   m_needAveMultiplier,
+                                                                   m_smoothedCount > 1);
+
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
@@ -620,19 +1008,26 @@ namespace CNTK
         return MakeSharedObject<LearnerNesterov>(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions);
     }
 
+    LearnerPtr FSAdaGradLearner(const vector<Parameter>& parameters,
+                                const LearningRateSchedule& learningRateSchedule,
+                                const MomentumSchedule& momentumSchedule,
+                                bool unitGain, /*=true*/
+                                const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
+                                AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
+    {
+        return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+    }
+
     LearnerPtr AdamLearner(const vector<Parameter>& parameters,
                            const LearningRateSchedule& learningRateSchedule,
                            const MomentumSchedule& momentumSchedule,
-                           bool unitGain,
+                           bool unitGain, /*=true*/
                            const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
-                           bool lowMemory, /*= true*/
+                           double epsilon,
+                           bool adamax, /*=false*/
                            AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        if (!lowMemory)
-        {
-            LogicError("AdamLearner: only the low-memory variant is supported at the moment.");
-        }
-        return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+        return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, epsilon, adamax, additionalOptions);
     }
 
     LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,
@@ -650,5 +1045,126 @@ namespace CNTK
                               AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
         return MakeSharedObject<LearnerRMSProp>(parameters, learningRateSchedule, gamma, inc, dec, max, min, needAveMultiplier, additionalOptions);
+    }
+
+    LearnerPtr AdaDeltaLearner(const vector<Parameter>& parameters,
+                               const LearningRateSchedule& learningRateSchedule,
+                               double rho, double epsilon,
+                               AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
+    {
+        return MakeSharedObject<LearnerAdaDelta>(parameters, learningRateSchedule, rho, epsilon, additionalOptions);
+    }
+
+    
+
+
+    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func)
+        : LearnerBase(parameters, LearningRateSchedule(1.0), AdditionalLearningOptions(), /*allocateSmoothGradients*/ false)
+    {
+        std::vector<Variable> gradients;
+        std::vector<FunctionPtr> functions;
+        for (const auto& p : parameters)
+        {
+            //we do not support sparse gradients for now 
+            auto grad = Constant(p.Shape(), p.GetDataType(), 0.0, p.Value()->Device(), L"gradient");
+            FunctionPtr result = func(p, grad);
+            gradients.push_back(grad);
+            functions.push_back(result);
+        }
+        
+        std::vector<Variable> outputs;
+        for (auto f : functions)
+        {
+            for (auto o : f->Outputs())
+                outputs.push_back(o);
+        }
+
+        ValidateInput(parameters, gradients, Combine(outputs));
+    }
+
+    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
+        : LearnerBase(parameters, LearningRateSchedule(1.0), AdditionalLearningOptions(), /*allocateSmoothGradients*/ false)
+    {
+        ValidateInput(parameters, gradients, updateFunc);
+    }
+
+    void LearnerUniversal::ValidateInput(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
+    {
+        if (parameters.size() != gradients.size())
+            LogicError("Number of parameters (%zd) does not match number of gradients (%zd)", parameters.size(), gradients.size());
+
+        if (parameters.size() == 0)
+            LogicError("At least 1 parameter is needed in universal learner");
+
+        for (size_t i = 0; i < parameters.size(); ++i)
+        {
+            auto&& param = parameters[i];
+            auto&& grad = gradients[i];
+            auto&& inputs = updateFunc->Inputs();
+            if (std::find(inputs.begin(), inputs.end(), param) == inputs.end())
+                LogicError("Update function does not contain the parameter %ls in its computation", param.AsString().c_str());
+            if (std::find(inputs.begin(), inputs.end(), grad) == inputs.end())
+                fprintf(stderr, "WARNING: Update function does not contain the gradient for parameter %ls in its computation\n", param.AsString().c_str());
+            m_parameter_gradient_map.insert({parameters[i], gradients[i]});
+        }
+        AllocateDummySmoothedGradients(parameters);
+        m_update_func = updateFunc;
+    }
+
+    bool LearnerUniversal::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd)
+    {
+        ReportTrainingParameterValue(m_learningRateSchedule, L"Learning rate");
+
+        if (LearningRate(trainingSampleCount) == 0.0)
+        {
+            return false;
+        }
+
+        if (trainingSampleCount == 0)
+            InvalidArgument("Learner::Update() cannot perform an update with an empty minibatch.");
+        
+        static const std::unordered_map<Variable, ValuePtr> m_empty = {};
+
+        for (const auto& parameter : Parameters())
+        {
+            const auto& gradientValue = gradientValues.at(parameter);
+            auto it = m_parameter_gradient_map.find(parameter);
+            if (it == m_parameter_gradient_map.end())
+                fprintf(stderr, "Parameter %ls does not found in universal learner's list.\n", parameter.AsString().c_str());
+            auto grad = Constant(it->second);
+            grad.SetValue(gradientValue);
+        }
+
+        FunctionPtr update = m_update_func;
+        std::unordered_map<Variable, ValuePtr> out;
+        for (const auto& o : update->Outputs())
+            out.insert({o, nullptr});
+
+        update->Forward(m_empty, out, m_parameters.front().Value()->Device());
+
+        m_sampleCount += trainingSampleCount;
+        m_minibatchCount++;
+        if (sweepEnd)
+        {
+            m_sweepCount++;
+        }
+
+        return true;
+    }
+
+    /*virtual*/ void LearnerUniversal::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) /*override*/
+    {
+        LogicError("Shouldn't trigger single element update in universal learner.");
+    }
+
+    LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func)
+    {
+        return MakeSharedObject<LearnerUniversal>(parameters, func);
+    }
+    
+    LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
+    {
+        return MakeSharedObject<LearnerUniversal>(parameters, gradients, updateFunc);
     }
 }

@@ -1,35 +1,75 @@
 [
     {
+        "category": ["GettingStarted"],
+        "name":  "LogisticRegression_FunctionalAPI",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/1stSteps/LogisticRegression_FunctionalAPI.py",
+        "description":  "Introduces basic CNTK usage using logistic regression as an example, using the Functional API.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/24/2017"
+    },
+    {
+        "category": ["GettingStarted"],
+        "name":  "LogisticRegression_GraphAPI",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/1stSteps/LogisticRegression_GraphAPI.py",
+        "description":  "Introduces basic CNTK usage using logistic regression as an example, using the Graph API.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/24/2017"
+    },
+    {
         "category": [""],
         "name":  "Model Evaluation on Azure",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Evaluate-a-model-in-an-Azure-WebApi",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Evaluate-a-model-in-an-Azure-WebApi",
         "description":  "Host an already trained CNTK model on Azure.",
         "language":  [],
-        "type":  ["Tutorial"]
+        "type":  ["Tutorial"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": [""],
-        "name":  "Model Evaluation in C#",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/EvalDLL-Evaluation-on-Windows#using-the-evaldll-c-library",
-        "description":  "Evaluation or inference of an already trained CNTK model in C#.",
-        "language":  ["C#"],
-        "type":  ["Example"]
+        "name":  "Model Evaluation in C++/C#/.NET",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Eval-Examples",
+        "description":  "Evaluation or inference of an already trained CNTK model in C++/C#.",
+        "language":  ["C++", "C#", ".NET"],
+        "type":  ["Example"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": [""],
-        "name":  "Model Evaluation in C++",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Native-EvalDLL-API",
-        "description":  "Evaluation or inference of an already trained CNTK model in C++.",
-        "language":  ["C++"],
-        "type":  ["Example"]
+        "name":  "Model Evaluation on Universal Windows Platform (UWP)",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Library-Evaluation-on-UWP",
+        "description":  "Evaluation or inference of an already trained CNTK model on UWP.",
+        "language":  ["C++", "C#"],
+        "type":  ["Example"],
+	"dateadded": "7/31/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Transfer Learning",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/TransferLearning",
+        "description":  "Transfer Learning: adapt a pretrained model to a new classification task.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Transfer Learning",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb",
+        "description":  "Recognize flowers and animals in natural scene images using deep transfer learning with pre-trained ResNet data.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
         "name":  "Image auto encoder",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#07_deconvolution",
         "description":  "A simple image auto encoder using deconvolution and unpooling.",
-        "language":  ["BrainScript, Python"],
-        "type":  ["Recipe"]
+        "language":  ["BrainScript", "Python"],
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -37,7 +77,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/FeatureExtraction",
         "description":  "Evaluate and write out different layers of a trained model using Python.",
         "language":  ["Python"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -45,7 +86,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Video/GettingStarted",
         "description":  "Train a Basic 3-D convolutional neural network for video action recognition on the UCF11 dataset.",
         "language":  ["Python"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -53,7 +95,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/AlexNet",
         "description":  "CNN based network by Alex Krizhevsky. This was the winning model of the ILSVRC2012 classification task.",
         "language":  ["Python", "BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -61,55 +104,98 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/ConvNet#cntk-examples-imageclassificationconvnet",
         "description":  "A popular convolutional neural network for image-related tasks.",
         "language":  ["Python", "BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Faster R-CNN",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Faster-R-CNN",
+        "description":  "Train object detection from images using a region proposal netwrok in Faster R-CNN.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "8/30/2017"
     },
     {
         "category": ["Image"],
         "name":  "Fast R-CNN",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN",
         "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling.",
-        "language":  ["BrainScript"],
-        "type":  ["Tutorial", "Recipe"]
+        "language":  ["Python", "BrainScript"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Faster R-CNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection/FasterRCNN",
+        "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling and region proposal networks.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "7/25/2017"
     },
     {
         "category": ["Image"],
         "name":  "GoogLeNet (BN-Inception)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/BN-Inception#cntk-examples-imageclassificationgooglenetbn-inception",
         "description":  "GoogLeNet (BN-Inception) network for image classification.",
-        "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "language":  ["Python", "BrainScript"],
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
         "name":  "GoogLeNet (Inception V3)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/InceptionV3#cntk-examples-imageclassificationgooglenetinceptionv3",
         "description":  "GoogLeNet (Inception V3) network for image classification.",
-        "language":  ["BrainScript"],
-        "type":  ["Recipe"]
-    },
-    {
-        "category": ["Image"],
-        "name":  "MLP",
-        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/MLP#cntk-examples-imageclassificationmlp",
-        "description":  "Training a multilayer perceptron (MLP) network for image classification.",
         "language":  ["Python", "BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
-        "name":  "MNIST Feed Forward OCR",
-        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb",
-        "description":  "Use Feed Forward networks on an OCR problem.",
+        "name":  "GoogLeNet (Inception-ResNet-V1)",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/Inception-ResNet-V1#cntk-examples-imageclassificationgooglenetinception-resnet-v1",
+        "description":  "GoogLeNet (Inception-ResNet-V1) network for image classification.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"],
+	"dateadded": "7/5/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "MNIST Logistic Regression (LR) OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_LogisticRegression.ipynb",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using multi-class LR.",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/26/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "MNIST Multi-Layer Perceptron (MLP) OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103C_MNIST_MultiLayerPerceptron.ipynb",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using MLP.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/24/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "MNIST Convolutional Neural Network (CNN) OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using CNN.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "5/1/2017"
     },
     {
         "category": ["Image"],
         "name":  "MNIST Autoencoder Dim Reduction",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb",
-        "description":  "Use Autoencoder for dimensionality reduction.",
+        "description":  "Compress (using autoencoder) hand written digits from MNIST data with no human input (unsupervised learning).",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -117,7 +203,8 @@
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_201B_CIFAR-10_ImageHandsOn.ipynb",
         "description":  "Hands-on lab that shows how to implement an image recognition task using convolutional neural networks.",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -125,15 +212,35 @@
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb",
         "description":  "This tutorial shows how to transfer the style of one image to another. This allows us to take our ordinary photos and render them in the style of famous images or paintings.",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
         "name":  "Generative Adversarial Networks (GAN)",
-        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_205_Basic_GAN.ipynb",
-        "description":  "This tutorial is a basic implementation of GAN networks. This allows us generate realistic looking MNIST images.",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206A_Basic_GAN.ipynb",
+        "description":  "This tutorial is a basic implementation of GAN networks. This allows us to generate realistic looking MNIST images with no human input (unsupervised learning).",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Deep Convolutional Generative Adversarial Networks (DCGAN)",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206B_DCGAN.ipynb",
+        "description":  "This tutorial is an implementation of deep convolutional GAN (DCGAN) networks. This allows us to generate realistic looking MNIST images with no human input (unsupervised learning).",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Wasserstein and Loss Sensitive Generative Adversarial Networks (WGAN and LSGAN)",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206C_WGAN_LSGAN.ipynb",
+        "description":  "This tutorial is an implementation of Wasserstein and Loss Sensitive GAN networks. This allows us to generate CIFAR images with no human input (unsupervised learning).",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
     },
     {
         "category": ["Image"],
@@ -141,7 +248,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#02_oneconvcntk",
         "description":  "Simple network with one convolutional layer.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -149,7 +257,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#04_oneconvbncntk",
         "description":  "Simple network showing how to add batch normalization to a CNN.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -157,7 +266,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#03_oneconvdropoutcntk",
         "description":  "Simple network showing how to add dropout to a CNN.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -165,7 +275,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#01_onehiddencntk",
         "description":  "Simple network with one hidden layer.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -173,7 +284,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#05_oneconvregrcntk",
         "description":  "Simple network showing how to treat MNIST as a regression problem using Root Mean Square Error.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -181,7 +293,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Regression#cntk-examples-imageregression",
         "description":  "A simple neural network to predict the average RGB values of normalized images.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
@@ -189,23 +302,26 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/ResNet#cntk-examples-imageclassificationresnet",
         "description":  "Deep residual learning invented by Microsoft Research. This was the winning model of the ILSVRC and MS-COCO challenges in 2015.",
         "language":  ["Python", "BrainScript"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Image"],
         "name":  "VGG",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/VGG",
         "description":  "Deep CNN from University of Oxford. This was the winning model for the ILSVRC2014 localization task.",
-        "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "language":  ["Python", "BrainScript"],
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Numeric"],
         "name":  "Feed Forward Classification",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_102_FeedForward.ipynb",
-        "description":  "Use Feed Forward networks on a classification problem with CNTK and NumPy.",
+        "description":  "Classify cancer using simulated data (Feed Forward) with Numpy",
         "language":  ["Python"],
-        "type":  ["Tutorial"]
+        "type":  ["Tutorial"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Numeric"],
@@ -213,15 +329,17 @@
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb",
         "description":  ": Looking at the predictive potential on classification of an Exchange-traded Funds (ETF), and in this simplified setting how one could trade it.",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Numeric"],
         "name":  "Logistic Regression",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_101_LogisticRegression.ipynb",
-        "description":  "Logistic regression example with Synthetic data.",
-        "language":  ["Python", "BrainScript"],
-        "type":  ["Tutorial", "Recipe"]
+        "description":  "Classify cancer using simulated data (Logistic Regression).",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Numeric"],
@@ -229,7 +347,17 @@
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb",
         "description":  "Timeseries modeling with LSTMs using simulated data.",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Numeric"],
+        "name":  "LSTM based Timeseries with real world data",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_106B_LSTM_Timeseries_with_IOT_Data.ipynb",
+        "description":  "Forecasting using data from an IOT device.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Numeric"],
@@ -237,7 +365,17 @@
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb",
         "description":  "Example how software agents could take actions in an environment so as to maximize some notion of cumulative reward.",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Numeric"],
+        "name":  "Training with Sampled Softmax",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb",
+        "description":  "Training with Sampled Softmax",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -245,7 +383,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/AN4",
         "description":  "Train a speech recognition DNN acoustic model on the CMU AN4 dataset.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -253,7 +392,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/AN4",
         "description":  "Train a speech recognition LSTM acoustic model on the CMU AN4 dataset.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -261,7 +401,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/AMI",
         "description":  "Train a speech recognition DNN acoustic model on top of fMLLR features generated with the Kaldi toolchain.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -269,7 +410,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
         "description":  "Train a speech recognition model with learning rate adapted based on dev set on the TIMIT dataset.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -277,7 +419,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
         "description":  "Train autoencoder with bottleneck layer on the TIMIT dataset.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -285,7 +428,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
         "description":  "Train with two different inputs, fbank and mfcc, on the TIMIT dataset.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -293,7 +437,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
         "description":  "Train with multi-task learning and joint prediction of senone labels and dialect region on the TIMIT dataset.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -301,7 +446,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
         "description":  "Pre-train using layerwise discriminative pre-training, then full network training on the TIMIT dataset.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -309,7 +455,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
         "description":  "Train a speech recognition DNN acoustic model on the TIMIT dataset (TrainSimpleNetwork).",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech"],
@@ -317,7 +464,17 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
         "description":  "Train a speech recognition LSTM acoustic model on the TIMIT dataset (TrainNDLNetwork).",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Speech"],
+        "name":  "Connectionist Temporal Classification",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_208_Speech_Connectionist_Temporal_Classification.ipynb",
+        "description":  "Train a speech recognition LSTM acoustic model with CTC criteria.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/20/2017"
     },
     {
         "category": ["Speech", "Text"],
@@ -325,15 +482,17 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceToSequence/CMUDict",
         "description":  "Sequence-to-sequence model with attention mechanism for a grapheme to phoneme translation task on the CMUDict dataset.",
         "language":  ["Python", "BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Speech", "Text"],
         "name":  "Sequence-to-Sequence",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb",
-        "description":  "The input is a sequence with a dynamic length, and the output is also a sequence with some dynamic length. This is a natural fit for machine translation , automatic text summarization , word to pronunciation models and even parse tree generation.",
+        "description":  "Translate text from one domain (grapheme) to other (phoneme). The input is a sequence with a dynamic length, and the output is also a sequence with some dynamic length. This is a natural fit for machine translation , automatic text summarization , word to pronunciation models and even parse tree generation.",
         "language":  ["Python"],
-        "type":  ["Tutorial"]
+        "type":  ["Tutorial"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Text"],
@@ -341,7 +500,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/LanguageUnderstanding/ATIS",
         "description":  "LSTM based model for language understanding on the ATIS dataset.",
         "language":  ["Python", "BrainScript"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Text"],
@@ -349,15 +509,26 @@
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_202_Language_Understanding.ipynb",
         "description":  "Implement a recurrent network for language understanding of the ATIS dataset.",
         "language":  ["Python"],
-        "type":  ["Tutorial", "Recipe"]
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": [ "Text" ],
+        "name": "Neural Character Language Model",
+        "url": "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/CharacterLM",
+        "description": "A neural language model uses a recurrent neural network to predict words (or characters) with a richer context than traditional n-gram models allow.",
+        "language": [ "Python" ],
+        "type": [ "Recipe" ],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Text"],
-        "name":  "Neural Character Language Model",
-        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/CharacterLM",
-        "description":  "A neural language model uses a recurrent neural network to predict words (or characters) with a richer context than traditional n-gram models allow.",
+        "name":  "Word Based Language Model using Sampled Softmax",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/WordLMWithSampledSoftmax",
+        "description":  "An example on how to use sampled softmax to train a neural language model.",
         "language":  ["Python"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Text"],
@@ -365,7 +536,8 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceToSequence/PennTreebank",
         "description":  "Recurrent neural network for language modeling on the PennTreebank dataset.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
     },
     {
         "category": ["Text"],
@@ -373,6 +545,70 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceClassification/SimpleExample/Python",
         "description":  "Create and train an LSTM sequence classification model.",
         "language":  ["Python"],
-        "type":  ["Recipe"]
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Text"],
+        "name":  "Training with Sampled Softmax",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb",
+        "description":  "Improve training speed for models with large vocabularies.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Text"],
+        "name": "LightRNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/LightRNN",
+        "description": "LightRNN: Memory and Computation-Efficient Recurrent Neural Networks",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dateadded": "07/14/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Deep Q Neural Network",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
+        "description": "Train an agent to play Atari Games using Reinforcement Learning",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "05/05/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Flapping Bird with Keras",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning/FlappingBirdWithKeras",
+        "description": "Using CNTK Keras backend to train an agent to navigate a bird through a cactus maze",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "07/21/2017"
+    },
+    {
+        "category": ["Text"],
+        "name":  "Deep semantic modeling",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.ipynb",
+        "description":  "Compare two documents using deep semantic similarity.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	    "dateadded": "10/11/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Pretrained Super-resolution GANs",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_302A_Evaluation_of_Pretrained_Super-resolution_Models.ipynb",
+        "description":  "This tutorial uses pre-trained models for generating high resolution images from lower resolution images.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "Training super-resolution GANs",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs.ipynb",
+        "description":  "This tutorial shows how to train networks to generate higher resolution images using CNNs and GANs",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "10/17/2017"
     }
 ]

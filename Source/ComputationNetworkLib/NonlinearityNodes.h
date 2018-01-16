@@ -17,6 +17,7 @@
 #include <list>
 #include <memory>
 #include <algorithm>
+#include <numeric>
 #include <assert.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -72,7 +73,7 @@ public:
         }
         else if (opTypeHolder == unaryGradient)
         {
-            sliceInputGrad.DoUnaryOpOf(Input(inputIndex)->ParentOverwritesGradient() ? 0.0f : 1.0f, sliceOutputGrad, 1, opBackward, opSum);
+            sliceInputGrad.DoUnaryOpOf(Input(inputIndex)->IsGradientInitializedBy(this) ? 0.0f : 1.0f, sliceOutputGrad, 1, opBackward, opSum);
         }
         else 
         {
@@ -80,7 +81,7 @@ public:
             // Not possible for Cos().
             auto sliceValue = (opType == binaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
                 InputRef(0).ValueTensorFor(rank, fr);
-            sliceInputGrad.DoBinaryOpOf(Input(inputIndex)->ParentOverwritesGradient() ? 0.0f : 1.0f, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
+            sliceInputGrad.DoBinaryOpOf(Input(inputIndex)->IsGradientInitializedBy(this) ? 0.0f : 1.0f, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
     }
 
@@ -99,7 +100,7 @@ public:
         return opType == binaryWithInputGradient;
     }
 
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return (opType != noGradient); }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override { return (opType != noGradient) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None; }
 };
 
 #define UnaryElementWiseWithOpCodeNodeBaseMembers UsingComputationNodeMembersBoilerplate;
@@ -114,10 +115,18 @@ public:
 // FloorNode (input)
 // CosineNode (input)
 // SinNode (input)
+// AsinNode (input)
+// AcosNode (input)
+// CoshNode (input)
+// AsinhNode (input)
+// SinhNode (input)
+// AtanhNode (input)
 // Abs(input)
 // Negate (input)
 // Sqrt (input)
 // Reciprocal (input)
+// ExponentialLinearUnitDerivative (input)
+// StableSigmoidNode (input)
 // These are all implemented by single-opcode functions and can thus be declared by a macro.
 // -----------------------------------------------------------------------
 
@@ -141,20 +150,29 @@ public:
         }                                                                                                                                    \
     }
 
-//                                    Name             Forward and      Backward opcodes                                           Gradient optype
-DeclareUnaryElementWiseWithOpCodeNode(Abs,             Abs,             ElementwiseProductWithAbsDerivative,                       binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Cosine,          Cosine,          ElementwiseProductWithCosDerivative,                       binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Exp,             Exp,             ElementwiseProduct,                                        binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Floor,           Floor,           None,                                                      noGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Log,             Log,             ElementwiseProductWithLogDerivativeFromOutput,             binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Negate,          Negate,          Negate,                                                    unaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Pass,            Copy,            Copy,                                                      unaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,      Reciprocal,      ElementwiseProductWithReciprocalDerivative,                binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,         Sigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,         binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sin,             Sin,             ElementwiseProductWithSinDerivative,                       binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sqrt,            Sqrt,            ElementwiseProductWithSqrtDerivative,                      binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh,            Tanh,            ElementwiseProductWithTanhDerivativeFromOutput,            binaryWithOutputGradient);
+//                                    Name                   Forward and            Backward opcodes                                                 Gradient optype
+DeclareUnaryElementWiseWithOpCodeNode(Abs,                   Abs,                   ElementwiseProductWithAbsDerivative,                             binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Acos,                  Acos,                  ElementwiseProductWithAcosDerivative,                            binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Asin,                  Asin,                  ElementwiseProductWithAsinDerivative,                            binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Asinh,                 Asinh,                 ElementwiseProductWithAsinhDerivative,                           binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Atanh,                 Atanh,                 ElementwiseProductWithAtanhDerivative,                           binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Cosh,                  Cosh,                  ElementwiseProductWithCoshDerivative,                            binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Cosine,                Cosine,                ElementwiseProductWithCosDerivative,                             binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Exp,                   Exp,                   ElementwiseProduct,                                              binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Floor,                 Floor,                 None,                                                            noGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Log,                   Log,                   ElementwiseProductWithLogDerivativeFromOutput,                   binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Negate,                Negate,                Negate,                                                          unaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Pass,                  Copy,                  Copy,                                                            unaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(LabelsToGraph,         Copy,                  Copy,                                                            unaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,            Reciprocal,            ElementwiseProductWithReciprocalDerivative,                      binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear,       LinearRectifier,       ElementwiseProductWithLinearRectifierDerivativeFromOutput,       binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,               Sigmoid,               ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sin,                   Sin,                   ElementwiseProductWithSinDerivative,                             binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sinh,                  Sinh,                  ElementwiseProductWithSinhDerivative,                            binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sqrt,                  Sqrt,                  ElementwiseProductWithSqrtDerivative,                            binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Tanh,                  ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(StableSigmoid,         StableSigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
@@ -429,6 +447,114 @@ public:
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
+
+
+template <class ElemType>
+class TopKNode : public ComputationNode<ElemType>, public MultiOutputNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"TopK"; }
+
+public:
+    TopKNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name), MultiOutputNode<ElemType>(2) {}
+    TopKNode(DEVICEID_TYPE deviceId, const wstring& name, size_t k)
+        : Base(deviceId, name), MultiOutputNode<ElemType>(2), m_k(k) {}
+
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_sortedIndices, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_sortedIndices, matrixPool);
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+#ifdef _MSC_VER 
+        auto& outputValuePtrRef = this->ValuePtrRef();
+        auto& inputValuePtrRef = Input(0)->ValuePtrRef();
+#else
+        auto& outputValuePtrRef = this->template ValuePtrRef();
+        auto& inputValuePtrRef = Input(0)->template ValuePtrRef();
+#endif
+        auto dim = Input(0)->GetSampleLayout().GetDimPadded(0);
+        if (m_k > dim)
+            LogicError("TopK: number of requested elements k (=%zd) exceeds total number of elements (=%zd) on this axis", m_k, dim);
+
+        auto&& topkOutput = outputValuePtrRef->Reshaped(m_k, outputValuePtrRef->GetNumElements() / m_k);
+        auto&& topkInput = inputValuePtrRef->Reshaped(dim, inputValuePtrRef->GetNumElements() / dim);
+        topkInput.VectorMax(*m_sortedIndices, topkOutput, true, m_k);
+        this->m_outputsValue[1]->SetValue(m_sortedIndices->Reshaped(outputValuePtrRef->GetNumRows(), outputValuePtrRef->GetNumCols()));
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // Backpropagation works the same way as for other nodes that take top element(s) such as max pooling.
+        // The values that are not selected get a gradient of zero, otherwise the gradient is copied to the
+        // positions that were responsible for the top values. This is a scatter operation.
+#ifdef _MSC_VER 
+        auto&& inputGradient = Input(0)->GradientPtrRef();
+        auto&& outputGradient = GradientPtrRef();
+#else
+        auto&& inputGradient = Input(0)->template GradientPtrRef();
+        auto&& outputGradient = this->template GradientPtrRef();
+#endif
+
+        auto&& reshapedInputGradient = inputGradient->Reshaped(1, inputGradient->GetNumElements());
+        auto&& reshapedOutputGradient = outputGradient->Reshaped(1, outputGradient->GetNumElements());
+
+        // The indices take values between 0 and the dimension of the axis over which we compute the top k
+        // Since the matrix class lacks a scatter that can handle indices arising from gather operations 
+        // over a particular axis of a multidimensional tensor, we patch the indices here so that they look
+        // as if they were generated from a gather-like operation over a 1-dimensional tensor.
+        auto numCols = m_sortedIndices->GetNumCols();
+        if (numCols != 1)
+        {
+            CreateMatrixIfNull(m_steps);
+            auto dim = Input(0)->GetSampleLayout().GetDimPadded(0);
+            auto tmp = new ElemType[numCols];
+            std::generate(tmp, tmp + numCols, [i = ElemType(0), dim]() mutable { auto ret = i; i += dim; return ret; });
+            m_steps->SetValue(1, numCols, this->m_deviceId, tmp);
+            delete[] tmp;
+            m_sortedIndices->ScaleAndAdd(ElemType(1), *m_steps, *m_sortedIndices);
+        }
+        reshapedInputGradient.DoScatterColumnsOf(ElemType(1), m_sortedIndices->Reshaped(1, m_sortedIndices->GetNumElements()), reshapedOutputGradient, ElemType(1));
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return false; }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        assert(m_inputs.size() == 1);
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        auto&& inputShape = Input(0)->GetSampleLayout();
+        SmallVector<size_t> outDims = inputShape.GetDims();
+        if (outDims.size() > 0)
+            outDims[0] = m_k;
+        auto outShape = TensorShape(outDims);
+        SetDims(outShape, Input(0)->HasMBLayout());
+        this->m_outputsMBLayout[1] = Input(0)->GetMBLayout();
+        this->m_outputsShape[1] = outShape;
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_sortedIndices;
+    shared_ptr<Matrix<ElemType>> m_steps;
+    size_t m_k;
+};
+
+template class TopKNode<float>;
+template class TopKNode<double>;
+
+
+
 // -----------------------------------------------------------------------
 // If (flag, ifValue, elseValue)
 // -----------------------------------------------------------------------
@@ -570,7 +696,7 @@ template class ClipNode<double>;
 // CompareNode(a,b)
 // -----------------------------------------------------------------------
 // Template parameters compType (-1, 0, 1) and polarity (0, 1) are used selecting one of the six basic comparison operations. 
-// Note: parametrizing the 6 comparison operations with the the two parameters 'compType' an 'polarity' is motivated by:
+// Note: parametrizing the 6 comparison operations with the two parameters 'compType' an 'polarity' is motivated by:
 //
 // comp(a, b, compType, polarity) <==> sign(a-b) == compType, if polarity == 0
 //                                     sign(a-b) != compType, if polarity == 1

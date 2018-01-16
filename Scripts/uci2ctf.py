@@ -69,7 +69,7 @@ if __name__ == "__main__":
               "--output_file Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
               "\n\n"
               "For more information please visit "
-              "https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader"),
+              "https://docs.microsoft.com/en-us/cognitive-toolkit/BrainScript-CNTKTextFormat-Reader"),
       formatter_class=argparse.RawTextHelpFormatter)
 
   requiredNamed = parser.add_argument_group('required arguments')

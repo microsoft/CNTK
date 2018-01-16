@@ -759,7 +759,7 @@ SectionHeader* Section::GetSectionHeader(size_t filePosition, MappingType& mappi
     }
     case mappingFile:
         if (filePosition != 0)
-            RuntimeError("invalid fileposition, file mapping sections must start at filePostion zero");
+            RuntimeError("invalid fileposition, file mapping sections must start at filePosition zero");
     // intentional fall-through - same case, just at beginning of file
     case mappingSectionAll:
         sectionHeader = m_file->GetSection(filePosition, size);
@@ -1246,7 +1246,7 @@ void SectionStats::InitCompute(const ConfigArray& compute)
     m_rms = 0.0;  // root mean square
 
     // second pass measures
-    m_varSum = 0.0; // accumulated sum of difference between the mean and and the value squared
+    m_varSum = 0.0; // accumulated sum of difference between the mean and the value squared
 
     // compute after second pass
     m_variance = 0.0;

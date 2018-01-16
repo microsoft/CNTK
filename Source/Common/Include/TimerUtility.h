@@ -57,4 +57,4 @@ public:
     static long long GetTicksPerSecond();
 };
 
-} } }
+}}}

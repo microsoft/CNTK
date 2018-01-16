@@ -11,10 +11,13 @@ Unit tests for combine operation, only forward pass is tested
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import AA, I, precision, PRECISION_TO_TYPE, compare_lists_of_np_arrays, cntk_device
-from ...utils import sanitize_dtype_cntk, eval as cntk_eval
-
-from .. import plus, minus, classification_error, cross_entropy_with_softmax
+import cntk as C
+from .ops_test_utils import AA, precision, PRECISION_TO_TYPE, compare_lists_of_np_arrays, cntk_device
+from cntk.internal.utils import eval as cntk_eval
+from cntk.internal import sanitize_dtype_cntk
+from .. import plus, minus
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 
 TENSOR_PAIRS = [
     # (first operand, second_operand, ops, expected_forward)
@@ -33,15 +36,15 @@ def test_op_combine(left_operand, right_operand, operations, expected_results, d
     left_value = AA(left_operand, dtype=dt)
     right_value = AA(right_operand, dtype=dt)
 
-    a = I(shape=left_value.shape,
-          dtype=sanitize_dtype_cntk(precision),
-          needs_gradient=True,
-          name='a')
+    a = C.input_variable(shape=left_value.shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=True,
+                name='a')
 
-    b = I(shape=right_value.shape,
-          dtype=sanitize_dtype_cntk(precision),
-          needs_gradient=True,
-          name='b')
+    b = C.input_variable(shape=right_value.shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=True,
+                name='b')
 
     left_value.shape = (1, 1) + left_value.shape
     right_value.shape = (1, 1) + right_value.shape
@@ -62,3 +65,23 @@ def test_op_combine(left_operand, right_operand, operations, expected_results, d
     results = list(forward_results.values())
 
     assert compare_lists_of_np_arrays(results, expected_forward_results)
+
+
+def test_op_combine_input_var():
+    from .. import combine
+
+    x = C.input_variable(shape=(2))
+    func = combine([x])
+    value = [[1, 2]]
+    res = func.eval({x : value})
+    
+    assert np.allclose(res, [[1, 2]])
+
+def test_op_combine_subscript():
+    from .. import combine
+
+    x = C.input_variable(shape=(2))
+    assert x == combine([x,x])[0]
+    assert x == combine((x,x))[0]
+    assert x == combine(x,x,name='x2')[0]
+    assert x == combine(combine(x,x),combine(x,x))[0]

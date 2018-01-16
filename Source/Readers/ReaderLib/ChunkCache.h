@@ -8,7 +8,7 @@
 #include <map>
 #include "DataDeserializer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A cache to store the complete dataset (all chunks) in memory. The caching can
 // be switched on/off by a boolean flag in the reader config section, independent 
@@ -16,30 +16,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // when the whole dataset fits in memory.
 // Implemented as a wrapping proxy around a deserializer that stores pointers to
 // all chunks it sees in an internal map.
-class ChunkCache : public IDataDeserializer
+class ChunkCache : public DataDeserializer
 {
 public:
 
-    ChunkCache(IDataDeserializerPtr deserializer) : m_deserializer(deserializer) { }
+    ChunkCache(DataDeserializerPtr deserializer) : m_deserializer(deserializer) { }
 
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> StreamInfos() override
     {
-        return m_deserializer->GetStreamDescriptions();
+        return m_deserializer->StreamInfos();
     }
 
-    virtual ChunkDescriptions GetChunkDescriptions() override
+    virtual std::vector<ChunkInfo> ChunkInfos() override
     {
-        return m_deserializer->GetChunkDescriptions();
+        return m_deserializer->ChunkInfos();
     }
 
-    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& descriptions) override
+    virtual void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& descriptions) override
     {
-        return m_deserializer->GetSequencesForChunk(chunkId, descriptions);
+        return m_deserializer->SequenceInfosForChunk(chunkId, descriptions);
     }
 
-    virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& description) override
+    virtual bool GetSequenceInfo(const SequenceInfo& primary, SequenceInfo& description) override
     {
-        return m_deserializer->GetSequenceDescription(primary, description);
+        return m_deserializer->GetSequenceInfo(primary, description);
     }
 
     // Gets chunk data given its id.
@@ -48,9 +48,9 @@ public:
 private:
     // A map of currently loaded chunks
     std::map<size_t, ChunkPtr> m_chunkMap;
-    IDataDeserializerPtr m_deserializer;
+    DataDeserializerPtr m_deserializer;
 
     DISABLE_COPY_AND_MOVE(ChunkCache);
 };
 
-} } }
+}

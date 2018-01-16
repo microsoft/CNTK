@@ -1,0 +1,10 @@
+h5py>=2.6.0
+jupyter>=1.0.0
+matplotlib>=1.5.3
+pandas>=0.19.1
+pandas-datareader>=0.2.1
+pillow>=3.4.2
+pip>=8.1.2
+seaborn>=0.7.1
+six>=1.10.0
+gym>=0.5.2 

@@ -24,33 +24,52 @@ using namespace std;
 static string MakeFunctionNameStandOut(string name);
 static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, const function<void(string)>& write);
 
-/// <summary>This function retrieves the call stack as a string</summary>
-template <class E>
-string ExceptionWithCallStack<E>::GetCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
+namespace DebugUtil
 {
-    try
+    /// <summary>This function retrieves the call stack as a string</summary>
+    string GetCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
     {
-        string output;
-        CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output](string stack)
+        try
         {
-            output += stack;
-        });
-        return output;
+            string output;
+            string previousLine;
+            int count = 1;
+            CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output, &previousLine, &count](const string& currentStackLine)
+            {
+                if (currentStackLine.compare(previousLine))
+                {
+                    if (count > 1)
+                    {
+                        output.pop_back(); // remove new line and add it below
+                        output += " (x" + std::to_string(count) + ")\n"; // print callstack line plus number of times it appears
+                    }
+                    output += currentStackLine;
+                    previousLine = currentStackLine;
+                    count = 1;
+                    return;
+                }
+                // make sure we're not counting empty lines
+                if (!currentStackLine.empty())
+                {
+                    ++count;
+                }
+            });
+            return output;
+        }
+        catch (...) // since we run as part of error reporting, don't get hung up on our own error
+        {
+            return string();
+        }
     }
-    catch (...) // since we run as part of error reporting, don't get hung up on our own error
-    {
-        return string();
-    }
-}
 
-/// <summary>This function outputs the call stack to the std err</summary>
-template <class E>
-void ExceptionWithCallStack<E>::PrintCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
-{
-    CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [](string stack)
+    /// <summary>This function outputs the call stack to the std err</summary>
+    void PrintCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
     {
-        cerr << stack;
-    });
+        CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [](string stack)
+        {
+            cerr << stack;
+        });
+    }
 }
 
 // make the unmangled name a bit more readable
@@ -136,6 +155,7 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     write("\n[CALL STACK]\n");
 
 #ifdef _WIN32
+#ifndef CNTK_UWP
 
     // RtlCaptureStackBackTrace() is a kernel API without default binding, we must manually determine its function pointer.
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
@@ -161,23 +181,24 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     size_t firstFrame = skipLevels + 1; // skip CollectCallStack()
     for (size_t i = firstFrame; i < frames; i++)
     {
+        string callStackLine;
         if (i == firstFrame)
-            write("    > ");
+            callStackLine = "    > ";
         else
-            write("    - ");
+            callStackLine = "    - ";
 
         if (SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo))
         {
-            write(makeFunctionNamesStandOut ? MakeFunctionNameStandOut(symbolInfo->Name) : symbolInfo->Name);
-            write("\n");
+            callStackLine += makeFunctionNamesStandOut ? MakeFunctionNameStandOut(symbolInfo->Name) : symbolInfo->Name;
+            write(callStackLine + "\n");
         }
         else
         {
             DWORD error = GetLastError();
             char buf[17];
             sprintf_s(buf, "%p", callStack[i]);
-            write(buf);
-            write(" (SymFromAddr() error: " + msra::strfun::utf8(FormatWin32Error(error)) + ")\n");
+            callStackLine += buf;
+            write(callStackLine + " (SymFromAddr() error: " + msra::strfun::utf8(FormatWin32Error(error)) + ")\n");
         }
     }
 
@@ -186,7 +207,7 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     free(symbolInfo);
 
     SymCleanup(process);
-
+#endif // CNTK_UWP
 #else // Linux
 
     unsigned int MAX_NUM_FRAMES = 1024;

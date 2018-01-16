@@ -7,12 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Drawing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-// Re-use the Resize method defined in the CSEvalClientTest.exe assembly. 
-// Strictly speaking, those extensions should live in an assembly of their own.
-using Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient;
 using System.Drawing.Imaging;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
@@ -456,10 +452,14 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
         public void EvalManagedCrossAppDomainExceptionTest()
         {
             var currentPath = Environment.CurrentDirectory;
+
+            // search for "our" dll, ignoring the version number
+            var names = Directory.EnumerateFiles(currentPath, "Cntk.Eval.Wrapper-*.dll");
+            var dllpathname = names.FirstOrDefault();
+
             var domain = AppDomain.CreateDomain("NewAppDomain");
-            var path = Path.Combine(currentPath, "EvalWrapper.dll");
             var t = typeof(CNTKException);
-            var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(path, t.FullName);
+            var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(dllpathname, t.FullName);
             Assert.AreNotEqual(null, instance);
         }
 

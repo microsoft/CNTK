@@ -72,7 +72,7 @@ function OpBoost160VS15(
          Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                         @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $targetPath },
                         @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVarLib; Content  = $envContentLib } );
-        Download = @( @{Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
+        Download = @( @{Function = "Download"; Method = "WebRequest"; UserAgent = "Firefox"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
         Action = @( @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content = $targetPath },
                     @{Function = "SetEnvironmentVariable"; EnvVar = $envVarLib; Content  = $envContentLib },
                     @{Function = "InstallExe"; Command = "$cache\$prodFile"; Param = "/dir=`"$targetPath`" /SP- /SILENT /NORESTART"; runAs=$false } );
@@ -96,25 +96,25 @@ function OpCMake362(
         } )
 }
 
-function OpCNTKMKL3
+function OpMKLML011
     ([parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "CNTK Custom MKL Version 3"
-    $prodFile = "CNTKCustomMKL-Windows-3.zip"
-    $prodSubDir = "CNTKCustomMKL"
+    $prodName = "MKLML Version 0.11"
+    $prodFile = "mklml_win_2018.0.1.20171007"
+    $prodSubDir = "mklml"
     $targetPath = join-path $targetFolder $prodSubDir
-    $targetPathCurrenVersion = join-path $targetPath "3"
-    $envVar = "CNTK_MKL_PATH";
-    $envValue = $targetPath
-    $downloadSource = "https://www.cntk.ai/mkl/$prodFile";
-    $expectedHash = "BFE38CC72F669AD9468AD18B681718C3F02125DCF24DCC87C4696DD89D0E3CDE"
+    $targetPathCurrentVersion = join-path $targetPath $prodFile
+    $envVar = "MKLML_PATH";
+    $envValue = $targetPathCurrentVersion
+    $downloadSource = "https://github.com/01org/mkl-dnn/releases/download/v0.11/$prodFile.zip";
+    $expectedHash = "5B24445DE0D8912751F4BAEDE98FCC7CB3988FECF58295D63D3796436A54202E"
 
-    @(  @{ShortName = "CNTKMKL3"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPathCurrenVersion"; ActionInfo = "Installing $prodName"; 
-          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPathCurrenVersion },
+    @(  @{ShortName = "MKLML011"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPathCurrentVersion"; ActionInfo = "Installing $prodName"; 
+          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPathCurrentVersion },
                             @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
-          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; destinationFolder = $prodSubDir },
+          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile.zip"; ExpectedHash = $expectedHash } );
+          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile.zip"; destination = $targetFolder; destinationFolder = $prodSubDir },
                       @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
 }
@@ -159,42 +159,36 @@ function OpNvidiaCub141(
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUB_PATH";
     $envValue = $targetPath
-    $downloadSource = "https://github.com/NVlabs/cub/archive/1.4.1.zip";
-    $expectedHash = "F464EDA366E4DFE0C1D9AE2A6BBC22C5804CF131F8A67974C01FAE4AE8213E8B"
+    $downloadSource = "https://github.com/NVlabs/cub/archive/1.4.1.zip"
 
     @( @{ShortName = "CUB141"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile" } );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = "$targetFolder"; destinationFolder = $prodSubDir; zipSubTree= $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
 }
 
-function OpNVidiaCudnn5180(
+function OpNVidiaCudnn6080(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "NVidia CUDNN 5.1 for CUDA 8.0"
-    $cudnnWin7 = "cudnn-8.0-windows7-x64-v5.1.zip"
-    $cudnnWin10 = "cudnn-8.0-windows10-x64-v5.1.zip"
+    $prodName = "NVidia CUDNN 6.0 for CUDA 8.0"
+    $cudnnWin = "cudnn-8.0-windows10-x64-v6.0.zip"
 
-    $prodSubDir =  "cudnn-8.0-v5.1"
+    $prodSubDir =  "cudnn-8.0-v6.0"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUDNN_PATH"
     $envValue = join-path $targetPath "cuda"
-    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v5.1"
-    $expectedHashWin7 = ""
-    $expectedHashWin10 = "BE75CA61365BACE03873B47C77930025FFEE7676FBEF0DC03D3E180700AF014B"
+    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v6.0"
 
-    @( @{ShortName = "CUDNN5180"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "CUDNN6080"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyDirectory"; Path = $envValue },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows 7"; Source = "$downloadSource/$cudnnWin7"; Destination = "$cache\$cudnnWin7"; ExpectedHash = $expectedHashWin7 },
-                       @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; Source = "$downloadSource/$cudnnWin10"; Destination = "$cache\$cudnnWin10"; ExpectedHash = $expectedHashWin10 } );
-         Action = @( @{Function = "ExtractAllFromZipForPlatform"; Platform = "^Microsoft Windows 7"; zipFileName = "$cache\$cudnnWin10"; destination = $targetFolder; destinationFolder = $prodSubDir },
-                     @{Function = "ExtractAllFromZipForPlatform"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; zipFileName = "$cache\$cudnnWin10"; destination = $targetFolder; destinationFolder = $prodSubDir },
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = "$downloadSource/$cudnnWin"; Destination = "$cache\$cudnnWin" } );
+         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$cudnnWin"; destination = $targetFolder; destinationFolder = $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue } );
          })
 }
@@ -209,14 +203,14 @@ function OpOpenCV31(
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "OPENCV_PATH_V31";
     $envValue = "$targetPath\build"
-    $downloadSource = "https://netcologne.dl.sourceforge.net/project/opencvlibrary/opencv-win/3.1.0/opencv-3.1.0.exe"
+    $downloadSource = "https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.1.0/opencv-3.1.0.exe/download"
     $expectedHash = "0CBB10FAB967111B5B699A44CB224F5D729F8D852D2720CBD5CDB56D8770B7B3"
     $archiveSubTree = "opencv"
 
     @(  @{ShortName = "OPENCV310"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
           Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                             @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-          Download = @( @{ Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
+          Download = @( @{ Function = "Download"; Method = "WebRequest"; UserAgent = "Firefox"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
           Action = @( @{Function = "Extract7zipSelfExtractingArchive"; archiveName = "$cache\$prodFile"; destination = "$targetFolder"; destinationFolder = $prodSubDir; archiveSubTree= $archiveSubTree },
                       @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
@@ -299,7 +293,7 @@ function OpSwig3010(
     @( @{ShortName = "SWIG3010"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";  
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{ Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
+         Download = @( @{ Function = "Download"; Method = "WebRequest"; UserAgent = "Firefox"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree =$prodSubDir; destinationFolder =$prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue } );
         } )

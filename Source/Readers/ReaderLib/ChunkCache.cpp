@@ -7,7 +7,7 @@
 
 #include "ChunkCache.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 ChunkPtr ChunkCache::GetChunk(ChunkIdType chunkId)
 {
@@ -23,4 +23,4 @@ ChunkPtr ChunkCache::GetChunk(ChunkIdType chunkId)
     return chunk;
 }
 
-} } }
+}

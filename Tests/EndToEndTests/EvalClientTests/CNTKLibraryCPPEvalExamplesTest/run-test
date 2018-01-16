@@ -1,0 +1,49 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+set -x
+
+# This test uses a large dataset which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+    TEST_DATA_DIR=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
+else
+    TEST_DATA_DIR=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+fi
+
+# Copy the test data to the test run directory
+LocalTestDir=$TEST_RUN_DIR/TestData
+mkdir $LocalTestDir
+
+# Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
+[ "$TEST_DEVICE" == "cpu" ] && export CUDA_VISIBLE_DEVICES=-1
+
+# use pre-trained models and data files for cpp eval examples test
+echo Use pre-trained eval models in $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY for cpp eval tests.
+cp $TEST_DATA_DIR/PreTrainedModels/EvalModels/01_OneHidden.model $LocalTestDir/01_OneHidden.model || exit $?
+cp $TEST_DATA_DIR/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn $LocalTestDir/resnet20.dnn || exit $?
+cp $TEST_DATA_DIR/PreTrainedModels/EvalModels/atis.dnn $LocalTestDir/atis.dnn || exit $?
+cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl $LocalTestDir/query.wl || exit $?
+cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl $LocalTestDir/slots.wl || exit $?
+
+pushd $LocalTestDir
+
+if [ "$OS" == "Windows_NT" ]; then
+  $TEST_BIN_DIR/CNTKLibraryCPPEvalExamplesTest.exe
+else
+  $TEST_BIN_DIR/CNTKLibraryCPPEvalExamplesTest
+fi
+
+ExitCode=$?
+
+# Delete the test data
+popd
+rm -rf $LocalTestDir
+
+exit $ExitCode

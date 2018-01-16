@@ -21,6 +21,9 @@
 #include "RNNNodes.h"
 #include "UserDefinedV2FunctionNode.h"
 #include "BlockFunction.h"
+#include "SpecialPurposeNodes.h"
+#include "SequenceReshapeNodes.h"
+#include "UserDefinedFunction.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -45,12 +48,62 @@ namespace CNTK
         return dict;
     }
 
+    // Copy the internal state from the network into the function graph,
+    // specifically from RngUser nodes into the attributes dictionaries of
+    // the corresponding stateful primitive functions.
+    void CompositeFunction::UpdateInternalState() const
+    {
+        if (!m_computationNetwork)
+            return;
+
+        for (auto& function : m_allPrimitiveFunctions)
+        {
+            auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
+                continue;
+
+            // TODO: same for BatchNorm
+
+            auto& outputs = primitiveFunction->RawOutputs();
+            if (outputs.size() != 1)
+                LogicError("Function '%S' UpdateInternalState: a stateful primitive function must have a single output.", AsString().c_str());
+
+            const auto& rng = m_variableToNodeMap.at(outputs[0])->As<RngUser>();
+
+            Dictionary state;
+            state[PrimitiveFunction::AttributeNameRngSeed] = static_cast<size_t>(rng->GetRngSeed());
+            state[PrimitiveFunction::AttributeNameRngOffset] = static_cast<size_t>(rng->GetRngOffset());
+            primitiveFunction->SetState(state);
+        }
+    }
+
+    // Generate a dictionary representing the internal (local) state of the function graph.
+    Dictionary CompositeFunction::GetInternalState() const
+    {
+        UpdateInternalState();
+
+        Dictionary stateDictionary;
+        for (auto& function : m_allPrimitiveFunctions)
+        {
+            auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(function.get());
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
+                continue;
+
+            // TODO: same for BatchNorm
+
+            stateDictionary[primitiveFunction->Uid()] = primitiveFunction->GetState();
+        }
+        return stateDictionary;
+    }
+
     /*virtual*/ Dictionary CompositeFunction::Serialize() const
     {
+        UpdateInternalState();
+
         Dictionary dict = SerializeBlockComposite();
-       
+
         // Find cycles in the graph and "break" them by inserting placeholders.
-        // This needs to be done on Save, since here we have easy access to the shape and 
+        // This needs to be done on Save, since here we have easy access to the shape and
         // dynamic axis info.
         std::unordered_set<FunctionPtr> visitedFunctions;
         std::vector<FunctionPtr> topoSortedPrimitiveFunctions;
@@ -97,21 +150,21 @@ namespace CNTK
         std::reverse(std::begin(topoSortedPrimitiveFunctions), std::end(topoSortedPrimitiveFunctions));
 
         assert(topoSortedPrimitiveFunctions.back()->Uid() == RootFunction()->Uid());
-        
+
         std::vector<DictionaryValue> inputDictionaries;
         inputDictionaries.reserve(uniqueInputs.size());
         inputUids.clear();
         for (const auto& input : uniqueInputs)
         {
             if (inputUids.find(input.Uid()) != inputUids.end())
-                LogicError("Input uids must be unique");
+                LogicError("Function '%S' Serialize: Input uids must be unique.", AsString().c_str());
 
             inputUids.insert(input.Uid());
             inputDictionaries.push_back(input.Serialize());
         }
 
         dict[inputsKey] = std::move(inputDictionaries);
-       
+
         std::vector<DictionaryValue>  functionDictionaries;
         std::unordered_set<std::wstring> outputUids;
         for (const auto& primitiveFunction : topoSortedPrimitiveFunctions)
@@ -119,38 +172,16 @@ namespace CNTK
             for (const auto& output : primitiveFunction->RawOutputs())
             {
                 if (outputUids.find(output.Uid()) != outputUids.end())
-                    LogicError("Output uids of all primitive functions in a function graph must be unique");
+                    LogicError("Function '%S' Serialize: Output uids of all primitive functions in a function graph must be unique", AsString().c_str());
 
                 outputUids.insert(primitiveFunction->Uid());
             }
 
-            functionDictionaries.push_back(primitiveFunction->Serialize());
+            auto functionDict = UDFUtils::IsUDF(primitiveFunction)  ? UDFUtils::Serialize(primitiveFunction) : primitiveFunction->Serialize();
+            functionDictionaries.push_back(functionDict);
         }
 
         dict[functionsKey] = std::move(functionDictionaries);
-        
-        // Now, collect and store the internal state for all non-pure (stateful) functions in the graph 
-        // (with the corresponding nodes that subclass from RngUser: Dropout, RandomSample, etc).
-        Dictionary stateDictionary; 
-        for (const auto& kv : m_variableToNodeMap)
-        {
-            if (kv.second->Is<RngUser>() && kv.first.IsOutput())
-            {
-                // The RNG state should be associated with the actual function that the computation node
-                // corresponds to, and not the block primitives that wrap the actual function
-                auto ownerFunction = kv.first.Owner().get();
-                if (!ownerFunction->IsBlock())
-                {
-                    auto rng = kv.second->As<RngUser>();
-                    Dictionary state;
-                    state[rngSeedKey] = static_cast<size_t>(rng->GetRngSeed());
-                    state[rngOffsetKey] = static_cast<size_t>(rng->GetRngOffset());
-                    stateDictionary[ownerFunction->Uid()] = state;
-                }
-            }
-        }
-
-        dict[stateKey] = std::move(stateDictionary);
 
         return dict;
     }
@@ -197,7 +228,7 @@ namespace CNTK
     /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { inputsKey, functionsKey };
-       
+
         size_t version = ValidateDictionary<CompositeFunction>(dict, s_requiredDictionaryKeys, s_compositeFunctionTypeValue, s_serializationVersion);
 
         const auto& inputs = dict[inputsKey].Value<vector<DictionaryValue>>();
@@ -209,15 +240,12 @@ namespace CNTK
 
             if (uidToInputMap.find(inputVar.Uid()) != uidToInputMap.end())
             {
-                LogicError("Input uids are not unique (several inputs share '%ls' uid) "
-                           "(%s).", inputVar.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
+                CNTK::LogicError("CompositeFunction::Deserialize: Input uids are not unique (several inputs share '%ls' uid) (%s).",
+                                 inputVar.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
             }
+
             uidToInputMap[inputVar.Uid()] = inputVar;
         }
-
-        Dictionary stateDictionary;
-        if (dict.Contains(stateKey))
-            stateDictionary = dict[stateKey].Value<Dictionary>();
 
         const auto& functions = dict[functionsKey].Value<vector<DictionaryValue>>();
 
@@ -225,34 +253,19 @@ namespace CNTK
         std::unordered_set<FunctionPtr> allPrimitiveFunctions; // this keeps all primitive functions alive until a composite function is created.
         for (const auto& dictionaryValue : functions)
         {
-            FunctionPtr root = PrimitiveFunction::Deserialize(dictionaryValue.Value<Dictionary>(), uidToInputMap, allPrimitiveFunctions, allPlaceholderReplacements, device);
+            auto functionDict = dictionaryValue.Value<Dictionary>();
+            FunctionPtr root = UDFUtils::IsUDF(functionDict) ?
+                UDFUtils::Deserialize(functionDict, uidToInputMap, device) :
+                PrimitiveFunction::Deserialize(functionDict, uidToInputMap, allPrimitiveFunctions, allPlaceholderReplacements, device);
             allPrimitiveFunctions.insert(root);
 
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(root.get());
 
-            // Since Combine simply forwards other functions' outputs, all of its outputs
-            // should already be in the uidToInputMap.
-            auto opType = primitiveFunction->OpType();
-            if (opType == PrimitiveOpType::Combine)
-                continue;
-
-            if (primitiveFunction->IsStateful())
+            if (primitiveFunction != nullptr && primitiveFunction->OpType() == PrimitiveOpType::Combine)
             {
-                if (stateDictionary.Contains(primitiveFunction->Uid()))
-                {
-                    auto state = stateDictionary[primitiveFunction->Uid()].Value<Dictionary>();
-                    auto seed = state[rngSeedKey].Value<size_t>();
-                    auto offset = state[rngOffsetKey].Value<size_t>();
-                    primitiveFunction->m_attributes[PrimitiveFunction::AttributeNameRngSeed] = seed;
-                    primitiveFunction->m_attributes[PrimitiveFunction::AttributeNameRngOffset] = offset;
-                }  
-                else if (Internal::GetComputationNetworkTraceLevel() > 0)
-                {
-                    // TODO: all logging functionality should be refactored to live in a logging utility class. 
-                    fprintf(stderr, "WARNING: no state information found for the stateful function (%ls) "
-                            "when deserializing from a dictionary (version=%zu). "
-                            "Reproducibility not guaranteed.", primitiveFunction->OpName().c_str(), version);
-                }
+                // Since Combine simply forwards other functions' outputs, all of its outputs
+                // should already be in the uidToInputMap.
+                continue;
             }
 
             for (const auto& output : root->RawOutputs())
@@ -262,9 +275,8 @@ namespace CNTK
                 {
                     if (!it->second.IsPlaceholder())
                     {
-                        LogicError("Unexpected variable type %ls instead of a Placeholder for input %ls variable (uid = %ls)"
-                        "(%s).", VariableKindName(it->second.Kind()), it->second.Name().c_str(), it->second.Uid().c_str(),
-                        GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
+                        CNTK::LogicError("CompositeFunction::Deserialize: Unexpected variable '%S' instead of a Placeholder (uid = %ls) (%s).",
+                                         it->second.AsString().c_str(), it->second.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
                     }
                     allPlaceholderReplacements[it->second] = output;
                 }
@@ -275,84 +287,139 @@ namespace CNTK
             }
         }
 
+        // starting with the serialization version = 3, the state is preserved inside the attribute dictionaries of the
+        // corresponding primitive functions. Earlier versions have a dedicated key-value pair in the composite function dict.
+        if (version < 3)
+            RestoreStatefulFunctions(version, dict, allPrimitiveFunctions);
+
         return DeserializeBlockComposite(dict, allPrimitiveFunctions, allPlaceholderReplacements, device);
+    }
+
+    void CompositeFunction::RestoreStatefulFunctions(size_t version, const Dictionary& dict, std::unordered_set<FunctionPtr> functions)
+    {
+        Dictionary stateDictionary;
+        if (dict.Contains(stateKey))
+            stateDictionary = dict[stateKey].Value<Dictionary>();
+
+        for (auto& function : functions)
+        {
+            auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
+                continue;
+
+            if (stateDictionary.Contains(primitiveFunction->Uid()))
+            {
+                auto state = stateDictionary[primitiveFunction->Uid()].Value<Dictionary>();
+                // Add key-value pairs expected by the SetState method to the state dictionary.
+                state[PrimitiveFunction::AttributeNameRngSeed] = state[rngSeedKey].Value<size_t>();
+                state[PrimitiveFunction::AttributeNameRngOffset] = state[rngOffsetKey].Value<size_t>();
+                primitiveFunction->SetState(state);
+            }
+            else
+            {
+                if (GetTraceLevel() >= TraceLevel::Warning)
+                {
+                    // TODO: all logging functionality should be refactored to live in a logging utility class.
+                    fprintf(stderr, "WARNING: no state information found for the stateful function (%ls) "
+                        "when deserializing from a dictionary (version=%zu). "
+                        "Reproducibility not guaranteed.", primitiveFunction->OpName().c_str(), version);
+                }
+
+                // Create state from scratch, so that function attributes contain all the required key-value pairs.
+                Dictionary state;
+                state[PrimitiveFunction::AttributeNameRngSeed] = Internal::GenerateRandomSeed(true);
+                state[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
+                primitiveFunction->SetState(state);
+            }
+        }
     }
 
     void CompositeFunction::CopyState(const CompositeFunction& source)
     {
-        // Create a map with all non-pure (stateful) functions in the function graph.
-        auto collectStatefulFunctions = [](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions) -> std::map<std::wstring, FunctionPtr> {
-            std::map<std::wstring, FunctionPtr> functionMap;
-            for (auto funcPtr : allPrimitiveFunctions)
-            {
+        // Collect a vector of stateful function uids using a pre-order traversal of a function graphs.
+        auto collectStatefulFunctionUIDs = [](const Function& function) -> vector<wstring> {
+            vector<wstring> uids;
+            PreorderTraverseFunctions(function.RootFunction(), [&uids](const FunctionPtr& funcPtr) {
                 auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
-                if (primitiveFunction->IsStateful())
+                if (primitiveFunction && primitiveFunction->IsStateful())
                 {
-                    functionMap[primitiveFunction->Uid()] = funcPtr;
+                    uids.push_back(funcPtr->Uid());
                 }
-            }
-            return functionMap;
+            }, true);
+
+            return uids;
         };
 
-        std::map<std::wstring, FunctionPtr> statefulFunctionsTo = collectStatefulFunctions(m_allPrimitiveFunctions);
-        std::map<std::wstring, FunctionPtr> statefulFunctionsFrom = collectStatefulFunctions(source.m_allPrimitiveFunctions);
+        auto theirUIDs = collectStatefulFunctionUIDs(source);
+        auto ourUIDs = collectStatefulFunctionUIDs(*this);
 
-        assert(statefulFunctionsTo.size() == statefulFunctionsFrom.size());
-        if (statefulFunctionsFrom.size() == 0)
+        if (theirUIDs.size() != ourUIDs.size())
+            CNTK::LogicError("Cannot copy internal state, the source and the destination contain different number of stateful functions.");
+
+        auto state = source.GetInternalState();
+
+        if (theirUIDs == ourUIDs)
         {
+            // uids are identialy, no need to remap.
+            SetInternalState(state);
             return;
         }
 
-        // Copy state captured in the attributes dictionaries.
-        for (const auto& kv : statefulFunctionsFrom)
-        {
-            statefulFunctionsTo[kv.first]->m_attributes = kv.second->Attributes();
-        }
+        // build a map of souce function to the destination (this) function UIDs.
+        map<wstring, wstring> uidMap;
+        for (auto i = 0; i < theirUIDs.size(); i++)
+            uidMap[theirUIDs[i]] = ourUIDs[i];
 
-        UpdateInternalNetworkState();
+        Dictionary remappedState;
+        for (auto& kv : state)
+            remappedState[uidMap[kv.first]] = kv.second;
+
+        SetInternalState(remappedState);
     }
 
-    void CompositeFunction::UpdateInternalNetworkState()
+    void CompositeFunction::SetInternalState(const Dictionary& state)
     {
-        if (!m_computationNetwork)
-        {
+        if (state.Size() == 0)
             return;
-        }
 
         for (const auto& function : m_allPrimitiveFunctions)
         {
-            auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(function.get());
-            if (primitiveFunction->IsStateful())
+            auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
+                continue;
+
+            auto functionState = state[primitiveFunction->Uid()].Value<Dictionary>();
+
+            primitiveFunction->SetState(functionState);
+
+            if (!m_computationNetwork)
+                continue;
+
+            auto seed = functionState[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+            auto offset = functionState[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+
+            // copy the state directly into the network
+            for (const auto& output : function->RawOutputs())
             {
-                for (const auto& output : function->RawOutputs())
-                {
-                    auto node = m_variableToNodeMap.at(output);
-                    auto attributes = function->Attributes();
-                    auto seed = attributes[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
-                    auto offset = attributes[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
-                    node->As<RngUser>()->SetRngState(seed, offset);
-                }
+                auto node = m_variableToNodeMap.at(output);
+                node->As<RngUser>()->SetRngState(seed, offset);
             }
         }
     }
 
-    // Names of the dynamic axes in the CNTK engine for some special sets of dynamic axes values
-    // Note: The no sequence axis corresponds to a special case where there is no sequence axis (i.e. has been reduced over)
-    // and the special name is used to identify this when loading back a model saved in CNTK v1 format. This will not really be needed
-    // when the new CNTK v2 model serialization format is ready.
-    /*static*/ const std::wstring CompositeFunction::InternalDefaultDynamicAxisName = L"*";
-    /*static*/ const std::wstring CompositeFunction::InternalNoSequenceAxisName = L"__noSequenceAxis";
 
-    // Recursively create a sub-network of ComputationNode instances corresponding to the graph of Functions 
-    // underlying the specified 'variable' and return the ComputationNode instance that corresponds to the 
+    // Recursively create a sub-network of ComputationNode instances corresponding to the graph of Functions
+    // underlying the specified 'variable' and return the ComputationNode instance that corresponds to the
     // top level 'variable'
     template <typename ElementType>
     /*static*/ ComputationNodeBasePtr CompositeFunction::GetNode(const Variable& variable,
                                                                  Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                  ComputationNetworkBuilder<ElementType>& builder,
+                                                                 const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                  std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
                                                                  std::unordered_map<Variable, bool>& isVariableRootMap,
-                                                                 const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
+                                                                 const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
+                                                                 bool useMangledNamesForComputationNodes)
     {
         auto iter = variableToNodeMap.find(variable);
         if (iter != variableToNodeMap.end())
@@ -363,24 +430,24 @@ namespace CNTK
 
         // The DataType, Shape and DynamicAxes of the variable must be known by now
         if (variable.GetDataType() == DataType::Unknown)
-            InvalidArgument("Variable%S with unknown DataType detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable '%S' with unknown DataType found when compiling the Function graph.", variable.AsString().c_str());
 
         if (variable.Shape().IsUnknown())
-            InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
-
-        if (variable.Shape().HasInferredDimension())
-            InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable '%S' with unknown shape found when compiling the Function graph.", variable.AsString().c_str());
 
         if (variable.DynamicAxes() == Axis::UnknownDynamicAxes())
-            InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable '%S' with unknown dynamic axes found when compiling the Function graph.", variable.AsString().c_str());
 
         // Lets add a null entry in the map for this variable, to break infinite recursion when processing recurrent graphs
         variableToNodeMap[variable] = nullptr;
 
         std::shared_ptr<ComputationNode<ElementType>> computationNodePtr;
+        auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name(), useMangledNamesForComputationNodes);
         if (variable.IsParameter() || variable.IsConstant())
         {
-            auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
+            if (variable.Shape().HasInferredDimension())
+                InvalidArgument("Parameter or Constant '%S' with unresolved shape %S found when compiling the Function graph.", variable.AsString().c_str(), variable.Shape().AsString().c_str());
+
             computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient() || (inputsToExcludeGradientsFor.find(variable) != inputsToExcludeGradientsFor.end()))
@@ -391,59 +458,135 @@ namespace CNTK
 
             if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
                 computationNodePtr->Value() = valueMatrix->AsReference();
-            else
+            else // Constant: if initialized data lives on wrong device, make a copy to the right one (copy is OK since it's constant)
             {
-                Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
+                // TODO: the following two lines are a workaround for a bug in the Math library
+                // (AssignValuesOf throws when source and destination matrices reside on different GPU devices).
+                // Once this bug is fixed, change to
+                // Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
+                Matrix<ElementType> clonedMatrix(network->GetDeviceId());
+                clonedMatrix.SwitchToMatrixType(valueMatrix->GetMatrixType(), valueMatrix->GetFormat(), false);
                 clonedMatrix.AssignValuesOf(*valueMatrix);
                 computationNodePtr->Value() = std::move(clonedMatrix);
             }
         }
         else if (variable.IsInput())
         {
-            auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
+            auto fullyDefinedArgumentVar = variable;
+            if (fullyDefinedArgumentVar.Shape().HasFreeDimension() && (fullyDefinedArgumentsMap.find(fullyDefinedArgumentVar) != fullyDefinedArgumentsMap.end()))
+                fullyDefinedArgumentVar = fullyDefinedArgumentsMap.at(fullyDefinedArgumentVar);
+
+            if (fullyDefinedArgumentVar.Shape().HasUnboundDimension())
+                InvalidArgument("Input Variable '%S' with unresolved shape %S found when compiling the Function graph.", fullyDefinedArgumentVar.AsString().c_str(), fullyDefinedArgumentVar.Shape().AsString().c_str());
 
             // TODO: Input variables currently are required to have the default batch axis
             auto dynamicAxes = variable.DynamicAxes();
             auto foundDefaultBatchAxis = std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis());
-            if (foundDefaultBatchAxis == dynamicAxes.end())
-                LogicError("Currently Input Variables are required to have the DefaultBatchAxis as one of their dynamic axes");
+            if (IsSparseInput(variable) && (foundDefaultBatchAxis == dynamicAxes.end()))
+                CNTK::LogicError("Sparse Input Variable '%S' found without a DefaultBatchAxis dynamic axis; this is currently unsupported.", variable.AsString().c_str());
 
-            if (dynamicAxes.back() != Axis::DefaultBatchAxis())
-                LogicError("Currently Input Variables are required to have the DefaultBatchAxis as their last dynamic axes");
+            if (!dynamicAxes.empty() && (dynamicAxes.back() != Axis::DefaultBatchAxis()))
+                CNTK::LogicError("Input Variable '%S' does not have the DefaultBatchAxis as its last dynamic axis.", variable.AsString().c_str());
 
             // TODO: Support inputs with > 1 dynamic axes
-            if ((dynamicAxes.size() < 1) || (dynamicAxes.size() > 2))
-                LogicError("Currently only Input variables with 1 or 2 dynamic axis are supported");
+            if (dynamicAxes.size() > 2)
+                CNTK::LogicError("Input Variable '%S' has %d dynamic axes; currently only inputs with <= 2 dynamic axes are supported.",
+                                 variable.AsString().c_str(), (int)dynamicAxes.size());
 
-            // Construct the dynamic axis name to be used internally for the CNTK InputNodes
-            std::wstring internalDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
-
-            if (!internalDynamicAxisName.empty() && !network->NodeNameExists(internalDynamicAxisName))
-                network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalDynamicAxisName), {});
-
-            if (IsSparseInput(variable))
-                computationNodePtr = builder.CreateSparseInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
-            else
-                computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
-
-            if (variable.NeedsGradient() && (inputsToExcludeGradientsFor.find(variable) == inputsToExcludeGradientsFor.end()))
+            if (!dynamicAxes.empty())
             {
-                // Set a dummy learning rate multiplier to force gradient computation for the input computation node since by default
-                // gradients are not computed for Input nodes
-                computationNodePtr->SetLearningRateMultiplier(0.00001f);
+                // Construct the dynamic axis name to be used internally for the CNTK InputNodes
+                std::wstring internalDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
+
+                if (!internalDynamicAxisName.empty() && !network->NodeNameExists(internalDynamicAxisName))
+                    network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalDynamicAxisName), {});
+
+                if (IsSparseInput(variable))
+                    computationNodePtr = builder.CreateSparseInputNode(internalNodeName, AsTensorShape(fullyDefinedArgumentVar.Shape()), internalDynamicAxisName);
+                else
+                    computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShape(fullyDefinedArgumentVar.Shape()), internalDynamicAxisName);
+
+                if (variable.NeedsGradient() && (inputsToExcludeGradientsFor.find(variable) == inputsToExcludeGradientsFor.end()))
+                {
+                    // Set a dummy learning rate multiplier to force gradient computation for the input computation node since by default
+                    // gradients are not computed for Input nodes
+                    computationNodePtr->SetLearningRateMultiplier(0.00001f);
+                }
             }
+            else
+            {
+                computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(fullyDefinedArgumentVar.Shape()));
+                network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
+                if (!variable.NeedsGradient() || (inputsToExcludeGradientsFor.find(variable) != inputsToExcludeGradientsFor.end()))
+                    computationNodePtr->SetLearningRateMultiplier(0.0);
+            }
+
+            if (variable.Shape().HasFreeDimension())
+                computationNodePtr->MarkNeedsDynamicValidation();
         }
         else
         {
             assert(variable.IsOutput());
-            computationNodePtr = GetOutputVariableNode(variable, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor)->template As<ComputationNode<ElementType>>()->shared_from_this();
+            // The primary output of a function is its first output
+            auto primaryOutput = variable.Owner()->RawOutputs()[0];
+            // If this variable is not the primary output, then we need to look up the primary output
+            // so that the variableToNodeMap will contain a mapping from the primary variable to an OutputMultiplexerNode
+            // which is how we handle multiple outputs in V1. See also the instantiation of OutputMultiplexerNode in this file.
+            if (primaryOutput != variable)
+                GetNode(primaryOutput, network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
+            auto outputVariableNode = GetOutputVariableNode(variable, network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
+            // Can be null in case of loops with f.output == f.input.
+            // Such loops cannot be handled, so we leave nullptr as computational node.
+            if (outputVariableNode)
+                computationNodePtr = outputVariableNode->template As<ComputationNode<ElementType>>()->shared_from_this();
+            else
+                computationNodePtr = nullptr;
         }
 
         variableToNodeMap[variable] = computationNodePtr;
         if (isVariableRootMap.find(variable) == isVariableRootMap.end())
-        isVariableRootMap[variable] = variable.IsOutput();
+            isVariableRootMap[variable] = variable.IsOutput();
 
         return computationNodePtr;
+    }
+
+    /*static*/ Variable CompositeFunction::GetMappingForNoOpOutput(const Variable& variable, bool recursive)
+    {
+        Variable mappingVariable = variable;
+
+        auto ownerFunc = variable.IsOutput() ? variable.Owner().get() : nullptr;
+        auto ownerPrimitiveFunc = dynamic_cast<PrimitiveFunction*>(ownerFunc);
+        if (ownerPrimitiveFunc && (ownerPrimitiveFunc->OpType() == PrimitiveOpType::NoOp))
+            mappingVariable = ownerPrimitiveFunc->Inputs()[0];
+
+        if (recursive && (mappingVariable != variable))
+            return GetMappingForNoOpOutput(mappingVariable);
+        else
+            return mappingVariable;
+    }
+
+    /*static*/ Variable CompositeFunction::GetMappingVariable(const Variable& variable, bool recursive)
+    {
+        Variable mappingVariable = variable;
+
+        auto ownerFunc = variable.IsOutput() ? variable.Owner().get() : nullptr;
+        auto ownerPrimitiveFunc = dynamic_cast<PrimitiveFunction*>(ownerFunc);
+        if (ownerPrimitiveFunc)
+        {
+            if (ownerPrimitiveFunc->OpType() == PrimitiveOpType::NoOp)
+                mappingVariable = GetMappingForNoOpOutput(variable);
+            else
+            {
+                auto ownerBlockFunc = dynamic_cast<BlockFunction*>(ownerFunc);
+                if (ownerBlockFunc)
+                    mappingVariable = ownerBlockFunc->CompositeOutputsMap().at(variable);
+            }
+        }
+
+        if (recursive && (mappingVariable != variable))
+            return GetMappingVariable(mappingVariable);
+        else
+            return mappingVariable;
     }
 
     template <typename ElementType>
@@ -451,370 +594,642 @@ namespace CNTK
                                                                                Function* function,
                                                                                const std::vector<std::shared_ptr<ComputationNode<ElementType>>>& inputNodes,
                                                                                Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
-                                                                               std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap)
+                                                                               std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
+                                                                               bool useMangledNamesForComputationNodes)
     {
+        PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
+        if (primitiveFunction && (primitiveFunction->OpType() == PrimitiveOpType::NoOp))
+            return variableToNodeMap[GetMappingVariable(variable)];
+
         ComputationNodeBasePtr computationNodePtr;
 
-        auto internalNodeName = CNTKInternalNodeNameFromUidAndName(function->Uid(), function->Name());
+        auto internalNodeName = CNTKInternalNodeNameFromUidAndName(function->Uid(), function->Name(), useMangledNamesForComputationNodes);
 
         std::vector<ComputationNodeBasePtr> inputNodesBasePtrs;
         for (auto inputNode : inputNodes)
             inputNodesBasePtrs.push_back(inputNode);
 
-        PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
-        if (primitiveFunction)
+        auto outputs = function->RawOutputs();
+        if (variable == outputs[0])
         {
-            auto functionInputs = function->Inputs();
-            auto& functionConfig = function->Attributes();
-            PrimitiveOpType op = primitiveFunction->OpType();
+            if (primitiveFunction)
+            {
+                auto functionInputs = function->Inputs();
+                auto& functionConfig = function->Attributes();
+                PrimitiveOpType op = primitiveFunction->OpType();
 
-            switch (op)
-            {
-            case PrimitiveOpType::Negate:
-                computationNodePtr = New<NegateNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Sigmoid:
-                computationNodePtr = New<SigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Tanh:
-                computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Cos:
-                computationNodePtr = New<CosineNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Sin:
-                computationNodePtr = New<SinNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::ReLU:
-                computationNodePtr = New<RectifiedLinearNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Exp:
-                computationNodePtr = New<ExpNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Log:
-                computationNodePtr = New<LogNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Sqrt:
-                computationNodePtr = New<SqrtNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Floor:
-                computationNodePtr = New<FloorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Abs:
-                computationNodePtr = New<AbsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Reciprocal:
-                computationNodePtr = New<ReciprocalNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Softmax:
-                computationNodePtr = New<SoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Hardmax:
-                computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::TransposeAxes:
-            {
-                auto axis1 = functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>();
-                auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
+                switch (op)
+                {
+                case PrimitiveOpType::Negate:
+                    computationNodePtr = New<NegateNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Sigmoid:
+                    computationNodePtr = New<SigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Atanh:
+                    computationNodePtr = New<AtanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Tanh:
+                    computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Acos:
+                    computationNodePtr = New<AcosNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Cos:
+                    computationNodePtr = New<CosineNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Asin:
+                    computationNodePtr = New<AsinNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Sin:
+                    computationNodePtr = New<SinNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Cosh:
+                    computationNodePtr = New<CoshNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Asinh:
+                    computationNodePtr = New<AsinhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Sinh:
+                    computationNodePtr = New<SinhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::ReLU:
+                    computationNodePtr = New<RectifiedLinearNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Exp:
+                    computationNodePtr = New<ExpNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Log:
+                    computationNodePtr = New<LogNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Sqrt:
+                    computationNodePtr = New<SqrtNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::ELU:
+                    computationNodePtr = New<ExponentialLinearUnitNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Floor:
+                    computationNodePtr = New<FloorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Abs:
+                    computationNodePtr = New<AbsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Reciprocal:
+                    computationNodePtr = New<ReciprocalNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Softmax:
+                    computationNodePtr = New<SoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Hardmax:
+                    computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::TopK:
+                {
+                    auto k = functionConfig[PrimitiveFunction::AttributeNameNumItems].Value<size_t>();
+                    computationNodePtr = New<TopKNode<ElementType>>(network->GetDeviceId(), internalNodeName, k);
+                    break;
+                }
+                case PrimitiveOpType::StableSigmoid:
+                    computationNodePtr = New<StableSigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::TransposeAxes:
+                {
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                    {
+                        auto perm = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                        for (auto& p : perm)
+                            p = NormalizeStaticAxis(p, perm.size());
+                        computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(perm));
+                    }
+                    else
+                    {
+                        auto axis1 = functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>();
+                        auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
 
-                // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
-                computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
-                break;
-            }
-            case PrimitiveOpType::Where:
-            {
-                auto dynamicAxes = variable.DynamicAxes();
-                auto internalCNTKWhereNodeDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
-                computationNodePtr = New<WhereNode<ElementType>>(network->GetDeviceId(), internalNodeName, internalCNTKWhereNodeDynamicAxisName);
-                break;
-            }
-            case PrimitiveOpType::Slice:
-            {
-                auto axis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                auto beginIndex = functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                auto endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
-
-                // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
-                computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
-                break;
-            }
-            case PrimitiveOpType::RandomSample:
-            {
-                auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
-                auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
-                computationNodePtr = New<RandomSampleNode<ElementType>>(network->GetDeviceId(), internalNodeName, numSamples, allowDuplicates);
-                break;
-            }
-            case PrimitiveOpType::RandomSampleInclusionFrequency:
-            {
-                auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
-                auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
-                computationNodePtr = New<RandomSampleInclusionFrequencyNode<ElementType>>(network->GetDeviceId(), internalNodeName, numSamples, allowDuplicates);
-                break;
-            }
-            case PrimitiveOpType::Dropout:
-            {
-                auto dropoutRate = functionConfig[PrimitiveFunction::AttributeNameDropoutRate].Value<double>();
-                computationNodePtr = New<DropoutNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                computationNodePtr->As<DropoutNode<ElementType>>()->SetDropoutRate(dropoutRate);
-                break;
-            }
-            case PrimitiveOpType::Reshape:
-            {
-                computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(primitiveFunction->RawOutputs()[0].Shape()));
-                break;
-            }
-            case PrimitiveOpType::ROIPooling:
-            {
-                auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
-                computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(roiOutputShape));
-                break;
-            }
-            case PrimitiveOpType::Pooling:
-            {
-                PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
-                auto poolingWindowsShape = functionConfig[PrimitiveFunction::AttributeNamePoolingWindowShape].Value<NDShape>();
-                auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-                auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-                auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
-                break;
-            }
-            case PrimitiveOpType::Unpooling:
-            {
-                auto unpoolingWindowShape = functionConfig[PrimitiveFunction::AttributeNameUnpoolingWindowShape].Value<NDShape>();
-                auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-                auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-                auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                //We only get here after validation so it is safe to assume unpooling is max
-                computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
-                break;
-            }
-            case PrimitiveOpType::SumAll:
-                computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Plus:
-                computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::LogPlus:
-                computationNodePtr = New<LogPlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Minus:
-                computationNodePtr = New<MinusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::ElementTimes:
-                computationNodePtr = New<ElementTimesNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Equal:
-                computationNodePtr = New<EqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::NotEqual:
-                computationNodePtr = New<NotEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Less:
-                computationNodePtr = New<LessNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::LessEqual:
-                computationNodePtr = New<LessEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Greater:
-                computationNodePtr = New<GreaterNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::GreaterEqual:
-                computationNodePtr = New<GreaterEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Times:
-            {
-                size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
-                computationNodePtr = New<TimesNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank, inferInputRankToMap);
-                break;
-            }
-            case PrimitiveOpType::TransposeTimes:
-            {
-                size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                computationNodePtr = New<TransposeTimesNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank);
-                break;
-            }
-            case PrimitiveOpType::Convolution:
-            {
-                NDShape outputMapCount, kernelShape;
-                std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape());
-                auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-                auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-                auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
-                auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
-                auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
-                computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples);
-                break;
-            }
-            case PrimitiveOpType::CosDistance:
-                computationNodePtr = New<CosDistanceNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Logistic:
-                computationNodePtr = New<LogisticNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::SquaredError:
-                computationNodePtr = New<SquareErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::CrossEntropyWithSoftmax:
-                computationNodePtr = New<CrossEntropyWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::ClassificationError:
-                computationNodePtr = New<ClassificationErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::EditDistanceError:
-            {
-                auto subPen = functionConfig[PrimitiveFunction::AttributeNameSubstitutionPenalty].Value<float>();
-                auto delPen = functionConfig[PrimitiveFunction::AttributeNameDeletionPenalty].Value<float>();
-                auto insPen = functionConfig[PrimitiveFunction::AttributeNameInsertionPenalty].Value<float>();
-                auto squashInputs = functionConfig[PrimitiveFunction::AttributeNameSquashInputs].Value<bool>();
-                auto samplesToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameSamplesToIgnore].Value<std::vector<DictionaryValue>>());
-                computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), subPen, delPen, insPen, squashInputs, samplesToIgnore, internalNodeName);
-                break;
-            }
-            case PrimitiveOpType::LambdaRank:
-                computationNodePtr = New<LambdaRankNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::NDCG:
-                computationNodePtr = New<NDCG1EvalNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::PastValue:
-            case PrimitiveOpType::FutureValue:
-            {
-                Variable inputOperandVar = functionInputs[0];
-                Variable initialStateVar = functionInputs[1];
-
-                size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
-                if (op == PrimitiveOpType::PastValue)
-                    computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
-                else
-                    computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
-
-                break;
-            }
-            case PrimitiveOpType::ReduceElements:
-            {
-                auto reductionAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                auto reductionOpName = functionConfig[PrimitiveFunction::AttributeNameReductionOpName].Value<std::wstring>();
-                computationNodePtr = New<ReduceElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName, reductionOpName, AsCNTKInternalAxisIdx(reductionAxis));
-                break;
-            }
-            case PrimitiveOpType::BatchNormalization:
-            {
-                auto spatial = functionConfig[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
-                auto normalizationTimeConstant = functionConfig[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
-                auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
-                auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
-                auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
-
-                computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW);
-                break;
-            }
-            case PrimitiveOpType::Combine:
-                // This operation is just a no-op and is a means to combine multiple functions to create a single Function
-                // whose outputs are a union of the outputs of the Functions being combined.
-                computationNodePtr = variableToNodeMap[variable];
-                break;
-            case PrimitiveOpType::PackedIndex:
-                computationNodePtr = New<PackedIndexNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::GatherPacked:
-                computationNodePtr = New<GatherPackedNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::ScatterPacked:
-                computationNodePtr = New<ScatterPackedNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Clip:
-                computationNodePtr = New<ClipNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Select:
-                computationNodePtr = New<IfNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            case PrimitiveOpType::Splice:
-            {
-                Axis spliceAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                computationNodePtr = New<RowStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(spliceAxis));
-                break;
-            }
-            case PrimitiveOpType::OptimizedRNNStack:
-            {
-                auto bidirectional = functionConfig[PrimitiveFunction::AttributeNameBidirectional].Value<bool>();
-                auto numLayers = functionConfig[PrimitiveFunction::AttributeNameNumLayers].Value<size_t>();
-                auto hiddenSize = functionConfig[PrimitiveFunction::AttributeNameHiddenSize].Value<size_t>();
-                auto recurrentOp = functionConfig[PrimitiveFunction::AttributeNameRecurrentOp].Value<std::wstring>();
-
-                computationNodePtr = New<OptimizedRNNStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, bidirectional, numLayers, hiddenSize, recurrentOp);
-                break;
-            }
-            case PrimitiveOpType::ReconcileDynamicAxis:
-            {
-                computationNodePtr = New<ReconcileDynamicAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            }
-            case PrimitiveOpType::LogSoftmax:
-            {
-                //This can be implemented as x => x - ReduceLogSum(x). How to do this here?
-                computationNodePtr = New<LogSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            }
-            case PrimitiveOpType::Pass:
-                computationNodePtr = New<PassNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
-            default:
-                LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
-                break;
-            }
-
-            // Let's reorder inputNodesBasePtrs properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
-            ReorderAsCNTKComputationNodeInputs(op, inputNodesBasePtrs);
-
-            if (computationNodePtr->Is<INumInputs>())
-            {
-                auto computationNodeExpectedInputCount = computationNodePtr->As<INumInputs>()->GetExpectedNumInputs();
-                if (computationNodeExpectedInputCount != inputNodesBasePtrs.size())
-                    LogicError("Input count mismatch: The Primitive function for op %S has %d inputs while the corresponding ComputationNode has %d inputs",
-                    PrimitiveOpTypeName(op).c_str(),
-                    (int)inputNodesBasePtrs.size(),
-                    (int)computationNodeExpectedInputCount);
-            }
-
-            if (computationNodePtr->Is<RngUser>())
-            {
-                if (functionConfig.Contains(PrimitiveFunction::AttributeNameRngSeed))
+                        // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
+                        computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
+                    }
+                    break;
+                }
+                case PrimitiveOpType::Where:
+                {
+                    auto dynamicAxes = variable.DynamicAxes();
+                    auto internalCNTKWhereNodeDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
+                    computationNodePtr = New<WhereNode<ElementType>>(network->GetDeviceId(), internalNodeName, internalCNTKWhereNodeDynamicAxisName);
+                    break;
+                }
+                case PrimitiveOpType::ToSequence:
+                {
+                    auto dynamicAxes = variable.DynamicAxes();
+                    auto internalCNTKDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
+                    computationNodePtr = New<ToSequenceNode<ElementType>>(network->GetDeviceId(), internalNodeName, internalCNTKDynamicAxisName);
+                    break;
+                }
+                case PrimitiveOpType::ToSequenceLike:
+                    computationNodePtr = New<ToSequenceLikeNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::UnpackSequence:
+                {
+                    auto paddingValue = functionConfig[PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue].Value<double>();
+                    auto suppressMaskOutput = functionConfig[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
+                    computationNodePtr = New<UnpackSequenceNode<ElementType>>(network->GetDeviceId(), internalNodeName, (ElementType)paddingValue, suppressMaskOutput);
+                    break;
+                }
+                case PrimitiveOpType::Slice:
+                {
+                    std::vector<Axis> axis;
+                    std::vector<int> beginIndex, endIndex, strides;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
+                        functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
+                        functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
+                    {
+                        axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                        beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
+                        endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
+                            strides = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                        else
+                            strides.resize(axis.size(), 1);
+                    }
+                    else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis) &&
+                        functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
+                        functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndex))
+                    {
+                        axis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+                        beginIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
+                        endIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStrides))
+                            strides.push_back(functionConfig[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                        else
+                            strides.push_back(1);
+                    }
+                    else
+                    {
+                        RuntimeError("Failed to create computation node: Slice operation with inconsistent attributes");
+                    }
+                    // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
+                    computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis), strides);
+                    break;
+                }
+                case PrimitiveOpType::RandomSample:
+                {
+                    auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+                    auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+                    computationNodePtr = New<RandomSampleNode<ElementType>>(network->GetDeviceId(), internalNodeName, numSamples, allowDuplicates);
+                    break;
+                }
+                case PrimitiveOpType::RandomSampleInclusionFrequency:
+                {
+                    auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+                    auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+                    computationNodePtr = New<RandomSampleInclusionFrequencyNode<ElementType>>(network->GetDeviceId(), internalNodeName, numSamples, allowDuplicates);
+                    break;
+                }
+                case PrimitiveOpType::Dropout:
+                {
+                    auto dropoutRate = functionConfig[PrimitiveFunction::AttributeNameDropoutRate].Value<double>();
+                    computationNodePtr = New<DropoutNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    computationNodePtr->As<DropoutNode<ElementType>>()->SetDropoutRate(dropoutRate);
+                    break;
+                }
+                case PrimitiveOpType::RandomDistribution:
                 {
                     auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
-                    uint64_t offset = 0;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRngOffset))
+                    auto offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+                    auto rvtype = functionConfig[PrimitiveFunction::AttributeNameRandomDistributionType].Value<std::wstring>();
+
+                    std::vector<double> randomDistributionArgs;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRandomDistributionArgs))
+                        randomDistributionArgs = AsVector<double>(functionConfig[PrimitiveFunction::AttributeNameRandomDistributionArgs].Value<std::vector<DictionaryValue>>());
+
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewShape))
                     {
-                        offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+                        auto shape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                        computationNodePtr = New<RandomDistributionNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomDistributionArgs, AsTensorShape(shape));
                     }
+                    else
+                        computationNodePtr = New<RandomDistributionNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomDistributionArgs);
+                    computationNodePtr->As<RandomDistributionNode<ElementType>>()->SetRngState(seed, offset);
+                    break;
+                }
+                case PrimitiveOpType::Reshape:
+                {
+                    auto beginAxis = Axis(0);
+                    auto endAxis = Axis((int)functionInputs[0].Shape().Rank());
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameBeginAxis))
+                        beginAxis = functionConfig[PrimitiveFunction::AttributeNameBeginAxis].Value<Axis>();
+
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameEndAxis))
+                        endAxis = functionConfig[PrimitiveFunction::AttributeNameEndAxis].Value<Axis>();
+
+                    auto replacementShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                    for (size_t i = 0; i < replacementShape.Rank(); ++i)
+                    {
+                        if (replacementShape[i] == NDShape::InferredDimension)
+                            replacementShape[i] = 0;
+                    }
+
+                    computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(replacementShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
+                    break;
+                }
+                case PrimitiveOpType::Squeeze:
+                {
+                    auto beginAxis = Axis(0);
+                    auto inputShape = functionInputs[0].Shape();
+                    auto endAxis = Axis((int)inputShape.Rank());
+                    auto outputShape = GetSqueezedShape(inputShape, functionConfig);
+
+                    computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(outputShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
+                    break;
+                }
+                case PrimitiveOpType::ConstantOp:
+                {
+                    double fillValue = functionConfig[PrimitiveFunction::AttributeNameFillValue].Value<double>();
+                    computationNodePtr = New<ConstantNode<ElementType>>(network->GetDeviceId(), internalNodeName, fillValue);
+                    break;
+                }
+                case PrimitiveOpType::ROIPooling:
+                {
+                    PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
+                    auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
+                    auto spatialScale = functionConfig[PrimitiveFunction::AttributeNameSpatialScale].Value<double>();
+                    computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(roiOutputShape), spatialScale);
+                    break;
+                }
+                case PrimitiveOpType::Pooling:
+                {
+                    PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
+                    auto poolingWindowsShape = functionConfig[PrimitiveFunction::AttributeNamePoolingWindowShape].Value<NDShape>();
+                    auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                    auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                    auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    auto ceilOutDim = false;
+                    auto includePad = false;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameCeilOutDim))
+                    {
+                        ceilOutDim = functionConfig[PrimitiveFunction::AttributeNameCeilOutDim].Value<bool>();
+                    }
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameIncludePad))
+                    {
+                        includePad = functionConfig[PrimitiveFunction::AttributeNameIncludePad].Value<bool>();
+                    }
+                    computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutDim, includePad, ImageLayoutKind::CHW);
+                    break;
+                }
+                case PrimitiveOpType::Unpooling:
+                {
+                    auto unpoolingWindowShape = functionConfig[PrimitiveFunction::AttributeNameUnpoolingWindowShape].Value<NDShape>();
+                    auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                    auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                    auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    //We only get here after validation so it is safe to assume unpooling is max
+                    computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
+                    break;
+                }
+                case PrimitiveOpType::SumAll:
+                    computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::OneHot:
+                {
+                    auto numClass = functionConfig[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
+                    auto is_sparse = functionConfig[PrimitiveFunction::AttributeNameOneHotOutputSparse].Value<bool>();
+                    auto axis = functionConfig[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>();
+                    computationNodePtr = New<OneHotNode<ElementType>>(network->GetDeviceId(), numClass, is_sparse, axis.StaticAxisIndex(), internalNodeName);
+                    break;
+                }
+                case PrimitiveOpType::Gather:
+                    computationNodePtr = New<GatherNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::ToBatch:
+                {
+                    computationNodePtr = New<ToBatchAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
+                case PrimitiveOpType::UnpackBatch:
+                {
+                    computationNodePtr = New<UnpackBatchAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
+                case PrimitiveOpType::Plus:
+                    computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::LogPlus:
+                    computationNodePtr = New<LogPlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Pow:
+                    computationNodePtr = New<PowNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Minus:
+                    computationNodePtr = New<MinusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::ElementTimes:
+                    computationNodePtr = New<ElementTimesNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Equal:
+                    computationNodePtr = New<EqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::NotEqual:
+                    computationNodePtr = New<NotEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Less:
+                    computationNodePtr = New<LessNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::LessEqual:
+                    computationNodePtr = New<LessEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Greater:
+                    computationNodePtr = New<GreaterNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::GreaterEqual:
+                    computationNodePtr = New<GreaterEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Times:
+                {
+                    size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                    auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
+                    computationNodePtr = New<TimesNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank, inferInputRankToMap);
+                    break;
+                }
+                case PrimitiveOpType::TransposeTimes:
+                {
+                    size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                    computationNodePtr = New<TransposeTimesNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank);
+                    break;
+                }
+                case PrimitiveOpType::Convolution:
+                {
+                    auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                    NDShape dilation = { 1 };
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDilation))
+                        dilation = functionConfig[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
+                    auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                    auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                    auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
+                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                    NDShape outputMapCount, kernelShape;
+                    std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
+                    NDShape outputShape = NDShape::Unknown();
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
+                        outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+                    auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
+                    computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName,
+                                                                           AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
+                                                                           sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
+                                                                           outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
+                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation));
+                    break;
+                }
+                case PrimitiveOpType::CosDistance:
+                    computationNodePtr = New<CosDistanceNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::CosDistanceWithNegativeSamples:
+                    computationNodePtr = New<CosDistanceWithNegativeSamplesNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Logistic:
+                    computationNodePtr = New<LogisticNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::SquaredError:
+                    computationNodePtr = New<SquareErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::CrossEntropyWithSoftmax:
+                    computationNodePtr = New<CrossEntropyWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::ClassificationError:
+                    computationNodePtr = New<ClassificationErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::EditDistanceError:
+                {
+                    auto subPen = functionConfig[PrimitiveFunction::AttributeNameSubstitutionPenalty].Value<float>();
+                    auto delPen = functionConfig[PrimitiveFunction::AttributeNameDeletionPenalty].Value<float>();
+                    auto insPen = functionConfig[PrimitiveFunction::AttributeNameInsertionPenalty].Value<float>();
+                    auto squashInputs = functionConfig[PrimitiveFunction::AttributeNameSquashInputs].Value<bool>();
+                    auto tokensToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameTokensToIgnore].Value<std::vector<DictionaryValue>>());
+                    computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
+                    break;
+                }
+                case PrimitiveOpType::ForwardBackward:
+                {
+                    auto delayContraint = functionConfig[PrimitiveFunction::AttributeNameDelayConstraint].Value<int>();
+                    auto blankTokenId = functionConfig[PrimitiveFunction::AttributeNameBlankTokenId].Value<size_t>();
+                    computationNodePtr = New<ForwardBackwardNode<ElementType>>(network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
+                    break;
+                }
+                case PrimitiveOpType::LambdaRank:
+                    computationNodePtr = New<LambdaRankNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::NDCG:
+                    computationNodePtr = New<NDCG1EvalNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::PastValue:
+                case PrimitiveOpType::FutureValue:
+                {
+                    Variable inputOperandVar = functionInputs[0];
+                    Variable initialStateVar = functionInputs[1];
+
+                    size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
+                    if (op == PrimitiveOpType::PastValue)
+                        computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
+                    else
+                        computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
+
+                    break;
+                }
+                case PrimitiveOpType::ReduceElements:
+                {
+                    bool keepDimensions = true;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameReductionKeepDimensions))
+                        keepDimensions = functionConfig[PrimitiveFunction::AttributeNameReductionKeepDimensions].Value<bool>();
+                    auto reductionOpName = functionConfig[PrimitiveFunction::AttributeNameReductionOpName].Value<std::wstring>();
+                    std::vector<Axis> reductionAxis;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                    {
+                        reductionAxis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                     }
+                    else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis))
+                    {
+                        reductionAxis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+                    }
+                    else
+                    {
+                        RuntimeError("Failed to create computation node': Reduce operation %ls with no '%ls' or  '%ls' attributes",
+                            PrimitiveOpTypeName(op).c_str(),
+                            PrimitiveFunction::AttributeNameAxis.c_str(),
+                            PrimitiveFunction::AttributeNameAxisVec.c_str()
+                        );
+
+                    } 
+                    computationNodePtr = New<ReduceElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName, reductionOpName, AsCNTKInternalAxisIdx(reductionAxis), keepDimensions);
+                    break;
+                }
+                case PrimitiveOpType::BatchNormalization:
+                {
+                    auto spatial = functionConfig[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
+                    auto normalizationTimeConstant = functionConfig[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
+                    auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
+                    auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
+                    auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
+                    
+                    bool disableRegularization = false;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDisableRegularization))
+                    {
+                        disableRegularization = functionConfig[PrimitiveFunction::AttributeNameDisableRegularization].Value<bool>();
+                    }
+                    
+                    computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, disableRegularization, ImageLayoutKind::CHW);
+                    break;
+                }
+                case PrimitiveOpType::Combine:
+                    // This operation is just a no-op and is a means to combine multiple functions to create a single Function
+                    // whose outputs are a union of the outputs of the Functions being combined.
+                    computationNodePtr = variableToNodeMap[variable];
+                    break;
+                case PrimitiveOpType::PackedIndex:
+                    computationNodePtr = New<PackedIndexNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::GatherPacked:
+                    computationNodePtr = New<GatherPackedNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::ScatterPacked:
+                    computationNodePtr = New<ScatterPackedNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Clip:
+                    computationNodePtr = New<ClipNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Select:
+                    computationNodePtr = New<IfNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Splice:
+                {
+                    Axis spliceAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                    computationNodePtr = New<RowStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(spliceAxis));
+                    break;
+                }
+                case PrimitiveOpType::Pad:
+                {
+                    auto head = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePaddingHead].Value<std::vector<DictionaryValue>>());
+                    auto foot = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePaddingFoot].Value<std::vector<DictionaryValue>>());
+                    auto mode = functionConfig[PrimitiveFunction::AttributeNamePaddingMode].Value<size_t>();
+                    auto constantValue = functionConfig[PrimitiveFunction::AttributeNamePaddingConstantValue].Value<double>();
+                    computationNodePtr = New<PaddingNode<ElementType>>(network->GetDeviceId(), internalNodeName, head, foot, (PaddingType)mode, (ElementType)constantValue);
+                    break;
+                }
+                case PrimitiveOpType::OptimizedRNNStack:
+                {
+                    auto bidirectional = functionConfig[PrimitiveFunction::AttributeNameBidirectional].Value<bool>();
+                    auto numLayers = functionConfig[PrimitiveFunction::AttributeNameNumLayers].Value<size_t>();
+                    auto hiddenSize = functionConfig[PrimitiveFunction::AttributeNameHiddenSize].Value<size_t>();
+                    auto recurrentOp = functionConfig[PrimitiveFunction::AttributeNameRecurrentOp].Value<std::wstring>();
+
+                    computationNodePtr = New<OptimizedRNNStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, bidirectional, numLayers, hiddenSize, recurrentOp);
+                    break;
+                }
+                case PrimitiveOpType::ReconcileDynamicAxis:
+                {
+                    computationNodePtr = New<ReconcileDynamicAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
+                case PrimitiveOpType::LogSoftmax:
+                {
+                    //This can be implemented as x => x - ReduceLogSum(x). How to do this here?
+                    computationNodePtr = New<LogSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
+                case PrimitiveOpType::Pass:
+                    computationNodePtr = New<PassNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::LabelsToGraph:
+                    computationNodePtr = New<LabelsToGraphNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::StopGradient:
+                    computationNodePtr = New<StopGradientNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Assign:
+                    computationNodePtr = New<AssignNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Crop:
+                    if (functionInputs.size() == 2)
+                    {
+                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameOffset))
+                        {
+                            // Crop with given offsets.
+                            const auto& offsets = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameOffset].Value<std::vector<DictionaryValue>>());
+                            if (offsets.size() != 2)
+                            {
+                                CNTK::LogicError("Vector of crop offsets must have size 2.");
+                            }
+                            computationNodePtr = New<CropNode<ElementType>>(offsets[0], offsets[1], network->GetDeviceId(), internalNodeName);
+                        }
+                        else
+                        {
+                            // Crop with two inputs and automatic offset computation.
+                            computationNodePtr = New<CropNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                        }
+                    }
+                    else if (functionInputs.size() == 4)
+                    {
+                        // Crop with four inputs and automatic offset computation.
+                        computationNodePtr = New<CropNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    }
+                    else
+                    {
+                        CNTK::LogicError("Crop node must have 2 or 4 node inputs.");
+                    }
+                    break;
+                default:
+                    CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
+                    break;
+                }
+
+                // Let's reorder inputNodesBasePtrs properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
+                ReorderAsCNTKComputationNodeInputs(op, inputNodesBasePtrs);
+
+                if (computationNodePtr->Is<INumInputs>())
+                {
+                    auto computationNodeExpectedInputCount = computationNodePtr->As<INumInputs>()->GetExpectedNumInputs();
+                    if (computationNodeExpectedInputCount != inputNodesBasePtrs.size())
+                        CNTK::LogicError("The Primitive Function '%S' has %d inputs while the corresponding ComputationNode expects %d inputs.",
+                            function->AsString().c_str(),
+                            (int)inputNodesBasePtrs.size(),
+                            (int)computationNodeExpectedInputCount);
+                }
+
+                if (computationNodePtr->Is<RngUser>())
+                {
+                    auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+                    auto offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
                     computationNodePtr->As<RngUser>()->SetRngState(seed, offset);
                 }
+            }
+            else
+            {
+                computationNodePtr = New<UserDefinedV2FunctionNode<ElementType>>(network->GetDeviceId(), internalNodeName, function->shared_from_this());
+
+                // For user defined functions, we only attach unique inputs in the internal computation network since, the UDF
+                // backward implementations directly compute aggregate gradient values for unique inputs
+                std::vector<ComputationNodeBasePtr> uniqueInputNodesBasePtrs;
+                for (auto inputNodeBasePtr : inputNodesBasePtrs)
+                {
+                    if (std::find(uniqueInputNodesBasePtrs.begin(), uniqueInputNodesBasePtrs.end(), inputNodeBasePtr) == uniqueInputNodesBasePtrs.end())
+                        uniqueInputNodesBasePtrs.push_back(inputNodeBasePtr);
+                }
+
+                inputNodesBasePtrs = uniqueInputNodesBasePtrs;
             }
         }
         else
         {
-            computationNodePtr = New<UserDefinedV2FunctionNode<ElementType>>(network->GetDeviceId(), internalNodeName, function->shared_from_this());
+            size_t i = 1;
+            while (outputs[i] != variable) i++;
+            assert(i < outputs.size());
 
-            // For user defined functions, we only attach unique inputs in the internal computation network since, the UDF 
-            // backward implementations directly compute aggregate gradient values for unique inputs
-            std::vector<ComputationNodeBasePtr> uniqueInputNodesBasePtrs;
-            for (auto inputNodeBasePtr : inputNodesBasePtrs)
-            {
-                if (std::find(uniqueInputNodesBasePtrs.begin(), uniqueInputNodesBasePtrs.end(), inputNodeBasePtr) == uniqueInputNodesBasePtrs.end())
-                    uniqueInputNodesBasePtrs.push_back(inputNodeBasePtr);
-            }
-
-            inputNodesBasePtrs = uniqueInputNodesBasePtrs;
+            computationNodePtr = New<OutputMultiplexerNode<ElementType>>(network->GetDeviceId(), CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name(), useMangledNamesForComputationNodes), i);
+            inputNodesBasePtrs = { variableToNodeMap[outputs[0]] };
         }
 
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
-
         return computationNodePtr;
     }
 
@@ -822,9 +1237,11 @@ namespace CNTK
     /*static*/ ComputationNodeBasePtr CompositeFunction::GetOutputVariableNode(const Variable& variable,
                                                                                Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                                ComputationNetworkBuilder<ElementType>& builder,
+                                                                               const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                                std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
                                                                                std::unordered_map<Variable, bool>& isVariableRootMap,
-                                                                               const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
+                                                                               const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
+                                                                               bool useMangledNamesForComputationNodes)
     {
         assert(variable.IsOutput());
 
@@ -841,21 +1258,16 @@ namespace CNTK
                 break;
             }
         }
-            
+
         // Create the nodes corresponding to the inputs
         std::vector<std::shared_ptr<ComputationNode<ElementType>>> inputNodes;
         for (auto& inputVar : functionInputs)
         {
             // If the inputVar is a constant and not the right DataType let's coerce it to the right type
             if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (inputVar.GetDataType() != nonConstInputDataType))
-            {
-                auto originalConstantValue = Constant(inputVar).Value();
-                auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
-                NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, nonConstInputDataType, true);
-                inputVar = Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), inputVar.Name());
-            }
+                inputVar = Constant(inputVar).CloneAs(nonConstInputDataType);
 
-            auto baseNodePtr = GetNode(inputVar, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
+            auto baseNodePtr = GetNode(inputVar, network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
             inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr);
         }
 
@@ -869,10 +1281,10 @@ namespace CNTK
             for (auto compositeArgument : compositeArguments)
                 variableToNodeMap[compositeArgument] = variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
-            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
+            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
         }
         else
-            computationNodePtr = CreateComputationNode(variable, function, inputNodes, network, variableToNodeMap);
+            computationNodePtr = CreateComputationNode(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
 
         PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
         if (!primitiveFunction || (primitiveFunction->OpType() != PrimitiveOpType::Combine))
@@ -884,6 +1296,184 @@ namespace CNTK
         return computationNodePtr;
     }
 
+    std::unordered_set<Variable> CompositeFunction::NonOwnerPreservingCopy(const std::unordered_set<Variable>& outputs)
+    {
+        std::unordered_set<Variable> result;
+        for (auto& o : outputs)
+        {
+            Variable sanitized = o.NonCompositePreservingCopy();
+            result.insert(sanitized);
+        }
+
+        return result;
+    }
+
+    static bool VariableShapeMatchesNodeShape(const NDShape& varShape, const TensorShape& nodeShape)
+    {
+        if (varShape.Rank() == 0)
+            return (nodeShape.GetNumElements() == 1);
+
+        // Sometimes the nodeShape may have an additional trailing axis with dim==1 due to the lack of support for 0-d tensors in V1 engine.
+        auto adjustedNodeShape = nodeShape;
+        while ((adjustedNodeShape.GetRank() > varShape.Rank()) && (adjustedNodeShape.GetDim(adjustedNodeShape.GetRank() - 1) == 1))
+            adjustedNodeShape.TrimRankInPlace(adjustedNodeShape.GetRank() - 1);
+
+        if (!varShape.HasUnboundDimension())
+            return (AsNDShape(adjustedNodeShape) == varShape);
+
+        if (varShape.Rank() != adjustedNodeShape.GetRank())
+            return false;
+
+        for (size_t i = 0; i < varShape.Rank(); ++i)
+        {
+            if ((varShape[i] != NDShape::FreeDimension) && (varShape[i] != NDShape::InferredDimension) && (varShape[i] != adjustedNodeShape.GetDim(i)))
+                return false;
+        }
+
+        return true;
+    }
+
+    template <typename ElementType>
+    std::pair<ComputationNetworkPtr, std::unordered_map<Variable, ComputationNodeBasePtr>>
+        CompositeFunction::CreateComputationNetwork(const FunctionPtr& compositeFunction,
+                                                    const DeviceDescriptor& device,
+                                                    const std::unordered_set<Variable>& outputs,
+                                                    const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
+                                                    const std::unordered_set<Variable>& inputsExcludedFromGradientComputation,
+                                                    bool useMangledNamesForComputationNodes)
+    {
+        auto computationNetwork = std::make_shared<ComputationNetwork>(AsCNTKImplDeviceId(device));
+        ComputationNetworkBuilder<ElementType> builder(*computationNetwork);
+
+        std::unordered_map<Variable, bool> isVariableRootMap;
+        std::unordered_map<Variable, ComputationNodeBasePtr> variableToNodeMap;
+
+        // Now recursively create the network in a top-down fashion
+        auto rootFunction = compositeFunction->RootFunction();
+        auto rootFunctionOutputs = rootFunction->RawOutputs();
+        for (auto rootOutput : rootFunctionOutputs)
+            GetNode(rootOutput, computationNetwork, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsExcludedFromGradientComputation, useMangledNamesForComputationNodes);
+
+        // We need to patch the Computation node mappings for the arguments of block functions
+        // since for recurrent inputs, the mappings are not fully established the first time
+        std::function<void(const Variable&)> PatchBlockArgumentsAndOutputsMapping;
+        PatchBlockArgumentsAndOutputsMapping = [&variableToNodeMap, &PatchBlockArgumentsAndOutputsMapping](const Variable& var) {
+            if (var.IsOutput())
+            {
+                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(var.Owner().get());
+                if (blockFunction)
+                {
+                    PostorderTraverseVariables(blockFunction->BlockRoot(), PatchBlockArgumentsAndOutputsMapping);
+
+                    auto compositeArguments = blockFunction->Composite()->Arguments();
+                    for (auto compositeArgument : compositeArguments)
+                    {
+                        auto mappingVarNodeIter = variableToNodeMap.find(compositeArgument.BlockFunctionVariableMapping());
+                        if (mappingVarNodeIter != variableToNodeMap.end())
+                            variableToNodeMap[compositeArgument] = mappingVarNodeIter->second;
+                    }
+
+                    auto mappingVarNodeIter = variableToNodeMap.find(var.BlockFunctionVariableMapping());
+                    if (mappingVarNodeIter != variableToNodeMap.end())
+                        variableToNodeMap[var] = mappingVarNodeIter->second;
+                }
+            }
+        };
+        PostorderTraverseVariables(rootFunction, PatchBlockArgumentsAndOutputsMapping);
+
+        std::function<bool(const Variable&)> IsVariableRoot = [&isVariableRootMap, &IsVariableRoot](const Variable& outputVar) {
+            auto mappingVariable = GetMappingVariable(outputVar);
+            return (isVariableRootMap[outputVar] && !IsFirstOutputOfMultiOutputFunction(mappingVariable) && ((mappingVariable == outputVar) || IsVariableRoot(mappingVariable)));
+        };
+
+        // If any of the function or requested outputs is not a root node, we need to explicitly
+        // add it to the 'output' group of the ComputationNetwork
+        std::unordered_set<Variable> networkOutputs(outputs);
+        networkOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
+        for (auto output : networkOutputs)
+        {
+            if (!IsVariableRoot(output))
+            {
+                auto computationNode = variableToNodeMap[output];
+
+                if (!computationNode)
+                    InvalidArgument("One of the requested outputs '%S' for the Function '%S' forward computation is not part of the graph underlying the Function.",
+                                    output.AsString().c_str(), compositeFunction->AsString().c_str());
+
+                computationNetwork->AddToNodeGroup(L"output", computationNode);
+            }
+        }
+
+        // In case of recurrence, the inputs of some of the ComputationNodes are not attached due to cycles.
+        // Now attach those after we have created all ComputationNodes in the network
+        for (auto varNodePair : variableToNodeMap)
+        {
+            auto& currentComputationNode = varNodePair.second;
+            if (!currentComputationNode)
+                LogicError("Function '%S': No computation node mapping exists for Variable %S.", compositeFunction->AsString().c_str(), varNodePair.first.AsString().c_str());
+
+            auto& currentComputationNodeInputs = currentComputationNode->GetInputs();
+            auto& currentVar = varNodePair.first;
+            if (!currentVar.IsOutput())
+                continue;
+
+            if (std::find(currentComputationNodeInputs.begin(), currentComputationNodeInputs.end(), nullptr) != currentComputationNodeInputs.end())
+            {
+                // This ComputationNode has at least one null input which now needs to be properly attached
+                const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.Owner().get());
+
+                if (primitiveFunc == nullptr) {
+                    LogicError("Non-primitive function '%S' cannot be a part of the CNTK recurrent loop.", currentVar.Owner()->Name().c_str());
+                }
+
+                // Skip block primitives since they do not directly map to a computation node
+                if (primitiveFunc->OpType() == PrimitiveOpType::Block)
+                    continue;
+
+                // Let's reorder properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
+                auto inputVars = primitiveFunc->Inputs();
+                ReorderAsCNTKComputationNodeInputs(primitiveFunc->OpType(), inputVars);
+                inputVars.resize(currentComputationNode->GetNumInputs());
+
+                std::vector<ComputationNodeBasePtr> inputNodesBasePtrs;
+                for (auto inputVar : inputVars)
+                    inputNodesBasePtrs.push_back(variableToNodeMap.at(inputVar));
+
+                currentComputationNode->AttachInputs(inputNodesBasePtrs);
+            }
+        }
+
+        computationNetwork->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
+        computationNetwork->SetTrackGapNans(GetCheckedMode());
+        computationNetwork->SetIsV2Library(true);
+        computationNetwork->CompileNetwork();
+        // Set EvalTimeStamp of all nodes in the network as "outdated" to make sure that all nodes will be evaluated at least once.
+        // During CompileNetwork(), nodes in the network might get different timestamp values because other threads could update the global timestamp value.
+        // (The global timestamp value is currently shared process-wide, i.e. among all nodes of all networks.) The nodes with a higher timestamp value are
+        // thus incorrectly treated as "updated", and their inputs are not further evaluated by ComputationNetwork::PARTraversalFlowControlNode::ForwardProp().
+        // This could lead to incorrect results or crash, because the matrix of the input nodes might never be initialized for ForwardProp().
+        computationNetwork->SetEvalTimeStampsOutdatedWithRegardToAll();
+
+        // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork
+        for (auto varNodePair : variableToNodeMap)
+        {
+            if (varNodePair.first.IsOutput())
+            {
+                auto outputVar = varNodePair.first;
+                auto computationNodePtr = variableToNodeMap.at(outputVar);
+                auto outputShape = outputVar.Shape();
+                auto computationNodeSampleLayout = computationNodePtr->GetSampleLayout();
+                if (!VariableShapeMatchesNodeShape(outputShape, computationNodeSampleLayout))
+                {
+                    LogicError("Function '%S': The output Variable '%S' shape '%S' does not match the SampleLayout shape '[%s]' of the corresponding ComputationNode in the network.",
+                               compositeFunction->AsString().c_str(), outputVar.AsString().c_str(), outputShape.AsString().c_str(), ((std::string)computationNodeSampleLayout).c_str());
+                }
+            }
+        }
+
+        return { computationNetwork, variableToNodeMap };
+    }
+
     template <typename ElementType>
     ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device,
                                                                    const std::unordered_set<Variable>& backpropRoots,
@@ -891,158 +1481,103 @@ namespace CNTK
                                                                    const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
                                                                    bool allocateNetworkMatrices)
     {
+        // Lets purge the current computation network and regenerate the network if the CompositeFunction
+        // was previously compiled just for evaluation and not for gradient backpropagation.
+        if ((m_computationNetwork != nullptr) && (m_currentBackpropRoots.empty() && !backpropRoots.empty()))
+            PurgeComputationNetwork();
+
         if (m_computationNetwork != nullptr)
         {
-            // TODO: We should either invalidate and readapt the network if he backpropRoots change compared to what was specified when the network
+            // TODO: We should either invalidate and readapt the network if the backpropRoots change compared to what was specified when the network
             // was last constructed, to just recreate a new network.
             // For now just disallow changing the backpropRoots after the network is created
             if (!backpropRoots.empty() && (m_currentBackpropRoots != backpropRoots))
-                LogicError("Changing backprop roots across different Forward calls on a CNTK composite Function is currently unsupported");
+                LogicError("Function '%S': Changing backprop roots (Current = '%S', New = '%S') across different Forward calls on a CNTK composite Function is currently unsupported.",
+                            AsString().c_str(), NamedListString(m_currentBackpropRoots).c_str(), NamedListString(backpropRoots).c_str());
 
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
             if (AsDeviceDescriptor(m_computationNetwork->GetDeviceId()) != device)
-                LogicError("Changing device across different Forward calls on a CNTK composite Function is currently unsupported");
-            
+                LogicError("Function '%S': Changing device (Current = '%S', New = %S') across different Forward calls on a CNTK composite Function is currently unsupported.",
+                            AsString().c_str(), AsDeviceDescriptor(m_computationNetwork->GetDeviceId()).AsString().c_str(), device.AsString().c_str());
+
             if (!backpropRoots.empty() && (inputsToExcludeGradientsFor != m_inputsExcludedFromGradientComputation))
-                LogicError("Changing the set of inputs to exclude from gradient computation, across different Forward calls on a CNTK composite Function, is currently unsupported");
+                LogicError("Function '%S': Changing the set of inputs to exclude from gradient computation, across different Forward calls on a CNTK composite Function, is currently unsupported.", AsString().c_str());
+
+            // Verify if the free dimensions of any of the arguments have changed, and if so, update the corresponding
+            // input ComputationNodes and rerun validation on the computation network
+            for (auto freeDimensionArgumentMapping : m_fullyDefinedArgumentsMap)
+            {
+                auto newShape = freeDimensionArgumentMapping.second.Shape();
+                auto argumentComputationNode = m_variableToNodeMap[freeDimensionArgumentMapping.first];
+                if (AsTensorShape(newShape) != argumentComputationNode->GetSampleLayout())
+                    argumentComputationNode->SetDims(AsTensorShape(newShape), argumentComputationNode->HasMBLayout());
+            }
         }
         else
         {
-            m_computationNetwork = std::make_shared<ComputationNetwork>(AsCNTKImplDeviceId(device));
-
             auto networkInputs = this->Inputs();
             for (auto inputExcluded : inputsToExcludeGradientsFor)
             {
                 // Only inputs of the network can be excluded from gradient computation
                 if (std::find(networkInputs.begin(), networkInputs.end(), inputExcluded) == networkInputs.end())
-                    InvalidArgument("Function::Forward: Only inputs of a Function can be excluded from gradient computation");
+                    InvalidArgument("Variable '%S' specified for exclusion from gradient computation is not an input of the Function '%S'. "
+                                    "Only an input of the Function can be explicitly excluded from gradient computation.",
+                                    inputExcluded.AsString().c_str(), this->AsString().c_str());
             }
 
-            m_inputsExcludedFromGradientComputation = inputsToExcludeGradientsFor;
-
-            ComputationNetworkBuilder<ElementType> builder(*m_computationNetwork);
+            m_inputsExcludedFromGradientComputation = NonOwnerPreservingCopy(inputsToExcludeGradientsFor);
+            m_currentBackpropRoots = NonOwnerPreservingCopy(backpropRoots);
 
             // TODO: We currently only support one backprop root
             if (backpropRoots.size() > 1)
-                LogicError("More than one backprop roots is currently unsupported");
+                LogicError("Function '%S': %d backprop roots specified; currently at most one backprop root is supported.", AsString().c_str(), (int)backpropRoots.size());
 
             auto placeholders = Placeholders();
             if (!placeholders.empty())
-                InvalidArgument("All placeholders of a Function must be bound before performing a Forward computation on the Function!");
+                InvalidArgument("%d unbound Placeholder(s) '%S' found in the Function. "
+                    "All Placeholders of a Function must be bound (to a variable) before performing a Forward computation.",
+                    (int)placeholders.size(), NamedListString(placeholders).c_str());
 
-            // Now recursively create the network in a top-down fashion
-            auto rootFunction = RootFunction();
-            auto rootFunctionOutputs = rootFunction->RawOutputs();
-            for (auto rootOutput : rootFunctionOutputs)
-                GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap, m_inputsExcludedFromGradientComputation);
-
-            // We need to patch the Computation node mappings for the arguments of block functions 
-            // since for recurrent inputs, the mappings are not fully established the first time
-            std::function<void(const FunctionPtr&)> PatchBlockArgumentsMapping;
-            PatchBlockArgumentsMapping = [this, &PatchBlockArgumentsMapping](const FunctionPtr& function) {
-                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(function.get());
-                if (blockFunction)
-                {
-                    auto compositeArguments = blockFunction->Composite()->Arguments();
-                    for (auto compositeArgument : compositeArguments)
-                        m_variableToNodeMap[compositeArgument] = m_variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
-
-                    PreorderTraverseFunctions(function->BlockRoot(), PatchBlockArgumentsMapping);
-                }
-            };
-            PreorderTraverseFunctions(rootFunction, PatchBlockArgumentsMapping);
-
-            std::function<bool(const Variable&)> IsVariableRoot;
-            IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
-                auto ownerFunc = outputVar.IsOutput() ? outputVar.Owner().get() : nullptr;
-                auto ownerBlockFunc = dynamic_cast<BlockFunction*>(ownerFunc);
-                return (m_isVariableRootMap[outputVar] && (!ownerBlockFunc || IsVariableRoot(ownerBlockFunc->CompositeOutputsMap().at(outputVar))));
-            };
-
-            // If any of the function or requested outputs is not a root node, we need to explicitly
-            // add it to the 'output' group of the ComputationNetwork
-            std::unordered_set<Variable> networkOutputs(outputs);
-            networkOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
-            for (auto output : networkOutputs)
+            // Lets update the composite Function graph's inputs with any inferred dimensions that
+            // were determined from the shapes of the supplied data
+            auto networkArguments = Arguments();
+            for (auto argument : networkArguments)
             {
-                if (!IsVariableRoot(output))
+                if (argument.Shape().HasInferredDimension())
                 {
-                    auto computationNode = m_variableToNodeMap[output];
-
-                    if (!computationNode)
-                        InvalidArgument("One of the requested outputs for the Function forward computation is not part of the graph underlying the Function");
-
-                    m_computationNetwork->AddToNodeGroup(L"output", computationNode);
+                    auto fullyDefinedArgument = m_fullyDefinedArgumentsMap.at(argument);
+                    for (size_t i = 0; i < argument.Shape().Rank(); ++i)
+                        if (argument.Shape()[i] == NDShape::InferredDimension)
+                            argument.m_dataFields->m_shape[i] = fullyDefinedArgument.Shape()[i];
                 }
             }
 
-            m_currentBackpropRoots = backpropRoots;
+            // Run the final validation on the entire network once before constructing/compiling the
+            // internal computation network
+            ValidateOrUpdateOutputs();
 
-            // In case of recurrence, the inputs of some of the ComputationNodes are not attached due to cycles.
-            // Now attach those after we have created all ComputationNodes in the network
-            for (auto varNodePair : m_variableToNodeMap)
-            {
-                auto& currentComputationNode = varNodePair.second;
-                if (!currentComputationNode)
-                    LogicError("No computation node mapping exists for Variable %S", varNodePair.first.Name().c_str());
+            std::tie(m_computationNetwork, m_variableToNodeMap) = CreateComputationNetwork<ElementType>(this->shared_from_this(), device, outputs, m_fullyDefinedArgumentsMap, m_inputsExcludedFromGradientComputation, /*useMangledNamesForComputationNodes =*/ false);
 
-                auto& currentComputationNodeInputs = currentComputationNode->GetInputs();
-                auto& currentVar = varNodePair.first;
-                if (!currentVar.IsOutput())
-                    continue;
-
-                if (std::find(currentComputationNodeInputs.begin(), currentComputationNodeInputs.end(), nullptr) != currentComputationNodeInputs.end())
-                {
-                    // This ComputationNode has at least one null input which now needs to be properly attached
-
-                    const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.Owner().get());
-
-                    // Skip block primitives since they do not directly map to a computation node
-                    if (primitiveFunc->OpType() == PrimitiveOpType::Block)
-                        continue;
-
-                    // Let's reorder properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
-                    auto inputVars = primitiveFunc->Inputs();
-                    ReorderAsCNTKComputationNodeInputs(primitiveFunc->OpType(), inputVars);
-                    inputVars.resize(currentComputationNode->GetNumInputs());
-
-                    std::vector<ComputationNodeBasePtr> inputNodesBasePtrs;
-                    for (auto inputVar : inputVars)
-                        inputNodesBasePtrs.push_back(m_variableToNodeMap.at(inputVar));
-
-                    currentComputationNode->AttachInputs(inputNodesBasePtrs);
-                }
-            }
-
-            m_computationNetwork->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
-            m_computationNetwork->CompileNetwork();
-
-            // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork
-            for (auto varNodePair : m_variableToNodeMap)
-            {
-                if (varNodePair.first.IsOutput())
-                {
-                    auto outputVar = varNodePair.first;
-                    auto computationNodePtr = m_variableToNodeMap.at(outputVar);
-                    auto outputShape = outputVar.Shape();
-                    auto computationNodeSampleLayout = computationNodePtr->GetSampleLayout();
-                    if (((outputShape.Rank() == 0) && (computationNodeSampleLayout[0] != 1)) ||
-                        ((outputShape.Rank() != 0) && (computationNodeSampleLayout != AsTensorViewShape(outputShape)) && (computationNodeSampleLayout != AsTensorShape(outputShape))))
-                    {
-                        LogicError("The output Variable shape %S does not match the SampleLayout shape %s of the corresponding ComputationNode in the network", outputShape.AsString().c_str(), ((std::string)computationNodeSampleLayout).c_str());
-                    }
-                }
-            }
-
-            // Record the timestamps of Parameter values
-            assert(m_lastRecordedParameterValueTimeStamps.empty());
+            // Record the timestamps of Parameters and Constants
+            assert(m_lastRecordedTimeStamps.empty());
             auto functionParameters = Parameters();
             for (auto parameter : functionParameters)
-                m_lastRecordedParameterValueTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
+                m_lastRecordedTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
+            auto functionConstants = Constants();
+            for (auto constant : functionConstants)
+                m_lastRecordedTimeStamps.insert({ constant, constant.CurrentValueTimeStamp() });
+
+            // Collect parameters and constants being assigned to
+            PreorderTraverseFunctions(RootFunction(), [this](const FunctionPtr& function) {
+                auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
+                if (primitiveFunction && (primitiveFunction->OpType() == PrimitiveOpType::Assign))
+                    m_refVariables.insert(primitiveFunction->Inputs()[0]);
+            }, /*nestedSearchInsideBlockFunction =*/ true);
         }
 
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
         {
+            m_allNetworkRoots = m_currentBackpropRoots;
             ComputationNodeBasePtr backpropRootNode;
             if (!m_currentBackpropRoots.empty())
                 backpropRootNode = m_variableToNodeMap.at(*m_currentBackpropRoots.begin());
@@ -1050,25 +1585,18 @@ namespace CNTK
             // Now recursively traverse the network in a top-down fashion
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->RawOutputs();
+            m_allNetworkRoots.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
                 forwardRootNodes.push_back(m_variableToNodeMap.at(rootOutput));
 
             std::vector<ComputationNodeBasePtr> forwardOutputNodes;
+            m_allNetworkRoots.insert(outputs.begin(), outputs.end());
             for (auto output : outputs)
                 forwardOutputNodes.push_back(m_variableToNodeMap.at(output));
 
             m_computationNetwork->AllocateAllMatrices(forwardRootNodes, forwardOutputNodes, backpropRootNode);
             m_networkMatricesAllocated = allocateNetworkMatrices;
-
-            std::unordered_set<ComputationNodeBasePtr> allNetworkRoots = { backpropRootNode };
-            allNetworkRoots.insert(forwardRootNodes.begin(), forwardRootNodes.end());
-            allNetworkRoots.insert(forwardOutputNodes.begin(), forwardOutputNodes.end());
-            m_allNetworkRootsInGlobalEvalOrder = m_computationNetwork->SortByGlobalEvalOrder(allNetworkRoots);
-
-            m_currentOutputs = outputs;
-            m_currentOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
-            m_currentOutputs.insert(m_currentBackpropRoots.begin(), m_currentBackpropRoots.end());
         }
         else
         {
@@ -1076,8 +1604,10 @@ namespace CNTK
             // in the cached computation network
             for (auto output : outputs)
             {
-                if (m_currentOutputs.find(output) == m_currentOutputs.end())
-                    LogicError("Changing requested outputs across different Forward calls on a CNTK composite Function is currently unsupported");
+                if (m_allNetworkRoots.find(output) == m_allNetworkRoots.end())
+                    LogicError("Function '%S': Requested output '%S' is not part of the list of outputs '%S' that the Function was initially compiled for. "
+                                "Changing requested outputs across different Forward calls is currently unsupported.",
+                                AsString().c_str(), output.AsString().c_str(), NamedListString(m_allNetworkRoots).c_str());
             }
         }
 
@@ -1087,10 +1617,11 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ void CompositeFunction::PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, ComputationNodeBasePtr& computationNode, std::unordered_map<MBLayoutPtr, Variable>& layoutsPopulated)
     {
-        if (!computationNode->Is<InputValueBase<ElementType>>())
-            LogicError("CompositeFunction::Forward: Illegal to populate value of computation node type other than InputValueBase!");
-
-        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second);
+        NDShape inferredVariableShape;
+        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second, &inferredVariableShape);
+        if (!VariableShapeMatchesNodeShape(inferredVariableShape, computationNode->GetSampleLayout()))
+            CNTK::LogicError("CompositeFunction::Forward: Inferred shape '%S' of Variable '%S' does not match the corresponding computation node shape '%s'.",
+                             inferredVariableShape.AsString().c_str(), variableValue.first.AsString().c_str(), ((std::string)computationNode->GetSampleLayout()).c_str());
 
         // Switch the node matrix to the right matrix type
         auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
@@ -1098,16 +1629,68 @@ namespace CNTK
 
         auto layout = CNTKMatrixAndMBLayout.second;
         auto& nodeLayout = computationNode->GetMBLayout();
-        if (layoutsPopulated.find(nodeLayout) == layoutsPopulated.end())
+        if ((layout == nullptr) != (nodeLayout == nullptr))
+            InvalidArgument("The layout of the specified Value for Variable '%S' is incompatible with the layout of the corresponding ComputationNode.", variableValue.first.AsString().c_str());
+        else if (layout)
         {
-            nodeLayout->CopyFrom(layout);
-            layoutsPopulated.insert({ nodeLayout, variableValue.first });
+            if (layoutsPopulated.find(nodeLayout) == layoutsPopulated.end())
+            {
+                nodeLayout->CopyFrom(layout);
+                layoutsPopulated.insert({ nodeLayout, variableValue.first });
+            }
+            else
+            {
+                if (*nodeLayout != *layout)
+                    InvalidArgument("Different minibatch layouts detected (difference in sequence lengths or count or start flags) in data specified "
+                                    "for the Function's arguments '%S' vs. '%S', though these arguments have the same dynamic axes '%S'",
+                                     variableValue.first.AsString().c_str(), layoutsPopulated.at(nodeLayout).AsString().c_str(), DynamicAxesAsString(variableValue.first.DynamicAxes(), Internal::IsReversingTensorShapesInErrorMessagesEnabled()).c_str());
+            }
         }
-        else
+    }
+
+    std::unordered_map<Variable, NDShape> CompositeFunction::InferFreeDimensionsOfArguments(const std::unordered_map<Variable, ValuePtr>& arguments)
+    {
+        std::unordered_map<Variable, NDShape> inferredArgumentDimensions;
+        for (auto argumentValuePair : arguments)
         {
-            if (*nodeLayout != *layout)
-                InvalidArgument("Function::Forward: Different minibatch layouts detected (difference in sequence lengths or count or start flags) in data specified for 2 of the Function's argument ('%S', '%S') having same dynamic axes", variableValue.first.Name().c_str(), layoutsPopulated.at(nodeLayout).Name().c_str());
+            NDShape inferredVarShape;
+            Utils::VerifyVariableValueCompatibility(argumentValuePair.first, argumentValuePair.second, &inferredVarShape);
+            if (inferredVarShape != argumentValuePair.first.Shape())
+                inferredArgumentDimensions.insert({ argumentValuePair.first , inferredVarShape });
         }
+
+        if (!inferredArgumentDimensions.empty())
+        {
+            if (m_fullyDefinedArgumentsMap.empty())
+            {
+                for (auto inferredArgumentShapePair : inferredArgumentDimensions)
+                {
+                    auto fullyDefinedArgument = inferredArgumentShapePair.first.Clone();
+                    fullyDefinedArgument.m_dataFields->m_shape = inferredArgumentShapePair.second;
+                    m_fullyDefinedArgumentsMap.insert({ inferredArgumentShapePair.first, fullyDefinedArgument });
+                }
+
+                if (GetCheckedMode())
+                    m_latestFullyDefinedCompositeForCheckedModeValidation = this->Clone(ParameterCloningMethod::Share, m_fullyDefinedArgumentsMap);
+            }
+            else
+            {
+                bool argumentShapeChangedSinceLastTime = false;
+                for (auto inferredArgumentShapePair : inferredArgumentDimensions)
+                {
+                    if (inferredArgumentShapePair.second != m_fullyDefinedArgumentsMap[inferredArgumentShapePair.first].Shape())
+                    {
+                        argumentShapeChangedSinceLastTime = true;
+                        m_fullyDefinedArgumentsMap[inferredArgumentShapePair.first].m_dataFields->m_shape = inferredArgumentShapePair.second;
+                    }
+                }
+
+                if (argumentShapeChangedSinceLastTime && m_latestFullyDefinedCompositeForCheckedModeValidation)
+                    m_latestFullyDefinedCompositeForCheckedModeValidation->ValidateOrUpdateOutputs();
+            }
+        }
+
+        return inferredArgumentDimensions;
     }
 
     void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments)
@@ -1131,7 +1714,7 @@ namespace CNTK
                 PopulateComputationNodeValue<double>({ argument, argumentValue }, argumentComputationNode, layoutsPopulated);
                 break;
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(argumentValue->GetDataType()));
+                LogicError("Function '%S' Forward: Unsupported DataType %s.", AsString().c_str(), DataTypeName(argumentValue->GetDataType()));
                 break;
             }
         }
@@ -1142,12 +1725,17 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ void CompositeFunction::PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode)
     {
-        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableGradient.first, variableGradient.second);
+        NDShape inferredVariableShape;
+        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableGradient.first, variableGradient.second, &inferredVariableShape);
+        if (!VariableShapeMatchesNodeShape(inferredVariableShape, computationNode->GetSampleLayout()))
+            CNTK::LogicError("CompositeFunction::Backward: Inferred shape '%S' of Variable '%S' does not match the corresponding computation node shape '%s'.",
+                             inferredVariableShape.AsString().c_str(), variableGradient.first.AsString().c_str(), ((std::string)computationNode->GetSampleLayout()).c_str());
 
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
         auto nodeLayout = computationNode->GetMBLayout();
         if (((layout == nullptr) != (nodeLayout == nullptr)) || ((layout != nullptr) && (*layout != *nodeLayout)))
-            InvalidArgument("The layout of the specified gradient Value is incompatible with the layout of the corresponding Variable computed during Forward call");
+            InvalidArgument("The layout of the specified gradient Value for Variable '%S' is incompatible with the layout computed during Forward call.",
+                            variableGradient.first.AsString().c_str());
         computationNode->As<ComputationNode<ElementType>>()->AssignGradient(*CNTKMatrixAndMBLayout.first);
     }
 
@@ -1169,41 +1757,22 @@ namespace CNTK
                 PopulateComputationNodeGradient<double>(gradientVarValuePair, outputComputationNode);
                 break;
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(gradientValue->GetDataType()));
+                LogicError("Function '%S' Backward: Unsupported DataType %s.", AsString().c_str(), DataTypeName(gradientValue->GetDataType()));
                 break;
             }
         }
     }
 
-    static NDShape GetValueShape(const Variable& var, const ComputationNodeBasePtr& computationNodePtr)
-    {
-        size_t outputValueNumAxes = var.Shape().Rank();
-
-        // Add the batch and dynamic axes if needed
-        if (computationNodePtr->GetMBLayout() != nullptr)
-            outputValueNumAxes += 2;
-
-        std::vector<size_t> outputShapeDims(outputValueNumAxes);
-        for (size_t i = 0; i < var.Shape().Rank(); ++i)
-            outputShapeDims[i] = computationNodePtr->GetSampleLayout().GetDim(i);
-
-        if (computationNodePtr->GetMBLayout() != nullptr)
-        {
-            outputShapeDims[var.Shape().Rank()] = computationNodePtr->GetMBLayout()->GetNumTimeSteps();
-            outputShapeDims[var.Shape().Rank() + 1] = computationNodePtr->GetMBLayout()->GetNumSequences();
-        }
-
-        return NDShape(outputShapeDims);
-    }
-
     /*static*/ void CompositeFunction::GetNodeOutputOrGradient(Variable var, ValuePtr& varValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, bool getGradient)
     {
-        auto valueShape = GetValueShape(var, computationNode);
+        auto varShape = GetVariableShape(var.Shape(), computationNode->GetSampleLayout());
+        auto valueShape = PackedValue::GetUnpackedShape(varShape, var.DynamicAxes(), computationNode->GetMBLayout());
         if (varValue != nullptr)
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
             if ((varValue->Shape() != valueShape) && (AsTensorShape(varValue->Shape()) != AsTensorShape(valueShape)))
-                InvalidArgument("The shape %S of the specified Value object for %s does not match the actual shape %S", AsStringForErrorReporting(varValue->Shape()).c_str(), getGradient ? "gradient" : "output", AsStringForErrorReporting(valueShape).c_str());
+                ::InvalidArgument("The shape %S of the specified Value object for Variable '%S' %s does not match the actual shape %S",
+                                  varValue->Shape().AsString().c_str(), var.AsString().c_str(), getGradient ? "gradient" : "output", valueShape.AsString().c_str());
         }
 
         ValuePtr nodeValue;
@@ -1214,22 +1783,22 @@ namespace CNTK
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<float>>()->Gradient() : computationNode->As<ComputationNode<float>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(varShape, var.DynamicAxes(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
             else
-                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var, matrix, layout);
+                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var, computationNode, matrix, layout);
             break;
         }
         case DataType::Double:
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<double>>()->Gradient() : computationNode->As<ComputationNode<double>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(varShape, var.DynamicAxes(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
             else
-                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, matrix, layout);
+                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, computationNode, matrix, layout);
             break;
         }
         default:
-            LogicError("Unsupported DataType %s", DataTypeName(var.GetDataType()));
+            CNTK::LogicError("CompositeFunction::Forward/Backward: Unsupported DataType %s", DataTypeName(var.GetDataType()));
             break;
         }
 
@@ -1242,43 +1811,65 @@ namespace CNTK
     void CompositeFunction::GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs)
     {
         // Now copy the Forward values of output nodes from the network to outputs' Value objects
-        for (auto outputVarValuePair : outputs)
-            GetNodeOutputOrGradient(outputVarValuePair.first, outputs[outputVarValuePair.first], m_variableToNodeMap.at(outputVarValuePair.first), false /*getGradient*/);
+        for (auto& outputVarValuePair : outputs)
+        {
+            auto& valuePtr = outputVarValuePair.second;
+            auto node = m_variableToNodeMap.at(outputVarValuePair.first);
+            bool noValueStrorageProvided = (valuePtr == nullptr);
+            GetNodeOutputOrGradient(outputVarValuePair.first, valuePtr, node, false /*getGradient*/);
+
+            auto packedVarValue = std::dynamic_pointer_cast<PackedValue>(valuePtr);
+            if (noValueStrorageProvided && packedVarValue && packedVarValue->IsPacked())
+                m_existingNetworkStorageReferences.push_back(packedVarValue);
+        }
     }
 
     void CompositeFunction::GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients)
     {
         auto networkInputs = this->Inputs();
         // Now copy the gradient values of input nodes of the network to gradients' Value objects
-        for (auto gradientVarValuePair : gradients)
+        for (auto& gradientVarValuePair : gradients)
         {
             // Only gradients corresponding to inputs of the network can be obtained
             if (std::find(networkInputs.begin(), networkInputs.end(), gradientVarValuePair.first) == networkInputs.end())
-                InvalidArgument("Backpropagated gradient values can only be obtained for inputs of a Function");
+                InvalidArgument("Gradient requested for Variable '%S' which is not a leaf input (Input, Parameter or Constant) of the Function '%S'; this is currently unsupported.",
+                                gradientVarValuePair.first.AsString().c_str(), this->AsString().c_str());
 
             // Gradients can only be obtained for parameter variables or input variables that NeedsGradient
             if (!gradientVarValuePair.first.NeedsGradient() || (m_inputsExcludedFromGradientComputation.find(gradientVarValuePair.first) != m_inputsExcludedFromGradientComputation.end()))
-                InvalidArgument("Gradient value incorrectly requested for an Output or Constant Variable, an Input Variable with NeedsGradient setting of false, or an input for which gradient computation was explicitly excluded");
+                InvalidArgument("Gradient value incorrectly requested for Variable '%S', "
+                                "an Output or Constant or Input Variable with NeedsGradient setting of false, or an input for which gradient computation was explicitly excluded.",
+                                gradientVarValuePair.first.AsString().c_str());
 
             auto computationNodePtr = m_variableToNodeMap.at(gradientVarValuePair.first);
 
             if (!computationNodePtr->NeedsGradient())
-                LogicError("Backpropagated gradient value cannot be read from a ComputationNode that has NeedsGradient set to false");
+                LogicError("Function '%S': Backpropagated gradient value cannot be read from a Variable '%S' whose ComputationNode has NeedsGradient set to false.",
+                            AsString().c_str(), gradientVarValuePair.first.AsString().c_str());
 
-            GetNodeOutputOrGradient(gradientVarValuePair.first, gradients[gradientVarValuePair.first], computationNodePtr, true /*getGradient*/);
+            auto& valuePtr = gradientVarValuePair.second;
+            bool noValueStrorageProvided = (valuePtr == nullptr);
+            GetNodeOutputOrGradient(gradientVarValuePair.first, valuePtr, computationNodePtr, true /*getGradient*/);
+
+            auto packedVarValue = std::dynamic_pointer_cast<PackedValue>(valuePtr);
+            if (noValueStrorageProvided && packedVarValue && packedVarValue->IsPacked())
+                m_existingNetworkStorageReferences.push_back(packedVarValue);
         }
     }
 
     const std::vector<Variable>& CompositeFunction::GetArgumentDependencies(const Variable& output)
     {
-        assert(output.IsOutput());
+        if (m_perOutputVarArgumentDependencies.find(output) == m_perOutputVarArgumentDependencies.end())
+        {
+            auto sanitizedOutput = output.NonCompositePreservingCopy();
 
-        auto iter = m_perOutputVarArgumentDependencies.find(output);
-        if (iter != m_perOutputVarArgumentDependencies.end())
-            return iter->second;
-
-        auto wrappedComposite = AsComposite(output.Owner());
-        m_perOutputVarArgumentDependencies[output] = wrappedComposite->Arguments();
+            if (sanitizedOutput.IsOutput())
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.Owner())->Arguments();
+            else if (sanitizedOutput.IsParameter() || sanitizedOutput.IsConstant())
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
+            else
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = { sanitizedOutput };
+        }
 
         return m_perOutputVarArgumentDependencies[output];
     }
@@ -1302,7 +1893,7 @@ namespace CNTK
     {
         // Validate arguments and outputs
         if (outputs.empty())
-            InvalidArgument("CompositeFunction::Forward: At least one output has to be specified!");
+            InvalidArgument("At least one output has to be specified when calling Forward method of the Function '%S'.", this->AsString().c_str());
 
         // Make sure that the DataType of the variables and corresponding values match
         // TODO: We need a better way to determine the ElementType for the network
@@ -1312,7 +1903,7 @@ namespace CNTK
             if (dataType == DataType::Unknown)
                 dataType = variableValuePair.first.GetDataType();
             else if (dataType != variableValuePair.first.GetDataType())
-                LogicError("CompositeFunction::Forward: The DataType of all arguments of the Function must be same");
+                LogicError("Function '%S' Forward: The DataType of all arguments must be same.", this->AsString().c_str());
         }
 
         if (dataType == DataType::Unknown)
@@ -1328,6 +1919,37 @@ namespace CNTK
         for (auto output : outputs)
             requestedOutputVariables.insert(output.first);
 
+        std::unordered_set<Variable> functionOutputs(m_outputs.begin(), m_outputs.end());
+        std::unordered_set<Variable> requiredArguments;
+        for (auto outputVariable : requestedOutputVariables)
+        {
+            auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVariable);
+            requiredArguments.insert(requiredArgumentsForCurrentOutput.begin(), requiredArgumentsForCurrentOutput.end());
+        }
+
+        // We should have argument values supplied for all required argument dependencies for the requested outputs
+        std::vector<Variable> missingRequiredArguments;
+        std::unordered_map<Variable, ValuePtr> requiredArgumentValues;
+        for (auto requiredArgument : requiredArguments)
+        {
+            auto iter = arguments.find(requiredArgument);
+            if (iter == arguments.end())
+                missingRequiredArguments.push_back(requiredArgument);
+            else
+                requiredArgumentValues.insert(*iter);
+        }
+
+        if (!missingRequiredArguments.empty())
+        {
+            InvalidArgument("Values for %d required arguments '%S', that the requested output(s) '%S' depend on, have not been provided.",
+                            (int)missingRequiredArguments.size(), NamedListString(missingRequiredArguments).c_str(), NamedListString(requestedOutputVariables).c_str());
+        }
+
+        if (requiredArgumentValues.size() < arguments.size())
+            fprintf(stderr, "WARNING: Function::Forward provided values for (%d) extra arguments which are not required for evaluating the specified Function outputs!\n", (int)(arguments.size() - requiredArgumentValues.size()));
+
+        auto inferredArgumentShapes = InferFreeDimensionsOfArguments(requiredArgumentValues);
+
         if (dataType == DataType::Float)
             GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
         else if (dataType == DataType::Double)
@@ -1335,55 +1957,29 @@ namespace CNTK
         else
             InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
 
-        std::unordered_set<Variable> functionOutputs(m_outputs.begin(), m_outputs.end());
-        std::vector<ComputationNodeBasePtr> outputsToEvaluate;
-        std::unordered_set<Variable> requiredArguments;
-        for (auto outputVarValuePair : outputs)
-        {
-            auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVarValuePair.first);
-            requiredArguments.insert(requiredArgumentsForCurrentOutput.begin(), requiredArgumentsForCurrentOutput.end());
-
-            auto outputComputationNode = m_variableToNodeMap.at(outputVarValuePair.first);
-            outputsToEvaluate.push_back(outputComputationNode);
-        }
-
-        // We should have argument values supplied for all required argument dependencies for the requested outputs
-        std::vector<Variable> missingRequiredArguments;
-        for (auto requiredArgument : requiredArguments)
-        {
-            if (arguments.find(requiredArgument) == arguments.end())
-                missingRequiredArguments.push_back(requiredArgument);
-        }
-
-        if (!missingRequiredArguments.empty())
-        {
-            std::wstring missingRequiredArgumentNames = NamedListString(missingRequiredArguments);
-            InvalidArgument("Function::Forward: Values for %d required arguments (%S), that the requested output(s) depend on, have not been provided", (int)missingRequiredArgumentNames.size(), missingRequiredArgumentNames.c_str());
-        }
-
         // Feed data into the arguments of the network
         // TODO: Avoid copying the data when possible
-        PopulateNetworkInputs(arguments);
+        PopulateNetworkInputs(requiredArgumentValues);
 
-        // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
-        // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
-        // w.r.t. inputs to force evaluation in each minibatch
-        list<ComputationNodeBasePtr> dropoutNodes = m_computationNetwork->GetNodesWithType(OperationNameOf(DropoutNode));
-        for (auto& nodeIter : dropoutNodes)
-            nodeIter->SetEvalTimeStampOutdatedWrtAll();
-        
+        // Copy all new values for 'dirty' attributes from functions into corresponding network nodes.
+        ApplyAttributeUpdates();
+
         // Bump the timestamp of the parameter nodes whose values have changed
-        for (auto& paramTimeStampRecord : m_lastRecordedParameterValueTimeStamps)
+        for (auto& timeStampRecord : m_lastRecordedTimeStamps)
         {
-            auto parameter = paramTimeStampRecord.first;
-            auto prevTimeStamp = paramTimeStampRecord.second;
-            auto newTimeStamp = parameter.CurrentValueTimeStamp();
+            auto variable = timeStampRecord.first;
+            auto prevTimeStamp = timeStampRecord.second;
+            auto newTimeStamp = variable.CurrentValueTimeStamp();
             if (newTimeStamp > prevTimeStamp)
             {
-                paramTimeStampRecord.second = newTimeStamp;
-                m_variableToNodeMap.at(parameter)->BumpEvalTimeStamp();
+                timeStampRecord.second = newTimeStamp;
+                m_variableToNodeMap.at(variable)->BumpEvalTimeStamp();
             }
         }
+
+        std::vector<ComputationNodeBasePtr> outputsToEvaluate;
+        for (auto outputVariable : requestedOutputVariables)
+            outputsToEvaluate.push_back(m_variableToNodeMap.at(outputVariable));
 
         // The 'outputsToRetainBackwardStateFor' nodes also need to be evaluated if not already specified in 'outputs'
         for (auto rootVarForBackprop : outputsToRetainBackwardStateFor)
@@ -1396,30 +1992,33 @@ namespace CNTK
         for (auto& backpropRoot : m_currentBackpropRoots)
             m_variableToNodeMap.at(backpropRoot)->SetEvalTimeStampOutdatedWrtAll();
 
-        // TODO: Verify that values were supplied for all inputs that requested outputs depend on
+        // Reset the timestamps of all dropout node to force recomputation of the (random) dropout mask.
+        list<ComputationNodeBasePtr> dropoutNodes = m_computationNetwork->GetNodesWithType<DropoutNodeBase>();
+        for (auto& dropout : dropoutNodes)
+            dropout->SetEvalTimeStampOutdatedWrtAll();
+
+        // Free any previous references to the matrix storage associated with the outputsToEvaluate
+        ClearExistingOutputOrGradientStorageReferences();
 
         ScopedNetworkOperationMode modeGuard(m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
 
-        // We may have to include additional nodes in the ForwardProp to align with how the memory sharing structure is setup
-        // We need to include all roots that lie earlier in the global eval order than the actual outputs we are interested
-        // in evaluation.
-        // TODO: This may incur additonal compute costs in some rare scenarios. We need to come up with a better way to handle this.
-        outputsToEvaluate = m_computationNetwork->SortByGlobalEvalOrder(outputsToEvaluate);
-        auto lastOutputInEvalOrder = outputsToEvaluate.back();
-        auto iterEndRootInEvalOrder = std::find(m_allNetworkRootsInGlobalEvalOrder.begin(), m_allNetworkRootsInGlobalEvalOrder.end(), lastOutputInEvalOrder) + 1;
+        m_computationNetwork->ForwardProp(outputsToEvaluate);
 
-        auto augmentedOutputsToEvaluate = std::vector<ComputationNodeBasePtr>(m_allNetworkRootsInGlobalEvalOrder.begin(), iterEndRootInEvalOrder);
-        m_computationNetwork->ForwardProp(augmentedOutputsToEvaluate);
+        // Call PostForwardAndBackProp after ForwardProp only in evaluation mode.
+        if (outputsToRetainBackwardStateFor.empty())
+        {
+            m_computationNetwork->PostForwardAndBackProp(outputsToEvaluate);
+            RecordRefVariableUpdates();
+        }
+        else
+        {
+            m_currentOutputsToEvaluate.clear();
+            for (auto outputToEvaluate : outputsToEvaluate)
+                m_currentOutputsToEvaluate.push_back(outputToEvaluate);
+        }
 
         GetNetworkOutputs(outputs);
-
         // TODO: How to deal with the specified 'computeDevice'
-        Variable evalTimeStampVariable;
-        if (arguments.empty())
-            evalTimeStampVariable = Inputs()[0];
-        else
-            evalTimeStampVariable = arguments.begin()->first;
-
         BackPropStatePtr backpropStatePtr;
         if (outputsToRetainBackwardStateFor.size() > 0)
             backpropStatePtr = MakeSharedObject<CNTKBackPropState>(this->shared_from_this(), computeDevice, GetCurrentBackpropRootsTimeStamps());
@@ -1433,16 +2032,21 @@ namespace CNTK
     {
         auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.get());
         if (backpropState == nullptr)
-            InvalidArgument("Invalid backprop state specified");
+            InvalidArgument("Function '%S' Backward: Invalid backprop state passed.", AsString().c_str());
+
+        if (backPropagatedGradientValuesForInputs.empty())
+            InvalidArgument("Function '%S' Backward: List of inputs to compute gradients for, must not be empty.", AsString().c_str());
 
         // TODO: Support multiple concurrent backprop states
         std::unordered_map<Variable, uint64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();
         if (backpropState->BackpropRootsForwardTimeStamps() != currentBackpropRootTimeStamps)
-            LogicError("The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified by subsequent Forward calls to the function."
-                       "This is not a user error but a shortcoming of the current implementation where multiple independent backprop states are not simultaneously supported");
+            LogicError("Function '%S' Backward: The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified "
+                        "by subsequent Forward calls to the function. This is not a user error but a shortcoming of the current implementation where multiple independent "
+                        "backprop states are not simultaneously supported.", AsString().c_str());
 
         if (rootGradientValues.size() > 1)
-            LogicError("Currently gradient backprop from only one of the Function Outputs is supported");
+            LogicError("Function '%S' Backward: %d root gradient values specified; currently gradient backprop from only one of the Function Outputs is supported.",
+                        AsString().c_str(), (int)rootGradientValues.size());
 
         // TODO: Avoid copying the data when possible
 
@@ -1461,6 +2065,60 @@ namespace CNTK
 
         GetNetworkGradients(backPropagatedGradientValuesForInputs);
 
+        if (m_currentOutputsToEvaluate.size() > 0)
+        {
+            m_computationNetwork->PostForwardAndBackProp(m_currentOutputsToEvaluate);
+            RecordRefVariableUpdates();
+            m_currentOutputsToEvaluate.clear();
+        }
+
         // TODO: How to deal with the specified 'computeDevice'
+    }
+
+    void CompositeFunction::ApplyAttributeUpdates()
+    {
+        // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
+        // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
+        // w.r.t. inputs to force evaluation in each minibatch
+        for (auto varNodePair : m_variableToNodeMap)
+        {
+            auto var = varNodePair.first;
+            if (!var.IsOutput())
+                continue;
+
+            auto function = var.Owner();
+
+            if (function->m_dirtyAttributes.empty())
+                continue;
+
+            auto node = varNodePair.second;
+
+            for (const wstring& attribute : function->m_dirtyAttributes)
+            {
+                if (attribute == PrimitiveFunction::AttributeNameDropoutRate)
+                {
+                    auto dropoutRate = function->m_attributes[attribute].Value<double>();
+                    auto dropoutPtr = dynamic_cast<DropoutNodeBase*>(node.get());
+                    assert(dropoutPtr != nullptr);
+                    dropoutPtr->SetDropoutRate(dropoutRate);
+                }
+                else if (attribute == PrimitiveFunction::AttributeNameRngSeed)
+                {
+                    auto seed = function->m_attributes[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+                    auto rngUserPtr = dynamic_cast<RngUser*>(node.get());
+                    assert(rngUserPtr != nullptr);
+                    rngUserPtr->SetRngState(seed);
+                }
+                else
+                {
+                    // Should never happen.
+                    LogicError("ApplyAttributeUpdates: function '%S' specified an unsupported attribute '%S'.",
+                        function->AsString().c_str(), attribute.c_str());
+                }
+            }
+
+            function->m_dirtyAttributes.clear();
+            node->SetEvalTimeStampOutdatedWrtAll();
+        }
     }
 }

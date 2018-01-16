@@ -49,7 +49,7 @@ All settings are identical to the previous example. The accuracy of the network 
 
 ### ConvNet_CIFAR10_DataAug_Distributed.py
 
-The fifth example uses the same CNN as ConvNet_CIFAR10_DataAug.py, but it adds support for distributed training with simple aggregation. For a reference on distributed training, please check [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#32-python).
+The fifth example uses the same CNN as ConvNet_CIFAR10_DataAug.py, but it adds support for distributed training with simple aggregation. For a reference on distributed training, please check [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines).
 Note that this example will run with a CPU-only build.
 
 `mpiexec -n <#workers> python ConvNet_CIFAR10_DataAug_Distributed.py`

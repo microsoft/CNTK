@@ -14,17 +14,13 @@ from random import randint
 from PIL import Image
 import imageio
 
-from cntk import Trainer
-from cntk.utils import *
-from cntk.layers import *
-from cntk.models import Sequential, LayerStack
-from cntk.learner import sgd, momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
-from _cntk_py import set_computation_network_trace_level
+import cntk as C
+from cntk.logging import *
+from cntk.debugging import set_computation_network_trace_level
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
-data_path  = os.path.join(abs_path, "..", "..", "Datasets", "UCF11")
+data_path  = os.path.join(abs_path, "..", "..", "DataSets", "UCF11")
 model_path = os.path.join(abs_path, "Models")
 
 # Define the reader for both training and evaluation action.
@@ -35,7 +31,7 @@ class VideoReader(object):
     stacked numpy arrays.
     Similar to http://vlg.cs.dartmouth.edu/c3d/c3d_video.pdf
     '''
-    def __init__(self, map_file, label_count, is_training):
+    def __init__(self, map_file, label_count, is_training, limit_epoch_size=sys.maxsize):
         '''
         Load video file paths and their corresponding labels.
         '''
@@ -50,10 +46,12 @@ class VideoReader(object):
         self.targets         = []
         self.batch_start     = 0
 
+        map_file_dir = os.path.dirname(map_file)
+
         with open(map_file) as csv_file:
             data = csv.reader(csv_file)
             for row in data:
-                self.video_files.append(row[0])
+                self.video_files.append(os.path.join(map_file_dir, row[0]))
                 target = [0.0] * self.label_count
                 target[int(row[1])] = 1.0
                 self.targets.append(target)
@@ -61,9 +59,10 @@ class VideoReader(object):
         self.indices = np.arange(len(self.video_files))
         if self.is_training:
             np.random.shuffle(self.indices)
+        self.epoch_size = min(len(self.video_files), limit_epoch_size)
 
     def size(self):
-        return len(self.video_files)
+        return self.epoch_size
             
     def has_more(self):
         if self.batch_start < self.size():
@@ -143,8 +142,8 @@ class VideoReader(object):
                             center_h + self.height / 2))
         
         norm_image = np.array(image, dtype=np.float32)
-        norm_image -= 128.0
-        norm_image /= 128.0
+        norm_image -= 127.5
+        norm_image /= 127.5
 
         # (channel, height, width)
         return np.ascontiguousarray(np.transpose(norm_image, (2, 0, 1)))
@@ -162,62 +161,61 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
     num_output_classes = train_reader.label_count
 
     # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, sequence_length, image_height, image_width), np.float32)
-    label_var = input_variable(num_output_classes, np.float32)
+    input_var = C.input_variable((num_channels, sequence_length, image_height, image_width), np.float32)
+    label_var = C.input_variable(num_output_classes, np.float32)
 
     # Instantiate simple 3D Convolution network inspired by VGG network 
     # and http://vlg.cs.dartmouth.edu/c3d/c3d_video.pdf
-    with default_options (activation=relu):
-        z = Sequential([
-            Convolution3D((3,3,3), 64, pad=True),
-            MaxPooling((1,2,2), (1,2,2)),
-            LayerStack(3, lambda i: [
-                Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
-                Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
-                MaxPooling((2,2,2), (2,2,2))
+    with C.default_options (activation=C.relu):
+        z = C.layers.Sequential([
+            C.layers.Convolution3D((3,3,3), 64, pad=True),
+            C.layers.MaxPooling((1,2,2), (1,2,2)),
+            C.layers.For(range(3), lambda i: [
+                C.layers.Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
+                C.layers.Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
+                C.layers.MaxPooling((2,2,2), (2,2,2))
             ]),
-            LayerStack(2, lambda : [
-                Dense(1024), 
-                Dropout(0.5)
+            C.layers.For(range(2), lambda : [
+                C.layers.Dense(1024), 
+                C.layers.Dropout(0.5)
             ]),
-            Dense(num_output_classes, activation=None)
+            C.layers.Dense(num_output_classes, activation=None)
         ])(input_var)
     
     # loss and classification error.
-    ce = cross_entropy_with_softmax(z, label_var)
-    pe = classification_error(z, label_var)
+    ce = C.cross_entropy_with_softmax(z, label_var)
+    pe = C.classification_error(z, label_var)
 
     # training config
-    epoch_size     = 1322                  # for now we manually specify epoch size
-    minibatch_size = 4
+    train_epoch_size     = train_reader.size()
+    train_minibatch_size = 2
 
     # Set learning parameters
     lr_per_sample          = [0.01]*10+[0.001]*10+[0.0001]
-    lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
-    momentum_time_constant = 4096
-    mm_schedule            = momentum_as_time_constant_schedule(momentum_time_constant, epoch_size=epoch_size)
+    lr_schedule            = C.learning_parameter_schedule_per_sample(lr_per_sample, epoch_size=train_epoch_size)
+    momentum_per_sample = 0.9997558891748972
+    mm_schedule            = C.momentum_schedule_per_sample([momentum_per_sample])
 
     # Instantiate the trainer object to drive the model training
-    learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule, True)
-    trainer     = Trainer(z, ce, pe, learner)
+    learner = C.momentum_sgd(z.parameters, lr_schedule, mm_schedule, True)
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    trainer = C.Trainer(z, (ce, pe), learner, progress_printer)
 
     log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(tag='Training')
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs
         train_reader.reset()
 
         while train_reader.has_more():
-            videos, labels, current_minibatch = train_reader.next_minibatch(minibatch_size)
+            videos, labels, current_minibatch = train_reader.next_minibatch(train_minibatch_size)
             trainer.train_minibatch({input_var : videos, label_var : labels})
 
-            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
-        progress_printer.epoch_summary(with_metric=True)
-    
+        trainer.summarize_training_progress()
+
     # Test data for trained model
-    epoch_size     = 332
-    minibatch_size = 2
+    epoch_size     = test_reader.size()
+    test_minibatch_size = 2
 
     # process minibatches and evaluate the model
     metric_numer    = 0
@@ -226,7 +224,7 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
 
     test_reader.reset()    
     while test_reader.has_more():
-        videos, labels, current_minibatch = test_reader.next_minibatch(minibatch_size)
+        videos, labels, current_minibatch = test_reader.next_minibatch(test_minibatch_size)
         # minibatch data to be trained with
         metric_numer += trainer.test_minibatch({input_var : videos, label_var : labels}) * current_minibatch
         metric_denom += current_minibatch
@@ -245,4 +243,3 @@ if __name__=='__main__':
     test_reader  = VideoReader(os.path.join(data_path, 'test_map.csv'), num_output_classes, False)
         
     conv3d_ucf11(train_reader, test_reader)
-

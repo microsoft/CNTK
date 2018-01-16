@@ -1,4 +1,4 @@
-FROM nvidia/cuda:8.0-cudnn5-devel-ubuntu14.04
+FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu14.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
@@ -29,8 +29,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         subversion \
         # For Kaldi's dependencies
         libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 \
+        # For Java Bindings
+        openjdk-7-jdk \
         # For SWIG
-        libpcre++-dev && \
+        libpcre3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN OPENMPI_VERSION=1.10.3 && \
@@ -44,7 +46,7 @@ ENV PATH /usr/local/mpi/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
 
 RUN LIBZIP_VERSION=1.1.2 && \
-    wget -q -O - http://nih.at/libzip/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
+    wget -q -O - https://libzip.org/download/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
     cd libzip-${LIBZIP_VERSION} && \
     ./configure && \
     make -j"$(nproc)" install && \
@@ -92,11 +94,11 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install CNTK custom MKL
-RUN CNTK_CUSTOM_MKL_VERSION=3 && \
-    mkdir /usr/local/CNTKCustomMKL && \
-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-$CNTK_CUSTOM_MKL_VERSION.tgz | \
-    tar -xzf - -C /usr/local/CNTKCustomMKL
+# Install MKLML
+RUN MKLML_VERSION=v0.11/mklml_lnx_2018.0.1.20171007 && \
+    mkdir /usr/local/mklml && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/$MKLML_VERSION.tgz | \
+    tar -xzf - -C /usr/local/mklml
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
@@ -122,11 +124,15 @@ RUN mv /bin/sh /bin/sh.orig && \
 
 ## PYTHON
 
+# Commit that will be used for Python environment creation (and later, compilation)
+ARG COMMIT=master
+
 # Swig
 RUN cd /root && \
     wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
     cd swig-3.0.10 && \
-    ./configure --without-java --without-perl5 && \
+    # Note: we specify --without-alllang to suppress building tests and examples for specific languages.
+    ./configure --without-alllang && \
     make -j $(nproc) && \
     make install
 
@@ -136,7 +142,7 @@ RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh &&
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
 RUN CONDA_ENV_PATH=/tmp/conda-linux-cntk-py35-environment.yml; \
-    wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O "$CONDA_ENV_PATH" && \
+    wget -q https://raw.githubusercontent.com/Microsoft/CNTK/$COMMIT/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O "$CONDA_ENV_PATH" && \
     /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35 --file "$CONDA_ENV_PATH" && \
     rm -f "$CONDA_ENV_PATH"
 
@@ -159,7 +165,8 @@ RUN mkdir -p /usr/local/cudnn/cuda/include && \
     ln -s /usr/local/cuda/lib64/stubs/libnvidia-ml.so /usr/local/cuda/lib64/stubs/libnvidia-ml.so.1
 
 # Build CNTK
-RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+RUN git clone --depth=1 -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
+    MKLML_VERSION_DETAIL=mklml_lnx_2018.0.1.20171007 && \
     CONFIGURE_OPTS="\
       --with-cuda=/usr/local/cuda \
       --with-gdk-include=/usr/local/cuda/include \
@@ -176,7 +183,7 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     cd ../../.. && \
     mkdir -p build-mkl/gpu/release && \
     cd build-mkl/gpu/release && \
-    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
+    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/$MKLML_VERSION_DETAIL && \
     make -j"$(nproc)" all
 
 RUN cd Examples/Image/DataSets/CIFAR-10 && \

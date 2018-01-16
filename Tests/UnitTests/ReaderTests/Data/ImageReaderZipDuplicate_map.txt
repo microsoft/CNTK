@@ -1,0 +1,8 @@
+images/simple.zip@/chunk0/black.jpg	0
+images/simple.zip@/chunk0/black.jpg	0
+images/simple.zip@/chunk0/black.jpg	0
+images/simple.zip@/chunk0/blue.jpg	1
+images/simple.zip@/chunk1/green.jpg	2
+images/simple.zip@/chunk1/green.jpg	2
+images/simple.zip@/chunk1/green.jpg	2
+images/simple.zip@/chunk1/red.jpg	3

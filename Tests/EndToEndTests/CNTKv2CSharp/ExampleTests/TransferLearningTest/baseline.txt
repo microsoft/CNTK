@@ -1,0 +1,21 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-1650 v4 @ 3.60GHz
+    Hardware threads: 12
+    Total Memory: 16691576 kB
+-------------------------------------------------------------------
+Test CNTKLibraryCSTrainingExamples
+======== Train model using GPU build ========
+======== running TransferLearning.TrainAndEvaluate with animal data using GPU ========
+Minibatch: 0 CrossEntropyLoss = 1.889423, EvaluationCriterion = 0.6
+Minibatch: 0 CrossEntropyLoss = 2.902373, EvaluationCriterion = 0.6
+Minibatch: 1 CrossEntropyLoss = 0.4620837, EvaluationCriterion = 0.2666667
+Minibatch: 1 CrossEntropyLoss = 1.259416, EvaluationCriterion = 0.4
+Minibatch: 2 CrossEntropyLoss = 0.09417935, EvaluationCriterion = 0
+Minibatch: 2 CrossEntropyLoss = 0.004285431, EvaluationCriterion = 0
+Minibatch: 3 CrossEntropyLoss = 0.005091119, EvaluationCriterion = 0
+Minibatch: 3 CrossEntropyLoss = 2.257029E-06, EvaluationCriterion = 0
+Minibatch: 4 CrossEntropyLoss = 7.629395E-07, EvaluationCriterion = 0
+Minibatch: 4 CrossEntropyLoss = 1.11262E-05, EvaluationCriterion = 0
+Validating Model: Total Samples = 10, Misclassify Count = 0
+0
+======== Train completes. ========

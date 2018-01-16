@@ -1,0 +1,40 @@
+# Modifies input network to take input of size $TestImageWidth$ x $TestImageHeight$, consisting of
+# $ImageChannels$ feature channels and $ClassCount$ pixelwise label channels (one for each possible output class).
+
+m = LoadModel("$CurModel$", format = "cntk")
+SetDefaultModel(m)
+
+ImageWidth = $TestImageWidth$
+ImageHeight = $TestImageHeight$
+ImageChannels = $ImageChannels$
+ClassCount = $ClassCount$
+
+# Replace cropped features with uncropped features.
+Rename(features, oldFeatures)
+features = ImageInput(ImageWidth, ImageHeight, ImageChannels, imageLayout = "cudnn", tag = "feature")
+SetInput(featuresFCN4.x._.x.c, 1, features)
+SetInput(out, 2, features)
+Delete(oldFeatures)
+
+# Replace cropped labels with uncropped labels.
+Rename(labels, oldLabels)
+labels = ImageInput(ImageWidth, ImageHeight, ClassCount, imageLayout = "cudnn", tag = "label")
+SetInput(out, 1, labels)
+SetInput(out, 3, labels)
+SetInput(CE.logits_per_class, 0, labels)
+SetInput(miouError.labelMasked, 0, labels)
+SetInput(pixelwiseError.acc._, 0, labels)
+Delete(oldLabels)
+
+# Replace cropped ignore mask with uncropped ignore mask.
+Rename(ignoreMask, oldIgnoreMask)
+ignoreMask = ImageInput(ImageWidth, ImageHeight, 1, imageLayout = "cudnn", tag = "feature")
+SetInput(CE.diff_valid, 1, ignoreMask)
+SetInput(CE.norm_factor.z, 0, ignoreMask)
+SetInput(miouError.outMasked, 1, ignoreMask)
+SetInput(miouError.labelMasked, 1, ignoreMask)
+SetInput(pixelwiseError.diffs, 1, ignoreMask)
+SetInput(pixelwiseError.pixelNorm.z.r, 0, ignoreMask)
+Delete(oldIgnoreMask)
+
+SaveModel(m, "$NewModel$", format = "cntk")

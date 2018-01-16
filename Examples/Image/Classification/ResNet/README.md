@@ -23,3 +23,7 @@ We offer multiple ResNet examples, including ResNet20 and ResNet110 for CIFAR-10
 ### [Python](./Python)
 
 ### [BrainScript](./BrainScript)
+
+## Pre-trained Models
+
+Pre-trained ResNet models can be found [here](../../../../PretrainedModels/Image.md#resnet).

@@ -139,6 +139,41 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAddAndSub, RandomSeedFixture)
     BOOST_CHECK(m3.IsEqualTo(m0));
 }
 
+BOOST_FIXTURE_TEST_CASE(CPUMatrixBatchMatmMul, RandomSeedFixture)
+{
+    DMatrix m0(6, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
+    m0(2, 0) = 5;
+    m0(2, 1) = 6;
+    m0(3, 0) = 7;
+    m0(3, 1) = 8;
+    m0(4, 0) = 9;
+    m0(4, 1) = 10;
+    m0(5, 0) = 11;
+    m0(5, 1) = 12;
+
+    DMatrix m1(2, 2);
+    m1(0, 0) = 10;
+    m1(0, 1) = 20;
+    m1(1, 0) = 30;
+    m1(1, 1) = 40;
+
+    DMatrix m00(3, 2);
+    m00(0, 0) = 220;
+    m00(0, 1) = 360;
+    m00(1, 0) = 300;
+    m00(1, 1) = 480;
+    m00(2, 0) = 380;
+    m00(2, 1) = 600;
+
+    DMatrix m2(3, 2);
+    DMatrix::BatchMatMul(0.0, m0, false, 3, m1, false, 1, m2, true);
+    BOOST_CHECK(m2.IsEqualTo(m00));
+}
+
 BOOST_FIXTURE_TEST_CASE(CPUMatrixMultiplyAndDiv, RandomSeedFixture)
 {
     DMatrix m0(2, 3);
@@ -303,6 +338,9 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixElementOperations, RandomSeedFixture)
     m2(1, 2) = 1.0000;
     BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 
+    m3.InplaceAtanh();
+    BOOST_CHECK(m3.IsEqualTo(m0, c_epsilonFloatE4));
+
     m3.SetValue(m0);
     m3.InplaceLogSoftmax(true);
     m3.InplaceExp();
@@ -431,6 +469,56 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixElementOperations, RandomSeedFixture)
     m_NegSine.SetValue(m_Trig);
     m_NegSine.AssignNegativeSineOf(m_Trig);
     BOOST_CHECK(m_NegSine.IsEqualTo(m_NegSine_expected, c_epsilonFloatE4));
+
+    m3.SetValue(m0Inverse);
+    m3.InplaceAcos();
+    m2(0, 0) = 0.0;
+    m2(0, 1) = 1.04719755;
+    m2(0, 2) = 1.23095942;
+    m2(1, 0) = 1.31811607;
+    m2(1, 1) = 1.36943841;
+    m2(1, 2) = 1.40334825;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0Inverse);
+    m3.InplaceAsin();
+    m2(0, 0) = 1.57079633;
+    m2(0, 1) = 0.52359878;
+    m2(0, 2) = 0.33983691;
+    m2(1, 0) = 0.25268026;
+    m2(1, 1) = 0.20135792;
+    m2(1, 2) = 0.16744808;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceCosh();
+    m2(0, 0) = 1.54308063;
+    m2(0, 1) = 3.76219569;
+    m2(0, 2) = 10.067662;
+    m2(1, 0) = 27.30823284;
+    m2(1, 1) = 74.20994852;
+    m2(1, 2) = 201.71563612;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceSinh();
+    m2(0, 0) = 1.17520119;
+    m2(0, 1) = 3.62686041;
+    m2(0, 2) = 10.01787493;
+    m2(1, 0) = 27.2899172;
+    m2(1, 1) = 74.20321058;
+    m2(1, 2) = 201.71315737;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
+
+    m3.SetValue(m0);
+    m3.InplaceAsinh();
+    m2(0, 0) = 0.88137359;
+    m2(0, 1) = 1.44363548;
+    m2(0, 2) = 1.81844646;
+    m2(1, 0) = 2.09471255;
+    m2(1, 1) = 2.31243834;
+    m2(1, 2) = 2.49177985;
+    BOOST_CHECK(m3.IsEqualTo(m2, c_epsilonFloatE4));
 }
 
 BOOST_FIXTURE_TEST_CASE(CPUMatrixNorms, RandomSeedFixture)
@@ -896,6 +984,195 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixSeedingDouble, RandomSeedFixture)
     auto m2 = CPUMatrix<double>::RandomUniform(16, 16, low, high, seed);
 
     BOOST_CHECK(m1.IsEqualTo(m2));
+}
+
+BOOST_FIXTURE_TEST_CASE(CPUMatrixAdam, RandomSeedFixture)
+{
+    CPUMatrix<double> adamMatrix;
+    CPUMatrix<double> gradients(2, 1);
+    CPUMatrix<double> parameters(2, 1);
+    CPUMatrix<double> expectedParameters(2, 1);
+    CPUMatrix<double> expectedStates(2, 2);
+    double gradientValues[] = { 0.1, -0.1 };
+    double paramValues[] = { 0.1, 0.1 };
+    double expectedValues[] = { -0.05811338, 0.25811338 };
+    double expectedStateValues[] = {1e-5, 0.01, 1e-5, -0.01};
+    gradients.SetValue(2, 1, gradientValues, matrixFormatRowMajor);
+    parameters.SetValue(2, 1, paramValues, matrixFormatRowMajor);
+    expectedParameters.SetValue(2, 1, expectedValues, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, expectedStateValues, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, 0.1);
+
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+
+    double expectedValues2[] = { -0.27059249, 0.47059249 };
+    double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
+    expectedParameters.SetValue(2, 1, expectedValues2, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, expectedStateValues2, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, 1e-8, 0.1);
+
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+}
+
+BOOST_FIXTURE_TEST_CASE(CPUMatrixAdamVarEpsilon, RandomSeedFixture)
+{
+    CPUMatrix<double> adamMatrix;
+    CPUMatrix<double> gradients(2, 1);
+    CPUMatrix<double> parameters(2, 1);
+    CPUMatrix<double> expectedParameters(2, 1);
+    CPUMatrix<double> expectedStates(2, 2);
+    double gradientValues[] = { 0.1, -0.1 };
+    double paramValues[] = { 0.1, 0.1 };
+    double expectedValues[] = { 0.0951532672, 0.1048467328 };
+    double expectedStateValues[] = {1e-5, 0.01, 1e-5, -0.01};
+    double epsilon = 0.1;
+
+    gradients.SetValue(2, 1, gradientValues, matrixFormatRowMajor);
+    parameters.SetValue(2, 1, paramValues, matrixFormatRowMajor);
+    expectedParameters.SetValue(2, 1, expectedValues, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, expectedStateValues, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, 0.1);
+
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+
+    double expectedValues2[] = { 0.0860598361, 0.1139401639 };
+    double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
+    expectedParameters.SetValue(2, 1, expectedValues2, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, expectedStateValues2, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, epsilon, 0.1);
+
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+}
+
+BOOST_FIXTURE_TEST_CASE(CPUMatrixOneHot, RandomSeedFixture)
+{
+    const size_t num_class = 6;
+
+    DMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
+
+    DMatrix expect(12, 2);
+    expect(1, 0) = 1;
+    expect(9, 0) = 1;
+    expect(2, 1) = 1;
+    expect(10, 1) = 1;
+
+    vector<size_t> shape(3);
+    shape[0] = num_class; shape[1] = 2; shape[2] = 2;
+    DMatrix m1;
+    m1.AssignOneHot(m0, shape, 0);
+    BOOST_CHECK(m1.GetNumRows() == 12);
+    BOOST_CHECK(m1.GetNumCols() == 2);
+    BOOST_CHECK(m1.IsEqualTo(expect, 1e-6));
+
+    DMatrix expect2(12, 2);
+    expect2(2, 0) = 1;
+    expect2(7, 0) = 1;
+    expect2(4, 1) = 1;
+    expect2(9, 1) = 1;
+
+    vector<size_t> shape2(3);
+    shape2[0] = 2; shape2[1] = num_class; shape2[2] = 2;
+    DMatrix m2;
+    m2.AssignOneHot(m0, shape2, 1);
+    BOOST_CHECK(m2.GetNumRows() == 12);
+    BOOST_CHECK(m2.GetNumCols() == 2);
+    BOOST_CHECK(m2.IsEqualTo(expect2, 1e-6));
+
+    DMatrix dirtyMatrix(2, 2);
+    dirtyMatrix(0, 0) = 1;
+    dirtyMatrix(0, 1) = -1;
+    dirtyMatrix(1, 0) = 7;
+    dirtyMatrix(1, 1) = 4;
+
+    DMatrix dirtyExpect(12, 2);
+    dirtyExpect(1, 0) = 1;
+    dirtyExpect(9, 0) = 0;
+    dirtyExpect(2, 1) = 0;
+    dirtyExpect(10, 1) = 1;
+
+    DMatrix dirty_m;
+    dirty_m.AssignOneHot(dirtyMatrix, shape, 0);
+    BOOST_CHECK(dirty_m.GetNumRows() == 12);
+    BOOST_CHECK(dirty_m.GetNumCols() == 2);
+    BOOST_CHECK(dirty_m.IsEqualTo(dirtyExpect, 1e-6));
+}
+
+BOOST_FIXTURE_TEST_CASE(CPUMatrixScatterToIndices, RandomSeedFixture)
+{
+    const size_t row_elements = 2;
+
+    DMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 2;
+    m0(1, 1) = 4;
+
+    DMatrix m1(row_elements, 6);
+    m1(0, 1) = m1(1, 1) = 4;
+    m1(0, 2) = m1(1, 2) = 3;
+    m1(0, 3) = m1(1, 3) = 2;
+    m1(0, 4) = m1(1, 4) = 1;
+
+    DMatrix m3(4, 2);
+    m3(0, 0) = 1;
+    m3(1, 0) = 2;
+    m3(2, 0) = 3;
+    m3(3, 0) = 4;
+    m3(0, 1) = 5;
+    m3(1, 1) = 6;
+    m3(2, 1) = 7;
+    m3(3, 1) = 8;
+
+    m1.ScatterToIndices(m3, m0, row_elements);
+
+    DMatrix expect(row_elements, 6);
+    expect(0, 1) = 5;
+    expect(1, 1) = 6;
+    expect(0, 2) = 11;
+    expect(1, 2) = 13;
+    expect(0, 3) = 2;
+    expect(1, 3) = 2;
+    expect(0, 4) = 8;
+    expect(1, 4) = 9;
+
+    BOOST_CHECK(m1.IsEqualTo(expect, 1e-6));
+}
+
+BOOST_FIXTURE_TEST_CASE(CPUMatrixGatherFromTarget, RandomSeedFixture)
+{
+    const size_t row_elements = 2;
+
+    DMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
+
+    DMatrix m1(row_elements, 6);
+    m1(0, 1) = m1(1, 1) = 4;
+    m1(0, 2) = m1(1, 2) = 3;
+    m1(0, 3) = m1(1, 3) = 2;
+    m1(0, 4) = m1(1, 4) = 1;
+
+    DMatrix expect(4, 2);
+    expect(0, 0) = expect(1, 0) = 4;
+    expect(2, 0) = expect(3, 0) = 2;
+    expect(0, 1) = expect(1, 1) = 3;
+    expect(2, 1) = expect(3, 1) = 1;
+
+    DMatrix m2;
+    m2.GatherFromTarget(m0, m1, row_elements);
+    BOOST_CHECK(m2.GetNumRows() == 4);
+    BOOST_CHECK(m2.GetNumCols() == 2);
+    BOOST_CHECK(m2.IsEqualTo(expect, 1e-6));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

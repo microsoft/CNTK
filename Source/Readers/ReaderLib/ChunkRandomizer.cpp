@@ -8,13 +8,17 @@
 #include <random>
 #include "RandomOrdering.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-    ChunkRandomizer::ChunkRandomizer(IDataDeserializerPtr deserializer, size_t randomizationRangeInSamples) :
-        m_deserializer(deserializer), m_randomizationRangeInSamples(randomizationRangeInSamples)
+    ChunkRandomizer::ChunkRandomizer(DataDeserializerPtr deserializer, 
+        size_t randomizationRange,
+        bool sampleBasedRandomizationWindow) :
+        m_deserializer(deserializer), 
+        m_randomizationRange(randomizationRange),
+        m_sampleBasedRandomizationWindow(sampleBasedRandomizationWindow)
     {
-        m_originalChunks = m_deserializer->GetChunkDescriptions();
-        assert(m_originalChunks.size() < CHUNKID_MAX);
+        m_originalChunks = m_deserializer->ChunkInfos();
+        assert(m_originalChunks.size() < ChunkIdMax);
     }
 
     // Gets randomized chunks.
@@ -24,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // Randomizes chunks and calculates randomization windows.
-    void ChunkRandomizer::Randomize(unsigned int seed)
+    void ChunkRandomizer::Randomize(size_t seed)
     {
         std::vector<ChunkIdType> randomizedChunkIndices;
         randomizedChunkIndices.reserve(m_originalChunks.size());
@@ -33,23 +37,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             randomizedChunkIndices.push_back(i);
         }
 
-        m_rng.seed(seed);
-        RandomShuffleMT(randomizedChunkIndices, m_rng);
+        m_rng.seed((unsigned long)seed);
+        Microsoft::MSR::CNTK::RandomShuffleMT(randomizedChunkIndices, m_rng);
 
         // Place randomized chunks on the timeline
         m_randomizedChunks.clear();
         m_randomizedChunks.reserve(m_originalChunks.size());
+
         size_t samplePosition = 0;
         size_t sequencePosition = 0;
         for (ChunkIdType chunkIndex = 0; chunkIndex < m_originalChunks.size(); chunkIndex++)
         {
-            const size_t originalChunkIndex = randomizedChunkIndices[chunkIndex];
-            const size_t numberOfSamples = m_originalChunks[originalChunkIndex]->m_numberOfSamples;
-            const size_t numberOfSequences = m_originalChunks[originalChunkIndex]->m_numberOfSequences;
+            // TODO: in case of the chunk-based randomization window, we couldn't care less
+            // about samples. If we get rid of sample-based randomization, we could do away
+            // with this sample counting altogether.
+            const size_t originalChunkIndex = randomizedChunkIndices.at(chunkIndex);
+            const size_t numberOfSamples = m_originalChunks[originalChunkIndex].m_numberOfSamples;
+            const size_t numberOfSequences = m_originalChunks[originalChunkIndex].m_numberOfSequences;
 
             RandomizedChunk randomizedChunk;
             randomizedChunk.m_chunkId = chunkIndex;
-            randomizedChunk.m_original = m_originalChunks[originalChunkIndex].get();
+            randomizedChunk.m_original = &m_originalChunks[originalChunkIndex];
             randomizedChunk.m_samplePositionStart = samplePosition;
             randomizedChunk.m_sequencePositionStart = sequencePosition;
             m_randomizedChunks.push_back(randomizedChunk);
@@ -57,8 +65,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sequencePosition += numberOfSequences;
         }
 
+        if (m_sampleBasedRandomizationWindow) 
+        {
+            RandomizeUsingWindowInSamples();
+        }
+        else 
+        {
+            RandomizeUsingWindowInChunks();
+        }
+    }
+
+    // Randomizes chunks and calculates randomization windows in samples.
+    void ChunkRandomizer::RandomizeUsingWindowInSamples()
+    {
         // For each chunk, compute the randomization range (w.r.t. the randomized chunk sequence)
-        size_t halfWindowRange = m_randomizationRangeInSamples / 2;
+        size_t halfWindowRange = m_randomizationRange / 2;
         for (ChunkIdType chunkId = 0; chunkId < m_originalChunks.size(); chunkId++)
         {
             auto& chunk = m_randomizedChunks[chunkId];
@@ -95,4 +116,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     }
-}}}
+
+    // Randomizes chunks and calculates randomization windows in chunks.
+    void ChunkRandomizer::RandomizeUsingWindowInChunks()
+    {
+        auto halfWindowRange = m_randomizationRange / 2;
+        auto windwowSize = m_randomizationRange == 0 ? 1 : ChunkIdType(m_randomizationRange);
+        for (auto i = 0; i < m_randomizedChunks.size(); i++)
+        {
+            auto& chunk = m_randomizedChunks[i];
+            chunk.m_randomizationWindow.m_begin = (i > halfWindowRange) ? i - ChunkIdType(halfWindowRange) : 0;
+            
+            chunk.m_randomizationWindow.m_end = chunk.m_randomizationWindow.m_begin + windwowSize;
+
+            if (chunk.m_randomizationWindow.m_end > m_randomizedChunks.size()) 
+            {
+                chunk.m_randomizationWindow.m_end = ChunkIdType(m_randomizedChunks.size());
+                chunk.m_randomizationWindow.m_begin =
+                    (m_randomizedChunks.size() > windwowSize) ? ChunkIdType(m_randomizedChunks.size() - windwowSize) : 0;
+            }
+        }
+    }
+}

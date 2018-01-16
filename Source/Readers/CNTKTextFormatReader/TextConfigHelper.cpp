@@ -10,6 +10,8 @@
 #include "TextConfigHelper.h"
 #include "DataReader.h"
 #include "StringUtil.h"
+#include "ReaderConstants.h"
+#include "ReaderUtil.h"
 
 using std::string;
 using std::wstring;
@@ -19,7 +21,9 @@ using std::map;
 
 #undef max // max is defined in minwindef.h
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
 {
@@ -38,11 +42,11 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     string precision = config.Find("precision", "float");
     if (AreEqualIgnoreCase(precision, "double"))
     {
-        m_elementType = ElementType::tdouble;
+        m_elementType = DataType::Double;
     }
     else if (AreEqualIgnoreCase(precision, "float"))
     {
-        m_elementType = ElementType::tfloat;
+        m_elementType = DataType::Float;
     }
     else
     {
@@ -66,15 +70,16 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         stream.m_id = id++;
         stream.m_name = name;
         stream.m_sampleDimension = input2(L"dim");
+        stream.m_definesMbSize = input2(L"definesMBSize", false);
         string type = input2(L"format");
 
         if (AreEqualIgnoreCase(type, "dense"))
         {
-            stream.m_storageType = StorageType::dense;
+            stream.m_storageFormat = StorageFormat::Dense;
         }
         else if (AreEqualIgnoreCase(type, "sparse"))
         {
-            stream.m_storageType = StorageType::sparse_csc;
+            stream.m_storageFormat = StorageFormat::SparseCSC;
             if (stream.m_sampleDimension > numeric_limits<IndexType>::max())
             {
                 RuntimeError("Sample dimension (%" PRIu64 ") for sparse input '%ls'"
@@ -116,39 +121,20 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     }
 
     m_filepath = msra::strfun::utf16(config(L"file"));
-
-    wstring randomizeString = config(L"randomize", wstring());
-    if (!_wcsicmp(randomizeString.c_str(), L"none")) // TODO: don't support case-insensitive option strings in the new reader
-    {
-        // "none" is only accepted to be backwards-compatible (DoWriteOutput() in EvalActions.cpp
-        // inserts this magic constant into the reader config to prevent it from shuffling the input).
-        // In user-defined configurations, 'randomize' should be a boolean.
-        m_randomizationWindow = randomizeNone;
-    }
-    else
-    {
-        bool randomize = config(L"randomize", true);
-
-        if (!randomize)
-        {
-            m_randomizationWindow = randomizeNone;
-        }
-        else if (config.Exists(L"randomizationWindow"))
-        {
-            m_randomizationWindow = config(L"randomizationWindow");
-        }
-        else
-        {
-            m_randomizationWindow = randomizeAuto;
-        }
-    }
-
     m_skipSequenceIds = config(L"skipSequenceIds", false);
     m_maxErrors = config(L"maxErrors", 0);
     m_traceLevel = config(L"traceLevel", 1);
-    m_chunkSizeBytes = config(L"chunkSizeInBytes", 32 * 1024 * 1024); // 32 MB by default
+    m_chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
     m_keepDataInMemory = config(L"keepDataInMemory", false);
     m_frameMode = config(L"frameMode", false);
+    m_cacheIndex = config(L"cacheIndex", false);
+
+    m_randomizationWindow = GetRandomizationWindowFromConfig(config);
+    m_sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);
+    if (!m_sampleBasedRandomizationWindow && m_randomizationWindow == randomizeAuto) 
+    {
+        m_randomizationWindow = g_4GB / m_chunkSizeBytes; // ~ 4 GB (on disk) worth of chunks
+    }
 }
 
-}}}
+}

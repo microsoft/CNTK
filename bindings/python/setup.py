@@ -9,6 +9,8 @@ import numpy
 
 IS_WINDOWS = platform.system() == 'Windows'
 
+IS_PY2 = sys.version_info.major == 2
+
 # TODO should handle swig path specified via build_ext --swig-path
 if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     print("Please install swig (>= 3.0.10) and include it in your path.\n")
@@ -66,15 +68,19 @@ def strip_ext(fn):
 
 if IS_WINDOWS:
     libname_rt_ext = '.dll'
-
-    link_libs = ["CNTKLibrary-2.0"]
+    cntkLibraryName = "Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']
+    link_libs = [cntkLibraryName]
 else:
-    link_libs = ["cntklibrary-2.0"]
+    cntkLibraryName = "Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']
+    link_libs = [cntkLibraryName]
     libname_rt_ext = '.so'
 
 
-rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
-                                                      '*' + libname_rt_ext))]
+if 'CNTK_LIBRARIES' in os.environ:
+  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split(';' if IS_WINDOWS else None)]
+else:
+  rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
+                                                        '*' + libname_rt_ext))]
 
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set
@@ -106,6 +112,7 @@ if IS_WINDOWS:
         "/EHsc",
         "/DEBUG",
         "/Zi",
+        "/WX"
     ]
     extra_link_args = ['/DEBUG']
     runtime_library_dirs = []
@@ -115,7 +122,7 @@ else:
     ]
     extra_link_args = []
 
-    # Expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside
+    # Expecting the dependent libs (libcntklibrary-2.3.1.so, etc.) inside
     # site-packages/cntk/libs.
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
     os.environ["CXX"] = "mpic++"
@@ -127,7 +134,7 @@ cntk_module = Extension(
     name="_cntk_py",
 
     sources = [os.path.join("cntk", "cntk_py.i")],
-    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
+    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon, "-Werror", "-threads" ],
     libraries = link_libs,
     library_dirs = [CNTK_LIB_PATH],
 
@@ -143,29 +150,37 @@ cntk_module = Extension(
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     language="c++",
+    depends = [os.path.join(CNTK_SOURCE_PATH, "Common", "Include", "ExceptionWithCallStack.h")] +
+        [os.path.join(cntkBindingCommon, f) for f in ["CNTKExceptionHandling.i", "CNTKValueExtend.i", "CNTKWarnFilters.i"]] +
+        [os.path.join(cntkV2LibraryInclude, f) for f in ["CNTKLibraryInternals.h", "CNTKLibrary.h"]],
 )
 
 # Do not include examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
-package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt'] }
+package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt', 'contrib/deeprl/tests/data/initial_policy_network.dnn'] }
 
 if IS_WINDOWS:
     # On Windows copy all runtime libs to the base folder of Python
     kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
                   package_data = package_data)
 else:
-    # On Linux copy all runtime libs into the cntk/lib folder. 
+    # On Linux copy all runtime libs into the cntk/lib folder.
     package_data['cntk'] += rt_libs
     kwargs = dict(package_data = package_data)
 
+cntk_install_requires = [
+    'numpy>=1.11',
+    'scipy>=0.17'
+]
+
+if IS_PY2:
+    cntk_install_requires.append('enum34>=1.1.6')
+
 setup(name="cntk",
-      version="2.0.beta9.0",
+      version="2.3.1",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,
-      # install_requires=[
-      #  'numpy>=1.11',
-      #  'scipy>=0.17'
-      #],
+      install_requires=cntk_install_requires,
       **kwargs)

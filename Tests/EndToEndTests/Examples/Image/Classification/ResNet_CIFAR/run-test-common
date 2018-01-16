@@ -1,0 +1,35 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Classification/ResNet/BrainScript
+
+export MKL_NUM_THREADS=4
+export MKL_CBWR=COMPATIBLE
+export OMP_NUM_THREADS=1
+
+if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/Train_cntk_text.txt || ! -e $TEST_DATA_DIR/train_map.txt ]]; then
+    # Cannot find test data locally.
+    # Try external test data directory (not part of the CNTK repository) as an alternative.
+    if [[ -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+        if [ "$OS" == "Windows_NT" ]; then
+            DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/CIFAR/v0
+        else
+            DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/CIFAR/v0
+        fi
+
+        # Copy the test data to the test run directory
+        DataDir=$TEST_RUN_DIR/TestData
+        mkdir $DataDir
+        mkdir $DataDir/cifar-10-batches-py
+        cp -R $DataSourceDir/*_cntk_text.txt $DataDir || exit $?
+        cp -R $DataSourceDir/cifar-10-batches-py/data.zip $DataDir/cifar-10-batches-py || exit $?
+        cp -R $DataSourceDir/cifar-10-batches-py/CIFAR-10_mean.xml $DataDir || exit $?
+        cp -R $DataSourceDir/cifar-10-batches-py/*_map.txt $DataDir || exit $?
+        Copied=1
+    else
+        echo Error: cannot find data. Please see Examples/Image/DataSets/CIFAR10/README.md for instructions to get it.
+        exit 1
+    fi
+fi
+

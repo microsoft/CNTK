@@ -37,3 +37,45 @@ Simple_Test = [
         ]
     ]
 ]
+
+
+shouldExpand=true
+
+Simple_TestDeserializers = {
+    reader = {
+        randomize = true
+        randomizationWindow = 450000
+        verbosity = 0
+
+        deserializers = (
+            {
+                type = "HTKFeatureDeserializer" ; module = "HTKDeserializers"
+                input = {
+                    features1 = {
+                        dim = 40
+                        contextWindow=1
+                        scpFile = "$DataDir$/features.rscp"
+                    }
+                }
+            }:{
+                type = "HTKFeatureDeserializer" ; module = "HTKDeserializers"
+                expandToUtterance = $shouldExpand$
+                input = {
+                    features2 = {
+                        dim = 100
+                        scpFile = "$DataDir$/ivector.rscp"
+                    }
+                }
+            }:{
+                type = "HTKMLFDeserializer" ; module = "HTKDeserializers"
+                input = {
+                    labels = {
+                        mlfFile = "$DataDir$/labels.smlf"
+                        labelMappingFile = "$DataDir$/labels.statelist"
+                        labelDim = 9000
+                    }
+                }
+            })
+        }
+    }
+}

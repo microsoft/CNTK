@@ -13,6 +13,42 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 const double relError = 1e-5f;
 
+// identical to 'sort -o filename filename'
+inline void SortLinesInFile(string filename, size_t expectedNumLines = 1)
+{
+    vector<string> content;
+    content.reserve(expectedNumLines);
+    ifstream ifstream(filename);
+
+    string line;
+    while (getline(ifstream, line))
+    {
+        content.push_back(line);
+    }
+
+    ifstream.close();
+
+    sort(content.begin(), content.end());
+
+    ofstream ofstream(filename);
+
+    copy(content.begin(), content.end(), ostream_iterator<string>(ofstream, "\n"));
+
+    ofstream.close();
+}
+
+inline void RemoveIndexCacheFiles()
+{
+    const auto& pwd = boost::filesystem::current_path();
+    for (boost::filesystem::directory_iterator itr(pwd); itr != boost::filesystem::directory_iterator(); ++itr)
+    {
+        if (is_regular_file(itr->status()) && itr->path().extension() == ".cache")
+        {
+            boost::filesystem::remove(itr->path());
+        }
+    }
+}
+
 struct ReaderFixture
 {
     // This fixture sets up paths so the tests can assume the right location for finding the configuration
@@ -105,6 +141,9 @@ struct ReaderFixture
     ~ReaderFixture()
     {
         BOOST_TEST_MESSAGE("Teardown fixture");
+        BOOST_TEST_MESSAGE("Removing index cache files");
+        RemoveIndexCacheFiles();
+
         BOOST_TEST_MESSAGE("Reverting current path to: " + m_initialWorkingPath);
         fprintf(stderr, "Set current path to: %s\n", m_initialWorkingPath.c_str());
         boost::filesystem::current_path(m_initialWorkingPath);

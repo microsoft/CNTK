@@ -21,6 +21,7 @@
     <ClCompile Include="CropNodeTests.cpp" />
     <ClCompile Include="TestHelpers.cpp" />
     <ClCompile Include="EditDistanceTests.cpp" />
+    <ClCompile Include="BatchNormalizationTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Config">
@@ -38,6 +39,9 @@
     <Filter Include="From BrainScript">
       <UniqueIdentifier>{90cee75b-2e8b-4cfb-b05b-b223d105f2ed}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Models">
+      <UniqueIdentifier>{d836c60d-fdf9-4b41-8388-6a2a1f2cc621}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Control\Network_Operator_Plus_Control.txt">
@@ -49,5 +53,31 @@
     <Text Include="Config\Network_Operator_Plus.cntk">
       <Filter>Config</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Config\BatchNorm_BS_Builder.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\Macros.bs">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\BatchNorm_BS_Model.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\BatchNorm_NDL_Model.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\BatchNorm_NDL_Builder_BN5.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\BatchNorm_NDL_Builder_BN6.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Models\01_OneHidden.dnn">
+      <Filter>Models</Filter>
+    </None>
+    <None Include="Models\ResNet20_CIFAR10_DataAug.dnn">
+      <Filter>Models</Filter>
+    </None>
   </ItemGroup>
 </Project>

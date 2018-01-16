@@ -1,0 +1,49 @@
+rootDir = ".."
+
+precision = "float"
+
+batchNormalizationEngine = "cntk"
+
+NDLNetworkBuilder = [
+    initOnCPUOnly = true
+    run = DNN
+
+    DNN = [
+        featDim = 784
+        labelDim = 10
+        hiddenDim = 200
+
+        features = InputValue(featDim)
+        featScale = Constant(0.00390625)
+        featScaled = Scale(featScale, features)
+        labels = InputValue(labelDim)
+
+        DNNLayer(inDim, outDim, x, parmScale) = [
+            W = LearnableParameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+            b = LearnableParameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+            t = Times(W, x)
+            z = Plus(t, b)
+        ]
+
+        h1 = DNNLayer(featDim, hiddenDim, featScaled, 1)
+
+        b = LearnableParameter(hiddenDim, 1, init = fixedValue, value = 0) 
+        sc = LearnableParameter(hiddenDim, 1, init = fixedValue, value = 1) 
+        m = LearnableParameter(hiddenDim, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+        v = LearnableParameter(hiddenDim, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+        runningMeanSampleCount = LearnableParameter(1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+        y = BatchNormalization(h1, sc, b, m, v, runningMeanSampleCount, eval=false, spatial=false, normalizationTimeConstant=64, imageLayout=cudnn, engine=$batchNormalizationEngine$)
+
+        ol = DNNLayer(hiddenDim, labelDim, y, 1)
+
+        ce = CrossEntropyWithSoftmax(labels, ol)
+        errs = ErrorPrediction(labels, ol)
+        top5Errs = ErrorPrediction(labels, ol, Const(5), tag="eval")  # only used in testing
+
+        FeatureNodes = (features)
+        LabelNodes = (labels)
+        CriterionNodes = (ce)
+        EvalNodes = (errs)
+        OutputNodes = (ol)
+    ]
+]
