@@ -522,14 +522,6 @@ def test_gather_op(device_id, precision):
     expectd = np.asarray([[[[0., 1.]],[[2., 3.]]],[[[6., 7.]],[[8.,9.]]]])
     assert np.array_equal(res, expectd)
 
-    reference_data_shape = [len(r_data)] + list(r_data[0].shape)
-    indices_data_shape = [len(a_data)] + list(a_data[0].shape)
-    assert list(res.shape[0: len(indices_data_shape[0:-1])]) == indices_data_shape[0:-1]
-    assert list(res.shape[len(indices_data_shape[0:-1]):]) == indices_data_shape[-1:] + reference_data_shape[1:]
-    assert list(res.shape) == indices_data_shape + reference_data_shape[1:]
-    gather_func = C.gather(r, a)
-    assert list(gather_func.dynamic_axes + gather_func.shape) == list(a.dynamic_axes + a.shape + r.shape[1:])
-
     grads = C.gather(r, a).grad({a:a_data}, [r])
     expectd_grad = np.asarray([[1,1],[1,1],[0,0],[1,1],[1,1],[0,0]], dtype=np.float32)
     assert np.array_equal(grads, expectd_grad)
@@ -585,6 +577,15 @@ def test_gather_op_with_axis(device_id, precision):
     x = C.constant(data)
     i = C.constant(indices)
     y = C.gather(x, i, axis=1)
+    z = y.eval({}, device=cntk_device(device_id))
+    assert np.allclose(output, z)
+
+    data = np.array([ [[1.0, 1.2, 1.9]], [[2.3, 3.4, 3.9]], [[4.5, 5.7, 5.9]], ]).astype(PRECISION_TO_TYPE[precision])
+    indices = np.array([ 0, 2]).astype(PRECISION_TO_TYPE[precision]).astype(PRECISION_TO_TYPE[precision])
+    output = np.array([ [[1.0, 1.9]], [[2.3, 3.9]], [[4.5, 5.9]], ]).astype(PRECISION_TO_TYPE[precision])
+    x = C.constant(data)
+    i = C.constant(indices)
+    y = C.gather(x, i, axis=2)
     z = y.eval({}, device=cntk_device(device_id))
     assert np.allclose(output, z)
 
