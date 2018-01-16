@@ -974,7 +974,7 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 # stream definition for use in StreamDefs
 # returns a record { stream_alias, is_sparse, optional shape, optional transforms, optional context, optional scp, optional mlf }
 def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
-              context=None, scp=None, mlf=None, broadcast=None, defines_mb_size=False):
+              context=None, scp=None, mlf=None, broadcast=None, defines_mb_size=False, max_sequence_length = 65535):
     '''
        Configuration of a stream for use with the builtin Deserializers.
        The meanings of some configuration keys have a mild dependency on the
@@ -1025,7 +1025,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
     if broadcast is not None:
         config['broadcast'] = broadcast
     config['defines_mb_size'] = True if defines_mb_size else False
-    config['max_sequence_length'] = True if max_sequence_length else False
+    config['max_sequence_length'] = max_sequence_length
 
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension

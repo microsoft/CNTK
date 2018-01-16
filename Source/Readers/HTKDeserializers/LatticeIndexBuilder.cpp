@@ -44,8 +44,8 @@ namespace CNTK {
     void LatticeIndexBuilder::AddSequence(shared_ptr<Index>& index, size_t id, size_t byteOffset, size_t prevSequenceStartOffset, const string& seqKey)
     {
         IndexedSequence sequence;
-        // Sanity check for the lattice to be less than 0.5 GB
-        if (byteOffset - prevSequenceStartOffset < 500000000)
+        // Sanity check for the lattice to be less than 50MB
+        if (byteOffset - prevSequenceStartOffset < 50000000)
         {
             auto seqSize = (uint32_t)(byteOffset - prevSequenceStartOffset);
             if (seqSize % sizeof(float) == 0)
@@ -61,7 +61,7 @@ namespace CNTK {
         }
         else
         {
-            LogicError("ERROR: Lattice with the next key '%s' inside the TOC file '%ls' is larger than 0.5GB\n", seqKey.c_str(), m_input.Filename().c_str());
+            LogicError("ERROR: Lattice with the next key '%s' inside the TOC file '%ls' is larger than 50MB\n", seqKey.c_str(), m_input.Filename().c_str());
         }
     }
 
