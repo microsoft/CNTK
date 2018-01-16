@@ -22,7 +22,11 @@ protected:
     int dimWords = subBatch->batchWidth();
 
     //auto graph = srcEmbeddings->graph();
-    auto chosenEmbeddings = rows(srcEmbeddings, subBatch->indices());
+    auto chosenEmbeddings =
+        /*if*/ (subBatch->cntkBatchP()) ?  // CNTK-specific: CNTK corpus data is stored differently.
+            data::embedCntk(srcEmbeddings, *subBatch->cntkBatchP())
+        /*else*/ :
+            rows(srcEmbeddings, subBatch->indices());
 
     auto batchEmbeddings
         = reshape(chosenEmbeddings, {dimWords, dimBatch, dimEmb});

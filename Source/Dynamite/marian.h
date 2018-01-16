@@ -265,8 +265,34 @@ namespace marian
         public:
             SubBatch(int size, int width) : // create an empty batch (all mask values 0) of given dimensions
                 m_indices(size * width, 0), m_mask(size * width, 0), m_totalNumTokens(0),
-                m_numSequences(size), m_maxSequenceLength(width)
+                m_numSequences(size), m_maxSequenceLength(width), m_cntkBatchP(nullptr)
             {
+            }
+            SubBatch(const std::vector<CNTK::Variable>* sequencesP) : // CNTK-specific: Encode CNTK batch in this data structure
+                m_cntkBatchP(sequencesP)
+            {
+                const auto& sequences = *m_cntkBatchP;
+                // we just keep the data as a CNTK batch, but create the mask here already
+                // Note that we keep a pointer to the CNTK batch, so the caller must keep the object alive.
+                m_numSequences = sequences.size();
+                m_maxSequenceLength = 0;
+                m_totalNumTokens = 0;
+                for (const auto& seq : sequences)
+                {
+                    size_t len = seq.size();
+                    if (len > m_maxSequenceLength)
+                        m_maxSequenceLength = len;
+                    m_totalNumTokens += len;
+                }
+                // create the mask now, in regular interleaved Marian format
+                m_mask.resize(m_numSequences * m_maxSequenceLength, 1); // init as if all words are present
+                for (size_t s = 0; s < m_numSequences; s++) // now clear the mask flag for padding entries
+                {
+                    const auto& seq = sequences[s];
+                    size_t len = seq.size();
+                    for (size_t t = len; t < m_maxSequenceLength; t++)
+                        m_mask[m_numSequences * t + s] = 0;
+                }
             }
             int batchSize()  const { return m_numSequences;  }
             int batchWidth() const { return m_maxSequenceLength; }
@@ -275,6 +301,7 @@ namespace marian
             std::vector<Word>& indices() { return m_indices; }
             std::vector<float>& mask()   { return m_mask; }
             const std::vector<Word>& indices() const { return m_indices; }
+            const std::vector<CNTK::Variable>* cntkBatchP() const { return m_cntkBatchP; } // CNTK only
             const std::vector<float>& mask()   const { return m_mask; }
         private:
             size_t m_numSequences;       // number of sequences
@@ -284,6 +311,7 @@ namespace marian
             // to m_maxSequenceLength. The resulting data can be reshaped to a column-major [T x S] tensor.
             // The mask is 1 for valid entries, and 0 for padding entries.
             std::vector<Word> m_indices; // [positionInSequence * m_numSequences + sequenceIndex] word indices as interleaved batch like CNTK
+            const std::vector<CNTK::Variable>* m_cntkBatchP;  // CNKT only: reference to the CNTK-side data
             std::vector<float> m_mask;   // 1/0 mask of same size
         };
         class CorpusBatch : public Batch // represents a set of data streams, e.g. source and target
@@ -322,6 +350,23 @@ namespace marian
             std::vector<Ptr<SubBatch>> m_streams; // e.g. { source, target }
             std::vector<float> m_guidedAlignment; // [size() * front().batchWidth() * back().batchWidth()]
         };
+        // CNTK only: helper function to embed data in CNTK format
+        static inline Expr embedCntk(const Expr& srcEmbeddings, const std::vector<CNTK::Variable>& batch)
+        {
+            // embed them
+            // For CNTK sparse vectors, the batch axis is 1.
+            CNTK::Variable embeddedBatch = CNTK::Times(srcEmbeddings, CNTK::Splice(batch, CNTK::Axis(1)));
+            return embeddedBatch;
+            // put the longest at the end
+            //CNTK::Variable* longestSeq = batch.front();
+            //for (const auto& seq : batch)
+            //    if (seq.size() > longestSeq->size())
+            //        longestSeq = &seq;
+            // create an input set, with longest at the end
+            //auto chosenEmbeddings = rows(srcEmbeddings, subBatch->indices());
+            //auto batchEmbeddings
+            //    = reshape(chosenEmbeddings, { dimWords, dimBatch, dimEmb });
+        }
     };
 
     // -----------------------------------------------------------------------

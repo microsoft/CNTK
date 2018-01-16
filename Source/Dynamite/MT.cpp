@@ -79,7 +79,22 @@ size_t maxBatchSizePerWorker = 2000;// CeilDiv(4096, 6); // this much fits into 
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
-    if (systemId == "chs_enu")
+    if (systemId == "en_de_bpe") // Marian setup
+    {
+        // cat vocab.ende.yml | sed 's/: [0-9]*$//' | tr -d ^" > vocab.ende.txt && "C:\Program Files\Git\usr\bin\echo.exe" >> vocab.ende.txt
+        srcVocabSize = 36000;
+        tgtVocabSize = 36000;
+        srcTrainFile = L"F:/data2/fseide/marian-examples/transformer/data/corpus.bpe.en";
+        tgtTrainFile = L"F:/data2/fseide/marian-examples/transformer/data/corpus.bpe.de";
+        srcDevFile   = L"F:/data2/fseide/marian-examples/transformer/data/valid.bpe.en";
+        tgtDevFile   = L"F:/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
+        srcTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
+        tgtTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
+        srcVocabFile = L"F:/data2/fseide/marian-examples/transformer/model/vocab.ende.txt";
+        tgtVocabFile = L"F:/data2/fseide/marian-examples/transformer/model/vocab.ende.txt";
+        bucketingFactor = 10;
+    }
+    else if (systemId == "chs_enu")
     {
         srcVocabSize = 78440;
         tgtVocabSize = 79439;
@@ -589,7 +604,7 @@ BinaryModel/*auto*/ CreateModelFunction()
 BinaryFoldingModel/*auto*/ CreateCriterionFunction(const BinaryModel& model_fn)
 {
     // features and labels are tensors with first dimension being the length
-    BinaryModel criterion = [=](const Variable& sourceSeq, const Variable& targetSeq) mutable -> Variable
+    BinaryModel criterion = [=](const Variable& sourceSeq, const Variable& targetSeq) -> Variable
     {
         // convert sequence tensors into sequences of tensors
         // and strip the corresponding boundary markers
@@ -803,7 +818,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
-#if 0 // CONTINUE HERE
+#if 1 // CONTINUE HERE
     auto moptions = Dictionary
     (
         // These are all options given in the log. Not all are used inside the model.
@@ -915,30 +930,65 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1);
     mmodel->build(graph, fakeBatch);
     auto mparamsVector = graph->GetAllParameters();
-    auto mparams = Dynamite::ModelParameters(mparamsVector, {});
-    mparams.LogParameters();
-#if 0 // next steps: finish shift() (use convolution??), then wrap it in a Dynamite Model
-    // Issue: This is the criterion function with Cost(). We want it without, and separate them.
-    auto mmodel_fn = BinaryModel(mparams,
-            [=](const Variable& xFwd, const Variable& xBwd) -> Variable
+    auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
+    // TODO: figure out why make_shared does not work here ^^
+    mparams->LogParameters();
+    auto mmodel_fn = BinaryFoldingModel(mparamsVector,
+            [=](const /*batch*/vector<Variable>& sources, const /*batch*/vector<Variable>& targets) -> Variable
     {
-        // the first layer has different inputs for forward and backward
-        auto h = layers[0](xFwd, xBwd);
-        for (size_t i = 1; i < numLayers; i++)
+        // convert source batch to Marian CorpusBatch
+        auto batch = New<marian::data::CorpusBatch>(vector<Ptr<marian::data::SubBatch>>
         {
-            // before each additional layer, so batch norm
-            h = bns[i - 1](h);
-            // do another layer
-            h = layers[i](h, h);
-            //// after each additional layer, so batch norm
-            //// BUGBUG: Why not the first? Seems like a bug.
-            //// But BN after this does not help, so probably it should be between those layers, not after.
-            ////h = bns[i - 1](h);
-        }
-        //DOLOG(h);
-        return h;
+            New<marian::data::SubBatch>(&sources), // wrap references to the CNTK variables in SubBatch instances
+            New<marian::data::SubBatch>(&targets)
+        });
+
+        // encoder
+        auto state = mmodel->startState(graph, batch);
+
+        // decoder input
+        // This sets state->targetEmbeddings_ and state->targetMask_.
+        //Expr trgMask, trgIdx;
+        /*std::tie(trgMask, trgIdx) =*/ mmodel->getDecoders().front()->groundTruth(state, graph, batch);
+
+        // decoder
+        // This sets state->probs_.
+        auto nextState = mmodel->step(graph, state);
+
+        return nextState->getProbs();
     });
+    mmodel_fn(
+    {
+        Constant({ srcVocabSize, (size_t)2 }, CurrentDataType(), 0.0, CurrentDevice()),
+        Constant({ srcVocabSize, (size_t)3 }, CurrentDataType(), 0.0, CurrentDevice())
+    },
+    {
+        Constant({ tgtVocabSize, (size_t)3 }, CurrentDataType(), 0.0, CurrentDevice()),
+        Constant({ tgtVocabSize, (size_t)2 }, CurrentDataType(), 0.0, CurrentDevice())
+    });
+    auto mcriterion_fn = BinaryFoldingModel({}, { { L"model", mmodel_fn } },
+        [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) -> Variable
+    {
+#if 1
+        features; labels; return Expr();
+#else
+        std::string costType = opt<std::string>("cost-type");
+        float ls = inference_ ? 0.f : opt<float>("label-smoothing");
+
+        auto cost = Cost(nextState->getProbs(), trgIdx, trgMask, costType, ls);
+
+        if (options_->has("guided-alignment") && !inference_) {
+            auto alignments = decoders_[0]->getAlignments();
+            ABORT_IF(alignments.empty(), "Model does not seem to support alignments");
+
+            auto att = concatenate(alignments, axis = 3);
+            return cost + guidedAlignmentCost(graph, batch, options_, att);
+        }
+        else {
+            return cost;
+        }
 #endif
+    });
 #endif
 
     // data
