@@ -83,7 +83,6 @@ namespace CNTK {
         size_t prevSequenceStartOffset{ 0 };
         for (string const& line : m_latticeToc)
         {
-            fprintf(stderr, "Reading line '%s'\n", line.c_str());
             if (line.empty())
                 continue;
 
