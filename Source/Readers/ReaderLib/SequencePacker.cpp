@@ -16,26 +16,43 @@ namespace CNTK {
 
 using namespace Microsoft::MSR::CNTK;
 
-MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
+std::pair<vector<MBLayout::SequenceInfo>, size_t> SequencePacker::CreateSequenceInfos(const StreamBatch& batch)
 {
     vector<MBLayout::SequenceInfo> infos;
+    size_t maxNumSteps = 0;
     for (size_t index = 0; index < batch.size(); ++index)
     {
         MBLayout::SequenceInfo info;
 
         info.seqId = index;
         info.tBegin = 0;
+        info.s = index;
         info.tEnd = batch[index]->m_numberOfSamples;
         infos.push_back(info);
-    }
 
+        maxNumSteps = std::max(maxNumSteps, info.tEnd);
+    }
+    return std::make_pair(infos, maxNumSteps);
+}
+
+MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
+{
+    auto infos = CreateSequenceInfos(batch);
+    MBLayoutPtr pMBLayout = make_shared<MBLayout>();
     vector<pair<size_t, size_t>> placement;
     vector<size_t> rowAllocations;
-
-    // Creating the minibatch layout.
-    MBLayoutPtr pMBLayout = make_shared<MBLayout>();
-    pMBLayout->InitAsPackedSequences(infos, placement, rowAllocations);
+    pMBLayout->InitAsPackedSequences(infos.first, placement, rowAllocations);
     return pMBLayout;
+}
+
+MBLayoutPtr SequencePacker::CreateBinaryMBLayout(const StreamBatch& batch)
+{
+    auto infos = CreateSequenceInfos(batch);
+    auto layout = make_shared<MBLayout>();
+    layout->Init(infos.first.size(), infos.second, false);
+    for (const auto& info : infos.first)
+        layout->AddSequence(info, false);
+    return layout;
 }
 
 Minibatch SequencePacker::ReadMinibatch()
@@ -60,8 +77,17 @@ Minibatch SequencePacker::ReadMinibatch()
         }
 
         const auto& type = m_outputStreamDescriptions[streamIndex].m_storageFormat;
-        auto pMBLayout = (type == StorageFormat::Dense) ?
-            PackDenseStream(streamBatch, streamIndex) : PackSparseStream(streamBatch, streamIndex);
+        auto isBinary = m_inputStreamDescriptions[streamIndex].m_isBinary;
+
+        MBLayoutPtr pMBLayout = nullptr;
+        if (isBinary)
+            pMBLayout = PackBinaryStream(streamBatch, streamIndex);
+        else if (type == StorageFormat::Dense)
+            pMBLayout = PackDenseStream(streamBatch, streamIndex);
+        else if (type == StorageFormat::SparseCSC)
+            pMBLayout = PackSparseStream(streamBatch, streamIndex);
+        else
+            RuntimeError("Unsupported for packing type '%d'", (int)type);
 
         auto& buffer = currentBuffer[streamIndex];
 
@@ -334,5 +360,47 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
 
     return pMBLayout;
 }
+
+MBLayoutPtr SequencePacker::PackBinaryStream(const StreamBatch& batch, size_t streamIndex)
+{
+    // In binary stream each sequence is an array chars. Currently we pack them as floats.
+    if (m_outputStreamDescriptions[streamIndex].m_storageFormat != StorageFormat::Dense ||
+        m_inputStreamDescriptions[streamIndex].m_storageFormat != StorageFormat::Dense)
+        RuntimeError("Binary streams can only be of dense storage format.");
+
+    const auto& stream = m_inputStreamDescriptions[streamIndex];
+    auto& buffer = m_streamBuffers[m_currentBufferIndex][streamIndex];
+    size_t sampleSize = GetSampleSize(m_inputStreamDescriptions[streamIndex]);
+
+    auto pMBLayout = CreateBinaryMBLayout(batch);
+    size_t requiredSize = pMBLayout->GetNumCols() * sampleSize;
+
+    if (buffer.m_size < requiredSize)
+        buffer.Resize(requiredSize);
+
+    auto elementSize = DataTypeSize(stream.m_elementType);
+    const auto& sequenceInfos = pMBLayout->GetAllSequences();
+
+    // Iterate over sequences in the layout, copy samples from the
+    // source sequences into the buffer (at appropriate offsets).
+    for (int i = 0; i < sequenceInfos.size(); ++i)
+    {
+        const auto& sequenceInfo = sequenceInfos[i];
+        if (sequenceInfo.seqId == GAP_SEQUENCE_ID) // skip gaps
+            continue;
+
+        const auto& sequence = batch[sequenceInfo.seqId];
+        size_t numSamples = sequence->m_numberOfSamples;
+        assert(numSamples == sequenceInfo.GetNumTimeSteps());
+
+        char* bufferPtr = buffer.m_data.get();
+        auto destinationOffset = i * pMBLayout->GetNumTimeSteps() * elementSize;
+
+        auto source = (const char*)(sequence->GetDataBuffer());
+        std::copy(source, source + numSamples * elementSize, bufferPtr + destinationOffset);
+    }
+    return pMBLayout;
+}
+
 
 }

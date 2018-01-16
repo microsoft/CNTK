@@ -1,0 +1,2713 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz
+    Hardware threads: 6
+    Total Memory: 58719796 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader/cntk_sequence.cntk currentDirectory=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData RunDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu DataDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader OutputDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu DeviceId=0 timestamping=true
+CNTK 2.3.1+ (HEAD 35ac14, Jan  9 2018 23:34:09) at 2018/01/10 00:17:45
+
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader/cntk_sequence.cntk  currentDirectory=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData  RunDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu  DataDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader  OutputDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu  DeviceId=0  timestamping=true
+Changed current directory to D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Jan  9 2018 23:21:17
+		Last modified date: Tue Jan  9 03:03:40 2018
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		With ASGD: yes
+		Math lib: mkl
+		CUDA version: 9.0.0
+		CUDNN version: 6.0.21
+		Build Branch: HEAD
+		Build SHA1: 35ac148b61d84c185805e9829cee98f267e8a3f0
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 3072; computeCapability = 5.2; type = "Tesla M60"; total memory = 8124 MB; free memory = 8001 MB
+-------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: cntk_sequence.cntk:addLayer2=[    
+    action = "edit"
+    currLayer = 1
+    newLayer = 2
+    currModel = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre1/cntkSpeech"
+    newModel  = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre2/cntkSpeech.0"
+    editPath  = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader/add_layer.mel"
+]
+
+configparameters: cntk_sequence.cntk:AddLayer3=[    
+    action = "edit"
+    currLayer = 2
+    newLayer = 3
+    currModel = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre2/cntkSpeech"
+    newModel  = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.0"
+    editPath  = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader/add_layer.mel"
+]
+
+configparameters: cntk_sequence.cntk:command=dptPre1:addLayer2:dptPre2:addLayer3:speechTrain:sequenceTrain
+configparameters: cntk_sequence.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader
+configparameters: cntk_sequence.cntk:currentDirectory=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData
+configparameters: cntk_sequence.cntk:DataDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData
+configparameters: cntk_sequence.cntk:deviceId=0
+configparameters: cntk_sequence.cntk:dptPre1=[
+    action = "train"
+    modelPath = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre1/cntkSpeech"
+    NDLNetworkBuilder = [
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader/dnn_1layer.txt"
+    ]
+]
+
+configparameters: cntk_sequence.cntk:dptPre2=[
+    action = "train"
+    modelPath = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre2/cntkSpeech"
+    NDLNetworkBuilder = [
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader/dnn_1layer.txt"
+    ]
+]
+
+configparameters: cntk_sequence.cntk:globalInvStdPath=GlobalStats/var.363
+configparameters: cntk_sequence.cntk:globalMeanPath=GlobalStats/mean.363
+configparameters: cntk_sequence.cntk:globalPriorPath=GlobalStats/prior.132
+configparameters: cntk_sequence.cntk:ndlMacros=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader/macros.txt
+configparameters: cntk_sequence.cntk:OutputDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu
+configparameters: cntk_sequence.cntk:precision=float
+configparameters: cntk_sequence.cntk:reader=[
+    readerType = "HTKMLFReader"
+    readMethod = "blockRandomize"
+    miniBatchMode = "partial"
+    randomize = "auto"
+    verbosity = 0
+    features = [
+        dim = 363
+        type = "real"
+        scpFile = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.scp"
+    ]
+    labels = [
+        mlfFile = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.mlf"
+        labelMappingFile = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list"
+        labelDim = 132
+        labelType = "category"
+    ]
+]
+
+configparameters: cntk_sequence.cntk:RunDir=D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu
+configparameters: cntk_sequence.cntk:sequenceTrain=[
+    action = "train"
+    modelPath = D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.sequence
+    traceLevel = 1
+    SGD = [
+        epochSize = 81920
+        minibatchSize = 10
+        learningRatesPerSample = 0.000002
+        momentumPerSample = 0.999589
+        dropoutRate = 0.0
+        maxEpochs = 3
+        numMBsToShowResult = 10
+	gradientClippingWithTruncation = true
+	clippingThresholdPerSample = 1.0
+    ]
+	reader = [
+			verbosity = 0
+			randomize = true
+                        maxErrors = 100
+			deserializers = (
+				[
+					type = "HTKFeatureDeserializer"
+					module = "HTKDeserializers"
+                                        definesMbSize = true
+					input = [
+						features = [
+							dim=363
+							scpFile = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.scp"
+						]
+					]
+				]:
+				[
+					type = "HTKMLFDeserializer"
+					module = "HTKDeserializers"
+					input = [
+						labels = [
+							dim = 132
+							mlfFile="D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.mlf"
+							labelMappingFile = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list" 
+						]
+					]
+				]:
+				[
+					type = "LatticeDeserializer"
+					module = "HTKDeserializers"
+					input = [
+						lattice=[
+							latticeIndexFile="D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/latticeIndex.txt"
+						]
+					]
+				]
+			)
+		]
+		BrainScriptNetworkBuilder = {
+			baseFeatDim = 33
+			featDim = 11 * baseFeatDim
+			labelDim = 132
+			latticeAxis = DynamicAxis()
+			features = Input{featDim}
+			labels = Input{labelDim, tag="label"}
+			lattice = Input{1,dynamicAxis=latticeAxis, tag="label"}
+			featExtNetwork  = BS.Network.Load("D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech")
+			featExt = BS.Network.CloneFunction (
+              (featExtNetwork.features),
+              [netEval = featExtNetwork.OL_z;scaledLogLikelihood = featExtNetwork.scaledLogLikelihood ],
+              parameters="learnable")
+			clonedmodel= featExt(features)
+			cr = LatticeSequenceWithSoftmax(labels, clonedmodel.netEval, clonedmodel.scaledLogLikelihood, lattice, "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/CY2SCH010061231_1369712653.numden.lats.symlist", "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/model.overalltying", "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list", "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/model.transprob", tag="criterion")  
+			Err = ClassificationError(labels,clonedmodel.netEval,tag="evaluation");
+		}
+]
+
+configparameters: cntk_sequence.cntk:SGD=[
+    epochSize = 81920
+    minibatchSize = 256
+    learningRatesPerMB = 0.8
+    numMBsToShowResult = 10
+    momentumPerMB = 0.9
+    dropoutRate = 0.0
+    maxEpochs = 2
+]
+
+configparameters: cntk_sequence.cntk:speechTrain=[
+    action = "train"
+    modelPath = "D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech"
+    traceLevel = 1
+    NDLNetworkBuilder = [
+        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\DNN\SequenceTrainingNewReader/dnn.txt"
+    ]
+    SGD = [
+        epochSize = 81920
+        minibatchSize = 256:512
+        learningRatesPerMB = 0.8:1.6
+        numMBsToShowResult = 10
+        momentumPerSample = 0.999589
+        dropoutRate = 0.0
+        maxEpochs = 4
+        gradUpdateType = "none"
+        normWithAveMultiplier = true
+        clippingThresholdPerSample = 1#INF
+    ]
+]
+
+configparameters: cntk_sequence.cntk:timestamping=true
+configparameters: cntk_sequence.cntk:traceLevel=1
+configparameters: cntk_sequence.cntk:truncated=false
+01/10/2018 00:17:45: Commands: dptPre1 addLayer2 dptPre2 addLayer3 speechTrain sequenceTrain
+01/10/2018 00:17:45: precision = "float"
+
+01/10/2018 00:17:45: ##############################################################################
+01/10/2018 00:17:45: #                                                                            #
+01/10/2018 00:17:45: # dptPre1 command (train action)                                             #
+01/10/2018 00:17:45: #                                                                            #
+01/10/2018 00:17:45: ##############################################################################
+
+01/10/2018 00:17:45: 
+Creating virgin network.
+NDLBuilder Using GPU 0
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+reading script file D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.scp ... 948 entries
+total 132 state names in state list D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list
+htkmlfreader: reading MLF file D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+01/10/2018 00:17:46: 
+Model has 19 nodes. Using GPU 0.
+
+01/10/2018 00:17:46: Training criterion:   ce = CrossEntropyWithSoftmax
+01/10/2018 00:17:46: Evaluation criterion: err = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Gradient Memory Aliasing: 2 are aliased.
+	OL.t (gradient) reuses OL.z (gradient)
+
+Memory Sharing: Out of 29 matrices, 11 are shared as 3, and 18 are not shared.
+
+Here are the ones that share memory:
+	{ HL1.t : [512 x *] (gradient)
+	  HL1.y : [512 x 1 x *] (gradient)
+	  HL1.z : [512 x 1 x *]
+	  OL.z : [132 x 1 x *] }
+	{ HL1.W : [512 x 363] (gradient)
+	  HL1.t : [512 x *]
+	  HL1.y : [512 x 1 x *] }
+	{ HL1.z : [512 x 1 x *] (gradient)
+	  OL.t : [132 x 1 x *]
+	  OL.t : [132 x 1 x *] (gradient)
+	  OL.z : [132 x 1 x *] (gradient) }
+
+Here are the ones that don't share memory:
+	{scaledLogLikelihood : [132 x 1 x *]}
+	{features : [363 x *]}
+	{globalMean : [363 x 1]}
+	{HL1.W : [512 x 363]}
+	{labels : [132 x *]}
+	{globalInvStd : [363 x 1]}
+	{globalPrior : [132 x 1]}
+	{OL.b : [132 x 1]}
+	{OL.W : [132 x 512]}
+	{HL1.b : [512 x 1]}
+	{featNorm : [363 x *]}
+	{ce : [1]}
+	{OL.b : [132 x 1] (gradient)}
+	{err : [1]}
+	{ce : [1] (gradient)}
+	{logPrior : [132 x 1]}
+	{OL.W : [132 x 512] (gradient)}
+	{HL1.b : [512 x 1] (gradient)}
+
+
+01/10/2018 00:17:46: Training 254084 parameters in 4 out of 4 parameter tensors and 10 nodes with gradient:
+
+01/10/2018 00:17:46: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
+01/10/2018 00:17:46: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:46: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
+01/10/2018 00:17:46: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
+
+01/10/2018 00:17:46: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+01/10/2018 00:17:46: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+
+01/10/2018 00:17:46: Starting minibatch loop.
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[   1-  10, 3.13%]: ce = 3.89978218 * 2560; err = 0.84375000 * 2560; time = 0.2294s; samplesPerSecond = 11160.3
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  11-  20, 6.25%]: ce = 2.96755714 * 2560; err = 0.72031250 * 2560; time = 0.0088s; samplesPerSecond = 291884.2
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  21-  30, 9.38%]: ce = 2.55723495 * 2560; err = 0.65859375 * 2560; time = 0.0087s; samplesPerSecond = 293578.0
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  31-  40, 12.50%]: ce = 2.29642792 * 2560; err = 0.61992187 * 2560; time = 0.0085s; samplesPerSecond = 301208.4
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  41-  50, 15.63%]: ce = 2.02396393 * 2560; err = 0.55117187 * 2560; time = 0.0086s; samplesPerSecond = 296863.2
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.87309265 * 2560; err = 0.51484375 * 2560; time = 0.0083s; samplesPerSecond = 309302.0
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.78157196 * 2560; err = 0.50507813 * 2560; time = 0.0083s; samplesPerSecond = 309365.6
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.75391235 * 2560; err = 0.50781250 * 2560; time = 0.0082s; samplesPerSecond = 313287.8
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  81-  90, 28.13%]: ce = 1.66460266 * 2560; err = 0.45742187 * 2560; time = 0.0084s; samplesPerSecond = 305456.5
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.62184296 * 2560; err = 0.47968750 * 2560; time = 0.0081s; samplesPerSecond = 315811.5
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.65328217 * 2560; err = 0.47265625 * 2560; time = 0.0081s; samplesPerSecond = 314395.9
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.50686951 * 2560; err = 0.44921875 * 2560; time = 0.0081s; samplesPerSecond = 316573.1
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 121- 130, 40.63%]: ce = 1.46723938 * 2560; err = 0.42304687 * 2560; time = 0.0081s; samplesPerSecond = 316049.4
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.49163513 * 2560; err = 0.44140625 * 2560; time = 0.0081s; samplesPerSecond = 316721.9
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.46437683 * 2560; err = 0.43398437 * 2560; time = 0.0083s; samplesPerSecond = 309724.9
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.43047791 * 2560; err = 0.43867187 * 2560; time = 0.0083s; samplesPerSecond = 308612.2
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 161- 170, 53.13%]: ce = 1.42104797 * 2560; err = 0.41992188 * 2560; time = 0.0082s; samplesPerSecond = 313073.3
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.46536865 * 2560; err = 0.42421875 * 2560; time = 0.0081s; samplesPerSecond = 315445.8
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.47427673 * 2560; err = 0.44062500 * 2560; time = 0.0081s; samplesPerSecond = 315193.3
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.42848816 * 2560; err = 0.44062500 * 2560; time = 0.0083s; samplesPerSecond = 308928.8
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 201- 210, 65.63%]: ce = 1.34078674 * 2560; err = 0.41171875 * 2560; time = 0.0081s; samplesPerSecond = 315115.7
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.39474792 * 2560; err = 0.42773438 * 2560; time = 0.0082s; samplesPerSecond = 313322.3
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.40156250 * 2560; err = 0.41250000 * 2560; time = 0.0081s; samplesPerSecond = 316143.1
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.39350281 * 2560; err = 0.42734375 * 2560; time = 0.0081s; samplesPerSecond = 316365.7
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 241- 250, 78.13%]: ce = 1.32500916 * 2560; err = 0.40156250 * 2560; time = 0.0081s; samplesPerSecond = 316307.1
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.27034607 * 2560; err = 0.39804688 * 2560; time = 0.0083s; samplesPerSecond = 308966.0
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.32393494 * 2560; err = 0.39375000 * 2560; time = 0.0081s; samplesPerSecond = 317688.8
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.25440979 * 2560; err = 0.38437500 * 2560; time = 0.0081s; samplesPerSecond = 317141.8
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 281- 290, 90.63%]: ce = 1.23372498 * 2560; err = 0.37148437 * 2560; time = 0.0086s; samplesPerSecond = 297301.1
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.20885620 * 2560; err = 0.35976562 * 2560; time = 0.0081s; samplesPerSecond = 315870.0
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.23717957 * 2560; err = 0.36953125 * 2560; time = 0.0082s; samplesPerSecond = 310758.8
+01/10/2018 00:17:46:  Epoch[ 1 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.23036499 * 2560; err = 0.37382813 * 2560; time = 0.0080s; samplesPerSecond = 319019.0
+01/10/2018 00:17:46: Finished Epoch[ 1 of 2]: [Training] ce = 1.65179615 * 81920; err = 0.46795654 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.616908s
+01/10/2018 00:17:46: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre1/cntkSpeech.1'
+
+01/10/2018 00:17:46: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
+
+01/10/2018 00:17:46: Starting minibatch loop.
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[   1-  10, 3.13%]: ce = 1.21826115 * 2560; err = 0.37031250 * 2560; time = 0.0109s; samplesPerSecond = 234802.1
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  11-  20, 6.25%]: ce = 1.18394566 * 2560; err = 0.36640625 * 2560; time = 0.0084s; samplesPerSecond = 306352.0
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  21-  30, 9.38%]: ce = 1.17353325 * 2560; err = 0.35976562 * 2560; time = 0.0085s; samplesPerSecond = 301364.4
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.20286140 * 2560; err = 0.35859375 * 2560; time = 0.0083s; samplesPerSecond = 310043.7
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  41-  50, 15.63%]: ce = 1.19606552 * 2560; err = 0.37812500 * 2560; time = 0.0082s; samplesPerSecond = 310408.4
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.16461678 * 2560; err = 0.34375000 * 2560; time = 0.0082s; samplesPerSecond = 313637.1
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.13763046 * 2560; err = 0.34765625 * 2560; time = 0.0082s; samplesPerSecond = 313023.5
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.19578094 * 2560; err = 0.37226562 * 2560; time = 0.0082s; samplesPerSecond = 313894.7
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  81-  90, 28.13%]: ce = 1.24385757 * 2560; err = 0.38046875 * 2560; time = 0.0083s; samplesPerSecond = 306961.8
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.18975372 * 2560; err = 0.36093750 * 2560; time = 0.0083s; samplesPerSecond = 308571.3
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.16871338 * 2560; err = 0.35625000 * 2560; time = 0.0081s; samplesPerSecond = 315115.7
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.24394531 * 2560; err = 0.37929687 * 2560; time = 0.0081s; samplesPerSecond = 316189.9
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 121- 130, 40.63%]: ce = 1.18284454 * 2560; err = 0.34921875 * 2560; time = 0.0081s; samplesPerSecond = 316354.0
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.21535187 * 2560; err = 0.36875000 * 2560; time = 0.0085s; samplesPerSecond = 302672.0
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.19859619 * 2560; err = 0.37187500 * 2560; time = 0.0081s; samplesPerSecond = 316143.1
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.14699402 * 2560; err = 0.34648438 * 2560; time = 0.0082s; samplesPerSecond = 311291.6
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 161- 170, 53.13%]: ce = 1.14664307 * 2560; err = 0.35859375 * 2560; time = 0.0090s; samplesPerSecond = 283330.0
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.17961731 * 2560; err = 0.35234375 * 2560; time = 0.0082s; samplesPerSecond = 313399.0
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.14800873 * 2560; err = 0.35234375 * 2560; time = 0.0082s; samplesPerSecond = 312859.0
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.08513489 * 2560; err = 0.33320312 * 2560; time = 0.0095s; samplesPerSecond = 268783.3
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 201- 210, 65.63%]: ce = 1.14455261 * 2560; err = 0.34726563 * 2560; time = 0.0081s; samplesPerSecond = 314558.1
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.16282043 * 2560; err = 0.35703125 * 2560; time = 0.0082s; samplesPerSecond = 311993.5
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.19267578 * 2560; err = 0.37265625 * 2560; time = 0.0081s; samplesPerSecond = 315445.8
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.15575562 * 2560; err = 0.34882812 * 2560; time = 0.0081s; samplesPerSecond = 314538.8
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 241- 250, 78.13%]: ce = 1.15968018 * 2560; err = 0.35351563 * 2560; time = 0.0083s; samplesPerSecond = 309201.1
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.08686829 * 2560; err = 0.33007813 * 2560; time = 0.0081s; samplesPerSecond = 316018.2
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.10071411 * 2560; err = 0.34804687 * 2560; time = 0.0089s; samplesPerSecond = 286491.3
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.06582336 * 2560; err = 0.33945313 * 2560; time = 0.0082s; samplesPerSecond = 310359.5
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 281- 290, 90.63%]: ce = 1.09620972 * 2560; err = 0.33085938 * 2560; time = 0.0084s; samplesPerSecond = 305288.9
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.15163269 * 2560; err = 0.35195312 * 2560; time = 0.0082s; samplesPerSecond = 310461.1
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.10898132 * 2560; err = 0.34296875 * 2560; time = 0.0083s; samplesPerSecond = 309597.5
+01/10/2018 00:17:46:  Epoch[ 2 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.06808777 * 2560; err = 0.32304688 * 2560; time = 0.0080s; samplesPerSecond = 319592.5
+01/10/2018 00:17:46: Finished Epoch[ 2 of 2]: [Training] ce = 1.15987368 * 81920; err = 0.35476074 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.272176s
+01/10/2018 00:17:46: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre1/cntkSpeech'
+
+01/10/2018 00:17:47: Action "train" complete.
+
+
+01/10/2018 00:17:47: ##############################################################################
+01/10/2018 00:17:47: #                                                                            #
+01/10/2018 00:17:47: # addLayer2 command (edit action)                                            #
+01/10/2018 00:17:47: #                                                                            #
+01/10/2018 00:17:47: ##############################################################################
+
+
+01/10/2018 00:17:47: Action "edit" complete.
+
+
+01/10/2018 00:17:47: ##############################################################################
+01/10/2018 00:17:47: #                                                                            #
+01/10/2018 00:17:47: # dptPre2 command (train action)                                             #
+01/10/2018 00:17:47: #                                                                            #
+01/10/2018 00:17:47: ##############################################################################
+
+01/10/2018 00:17:47: 
+Starting from checkpoint. Loading network from 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre2/cntkSpeech.0'.
+NDLBuilder Using GPU 0
+reading script file D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.scp ... 948 entries
+total 132 state names in state list D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list
+htkmlfreader: reading MLF file D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+01/10/2018 00:17:47: 
+Model has 24 nodes. Using GPU 0.
+
+01/10/2018 00:17:47: Training criterion:   ce = CrossEntropyWithSoftmax
+01/10/2018 00:17:47: Evaluation criterion: err = ClassificationError
+
+01/10/2018 00:17:47: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+
+01/10/2018 00:17:47: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
+01/10/2018 00:17:47: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:47: 	Node 'HL2.W' (LearnableParameter operation) : [512 x 512]
+01/10/2018 00:17:47: 	Node 'HL2.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:47: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
+01/10/2018 00:17:47: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
+
+01/10/2018 00:17:47: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+01/10/2018 00:17:47: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+
+01/10/2018 00:17:47: Starting minibatch loop.
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[   1-  10, 3.13%]: ce = 4.68514671 * 2560; err = 0.80507812 * 2560; time = 0.0196s; samplesPerSecond = 130829.2
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  11-  20, 6.25%]: ce = 2.83540916 * 2560; err = 0.69765625 * 2560; time = 0.0107s; samplesPerSecond = 239644.3
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  21-  30, 9.38%]: ce = 2.27396317 * 2560; err = 0.59335938 * 2560; time = 0.0106s; samplesPerSecond = 241895.1
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.93453598 * 2560; err = 0.52070313 * 2560; time = 0.0106s; samplesPerSecond = 242323.3
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  41-  50, 15.63%]: ce = 1.72010727 * 2560; err = 0.47890625 * 2560; time = 0.0106s; samplesPerSecond = 241628.0
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.61654205 * 2560; err = 0.47070313 * 2560; time = 0.0106s; samplesPerSecond = 241350.1
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.51410522 * 2560; err = 0.44140625 * 2560; time = 0.0107s; samplesPerSecond = 239209.9
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.49882050 * 2560; err = 0.43671875 * 2560; time = 0.0106s; samplesPerSecond = 242073.5
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  81-  90, 28.13%]: ce = 1.45906067 * 2560; err = 0.41835937 * 2560; time = 0.0106s; samplesPerSecond = 241988.8
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.41359100 * 2560; err = 0.40937500 * 2560; time = 0.0108s; samplesPerSecond = 238013.3
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.41605682 * 2560; err = 0.41093750 * 2560; time = 0.0106s; samplesPerSecond = 242188.0
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.34621582 * 2560; err = 0.39531250 * 2560; time = 0.0106s; samplesPerSecond = 241694.1
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 121- 130, 40.63%]: ce = 1.32200775 * 2560; err = 0.39257813 * 2560; time = 0.0105s; samplesPerSecond = 243235.0
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.33358459 * 2560; err = 0.39609375 * 2560; time = 0.0105s; samplesPerSecond = 242879.6
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.32798462 * 2560; err = 0.39023438 * 2560; time = 0.0106s; samplesPerSecond = 241616.6
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.28152161 * 2560; err = 0.38906250 * 2560; time = 0.0105s; samplesPerSecond = 243061.8
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 161- 170, 53.13%]: ce = 1.29407654 * 2560; err = 0.38476563 * 2560; time = 0.0106s; samplesPerSecond = 242286.6
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.29927979 * 2560; err = 0.39023438 * 2560; time = 0.0105s; samplesPerSecond = 243105.7
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.33316956 * 2560; err = 0.40546875 * 2560; time = 0.0107s; samplesPerSecond = 240028.5
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.32376099 * 2560; err = 0.41406250 * 2560; time = 0.0106s; samplesPerSecond = 242394.4
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 201- 210, 65.63%]: ce = 1.23729553 * 2560; err = 0.37539062 * 2560; time = 0.0114s; samplesPerSecond = 225233.2
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.27207336 * 2560; err = 0.38906250 * 2560; time = 0.0105s; samplesPerSecond = 242723.0
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.26402893 * 2560; err = 0.37695313 * 2560; time = 0.0106s; samplesPerSecond = 242564.4
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.24779053 * 2560; err = 0.36992188 * 2560; time = 0.0106s; samplesPerSecond = 241947.7
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 241- 250, 78.13%]: ce = 1.21864014 * 2560; err = 0.36757812 * 2560; time = 0.0109s; samplesPerSecond = 235662.3
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.19121704 * 2560; err = 0.37070313 * 2560; time = 0.0106s; samplesPerSecond = 242444.9
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.23925476 * 2560; err = 0.36835937 * 2560; time = 0.0105s; samplesPerSecond = 242759.9
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.18916016 * 2560; err = 0.36406250 * 2560; time = 0.0105s; samplesPerSecond = 243714.4
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 281- 290, 90.63%]: ce = 1.17012329 * 2560; err = 0.35351563 * 2560; time = 0.0105s; samplesPerSecond = 242923.4
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.14500122 * 2560; err = 0.33984375 * 2560; time = 0.0107s; samplesPerSecond = 239898.0
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.17140808 * 2560; err = 0.35000000 * 2560; time = 0.0106s; samplesPerSecond = 242428.8
+01/10/2018 00:17:47:  Epoch[ 1 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.18915710 * 2560; err = 0.36992188 * 2560; time = 0.0105s; samplesPerSecond = 242810.5
+01/10/2018 00:17:47: Finished Epoch[ 1 of 2]: [Training] ce = 1.52387781 * 81920; err = 0.42613525 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.475763s
+01/10/2018 00:17:47: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre2/cntkSpeech.1'
+
+01/10/2018 00:17:47: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
+
+01/10/2018 00:17:47: Starting minibatch loop.
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[   1-  10, 3.13%]: ce = 1.18371334 * 2560; err = 0.35312500 * 2560; time = 0.0133s; samplesPerSecond = 192772.5
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  11-  20, 6.25%]: ce = 1.15387115 * 2560; err = 0.35195312 * 2560; time = 0.0106s; samplesPerSecond = 241165.9
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  21-  30, 9.38%]: ce = 1.15634022 * 2560; err = 0.35078125 * 2560; time = 0.0106s; samplesPerSecond = 241193.2
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.13972702 * 2560; err = 0.34531250 * 2560; time = 0.0106s; samplesPerSecond = 240513.3
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  41-  50, 15.63%]: ce = 1.14528008 * 2560; err = 0.36445312 * 2560; time = 0.0106s; samplesPerSecond = 242149.1
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.14011345 * 2560; err = 0.33476563 * 2560; time = 0.0108s; samplesPerSecond = 236500.5
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.09710693 * 2560; err = 0.33671875 * 2560; time = 0.0106s; samplesPerSecond = 241568.7
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.15687256 * 2560; err = 0.35546875 * 2560; time = 0.0106s; samplesPerSecond = 241760.3
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  81-  90, 28.13%]: ce = 1.16989441 * 2560; err = 0.35898438 * 2560; time = 0.0106s; samplesPerSecond = 241767.2
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.12214737 * 2560; err = 0.34804687 * 2560; time = 0.0108s; samplesPerSecond = 237261.1
+01/10/2018 00:17:47:  Epoch[ 2 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.12149048 * 2560; err = 0.34687500 * 2560; time = 0.0106s; samplesPerSecond = 241694.1
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.19465485 * 2560; err = 0.36406250 * 2560; time = 0.0106s; samplesPerSecond = 242284.3
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 121- 130, 40.63%]: ce = 1.13471985 * 2560; err = 0.34140625 * 2560; time = 0.0106s; samplesPerSecond = 241473.0
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.16473541 * 2560; err = 0.36054687 * 2560; time = 0.0106s; samplesPerSecond = 242506.9
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.12361755 * 2560; err = 0.35000000 * 2560; time = 0.0109s; samplesPerSecond = 234438.7
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.09654999 * 2560; err = 0.34101562 * 2560; time = 0.0106s; samplesPerSecond = 242185.7
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 161- 170, 53.13%]: ce = 1.10468903 * 2560; err = 0.33945313 * 2560; time = 0.0106s; samplesPerSecond = 241906.5
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.11432037 * 2560; err = 0.33007813 * 2560; time = 0.0106s; samplesPerSecond = 242188.0
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.10250244 * 2560; err = 0.33906250 * 2560; time = 0.0108s; samplesPerSecond = 237745.9
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.06273804 * 2560; err = 0.32578125 * 2560; time = 0.0106s; samplesPerSecond = 241828.8
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 201- 210, 65.63%]: ce = 1.10996704 * 2560; err = 0.33750000 * 2560; time = 0.0105s; samplesPerSecond = 242704.6
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.13582306 * 2560; err = 0.35078125 * 2560; time = 0.0106s; samplesPerSecond = 240375.6
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.12325439 * 2560; err = 0.34257813 * 2560; time = 0.0107s; samplesPerSecond = 239796.9
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.10882263 * 2560; err = 0.34023437 * 2560; time = 0.0106s; samplesPerSecond = 242513.8
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 241- 250, 78.13%]: ce = 1.09274902 * 2560; err = 0.33789063 * 2560; time = 0.0106s; samplesPerSecond = 242527.6
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.04688721 * 2560; err = 0.31914063 * 2560; time = 0.0105s; samplesPerSecond = 242725.4
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.04932556 * 2560; err = 0.33515625 * 2560; time = 0.0106s; samplesPerSecond = 242399.0
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.03842468 * 2560; err = 0.31992188 * 2560; time = 0.0106s; samplesPerSecond = 241165.9
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 281- 290, 90.63%]: ce = 1.06117859 * 2560; err = 0.33046875 * 2560; time = 0.0107s; samplesPerSecond = 239261.3
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.11318054 * 2560; err = 0.34492187 * 2560; time = 0.0106s; samplesPerSecond = 242578.2
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.08679199 * 2560; err = 0.33515625 * 2560; time = 0.0106s; samplesPerSecond = 242167.4
+01/10/2018 00:17:48:  Epoch[ 2 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.04743347 * 2560; err = 0.32773438 * 2560; time = 0.0106s; samplesPerSecond = 242401.3
+01/10/2018 00:17:48: Finished Epoch[ 2 of 2]: [Training] ce = 1.11559134 * 81920; err = 0.34248047 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.347864s
+01/10/2018 00:17:48: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/Pre2/cntkSpeech'
+
+01/10/2018 00:17:48: Action "train" complete.
+
+
+01/10/2018 00:17:48: ##############################################################################
+01/10/2018 00:17:48: #                                                                            #
+01/10/2018 00:17:48: # addLayer3 command (edit action)                                            #
+01/10/2018 00:17:48: #                                                                            #
+01/10/2018 00:17:48: ##############################################################################
+
+
+01/10/2018 00:17:48: Action "edit" complete.
+
+
+01/10/2018 00:17:48: ##############################################################################
+01/10/2018 00:17:48: #                                                                            #
+01/10/2018 00:17:48: # speechTrain command (train action)                                         #
+01/10/2018 00:17:48: #                                                                            #
+01/10/2018 00:17:48: ##############################################################################
+
+01/10/2018 00:17:48: 
+Starting from checkpoint. Loading network from 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.0'.
+NDLBuilder Using GPU 0
+reading script file D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.scp ... 948 entries
+total 132 state names in state list D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list
+htkmlfreader: reading MLF file D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+01/10/2018 00:17:48: 
+Model has 29 nodes. Using GPU 0.
+
+01/10/2018 00:17:48: Training criterion:   ce = CrossEntropyWithSoftmax
+01/10/2018 00:17:48: Evaluation criterion: err = ClassificationError
+
+01/10/2018 00:17:48: Training 779396 parameters in 8 out of 8 parameter tensors and 20 nodes with gradient:
+
+01/10/2018 00:17:48: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
+01/10/2018 00:17:48: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:48: 	Node 'HL2.W' (LearnableParameter operation) : [512 x 512]
+01/10/2018 00:17:48: 	Node 'HL2.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:48: 	Node 'HL3.W' (LearnableParameter operation) : [512 x 512]
+01/10/2018 00:17:48: 	Node 'HL3.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:48: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
+01/10/2018 00:17:48: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
+
+01/10/2018 00:17:48: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+01/10/2018 00:17:48: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900117  momentum as time constant = 2432.7 samples
+minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+
+01/10/2018 00:17:48: Starting minibatch loop.
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.13%]: ce = 4.09347076 * 2560; err = 0.82734375 * 2560; time = 0.0230s; samplesPerSecond = 111422.6
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: ce = 2.57447586 * 2560; err = 0.64023438 * 2560; time = 0.0138s; samplesPerSecond = 185888.5
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: ce = 2.03476105 * 2560; err = 0.54375000 * 2560; time = 0.0138s; samplesPerSecond = 186110.1
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: ce = 1.73747635 * 2560; err = 0.47617188 * 2560; time = 0.0137s; samplesPerSecond = 186999.2
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.63%]: ce = 1.55056915 * 2560; err = 0.43750000 * 2560; time = 0.0138s; samplesPerSecond = 184886.9
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: ce = 1.44497986 * 2560; err = 0.41054687 * 2560; time = 0.0137s; samplesPerSecond = 186391.9
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: ce = 1.36142731 * 2560; err = 0.40546875 * 2560; time = 0.0140s; samplesPerSecond = 183320.7
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: ce = 1.35946808 * 2560; err = 0.39531250 * 2560; time = 0.0137s; samplesPerSecond = 186806.8
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.13%]: ce = 1.34237213 * 2560; err = 0.39570312 * 2560; time = 0.0137s; samplesPerSecond = 187030.6
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: ce = 1.30687866 * 2560; err = 0.37929687 * 2560; time = 0.0137s; samplesPerSecond = 186765.9
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: ce = 1.31363678 * 2560; err = 0.38750000 * 2560; time = 0.0144s; samplesPerSecond = 178140.2
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: ce = 1.24034119 * 2560; err = 0.37109375 * 2560; time = 0.0137s; samplesPerSecond = 186187.2
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.63%]: ce = 1.21518860 * 2560; err = 0.35937500 * 2560; time = 0.0137s; samplesPerSecond = 187144.1
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: ce = 1.24078827 * 2560; err = 0.36914063 * 2560; time = 0.0138s; samplesPerSecond = 185897.9
+01/10/2018 00:17:48:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: ce = 1.23589020 * 2560; err = 0.37265625 * 2560; time = 0.0137s; samplesPerSecond = 186801.3
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: ce = 1.20203857 * 2560; err = 0.35351563 * 2560; time = 0.0137s; samplesPerSecond = 186541.3
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.13%]: ce = 1.22040405 * 2560; err = 0.36328125 * 2560; time = 0.0137s; samplesPerSecond = 186533.2
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: ce = 1.25242310 * 2560; err = 0.38046875 * 2560; time = 0.0137s; samplesPerSecond = 186544.1
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: ce = 1.27484131 * 2560; err = 0.38554688 * 2560; time = 0.0137s; samplesPerSecond = 186661.0
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: ce = 1.22908630 * 2560; err = 0.38554688 * 2560; time = 0.0137s; samplesPerSecond = 186621.6
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.63%]: ce = 1.18030090 * 2560; err = 0.36093750 * 2560; time = 0.0137s; samplesPerSecond = 186514.2
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: ce = 1.19837036 * 2560; err = 0.36757812 * 2560; time = 0.0137s; samplesPerSecond = 186879.0
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: ce = 1.22071533 * 2560; err = 0.36406250 * 2560; time = 0.0137s; samplesPerSecond = 187021.0
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: ce = 1.19018860 * 2560; err = 0.35351563 * 2560; time = 0.0137s; samplesPerSecond = 186476.1
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.13%]: ce = 1.17300720 * 2560; err = 0.35742188 * 2560; time = 0.0137s; samplesPerSecond = 186905.0
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: ce = 1.12558594 * 2560; err = 0.35351563 * 2560; time = 0.0137s; samplesPerSecond = 186943.2
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: ce = 1.19316711 * 2560; err = 0.35898438 * 2560; time = 0.0137s; samplesPerSecond = 186836.8
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: ce = 1.13930359 * 2560; err = 0.35195312 * 2560; time = 0.0137s; samplesPerSecond = 186847.7
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.63%]: ce = 1.12437134 * 2560; err = 0.33515625 * 2560; time = 0.0137s; samplesPerSecond = 186779.5
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: ce = 1.10540161 * 2560; err = 0.34101562 * 2560; time = 0.0137s; samplesPerSecond = 186790.4
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: ce = 1.12473755 * 2560; err = 0.33515625 * 2560; time = 0.0137s; samplesPerSecond = 186737.3
+01/10/2018 00:17:49:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: ce = 1.13026428 * 2560; err = 0.34765625 * 2560; time = 0.0137s; samplesPerSecond = 186723.7
+01/10/2018 00:17:49: Finished Epoch[ 1 of 4]: [Training] ce = 1.41049786 * 81920; err = 0.40207520 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.576407s
+01/10/2018 00:17:49: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.1'
+
+01/10/2018 00:17:49: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
+minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
+
+01/10/2018 00:17:49: Starting minibatch loop.
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.21424761 * 5120; err = 0.36523438 * 5120; time = 0.0265s; samplesPerSecond = 193184.2
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.14997759 * 5120; err = 0.34570313 * 5120; time = 0.0186s; samplesPerSecond = 275092.8
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.10502491 * 5120; err = 0.33886719 * 5120; time = 0.0186s; samplesPerSecond = 275194.8
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  31-  40, 25.00%]: ce = 1.10657425 * 5120; err = 0.34101562 * 5120; time = 0.0186s; samplesPerSecond = 275784.8
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  41-  50, 31.25%]: ce = 1.16255798 * 5120; err = 0.36328125 * 5120; time = 0.0186s; samplesPerSecond = 275894.8
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  51-  60, 37.50%]: ce = 1.15796547 * 5120; err = 0.35898438 * 5120; time = 0.0186s; samplesPerSecond = 275802.6
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  61-  70, 43.75%]: ce = 1.13883362 * 5120; err = 0.34492187 * 5120; time = 0.0185s; samplesPerSecond = 276079.2
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  71-  80, 50.00%]: ce = 1.10509262 * 5120; err = 0.34648438 * 5120; time = 0.0185s; samplesPerSecond = 276208.8
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  81-  90, 56.25%]: ce = 1.11047897 * 5120; err = 0.34062500 * 5120; time = 0.0186s; samplesPerSecond = 275761.0
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[  91- 100, 62.50%]: ce = 1.06133652 * 5120; err = 0.32734375 * 5120; time = 0.0186s; samplesPerSecond = 275369.5
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 1.10699844 * 5120; err = 0.33867188 * 5120; time = 0.0187s; samplesPerSecond = 273289.7
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.13975754 * 5120; err = 0.35292969 * 5120; time = 0.0186s; samplesPerSecond = 275342.8
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 1.04995117 * 5120; err = 0.32480469 * 5120; time = 0.0186s; samplesPerSecond = 275799.7
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 1.02763824 * 5120; err = 0.32285156 * 5120; time = 0.0186s; samplesPerSecond = 275473.2
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 1.08706665 * 5120; err = 0.32988281 * 5120; time = 0.0185s; samplesPerSecond = 276229.7
+01/10/2018 00:17:49:  Epoch[ 2 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 1.06690369 * 5120; err = 0.32167969 * 5120; time = 0.0186s; samplesPerSecond = 275628.9
+01/10/2018 00:17:49: Finished Epoch[ 2 of 4]: [Training] ce = 1.11190033 * 81920; err = 0.34145508 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.308967s
+01/10/2018 00:17:49: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.2'
+
+01/10/2018 00:17:49: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
+minibatchiterator: epoch 2: frames [163840..245760] (first utterance at frame 163840), data subset 0 of 1, with 1 datapasses
+
+01/10/2018 00:17:49: Starting minibatch loop.
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.12241631 * 5120; err = 0.34179688 * 5120; time = 0.0200s; samplesPerSecond = 256270.4
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.08498554 * 5120; err = 0.33613281 * 5120; time = 0.0186s; samplesPerSecond = 275273.3
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.09316616 * 5120; err = 0.33828125 * 5120; time = 0.0186s; samplesPerSecond = 275230.3
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  31-  40, 25.00%]: ce = 1.10422935 * 5120; err = 0.33828125 * 5120; time = 0.0186s; samplesPerSecond = 275658.6
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  41-  50, 31.25%]: ce = 1.07953606 * 5120; err = 0.33261719 * 5120; time = 0.0186s; samplesPerSecond = 275574.0
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  51-  60, 37.50%]: ce = 1.05399208 * 5120; err = 0.33085938 * 5120; time = 0.0186s; samplesPerSecond = 275488.0
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  61-  70, 43.75%]: ce = 1.06956406 * 5120; err = 0.32539062 * 5120; time = 0.0185s; samplesPerSecond = 276165.6
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  71-  80, 50.00%]: ce = 1.07985764 * 5120; err = 0.32792969 * 5120; time = 0.0186s; samplesPerSecond = 275829.4
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  81-  90, 56.25%]: ce = 1.05197220 * 5120; err = 0.32617188 * 5120; time = 0.0187s; samplesPerSecond = 273817.3
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[  91- 100, 62.50%]: ce = 1.05977478 * 5120; err = 0.33046875 * 5120; time = 0.0186s; samplesPerSecond = 275483.6
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 1.04717255 * 5120; err = 0.32792969 * 5120; time = 0.0185s; samplesPerSecond = 276335.5
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.08563919 * 5120; err = 0.33964844 * 5120; time = 0.0188s; samplesPerSecond = 272418.7
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 1.10514679 * 5120; err = 0.32910156 * 5120; time = 0.0186s; samplesPerSecond = 275603.7
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 1.06171722 * 5120; err = 0.32109375 * 5120; time = 0.0186s; samplesPerSecond = 275997.4
+01/10/2018 00:17:49:  Epoch[ 3 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 1.05704346 * 5120; err = 0.33281250 * 5120; time = 0.0186s; samplesPerSecond = 275523.6
+01/10/2018 00:17:50:  Epoch[ 3 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 1.04391479 * 5120; err = 0.32871094 * 5120; time = 0.0186s; samplesPerSecond = 275277.7
+01/10/2018 00:17:50: Finished Epoch[ 3 of 4]: [Training] ce = 1.07500801 * 81920; err = 0.33170166 * 81920; totalSamplesSeen = 245760; learningRatePerSample = 0.003125; epochTime=0.301991s
+01/10/2018 00:17:50: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.3'
+
+01/10/2018 00:17:50: Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
+minibatchiterator: epoch 3: frames [245760..327680] (first utterance at frame 245760), data subset 0 of 1, with 1 datapasses
+
+01/10/2018 00:17:50: Starting minibatch loop.
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.03005266 * 5120; err = 0.32695313 * 5120; time = 0.0200s; samplesPerSecond = 256315.3
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.04017516 * 4926; err = 0.31303289 * 4926; time = 0.0601s; samplesPerSecond = 81966.7
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.02174778 * 5120; err = 0.32285156 * 5120; time = 0.0186s; samplesPerSecond = 275038.1
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  31-  40, 25.00%]: ce = 1.01952095 * 5120; err = 0.31582031 * 5120; time = 0.0186s; samplesPerSecond = 275360.6
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  41-  50, 31.25%]: ce = 1.00513496 * 5120; err = 0.31972656 * 5120; time = 0.0186s; samplesPerSecond = 275480.6
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  51-  60, 37.50%]: ce = 0.99812813 * 5120; err = 0.31367187 * 5120; time = 0.0186s; samplesPerSecond = 275897.7
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  61-  70, 43.75%]: ce = 0.99019432 * 5120; err = 0.30546875 * 5120; time = 0.0186s; samplesPerSecond = 275686.8
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  71-  80, 50.00%]: ce = 1.01111908 * 5120; err = 0.31445313 * 5120; time = 0.0186s; samplesPerSecond = 275611.1
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  81-  90, 56.25%]: ce = 0.99833145 * 5120; err = 0.31289062 * 5120; time = 0.0186s; samplesPerSecond = 275715.0
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[  91- 100, 62.50%]: ce = 0.96827850 * 5120; err = 0.31464844 * 5120; time = 0.0186s; samplesPerSecond = 275181.5
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 0.99143982 * 5120; err = 0.30781250 * 5120; time = 0.0186s; samplesPerSecond = 274956.9
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.00068130 * 5120; err = 0.31035156 * 5120; time = 0.0186s; samplesPerSecond = 275153.4
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 1.00592957 * 5120; err = 0.31328125 * 5120; time = 0.0185s; samplesPerSecond = 276070.3
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 0.98450165 * 5120; err = 0.30976562 * 5120; time = 0.0186s; samplesPerSecond = 275931.9
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 0.93657532 * 5120; err = 0.29726562 * 5120; time = 0.0185s; samplesPerSecond = 276465.3
+01/10/2018 00:17:50:  Epoch[ 4 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 0.96798401 * 5120; err = 0.30292969 * 5120; time = 0.0185s; samplesPerSecond = 276119.4
+01/10/2018 00:17:50: Finished Epoch[ 4 of 4]: [Training] ce = 0.99785318 * 81920; err = 0.31252441 * 81920; totalSamplesSeen = 327680; learningRatePerSample = 0.003125; epochTime=0.344416s
+01/10/2018 00:17:50: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech'
+
+01/10/2018 00:17:50: Action "train" complete.
+
+
+01/10/2018 00:17:50: ##############################################################################
+01/10/2018 00:17:50: #                                                                            #
+01/10/2018 00:17:50: # sequenceTrain command (train action)                                       #
+01/10/2018 00:17:50: #                                                                            #
+01/10/2018 00:17:50: ##############################################################################
+
+01/10/2018 00:17:50: 
+Creating virgin network.
+Load: Loading model file: D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	err = ClassificationError()
+	scaledLogLikelihood = Minus()
+
+Validating network. 29 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [132 x *8]
+Validating --> OL.W = LearnableParameter() :  -> [132 x 512]
+Validating --> HL3.W = LearnableParameter() :  -> [512 x 512]
+Validating --> HL2.W = LearnableParameter() :  -> [512 x 512]
+Validating --> HL1.W = LearnableParameter() :  -> [512 x 363]
+Validating --> features = InputValue() :  -> [363 x *8]
+Validating --> globalMean = LearnableParameter() :  -> [363 x 1]
+Validating --> globalInvStd = LearnableParameter() :  -> [363 x 1]
+Validating --> featNorm = PerDimMeanVarNormalization (features, globalMean, globalInvStd) : [363 x *8], [363 x 1], [363 x 1] -> [363 x *8]
+Validating --> HL1.t = Times (HL1.W, featNorm) : [512 x 363], [363 x *8] -> [512 x *8]
+Validating --> HL1.b = LearnableParameter() :  -> [512 x 1]
+Validating --> HL1.z = Plus (HL1.t, HL1.b) : [512 x *8], [512 x 1] -> [512 x 1 x *8]
+Validating --> HL1.y = Sigmoid (HL1.z) : [512 x 1 x *8] -> [512 x 1 x *8]
+Validating --> HL2.t = Times (HL2.W, HL1.y) : [512 x 512], [512 x 1 x *8] -> [512 x 1 x *8]
+Validating --> HL2.b = LearnableParameter() :  -> [512 x 1]
+Validating --> HL2.z = Plus (HL2.t, HL2.b) : [512 x 1 x *8], [512 x 1] -> [512 x 1 x *8]
+Validating --> HL2.y = Sigmoid (HL2.z) : [512 x 1 x *8] -> [512 x 1 x *8]
+Validating --> HL3.t = Times (HL3.W, HL2.y) : [512 x 512], [512 x 1 x *8] -> [512 x 1 x *8]
+Validating --> HL3.b = LearnableParameter() :  -> [512 x 1]
+Validating --> HL3.z = Plus (HL3.t, HL3.b) : [512 x 1 x *8], [512 x 1] -> [512 x 1 x *8]
+Validating --> HL3.y = Sigmoid (HL3.z) : [512 x 1 x *8] -> [512 x 1 x *8]
+Validating --> OL.t = Times (OL.W, HL3.y) : [132 x 512], [512 x 1 x *8] -> [132 x 1 x *8]
+Validating --> OL.b = LearnableParameter() :  -> [132 x 1]
+Validating --> OL.z = Plus (OL.t, OL.b) : [132 x 1 x *8], [132 x 1] -> [132 x 1 x *8]
+Validating --> ce = CrossEntropyWithSoftmax (labels, OL.z) : [132 x *8], [132 x 1 x *8] -> [1]
+Validating --> err = ClassificationError (labels, OL.z) : [132 x *8], [132 x 1 x *8] -> [1]
+Validating --> globalPrior = LearnableParameter() :  -> [132 x 1]
+Validating --> logPrior = Log (globalPrior) : [132 x 1] -> [132 x 1]
+Validating --> scaledLogLikelihood = Minus (OL.z, logPrior) : [132 x 1 x *8], [132 x 1] -> [132 x 1 x *8]
+
+Validating network. 16 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+CloneFunction: (features : InputValue) -> [
+    netEval = OL.z : Plus
+    scaledLogLikelihood = scaledLogLikelihood : Minus
+]
+clonedmodel.HL2.t.inputs[0] = HL2.W (162) ==>  clonedmodel.HL2.W (193)
+clonedmodel.HL2.t.inputs[1] = HL1.y (158) ==>  clonedmodel.HL1.y (203)
+clonedmodel.OL.t.inputs[0] = OL.W (174) ==>  clonedmodel.OL.W (186)
+clonedmodel.OL.t.inputs[1] = HL3.y (168) ==>  clonedmodel.HL3.y (202)
+clonedmodel.HL1.t.inputs[0] = HL1.W (157) ==>  clonedmodel.HL1.W (192)
+clonedmodel.HL1.t.inputs[1] = featNorm (150) ==>  clonedmodel.featNorm (205)
+clonedmodel.HL3.t.inputs[0] = HL3.W (167) ==>  clonedmodel.HL3.W (195)
+clonedmodel.HL3.t.inputs[1] = HL2.y (163) ==>  clonedmodel.HL2.y (198)
+clonedmodel.HL3.z.inputs[0] = HL3.t (166) ==>  clonedmodel.HL3.t (194)
+clonedmodel.HL3.z.inputs[1] = HL3.b (165) ==>  clonedmodel.HL3.b (182)
+clonedmodel.logPrior.inputs[0] = globalPrior (154) ==>  clonedmodel.globalPrior (187)
+clonedmodel.HL2.y.inputs[0] = HL2.z (164) ==>  clonedmodel.HL2.z (204)
+clonedmodel.OL.z.inputs[0] = OL.t (173) ==>  clonedmodel.OL.t (185)
+clonedmodel.OL.z.inputs[1] = OL.b (172) ==>  clonedmodel.OL.b (183)
+clonedmodel.scaledLogLikelihood.inputs[0] = OL.z (175) ==>  clonedmodel.OL.z (199)
+clonedmodel.scaledLogLikelihood.inputs[1] = logPrior (171) ==>  clonedmodel.logPrior (197)
+clonedmodel.HL1.z.inputs[0] = HL1.t (156) ==>  clonedmodel.HL1.t (190)
+clonedmodel.HL1.z.inputs[1] = HL1.b (155) ==>  clonedmodel.HL1.b (188)
+clonedmodel.HL3.y.inputs[0] = HL3.z (169) ==>  clonedmodel.HL3.z (196)
+clonedmodel.HL1.y.inputs[0] = HL1.z (159) ==>  clonedmodel.HL1.z (201)
+clonedmodel.HL2.z.inputs[0] = HL2.t (161) ==>  clonedmodel.HL2.t (181)
+clonedmodel.HL2.z.inputs[1] = HL2.b (160) ==>  clonedmodel.HL2.b (191)
+clonedmodel.featNorm.inputs[0] = features (151) ==>  features (180)
+clonedmodel.featNorm.inputs[1] = globalMean (153) ==>  clonedmodel.globalMean (189)
+clonedmodel.featNorm.inputs[2] = globalInvStd (152) ==>  clonedmodel.globalInvStd (184)
+CloneFunction: Cloned 25 nodes and relinked 25 inputs.
+01/10/2018 00:17:50: Reading files
+ D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/CY2SCH010061231_1369712653.numden.lats.symlist 
+ D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/model.overalltying 
+ D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list 
+ D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/model.transprob 
+simplesenonehmm: reading 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/model.overalltying', 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list', 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/model.transprob'
+simplesenonehmm: 83253 units with 45 unique HMMs, 132 tied states, and 45 trans matrices read
+
+Post-processing network...
+
+4 roots:
+	Err = ClassificationError()
+	clonedmodel.scaledLogLikelihood = Minus()
+	cr = LatticeSequenceWithSoftmax()
+	latticeAxis = DynamicAxis()
+
+Validating network. 31 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [132 x *7]
+Validating --> clonedmodel.OL.W = LearnableParameter() :  -> [132 x 512]
+Validating --> clonedmodel.HL3.W = LearnableParameter() :  -> [512 x 512]
+Validating --> clonedmodel.HL2.W = LearnableParameter() :  -> [512 x 512]
+Validating --> clonedmodel.HL1.W = LearnableParameter() :  -> [512 x 363]
+Validating --> features = InputValue() :  -> [363 x *7]
+Validating --> clonedmodel.globalMean = LearnableParameter() :  -> [363 x 1]
+Validating --> clonedmodel.globalInvStd = LearnableParameter() :  -> [363 x 1]
+Validating --> clonedmodel.featNorm = PerDimMeanVarNormalization (features, clonedmodel.globalMean, clonedmodel.globalInvStd) : [363 x *7], [363 x 1], [363 x 1] -> [363 x *7]
+Validating --> clonedmodel.HL1.t = Times (clonedmodel.HL1.W, clonedmodel.featNorm) : [512 x 363], [363 x *7] -> [512 x *7]
+Validating --> clonedmodel.HL1.b = LearnableParameter() :  -> [512 x 1]
+Validating --> clonedmodel.HL1.z = Plus (clonedmodel.HL1.t, clonedmodel.HL1.b) : [512 x *7], [512 x 1] -> [512 x 1 x *7]
+Validating --> clonedmodel.HL1.y = Sigmoid (clonedmodel.HL1.z) : [512 x 1 x *7] -> [512 x 1 x *7]
+Validating --> clonedmodel.HL2.t = Times (clonedmodel.HL2.W, clonedmodel.HL1.y) : [512 x 512], [512 x 1 x *7] -> [512 x 1 x *7]
+Validating --> clonedmodel.HL2.b = LearnableParameter() :  -> [512 x 1]
+Validating --> clonedmodel.HL2.z = Plus (clonedmodel.HL2.t, clonedmodel.HL2.b) : [512 x 1 x *7], [512 x 1] -> [512 x 1 x *7]
+Validating --> clonedmodel.HL2.y = Sigmoid (clonedmodel.HL2.z) : [512 x 1 x *7] -> [512 x 1 x *7]
+Validating --> clonedmodel.HL3.t = Times (clonedmodel.HL3.W, clonedmodel.HL2.y) : [512 x 512], [512 x 1 x *7] -> [512 x 1 x *7]
+Validating --> clonedmodel.HL3.b = LearnableParameter() :  -> [512 x 1]
+Validating --> clonedmodel.HL3.z = Plus (clonedmodel.HL3.t, clonedmodel.HL3.b) : [512 x 1 x *7], [512 x 1] -> [512 x 1 x *7]
+Validating --> clonedmodel.HL3.y = Sigmoid (clonedmodel.HL3.z) : [512 x 1 x *7] -> [512 x 1 x *7]
+Validating --> clonedmodel.OL.t = Times (clonedmodel.OL.W, clonedmodel.HL3.y) : [132 x 512], [512 x 1 x *7] -> [132 x 1 x *7]
+Validating --> clonedmodel.OL.b = LearnableParameter() :  -> [132 x 1]
+Validating --> clonedmodel.OL.z = Plus (clonedmodel.OL.t, clonedmodel.OL.b) : [132 x 1 x *7], [132 x 1] -> [132 x 1 x *7]
+Validating --> Err = ClassificationError (labels, clonedmodel.OL.z) : [132 x *7], [132 x 1 x *7] -> [1]
+Validating --> clonedmodel.globalPrior = LearnableParameter() :  -> [132 x 1]
+Validating --> clonedmodel.logPrior = Log (clonedmodel.globalPrior) : [132 x 1] -> [132 x 1]
+Validating --> clonedmodel.scaledLogLikelihood = Minus (clonedmodel.OL.z, clonedmodel.logPrior) : [132 x 1 x *7], [132 x 1] -> [132 x 1 x *7]
+Validating --> lattice = InputValue() :  -> [1 x latticeAxis]
+Validating --> cr = LatticeSequenceWithSoftmax (labels, clonedmodel.OL.z, clonedmodel.scaledLogLikelihood, lattice) : [132 x *7], [132 x 1 x *7], [132 x 1 x *7], [1 x latticeAxis] -> [1]
+Validating --> latticeAxis = DynamicAxis() :  -> [1 x 1 x latticeAxis]
+
+Validating network. 15 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+Reading script file D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/glob_0000.scp ... 948 entries
+HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
+Total (133) state names in state list 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/state.list'
+MLFDeserializer: '948' utterances with '252734' frames
+Reading lattice index file 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu\TestData/latticeIndex.txt' ...
+LatticeDeserializer: '923' sequences
+01/10/2018 00:17:50: 
+Model has 31 nodes. Using GPU 0.
+
+01/10/2018 00:17:50: Training criterion:   cr = LatticeSequenceWithSoftmax
+01/10/2018 00:17:50: Evaluation criterion: Err = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Gradient Memory Aliasing: 6 are aliased.
+	clonedmodel.HL2.t (gradient) reuses clonedmodel.HL2.z (gradient)
+	clonedmodel.HL3.t (gradient) reuses clonedmodel.HL3.z (gradient)
+	clonedmodel.OL.t (gradient) reuses clonedmodel.OL.z (gradient)
+
+Memory Sharing: Out of 52 matrices, 29 are shared as 7, and 23 are not shared.
+
+Here are the ones that share memory:
+	{ clonedmodel.HL3.W : [512 x 512] (gradient)
+	  clonedmodel.OL.t : [132 x 1 x *7] (gradient)
+	  clonedmodel.OL.z : [132 x 1 x *7] (gradient) }
+	{ clonedmodel.HL1.z : [512 x 1 x *7]
+	  clonedmodel.HL2.W : [512 x 512] (gradient)
+	  clonedmodel.HL2.t : [512 x 1 x *7]
+	  clonedmodel.HL2.y : [512 x 1 x *7] }
+	{ clonedmodel.HL1.z : [512 x 1 x *7] (gradient)
+	  clonedmodel.HL2.t : [512 x 1 x *7] (gradient)
+	  clonedmodel.HL2.z : [512 x 1 x *7] (gradient)
+	  clonedmodel.HL3.t : [512 x 1 x *7] (gradient)
+	  clonedmodel.HL3.z : [512 x 1 x *7]
+	  clonedmodel.HL3.z : [512 x 1 x *7] (gradient)
+	  clonedmodel.OL.z : [132 x 1 x *7] }
+	{ clonedmodel.HL1.W : [512 x 363] (gradient)
+	  clonedmodel.HL1.t : [512 x *7]
+	  clonedmodel.HL1.y : [512 x 1 x *7] }
+	{ clonedmodel.HL1.t : [512 x *7] (gradient)
+	  clonedmodel.HL1.y : [512 x 1 x *7] (gradient)
+	  clonedmodel.HL3.y : [512 x 1 x *7] (gradient)
+	  clonedmodel.OL.t : [132 x 1 x *7]
+	  clonedmodel.scaledLogLikelihood : [132 x 1 x *7] }
+	{ clonedmodel.OL.W : [132 x 512] (gradient)
+	  clonedmodel.scaledLogLikelihood : [132 x 1 x *7] (gradient) }
+	{ clonedmodel.HL2.b : [512 x 1] (gradient)
+	  clonedmodel.HL2.y : [512 x 1 x *7] (gradient)
+	  clonedmodel.HL2.z : [512 x 1 x *7]
+	  clonedmodel.HL3.t : [512 x 1 x *7]
+	  clonedmodel.HL3.y : [512 x 1 x *7] }
+
+Here are the ones that don't share memory:
+	{latticeAxis : [1 x 1 x latticeAxis]}
+	{clonedmodel.logPrior : [132 x 1]}
+	{Err : [1]}
+	{cr : [1]}
+	{clonedmodel.HL3.b : [512 x 1]}
+	{features : [363 x *7]}
+	{labels : [132 x *7]}
+	{clonedmodel.OL.b : [132 x 1] (gradient)}
+	{clonedmodel.HL3.b : [512 x 1] (gradient)}
+	{clonedmodel.featNorm : [363 x *7]}
+	{clonedmodel.HL1.b : [512 x 1] (gradient)}
+	{cr : [1] (gradient)}
+	{clonedmodel.HL1.b : [512 x 1]}
+	{clonedmodel.globalInvStd : [363 x 1]}
+	{clonedmodel.HL2.b : [512 x 1]}
+	{clonedmodel.OL.b : [132 x 1]}
+	{clonedmodel.globalMean : [363 x 1]}
+	{clonedmodel.OL.W : [132 x 512]}
+	{clonedmodel.globalPrior : [132 x 1]}
+	{lattice : [1 x latticeAxis]}
+	{clonedmodel.HL2.W : [512 x 512]}
+	{clonedmodel.HL3.W : [512 x 512]}
+	{clonedmodel.HL1.W : [512 x 363]}
+
+
+01/10/2018 00:17:50: Training 779396 parameters in 8 out of 8 parameter tensors and 21 nodes with gradient:
+
+01/10/2018 00:17:50: 	Node 'clonedmodel.HL1.W' (LearnableParameter operation) : [512 x 363]
+01/10/2018 00:17:50: 	Node 'clonedmodel.HL1.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:50: 	Node 'clonedmodel.HL2.W' (LearnableParameter operation) : [512 x 512]
+01/10/2018 00:17:50: 	Node 'clonedmodel.HL2.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:50: 	Node 'clonedmodel.HL3.W' (LearnableParameter operation) : [512 x 512]
+01/10/2018 00:17:50: 	Node 'clonedmodel.HL3.b' (LearnableParameter operation) : [512 x 1]
+01/10/2018 00:17:50: 	Node 'clonedmodel.OL.W' (LearnableParameter operation) : [132 x 512]
+01/10/2018 00:17:50: 	Node 'clonedmodel.OL.b' (LearnableParameter operation) : [132 x 1]
+
+01/10/2018 00:17:50: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+01/10/2018 00:17:50: Starting Epoch 1: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
+
+01/10/2018 00:17:50: Starting minibatch loop.
+dengamma value 1.098157
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.106251
+dengamma value 1.082561
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.112890
+dengamma value 1.058198
+dengamma value 1.096610
+dengamma value 1.098049
+parallelforwardbackwardlattice: 95 launches for forward, 95 launches for backward
+dengamma value 1.085092
+dengamma value 0.994490
+dengamma value 1.096401
+01/10/2018 00:17:51:  Epoch[ 1 of 3]-Minibatch[   1-  10, 0.12%]: cr = 0.07487197 * 3030; Err = 0.35049505 * 3030; time = 0.9787s; samplesPerSecond = 3095.8
+WARNING: The same matrix with dim [1, 318] has been transferred between different devices for 20 times.
+dengamma value 1.032032
+dengamma value 1.057598
+dengamma value 1.072557
+dengamma value 1.157991
+parallelforwardbackwardlattice: 94 launches for forward, 94 launches for backward
+dengamma value 1.070472
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.063513
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.034062
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 0.987969
+dengamma value 0.950870
+dengamma value 1.128985
+01/10/2018 00:17:52:  Epoch[ 1 of 3]-Minibatch[  11-  20, 0.24%]: cr = 0.08708244 * 2720; Err = 0.33897059 * 2720; time = 0.2793s; samplesPerSecond = 9737.0
+dengamma value 1.081391
+dengamma value 1.137648
+dengamma value 1.049257
+dengamma value 1.077474
+dengamma value 1.072234
+dengamma value 1.145192
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 1.018340
+dengamma value 0.963768
+parallelforwardbackwardlattice: 19 launches for forward, 19 launches for backward
+dengamma value 1.074528
+parallelforwardbackwardlattice: 32 launches for forward, 32 launches for backward
+dengamma value 0.954175
+01/10/2018 00:17:52:  Epoch[ 1 of 3]-Minibatch[  21-  30, 0.37%]: cr = 0.08986032 * 2460; Err = 0.34065041 * 2460; time = 0.2337s; samplesPerSecond = 10526.4
+dengamma value 1.051671
+parallelforwardbackwardlattice: 81 launches for forward, 81 launches for backward
+dengamma value 1.063835
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.044365
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.085000
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.072683
+dengamma value 1.123277
+dengamma value 1.052824
+dengamma value 1.131793
+parallelforwardbackwardlattice: 95 launches for forward, 95 launches for backward
+dengamma value 1.101259
+dengamma value 1.104917
+01/10/2018 00:17:52:  Epoch[ 1 of 3]-Minibatch[  31-  40, 0.49%]: cr = 0.08122982 * 3390; Err = 0.28584071 * 3390; time = 0.3847s; samplesPerSecond = 8812.0
+parallelforwardbackwardlattice: 21 launches for forward, 21 launches for backward
+dengamma value 1.197665
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.110905
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.137528
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.165162
+parallelforwardbackwardlattice: 16 launches for forward, 16 launches for backward
+dengamma value 0.953704
+parallelforwardbackwardlattice: 59 launches for forward, 59 launches for backward
+dengamma value 1.096160
+dengamma value 1.057111
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.077334
+parallelforwardbackwardlattice: 126 launches for forward, 126 launches for backward
+dengamma value 1.035147
+parallelforwardbackwardlattice: 129 launches for forward, 129 launches for backward
+dengamma value 1.087287
+01/10/2018 00:17:53:  Epoch[ 1 of 3]-Minibatch[  41-  50, 0.61%]: cr = 0.06284136 * 2630; Err = 0.32585551 * 2630; time = 0.3196s; samplesPerSecond = 8228.7
+parallelforwardbackwardlattice: 24 launches for forward, 24 launches for backward
+dengamma value 1.228458
+parallelforwardbackwardlattice: 110 launches for forward, 110 launches for backward
+dengamma value 1.062338
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.060767
+parallelforwardbackwardlattice: 115 launches for forward, 115 launches for backward
+dengamma value 1.095013
+parallelforwardbackwardlattice: 15 launches for forward, 15 launches for backward
+dengamma value 1.075483
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.105219
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.016098
+parallelforwardbackwardlattice: 80 launches for forward, 80 launches for backward
+dengamma value 1.056174
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.136700
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.075757
+01/10/2018 00:17:53:  Epoch[ 1 of 3]-Minibatch[  51-  60, 0.73%]: cr = 0.08269820 * 2640; Err = 0.30075758 * 2640; time = 0.3062s; samplesPerSecond = 8621.0
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.073111
+parallelforwardbackwardlattice: 94 launches for forward, 94 launches for backward
+dengamma value 1.109574
+parallelforwardbackwardlattice: 39 launches for forward, 39 launches for backward
+dengamma value 1.033514
+parallelforwardbackwardlattice: 92 launches for forward, 92 launches for backward
+dengamma value 1.024983
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.002046
+parallelforwardbackwardlattice: 130 launches for forward, 130 launches for backward
+dengamma value 1.160107
+parallelforwardbackwardlattice: 114 launches for forward, 114 launches for backward
+dengamma value 1.143854
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.075593
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.104278
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.097520
+01/10/2018 00:17:53:  Epoch[ 1 of 3]-Minibatch[  61-  70, 0.85%]: cr = 0.08414101 * 3260; Err = 0.31257669 * 3260; time = 0.3769s; samplesPerSecond = 8648.4
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.107276
+parallelforwardbackwardlattice: 90 launches for forward, 90 launches for backward
+dengamma value 1.095851
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.049153
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.062153
+parallelforwardbackwardlattice: 116 launches for forward, 116 launches for backward
+dengamma value 1.136648
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.127192
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.059680
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.041588
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.087930
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.110820
+01/10/2018 00:17:54:  Epoch[ 1 of 3]-Minibatch[  71-  80, 0.98%]: cr = 0.07776234 * 2890; Err = 0.28408304 * 2890; time = 0.3206s; samplesPerSecond = 9013.2
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.049407
+parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backward
+dengamma value 1.086985
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 0.977111
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.095410
+parallelforwardbackwardlattice: 22 launches for forward, 22 launches for backward
+dengamma value 1.140545
+parallelforwardbackwardlattice: 128 launches for forward, 128 launches for backward
+dengamma value 1.103287
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 1.172994
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.054062
+parallelforwardbackwardlattice: 104 launches for forward, 104 launches for backward
+dengamma value 1.020148
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.037801
+01/10/2018 00:17:54:  Epoch[ 1 of 3]-Minibatch[  81-  90, 1.10%]: cr = 0.07893793 * 2940; Err = 0.35986395 * 2940; time = 0.3326s; samplesPerSecond = 8840.7
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.118989
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.066894
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.202222
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.080672
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.060066
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.114328
+parallelforwardbackwardlattice: 116 launches for forward, 116 launches for backward
+dengamma value 1.092812
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 1.081317
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.046736
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.129437
+01/10/2018 00:17:54:  Epoch[ 1 of 3]-Minibatch[  91- 100, 1.22%]: cr = 0.07567014 * 2650; Err = 0.26301887 * 2650; time = 0.3221s; samplesPerSecond = 8226.6
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.047832
+parallelforwardbackwardlattice: 78 launches for forward, 78 launches for backward
+dengamma value 1.054332
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 1.106057
+parallelforwardbackwardlattice: 20 launches for forward, 20 launches for backward
+dengamma value 1.067875
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.066747
+parallelforwardbackwardlattice: 29 launches for forward, 29 launches for backward
+dengamma value 1.159817
+parallelforwardbackwardlattice: 91 launches for forward, 91 launches for backward
+dengamma value 1.063600
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.134628
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.089619
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.033048
+01/10/2018 00:17:55:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 1.34%]: cr = 0.08271180 * 2410; Err = 0.31576763 * 2410; time = 0.2696s; samplesPerSecond = 8940.1
+parallelforwardbackwardlattice: 107 launches for forward, 107 launches for backward
+dengamma value 1.075851
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.084133
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.072607
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 1.067672
+parallelforwardbackwardlattice: 39 launches for forward, 39 launches for backward
+dengamma value 1.081708
+parallelforwardbackwardlattice: 16 launches for forward, 16 launches for backward
+dengamma value 1.178889
+parallelforwardbackwardlattice: 86 launches for forward, 86 launches for backward
+dengamma value 1.097974
+parallelforwardbackwardlattice: 175 launches for forward, 175 launches for backward
+dengamma value 1.172555
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.055876
+parallelforwardbackwardlattice: 12 launches for forward, 12 launches for backward
+dengamma value 1.037180
+01/10/2018 00:17:55:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 1.46%]: cr = 0.07147976 * 2700; Err = 0.31444444 * 2700; time = 0.3167s; samplesPerSecond = 8524.5
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.015297
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.078042
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 1.089801
+parallelforwardbackwardlattice: 124 launches for forward, 124 launches for backward
+dengamma value 1.132930
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.106688
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.094006
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.133973
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.081589
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.126929
+parallelforwardbackwardlattice: 59 launches for forward, 59 launches for backward
+dengamma value 1.033561
+01/10/2018 00:17:55:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 1.59%]: cr = 0.08327647 * 2380; Err = 0.32605042 * 2380; time = 0.2642s; samplesPerSecond = 9008.6
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.076193
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 0.960966
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.084532
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 0.979241
+parallelforwardbackwardlattice: 63 launches for forward, 63 launches for backward
+dengamma value 1.092376
+parallelforwardbackwardlattice: 15 launches for forward, 15 launches for backward
+dengamma value 1.065985
+parallelforwardbackwardlattice: 24 launches for forward, 24 launches for backward
+dengamma value 1.089902
+parallelforwardbackwardlattice: 124 launches for forward, 124 launches for backward
+dengamma value 1.128427
+parallelforwardbackwardlattice: 91 launches for forward, 91 launches for backward
+dengamma value 1.070220
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.044788
+01/10/2018 00:17:55:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 1.71%]: cr = 0.07500334 * 2630; Err = 0.33726236 * 2630; time = 0.3156s; samplesPerSecond = 8334.5
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.033618
+parallelforwardbackwardlattice: 88 launches for forward, 88 launches for backward
+dengamma value 1.077813
+parallelforwardbackwardlattice: 107 launches for forward, 107 launches for backward
+dengamma value 1.089922
+parallelforwardbackwardlattice: 77 launches for forward, 77 launches for backward
+dengamma value 1.039080
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.111939
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 0.983306
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.097458
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.073135
+parallelforwardbackwardlattice: 56 launches for forward, 56 launches for backward
+dengamma value 1.186335
+parallelforwardbackwardlattice: 123 launches for forward, 123 launches for backward
+dengamma value 1.083103
+01/10/2018 00:17:56:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 1.83%]: cr = 0.07540905 * 3100; Err = 0.29032258 * 3100; time = 0.3695s; samplesPerSecond = 8389.6
+parallelforwardbackwardlattice: 137 launches for forward, 137 launches for backward
+dengamma value 1.094129
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 0.935865
+parallelforwardbackwardlattice: 12 launches for forward, 12 launches for backward
+dengamma value 1.094436
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 1.032744
+parallelforwardbackwardlattice: 59 launches for forward, 59 launches for backward
+dengamma value 1.073981
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.088789
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 0.982670
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 0.997057
+parallelforwardbackwardlattice: 95 launches for forward, 95 launches for backward
+dengamma value 1.041219
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.088521
+01/10/2018 00:17:56:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 1.95%]: cr = 0.07356137 * 2720; Err = 0.37500000 * 2720; time = 0.2933s; samplesPerSecond = 9273.0
+parallelforwardbackwardlattice: 21 launches for forward, 21 launches for backward
+dengamma value 1.187688
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.040984
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.076985
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.078936
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 1.071944
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 1.044442
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 1.085509
+parallelforwardbackwardlattice: 72 launches for forward, 72 launches for backward
+dengamma value 1.062284
+parallelforwardbackwardlattice: 115 launches for forward, 115 launches for backward
+dengamma value 1.103135
+parallelforwardbackwardlattice: 83 launches for forward, 83 launches for backward
+dengamma value 1.015508
+01/10/2018 00:17:56:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 2.08%]: cr = 0.08268026 * 3000; Err = 0.30033333 * 3000; time = 0.3074s; samplesPerSecond = 9758.9
+parallelforwardbackwardlattice: 115 launches for forward, 115 launches for backward
+dengamma value 1.286482
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.108562
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 1.098396
+parallelforwardbackwardlattice: 92 launches for forward, 92 launches for backward
+dengamma value 1.128847
+parallelforwardbackwardlattice: 103 launches for forward, 103 launches for backward
+dengamma value 1.045091
+parallelforwardbackwardlattice: 128 launches for forward, 128 launches for backward
+dengamma value 1.101791
+parallelforwardbackwardlattice: 92 launches for forward, 92 launches for backward
+dengamma value 1.125997
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.079883
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.046293
+dengamma value 1.048269
+01/10/2018 00:17:57:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 2.20%]: cr = 0.07047775 * 3370; Err = 0.27804154 * 3370; time = 0.4052s; samplesPerSecond = 8316.3
+parallelforwardbackwardlattice: 77 launches for forward, 77 launches for backward
+dengamma value 1.078788
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.107343
+parallelforwardbackwardlattice: 39 launches for forward, 39 launches for backward
+dengamma value 1.101204
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 0.960008
+parallelforwardbackwardlattice: 119 launches for forward, 119 launches for backward
+dengamma value 1.107882
+parallelforwardbackwardlattice: 78 launches for forward, 78 launches for backward
+dengamma value 1.007515
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.109840
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.008014
+parallelforwardbackwardlattice: 26 launches for forward, 26 launches for backward
+dengamma value 1.133813
+parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backward
+dengamma value 1.104308
+01/10/2018 00:17:57:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 2.32%]: cr = 0.07960778 * 2600; Err = 0.35576923 * 2600; time = 0.3114s; samplesPerSecond = 8349.3
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.105338
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.129334
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.083165
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.038746
+parallelforwardbackwardlattice: 94 launches for forward, 94 launches for backward
+dengamma value 1.086768
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.026720
+parallelforwardbackwardlattice: 106 launches for forward, 106 launches for backward
+dengamma value 1.152656
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 0.983740
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.155358
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 1.011313
+01/10/2018 00:17:57:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 2.44%]: cr = 0.07935434 * 2600; Err = 0.31230769 * 2600; time = 0.2972s; samplesPerSecond = 8748.3
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.087543
+parallelforwardbackwardlattice: 79 launches for forward, 79 launches for backward
+dengamma value 1.053718
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 0.985794
+parallelforwardbackwardlattice: 72 launches for forward, 72 launches for backward
+dengamma value 1.085655
+parallelforwardbackwardlattice: 115 launches for forward, 115 launches for backward
+dengamma value 1.099306
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.024260
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.049562
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.138642
+parallelforwardbackwardlattice: 12 launches for forward, 12 launches for backward
+dengamma value 1.159902
+parallelforwardbackwardlattice: 28 launches for forward, 28 launches for backward
+dengamma value 1.158625
+01/10/2018 00:17:58:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 2.56%]: cr = 0.07102263 * 2300; Err = 0.33260870 * 2300; time = 0.2769s; samplesPerSecond = 8306.7
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.012161
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.024525
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.001728
+parallelforwardbackwardlattice: 93 launches for forward, 93 launches for backward
+dengamma value 1.089635
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.041389
+parallelforwardbackwardlattice: 56 launches for forward, 56 launches for backward
+dengamma value 1.075765
+parallelforwardbackwardlattice: 130 launches for forward, 130 launches for backward
+dengamma value 1.192685
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.028642
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.091593
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.069779
+01/10/2018 00:17:58:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 2.69%]: cr = 0.08151838 * 2800; Err = 0.34357143 * 2800; time = 0.3258s; samplesPerSecond = 8594.8
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.068428
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.109537
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.106124
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.082162
+parallelforwardbackwardlattice: 80 launches for forward, 80 launches for backward
+dengamma value 1.005531
+dengamma value 1.004299
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 1.072272
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.071440
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.101832
+parallelforwardbackwardlattice: 79 launches for forward, 79 launches for backward
+dengamma value 1.022549
+01/10/2018 00:17:58:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 2.81%]: cr = 0.08598953 * 2590; Err = 0.32741313 * 2590; time = 0.3012s; samplesPerSecond = 8600.0
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 0.995574
+parallelforwardbackwardlattice: 103 launches for forward, 103 launches for backward
+dengamma value 1.093792
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.106915
+parallelforwardbackwardlattice: 15 launches for forward, 15 launches for backward
+dengamma value 1.114396
+parallelforwardbackwardlattice: 26 launches for forward, 26 launches for backward
+dengamma value 1.075629
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 1.086284
+dengamma value 0.998504
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.141893
+dengamma value 1.112956
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.105446
+01/10/2018 00:17:59:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 2.93%]: cr = 0.07584692 * 2610; Err = 0.30919540 * 2610; time = 0.2919s; samplesPerSecond = 8942.6
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.142979
+dengamma value 1.094858
+parallelforwardbackwardlattice: 20 launches for forward, 20 launches for backward
+dengamma value 1.112932
+parallelforwardbackwardlattice: 102 launches for forward, 102 launches for backward
+dengamma value 1.111596
+dengamma value 1.057984
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.131579
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.132749
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.042995
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.076826
+parallelforwardbackwardlattice: 83 launches for forward, 83 launches for backward
+dengamma value 1.024062
+01/10/2018 00:17:59:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 3.05%]: cr = 0.07877686 * 2400; Err = 0.30875000 * 2400; time = 0.2584s; samplesPerSecond = 9287.6
+parallelforwardbackwardlattice: 19 launches for forward, 19 launches for backward
+dengamma value 1.121445
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.079991
+parallelforwardbackwardlattice: 24 launches for forward, 24 launches for backward
+dengamma value 1.092558
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.076313
+parallelforwardbackwardlattice: 161 launches for forward, 161 launches for backward
+dengamma value 1.071288
+parallelforwardbackwardlattice: 63 launches for forward, 63 launches for backward
+dengamma value 1.067850
+parallelforwardbackwardlattice: 146 launches for forward, 146 launches for backward
+dengamma value 1.171702
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.094304
+parallelforwardbackwardlattice: 116 launches for forward, 116 launches for backward
+dengamma value 1.058888
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.036921
+01/10/2018 00:17:59:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 3.17%]: cr = 0.07854553 * 3200; Err = 0.28656250 * 3200; time = 0.3639s; samplesPerSecond = 8793.0
+parallelforwardbackwardlattice: 98 launches for forward, 98 launches for backward
+dengamma value 1.105200
+dengamma value 1.063137
+parallelforwardbackwardlattice: 126 launches for forward, 126 launches for backward
+dengamma value 1.130558
+parallelforwardbackwardlattice: 96 launches for forward, 96 launches for backward
+dengamma value 1.083695
+parallelforwardbackwardlattice: 75 launches for forward, 75 launches for backward
+dengamma value 1.120837
+dengamma value 1.048910
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.085424
+dengamma value 1.056437
+parallelforwardbackwardlattice: 72 launches for forward, 72 launches for backward
+dengamma value 1.121678
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.010441
+01/10/2018 00:18:00:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 3.30%]: cr = 0.08404989 * 3570; Err = 0.30028011 * 3570; time = 0.4373s; samplesPerSecond = 8163.2
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.031804
+parallelforwardbackwardlattice: 15 launches for forward, 15 launches for backward
+dengamma value 1.141028
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.114967
+parallelforwardbackwardlattice: 26 launches for forward, 26 launches for backward
+dengamma value 1.049522
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.084649
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 1.013246
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.059281
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.127644
+parallelforwardbackwardlattice: 109 launches for forward, 109 launches for backward
+dengamma value 0.973975
+parallelforwardbackwardlattice: 15 launches for forward, 15 launches for backward
+dengamma value 1.078594
+01/10/2018 00:18:00:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 3.42%]: cr = 0.09594299 * 2510; Err = 0.34860558 * 2510; time = 0.2630s; samplesPerSecond = 9543.5
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.045329
+parallelforwardbackwardlattice: 100 launches for forward, 100 launches for backward
+dengamma value 1.099711
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 0.935432
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.093521
+parallelforwardbackwardlattice: 82 launches for forward, 82 launches for backward
+dengamma value 1.095008
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.073385
+parallelforwardbackwardlattice: 95 launches for forward, 95 launches for backward
+dengamma value 1.103955
+parallelforwardbackwardlattice: 111 launches for forward, 111 launches for backward
+dengamma value 1.058324
+parallelforwardbackwardlattice: 77 launches for forward, 77 launches for backward
+dengamma value 1.066021
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.084483
+01/10/2018 00:18:00:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 3.54%]: cr = 0.07402617 * 3400; Err = 0.36911765 * 3400; time = 0.3850s; samplesPerSecond = 8831.8
+parallelforwardbackwardlattice: 18 launches for forward, 18 launches for backward
+dengamma value 1.144046
+parallelforwardbackwardlattice: 20 launches for forward, 20 launches for backward
+dengamma value 1.080928
+parallelforwardbackwardlattice: 81 launches for forward, 81 launches for backward
+dengamma value 1.027465
+01/10/2018 00:18:00: Finished Epoch[ 1 of 3]: [Training] cr = 0.07898496 * 82104; Err = 0.31997223 * 82104; totalSamplesSeen = 82104; learningRatePerSample = 2e-06; epochTime=9.97043s
+01/10/2018 00:18:00: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.sequence.1'
+
+01/10/2018 00:18:00: Starting Epoch 2: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
+
+01/10/2018 00:18:00: Starting minibatch loop.
+parallelforwardbackwardlattice: 107 launches for forward, 107 launches for backward
+dengamma value 1.094192
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.082099
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 1.055784
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 0.961069
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.143452
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.076682
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.079352
+parallelforwardbackwardlattice: 80 launches for forward, 80 launches for backward
+dengamma value 1.077103
+dengamma value 1.068353
+dengamma value 1.050263
+01/10/2018 00:18:01:  Epoch[ 2 of 3]-Minibatch[   1-  10, 0.12%]: cr = 0.08315414 * 2880; Err = 0.29791667 * 2880; time = 0.3161s; samplesPerSecond = 9109.7
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.058989
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.126660
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.052224
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.038817
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.084766
+dengamma value 1.077397
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.062587
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.071580
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.076107
+dengamma value 1.109994
+01/10/2018 00:18:01:  Epoch[ 2 of 3]-Minibatch[  11-  20, 0.24%]: cr = 0.07810944 * 2560; Err = 0.29765625 * 2560; time = 0.2846s; samplesPerSecond = 8993.5
+parallelforwardbackwardlattice: 63 launches for forward, 63 launches for backward
+dengamma value 1.065765
+parallelforwardbackwardlattice: 116 launches for forward, 116 launches for backward
+dengamma value 1.067516
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.067111
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.200090
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 1.036868
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 1.073525
+parallelforwardbackwardlattice: 69 launches for forward, 69 launches for backward
+dengamma value 1.040210
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.041021
+parallelforwardbackwardlattice: 16 launches for forward, 16 launches for backward
+dengamma value 1.126510
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.046665
+01/10/2018 00:18:01:  Epoch[ 2 of 3]-Minibatch[  21-  30, 0.37%]: cr = 0.08311299 * 2240; Err = 0.32544643 * 2240; time = 0.2583s; samplesPerSecond = 8671.5
+parallelforwardbackwardlattice: 92 launches for forward, 92 launches for backward
+dengamma value 1.062636
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.011486
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.093481
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.105808
+parallelforwardbackwardlattice: 93 launches for forward, 93 launches for backward
+dengamma value 1.021724
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.019951
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.034297
+parallelforwardbackwardlattice: 91 launches for forward, 91 launches for backward
+dengamma value 1.111909
+parallelforwardbackwardlattice: 88 launches for forward, 88 launches for backward
+dengamma value 1.033059
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.057929
+01/10/2018 00:18:02:  Epoch[ 2 of 3]-Minibatch[  31-  40, 0.49%]: cr = 0.08859498 * 2940; Err = 0.30952381 * 2940; time = 0.3441s; samplesPerSecond = 8543.1
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.095891
+parallelforwardbackwardlattice: 86 launches for forward, 86 launches for backward
+dengamma value 1.048078
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.083873
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.069195
+parallelforwardbackwardlattice: 59 launches for forward, 59 launches for backward
+dengamma value 1.089107
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.071511
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.083502
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 1.068608
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.044492
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.081681
+01/10/2018 00:18:02:  Epoch[ 2 of 3]-Minibatch[  41-  50, 0.61%]: cr = 0.08273413 * 2570; Err = 0.31906615 * 2570; time = 0.2566s; samplesPerSecond = 10016.7
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 1.019873
+parallelforwardbackwardlattice: 59 launches for forward, 59 launches for backward
+dengamma value 1.037872
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.095674
+parallelforwardbackwardlattice: 59 launches for forward, 59 launches for backward
+dengamma value 1.057900
+parallelforwardbackwardlattice: 115 launches for forward, 115 launches for backward
+dengamma value 1.090767
+parallelforwardbackwardlattice: 69 launches for forward, 69 launches for backward
+dengamma value 1.064899
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.007462
+parallelforwardbackwardlattice: 63 launches for forward, 63 launches for backward
+dengamma value 1.063698
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.036106
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.041405
+01/10/2018 00:18:02:  Epoch[ 2 of 3]-Minibatch[  51-  60, 0.73%]: cr = 0.08371552 * 2800; Err = 0.29071429 * 2800; time = 0.2923s; samplesPerSecond = 9579.7
+parallelforwardbackwardlattice: 22 launches for forward, 22 launches for backward
+dengamma value 1.011848
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.046794
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.031635
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.083332
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.013357
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.114831
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.142379
+parallelforwardbackwardlattice: 69 launches for forward, 69 launches for backward
+dengamma value 1.064662
+parallelforwardbackwardlattice: 116 launches for forward, 116 launches for backward
+dengamma value 1.160959
+parallelforwardbackwardlattice: 83 launches for forward, 83 launches for backward
+dengamma value 1.151135
+01/10/2018 00:18:03:  Epoch[ 2 of 3]-Minibatch[  61-  70, 0.85%]: cr = 0.07670466 * 2540; Err = 0.27204724 * 2540; time = 0.3075s; samplesPerSecond = 8260.8
+parallelforwardbackwardlattice: 18 launches for forward, 18 launches for backward
+dengamma value 1.060599
+parallelforwardbackwardlattice: 87 launches for forward, 87 launches for backward
+dengamma value 1.085287
+parallelforwardbackwardlattice: 77 launches for forward, 77 launches for backward
+dengamma value 1.099561
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.014757
+parallelforwardbackwardlattice: 13 launches for forward, 13 launches for backward
+dengamma value 0.994656
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.086714
+parallelforwardbackwardlattice: 18 launches for forward, 18 launches for backward
+dengamma value 1.040621
+parallelforwardbackwardlattice: 39 launches for forward, 39 launches for backward
+dengamma value 0.974319
+parallelforwardbackwardlattice: 32 launches for forward, 32 launches for backward
+dengamma value 1.033122
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.087092
+01/10/2018 00:18:03:  Epoch[ 2 of 3]-Minibatch[  71-  80, 0.98%]: cr = 0.08128438 * 2180; Err = 0.36100917 * 2180; time = 0.2271s; samplesPerSecond = 9599.5
+dengamma value 1.038360
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.032493
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 0.990200
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 0.991864
+dengamma value 1.125399
+parallelforwardbackwardlattice: 158 launches for forward, 158 launches for backward
+dengamma value 1.130266
+parallelforwardbackwardlattice: 86 launches for forward, 86 launches for backward
+dengamma value 1.066020
+parallelforwardbackwardlattice: 10 launches for forward, 10 launches for backward
+dengamma value 1.152656
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.073778
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.021275
+01/10/2018 00:18:03:  Epoch[ 2 of 3]-Minibatch[  81-  90, 1.10%]: cr = 0.09045470 * 3060; Err = 0.32875817 * 3060; time = 0.3412s; samplesPerSecond = 8968.1
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.091784
+parallelforwardbackwardlattice: 78 launches for forward, 78 launches for backward
+dengamma value 1.115456
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.096193
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.044564
+parallelforwardbackwardlattice: 138 launches for forward, 138 launches for backward
+dengamma value 1.163755
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.069460
+parallelforwardbackwardlattice: 93 launches for forward, 93 launches for backward
+dengamma value 1.062514
+parallelforwardbackwardlattice: 63 launches for forward, 63 launches for backward
+dengamma value 1.023144
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 0.933032
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.007834
+01/10/2018 00:18:03:  Epoch[ 2 of 3]-Minibatch[  91- 100, 1.22%]: cr = 0.08035211 * 3280; Err = 0.32469512 * 3280; time = 0.3760s; samplesPerSecond = 8723.9
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.081170
+parallelforwardbackwardlattice: 36 launches for forward, 36 launches for backward
+dengamma value 1.009058
+parallelforwardbackwardlattice: 107 launches for forward, 107 launches for backward
+dengamma value 1.140225
+parallelforwardbackwardlattice: 77 launches for forward, 77 launches for backward
+dengamma value 1.046304
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.020039
+parallelforwardbackwardlattice: 97 launches for forward, 97 launches for backward
+dengamma value 1.030756
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.070017
+parallelforwardbackwardlattice: 134 launches for forward, 134 launches for backward
+dengamma value 1.069935
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.062697
+parallelforwardbackwardlattice: 72 launches for forward, 72 launches for backward
+dengamma value 1.036778
+01/10/2018 00:18:04:  Epoch[ 2 of 3]-Minibatch[ 101- 110, 1.34%]: cr = 0.08731439 * 3270; Err = 0.30795107 * 3270; time = 0.3713s; samplesPerSecond = 8806.2
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.094433
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.014554
+parallelforwardbackwardlattice: 39 launches for forward, 39 launches for backward
+dengamma value 1.053956
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.052138
+parallelforwardbackwardlattice: 89 launches for forward, 89 launches for backward
+dengamma value 1.119733
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.080540
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.044666
+parallelforwardbackwardlattice: 22 launches for forward, 22 launches for backward
+dengamma value 1.102464
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.118225
+parallelforwardbackwardlattice: 86 launches for forward, 86 launches for backward
+dengamma value 1.075555
+01/10/2018 00:18:04:  Epoch[ 2 of 3]-Minibatch[ 111- 120, 1.46%]: cr = 0.08665724 * 2560; Err = 0.30585937 * 2560; time = 0.3128s; samplesPerSecond = 8185.3
+parallelforwardbackwardlattice: 56 launches for forward, 56 launches for backward
+dengamma value 1.049400
+parallelforwardbackwardlattice: 123 launches for forward, 123 launches for backward
+dengamma value 1.077216
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.065106
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.071094
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.089589
+parallelforwardbackwardlattice: 72 launches for forward, 72 launches for backward
+dengamma value 0.998683
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.116511
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.054096
+parallelforwardbackwardlattice: 9 launches for forward, 9 launches for backward
+dengamma value 1.029180
+parallelforwardbackwardlattice: 69 launches for forward, 69 launches for backward
+dengamma value 1.070048
+01/10/2018 00:18:04:  Epoch[ 2 of 3]-Minibatch[ 121- 130, 1.59%]: cr = 0.07761127 * 2820; Err = 0.32304965 * 2820; time = 0.3153s; samplesPerSecond = 8945.1
+parallelforwardbackwardlattice: 22 launches for forward, 22 launches for backward
+dengamma value 1.052674
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.037336
+dengamma value 1.054959
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.026641
+parallelforwardbackwardlattice: 15 launches for forward, 15 launches for backward
+dengamma value 1.162028
+parallelforwardbackwardlattice: 120 launches for forward, 120 launches for backward
+dengamma value 1.015970
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.028912
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.015787
+parallelforwardbackwardlattice: 83 launches for forward, 83 launches for backward
+dengamma value 1.053263
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.055796
+01/10/2018 00:18:05:  Epoch[ 2 of 3]-Minibatch[ 131- 140, 1.71%]: cr = 0.08799373 * 2420; Err = 0.37148760 * 2420; time = 0.2709s; samplesPerSecond = 8932.0
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.043489
+parallelforwardbackwardlattice: 20 launches for forward, 20 launches for backward
+dengamma value 1.060638
+parallelforwardbackwardlattice: 21 launches for forward, 21 launches for backward
+dengamma value 1.046106
+dengamma value 1.057764
+parallelforwardbackwardlattice: 80 launches for forward, 80 launches for backward
+dengamma value 1.076539
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.070211
+parallelforwardbackwardlattice: 29 launches for forward, 29 launches for backward
+dengamma value 1.034368
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.078990
+parallelforwardbackwardlattice: 61 launches for forward, 61 launches for backward
+dengamma value 1.080894
+parallelforwardbackwardlattice: 22 launches for forward, 22 launches for backward
+dengamma value 1.031643
+01/10/2018 00:18:05:  Epoch[ 2 of 3]-Minibatch[ 141- 150, 1.83%]: cr = 0.07695396 * 2040; Err = 0.34607843 * 2040; time = 0.2351s; samplesPerSecond = 8676.9
+parallelforwardbackwardlattice: 142 launches for forward, 142 launches for backward
+dengamma value 1.043923
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 1.100843
+parallelforwardbackwardlattice: 130 launches for forward, 130 launches for backward
+dengamma value 1.052030
+dengamma value 1.115294
+dengamma value 1.080540
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.002472
+dengamma value 1.117373
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.018227
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 0.957393
+dengamma value 1.127905
+01/10/2018 00:18:05:  Epoch[ 2 of 3]-Minibatch[ 151- 160, 1.95%]: cr = 0.08385918 * 3130; Err = 0.34728435 * 3130; time = 0.3435s; samplesPerSecond = 9111.7
+dengamma value 1.072353
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.152211
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.076150
+parallelforwardbackwardlattice: 77 launches for forward, 77 launches for backward
+dengamma value 1.066050
+dengamma value 1.012639
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.071508
+parallelforwardbackwardlattice: 14 launches for forward, 14 launches for backward
+dengamma value 1.050149
+parallelforwardbackwardlattice: 113 launches for forward, 113 launches for backward
+dengamma value 1.100260
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 0.984806
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.077242
+01/10/2018 00:18:06:  Epoch[ 2 of 3]-Minibatch[ 161- 170, 2.08%]: cr = 0.08537626 * 2600; Err = 0.32615385 * 2600; time = 0.3162s; samplesPerSecond = 8222.3
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 1.065497
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.014835
+parallelforwardbackwardlattice: 56 launches for forward, 56 launches for backward
+dengamma value 1.054527
+parallelforwardbackwardlattice: 32 launches for forward, 32 launches for backward
+dengamma value 0.997694
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.046342
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.035061
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 0.982002
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.029836
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.095771
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 1.040110
+01/10/2018 00:18:06:  Epoch[ 2 of 3]-Minibatch[ 171- 180, 2.20%]: cr = 0.09294893 * 2340; Err = 0.35897436 * 2340; time = 0.2634s; samplesPerSecond = 8882.2
+parallelforwardbackwardlattice: 110 launches for forward, 110 launches for backward
+dengamma value 1.098093
+dengamma value 1.096183
+parallelforwardbackwardlattice: 14 launches for forward, 14 launches for backward
+dengamma value 1.084598
+parallelforwardbackwardlattice: 98 launches for forward, 98 launches for backward
+dengamma value 1.105096
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.079621
+parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backward
+dengamma value 1.027382
+dengamma value 1.033223
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.049519
+dengamma value 1.091064
+dengamma value 0.878330
+01/10/2018 00:18:06:  Epoch[ 2 of 3]-Minibatch[ 181- 190, 2.32%]: cr = 0.08367783 * 2590; Err = 0.35405405 * 2590; time = 0.2921s; samplesPerSecond = 8867.9
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.163649
+parallelforwardbackwardlattice: 61 launches for forward, 61 launches for backward
+dengamma value 1.129154
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 0.987804
+dengamma value 1.046962
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.026988
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.029668
+dengamma value 1.033893
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.067522
+parallelforwardbackwardlattice: 82 launches for forward, 82 launches for backward
+dengamma value 1.071581
+parallelforwardbackwardlattice: 109 launches for forward, 109 launches for backward
+dengamma value 1.099663
+01/10/2018 00:18:06:  Epoch[ 2 of 3]-Minibatch[ 191- 200, 2.44%]: cr = 0.08923007 * 2640; Err = 0.31250000 * 2640; time = 0.3039s; samplesPerSecond = 8687.9
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 1.113609
+dengamma value 1.111826
+parallelforwardbackwardlattice: 102 launches for forward, 102 launches for backward
+dengamma value 1.021733
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.086493
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.024932
+parallelforwardbackwardlattice: 14 launches for forward, 14 launches for backward
+dengamma value 1.157093
+dengamma value 1.038879
+dengamma value 1.142718
+parallelforwardbackwardlattice: 81 launches for forward, 81 launches for backward
+dengamma value 1.099373
+parallelforwardbackwardlattice: 14 launches for forward, 14 launches for backward
+dengamma value 1.078189
+01/10/2018 00:18:07:  Epoch[ 2 of 3]-Minibatch[ 201- 210, 2.56%]: cr = 0.08704989 * 2840; Err = 0.28767606 * 2840; time = 0.3539s; samplesPerSecond = 8025.6
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 1.037885
+parallelforwardbackwardlattice: 13 launches for forward, 13 launches for backward
+dengamma value 1.015264
+parallelforwardbackwardlattice: 80 launches for forward, 80 launches for backward
+dengamma value 1.032366
+dengamma value 1.076017
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.030969
+dengamma value 1.090328
+parallelforwardbackwardlattice: 104 launches for forward, 104 launches for backward
+dengamma value 1.106653
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 0.953508
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.028544
+parallelforwardbackwardlattice: 36 launches for forward, 36 launches for backward
+dengamma value 1.081440
+01/10/2018 00:18:07:  Epoch[ 2 of 3]-Minibatch[ 211- 220, 2.69%]: cr = 0.08429827 * 2450; Err = 0.35673469 * 2450; time = 0.2730s; samplesPerSecond = 8974.4
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 1.110429
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.050651
+parallelforwardbackwardlattice: 72 launches for forward, 72 launches for backward
+dengamma value 1.077528
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.046701
+parallelforwardbackwardlattice: 61 launches for forward, 61 launches for backward
+dengamma value 1.117976
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.117775
+parallelforwardbackwardlattice: 92 launches for forward, 92 launches for backward
+dengamma value 1.088426
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.053814
+dengamma value 1.091510
+parallelforwardbackwardlattice: 87 launches for forward, 87 launches for backward
+dengamma value 1.027723
+01/10/2018 00:18:07:  Epoch[ 2 of 3]-Minibatch[ 221- 230, 2.81%]: cr = 0.08785899 * 3180; Err = 0.29937107 * 3180; time = 0.3490s; samplesPerSecond = 9111.1
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 0.965819
+dengamma value 1.128063
+parallelforwardbackwardlattice: 29 launches for forward, 29 launches for backward
+dengamma value 1.047738
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 1.053374
+parallelforwardbackwardlattice: 63 launches for forward, 63 launches for backward
+dengamma value 1.024405
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.098594
+parallelforwardbackwardlattice: 133 launches for forward, 133 launches for backward
+dengamma value 1.024423
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.089020
+parallelforwardbackwardlattice: 80 launches for forward, 80 launches for backward
+dengamma value 0.999383
+parallelforwardbackwardlattice: 75 launches for forward, 75 launches for backward
+dengamma value 1.080306
+01/10/2018 00:18:08:  Epoch[ 2 of 3]-Minibatch[ 231- 240, 2.93%]: cr = 0.08477680 * 2970; Err = 0.31784512 * 2970; time = 0.3701s; samplesPerSecond = 8025.6
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.088564
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.055055
+dengamma value 1.090746
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 1.115948
+parallelforwardbackwardlattice: 105 launches for forward, 105 launches for backward
+dengamma value 1.051951
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.035624
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.055674
+parallelforwardbackwardlattice: 90 launches for forward, 90 launches for backward
+dengamma value 1.028023
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.015737
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.085563
+01/10/2018 00:18:08:  Epoch[ 2 of 3]-Minibatch[ 241- 250, 3.05%]: cr = 0.08539280 * 2830; Err = 0.28409894 * 2830; time = 0.3136s; samplesPerSecond = 9024.8
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.016386
+dengamma value 1.099158
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.105641
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.041135
+parallelforwardbackwardlattice: 15 launches for forward, 15 launches for backward
+dengamma value 1.142298
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 0.968866
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.057823
+dengamma value 1.030949
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.062884
+dengamma value 1.129589
+01/10/2018 00:18:08:  Epoch[ 2 of 3]-Minibatch[ 251- 260, 3.17%]: cr = 0.08069712 * 2600; Err = 0.32769231 * 2600; time = 0.2736s; samplesPerSecond = 9502.4
+parallelforwardbackwardlattice: 150 launches for forward, 150 launches for backward
+dengamma value 1.143103
+parallelforwardbackwardlattice: 82 launches for forward, 82 launches for backward
+dengamma value 1.064882
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.126354
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.087589
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.096430
+parallelforwardbackwardlattice: 81 launches for forward, 81 launches for backward
+dengamma value 1.113808
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.084879
+parallelforwardbackwardlattice: 99 launches for forward, 99 launches for backward
+dengamma value 1.110359
+parallelforwardbackwardlattice: 22 launches for forward, 22 launches for backward
+dengamma value 1.151112
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.128744
+01/10/2018 00:18:09:  Epoch[ 2 of 3]-Minibatch[ 261- 270, 3.30%]: cr = 0.07569170 * 2770; Err = 0.26137184 * 2770; time = 0.3328s; samplesPerSecond = 8324.3
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.063606
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.046325
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.115843
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.036365
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.136702
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.102451
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.196636
+parallelforwardbackwardlattice: 91 launches for forward, 91 launches for backward
+dengamma value 1.043793
+parallelforwardbackwardlattice: 29 launches for forward, 29 launches for backward
+dengamma value 1.136444
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.137861
+01/10/2018 00:18:09:  Epoch[ 2 of 3]-Minibatch[ 271- 280, 3.42%]: cr = 0.07820831 * 2450; Err = 0.30122449 * 2450; time = 0.3052s; samplesPerSecond = 8028.8
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 0.973563
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.017829
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.095241
+parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backward
+dengamma value 1.122787
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.076464
+parallelforwardbackwardlattice: 17 launches for forward, 17 launches for backward
+dengamma value 1.052412
+parallelforwardbackwardlattice: 91 launches for forward, 91 launches for backward
+dengamma value 1.084082
+parallelforwardbackwardlattice: 80 launches for forward, 80 launches for backward
+dengamma value 1.067096
+parallelforwardbackwardlattice: 115 launches for forward, 115 launches for backward
+dengamma value 1.092503
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.131919
+01/10/2018 00:18:09:  Epoch[ 2 of 3]-Minibatch[ 281- 290, 3.54%]: cr = 0.08181769 * 2730; Err = 0.31428571 * 2730; time = 0.2973s; samplesPerSecond = 9181.5
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.098246
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 1.007781
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.032259
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 0.977547
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.033669
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.007694
+parallelforwardbackwardlattice: 14 launches for forward, 14 launches for backward
+dengamma value 1.022083
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.037810
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.081071
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.015176
+01/10/2018 00:18:10:  Epoch[ 2 of 3]-Minibatch[ 291- 300, 3.66%]: cr = 0.08882496 * 2440; Err = 0.32909836 * 2440; time = 0.2710s; samplesPerSecond = 9003.4
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.067903
+parallelforwardbackwardlattice: 81 launches for forward, 81 launches for backward
+dengamma value 1.049409
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 0.993449
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 1.064031
+01/10/2018 00:18:10: Finished Epoch[ 2 of 3]: [Training] cr = 0.08392263 * 81852; Err = 0.31784196 * 81852; totalSamplesSeen = 163956; learningRatePerSample = 2e-06; epochTime=9.28537s
+01/10/2018 00:18:10: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.sequence.2'
+
+01/10/2018 00:18:10: Starting Epoch 3: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
+
+01/10/2018 00:18:10: Starting minibatch loop.
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.120536
+parallelforwardbackwardlattice: 81 launches for forward, 81 launches for backward
+dengamma value 1.043034
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 0.935201
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.053504
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.054135
+dengamma value 1.063120
+parallelforwardbackwardlattice: 129 launches for forward, 129 launches for backward
+dengamma value 1.086814
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.088886
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.071581
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 0.997326
+01/10/2018 00:18:10:  Epoch[ 3 of 3]-Minibatch[   1-  10, 0.12%]: cr = 0.08958213 * 2810; Err = 0.30533808 * 2810; time = 0.3066s; samplesPerSecond = 9164.1
+parallelforwardbackwardlattice: 19 launches for forward, 19 launches for backward
+dengamma value 1.023479
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 1.167924
+parallelforwardbackwardlattice: 83 launches for forward, 83 launches for backward
+dengamma value 1.092052
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.099558
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.102921
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.037780
+parallelforwardbackwardlattice: 23 launches for forward, 23 launches for backward
+dengamma value 1.206039
+parallelforwardbackwardlattice: 13 launches for forward, 13 launches for backward
+dengamma value 1.149521
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.097699
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 1.028733
+01/10/2018 00:18:10:  Epoch[ 3 of 3]-Minibatch[  11-  20, 0.24%]: cr = 0.07561535 * 1970; Err = 0.31421320 * 1970; time = 0.2235s; samplesPerSecond = 8815.4
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 1.100380
+parallelforwardbackwardlattice: 23 launches for forward, 23 launches for backward
+dengamma value 1.064008
+parallelforwardbackwardlattice: 141 launches for forward, 141 launches for backward
+dengamma value 1.056242
+parallelforwardbackwardlattice: 69 launches for forward, 69 launches for backward
+dengamma value 1.032431
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.101903
+parallelforwardbackwardlattice: 75 launches for forward, 75 launches for backward
+dengamma value 1.091928
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.049669
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.066411
+parallelforwardbackwardlattice: 18 launches for forward, 18 launches for backward
+dengamma value 1.026510
+parallelforwardbackwardlattice: 61 launches for forward, 61 launches for backward
+dengamma value 1.078377
+01/10/2018 00:18:11:  Epoch[ 3 of 3]-Minibatch[  21-  30, 0.37%]: cr = 0.08243539 * 3050; Err = 0.31311475 * 3050; time = 0.3312s; samplesPerSecond = 9210.2
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.001786
+parallelforwardbackwardlattice: 14 launches for forward, 14 launches for backward
+dengamma value 1.063861
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.065958
+dengamma value 1.017980
+parallelforwardbackwardlattice: 15 launches for forward, 15 launches for backward
+dengamma value 1.169641
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.002860
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.014372
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.085655
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.088683
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.017912
+01/10/2018 00:18:11:  Epoch[ 3 of 3]-Minibatch[  31-  40, 0.49%]: cr = 0.08938891 * 2230; Err = 0.33901345 * 2230; time = 0.2619s; samplesPerSecond = 8515.4
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.027935
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.084787
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.037455
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.026124
+parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backward
+dengamma value 1.122935
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.076638
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 1.059120
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.032677
+parallelforwardbackwardlattice: 59 launches for forward, 59 launches for backward
+dengamma value 1.007482
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.057958
+01/10/2018 00:18:11:  Epoch[ 3 of 3]-Minibatch[  41-  50, 0.61%]: cr = 0.08795322 * 2350; Err = 0.33148936 * 2350; time = 0.2707s; samplesPerSecond = 8680.3
+dengamma value 1.107206
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 0.998052
+parallelforwardbackwardlattice: 39 launches for forward, 39 launches for backward
+dengamma value 1.079846
+parallelforwardbackwardlattice: 85 launches for forward, 85 launches for backward
+dengamma value 1.069912
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.066003
+parallelforwardbackwardlattice: 119 launches for forward, 119 launches for backward
+dengamma value 1.085437
+parallelforwardbackwardlattice: 79 launches for forward, 79 launches for backward
+dengamma value 1.078554
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.113238
+parallelforwardbackwardlattice: 61 launches for forward, 61 launches for backward
+dengamma value 1.039846
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 0.990899
+01/10/2018 00:18:12:  Epoch[ 3 of 3]-Minibatch[  51-  60, 0.73%]: cr = 0.08560410 * 2850; Err = 0.31578947 * 2850; time = 0.3218s; samplesPerSecond = 8856.9
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.009666
+parallelforwardbackwardlattice: 87 launches for forward, 87 launches for backward
+dengamma value 1.093568
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.073803
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.121710
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.063168
+parallelforwardbackwardlattice: 72 launches for forward, 72 launches for backward
+dengamma value 1.111108
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.111662
+parallelforwardbackwardlattice: 108 launches for forward, 108 launches for backward
+dengamma value 1.122063
+parallelforwardbackwardlattice: 81 launches for forward, 81 launches for backward
+dengamma value 1.033203
+parallelforwardbackwardlattice: 88 launches for forward, 88 launches for backward
+dengamma value 1.141327
+01/10/2018 00:18:12:  Epoch[ 3 of 3]-Minibatch[  61-  70, 0.85%]: cr = 0.07951333 * 3020; Err = 0.29635762 * 3020; time = 0.3895s; samplesPerSecond = 7752.7
+parallelforwardbackwardlattice: 14 launches for forward, 14 launches for backward
+dengamma value 1.098909
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 0.981961
+parallelforwardbackwardlattice: 61 launches for forward, 61 launches for backward
+dengamma value 1.084230
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.104820
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 0.947825
+parallelforwardbackwardlattice: 21 launches for forward, 21 launches for backward
+dengamma value 1.036321
+parallelforwardbackwardlattice: 87 launches for forward, 87 launches for backward
+dengamma value 1.047483
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 1.016064
+dengamma value 1.072944
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.014034
+01/10/2018 00:18:12:  Epoch[ 3 of 3]-Minibatch[  71-  80, 0.98%]: cr = 0.09441616 * 2220; Err = 0.31441441 * 2220; time = 0.2389s; samplesPerSecond = 9293.6
+parallelforwardbackwardlattice: 97 launches for forward, 97 launches for backward
+dengamma value 1.059296
+parallelforwardbackwardlattice: 70 launches for forward, 70 launches for backward
+dengamma value 1.047792
+parallelforwardbackwardlattice: 109 launches for forward, 109 launches for backward
+dengamma value 1.136270
+parallelforwardbackwardlattice: 92 launches for forward, 92 launches for backward
+dengamma value 1.173222
+parallelforwardbackwardlattice: 125 launches for forward, 125 launches for backward
+dengamma value 1.129351
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.031601
+parallelforwardbackwardlattice: 96 launches for forward, 96 launches for backward
+dengamma value 1.069307
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.139293
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.056081
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.064902
+01/10/2018 00:18:13:  Epoch[ 3 of 3]-Minibatch[  81-  90, 1.10%]: cr = 0.08509290 * 3110; Err = 0.26881029 * 3110; time = 0.4039s; samplesPerSecond = 7700.7
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.022196
+parallelforwardbackwardlattice: 72 launches for forward, 72 launches for backward
+dengamma value 0.990125
+parallelforwardbackwardlattice: 28 launches for forward, 28 launches for backward
+dengamma value 1.014402
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.033788
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.057174
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.096375
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.008563
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.050195
+parallelforwardbackwardlattice: 96 launches for forward, 96 launches for backward
+dengamma value 1.149007
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.030818
+01/10/2018 00:18:13:  Epoch[ 3 of 3]-Minibatch[  91- 100, 1.22%]: cr = 0.07650480 * 2560; Err = 0.34804687 * 2560; time = 0.2935s; samplesPerSecond = 8722.4
+parallelforwardbackwardlattice: 75 launches for forward, 75 launches for backward
+dengamma value 1.036104
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.095000
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.166921
+parallelforwardbackwardlattice: 32 launches for forward, 32 launches for backward
+dengamma value 1.135808
+parallelforwardbackwardlattice: 90 launches for forward, 90 launches for backward
+dengamma value 1.090107
+dengamma value 1.045368
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.083045
+parallelforwardbackwardlattice: 99 launches for forward, 99 launches for backward
+dengamma value 1.052756
+dengamma value 1.093207
+parallelforwardbackwardlattice: 91 launches for forward, 91 launches for backward
+dengamma value 1.021930
+01/10/2018 00:18:13:  Epoch[ 3 of 3]-Minibatch[ 101- 110, 1.34%]: cr = 0.07994060 * 2780; Err = 0.31906475 * 2780; time = 0.3040s; samplesPerSecond = 9143.2
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.014628
+parallelforwardbackwardlattice: 114 launches for forward, 114 launches for backward
+dengamma value 1.119380
+dengamma value 1.123704
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 0.966645
+parallelforwardbackwardlattice: 28 launches for forward, 28 launches for backward
+dengamma value 0.960421
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.072525
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.060955
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.037380
+parallelforwardbackwardlattice: 62 launches for forward, 62 launches for backward
+dengamma value 1.098809
+dengamma value 1.051219
+01/10/2018 00:18:13:  Epoch[ 3 of 3]-Minibatch[ 111- 120, 1.46%]: cr = 0.09093269 * 2520; Err = 0.31865079 * 2520; time = 0.2996s; samplesPerSecond = 8412.3
+parallelforwardbackwardlattice: 113 launches for forward, 113 launches for backward
+dengamma value 1.053188
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 1.026728
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 0.968937
+parallelforwardbackwardlattice: 23 launches for forward, 23 launches for backward
+dengamma value 1.110307
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.096449
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 1.014478
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.064246
+dengamma value 1.127211
+parallelforwardbackwardlattice: 13 launches for forward, 13 launches for backward
+dengamma value 1.128247
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.066037
+01/10/2018 00:18:14:  Epoch[ 3 of 3]-Minibatch[ 121- 130, 1.59%]: cr = 0.08628867 * 2580; Err = 0.31744186 * 2580; time = 0.2808s; samplesPerSecond = 9187.6
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.039189
+parallelforwardbackwardlattice: 20 launches for forward, 20 launches for backward
+dengamma value 1.093105
+parallelforwardbackwardlattice: 63 launches for forward, 63 launches for backward
+dengamma value 1.010951
+parallelforwardbackwardlattice: 39 launches for forward, 39 launches for backward
+dengamma value 1.107778
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.057101
+dengamma value 1.102175
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 1.118991
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 1.000915
+parallelforwardbackwardlattice: 39 launches for forward, 39 launches for backward
+dengamma value 1.091334
+parallelforwardbackwardlattice: 26 launches for forward, 26 launches for backward
+dengamma value 0.984076
+01/10/2018 00:18:14:  Epoch[ 3 of 3]-Minibatch[ 131- 140, 1.71%]: cr = 0.07925472 * 2450; Err = 0.32612245 * 2450; time = 0.2415s; samplesPerSecond = 10146.5
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 0.972561
+parallelforwardbackwardlattice: 77 launches for forward, 77 launches for backward
+dengamma value 1.044718
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.036504
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.134353
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.027725
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.052530
+parallelforwardbackwardlattice: 36 launches for forward, 36 launches for backward
+dengamma value 1.122627
+dengamma value 0.980667
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.058502
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.082974
+01/10/2018 00:18:14:  Epoch[ 3 of 3]-Minibatch[ 141- 150, 1.83%]: cr = 0.08384013 * 2290; Err = 0.31135371 * 2290; time = 0.2323s; samplesPerSecond = 9857.2
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 1.270468
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 1.044149
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 0.995428
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.084678
+parallelforwardbackwardlattice: 170 launches for forward, 170 launches for backward
+dengamma value 1.102933
+parallelforwardbackwardlattice: 32 launches for forward, 32 launches for backward
+dengamma value 1.061082
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.005238
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.079382
+parallelforwardbackwardlattice: 79 launches for forward, 79 launches for backward
+dengamma value 1.110160
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.060600
+01/10/2018 00:18:15:  Epoch[ 3 of 3]-Minibatch[ 151- 160, 1.95%]: cr = 0.08121069 * 3000; Err = 0.28066667 * 3000; time = 0.3155s; samplesPerSecond = 9509.2
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.274211
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 1.098453
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.071518
+parallelforwardbackwardlattice: 82 launches for forward, 82 launches for backward
+dengamma value 1.091137
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 0.937688
+parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backward
+dengamma value 1.056207
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.077145
+dengamma value 1.062990
+parallelforwardbackwardlattice: 49 launches for forward, 49 launches for backward
+dengamma value 0.999550
+parallelforwardbackwardlattice: 19 launches for forward, 19 launches for backward
+dengamma value 1.099108
+01/10/2018 00:18:15:  Epoch[ 3 of 3]-Minibatch[ 161- 170, 2.08%]: cr = 0.07624794 * 2510; Err = 0.30996016 * 2510; time = 0.2493s; samplesPerSecond = 10068.6
+parallelforwardbackwardlattice: 82 launches for forward, 82 launches for backward
+dengamma value 1.012179
+parallelforwardbackwardlattice: 30 launches for forward, 30 launches for backward
+dengamma value 1.093297
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.014935
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.061754
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.079969
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.074487
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.030915
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.137582
+parallelforwardbackwardlattice: 86 launches for forward, 86 launches for backward
+dengamma value 1.123346
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.078667
+01/10/2018 00:18:15:  Epoch[ 3 of 3]-Minibatch[ 171- 180, 2.20%]: cr = 0.08522650 * 2610; Err = 0.28084291 * 2610; time = 0.3056s; samplesPerSecond = 8541.3
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.104299
+parallelforwardbackwardlattice: 80 launches for forward, 80 launches for backward
+dengamma value 1.091328
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.109522
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.091829
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.000546
+parallelforwardbackwardlattice: 58 launches for forward, 58 launches for backward
+dengamma value 1.098479
+parallelforwardbackwardlattice: 29 launches for forward, 29 launches for backward
+dengamma value 1.035614
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.069825
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.082284
+dengamma value 1.065267
+01/10/2018 00:18:15:  Epoch[ 3 of 3]-Minibatch[ 181- 190, 2.32%]: cr = 0.08484853 * 2400; Err = 0.30625000 * 2400; time = 0.2803s; samplesPerSecond = 8561.4
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.140037
+parallelforwardbackwardlattice: 106 launches for forward, 106 launches for backward
+dengamma value 1.094068
+parallelforwardbackwardlattice: 50 launches for forward, 50 launches for backward
+dengamma value 1.082963
+parallelforwardbackwardlattice: 21 launches for forward, 21 launches for backward
+dengamma value 1.075658
+parallelforwardbackwardlattice: 52 launches for forward, 52 launches for backward
+dengamma value 1.063642
+parallelforwardbackwardlattice: 28 launches for forward, 28 launches for backward
+dengamma value 1.029329
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.073546
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 1.084057
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 1.039129
+parallelforwardbackwardlattice: 118 launches for forward, 118 launches for backward
+dengamma value 1.070681
+01/10/2018 00:18:16:  Epoch[ 3 of 3]-Minibatch[ 191- 200, 2.44%]: cr = 0.08464780 * 2590; Err = 0.26177606 * 2590; time = 0.3047s; samplesPerSecond = 8499.1
+parallelforwardbackwardlattice: 21 launches for forward, 21 launches for backward
+dengamma value 1.146614
+parallelforwardbackwardlattice: 44 launches for forward, 44 launches for backward
+dengamma value 1.038004
+parallelforwardbackwardlattice: 63 launches for forward, 63 launches for backward
+dengamma value 1.083464
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.016419
+parallelforwardbackwardlattice: 20 launches for forward, 20 launches for backward
+dengamma value 1.097390
+parallelforwardbackwardlattice: 98 launches for forward, 98 launches for backward
+dengamma value 1.068822
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.091391
+parallelforwardbackwardlattice: 93 launches for forward, 93 launches for backward
+dengamma value 1.058538
+parallelforwardbackwardlattice: 73 launches for forward, 73 launches for backward
+dengamma value 0.997856
+parallelforwardbackwardlattice: 24 launches for forward, 24 launches for backward
+dengamma value 1.074920
+01/10/2018 00:18:16:  Epoch[ 3 of 3]-Minibatch[ 201- 210, 2.56%]: cr = 0.07541663 * 2460; Err = 0.36747967 * 2460; time = 0.2880s; samplesPerSecond = 8542.3
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.059935
+parallelforwardbackwardlattice: 123 launches for forward, 123 launches for backward
+dengamma value 1.127297
+parallelforwardbackwardlattice: 77 launches for forward, 77 launches for backward
+dengamma value 1.029912
+dengamma value 1.089471
+parallelforwardbackwardlattice: 74 launches for forward, 74 launches for backward
+dengamma value 1.108323
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.015650
+parallelforwardbackwardlattice: 33 launches for forward, 33 launches for backward
+dengamma value 1.052023
+parallelforwardbackwardlattice: 86 launches for forward, 86 launches for backward
+dengamma value 1.083768
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.005844
+parallelforwardbackwardlattice: 14 launches for forward, 14 launches for backward
+dengamma value 1.049971
+01/10/2018 00:18:16:  Epoch[ 3 of 3]-Minibatch[ 211- 220, 2.69%]: cr = 0.07925343 * 2810; Err = 0.30249110 * 2810; time = 0.2881s; samplesPerSecond = 9752.2
+parallelforwardbackwardlattice: 132 launches for forward, 132 launches for backward
+dengamma value 1.047816
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.037694
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.044386
+parallelforwardbackwardlattice: 45 launches for forward, 45 launches for backward
+dengamma value 1.061331
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.085604
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.161612
+parallelforwardbackwardlattice: 36 launches for forward, 36 launches for backward
+dengamma value 1.166876
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.023758
+parallelforwardbackwardlattice: 29 launches for forward, 29 launches for backward
+dengamma value 1.017098
+dengamma value 1.004604
+01/10/2018 00:18:17:  Epoch[ 3 of 3]-Minibatch[ 221- 230, 2.81%]: cr = 0.08722063 * 2550; Err = 0.31137255 * 2550; time = 0.2677s; samplesPerSecond = 9525.7
+parallelforwardbackwardlattice: 51 launches for forward, 51 launches for backward
+dengamma value 1.082435
+parallelforwardbackwardlattice: 37 launches for forward, 37 launches for backward
+dengamma value 1.051687
+parallelforwardbackwardlattice: 83 launches for forward, 83 launches for backward
+dengamma value 1.045112
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.051119
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.081021
+parallelforwardbackwardlattice: 141 launches for forward, 141 launches for backward
+dengamma value 1.082898
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 0.985309
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.005695
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.074795
+parallelforwardbackwardlattice: 60 launches for forward, 60 launches for backward
+dengamma value 1.064292
+01/10/2018 00:18:17:  Epoch[ 3 of 3]-Minibatch[ 231- 240, 2.93%]: cr = 0.08834467 * 2810; Err = 0.29750890 * 2810; time = 0.3325s; samplesPerSecond = 8450.9
+parallelforwardbackwardlattice: 35 launches for forward, 35 launches for backward
+dengamma value 1.175846
+parallelforwardbackwardlattice: 31 launches for forward, 31 launches for backward
+dengamma value 0.951798
+parallelforwardbackwardlattice: 22 launches for forward, 22 launches for backward
+dengamma value 1.039765
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.119797
+parallelforwardbackwardlattice: 75 launches for forward, 75 launches for backward
+dengamma value 1.013306
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 0.997320
+dengamma value 0.978129
+parallelforwardbackwardlattice: 104 launches for forward, 104 launches for backward
+dengamma value 1.112122
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.037125
+parallelforwardbackwardlattice: 47 launches for forward, 47 launches for backward
+dengamma value 1.024721
+01/10/2018 00:18:17:  Epoch[ 3 of 3]-Minibatch[ 241- 250, 3.05%]: cr = 0.09173997 * 2540; Err = 0.32322835 * 2540; time = 0.2764s; samplesPerSecond = 9188.5
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.091922
+parallelforwardbackwardlattice: 40 launches for forward, 40 launches for backward
+dengamma value 1.061260
+dengamma value 1.028855
+parallelforwardbackwardlattice: 59 launches for forward, 59 launches for backward
+dengamma value 1.042079
+parallelforwardbackwardlattice: 66 launches for forward, 66 launches for backward
+dengamma value 1.078928
+parallelforwardbackwardlattice: 96 launches for forward, 96 launches for backward
+dengamma value 1.061462
+dengamma value 1.048656
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.066598
+parallelforwardbackwardlattice: 76 launches for forward, 76 launches for backward
+dengamma value 1.070862
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.015405
+01/10/2018 00:18:17:  Epoch[ 3 of 3]-Minibatch[ 251- 260, 3.17%]: cr = 0.09247277 * 2790; Err = 0.30501792 * 2790; time = 0.3305s; samplesPerSecond = 8441.1
+parallelforwardbackwardlattice: 120 launches for forward, 120 launches for backward
+dengamma value 1.093721
+dengamma value 1.083641
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.042251
+parallelforwardbackwardlattice: 168 launches for forward, 168 launches for backward
+dengamma value 1.132590
+parallelforwardbackwardlattice: 108 launches for forward, 108 launches for backward
+dengamma value 1.061812
+parallelforwardbackwardlattice: 84 launches for forward, 84 launches for backward
+dengamma value 1.080220
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.104547
+parallelforwardbackwardlattice: 169 launches for forward, 169 launches for backward
+dengamma value 1.109683
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.082076
+parallelforwardbackwardlattice: 121 launches for forward, 121 launches for backward
+dengamma value 1.053906
+01/10/2018 00:18:18:  Epoch[ 3 of 3]-Minibatch[ 261- 270, 3.30%]: cr = 0.08268433 * 3920; Err = 0.26760204 * 3920; time = 0.5097s; samplesPerSecond = 7690.3
+parallelforwardbackwardlattice: 137 launches for forward, 137 launches for backward
+dengamma value 1.122059
+parallelforwardbackwardlattice: 54 launches for forward, 54 launches for backward
+dengamma value 1.005782
+parallelforwardbackwardlattice: 21 launches for forward, 21 launches for backward
+dengamma value 1.023124
+parallelforwardbackwardlattice: 34 launches for forward, 34 launches for backward
+dengamma value 1.070231
+parallelforwardbackwardlattice: 46 launches for forward, 46 launches for backward
+dengamma value 1.049399
+parallelforwardbackwardlattice: 57 launches for forward, 57 launches for backward
+dengamma value 1.056142
+parallelforwardbackwardlattice: 100 launches for forward, 100 launches for backward
+dengamma value 1.081642
+parallelforwardbackwardlattice: 89 launches for forward, 89 launches for backward
+dengamma value 1.030790
+parallelforwardbackwardlattice: 81 launches for forward, 81 launches for backward
+dengamma value 1.039016
+parallelforwardbackwardlattice: 101 launches for forward, 101 launches for backward
+dengamma value 1.042062
+01/10/2018 00:18:18:  Epoch[ 3 of 3]-Minibatch[ 271- 280, 3.42%]: cr = 0.07723378 * 3370; Err = 0.33916914 * 3370; time = 0.3613s; samplesPerSecond = 9328.1
+parallelforwardbackwardlattice: 64 launches for forward, 64 launches for backward
+dengamma value 1.046651
+parallelforwardbackwardlattice: 93 launches for forward, 93 launches for backward
+dengamma value 1.047353
+parallelforwardbackwardlattice: 65 launches for forward, 65 launches for backward
+dengamma value 1.033298
+parallelforwardbackwardlattice: 82 launches for forward, 82 launches for backward
+dengamma value 1.069368
+parallelforwardbackwardlattice: 91 launches for forward, 91 launches for backward
+dengamma value 1.086779
+parallelforwardbackwardlattice: 53 launches for forward, 53 launches for backward
+dengamma value 1.058958
+parallelforwardbackwardlattice: 43 launches for forward, 43 launches for backward
+dengamma value 1.017121
+parallelforwardbackwardlattice: 96 launches for forward, 96 launches for backward
+dengamma value 1.097401
+parallelforwardbackwardlattice: 38 launches for forward, 38 launches for backward
+dengamma value 1.070772
+parallelforwardbackwardlattice: 42 launches for forward, 42 launches for backward
+dengamma value 1.071142
+01/10/2018 00:18:19:  Epoch[ 3 of 3]-Minibatch[ 281- 290, 3.54%]: cr = 0.09768141 * 2930; Err = 0.30375427 * 2930; time = 0.3545s; samplesPerSecond = 8265.5
+parallelforwardbackwardlattice: 41 launches for forward, 41 launches for backward
+dengamma value 1.021346
+dengamma value 1.027858
+parallelforwardbackwardlattice: 68 launches for forward, 68 launches for backward
+dengamma value 1.040996
+parallelforwardbackwardlattice: 71 launches for forward, 71 launches for backward
+dengamma value 1.066689
+parallelforwardbackwardlattice: 48 launches for forward, 48 launches for backward
+dengamma value 1.117846
+parallelforwardbackwardlattice: 94 launches for forward, 94 launches for backward
+dengamma value 1.140250
+parallelforwardbackwardlattice: 67 launches for forward, 67 launches for backward
+dengamma value 1.072074
+parallelforwardbackwardlattice: 23 launches for forward, 23 launches for backward
+dengamma value 1.026997
+parallelforwardbackwardlattice: 55 launches for forward, 55 launches for backward
+dengamma value 1.035705
+parallelforwardbackwardlattice: 61 launches for forward, 61 launches for backward
+dengamma value 1.037658
+01/10/2018 00:18:19:  Epoch[ 3 of 3]-Minibatch[ 291- 300, 3.66%]: cr = 0.07993258 * 2590; Err = 0.29806950 * 2590; time = 0.2891s; samplesPerSecond = 8958.9
+parallelforwardbackwardlattice: 16 launches for forward, 16 launches for backward
+dengamma value 1.044984
+parallelforwardbackwardlattice: 27 launches for forward, 27 launches for backward
+dengamma value 1.092996
+dengamma value 1.035757
+parallelforwardbackwardlattice: 25 launches for forward, 25 launches for backward
+dengamma value 1.047226
+parallelforwardbackwardlattice: 138 launches for forward, 138 launches for backward
+dengamma value 1.055431
+01/10/2018 00:18:19: Finished Epoch[ 3 of 3]: [Training] cr = 0.08408191 * 82070; Err = 0.30874863 * 82070; totalSamplesSeen = 246026; learningRatePerSample = 2e-06; epochTime=9.30867s
+01/10/2018 00:18:19: SGD: Saving checkpoint model 'D:\cntk-test-20180110001653.676476\Speech\DNN_SequenceTrainingNewReader@release_gpu/models/cntkSpeech.sequence'
+
+01/10/2018 00:18:19: Action "train" complete.
+
+01/10/2018 00:18:19: __COMPLETED__

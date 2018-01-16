@@ -1010,6 +1010,25 @@ namespace CNTK
                     computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
                     break;
                 }
+                case PrimitiveOpType::LatticeSequenceWithSoftmax:
+                {
+                    auto symListPath = functionConfig[PrimitiveFunction::AttributeNameSymListPath].Value<wstring>();
+                    auto phonePath = functionConfig[PrimitiveFunction::AttributeNamePhonePath].Value<wstring>();
+                    auto stateListPath = functionConfig[PrimitiveFunction::AttributeNameStateListPath].Value<wstring>();
+                    auto transProbPath =  functionConfig[PrimitiveFunction::AttributeNameTransProbPath].Value<wstring>();
+                    auto frameDropThresh = functionConfig[PrimitiveFunction::AttributeNameFrameDropThresh].Value<float>();
+                    auto doReferenceAlign = functionConfig[PrimitiveFunction::AttributeNameDoReferenceAlign].Value<bool>();
+                    auto seqGammarUsesMBR = functionConfig[PrimitiveFunction::AttributeNameSeqGammarUsesMBR].Value<bool>();
+                    auto seqGammarAMF = functionConfig[PrimitiveFunction::AttributeNameSeqGammarAMF].Value<float>();
+                    auto seqGammarLMF = functionConfig[PrimitiveFunction::AttributeNameSeqGammarLMF].Value<float>();
+                    auto seqGammarBMMIFactor = functionConfig[PrimitiveFunction::AttributeNameSeqGammarBMMIFactor].Value<float>();
+                    auto seqGammarWordPen = functionConfig[PrimitiveFunction::AttributeNameSeqGammarWordPen].Value<float>();
+                    auto hSmoothingWeight = functionConfig[PrimitiveFunction::AttributeNameHSmoothingWeight].Value<float>();
+
+                    computationNodePtr = New<LatticeSequenceWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath,
+                        hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen);
+                    break;
+                }
                 case PrimitiveOpType::ForwardBackward:
                 {
                     auto delayContraint = functionConfig[PrimitiveFunction::AttributeNameDelayConstraint].Value<int>();

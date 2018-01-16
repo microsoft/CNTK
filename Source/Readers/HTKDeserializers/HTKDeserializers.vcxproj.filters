@@ -13,10 +13,16 @@
       <Filter>MLF</Filter>
     </ClCompile>
     <ClCompile Include="HTKDeserializer.cpp">
-      <Filter>HTK</Filter>
+      <Filter>Common\HTK</Filter>
     </ClCompile>
     <ClCompile Include="MLFIndexBuilder.cpp">
       <Filter>MLF</Filter>
+    </ClCompile>
+    <ClCompile Include="LatticeDeserializer.cpp">
+      <Filter>Lattice</Filter>
+    </ClCompile>
+    <ClCompile Include="LatticeIndexBuilder.cpp">
+      <Filter>Lattice</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -43,25 +49,31 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="HTKChunkDescription.h">
-      <Filter>HTK</Filter>
+      <Filter>Common\HTK</Filter>
     </ClInclude>
     <ClInclude Include="MLFUtils.h">
       <Filter>MLF</Filter>
     </ClInclude>
     <ClInclude Include="UtteranceDescription.h">
-      <Filter>HTK</Filter>
+      <Filter>Common\HTK</Filter>
     </ClInclude>
     <ClInclude Include="MLFDeserializer.h">
       <Filter>MLF</Filter>
     </ClInclude>
     <ClInclude Include="HTKFeaturesIO.h">
-      <Filter>HTK</Filter>
+      <Filter>Common\HTK</Filter>
     </ClInclude>
     <ClInclude Include="HTKDeserializer.h">
-      <Filter>HTK</Filter>
+      <Filter>Common\HTK</Filter>
     </ClInclude>
     <ClInclude Include="MLFIndexBuilder.h">
       <Filter>MLF</Filter>
+    </ClInclude>
+    <ClInclude Include="LatticeDeserializer.h">
+      <Filter>Lattice</Filter>
+    </ClInclude>
+    <ClInclude Include="LatticeIndexBuilder.h">
+      <Filter>Lattice</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -74,7 +86,10 @@
     <Filter Include="MLF">
       <UniqueIdentifier>{90cbdba0-7433-40cf-a2ca-2d6e04a9cad8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="HTK">
+    <Filter Include="Lattice">
+      <UniqueIdentifier>{f6fe345a-e603-491c-b9ed-8b46d01c070c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\HTK">
       <UniqueIdentifier>{c786b890-c7e4-4617-b5df-e2fdef2291ad}</UniqueIdentifier>
     </Filter>
   </ItemGroup>

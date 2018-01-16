@@ -777,12 +777,13 @@ def HTKFeatureDeserializer(streams):
         scp_file = stream['scp']
         broadcast = stream['broadcast'] if 'broadcast' in stream else False
         defines_mb_size = stream.get('defines_mb_size', False)
+        max_sequence_length = stream.get('max_sequence_length', 65535)
         left_context, right_context = stream.context if 'context' in stream\
                                                      else (0, 0)
         htk_config = cntk_py.HTKFeatureConfiguration(stream_name, scp_file,
                                                      dimension, left_context,
                                                      right_context, broadcast,
-                                                     defines_mb_size)
+                                                     defines_mb_size, max_sequence_length)
         feat.append(htk_config)
 
     if len(feat) == 0:
@@ -815,6 +816,20 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
         if not isinstance(master_label_files, list):
             master_label_files = [master_label_files]
         return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries)
+
+def LatticeDeserializer(lattice_index_file, streams):
+    '''
+    Configures a lattice deserializer
+
+    Args:
+        lattice_index_file (str): path to the file containing list of lattice TOC (table of content) files
+    '''
+    if len(streams) != 1:
+        raise ValueError("LatticeDeserializer only accepts a single stream")
+    for stream_name, stream in streams.items():
+        if stream.stream_alias is not None:
+            raise ValueError("LatticeDeserializer does not support stream alias")
+        return cntk_py.lattice_deserializer(stream_name, lattice_index_file)
 
 def _process_image_deserializer_args(filename, streams, deserializer):
     image_stream_name = None
@@ -959,7 +974,7 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 # stream definition for use in StreamDefs
 # returns a record { stream_alias, is_sparse, optional shape, optional transforms, optional context, optional scp, optional mlf }
 def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
-              context=None, scp=None, mlf=None, broadcast=None, defines_mb_size=False):
+              context=None, scp=None, mlf=None, broadcast=None, defines_mb_size=False, max_sequence_length = 65535):
     '''
        Configuration of a stream for use with the builtin Deserializers.
        The meanings of some configuration keys have a mild dependency on the
@@ -993,6 +1008,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
           ivectors with HTK)
         defines_mb_size (`bool`, defaults to False): whether this stream defines
           the minibatch size.
+        max_sequence_length (`int`, defaults to 65535): the upper limit on the length of consumed sequences. Sequence of larger size are skipped.
     '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
     if shape is not None:
@@ -1009,6 +1025,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
     if broadcast is not None:
         config['broadcast'] = broadcast
     config['defines_mb_size'] = True if defines_mb_size else False
+    config['max_sequence_length'] = max_sequence_length
 
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension

@@ -255,12 +255,6 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     //TODO: Set proper format on matrices?
 
-    // Check that all matrices have the same device id.
-    // If not we should inject the MemoryProvider per stream.
-    int deviceId = matrices.begin()->second.matrix->GetDeviceId();
-    for (auto mx : matrices)
-        assert(mx.second.matrix->GetDeviceId() == deviceId), UNUSED(deviceId);
-
     // Do sanity checks: requested streams should be exposed by low level deserializers.
     for (const auto& mx : matrices)
     {

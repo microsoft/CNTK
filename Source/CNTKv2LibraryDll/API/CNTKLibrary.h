@@ -372,6 +372,7 @@ namespace CNTK
         DataType m_elementType;        // Element type of the stream
         NDShape m_sampleLayout;        // Layout of the sample for the stream
         bool m_definesMbSize = false;  // Flag indicating whether this stream defines minibatch size.
+        bool m_isBinary = false;       // Whether this is an opaque binary stream. Currently in use only for lattices.
 
         std::wstring AsString() const
         {
@@ -4203,7 +4204,15 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the edit distance error for specified operands.
     ///
-    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
+    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, 
+        const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation for sequence with lattice training (typically for speech).
+    ///
+    CNTK_API FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symbolListPath, 
+        const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transitionProbabilityPath, float smoothingWeight, float frameDropThreshold, bool doReferenceAlign, bool gammarUsesMBR, 
+        float gammarAMF, float gammarLMF, float gammarBMMIFactor, float gammarWordPenalty, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the forwardbackward for specified operands.
@@ -5742,8 +5751,8 @@ namespace CNTK
 
     struct HTKFeatureConfiguration
     {
-        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast, bool definesMbSize = false)
-            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast), m_definesMbSize(definesMbSize)
+        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast, bool definesMbSize = false, size_t maxSequenceLength = SIZE_MAX)
+            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast), m_definesMbSize(definesMbSize), m_maxSequenceLength(maxSequenceLength)
         {}
 
         std::wstring m_streamName;
@@ -5753,6 +5762,7 @@ namespace CNTK
         size_t m_right;
         bool m_broadcast;
         bool m_definesMbSize;
+        size_t m_maxSequenceLength;
     };
 
     typedef Dictionary ImageTransform;
@@ -5814,6 +5824,11 @@ namespace CNTK
     /// Create an HTKMLFDeserializer with the specified options
     ///
     CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false);
+
+    ///
+    /// Create a LatticeDeserializer with the specified options
+    ///
+    CNTK_API  Deserializer LatticeDeserializer(const std::wstring& streamName, const std::wstring& latticeIndexFile);
 
     ///
     /// Instantiate the CNTK built-in text format minibatch source

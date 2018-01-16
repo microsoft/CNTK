@@ -65,7 +65,6 @@ public:
 
             // prep for parallel implementation (CUDA)
             parallellattice.setdevice(DeviceId);
-
             if (parallellattice.enabled())                             // send hmm set to GPU if GPU computation enabled
                 parallellattice.entercomputation(m_hset, mbrclassdef); // cache senone2classmap if mpemode
             initialmark = true;

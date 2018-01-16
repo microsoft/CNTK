@@ -98,6 +98,8 @@
     <ClInclude Include="HTKDeserializer.h" />
     <ClInclude Include="HTKFeaturesIO.h" />
     <ClInclude Include="HTKMLFReader.h" />
+    <ClInclude Include="LatticeDeserializer.h" />
+    <ClInclude Include="LatticeIndexBuilder.h" />
     <ClInclude Include="MLFDeserializer.h" />
     <ClInclude Include="MLFUtils.h" />
     <ClInclude Include="MLFIndexBuilder.h" />
@@ -114,6 +116,8 @@
     </ClCompile>
     <ClCompile Include="HTKDeserializer.cpp" />
     <ClCompile Include="HTKMLFReader.cpp" />
+    <ClCompile Include="LatticeDeserializer.cpp" />
+    <ClCompile Include="LatticeIndexBuilder.cpp" />
     <ClCompile Include="MLFDeserializer.cpp" />
     <ClCompile Include="MLFUtils.cpp" />
     <ClCompile Include="MLFIndexBuilder.cpp" />

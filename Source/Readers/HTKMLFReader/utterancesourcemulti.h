@@ -1117,10 +1117,7 @@ public:
                                             classids[j]->push_back(e.classid);
                                             if (m_generatePhoneBoundaries)
                                             {
-                                                if (e.phonestart != 0 && t == e.firstframe)
-                                                    phoneboundaries[j]->push_back((HMMIDTYPE)e.phonestart);
-                                                else
-                                                    phoneboundaries[j]->push_back((HMMIDTYPE)0);
+                                                phoneboundaries[j]->push_back((HMMIDTYPE)0);
                                             }
                                         }
                                         numclasses[j] = std::max(numclasses[j], (size_t)(1u + e.classid));
