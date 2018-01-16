@@ -7,9 +7,16 @@
 import os
 import re
 import numpy as np
+import pytest
+
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs.ipynb")
+   
+    return notebook
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_302B_Image_Super-resolution_Using_CNNs_and_GANs.ipynb")
 datadir = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "data", "BerkeleySegmentationDataset")
 
 # Run this on GPU only

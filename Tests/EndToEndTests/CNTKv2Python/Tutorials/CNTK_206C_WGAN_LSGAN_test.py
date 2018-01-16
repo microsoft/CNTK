@@ -7,9 +7,15 @@
 import os
 import re
 import numpy as np
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_206C_WGAN_LSGAN.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_206C_WGAN_LSGAN.ipynb"")
+   
+    return notebook
+
 notebook_deviceIdsToRun = [0]
 notebook_timeoutSeconds = 900
 

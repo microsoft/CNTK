@@ -9,9 +9,16 @@ import re
 import numpy as np
 import pytest
 import shutil
+import pytest
+
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_201A_CIFAR-10_DataLoader.ipynb")
+  
+    return notebook
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_201A_CIFAR-10_DataLoader.ipynb")
 datadir = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "data", "CIFAR-10")
 reWeekly = re.compile(r'^weekly\b', re.IGNORECASE)
 
