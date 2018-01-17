@@ -351,11 +351,29 @@ namespace marian
             std::vector<float> m_guidedAlignment; // [size() * front().batchWidth() * back().batchWidth()]
         };
         // CNTK only: helper function to embed data in CNTK format
-        static inline Expr embedCntk(const Expr& srcEmbeddings, const std::vector<CNTK::Variable>& batch)
+        static inline Expr embedCntk(const Expr& srcEmbeddings, const Ptr<SubBatch>& subBatch)
         {
+            const auto& batch = *subBatch->cntkBatchP();
             // embed them
             // For CNTK sparse vectors, the batch axis is 1.
-            CNTK::Variable embeddedBatch = CNTK::Times(srcEmbeddings, CNTK::Splice(batch, CNTK::Axis(1)));
+            // TODO: correctly recreate the packed data, and then use that earlier on
+            //auto seqValues = std::vector<CNTK::NDArrayViewPtr>(CNTK::Transform(batch, [&](const CNTK::Variable& seq) { return seq.Value(); }));
+            //auto batchValue = CNTK::Value::Create({ batch.front().Shape().Dimensions().front() }, seqValues, Dynamite::CurrentDevice());
+            size_t S = subBatch->batchSize();
+            size_t T = subBatch->batchWidth();
+            const auto& mask = subBatch->mask();
+            const auto& dummy = batch.front()[0];
+            std::vector<CNTK::Variable> interleavedWords(CNTK::Transform(CNTK::NumericRangeSpan<size_t>(S * T), [&](const size_t i)
+            {
+                size_t t = i / S;
+                size_t s = i % S;
+                if (mask[i])
+                    return batch[s][t];
+                else
+                    return dummy;
+            }));
+            CNTK::Variable interleavedBatch = CNTK::Splice(interleavedWords, CNTK::Axis(1));
+            CNTK::Variable embeddedBatch = CNTK::Times(srcEmbeddings, interleavedBatch);
             return embeddedBatch;
             // put the longest at the end
             //CNTK::Variable* longestSeq = batch.front();

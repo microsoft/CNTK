@@ -24,7 +24,7 @@ protected:
     //auto graph = srcEmbeddings->graph();
     auto chosenEmbeddings =
         /*if*/ (subBatch->cntkBatchP()) ?  // CNTK-specific: CNTK corpus data is stored differently.
-            data::embedCntk(srcEmbeddings, *subBatch->cntkBatchP())
+            data::embedCntk(srcEmbeddings, subBatch)
         /*else*/ :
             rows(srcEmbeddings, subBatch->indices());
 
@@ -107,7 +107,11 @@ public:
     int dimBatch = subBatch->batchSize();
     int dimWords = subBatch->batchWidth();
 
-    auto chosenEmbeddings = rows(yEmb, subBatch->indices());
+    auto chosenEmbeddings =
+        /*if*/ (subBatch->cntkBatchP()) ?  // CNTK-specific: CNTK corpus data is stored differently.
+            data::embedCntk(yEmb, subBatch)
+        /*else*/ :
+            rows(yEmb, subBatch->indices());
 
     auto y
         = reshape(chosenEmbeddings, {dimWords, dimBatch, opt<int>("dim-emb")});
