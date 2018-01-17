@@ -95,7 +95,8 @@ static UnaryModel Stabilizer(double steepness = 1)
         [=]() -> Variable
     {
         CountAPICalls(3);
-        return LogAddExp(param * steepFactor, zero) * invSteepFactor;
+        return LogAddExp(param * (Variable)steepFactor, zero) * invSteepFactor;
+        // note: without (Variable), the compiler tries to match NDArrayViewPtr::operator*, for unknown reasons
     }, Named("softplusOfParam"));
     //steepness;
 
