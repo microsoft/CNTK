@@ -23,8 +23,8 @@ protected:
 
     //auto graph = srcEmbeddings->graph();
     auto chosenEmbeddings =
-        /*if*/ (subBatch->cntkBatchP()) ?  // CNTK-specific: CNTK corpus data is stored differently.
-            data::embedCntk(srcEmbeddings, subBatch)
+        /*if*/ (subBatch->oneHot()) ?  // CNTK-specific: CNTK corpus data is stored differently.
+            Times(srcEmbeddings, subBatch->oneHot())//data::embedCntk(srcEmbeddings, subBatch)
         /*else*/ :
             rows(srcEmbeddings, subBatch->indices());
 
@@ -108,8 +108,8 @@ public:
     int dimWords = subBatch->batchWidth();
 
     auto chosenEmbeddings =
-        /*if*/ (subBatch->cntkBatchP()) ?  // CNTK-specific: CNTK corpus data is stored differently.
-            data::embedCntk(yEmb, subBatch)
+        /*if*/ (subBatch->oneHot()) ?  // CNTK-specific: CNTK corpus data is stored differently.
+            Times(yEmb, subBatch->oneHot())//data::embedCntk(yEmb, subBatch)
         /*else*/ :
             rows(yEmb, subBatch->indices());
 

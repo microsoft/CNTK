@@ -76,6 +76,7 @@ double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
 size_t minibatchSize = 4096;
 size_t maxBatchSizePerWorker = 2000;// CeilDiv(4096, 6); // this much fits into RAM
+bool insertBOS = true;
 
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
@@ -89,10 +90,11 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         srcDevFile   = L"F:/data2/fseide/marian-examples/transformer/data/valid.bpe.en";
         tgtDevFile   = L"F:/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
         srcTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
-        tgtTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
+        tgtTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
         srcVocabFile = L"F:/data2/fseide/marian-examples/transformer/model/vocab.ende.txt";
         tgtVocabFile = L"F:/data2/fseide/marian-examples/transformer/model/vocab.ende.txt";
         bucketingFactor = 10;
+        insertBOS = false; // Marian model does not expect <s>
     }
     else if (systemId == "chs_enu")
     {
@@ -709,8 +711,8 @@ MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& 
 {
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
-            PlainTextStreamConfiguration(L"src", srcVocabSize, { srcFile }, { srcVocabFile, L"<s>", L"</s>", L"<unk>" }),
-            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { tgtFile }, { tgtVocabFile, L"<s>", L"</s>", L"<unk>" })
+            PlainTextStreamConfiguration(L"src", srcVocabSize, { srcFile }, { srcVocabFile, insertBOS ? L"<s>" : L"", L"</s>", L"<unk>" }),
+            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { tgtFile }, { tgtVocabFile, insertBOS ? L"<s>" : L"", L"</s>", L"<unk>" })
         }) },
         /*randomize=*/isTraining);
     minibatchSourceConfig.maxSamples = isTraining ? MinibatchSource::InfinitelyRepeat : MinibatchSource::FullDataSweep;
@@ -936,15 +938,15 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto mparamsVector = graph->GetAllParameters();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
     // TODO: figure out why make_shared does not work here ^^
-    mparams->LogParameters();
+    //mparams->LogParameters();
     auto model_fn = BinaryFoldingModel(mparamsVector,
             [=](const /*batch*/vector<Variable>& sources, const /*batch*/vector<Variable>& targets) -> Variable
     {
         // convert source batch to Marian CorpusBatch
         auto batch = New<marian::data::CorpusBatch>(vector<Ptr<marian::data::SubBatch>>
         {
-            New<marian::data::SubBatch>(&sources), // wrap references to the CNTK variables in SubBatch instances
-            New<marian::data::SubBatch>(&targets)
+            New<marian::data::SubBatch>(sources), // wrap references to the CNTK variables in SubBatch instances
+            New<marian::data::SubBatch>(targets)
         });
 
         // encoder
@@ -967,7 +969,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         auto probs = model_fn(sources, targets);
 
         // wrap targets in a SubBatch once again
-        let subBatch = New<marian::data::SubBatch>(&targets);
+        let subBatch = New<marian::data::SubBatch>(targets);
         int dimBatch = subBatch->batchSize();
         int dimWords = subBatch->batchWidth();
         let trgMask = graph->constant({ dimWords, dimBatch, 1 }, inits::from_vector(subBatch->mask()));
@@ -999,6 +1001,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     });
 #endif
     // run something through to get the parameter matrices shaped --ugh!
+#if 0
     criterion_fn(
     {
         Constant({ srcVocabSize, (size_t)2 }, CurrentDataType(), 0.0, CurrentDevice()),
@@ -1008,10 +1011,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         Constant({ tgtVocabSize, (size_t)3 }, CurrentDataType(), 0.0, CurrentDevice()),
         Constant({ tgtVocabSize, (size_t)2 }, CurrentDataType(), 0.0, CurrentDevice())
     });
+#endif
 
     // data
-    if (runProfiling) // if profiling then use small files so we don't measure the load time
-        srcTrainFile = srcTestFile, tgtTrainFile = tgtTestFile;
+    if (runProfiling     ||true) // if profiling then use small files so we don't measure the load time
+        srcTrainFile = srcDevFile, tgtTrainFile = tgtDevFile;
     let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/true);
 
     model_fn.LogParameters();

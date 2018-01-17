@@ -265,13 +265,11 @@ namespace marian
         public:
             SubBatch(int size, int width) : // create an empty batch (all mask values 0) of given dimensions
                 m_indices(size * width, 0), m_mask(size * width, 0), m_totalNumTokens(0),
-                m_numSequences(size), m_maxSequenceLength(width), m_cntkBatchP(nullptr)
+                m_numSequences(size), m_maxSequenceLength(width)
             {
             }
-            SubBatch(const std::vector<CNTK::Variable>* sequencesP) : // CNTK-specific: Encode CNTK batch in this data structure
-                m_cntkBatchP(sequencesP)
+            SubBatch(const std::vector<CNTK::Variable>& sequences) // CNTK-specific: Encode CNTK batch in this data structure
             {
-                const auto& sequences = *m_cntkBatchP;
                 // we just keep the data as a CNTK batch, but create the mask here already
                 // Note that we keep a pointer to the CNTK batch, so the caller must keep the object alive.
                 m_numSequences = sequences.size();
@@ -293,6 +291,40 @@ namespace marian
                     for (size_t t = len; t < m_maxSequenceLength; t++)
                         m_mask[m_numSequences * t + s] = 0;
                 }
+
+                // create interleaved data vector
+                // TODO: This warrants a special kernel.
+                //auto seqValues = std::vector<CNTK::NDArrayViewPtr>(CNTK::Transform(batch, [&](const CNTK::Variable& seq) { return seq.Value(); }));
+                //auto batchValue = CNTK::Value::Create({ batch.front().Shape().Dimensions().front() }, seqValues, Dynamite::CurrentDevice());
+                size_t S = m_numSequences;
+                size_t T = m_maxSequenceLength;
+                const auto& dummy = sequences.front()[0];
+                std::vector<CNTK::Variable> interleavedWords(CNTK::Transform(CNTK::NumericRangeSpan<size_t>(S * T), [&](const size_t i)
+                {
+                    size_t t = i / S;
+                    size_t s = i % S;
+                    if (m_mask[i])
+                        return sequences[s][t];
+                    else
+                        return dummy;
+                }));
+                sequences[0].Value()->LogToFile(L"send[0]");
+                sequences[1].Value()->LogToFile(L"send[1]");
+                CNTK::Variable interleavedBatch = CNTK::Splice(interleavedWords, CNTK::Axis(1));
+                let v = interleavedBatch.Value();
+                v->LogToFile(L"interleaved");
+                fflush(stderr);
+                m_oneHot = interleavedBatch;
+                // put the longest at the end
+                //CNTK::Variable* longestSeq = batch.front();
+                //for (const auto& seq : batch)
+                //    if (seq.size() > longestSeq->size())
+                //        longestSeq = &seq;
+                // create an input set, with longest at the end
+                //auto chosenEmbeddings = rows(srcEmbeddings, subBatch->indices());
+                //auto batchEmbeddings
+                //    = reshape(chosenEmbeddings, { dimWords, dimBatch, dimEmb });
+
             }
             int batchSize()  const { return m_numSequences;  }
             int batchWidth() const { return m_maxSequenceLength; }
@@ -301,7 +333,7 @@ namespace marian
             std::vector<Word>& indices() { return m_indices; }
             std::vector<float>& mask()   { return m_mask; }
             const std::vector<Word>& indices() const { return m_indices; }
-            const std::vector<CNTK::Variable>* cntkBatchP() const { return m_cntkBatchP; } // CNTK only
+            const Expr& oneHot() const { return m_oneHot; } // CNTK only
             const std::vector<float>& mask()   const { return m_mask; }
         private:
             size_t m_numSequences;       // number of sequences
@@ -310,8 +342,8 @@ namespace marian
             // Sentence data is stored as a concatenation of all sequences, which have been padded
             // to m_maxSequenceLength. The resulting data can be reshaped to a column-major [T x S] tensor.
             // The mask is 1 for valid entries, and 0 for padding entries.
-            std::vector<Word> m_indices; // [positionInSequence * m_numSequences + sequenceIndex] word indices as interleaved batch like CNTK
-            const std::vector<CNTK::Variable>* m_cntkBatchP;  // CNKT only: reference to the CNTK-side data
+            std::vector<Word> m_indices; // [positionInSequence * m_numSequences + sequenceIndex] word indices as interleaved batch like CNTK V1
+            Expr m_oneHot;     // CNTK only: alternatively, store as one-hot (same order as m_indices)
             std::vector<float> m_mask;   // 1/0 mask of same size
         };
         class CorpusBatch : public Batch // represents a set of data streams, e.g. source and target
@@ -350,6 +382,7 @@ namespace marian
             std::vector<Ptr<SubBatch>> m_streams; // e.g. { source, target }
             std::vector<float> m_guidedAlignment; // [size() * front().batchWidth() * back().batchWidth()]
         };
+#if 0
         // CNTK only: helper function to embed data in CNTK format
         static inline Expr embedCntk(const Expr& srcEmbeddings, const Ptr<SubBatch>& subBatch)
         {
@@ -385,6 +418,7 @@ namespace marian
             //auto batchEmbeddings
             //    = reshape(chosenEmbeddings, { dimWords, dimBatch, dimEmb });
         }
+#endif
     };
 
     // -----------------------------------------------------------------------
