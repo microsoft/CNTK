@@ -1307,7 +1307,7 @@ namespace CNTK
 
     FunctionPtr Transpose(const Variable& operand, const std::wstring& name)
     {
-        if (operand.Shape().Rank() <= 2)
+        if (operand.Shape().Rank() > 2)
             InvalidArgument("Transpose called with operand '%S'; only 1D or 2D operands are supported", operand.AsString().c_str());
 
         return TransposeAxes(operand, Axis(0), Axis(1), name);
