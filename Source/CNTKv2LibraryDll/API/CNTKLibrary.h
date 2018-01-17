@@ -2286,18 +2286,24 @@ namespace CNTK
         CNTK_API size_t CurrentValueTimeStamp() const;
 
         ///
-        /// In a dynamic setting, the value of this node is knowable. This computes and returns it.
+        /// In Dynamite, the value of this node is knowable. This computes and returns it.
         /// The requirement is that this InternalVariable is the output of a Function that only
         /// depends on Constants and Parameters but not on Inputs and Placeholders.
         ///
         CNTK_API NDArrayViewPtr Value() const;
 
         ///
-        /// In a dynamic setting, this computes the gradient of this InternalVariable w.r.t. given leaves.
+        /// In Dynamite, this computes the gradient of this InternalVariable w.r.t. given leaves.
         /// Beta can be 0 or 1. If 1, gradients are added to.
         /// TODO: Function::grad() allows to pass multiple roots. Does that ever make sense in this context?
         ///
         CNTK_API void Backward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients, double beta = 0.0) const;
+
+        ///
+        /// Test whether a variable is non-empty.
+        /// Use this to test for a default-constructed variable to denote "None".
+        ///
+        operator bool() const { return (bool)m_dataFields; }
     protected:
         class AutoBatch;
         class Memoizer;
@@ -2473,11 +2479,6 @@ namespace CNTK
         /// Length of the last axis.
         ///
         CNTK_API size_t size() const;
-
-        ///
-        /// Test whether a variable is non-empty.
-        ///
-        operator bool() const { return (bool)m_dataFields; }
 
     protected:
         Variable(const InternalVariable& other, const ConstFunctionPtr& composite, const ConstPrimitiveFunctionPtr& primitive);
