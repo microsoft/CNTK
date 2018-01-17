@@ -943,6 +943,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             [=](const /*batch*/vector<Variable>& sources, const /*batch*/vector<Variable>& targets) -> Variable
     {
         // convert source batch to Marian CorpusBatch
+        // TODO: pass this in
         auto batch = New<marian::data::CorpusBatch>(vector<Ptr<marian::data::SubBatch>>
         {
             New<marian::data::SubBatch>(sources), // wrap references to the CNTK variables in SubBatch instances
@@ -965,39 +966,49 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto criterion_fn = BinaryFoldingModel({}, { { L"model", model_fn } },
         [=](const /*batch*/vector<Variable>& sources, const /*batch*/vector<Variable>& targets) -> Variable
     {
-#if 1
-        auto probs = model_fn(sources, targets);
+        using namespace keywords;
 
-        // wrap targets in a SubBatch once again
-        let subBatch = New<marian::data::SubBatch>(targets);
-        int dimBatch = subBatch->batchSize();
-        int dimWords = subBatch->batchWidth();
-        let trgMask = graph->constant({ dimWords, dimBatch, 1 }, inits::from_vector(subBatch->mask()));
-        //let trgData = subBatch->x;
+        // convert source batch to Marian CorpusBatch
+        let batch = New<marian::data::CorpusBatch>(vector<Ptr<marian::data::SubBatch>>
+        {
+            New<marian::data::SubBatch>(sources), // wrap references to the CNTK variables in SubBatch instances
+            New<marian::data::SubBatch>(targets)
+        });
+
+        // invoke the model function
+        // TODO: pass in the Corpus batch instead of (source, targets), so that we compute that only once
+        let probs = model_fn(sources, targets);
+
+        // apply the criterion
+        let& trgSubBatch = batch->back();
+        let dimBatch = trgSubBatch->batchSize();
+        let dimWords = trgSubBatch->batchWidth();
+        let  trgMask = graph->constant({ dimWords, dimBatch, 1 }, init = inits::from_vector(trgSubBatch->mask()));
+        let& trgData = trgSubBatch->oneHot();
+        //let trgData = trgSubBatch->x;
         //
-        //let yIdx = graph->constant({ (int)subBatch->indices().size(), 1 },
-        //    init = inits::from_vector(subBatch->indices()));
+        //let yIdx = graph->constant({ (int)trgSubBatch->indices().size(), 1 },
+        //    init = inits::from_vector(trgSubBatch->indices()));
         //Expr trgMask, trgIdx;
         ///*std::tie(trgMask, trgIdx) =*/ mmodel->getDecoders().front()->groundTruth(state, graph, batch);
-        probs.Value(); // currently fails in DetermineBatchAxis for Transpose operation
-        return probs;
-#else
-        std::string costType = opt<std::string>("cost-type");
-        float ls = inference_ ? 0.f : opt<float>("label-smoothing");
+        //probs.Value(); // currently fails in DetermineBatchAxis for Transpose operation
 
-        auto cost = Cost(nextState->getProbs(), trgIdx, trgMask, costType, ls);
+        std::string costType = mmodel->opt<string>("cost-type");
+        bool inference = false; // TODO
+        float ls = inference ? 0.f : mmodel->opt<float>("label-smoothing");
 
-        if (options_->has("guided-alignment") && !inference_) {
-            auto alignments = decoders_[0]->getAlignments();
+        auto cost = Cost(probs, trgData, trgMask, costType, ls);
+
+        if (mmodel->getOptions()->has("guided-alignment") && !inference) {
+            auto alignments = mmodel->getDecoders()[0]->getAlignments();
             ABORT_IF(alignments.empty(), "Model does not seem to support alignments");
 
             auto att = concatenate(alignments, axis = 3);
-            return cost + guidedAlignmentCost(graph, batch, options_, att);
+            return cost + guidedAlignmentCost(graph, batch, mmodel->getOptions(), att);
         }
         else {
             return cost;
         }
-#endif
     });
 #endif
     // run something through to get the parameter matrices shaped --ugh!

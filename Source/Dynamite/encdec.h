@@ -410,6 +410,8 @@ public:
     return options_->get<T>(key);
   }
 
+  const Ptr<Options>& getOptions() const { return options_; } // added for CNTK
+
   template <typename T>
   void set(std::string key, T value) {
     options_->set(key, value);

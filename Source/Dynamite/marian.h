@@ -291,40 +291,26 @@ namespace marian
                     for (size_t t = len; t < m_maxSequenceLength; t++)
                         m_mask[m_numSequences * t + s] = 0;
                 }
-
-                // create interleaved data vector
-                // TODO: This warrants a special kernel.
+                // create data tensor, in the same interleaved format
+                // TODO: This way it is highly inefficient, and warrants a special kernel.
                 //auto seqValues = std::vector<CNTK::NDArrayViewPtr>(CNTK::Transform(batch, [&](const CNTK::Variable& seq) { return seq.Value(); }));
                 //auto batchValue = CNTK::Value::Create({ batch.front().Shape().Dimensions().front() }, seqValues, Dynamite::CurrentDevice());
-                size_t S = m_numSequences;
-                size_t T = m_maxSequenceLength;
                 const auto& dummy = sequences.front()[0];
-                std::vector<CNTK::Variable> interleavedWords(CNTK::Transform(CNTK::NumericRangeSpan<size_t>(S * T), [&](const size_t i)
+                std::vector<CNTK::Variable> interleavedWords(CNTK::Transform(CNTK::NumericRangeSpan<size_t>(m_numSequences * m_maxSequenceLength), [&](const size_t i)
                 {
-                    size_t t = i / S;
-                    size_t s = i % S;
+                    size_t t = i / m_numSequences;
+                    size_t s = i % m_numSequences;
                     if (m_mask[i])
                         return sequences[s][t];
                     else
                         return dummy;
                 }));
-                sequences[0].Value()->LogToFile(L"send[0]");
-                sequences[1].Value()->LogToFile(L"send[1]");
+                //sequences[0].Value()->LogToFile(L"sent[0]");
+                //sequences[1].Value()->LogToFile(L"sent[1]");
                 CNTK::Variable interleavedBatch = CNTK::Splice(interleavedWords, CNTK::Axis(1));
-                let v = interleavedBatch.Value();
-                v->LogToFile(L"interleaved");
-                fflush(stderr);
-                m_oneHot = interleavedBatch;
-                // put the longest at the end
-                //CNTK::Variable* longestSeq = batch.front();
-                //for (const auto& seq : batch)
-                //    if (seq.size() > longestSeq->size())
-                //        longestSeq = &seq;
-                // create an input set, with longest at the end
-                //auto chosenEmbeddings = rows(srcEmbeddings, subBatch->indices());
-                //auto batchEmbeddings
-                //    = reshape(chosenEmbeddings, { dimWords, dimBatch, dimEmb });
-
+                let vocabSize = dummy.Shape()[0];
+                m_oneHot = CNTK::Reshape(interleavedBatch, { (size_t)vocabSize, m_numSequences, m_maxSequenceLength });
+                //m_oneHot.Value()->LogToFile(L"interleaved"), fflush(stderr);
             }
             int batchSize()  const { return m_numSequences;  }
             int batchWidth() const { return m_maxSequenceLength; }
@@ -728,7 +714,11 @@ namespace marian
     static inline Expr cross_entropy(const Expr& o, const Expr& y)
     {
         auto numClasses = o.Shape()[0];
-        auto yOneHot = CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0));
+        const Expr& yOneHot =
+            /*if*/ (y.Shape()[0] != numClasses) ? // Marian passes a vector here, must convert to CNTK's one-hot convention
+                (Expr)CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0))
+            /*else*/:                    // Dynamite passes ready-to-use one-hot tensors
+                y;
         return Alias(Dynamite::CrossEntropyWithSoftmax(o, yOneHot, CNTK::Axis(0)), L"CrossEntropyWithSoftmax(" + o.Name() + L",OneHot(" + y.Name() + L",)" + std::to_wstring(numClasses) + L")");
     }
 
@@ -840,7 +830,8 @@ namespace marian
         return InternalOps::NotImplemented("pooling_with_masking");
     }
 
-    static inline Expr Cost(Expr logits, Expr indices, Expr mask, std::string costType, float smoothing) // (direct copy)
+    // (direct copy, but note that 'indices' and also be oneHot, courtesy of cross_entropy())
+    static inline Expr Cost(Expr logits, Expr indices, Expr mask, std::string costType, float smoothing)
     {
         using namespace keywords;
 
