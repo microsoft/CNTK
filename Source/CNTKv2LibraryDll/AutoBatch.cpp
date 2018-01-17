@@ -32,8 +32,8 @@ using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
 //#define LOG_DETAILS     // if defined, log all forward and backward operations
-#define LOG_STATS         // if defined, log statistics (#operations)
-#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
+//#define LOG_STATS         // if defined, log statistics (#operations)
+//#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
 //#define LOG_GPU         // if defined, profile the GPU (warning: this will disturb the CPU measurements)
 #define NUM_MBS_TO_LOG 10 // 4
 
@@ -2419,9 +2419,28 @@ class InternalVariable::AutoBatch
             case PrimitiveOpType::OneHot: // TODO
                 // BUGBUG: This is not complete. Think this through. For now, only used for scalar constant to vector expansion.
                 return{ StackingMode::BATCHING, maxRank, 1 };
-            case PrimitiveOpType::TransposeAxes: // TODO
-                fail_if(true, "DetermineBatchAxis: not yet implemented for TransposeAxes");
-                break;
+            case PrimitiveOpType::TransposeAxes:
+                {
+                    size_t maxAxisIndex = 0; // determine the largest axis involved in transposition
+                    if (f.m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                    {
+                        const auto& perm = f.m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                        for (size_t i = 0; i < perm.size(); i++)
+                        {
+                            let axisIndex = perm[i].Value<Axis>().StaticAxisIndex();
+                            if (axisIndex != i && axisIndex > maxAxisIndex) // record largest axis that is involved in any axis swap
+                                maxAxisIndex = axisIndex;
+                        }
+                    }
+                    else
+                    {
+                        maxAxisIndex = max(f.m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>().StaticAxisIndex(),
+                                           f.m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>().StaticAxisIndex());
+                    }
+                    if (maxAxisIndex >= stackingAxis) // transposing into the batch axis: can't stack
+                        goto mustBatch;
+                    break;
+                }
             }
             // no problem case detected: we can stack
             if (!hasSparse)

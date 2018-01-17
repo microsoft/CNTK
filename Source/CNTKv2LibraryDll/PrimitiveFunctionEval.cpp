@@ -210,7 +210,6 @@ namespace CNTK
             // This is not hard but different from the above ops, in that it requires manipulating the TensorShape.
             // Basically we need to create a transposed view on the arg, and then do an opCopy to bring it into dense format again.
             LogicError("Variable '%S' Value(): Memoziation of unary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-            LogicError("Variable '%S' Value(): Memoziation of ternary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // the following operations are not TensorView, and may be implementable through relatively simple calls to Matrix
         case PrimitiveOpType::BatchNormalization:
             // batch normalization is a little tricky

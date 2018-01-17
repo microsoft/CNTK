@@ -71,10 +71,15 @@ namespace marian
     class Expr : public CNTK::Variable
     {
         typedef CNTK::Variable Base;
+#if 0   // this does not work presently because see-through ops on leaves are not allowed presently
+        void Debug() const { Value(); }
+#else
+        void Debug() const {}
+#endif
     public:
-        Expr(const CNTK::Variable& v) : Base(v) { }
-        Expr(CNTK::Variable&& v) : Base(std::move(v)) { }
-        Expr(const CNTK::FunctionPtr& f) : Base(f) { }
+        Expr(const CNTK::Variable& v) : Base(v) { Debug(); }
+        Expr(CNTK::Variable&& v) : Base(std::move(v)) { Debug(); }
+        Expr(const CNTK::FunctionPtr& f) : Base(f) { Debug(); }
         Expr(const std::nullptr_t&) : Base(CNTK::Variable()) { }
         Expr() : Base(CNTK::Variable()) { }
         Expr& operator=(const Expr& other) { Base::operator=(other); return *this; }
@@ -456,6 +461,7 @@ namespace marian
     {
         static inline Expr NotImplemented(const char* s) { CNTK::LogicError(s); return CNTK::Variable(); }
 
+        // helper to implement sum over many elements
         static inline Expr plus(const std::vector<Expr>::const_iterator& b, const std::vector<Expr>::const_iterator& e) // TODO: use fused Gather/ReduceSum?
         {
             size_t n = e - b;
@@ -466,6 +472,8 @@ namespace marian
                 return CNTK::Plus(plus(b, mid), plus(mid, e));
         }
 
+        // constants
+        // TODO: for adding and multiplying scalars, we should have special operations, without creating Constants all the time
         // this is not efficient, but all we can do presently
         template<typename Number>
         static inline Expr Scalar(Number x) { return CNTK::Constant::Scalar(CNTK::DataType::Float, (float)x, Dynamite::CurrentDevice()); }
@@ -487,6 +495,8 @@ namespace marian
             auto viewShape = mappers::ToNDShape(npShape); // convert to CNTK's column-major viewShape
             return Constant(viewShape, init, isVolatile);
         }
+
+        // dropout
         static inline std::vector<float> DropoutMask(size_t n, float dropProb)
         {
             // PERF BUGBUG: For now, we determine the dropout mask on the CPU. Instead, we should get the rand op to work under Dynamite.
@@ -503,6 +513,19 @@ namespace marian
         }
         static inline Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              inits::Internal::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
         static inline Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), inits::Internal::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+
+        // Reshape helper
+        static inline Expr Reshape(const CNTK::Variable& operand, const CNTK::NDShape& newShape)
+        {
+            if (!operand.IsConstant())
+                return CNTK::Reshape(operand, newShape);
+            // special treatment of constants: recreate a new constant with the correct shape
+            // This is because AutoBatch can currently Functions, but not Constants, but Marian reshapes its inputs.
+            // If we change AutoBatch's redirect from redirecting Functions to redirecting Variables, this workaround can be removed.
+            const auto& val = operand.Value();
+            auto valReshaped = val->AsShape(newShape);
+            return CNTK::Constant(valReshaped);
+        }
     };
 
     static inline Expr operator-(const Expr& a) { return CNTK::Negate(a); }
@@ -622,8 +645,8 @@ namespace marian
         bShapeExtended[0] = 1;
         bShapeExtended[1] = J;
         bShapeExtended[2] = K;
-        auto aExtended = CNTK::Reshape(a, CNTK::NDShape(std::move(aShapeExtended))); // this is free in Dynamite
-        auto bExtended = CNTK::Reshape(b, CNTK::NDShape(std::move(bShapeExtended)));
+        auto aExtended = InternalOps::Reshape(a, CNTK::NDShape(std::move(aShapeExtended))); // this is free in Dynamite
+        auto bExtended = InternalOps::Reshape(b, CNTK::NDShape(std::move(bShapeExtended)));
         // perform the matrix product
         auto cExtended = CNTK::InnerProduct(aExtended, bExtended, CNTK::Axis(1));
         // remove the extra axis
@@ -653,7 +676,7 @@ namespace marian
         return concatenate(std::vector<Expr>(repeats, a), ax);
     }
 
-    static inline Expr reshape(const Expr& a, Shape ndShape) { return CNTK::Reshape(a, mappers::ToNDShape(ndShape)); }
+    static inline Expr reshape(const Expr& a, Shape ndShape) { return InternalOps::Reshape(a, mappers::ToNDShape(ndShape)); }
 
     static inline Expr atleast_nd(const Expr& a, size_t dims)
     {
@@ -661,20 +684,20 @@ namespace marian
         if (viewShape.Rank() >= dims)
             return a;
         else
-            return CNTK::Reshape(a, viewShape.AppendAxis(dims -1, 1)); // pad with ones at end
+            return InternalOps::Reshape(a, viewShape.AppendAxis(dims -1, 1)); // pad with ones at end
     }
     static inline Expr atleast_1d(const Expr& a) { return atleast_nd(a, 1); }
     static inline Expr atleast_2d(const Expr& a) { return atleast_nd(a, 2); }
     static inline Expr atleast_3d(const Expr& a) { return atleast_nd(a, 3); }
     static inline Expr atleast_4d(const Expr& a) { return atleast_nd(a, 4); }
 
-    static inline Expr flatten(const Expr& a) { return CNTK::Reshape(a, { a.Shape().TotalSize() }); }
+    static inline Expr flatten(const Expr& a) { return InternalOps::Reshape(a, { a.Shape().TotalSize() }); }
     static inline Expr flatten_2d(const Expr& a)
     {
         const auto& viewShape = a.Shape();
         size_t I = viewShape.Dimensions().front();
         size_t J = viewShape.TotalSize() / I; // all except first NDShape axis get flattened
-        return CNTK::Reshape(a, { I, J });
+        return InternalOps::Reshape(a, { I, J });
     }
 
     static inline Expr rows(const Expr& a, const std::vector<size_t>& indices)
@@ -709,14 +732,13 @@ namespace marian
 
     static inline Expr mean(const Expr& a, keywords::axis_k ax = 0) { return CNTK::ReduceMean(a, mappers::ToCNTKAxis(a, ax)); }
 
-    // o = unnormalized log prob; y = label as an index, not one-hot
-    // o: (3,120); y: (120,)
+    // o = unnormalized log prob; y = label as an index if dense, and CNTK one-hot if sparse
     static inline Expr cross_entropy(const Expr& o, const Expr& y)
     {
         auto numClasses = o.Shape()[0];
         const Expr& yOneHot =
-            /*if*/ (y.Shape()[0] != numClasses) ? // Marian passes a vector here, must convert to CNTK's one-hot convention
-                (Expr)CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0))
+            /*if*/ (!y.IsSparse()) ? // Marian passes a vector here, must convert to CNTK's one-hot convention
+                (const Expr&)CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0))
             /*else*/:                    // Dynamite passes ready-to-use one-hot tensors
                 y;
         return Alias(Dynamite::CrossEntropyWithSoftmax(o, yOneHot, CNTK::Axis(0)), L"CrossEntropyWithSoftmax(" + o.Name() + L",OneHot(" + y.Name() + L",)" + std::to_wstring(numClasses) + L")");

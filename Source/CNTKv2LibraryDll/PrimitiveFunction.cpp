@@ -589,6 +589,7 @@ namespace CNTK
 
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
                             {
+                                // TODO: avoid AsVector()
                                 auto perm = AsVector<Axis>(m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
                                 auto shape = m_inputs[0].Shape();
                                 for (auto& p : perm)
@@ -599,8 +600,8 @@ namespace CNTK
                             }
                             else
                             {
-                                auto axis1 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), m_inputs[0].Shape());
-                                auto axis2 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), m_inputs[0].Shape());
+                                const auto& axis1 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), m_inputs[0].Shape());
+                                const auto& axis2 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), m_inputs[0].Shape());
 
                                 if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
                                     LogicError("Function '%S': TransposeAxes operation currently does not support transposing dynamic axes.", AsString().c_str());
