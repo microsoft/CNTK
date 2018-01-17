@@ -948,24 +948,35 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         });
 
         // encoder
-        auto state = mmodel->startState(graph, batch);
+        let state = mmodel->startState(graph, batch);
 
         // decoder input
         // This sets state->targetEmbeddings_ and state->targetMask_.
-        //Expr trgMask, trgIdx;
-        /*std::tie(trgMask, trgIdx) =*/ mmodel->getDecoders().front()->groundTruth(state, graph, batch);
+        mmodel->getDecoders().front()->groundTruth(state, graph, batch);
 
         // decoder
         // This sets state->probs_.
-        auto nextState = mmodel->step(graph, state);
+        let nextState = mmodel->step(graph, state);
 
         return nextState->getProbs();
     });
     auto criterion_fn = BinaryFoldingModel({}, { { L"model", model_fn } },
-        [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) -> Variable
+        [=](const /*batch*/vector<Variable>& sources, const /*batch*/vector<Variable>& targets) -> Variable
     {
 #if 1
-        auto probs = model_fn(features, labels);
+        auto probs = model_fn(sources, targets);
+
+        // wrap targets in a SubBatch once again
+        let subBatch = New<marian::data::SubBatch>(&targets);
+        int dimBatch = subBatch->batchSize();
+        int dimWords = subBatch->batchWidth();
+        let trgMask = graph->constant({ dimWords, dimBatch, 1 }, inits::from_vector(subBatch->mask()));
+        //let trgData = subBatch->x;
+        //
+        //let yIdx = graph->constant({ (int)subBatch->indices().size(), 1 },
+        //    init = inits::from_vector(subBatch->indices()));
+        //Expr trgMask, trgIdx;
+        ///*std::tie(trgMask, trgIdx) =*/ mmodel->getDecoders().front()->groundTruth(state, graph, batch);
         probs.Value(); // currently fails in DetermineBatchAxis for Transpose operation
         return probs;
 #else
