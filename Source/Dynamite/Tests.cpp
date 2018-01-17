@@ -172,9 +172,10 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     vector<TensorViewTest> tests =
     {
         // transpose. Note: Reference must be cloned, because AvSqrErr cannot reduce over >2 non-contiguous dimensions.
-        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 0       })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0])),{ { 13, 42 } } }, // basic transpose
-        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 0, 2, 1, 3 })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 0, 2, 1, 3 }))),{ { 13, 42, 4, 2 } } }, // 2-axis permutation
-        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 2, 3, 0 })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 1, 2, 3, 0 }))),{ { 13, 42, 4, 2 } } }, // axis rotation
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 0, 2, 1, 3 })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 0, 2, 1, 3 }))),{ { 13, 42, 4, 2 } } }, // 2-axis permutation (stackable)
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 0, 2    })->DeepClone()), "Transpose" }, VarExpr(CNTK::TransposeAxes(args[0], Axis(0), Axis(1))),{ { 13, 42, 5 } } }, // basic transpose (stackable)
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 2, 3, 0 })->DeepClone()), "Transpose_dontstack" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 1, 2, 3, 0 }))),{ { 13, 42, 4, 2 } } }, // axis rotation (not stackable)
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 0       })->DeepClone()), "Transpose_dontstack" }, VarExpr(CNTK::Transpose(args[0])),{ { 13, 42 } } }, // basic transpose (not stackable, since swapping the stack axis)
         // splicing. Uniform splicing along last dimension will use single-kernel Gather; otherwise use multiple copy ops. Test both, also batched.
         { { ValExpr(doSplice(argValues, 2)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(2))),{ {  2,  1 },{  1,  3 },{  1,  1 },{ 2, 3 } } }, // messy shapes, new axis
         { { ValExpr(doSplice(argValues, 2)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(2))),{ {  2,  1 },{  1,  3 },{  1,  1 },{ 2, 3 } } }, // messy shapes, new axis
@@ -251,19 +252,21 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     size_t numFailed = 0;
     for (let& test : tests) // loop over all tests
     {
-        let isTimes     = strstr(test.op.second, "Times")              != nullptr;
-        let isSplice    = strstr(test.op.second, "Splice")             != nullptr;
-        let isSlice     = strstr(test.op.second, "Slice")              != nullptr;
-        let isBatchNorm = strstr(test.op.second, "BatchNormalization") != nullptr; // BatchNormalization requires some special-casing
-        let isReduction = strstr(test.op.second, "Reduc")              != nullptr; // InnerProduct and Reduce
+        let isTimes                 = strstr(test.op.second, "Times")               != nullptr;
+        let isSplice                = strstr(test.op.second, "Splice")              != nullptr;
+        let isSlice                 = strstr(test.op.second, "Slice")               != nullptr;
+        let isBatchNorm             = strstr(test.op.second, "BatchNormalization")  != nullptr; // BatchNormalization requires some special-casing
+        let isReduction             = strstr(test.op.second, "Reduc")               != nullptr; // InnerProduct and Reduce
+        let isNonstackableTranspose = strstr(test.op.second, "Transpose_dontstack") != nullptr; // Transpose into last axis
 
         let aryness = test.shapes.size(); // number of arguments of this test
 
         let testStacking = testStackingEnabled &&
-                           !isSplice    &&  // splice uses funky shapes on output, don't touch the last axis
-                           !isSlice     &&  // slice reference has baked-in result dimensions that are off
-                           !isReduction &&  // some reduction ops test reduction along first axis, so can't mess with the other axes
-                           !isBatchNorm;    // TODO: update BatchNorm test to test stacking (batch along last dim); currently it batches
+                           !isSplice    &&           // splice uses funky shapes on output, don't touch the last axis
+                           !isSlice     &&           // slice reference has baked-in result dimensions that are off
+                           !isReduction &&           // some reduction ops test reduction along first axis, so can't mess with the other axes
+                           !isBatchNorm &&           // TODO: update BatchNorm test to test stacking (batch along last dim); currently it batches
+                           !isNonstackableTranspose; // our test cannot handle stacking for transpose into last axis (AutoBatch itself can; it will batch instad)
         if (testStackingEnabled && !testStacking) // if stacking-test requested but not possible for this op then don't bother
             continue;
 
