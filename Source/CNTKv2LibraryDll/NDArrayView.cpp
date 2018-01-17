@@ -479,23 +479,24 @@ namespace CNTK
     NDArrayViewPtr NDArrayView::DeepClone(const DeviceDescriptor& device, bool readOnly/* = false*/) const
     {
         NDArrayViewPtr newView = MakeSharedObject<NDArrayView>(this->GetDataType(), this->GetStorageFormat(), this->Shape(), device);
-        // TODO: for dense data, this can call TensorView, which will amount to a cudaMemcpy() while bypassing GetMatrix() complexity
+        // For dense data on the same device, we use TensorView, which will amount to a cudaMemcpy() for contiguous data
+        // (bypassing GetMatrix() complexity) and handle non-contiguous tensors.
+        bool useTensorView = !IsSparse() && Device() == device;
+        auto* us = const_cast<NDArrayView*>(this); // (need to go through a writable ref below)
         switch (m_dataType)
         {
         case DataType::Float:
-        {
-            auto newMatrix = newView->GetWritableMatrix<float>();
-            auto thisMatrix = GetMatrix<float>();
-            newMatrix->AssignValuesOf(*thisMatrix);
+            if (useTensorView)
+                TensorView<float>::template Do<2>(1, { std::ref(us->WritableNativeTensorView<float>()), std::ref(newView->WritableNativeTensorView<float>()) }, ElementWiseOperator::opCopy, ElementWiseOperator::opSum, /*alpha=*/1, /*beta=*/0);
+            else
+                newView->GetWritableMatrix<float>()->AssignValuesOf(*GetMatrix<float>());
             break;
-        }
         case DataType::Double:
-        {
-            auto newMatrix = newView->GetWritableMatrix<double>();
-            auto thisMatrix = GetMatrix<double>();
-            newMatrix->AssignValuesOf(*thisMatrix);
+            if (useTensorView)
+                TensorView<double>::template Do<2>(1, { std::ref(us->WritableNativeTensorView<double>()), std::ref(newView->WritableNativeTensorView<double>()) }, ElementWiseOperator::opCopy, ElementWiseOperator::opSum, /*alpha=*/1, /*beta=*/0);
+            else
+                newView->GetWritableMatrix<double>()->AssignValuesOf(*GetMatrix<double>());
             break;
-        }
         default:
             LogicError("NDArrayView::DeepClone: Unsupported DataType %s", DataTypeName(m_dataType));
             break;

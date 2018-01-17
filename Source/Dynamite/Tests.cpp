@@ -171,10 +171,10 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 #define ValOpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum")), #opCode "|Reduce"))
     vector<TensorViewTest> tests =
     {
-        // transpose
-        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 0, 2, 1, 3 })), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 0, 2, 1, 3 }))),{ { 13, 42, 4, 2 } } }, // 2-axis permutation
-        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 0       })), "Transpose" }, VarExpr(CNTK::Transpose(args[0])),{ { 13, 42 } } }, // basic transpose
-        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 2, 3, 0 })), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 1, 2, 3, 0 }))),{ { 13, 42, 4, 2 } } }, // axis rotation
+        // transpose. Note: Reference must be cloned, because AvSqrErr cannot reduce over >2 non-contiguous dimensions.
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 0       })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0])),{ { 13, 42 } } }, // basic transpose
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 0, 2, 1, 3 })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 0, 2, 1, 3 }))),{ { 13, 42, 4, 2 } } }, // 2-axis permutation
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 2, 3, 0 })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 1, 2, 3, 0 }))),{ { 13, 42, 4, 2 } } }, // axis rotation
         // splicing. Uniform splicing along last dimension will use single-kernel Gather; otherwise use multiple copy ops. Test both, also batched.
         { { ValExpr(doSplice(argValues, 2)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(2))),{ {  2,  1 },{  1,  3 },{  1,  1 },{ 2, 3 } } }, // messy shapes, new axis
         { { ValExpr(doSplice(argValues, 2)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(2))),{ {  2,  1 },{  1,  3 },{  1,  1 },{ 2, 3 } } }, // messy shapes, new axis
@@ -505,9 +505,9 @@ void RunDynamiteTests()
 #if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
+    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true, DeviceDescriptor::GPUDevice(0));
+#if 1 // only do a stacked one (most complicated) on the GPU by default
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
-    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true,  DeviceDescriptor::GPUDevice(0));
-#if 0 // only do a batched one on the GPU by default
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(N, DataType::Float,  /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
