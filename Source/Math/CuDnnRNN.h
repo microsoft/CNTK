@@ -63,6 +63,9 @@ private:
     cudnnRNNDescriptor_t m_rnnDesc;
     CuDnnDropout m_dropout;
     RnnAttributes m_rnnAttributes;
+#if CUDNN_MAJOR >=7
+    CuDnn::ptr_t m_cudnn;
+#endif
 
     cudnnRNNMode_t GetMode()
     {
@@ -77,15 +80,25 @@ public:
     CuDnnRNN(const RnnAttributes& rnnAttributes)
         : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnAttributes(rnnAttributes),
         m_dataType(CuDnnTensor::GetDataType<ElemType>())
+#if CUDNN_MAJOR >=7
+        , m_cudnn(CuDnn::Instance())
+#endif
     {
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
-        CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
+        CUDNN_CALL(cudnnSetRNNDescriptor(
+#if CUDNN_MAJOR >=7
+            *m_cudnn,
+#endif
+            m_rnnDesc,
             (int)m_rnnAttributes.m_hiddenSize,
             (int)m_rnnAttributes.m_numLayers,
             m_dropout,
             CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
             m_rnnAttributes.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
             GetMode(),
+#if CUDNN_MAJOR >= 7
+            CUDNN_RNN_ALGO_STANDARD,
+#endif
             m_dataType));
     }
 
