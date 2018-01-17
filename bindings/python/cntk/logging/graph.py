@@ -7,6 +7,7 @@
 import os
 import sys
 from cntk.variables import Variable
+from past.builtins import basestring
 
 
 def depth_first_search(root, visitor, depth=0):
@@ -132,6 +133,40 @@ def find_by_name(node, node_name, depth=0):
 
     return result[0]
 
+def find_by_uid(node, node_uid, depth=0):
+    '''
+    Finds a function in the graph based on its UID starting from ``node`` and doing a depth-first
+    search. It assumes that the name occurs only once.
+
+    Args:
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
+        node_uid (`str`): uid for which we are search nodes
+        depth (int, default 0): how deep into the block hierarchy the DFS
+         algorithm should go into. Set to -1 for infinite depth.
+
+    Returns:
+        Primitive (or block) function having the specified name
+
+    See also:
+        :func:`~cntk.ops.functions.Function.find_by_uid` in class
+        :class:`~cntk.ops.functions.Function`.
+
+    '''
+    if not isinstance(node_uid, basestring): # basestring is the super class of both str and unicode (Python 2.7).
+        raise ValueError('node uid has to be a string. You gave '
+                         'a %s' % type(node_uid))
+
+    result = depth_first_search(node, lambda x: x.uid == node_uid,
+                                depth)
+
+    if len(result) > 1:
+        raise ValueError('found multiple functions matching "%s". '
+                         'This should not happen as UIDs are unique.' % node_uid)
+
+    if not result:
+        return None
+
+    return result[0]
 
 def plot(root, filename=None):
     '''
