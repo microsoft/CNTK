@@ -814,11 +814,15 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     let numWorkers = communicator->Workers().size();
     let workerId = communicator->CurrentWorker().m_globalRank;
 
+#if 0   // old Dynamite model
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
-#if 1 // CONTINUE HERE
+    // run something through to get the parameter matrices shaped --ugh!
+    //model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
+
+#else // Marian model
     auto moptions = Dictionary
     (
         // These are all options given in the log. Not all are used inside the model.
@@ -933,7 +937,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
     // TODO: figure out why make_shared does not work here ^^
     mparams->LogParameters();
-    auto mmodel_fn = BinaryFoldingModel(mparamsVector,
+    auto model_fn = BinaryFoldingModel(mparamsVector,
             [=](const /*batch*/vector<Variable>& sources, const /*batch*/vector<Variable>& targets) -> Variable
     {
         // convert source batch to Marian CorpusBatch
@@ -957,20 +961,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         return nextState->getProbs();
     });
-    mmodel_fn(
-    {
-        Constant({ srcVocabSize, (size_t)2 }, CurrentDataType(), 0.0, CurrentDevice()),
-        Constant({ srcVocabSize, (size_t)3 }, CurrentDataType(), 0.0, CurrentDevice())
-    },
-    {
-        Constant({ tgtVocabSize, (size_t)3 }, CurrentDataType(), 0.0, CurrentDevice()),
-        Constant({ tgtVocabSize, (size_t)2 }, CurrentDataType(), 0.0, CurrentDevice())
-    });
-    auto mcriterion_fn = BinaryFoldingModel({}, { { L"model", mmodel_fn } },
+    auto criterion_fn = BinaryFoldingModel({}, { { L"model", model_fn } },
         [=](const /*batch*/vector<Variable>& features, const /*batch*/vector<Variable>& labels) -> Variable
     {
 #if 1
-        features; labels; return Expr();
+        auto probs = model_fn(features, labels);
+        probs.Value(); // currently fails in DetermineBatchAxis for Transpose operation
+        return probs;
 #else
         std::string costType = opt<std::string>("cost-type");
         float ls = inference_ ? 0.f : opt<float>("label-smoothing");
@@ -990,14 +987,21 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #endif
     });
 #endif
+    // run something through to get the parameter matrices shaped --ugh!
+    criterion_fn(
+    {
+        Constant({ srcVocabSize, (size_t)2 }, CurrentDataType(), 0.0, CurrentDevice()),
+        Constant({ srcVocabSize, (size_t)3 }, CurrentDataType(), 0.0, CurrentDevice())
+    },
+    {
+        Constant({ tgtVocabSize, (size_t)3 }, CurrentDataType(), 0.0, CurrentDevice()),
+        Constant({ tgtVocabSize, (size_t)2 }, CurrentDataType(), 0.0, CurrentDevice())
+    });
 
     // data
     if (runProfiling) // if profiling then use small files so we don't measure the load time
         srcTrainFile = srcTestFile, tgtTrainFile = tgtTestFile;
     let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/true);
-
-    // run something through to get the parameter matrices shaped --ugh!
-    model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
 
     model_fn.LogParameters();
 
