@@ -1046,7 +1046,18 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             auto strides = (NDShape)src->Attributes()[L"strides"].Value<NDShape>();
             if (strides.Rank() < kernelShape.Rank())
             {
+                // TODO: Try removing this branch. May not be needed after batch dimension fix.
                 strides = strides.AppendShape(NDShape(std::vector<size_t>(kernelShape.Rank() - strides.Rank(), 1)));
+            }
+            if ((strides.Rank() - kernelShape.Rank()) == 1)
+            {
+                // This can happen, for example, because a CNTK node includes strides for the channel axis as well. 
+                strides = strides.SubShape(0, strides.Rank() - 1);
+            }
+            else if ((strides.Rank() - kernelShape.Rank()) > 1)
+            {
+                // This means that the length of kernel shape and strides is off by two or more which should not happen.
+                LogicError("Node '%S': kernel shape and strides dimensionality does not match.", src->AsString().c_str());
             }
             auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
 
