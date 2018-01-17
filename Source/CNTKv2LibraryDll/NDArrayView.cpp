@@ -1241,6 +1241,16 @@ namespace CNTK
         return Reviewed(tensorShape, m_isReadOnly);
     }
 
+    NDArrayViewPtr NDArrayView::AsTransposed(const NDShapePermutation& permutation, bool inverted) const
+    {
+        // invert = false: permutation[i] denotes which original axis will become axis i: newShape[i] <- shape[permutation[i]]
+        // invert = true: opposite
+        auto tensorShape = GetTensorShape();
+        tensorShape.PermuteDimsInPlace(permutation, inverted);
+        // result is no longer memory-consecutive
+        return Reviewed(tensorShape, IsReadOnly());
+    }
+
     // TODO: This could actually be strided?
     template <typename ElementType>
     ElementType* NDArrayView::WritableDataBuffer()
@@ -1252,6 +1262,7 @@ namespace CNTK
     }
 
     // TODO: This could actually be strided?
+    // TODO: towards allowing non-dense tensors: Define the DataBuffers as contiguous, and enforce it with a check here.
     template <typename ElementType>
     const ElementType* NDArrayView::DataBuffer() const
     {
@@ -1272,7 +1283,7 @@ namespace CNTK
         let& sob = tensorView.GetSOB();
         sob.TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         let* dataBuffer = sob.Data() + tensorView.GetShape().GetOffset();
-#if 1
+#if 1   // sanity check against old implementation
         //NativeTensorView<ElementType>().GetSOBPtr()->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         // the above version is faster; make sure it is correct
         let* dataBuffer1 = NativeTensorView<ElementType>().GetSOBViewPtr()->Data();

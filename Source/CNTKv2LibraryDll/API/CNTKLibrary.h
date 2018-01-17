@@ -156,6 +156,7 @@ namespace CNTK
     //typedef std::vector<NDShapeDimension> NDShapeDimensionsSpan;
     typedef FixedVectorWithBuffer<NDShapeDimension,4> NDShapeDimensions;
     typedef NDShapeDimensions::Span NDShapeDimensionsSpan;
+    typedef FixedVectorWithBuffer<NDShapeDimension, 4> NDShapePermutation; // use as arg to NDArrayView::AsTransposed()
     class NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
@@ -1062,6 +1063,14 @@ namespace CNTK
         /// Creates a new NDArrayView which is an alias of 'this' view but with a new shape.
         ///
         CNTK_API NDArrayViewPtr AsShape(const NDShape& newShape) const;
+
+        ///
+        /// Creates a new NDArrayView which is an alias of 'this' view but with axes permuted.
+        /// The resulting object is no longer contiguous in memory, and therefore may not be usable for all operations.
+        /// permutation[i] denotes which original axis will become axis i: newShape[i] <- shape[permutation[i]]
+        /// If 'invert' then revert the meaning.
+        ///
+        CNTK_API NDArrayViewPtr AsTransposed(const NDShapePermutation& permutation, bool inverted = false) const;
 
         ///
         /// Copies the contents of the 'source' NDArrayView to 'this' view.

@@ -747,16 +747,24 @@ public:
 
     // permute existing dimensions (implements generalized transposition)
     // This tensor is now no longer stored as column-major.
-    void PermuteDimsInPlace(const std::vector<size_t>& permutation)
+    template<typename Vector> // e.g. vector<size_t> or FixedVectorWithBuffer<size_t, 4>
+    void PermuteDimsInPlace(const Vector& permutation, bool inverted = false)
     {
-        auto m_dims_copy = m_dims;
-        auto m_strides_copy = m_strides;
+        auto m_dimsCopy    = m_dims;
+        auto m_stridesCopy = m_strides;
         auto size = permutation.size();
-        for (auto i = 0; i < size; ++i) 
-        {
-            m_dims[i] = m_dims_copy[permutation[i]];
-            m_strides[i] = m_strides_copy[permutation[i]];
-        }
+        if (inverted)
+            for (auto i = 0; i < size; ++i) 
+            {
+                m_dims   [permutation[i]] = m_dimsCopy[i];
+                m_strides[permutation[i]] = m_stridesCopy[i];
+            }
+        else
+            for (auto i = 0; i < size; ++i) 
+            {
+                m_dims   [i] =    m_dimsCopy[permutation[i]];
+                m_strides[i] = m_stridesCopy[permutation[i]];
+            }
     }
 
     // Flatten a tensor shape into a 2D tensor, where splitPoint is the first index to go into the second dimension
