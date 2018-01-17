@@ -736,12 +736,10 @@ namespace marian
     static inline Expr cross_entropy(const Expr& o, const Expr& y)
     {
         auto numClasses = o.Shape()[0];
-        const Expr& yOneHot =
-            /*if*/ (!y.IsSparse()) ? // Marian passes a vector here, must convert to CNTK's one-hot convention
-                (const Expr&)CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0))
-            /*else*/:                    // Dynamite passes ready-to-use one-hot tensors
-                y;
-        return Alias(Dynamite::CrossEntropyWithSoftmax(o, yOneHot, CNTK::Axis(0)), L"CrossEntropyWithSoftmax(" + o.Name() + L",OneHot(" + y.Name() + L",)" + std::to_wstring(numClasses) + L")");
+        if (y.IsSparse())
+            return Dynamite::CrossEntropyWithSoftmax(o, y, CNTK::Axis(0));
+        else
+            return Dynamite::CrossEntropyWithSoftmax(o, CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0)), CNTK::Axis(0));
     }
 
     static inline Expr affine(const Expr& x, const Expr& W, const Expr& b) { Expr y = CNTK::Times(W, x) + b; return Alias(y, L"Times(" + W.Name() + L"," + x.Name() + L")+(" + b.Name() + L")"); }
