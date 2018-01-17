@@ -1954,6 +1954,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     // fprintf (stderr, "forwardbackward: total forward score %.6f (%d frames)\n", totalfwscore, (int) numframes);   // for now--while we are debugging the GPU port
 
     /* guoye: start */
+    /*
     if (EMBR)
     {
         std::vector<vector<size_t>> vt_paths;
@@ -1973,7 +1974,10 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 
         return avg_wer;
     }
+    
     else
+
+    */
     /* guoye: end */
     {
         // MMI mode
