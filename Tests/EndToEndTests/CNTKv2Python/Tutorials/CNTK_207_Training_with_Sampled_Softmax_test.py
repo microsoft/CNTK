@@ -6,9 +6,14 @@
 
 import os
 import re
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_207_Training_with_Sampled_Softmax.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_207_Training_with_Sampled_Softmax.ipynb")
+   
+    return notebook
 
 def test_cntk_207_sampledsoftmax_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell

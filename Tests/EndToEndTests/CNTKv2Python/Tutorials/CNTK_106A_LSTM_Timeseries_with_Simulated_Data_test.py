@@ -8,9 +8,14 @@ import os
 import re
 import numpy as np
 from . import _all_close_or_less
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb")
+  
+    return notebook
 
 def test_cntk_106A_lstm_timeseries_with_simulated_data_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell

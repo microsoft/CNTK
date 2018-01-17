@@ -6,9 +6,14 @@
 
 import os
 import re
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_205_Artistic_Style_Transfer.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_205_Artistic_Style_Transfer.ipynb")
+   
+    return notebook
 
 def test_cntk_205_artistic_style_transfer_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell

@@ -6,9 +6,14 @@
 
 import os
 import re
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb")
+    
+    return notebook
 
 def test_cntk_104_finance_timeseries_basic_with_pandas_numpy_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell

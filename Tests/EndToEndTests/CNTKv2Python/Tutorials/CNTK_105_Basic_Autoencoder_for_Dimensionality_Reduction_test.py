@@ -7,10 +7,14 @@
 import os
 import re
 import numpy as np
+import pytest
 
-
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb")
+   
+    return notebook
 
 TOLERANCE_ABSOLUTE = 1E-1
 
