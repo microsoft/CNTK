@@ -1886,6 +1886,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     double totalfwscore = 0; // TODO: name no longer precise in sMBRmode
     double logEframescorrecttotal = LOGZERO;
     double totalbwscore = 0;
+    double totalfwscore1 = 0;
 
     bool returnEframescorrect = sMBRmode;
     if (softalignlattice)
@@ -1895,8 +1896,34 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         {
             //compute Beta only, 
             //fprintf(stderr, "\nforwardbackward: start backwardlatticeEMBR \n");
-            totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetas, lmf, wp, amf);
+            std::vector<double> logbetasdebug;
+            // guoye: mask for debug purpose
+            // totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetas, lmf, wp, amf);
+
+            totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetasdebug, lmf, wp, amf);
             totalfwscore = totalbwscore; // to make the existing code happy
+
+            // fprintf(stderr, "\nforwardbackward: totalbwscore = %f \n", totalbwscore);
+            totalfwscore1 = forwardbackwardlattice(edgeacscores, parallelstate, logpps, logalphas, logbetas, lmf, wp, amf, boostingfactor, returnEframescorrect, (const_array_ref<size_t> &) uids, thisedgealignments, logEframescorrect, Eframescorrectbuf, logEframescorrecttotal);
+            // fprintf(stderr, "\nforwardbackward: totalfwscore1 = %f \n", totalfwscore1);
+            if(abs(totalfwscore1 - totalfwscore) > 1e-6)
+            {
+                fprintf(stderr, "\nforwardbackward: Error, totalfwscore1 = %f is not equal to totalfwsscore = %f \n", totalfwscore1, totalfwscore);
+                exit(-1);
+            }
+            if (logbetasdebug.size() != logbetas.size())
+            {
+                fprintf(stderr, "\nforwardbackward: Error, logbetasdebug.size() = %d is not equal to logbetas.size() = %d \n", int(logbetasdebug.size()), int(logbetas.size()));
+                exit(-1);
+            }
+            for (size_t i = 0; i < logbetas.size(); i++)
+            {
+                if (abs(logbetas[i] - logbetasdebug[i]) > 1e-6)
+                {
+                    fprintf(stderr, "\nforwardbackward: Error, i = %d, logbetas[i] = %f is not equal to logbetasdebug[i] = %f \n", int(i), logbetas[i], logbetasdebug[i]);
+                    exit(-1);
+                }
+            }
         }
         else
         /* guoye: end */
@@ -1914,7 +1941,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 #endif
     if (islogzero(totalfwscore))
     {
-        fprintf(stderr, "forwardbackward: WARNING: line 1917, no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+        fprintf(stderr, "forwardbackward: WARNING: line 1917, totalforwardscore is zero: (%d nodes/%d edges), totalfwscore = %f, totalfwscore1= %f \n", (int) nodes.size(), (int) edges.size(), totalfwscore, totalfwscore1);
         return LOGZERO; // failed, do not use resulting matrix
     }
 
@@ -1939,8 +1966,6 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         double avg_wer = get_edge_weights(wids, vt_paths, numPathsEMBR, edge_weights);
 
         auto &errorsignal = result;
-    
-        // embrerrorsignal(parallelstate, abcs, softalignstates, hset, thisedgealignments, vt_paths, path_weights, errorsignal);
         EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
 
         
