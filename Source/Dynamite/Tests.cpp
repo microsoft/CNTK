@@ -88,6 +88,11 @@ static double SumAll(const NDArrayViewPtr& x, DataType dataType, const DeviceDes
     return sum->AsScalar<double>();
 }
 
+static vector<Axis> AxisVector(const vector<size_t>& axisIndexVector) // create vector<Axis> from vector<axis index>
+{
+    return vector<Axis>(Transform(axisIndexVector, [&](size_t axisIndex) -> Axis { return Axis(axisIndex); }));
+}
+
 #ifndef _MSC_VER // gcc won't eat this with gazillion errors, so forget about it
 size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const DeviceDescriptor& device);
 #else
@@ -166,6 +171,10 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 #define ValOpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum")), #opCode "|Reduce"))
     vector<TensorViewTest> tests =
     {
+        // transpose
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 0, 2, 1, 3 })), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 0, 2, 1, 3 }))),{ { 13, 42, 4, 2 } } }, // 2-axis permutation
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 0       })), "Transpose" }, VarExpr(CNTK::Transpose(args[0])),{ { 13, 42 } } }, // basic transpose
+        { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 2, 3, 0 })), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 1, 2, 3, 0 }))),{ { 13, 42, 4, 2 } } }, // axis rotation
         // splicing. Uniform splicing along last dimension will use single-kernel Gather; otherwise use multiple copy ops. Test both, also batched.
         { { ValExpr(doSplice(argValues, 2)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(2))),{ {  2,  1 },{  1,  3 },{  1,  1 },{ 2, 3 } } }, // messy shapes, new axis
         { { ValExpr(doSplice(argValues, 2)), "Splice" }, VarExpr(CNTK::Splice(args, Axis(2))),{ {  2,  1 },{  1,  3 },{  1,  1 },{ 2, 3 } } }, // messy shapes, new axis
@@ -493,12 +502,12 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 
 void RunDynamiteTests()
 {
-#if 0 // (interferes with logging for profiling and reprodible Parameter initialization)
+#if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
+    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true,  DeviceDescriptor::GPUDevice(0));
 #if 0 // only do a batched one on the GPU by default
-    numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
     numFailed += DynamiteTest(N, DataType::Float,  /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));

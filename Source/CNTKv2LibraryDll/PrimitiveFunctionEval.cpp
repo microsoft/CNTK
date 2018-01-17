@@ -75,6 +75,17 @@ namespace CNTK
         return arg;
     }
 
+    // helper to parse Transpose axis arguments
+    static NDShapePermutation TransposePermutationArg(const Dictionary& attributes)
+    {
+        if (attributes.Contains(PrimitiveFunction::AttributeNameAxisVec)) // two axes
+            return NDShapePermutation(Transform(attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>(),
+                                                [&](const DictionaryValue& arg) { return (NDShapePermutation::value_type)arg.Value<Axis>().StaticAxisIndex(); }));
+        else
+            return NDShapePermutation({ attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>().StaticAxisIndex(),
+                                        attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>().StaticAxisIndex() });
+    }
+
     // Performs a forward operation.
     // It is assumed that the inputs are immutable, and hence if the result can be expressed as a view (e.g. Reshape()),
     // a view into the an input is returned instead of a newly allocated buffer.
@@ -95,6 +106,7 @@ namespace CNTK
         let sliceView = primitiveOp == PrimitiveOpType::Slice ? GetSliceView(args[0], attributes, outputShape, /*readOnly=*/true, funcForErrMsg) : nullptr;
 
         // first handle ops that do not create new data
+        // TODO: Transpose could be included here as well, if we pre-process inputs of ops that do not accept non-dense tensors.
         if (primitiveOp == PrimitiveOpType::StopGradient ||
             primitiveOp == PrimitiveOpType::Pass         ||
             primitiveOp == PrimitiveOpType::NoOp         ||
@@ -158,6 +170,12 @@ namespace CNTK
         case PrimitiveOpType::StableSigmoid: op = Microsoft::MSR::CNTK::ElementWiseOperator::opStableSigmoid;         break;
             // ternary operations
         case PrimitiveOpType::Select:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opCond;                  break;
+            // Transpose
+        case PrimitiveOpType::TransposeAxes:
+            // TODO: I hope that one day this can be a see-through op (needs more solid support for non-dense objects)
+            // we must copy, since non-consecutive tensors are not universally supported yet
+            NDArrayView::NumericOperation({ args[0]->AsTransposed(TransposePermutationArg(attributes)) }, 1, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, out);
+            break;
             // Slice if copy requested or needed
         case PrimitiveOpType::Slice:
             // The slice view has already completed, but we must copy the result over. The following op is the same as the shared one except for taking the slice view as its input.
@@ -204,13 +222,6 @@ namespace CNTK
             // TODO: We may communicate from outside by not providing an Axis attribute that batching is along a new axis, and all shapes are the same.
             NDArrayView::GatherBatch(args, (size_t)attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex(), out);
             break;
-            // the following N-nary operations should be easy, mostly a matter of writing tests
-            // unary operations to be completed
-        case PrimitiveOpType::TransposeAxes:
-            // This is not hard but different from the above ops, in that it requires manipulating the TensorShape.
-            // Basically we need to create a transposed view on the arg, and then do an opCopy to bring it into dense format again.
-            LogicError("Variable '%S' Value(): Memoziation of unary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-            // the following operations are not TensorView, and may be implementable through relatively simple calls to Matrix
         case PrimitiveOpType::BatchNormalization:
             // batch normalization is a little tricky
             {
@@ -436,6 +447,7 @@ namespace CNTK
                 }
             }
             break;
+            // the following operations are not TensorView, but are implementable through relatively simple calls to Matrix
         case PrimitiveOpType::OneHot:
             NDArrayView::AsOneHot(args[0],
                                   (size_t)attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>().StaticAxisIndex(),
@@ -585,6 +597,12 @@ namespace CNTK
         case PrimitiveOpType::Reciprocal:    op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithReciprocalDerivative;                      arg2 = outputValue; break;
         case PrimitiveOpType::ELU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput; arg2 = outputValue; break;
         case PrimitiveOpType::StableSigmoid: op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithSigmoidDerivativeFromOutput;               arg2 = outputValue; break;
+        case PrimitiveOpType::TransposeAxes:
+            // TODO: one day we may treat this as a see-through gradient, in Autobatch
+            NDArrayView::NumericOperation({ outputGradientValue->AsTransposed(TransposePermutationArg(attributes), /*invert=*/true) }, 1, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);
+            handled = true;
+            break;
+            // gradients that are copies with broadcasting
             // no-op operations with simple TensorView implementation
             // NOTE: These do not need any data copy if there is only one consumer, which we won't know here. That case will be caught in the batched version.
         case PrimitiveOpType::NoOp:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
@@ -599,7 +617,6 @@ namespace CNTK
             else
                 op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; // (no shape change: they match already, use the the shared code below)
             break;
-            // gradients that are copies with broadcasting
         case PrimitiveOpType::ReduceElements:
             {
                 const auto& reductionOpName = attributes[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
