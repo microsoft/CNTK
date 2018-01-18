@@ -2379,7 +2379,8 @@ class InternalVariable::AutoBatch
             }
             // sparse inputs can only be batched/stacked in axis 1
             if (hasSparse && (maxRank < 1 || maxRank > 2))
-                InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
+                fprintf(stderr, "DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.\n");
+                //InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
             // decide stacking vs. batching
             let stackingAxis = maxRank - 1; // (gcc requires me to do this before the 'goto')
             if (maxRank == 0) // can only stack if inputs are not scalars
@@ -2446,7 +2447,8 @@ class InternalVariable::AutoBatch
             // no problem case detected: we can stack
             if (!hasSparse)
                 return{ StackingMode::STACKING_BUT_MAY_BATCH, stackingAxis, lastDim };
-            else if (maxRank == 2) // sparse matrices must be stacked along axis 1
+            else if (maxRank >= 2) // sparse matrices must be stacked along the last axis of the dense axes
+            //else if (maxRank == 2) // sparse matrices must be stacked along axis 1
                 return{ StackingMode::STACKING, stackingAxis, lastDim };
             else if (maxRank == 1) // sparse vectors must be batched along axis 1
                 return{ StackingMode::BATCHING, maxRank, 1 };
@@ -3622,7 +3624,7 @@ class InternalVariable::AutoBatch
                 fail_if(batchedInputTotalSizePre != batchedInputTotalSizePost, "post-slice reshape did not produce correct dimensions??"); // ...Reshape should not even work then, well...
             }
 #else
-            // old version, which is garbage:
+            // old version, which is garbage:  --TODO: delete this block once tested with old MT.cpp model
             // if this op has a a different batchAxis than the re-batched view, we must adjust the axis as to fulfill this function's post-condition
             // Complex corner cases arise when going back and forth betwen STACKING and BATCHING.
             // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
