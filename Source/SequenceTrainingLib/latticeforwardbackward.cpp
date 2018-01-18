@@ -1340,9 +1340,9 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         for (size_t j = 0; j < vt_paths[i].size(); j++)
         {
             // open add instead of substract, for debug purpose
-            vt_edge_weights[vt_paths[i][j]] += vt_path_weights[i];
+            // vt_edge_weights[vt_paths[i][j]] += vt_path_weights[i];
             // substraction instead of add, since we want to minimize the loss function, rather than maximize
-            // vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
+            vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
         }
     }
 

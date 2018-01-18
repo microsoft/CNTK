@@ -837,7 +837,7 @@ public:
             {
                 // an edge with !NULL pointing to not <s>
                 // this code make sure if you always start from <s> in the sampled path. 
-                // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
+                if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
 
                 vt_node_out_edge_indices[edges2[j].S].push_back(j);
 
