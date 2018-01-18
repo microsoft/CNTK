@@ -269,38 +269,34 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
     }
 
     PrepareDevice();
-    cusparseHandle_t cusparseHandle = 0;
-    CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
-    cusparseMatDescr_t descr = 0;
-    CUSPARSE_CALL(cusparseCreateMatDescr(&descr));
-    cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL);
-    cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO);
-
     denseMatrix.RequireSize(GetNumRows(), GetNumCols());
 
     SyncGuard syncGuard;
-    CUSPARSE_CALL(cusparseSetStream(cusparseHandle, t_stream));
-    if (GetFormat() == MatrixFormat::matrixFormatSparseCSR)
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSR || GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
-        if (sizeof(ElemType) == sizeof(float))
+        cusparseHandle_t cusparseHandle = 0;
+        CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
+        cusparseMatDescr_t descr = 0;
+        CUSPARSE_CALL(cusparseCreateMatDescr(&descr));
+        cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL);
+        cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO);
+        CUSPARSE_CALL(cusparseSetStream(cusparseHandle, t_stream));
+
+        if (GetFormat() == MatrixFormat::matrixFormatSparseCSR)
         {
-            CUSPARSE_CALL(cusparseScsr2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (float*) Buffer(), RowLocation(), ColLocation(), (float*) denseMatrix.Data(), int(GetNumRows())));
+            if (sizeof(ElemType) == sizeof(float))
+                CUSPARSE_CALL(cusparseScsr2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (float*)Buffer(), RowLocation(), ColLocation(), (float*)denseMatrix.Data(), int(GetNumRows())));
+            else
+                CUSPARSE_CALL(cusparseDcsr2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*)Buffer(), RowLocation(), ColLocation(), (double*)denseMatrix.Data(), int(GetNumRows())));
         }
         else
         {
-            CUSPARSE_CALL(cusparseDcsr2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*) Buffer(), RowLocation(), ColLocation(), (double*) denseMatrix.Data(), int(GetNumRows())));
+            if (sizeof(ElemType) == sizeof(float))
+                CUSPARSE_CALL(cusparseScsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (float*)Buffer(), RowLocation(), ColLocation(), (float*)denseMatrix.Data(), int(GetNumRows())));
+            else
+                CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*)Buffer(), RowLocation(), ColLocation(), (double*)denseMatrix.Data(), int(GetNumRows())));
         }
-    }
-    else if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
-    {
-        if (sizeof(ElemType) == sizeof(float))
-        {
-            CUSPARSE_CALL(cusparseScsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (float*) Buffer(), RowLocation(), ColLocation(), (float*) denseMatrix.Data(), int(GetNumRows())));
-        }
-        else
-        {
-            CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*) Buffer(), RowLocation(), ColLocation(), (double*) denseMatrix.Data(), int(GetNumRows())));
-        }
+        CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
     }
     else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
     {
@@ -311,8 +307,6 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
     {
         NOT_IMPLEMENTED;
     }
-    CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
-
 }
 
 // if the matrix contains strictly one-hot data, then return a vector of the indices; otherwise NULL
@@ -2797,7 +2791,7 @@ void GPUSparseMatrix<ElemType>::AssignColumnSliceToDense(GPUMatrix<ElemType>& sl
         if ((startColumn != 0) || (numCols != GetNumCols()))
             NOT_IMPLEMENTED;
 
-        return this->CopyToDenseMatrix(slice);
+        return CopyToDenseMatrix(slice);
     }
 
     PrepareDevice();
