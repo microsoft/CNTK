@@ -1339,9 +1339,10 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
     {
         for (size_t j = 0; j < vt_paths[i].size(); j++)
         {
-            // vt_edge_weights[vt_paths[i][j]] += vt_path_weights[i];
+            // open add instead of substract, for debug purpose
+            vt_edge_weights[vt_paths[i][j]] += vt_path_weights[i];
             // substraction instead of add, since we want to minimize the loss function, rather than maximize
-            vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
+            // vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
         }
     }
 
@@ -1954,7 +1955,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     // fprintf (stderr, "forwardbackward: total forward score %.6f (%d frames)\n", totalfwscore, (int) numframes);   // for now--while we are debugging the GPU port
 
     /* guoye: start */
-    /*
+    
     if (EMBR)
     {
         std::vector<vector<size_t>> vt_paths;
@@ -1976,8 +1977,6 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     }
     
     else
-
-    */
     /* guoye: end */
     {
         // MMI mode
