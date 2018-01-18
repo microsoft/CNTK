@@ -88,6 +88,25 @@ static double SumAll(const NDArrayViewPtr& x, DataType dataType, const DeviceDes
     return sum->AsScalar<double>();
 }
 
+// determine the arg max along an axis, and represent the result as a one-hot
+static Variable ArgmaxOneHotOp(const Variable& x, bool outputSparse = false, const Axis& axis = Axis(0))
+{
+    Variable argMax = CNTK::Argmax(x, axis);
+    Variable indices = Reshape(argMax, argMax.Shape().SubShape(1));
+    Variable oneHot = OneHotOp(indices, x.Shape()[0], outputSparse, axis);
+    return oneHot;
+}
+
+// determine the arg max along an axis, and represent the result as a one-hot (dense)
+static NDArrayViewPtr ArgmaxOneHot(const NDArrayViewPtr x, size_t axisIndex = 0)
+{
+    auto maxShape = x->Shape().Dimensions();
+    maxShape[axisIndex] = 1;
+    let maxVal = NDArrayView::NumericOperation({ x }, 1.0, L"Copy", maxShape, L"Max"); // find max
+    let oneHot = NDArrayView::NumericOperation({ x, maxVal }, 1.0, L"Equal"); // set to 1 for the value(s) that matches the max val
+    return oneHot;
+}
+
 static vector<Axis> AxisVector(const vector<size_t>& axisIndexVector) // create vector<Axis> from vector<axis index>
 {
     return vector<Axis>(Transform(axisIndexVector, [&](size_t axisIndex) -> Axis { return Axis((int)axisIndex); }));
@@ -171,6 +190,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 #define ValOpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum")), #opCode "|Reduce"))
     vector<TensorViewTest> tests =
     {
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, ArgmaxOneHot(argValues[1]), false, 1.0, 1)), "Times_sparse" }, VarExpr(CNTK::Times(args[0], ArgmaxOneHotOp(args[1]))),{ { 13, 4 },{ 4, 3, 5 } } },
         // transpose. Note: Reference must be cloned, because AvSqrErr cannot reduce over >2 non-contiguous dimensions.
         { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 0, 2, 1, 3 })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 0, 2, 1, 3 }))),{ { 13, 42, 4, 2 } } }, // 2-axis permutation (stackable)
         { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 0, 2    })->DeepClone()), "Transpose" }, VarExpr(CNTK::TransposeAxes(args[0], Axis(0), Axis(1))),{ { 13, 42, 5 } } }, // basic transpose (stackable)
@@ -255,6 +275,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     for (let& test : tests) // loop over all tests
     {
         let isTimes                 = strstr(test.op.second, "Times")               != nullptr;
+        let isTimesSparse           = strstr(test.op.second, "Times_sparse")        != nullptr; // Times with sparse
         let isSplice                = strstr(test.op.second, "Splice")              != nullptr;
         let isSlice                 = strstr(test.op.second, "Slice")               != nullptr;
         let isBatchNorm             = strstr(test.op.second, "BatchNormalization")  != nullptr; // BatchNormalization requires some special-casing
@@ -426,6 +447,8 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
                     continue;
                 if (strstr(test.op.second, "Cond") && argIndexUnderTest == 0)
                     continue;
+                if (strstr(test.op.second, "Times_sparse") && argIndexUnderTest == 1)
+                    continue;
                 // determine all gradients. That is args[*][argIndexUnderTest].
                 // Note: args that are shared across the batch will only get a single entry in the gradients[] map
                 unordered_map<Parameter, NDArrayViewPtr> gradients; // [argVariable] -> symbolic gradient for arg[n][i] goes here
@@ -507,11 +530,11 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 
 void RunDynamiteTests()
 {
-#if 0 // (interferes with logging for profiling and reprodible Parameter initialization)
+#if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true, DeviceDescriptor::GPUDevice(0));
-#if 0 // only do a stacked one (most complicated) on the GPU by default
+#if 1 // only do a stacked one (most complicated) on the GPU by default
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
