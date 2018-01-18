@@ -903,6 +903,7 @@ public:
     // this operation short-circuits CUDA and is very fast.
     // Sparse objects cannot be arena-allocated. Which is fine, since they are inputs or
     // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
+    // For sparse objects, it is assumed that the first axis is sparse.
     NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
         lock_guard<recursive_mutex> guard(s_mutex);
@@ -957,10 +958,12 @@ public:
             size_t numRows, numCols;
             if (isSparse)
             {
-                if (shape.Rank() != 1 && shape.Rank() != 2)
-                    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
+                //if (shape.Rank() < 1)
+                ////if (shape.Rank() != 1 && shape.Rank() != 2)
+                //    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
                 numRows = shape[0];
-                numCols = shape.Rank() > 1 ? shape[1] : 1;
+                numCols = shape.Rank() > 1 ? shape.TotalSize()/numRows : 1;
+                //numCols = shape.Rank() > 1 ? shape[1] : 1;
             }
             else
             {
