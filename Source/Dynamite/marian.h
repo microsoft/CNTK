@@ -71,7 +71,7 @@ namespace marian
     class Expr : public CNTK::Variable
     {
         typedef CNTK::Variable Base;
-#if 1
+#if 0
         void Trace() const
         {
             if (IsParameter())

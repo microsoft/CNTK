@@ -989,12 +989,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let  trgMask = graph->constant({ dimWords, dimBatch, 1 }, init = inits::from_vector(trgSubBatch->mask()));
         let& trgData = trgSubBatch->oneHot();
 
-        std::string costType = mmodel->opt<string>("cost-type");
+        std::string costType = "ce-sum";// mmodel->opt<string>("cost-type");
         bool inference = false; // TODO
         float ls = inference ? 0.f : mmodel->opt<float>("label-smoothing");
 
         auto cost = Cost(probs, trgData, trgMask, costType, ls);
-        //fprintf(stderr, "====> %.8f\n", cost.Value()->AsScalar<float>()), fflush(stderr);
+        fprintf(stderr, "====> cost/target = %.8f\n", cost.Value()->AsScalar<float>() / trgSubBatch->batchWords()), fflush(stderr);
 
         if (mmodel->getOptions()->has("guided-alignment") && !inference) {
             auto alignments = mmodel->getDecoders()[0]->getAlignments();
