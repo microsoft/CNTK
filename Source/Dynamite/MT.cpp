@@ -979,8 +979,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // TODO: pass in the Corpus batch instead of (source, targets), so that we compute that only once
         let probs = model_fn(sources, targets);
 
-        probs.Value(); // currently fails in DetermineBatchAxis for Transpose operation
-        probs.Value()->LogToFile(L"probs");
+        //probs.Value(); // currently fails in DetermineBatchAxis for Transpose operation
+        //probs.Value()->LogToFile(L"probs");
 
         // apply the criterion
         let& trgSubBatch = batch->back();
@@ -1001,11 +1001,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             ABORT_IF(alignments.empty(), "Model does not seem to support alignments");
 
             auto att = concatenate(alignments, axis = 3);
-            return cost + guidedAlignmentCost(graph, batch, mmodel->getOptions(), att);
+            cost = cost + guidedAlignmentCost(graph, batch, mmodel->getOptions(), att);
         }
-        else {
-            return cost;
-        }
+        cost = Reshape(cost, { 1 }); // Learner.Update() expects a 1-dim vector for some reason
+        return cost;
     });
 #endif
     // run something through to get the parameter matrices shaped --ugh!
