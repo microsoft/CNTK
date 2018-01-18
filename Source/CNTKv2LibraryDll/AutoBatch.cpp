@@ -3463,7 +3463,7 @@ class InternalVariable::AutoBatch
     // If all inputs are identical and that can be represented by broadcasting (which is only possible if BATCHING).
     // In that case, the output will have no batchAxis (which implies it is 1, which means 'broadcast along the batchAxis' to all ops).
     // The stackingMode passed here does not affect the meaning of batchAxis and batchDim; but rather their constraints.
-    vector<NDShapeDimension> m_CreateBatchedInputFor_outputShapeBuffer;
+    vector<NDShapeDimension> m_CreateBatchedInputFor_shapeBuffer;
     inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t batchAxis, NDShapeDimension batchDim, StackingMode stackingMode,
                                           size_t i, /*in/out*/bool& anyBatchedInputs)
     {
@@ -3482,14 +3482,14 @@ class InternalVariable::AutoBatch
         // first determine special cases that can be optimized
         // If all args are consecutive slices, then use a slice view instead. If all objects are identical, then don't even use a batch.
         let& input0 = f0.m_inputs[i];
-        let& inputFields0 = GetInputFields(input0);
-        let isScalar = inputFields0.m_shape.Rank() == 0;
-        let redirectionPair0 = LazyPhysicalSlice(inputFields0);
+        let& input0Fields = GetInputFields(input0);
+        let isScalar = input0Fields.m_shape.Rank() == 0;
+        let redirectionPair0 = LazyPhysicalSlice(input0Fields);
         let is0Redirected = redirectionPair0.originatingFunction != nullptr;
         bool allSame = true;                                              // will be true if all are the same objects
         bool allConsecutiveSlices = !redirectionPair0.sliceRange.empty(); // will be true if all are consecutive index ops into the same batched result
         size_t prevSliceEndIndex = allConsecutiveSlices ? redirectionPair0.sliceRange.BeginIndex() : SIZE_MAX/*not used*/; // running index
-        //if (inputFields0.m_uniqueIdForDebugging == 26932)
+        //if (input0Fields.m_uniqueIdForDebugging == 26932)
         //    Break;
         for (let& f : ops) // create the batched tensors
         {
@@ -3501,7 +3501,7 @@ class InternalVariable::AutoBatch
             let redirectionPair = LazyPhysicalSlice(inputFields);
             // optimization: if all args are the same, then don't batch
             allSame = allSame &&
-                      (&inputFields == &inputFields0 ||                           // same object (also covers the case of leaves)
+                      (&inputFields == &input0Fields ||                           // same object (also covers the case of leaves)
                        (is0Redirected && redirectionPair.originatingFunction == redirectionPair0.originatingFunction && redirectionPair.sliceRange == redirectionPair0.sliceRange)); // or same view
             // Note: If we remove is0Redirected, then this comparison will not be correct for leaves.
             // optimization: if all args are consecutive slices, then use a slice view instead
@@ -3533,8 +3533,8 @@ class InternalVariable::AutoBatch
             // Consider stacking of b + [X X Y Y Y Z Z], where b, X, Y, Z have matching vector dimension D.
             // In this case, concatenating X, X, Y, Y, Y, Z and Z gives a 7*D vector. b cannot be added to that.
             // (While for BATCHING, we'd get a [D x 7] tensor, to which b can be added without problem.)
-            allSame = batchAxis >= inputFields0.m_shape.Rank() || // does not live in the batch axis
-                      inputFields0.m_shape[batchAxis] == 1;       // lives there but broadcasts
+            allSame = batchAxis >= input0Fields.m_shape.Rank() || // does not live in the batch axis
+                      input0Fields.m_shape[batchAxis] == 1;       // lives there but broadcasts
         }
         cudaStatsguard.Stop();
         // create the batched input
@@ -3591,23 +3591,41 @@ class InternalVariable::AutoBatch
             // To address this:
             //  - determine the expected batched input shape
             //  - if it does not match, then Reshape
-#if 0
-            // CONTINUE HERE
-            // BUGBUG: batchedInput now has the original output dimension, not accounting for potential Reshapes.
-            // --> reassemble the expected output shape. And if it differs, then Reshape.
-            let& batchedInputDims = batchedInput.Shape().Dimensions(); // shape of the batched input
-            let& outputDims0 = f0.m_outputs.front().Shape().Dimensions();
-
-            
-            
-            vector<NDShapeDimension> batchedInputShape; // determine output shape   --TODO: use a vector<NDShapeDimension> in this class
-            batchedInputShape.reserve(batchAxis + 1);
-            batchedInputShape = vector<NDShapeDimension>(input0Shape.Dimensions());
-            //batchedInputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeInArena()
-            batchedInputShape.resize(batchAxis, 1); // pad to batchAxis
-            batchedInputShape.push_back(batchDim);  // and add the batch axis
-#endif
-
+            // How to determine the expected input shape:
+            //  - notes:
+            //     - all m_inputs' shapes (after potential Reshape) are identical except for last a axis when STACKING
+            //     - the batchedInput's last dim is batchDim. All other axes match the pre-Reshape originating output shape, which we don't want.
+            //  - take first input shape
+            //  - if STACKING, strip its last axis and add batchDim in its place (i.e. replace it)
+            //  - if BATCHING, append batchDim to its shape
+#if 1
+            // to avoid mem copies, we first check directly whether the shape is already correct
+            let& input0Dims = input0Fields.m_shape.Dimensions();
+            let expectedBatchedInputRank = batchAxis + 1;
+            fail_if(expectedBatchedInputRank != input0Dims.size() + (stackingMode == StackingMode::BATCHING), "expectedBatchedInputRank not as expected??");
+            let& batchedInputDims = batchedInput.Shape().Dimensions(); // shape of the batched input at this point
+            bool shapeOK = true;
+            shapeOK = shapeOK && (batchedInputDims.size() == expectedBatchedInputRank); // rank must match
+            for (size_t k = 0; shapeOK && k < batchAxis; k++)
+                shapeOK = shapeOK && (input0Dims[k] == batchedInputDims[k]); // dimensions before batchAxis must match
+            // dimensions do not match: there was an additional Reshape that we must replicate
+            if (!shapeOK)
+            {
+                CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"intermediate reshape", 3, numBatchItems);
+                auto& expectedBatchedInputShapeVec = m_CreateBatchedInputFor_shapeBuffer;
+                expectedBatchedInputShapeVec.assign(input0Dims.begin(), input0Dims.begin() + batchAxis); // (skips last axis if STACKING)
+                expectedBatchedInputShapeVec.push_back(batchDim);
+                // insert a Reshape() op
+                let batchedInputTotalSizePre = batchedInput.Shape().TotalSize();
+                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), expectedBatchedInputShapeVec,
+                                                         Dictionary(),
+                                                         //f0.m_name,
+                                                         f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
+                let batchedInputTotalSizePost = batchedInput.Shape().TotalSize();
+                fail_if(batchedInputTotalSizePre != batchedInputTotalSizePost, "post-slice reshape did not produce correct dimensions??"); // ...Reshape should not even work then, well...
+            }
+#else
+            // old version, which is garbage:
             // if this op has a a different batchAxis than the re-batched view, we must adjust the axis as to fulfill this function's post-condition
             // Complex corner cases arise when going back and forth betwen STACKING and BATCHING.
             // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
@@ -3634,7 +3652,7 @@ class InternalVariable::AutoBatch
                 }
                 else // batchAxis > fromOutputRank
                 {
-                    auto& outputShapeVec = m_CreateBatchedInputFor_outputShapeBuffer;
+                    auto& outputShapeVec = m_CreateBatchedInputFor_shapeBuffer;
                     outputShapeVec.assign(batchedInputDims.begin(), batchedInputDims.end());
                     //auto outputShapeVec = MakeVector(batchedInputDims); // PERF BUGBUG--can we do better than this? E.g. use a shared vector class member for this?
                     if (outputShapeVec.back() == batchDim)
@@ -3668,7 +3686,8 @@ class InternalVariable::AutoBatch
                 }
                 // and that's now really our input to the batched operation
             }
-            fail_if(batchedInput.Shape()[batchAxis] != batchDim, "CreateBatchedInputFor() post=condition not fulfilled??"); // with all this axis mess, verify this function's post-condition
+#endif
+            fail_if(batchedInput.Shape().Rank() != batchAxis + 1 || batchedInput.Shape().Dimensions().back() != batchDim, "CreateBatchedInputFor() post-condition not fulfilled??"); // with all this axis mess, verify this function's post-condition
             return batchedInput;
         }
         else // batch inputs are not consecutive: We must actually copy them together.
@@ -3685,7 +3704,7 @@ class InternalVariable::AutoBatch
                 {
                     // if this input broadcasts in the batch-axis dimension, we must manually unroll it.
                     // This implements broadcasting with non-uniform dimensions in the stacking case.
-                    auto& broadcastShape = m_CreateBatchedInputFor_outputShapeBuffer; // reuse a shared object to avoid malloc
+                    auto& broadcastShape = m_CreateBatchedInputFor_shapeBuffer; // reuse a shared object to avoid malloc
                     let& inputDims = inputFields.m_shape.Dimensions();
                     broadcastShape.assign(inputDims.begin(), inputDims.end());
                     broadcastShape.resize(batchAxis, 1);
