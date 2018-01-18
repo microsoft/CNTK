@@ -589,14 +589,24 @@ namespace CNTK
 
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
                             {
-                                // TODO: avoid AsVector()
+                                const auto& shape = m_inputs[0].Shape();
+                                outputShape = shape;
+#if 1
+                                // note: Dynamite relies on all Axis objects in attributes to be normalized in-place
+                                auto& permValues = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                                for (size_t i = 0; i < permValues.size(); ++i)
+                                {
+                                    auto& axis = permValues[i].Value<Axis>();
+                                    NormalizeStaticAxis(axis, shape);
+                                    outputShape[i] = shape[axis.StaticAxisIndex()];
+                                }
+#else                           // old veresion, which does not fix up the axes in-place
                                 auto perm = AsVector<Axis>(m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
-                                auto shape = m_inputs[0].Shape();
                                 for (auto& p : perm)
                                     p = NormalizeStaticAxis(p, shape);
-                                outputShape = shape;
                                 for (size_t i = 0; i < perm.size(); ++i)
                                     outputShape[i] = shape[perm[i].StaticAxisIndex()];
+#endif
                             }
                             else
                             {
@@ -612,6 +622,8 @@ namespace CNTK
                                 outputShape = m_inputs[0].Shape().AppendShape(NDShape(outputRank - m_inputs[0].Shape().Rank(), 1));
                                 std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
                             }
+                            //if (outputShape[0] == 512 || outputShape[0] == 64)
+                            //    fprintf(stderr, "Transpose shape: %S -> %S\n", m_inputs[0].Shape().AsString().c_str(), outputShape.AsString().c_str()), fflush(stderr);
                             break;
                         }
                         case PrimitiveOpType::Slice:

@@ -794,6 +794,11 @@ namespace CNTK
         return m_dataFields->More().m_valueTimeStamp.load(); 
     }
 
+    unsigned int InternalVariable::UniqueIdForDebugging() const
+    {
+        return m_dataFields->m_uniqueIdForDebugging;
+    }
+
     void Parameter::RecordValueUpdate()
     {
         m_dataFields->More().m_valueTimeStamp++;

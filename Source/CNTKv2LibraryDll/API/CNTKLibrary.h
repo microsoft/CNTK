@@ -2313,6 +2313,11 @@ namespace CNTK
         /// Use this to test for a default-constructed variable to denote "None".
         ///
         operator bool() const { return (bool)m_dataFields; }
+
+        ///
+        /// For debugging: Return the unique id
+        ///
+        CNTK_API unsigned int UniqueIdForDebugging() const;
     protected:
         class AutoBatch;
         class Memoizer;

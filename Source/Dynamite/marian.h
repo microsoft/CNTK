@@ -71,15 +71,41 @@ namespace marian
     class Expr : public CNTK::Variable
     {
         typedef CNTK::Variable Base;
-#if 0   // this does not work presently because see-through ops on leaves are not allowed presently
-        void Debug() const { Value(); }
+#if 1
+        void Trace() const
+        {
+            if (IsParameter())
+                fprintf(stderr, "Parameter %S", Name().c_str());
+            else if (IsConstant())
+                fprintf(stderr, "Constant");
+            else
+            {
+                let& owner = Owner();
+                if (owner)
+                {
+                    fprintf(stderr, "%S^%u(", owner->OpName().c_str(), UniqueIdForDebugging());
+                    let& args = owner->Inputs();
+                    const char* delim = "";
+                    for (let& arg : args)
+                    {
+                        fprintf(stderr, "%s%S", delim, arg.Shape().AsString().c_str());
+                        delim = ", ";
+                    }
+                    fprintf(stderr, ")");
+                }
+                else
+                    fprintf(stderr, "<unknown type>");
+            }
+            fprintf(stderr, " : %S\n", Shape().AsString().c_str()), fflush(stderr);
+            //Value();   // this does not work presently because see-through ops on leaves are not allowed presently
+        }
 #else
-        void Debug() const {}
+        void Trace() const {}
 #endif
     public:
-        Expr(const CNTK::Variable& v) : Base(v) { Debug(); }
-        Expr(CNTK::Variable&& v) : Base(std::move(v)) { Debug(); }
-        Expr(const CNTK::FunctionPtr& f) : Base(f) { Debug(); }
+        Expr(const CNTK::Variable& v) : Base(v)       { Trace(); }
+        Expr(CNTK::Variable&& v) : Base(std::move(v)) { Trace(); }
+        Expr(const CNTK::FunctionPtr& f) : Base(f)    { Trace(); }
         Expr(const std::nullptr_t&) : Base(CNTK::Variable()) { }
         Expr() : Base(CNTK::Variable()) { }
         Expr& operator=(const Expr& other) { Base::operator=(other); return *this; }
