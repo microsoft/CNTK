@@ -13,8 +13,16 @@
 #include <memory>
 #include <map>
 
-template <typename... Args> __declspec(noreturn) static inline void ABORT_IF(bool cond, const char* msg, Args&&... ignoredArgs) { if (cond) CNTK::InvalidArgument(msg); } // ignoring additional args for now
-template <typename... Args> __declspec(noreturn) static inline void ABORT(const char* msg, Args&&... ignoredArgs) { CNTK::InvalidArgument(msg); } // ignoring additional args for now
+template <typename... Args> __declspec(noreturn) static inline void ABORT_IF(bool cond, const char* msg, Args&&... /*ignoredArgs*/) { if (cond) CNTK::InvalidArgument(msg); } // ignoring additional args for now
+template <typename... Args> __declspec(noreturn) static inline void ABORT(const char* msg, Args&&... /*ignoredArgs*/) { CNTK::InvalidArgument(msg); } // ignoring additional args for now
+
+// Marian is not warning-clean
+#pragma warning(disable: 4267) // conversion from 'size_t' to 'int', possible loss of data
+#pragma warning(disable: 4305) // truncation from 'double' to 'float'
+#pragma warning(disable: 4100) // unreferenced formal parameter
+#pragma warning(disable: 4099) // type name first seen using 'struct' now seen using 'class'
+#pragma warning(disable: 4244) // conversion from 'int' to 'float', possible loss of data
+#pragma warning(disable: 4189) // local variable is initialized but not referenced
 
 #include "shape.h"
 // Note: more #includes at the end
@@ -32,7 +40,7 @@ namespace marian
     class ExpressionGraph;
     typedef size_t Word;
     typedef std::vector<Word> Words;
-    const float NEMATUS_LN_EPS = 1e-5;
+    const float NEMATUS_LN_EPS = 1e-5f;
 
     // -----------------------------------------------------------------------
     // Shape
@@ -57,7 +65,7 @@ namespace marian
             size_t rank = m_viewShape.Rank();
             Shape shape; shape.resize(rank);
             for (size_t i = 0; i < rank; i++)
-                shape.set(i, m_viewShape[rank - 1 - i]);
+                shape.set((int)i, m_viewShape[rank - 1 - i]);
             return shape;
         }
         size_t size() const { return m_viewShape.Rank(); }
@@ -136,10 +144,10 @@ namespace marian
             const auto& viewShape = x.Shape();
             auto rank = viewShape.Rank();
             if (axisIndex < 0)
-                axisIndex += rank;
+                axisIndex += (int)rank;
             if (axisIndex < 0 || axisIndex >= rank)
                 CNTK::InvalidArgument("marian::ToCNTKAxis: axis out of range");
-            return CNTK::Axis(rank - 1 - (size_t)axisIndex);
+            return CNTK::Axis((int)rank - 1 - axisIndex);
         }
         template<typename Vector>
         static inline std::vector<CNTK::Axis> ToCNTKAxes(const Expr& x, const Vector/*collection<int>*/& axisIndices)
@@ -343,9 +351,9 @@ namespace marian
                 m_oneHot = CNTK::Reshape(interleavedBatch, { (size_t)vocabSize, m_numSequences, m_maxSequenceLength });
                 //m_oneHot.Value()->LogToFile(L"interleaved"), fflush(stderr);
             }
-            int batchSize()  const { return m_numSequences;  }
-            int batchWidth() const { return m_maxSequenceLength; }
-            int batchWords() const { return m_totalNumTokens; }
+            int batchSize()  const { return (int)m_numSequences;  }
+            int batchWidth() const { return (int)m_maxSequenceLength; }
+            int batchWords() const { return (int)m_totalNumTokens; }
             void setWords(size_t words) { m_totalNumTokens = words; }
             std::vector<Word>& indices() { return m_indices; }
             std::vector<float>& mask()   { return m_mask; }
@@ -377,14 +385,14 @@ namespace marian
             size_t words() const { return front()->batchWords(); }                           // get #total present tokens in first stream (source)
             const std::vector<float>& getGuidedAlignment() { return m_guidedAlignment; }
             void setGuidedAlignment(const std::vector<float>& aln) { m_guidedAlignment = aln; }
-            virtual std::vector<Ptr<Batch>> split(size_t n) override { CNTK::LogicError("CorpusBatch::split not implemented"); }
+            virtual std::vector<Ptr<Batch>> split(size_t n) override { n; CNTK::LogicError("CorpusBatch::split not implemented"); }
             // helper for the initial run
-            static Ptr<CorpusBatch> fakeBatch(std::vector<size_t>& lengths, size_t batchSize, bool guidedAlignment = false)
+            static Ptr<CorpusBatch> fakeBatch(const std::vector<size_t>& lengths, size_t batchSize, bool guidedAlignment = false)
             {
                 auto batch = New<CorpusBatch>(std::vector<Ptr<SubBatch>>(CNTK::Transform(lengths, [&](size_t len)
                 {
-                    auto sb = New<SubBatch>(batchSize, len);
-                    float i = 0;
+                    auto sb = New<SubBatch>((int)batchSize, (int)len);
+                    size_t i = 0;
                     for (auto& v : sb->indices())
                         v = i++;
                     std::fill(sb->mask().begin(), sb->mask().end(), 1.0f);
@@ -838,9 +846,9 @@ namespace marian
         size_t len = shape[rank - 1];
         if (rank == 0)
             CNTK::InvalidArgument("marian::shift cannot shift scalars");
-        auto remaining = CNTK::Slice(x, CNTK::Axis(rank-1), 0, len-1);
+        auto remaining = CNTK::Slice(x, CNTK::Axis((int)rank-1), 0, (int)len-1);
         auto inserted = CNTK::Constant(shape.SubShape(0, rank-1), Dynamite::CurrentDataType(), 0.0, Dynamite::CurrentDevice());
-        Expr res = CNTK::Splice({ inserted, remaining }, CNTK::Axis(rank-1));
+        Expr res = CNTK::Splice({ inserted, remaining }, CNTK::Axis((int)rank-1));
         //x.Value()->LogToFile(L"x");
         //res.Value()->LogToFile(L"shift(x)");
         return res;
@@ -934,7 +942,7 @@ namespace marian
             = options->get<std::string>("guided-alignment-cost");
 
         Expr alnCost;
-        float eps = 1e-6;
+        float eps = 1e-6f;
         if (guidedCostType == "mse") {
             alnCost = sum(flatten(square(att - aln))) / (2 * dimBatch);
         }
@@ -973,6 +981,7 @@ namespace marian
         // TODO: namespace; lots more
         Expr param(const std::string& name, const Shape& shape, const CNTK::ParameterInitializer& init, bool fixed = false)
         {
+            fixed; // TODO
             auto viewShape = mappers::ToNDShape(shape); // convert to CNTK's column-major viewShape
             auto iter = m_allParametersMap.find(name);
             if (iter == m_allParametersMap.end()) // case 1: create a new parameter

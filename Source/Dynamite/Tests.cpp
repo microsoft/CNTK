@@ -90,7 +90,7 @@ static double SumAll(const NDArrayViewPtr& x, DataType dataType, const DeviceDes
 
 static vector<Axis> AxisVector(const vector<size_t>& axisIndexVector) // create vector<Axis> from vector<axis index>
 {
-    return vector<Axis>(Transform(axisIndexVector, [&](size_t axisIndex) -> Axis { return Axis(axisIndex); }));
+    return vector<Axis>(Transform(axisIndexVector, [&](size_t axisIndex) -> Axis { return Axis((int)axisIndex); }));
 }
 
 #ifndef _MSC_VER // gcc won't eat this with gazillion errors, so forget about it
@@ -505,11 +505,11 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 
 void RunDynamiteTests()
 {
-#if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
+#if 0 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true, DeviceDescriptor::GPUDevice(0));
-#if 1 // only do a stacked one (most complicated) on the GPU by default
+#if 0 // only do a stacked one (most complicated) on the GPU by default
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
