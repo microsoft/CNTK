@@ -3157,7 +3157,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>
     auto& us = *this;
     auto nCols = a.GetNumCols();
     auto nRows = num_class * a.GetNumRows();
-    us.RequireSize(nRows, nCols);
+    if (us.GetNumElements() != nRows * nCols) // we only require the #elements to match, not the actual shape
+        us.RequireSize(nRows, nCols);
     ElemType* bufPtr = Data();
     ElemType* aBufPtr = a.Data();
     memset(bufPtr, 0, sizeof(ElemType) * nRows *nCols);

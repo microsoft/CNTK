@@ -4738,7 +4738,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
     if (axis >= shape.size())
         LogicError("AssignOneHot: axis is not correct");
 
-    size_t item_size = 1;
+    size_t item_size = 1; // assume column-major tensors
     for (size_t i = 0; i < shape.size() && i < axis; i++)
         item_size *= shape[i];
 
@@ -4746,11 +4746,11 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
 
     auto nCols = a.GetNumCols();
     auto nRows = num_class * a.GetNumRows();
-    this->RequireSize(nRows, nCols);
-    this->PrepareDevice();
+    if (GetNumElements() != nRows * nCols) // we only require the #elements to match, not the actual shape
+        RequireSize(nRows, nCols);
+    PrepareDevice();
 
     CUDA_CALL(cudaMemset(Data(), 0, nCols * nRows * sizeof(ElemType)));
-
 
     CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
     int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
