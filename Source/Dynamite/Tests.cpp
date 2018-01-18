@@ -89,7 +89,7 @@ static double SumAll(const NDArrayViewPtr& x, DataType dataType, const DeviceDes
 }
 
 // determine the arg max along an axis, and represent the result as a one-hot
-static Variable ArgmaxOneHotOp(const Variable& x, bool outputSparse = false, const Axis& axis = Axis(0))
+static Variable ArgmaxOneHotOp(const Variable& x, bool outputSparse = true, const Axis& axis = Axis(0))
 {
     Variable argMax = CNTK::Argmax(x, axis);
     Variable indices = Reshape(argMax, argMax.Shape().SubShape(1));
@@ -498,7 +498,13 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
                 for (let& kv : gradients)
                 {
                     let& arg = kv.first;
-                    let gradientWrtInput = kv.second;
+                    auto gradientWrtInput = kv.second;
+                    if (gradientWrtInput->IsSparse()) // convert block-sparse gradients to dense so we can compute with them
+                    {
+                        let target = make_shared<NDArrayView>(dataType, gradientWrtInput->Shape(), gradientWrtInput->Device());
+                        target->CopyFrom(*gradientWrtInput);
+                        gradientWrtInput = target;
+                    }
                     //gradientWrtInput->LogToFile(L"gradientWrtInput_" + to_wstring(argIndexUnderTest), stderr);
                     let eps = epsilons[arg]; // epsilon used to perturb
                     // compute expected perturbed output based on gradient
