@@ -421,12 +421,12 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         };
         let resVar = functionUnderRest(allArgs);
         let resVal = resVar.Value(); // this triggers the batched evaluation
-        fprintf(stderr, ") -> %S\n", resVal->AsString().c_str());
+        fprintf(stderr, ") -> %S", resVal->AsString().c_str());
         // compare reference result with Dynamite result
         let avSqrErr = AvSqrErr(resVal, refVal, dataType, device);
         if (isnan(avSqrErr) || avSqrErr > 1e-5)
         {
-            fprintf(stderr, ">>>>>>>>>> FWD FAILED: avSqrErr = %.10f\n", avSqrErr);
+            fprintf(stderr, "\n>>>>>>>>>> FWD FAILED: avSqrErr = %.10f\n", avSqrErr);
             resVal->LogToFile(L"result (Dynamite)");
             refVal->LogToFile(L"reference (NDArrayView)");
             numFailed++;
@@ -511,16 +511,18 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
                 let relErr = (perturbationBasedDelta == gradientBasedDelta) ? 0 : fabs(((perturbationBasedDelta - gradientBasedDelta) / perturbationBasedDelta));
                 if (isnan(relErr) || (relErr > 1e-3 && absErr > 1e-10))
                 {
-                    fprintf(stderr, ">>>>>>>>>> BWD[%d] FAILED: err=%.10f%% (numeric=%.20f, symbolic=%.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
+                    fprintf(stderr, "\n>>>>>>>>>> BWD[%d] FAILED: err=%.10f%% (numeric=%.20f, symbolic=%.20f)", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
                     numFailed++;
                 }
                 else if (relErr > 1e-5)
-                    fprintf(stderr, "           BWD[%d] SOMEWHAT OFF: err=%.10f%% (numeric=%.20f, symbolic=%.20f)\n", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
+                    fprintf(stderr, "\n           BWD[%d] SOMEWHAT OFF: err=%.10f%% (numeric=%.20f, symbolic=%.20f)", (int)argIndexUnderTest, 100.0 * relErr, perturbationBasedDelta, gradientBasedDelta);
                 // Once in a while enable the following, to see whether there are some broken tests. We do have zeroes e.g. for Equal().
                 //else if (gradientBasedDelta == 0)
-                //    fprintf(stderr, ">>>>>>>>>> BWD[%d] IS 0??\n", (int)argIndexUnderTest);
+                //    fprintf(stderr, "\n>>>>>>>>>> BWD[%d] IS 0??", (int)argIndexUnderTest);
+                fprintf(stderr, ", grad[%d]", (int)argIndexUnderTest);
             }
         }
+        fprintf(stderr, "\n");
     } // loop over tests
     if (!doGradientCheck)
         fprintf(stderr, "Skipped gradient checks for Float precision.\n");
@@ -534,7 +536,7 @@ void RunDynamiteTests()
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true, DeviceDescriptor::GPUDevice(0));
-#if 1 // only do a stacked one (most complicated) on the GPU by default
+#if 0 // only do a stacked one (most complicated) on the GPU by default
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
