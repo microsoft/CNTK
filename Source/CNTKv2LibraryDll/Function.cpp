@@ -1288,6 +1288,10 @@ namespace CNTK
 
     FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name)
     {
+        // some sanity check would be useful here, e.g. if all are static, then
+        //if (!((axis1.StaticAxisIndex(false) == 0 && axis1.StaticAxisIndex(false) == 1) ||
+        //      (axis1.StaticAxisIndex(false) == 1 && axis1.StaticAxisIndex(false) == 0)))
+        //    InvalidArgument("TransposeAxes: invalid axis parameters");
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxis1] = axis1;
         additionalProperties[PrimitiveFunction::AttributeNameAxis2] = axis2;
@@ -1591,6 +1595,33 @@ namespace CNTK
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
         additionalProperties[PrimitiveFunction::AttributeNameInferInputRankToMap] = inferInputRankToMap;
+        // special optimization: if left operand is a matrix that is the result of a Transpose, then call TransposeTimes instead
+        // This is needed for Marian interop, where an explicit transpose() is used for the Softmax projection. This saves cost and memory.
+        if (leftOperand.IsOutput() && leftOperand.Shape().Rank() == 2 && outputRank == 1)
+        {
+            const auto& f = (const PrimitiveFunction&)*leftOperand.Owner();            // shapes match: check the op type
+            if (f.OpType() == PrimitiveOpType::TransposeAxes)
+            {
+                const auto& attributes = f.Attributes(); // op matches: check the axes
+                if (attributes.Contains(PrimitiveFunction::AttributeNameAxis2) &&
+                    attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>().IsStaticAxis() &&
+                    attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>().StaticAxisIndex())
+                {
+                    return BinaryOp(PrimitiveOpType::TransposeTimes, f.OpInputs().front(), rightOperand, std::move(additionalProperties), name);
+                }
+                else // alternative parameterization: by permutation array
+                {
+                    const auto& axisVector = attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                    if (axisVector.size() == 2)
+                    {
+                        const auto& axis1 = axisVector.front().Value<Axis>();
+                        const auto& axis2 = axisVector.back() .Value<Axis>();
+                        if (axis1.IsStaticAxis() && axis2.IsStaticAxis() && axis1.StaticAxisIndex(false) == 1 && axis2.StaticAxisIndex(false) == 0)
+                            return BinaryOp(PrimitiveOpType::TransposeTimes, f.OpInputs().front(), rightOperand, std::move(additionalProperties), name);
+                    }
+                }
+            }
+        }
         return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 

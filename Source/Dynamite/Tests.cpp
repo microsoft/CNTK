@@ -208,6 +208,8 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9    } } },
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42       } } },
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9, 3 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "Transpose|Times()" }, VarExpr(CNTK::Times(CNTK::Transpose(args[0])                      , args[1])),{ { 42, 13 },{ 42, 9, 3 } } }, // Transpose optimization, from axes
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "Transpose|Times{}" }, VarExpr(CNTK::Times(CNTK::Transpose(args[0], AxisVector({ 1, 0 })), args[1])),{ { 42, 13 },{ 42, 9, 3 } } }, // Transpose optimization, from permutation
         // ternary
         { ValOp(Clip), VarExpr(CNTK::Clip         (args[2], args[0], args[1])), { { 13,  1 }, { 13, 1 }, { 13, 42 } } },
         { ValOp(Cond), VarExpr(CNTK::ElementSelect(args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13,  1 } } },

@@ -473,6 +473,11 @@ namespace CNTK
 
         void SetState(const Dictionary& state);
 
+        const InputsVectorType& OpInputs() const // meant for internal use: get the inputs of the primitive op
+        {
+            return m_inputs;
+        }
+
     private:
 
         // The following helper functions are used to determine the output shape for different
