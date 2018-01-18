@@ -2857,11 +2857,12 @@ class InternalVariable::AutoBatch
     // by setting its m_acyclicOutputPrimitiveReference field.
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
-    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes/*, const wstring& name*/,
+    Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, Function::InputsVectorType&& inputs, Dictionary&& attributes/*, const wstring& name*/,
+                                       const ShapeType& shape, bool isSparse,
                                        const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                        bool isFree = false, bool logSpliceAsGather = false)
     {
-        auto fPtr = CreateAndMemoizeOp(op, move(inputs), shape, move(attributes)/*, name*/, profiler, logPrefix, isFree, logSpliceAsGather);
+        auto fPtr = CreateAndMemoizeOp(op, move(inputs), move(attributes), shape, isSparse/*, name*/, profiler, logPrefix, isFree, logSpliceAsGather);
         let& output = fPtr->m_outputs.front();
         // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
         //input = output.CompositePreservingCopy(fPtr);         // without the acyclic trick, this works as well, but is not quite right since fPtr is not a Composite
@@ -2884,7 +2885,8 @@ class InternalVariable::AutoBatch
             return InlineAndMemoizeBatchedBasicBlock(static_cast<const BlockFunction&>(clonee), inputs, batchAxis, batchSize);
 
         // get the unbatched output shape, considering the case that 'clonee' lives inside a composite
-        let& cloneeOutputShape = clonee.m_outputs.front().Shape();
+        let& output = clonee.m_outputs.front();
+        let& cloneeOutputShape = output.Shape();
         let& cloneeOutputDims = cloneeOutputShape.Dimensions();
         let mustReplaceFreeDimension = (!cloneeOutputDims.empty() && cloneeOutputDims.back() == NDShape::FreeDimension);
         if (mustReplaceFreeDimension)
@@ -2899,14 +2901,15 @@ class InternalVariable::AutoBatch
         if (IsMatrixProduct(clonee.m_op))
             fail_if(inputs.front().Shape() != clonee.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(clonee.m_op, move(inputs), shape, move(attributes)/*, clonee.m_name*/, clonee.m_profiler, L"*"/*clonee*/, isFree);
+        return CreateAndMemoizeOp(clonee.m_op, move(inputs), move(attributes), shape, output.IsSparse()/*, clonee.m_name*/, clonee.m_profiler, L"*"/*clonee*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
     // This executes RawPrimitiveFunction() and MemoizeInArena().
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
-    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, Function::InputsVectorType&& inputs, const ShapeType& shape, Dictionary&& attributes/*, const wstring& name*/,
+    PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, Function::InputsVectorType&& inputs, Dictionary&& attributes,
+                                            const ShapeType& shape, bool isSparse/*, const wstring& name*/,
                                             const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                             bool isFree = false, bool logSpliceAsGather = false)
     {
@@ -2918,7 +2921,6 @@ class InternalVariable::AutoBatch
         let isVolatile    = any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsVolatile();    }); // PERF BUGBUG: caller knows this already; should pass it in
         let needsGradient = !isVolatile &&
                             any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }); // PERF BUGBUG: caller knows this already; should pass it in
-        let isSparse      = all_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsSparse();      }); // BUGBUG: This is not generally correct -> Caller knows this, just pass it in.
         fPtr->InitOutput(OutputVariable(NDShape(shape)/*it's a &&*/, fInputs.front().GetDataType(), needsGradient, isSparse, isVolatile));
         //if (fPtr->m_uniqueIdForDebugging == 194962)
         //    Break;
@@ -3577,12 +3579,13 @@ class InternalVariable::AutoBatch
                 // create a new PrimitiveFunction Slice()
                 auto outputShape = fromOutputDims; // determine output shape
                 outputShape.back()/*[fromOutputRank]*/ = endIndex - beginIndex; // narrow it down to the range of the slice we are taking
-                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(nullptr/*1*/, batchedInput), outputShape,
+                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(nullptr/*1*/, batchedInput),
                                                          Dictionary(
                                                              PrimitiveFunction::AttributeNameAxis,       Axis((int)fromOutputRank),
                                                              PrimitiveFunction::AttributeNameBeginIndex, (int)beginIndex,
                                                              PrimitiveFunction::AttributeNameEndIndex,   (int)endIndex
                                                          ),
+                                                         outputShape, batchedInput.IsSparse(),
                                                          //f0.m_name,
                                                          f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                                          /*isFree=*/true);
@@ -3626,8 +3629,8 @@ class InternalVariable::AutoBatch
                 expectedBatchedInputShapeVec.push_back(batchDim);
                 // insert a Reshape() op
                 let batchedInputTotalSizePre = batchedInput.Shape().TotalSize();
-                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), expectedBatchedInputShapeVec,
-                                                         Dictionary(),
+                batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), Dictionary(),
+                                                         expectedBatchedInputShapeVec, batchedInput.IsSparse(),
                                                          //f0.m_name,
                                                          f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 let batchedInputTotalSizePost = batchedInput.Shape().TotalSize();
@@ -3719,8 +3722,9 @@ class InternalVariable::AutoBatch
                     broadcastShape.resize(batchAxis, 1);
                     broadcastShape.push_back(f.m_autoBatchState.m_batchDim); // this is the shape we want
                     // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
-                    return CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(nullptr/*1*/, input), broadcastShape,
+                    return CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(nullptr/*1*/, input),
                                                      Dictionary(PrimitiveFunction::AttributeNameReductionOpName, PrimitiveFunction::InternalSumReductionOpName),
+                                                     broadcastShape, input.IsSparse(),
                                                      //f0.m_name,
                                                      f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false);
                     // Note that at this point, the inputs to the Gather operation will have inconsistent
@@ -3734,7 +3738,8 @@ class InternalVariable::AutoBatch
             };
             Function::InputsVectorType gatherInputs(Transform(ops, createArgumentFn));
             CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
-            let& input0Shape = gatherInputs[0].Shape();
+            let& input0Shape    = gatherInputs.front().Shape();
+            let  input0IsSparse = gatherInputs.front().IsSparse();
 #if 0       // TODO: remove this. I used this earlier. Not sure why.
             let& input0Shape1 = MTCacheAndGetValue(gatherInputs[0])->Shape();
             fail_if(input0Shape != input0Shape1, "shape not set?");
@@ -3750,8 +3755,9 @@ class InternalVariable::AutoBatch
             // BUGBUG: vv The move(gatherInputs) is ineffective because ultimately, the copy (not move) constructor of PrimtiveFunction ends up being called.
             //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
             //    Break;
-            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), batchedInputShape,
+            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs),
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)batchAxis)),
+                                             batchedInputShape, input0IsSparse,
                                              //f0.m_name,
                                              f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                              /*isFree=*/false, /*logSpliceAsGather=*/true);
@@ -4109,7 +4115,7 @@ class InternalVariable::AutoBatch
                 //arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                 // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(arg)), batchedOutputShape, Dictionary()/*, f0.m_name*/, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
+                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(arg)), Dictionary(), batchedOutputShape, arg.IsSparse()/*, f0.m_name*/, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
 
                 batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
             }

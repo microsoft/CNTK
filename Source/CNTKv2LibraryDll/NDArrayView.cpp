@@ -797,6 +797,7 @@ namespace CNTK
         return view;
     }
 
+    // output is sparse or dense depending on 'out'
     /*static*/ NDArrayViewPtr NDArrayView::AsOneHot(NDArrayViewPtr arg, size_t axis, NDArrayViewPtr out)
     {
         // create result object if not given
