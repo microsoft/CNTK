@@ -979,25 +979,22 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // TODO: pass in the Corpus batch instead of (source, targets), so that we compute that only once
         let probs = model_fn(sources, targets);
 
+        probs.Value(); // currently fails in DetermineBatchAxis for Transpose operation
+        probs.Value()->LogToFile(L"probs");
+
         // apply the criterion
         let& trgSubBatch = batch->back();
         let dimBatch = trgSubBatch->batchSize();
         let dimWords = trgSubBatch->batchWidth();
         let  trgMask = graph->constant({ dimWords, dimBatch, 1 }, init = inits::from_vector(trgSubBatch->mask()));
         let& trgData = trgSubBatch->oneHot();
-        //let trgData = trgSubBatch->x;
-        //
-        //let yIdx = graph->constant({ (int)trgSubBatch->indices().size(), 1 },
-        //    init = inits::from_vector(trgSubBatch->indices()));
-        //Expr trgMask, trgIdx;
-        ///*std::tie(trgMask, trgIdx) =*/ mmodel->getDecoders().front()->groundTruth(state, graph, batch);
-        //probs.Value(); // currently fails in DetermineBatchAxis for Transpose operation
 
         std::string costType = mmodel->opt<string>("cost-type");
         bool inference = false; // TODO
         float ls = inference ? 0.f : mmodel->opt<float>("label-smoothing");
 
         auto cost = Cost(probs, trgData, trgMask, costType, ls);
+        //fprintf(stderr, "====> %.8f\n", cost.Value()->AsScalar<float>()), fflush(stderr);
 
         if (mmodel->getOptions()->has("guided-alignment") && !inference) {
             auto alignments = mmodel->getDecoders()[0]->getAlignments();
