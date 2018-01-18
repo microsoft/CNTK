@@ -2323,7 +2323,8 @@ class InternalVariable::AutoBatch
                 let outputRank = leftRank  - reductionRank;
                 let mapRank    = rightRank - reductionRank;
                 if (right.IsSparse() && rightRank > 2)
-                    InvalidArgument("DetermineBatchAxisAndDim: Sparse matrix product currently only supports vectors or matrices.");
+                    fprintf(stderr, "DetermineBatchAxisAndDim: Sparse matrix product currently only supports vectors or matrices.\n");
+                    //InvalidArgument("DetermineBatchAxisAndDim: Sparse matrix product currently only supports vectors or matrices.");
                 // Note: We could batch Times ops that have the same sequence length. For now, those would be forced to be stacking.
                 // Stacking is fine though in this case. Since there is no funky broadcasting involved, it is equally efficient (same kernel dims).
                 return getLastDim(right, mapRank == 0/*single vector; no batch dim*/ ? reductionRank : rightRank - 1, StackingMode::STACKING);
@@ -3552,11 +3553,11 @@ class InternalVariable::AutoBatch
             let& from = redirectionPair0.originatingFunction; // and this is the function that we take this consecutive slice into
             let& fromOutput = from->m_outputs.front();        // and its output...
             //fail_if(!GetOutputFields(*from).m_value, "value not yet available??");
-            let& fromDims = fromOutput.Shape().Dimensions();  // ...and its shape dimensions
-            fail_if(fromDims.size() == 0, "slice view into batch has rank 0??");
-            let fromRank = fromDims.size() - 1;          // the slice of from is taken along this axis
+            let& fromOutputDims = fromOutput.Shape().Dimensions();  // ...and its shape dimensions
+            fail_if(fromOutputDims.size() == 0, "slice view into batch has rank 0??");
+            let fromOutputRank = fromOutputDims.size() - 1;          // the slice of from is taken along this axis
             Variable batchedInput = Variable(fromOutput, ConstFunctionPtr(), static_pointer_cast<PrimitiveFunction const>(from->shared_from_this())); // our return value
-            if (beginIndex == 0 && endIndex == fromDims.back()/*[fromRank]*/) // full range: just take it, no need to slice at all
+            if (beginIndex == 0 && endIndex == fromOutputDims.back()/*[fromOutputRank]*/) // full range: just take it, no need to slice at all
             {
                 // BUGBUG: ^^ This does not cover STACKING of a previously BATCHED result
                 batchedInput; // this is what we want here
@@ -3565,11 +3566,11 @@ class InternalVariable::AutoBatch
             {
                 //CudaStatsGuard cudaStatsguard(PrimitiveOpType::Slice, L"re-batch", 3, numBatchItems);
                 // create a new PrimitiveFunction Slice()
-                auto outputShape = fromDims; // determine output shape
-                outputShape.back()/*[fromRank]*/ = endIndex - beginIndex; // narrow it down to the range of the slice we are taking
+                auto outputShape = fromOutputDims; // determine output shape
+                outputShape.back()/*[fromOutputRank]*/ = endIndex - beginIndex; // narrow it down to the range of the slice we are taking
                 batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Slice, Function::InputsVectorType(nullptr/*1*/, batchedInput), outputShape,
                                                          Dictionary(
-                                                             PrimitiveFunction::AttributeNameAxis,       Axis((int)fromRank),
+                                                             PrimitiveFunction::AttributeNameAxis,       Axis((int)fromOutputRank),
                                                              PrimitiveFunction::AttributeNameBeginIndex, (int)beginIndex,
                                                              PrimitiveFunction::AttributeNameEndIndex,   (int)endIndex
                                                          ),
@@ -3580,20 +3581,47 @@ class InternalVariable::AutoBatch
                 // TODO: Can this be done by directly messing with the Variable? Make a deep copy of the var object with begin/end slice?
                 //       Would avoid allocating a PrimitiveFunction, and make it easier to be short-circuited directly in backprop.
             }
+            // the last axis of batchedInput is the batch axis, which coincides with the last input axis for STACKING, and is a new one for BATCHING.
+            fail_if(batchedInput.Shape().Dimensions().back() != batchDim, "batchedInput does not have expected last dimension");
+
+            // We now have a batched input, but its shape is based on the originating output,
+            // not considering potential Reshapes expressed as the shape of the input that redirects there.
+            // It is also possible that the batchAxis is different.
+            // May we also have a stacking/batching switch?
+            // To address this:
+            //  - determine the expected batched input shape
+            //  - if it does not match, then Reshape
+#if 0
+            // CONTINUE HERE
+            // BUGBUG: batchedInput now has the original output dimension, not accounting for potential Reshapes.
+            // --> reassemble the expected output shape. And if it differs, then Reshape.
+            let& batchedInputDims = batchedInput.Shape().Dimensions(); // shape of the batched input
+            let& outputDims0 = f0.m_outputs.front().Shape().Dimensions();
+
+            
+            
+            vector<NDShapeDimension> batchedInputShape; // determine output shape   --TODO: use a vector<NDShapeDimension> in this class
+            batchedInputShape.reserve(batchAxis + 1);
+            batchedInputShape = vector<NDShapeDimension>(input0Shape.Dimensions());
+            //batchedInputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeInArena()
+            batchedInputShape.resize(batchAxis, 1); // pad to batchAxis
+            batchedInputShape.push_back(batchDim);  // and add the batch axis
+#endif
+
             // if this op has a a different batchAxis than the re-batched view, we must adjust the axis as to fulfill this function's post-condition
-            // Complex corner cases arise when going back and forth betwen STACING and BATCHING.
+            // Complex corner cases arise when going back and forth betwen STACKING and BATCHING.
             // BUGBUG: (perf) Reshape incurs an unnecessary mem copy in Backprop
             // BUGBUG: This seems never called in the MT case?
             // TODO: Do this inside Gather, based on its output shape.
-            if (fromRank != batchAxis)
+            if (fromOutputRank != batchAxis)
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::Reshape, L"intermediate reshape", 3, numBatchItems);
                 // TODO: Any way we can fold the reshape in using m_redirection? ... no need, this will become part of Gather.
                 // start with actual shape we have, and make it the one we want
                 let& batchedInputDims = batchedInput.Shape().Dimensions();
-                if (batchAxis < fromRank)
+                if (batchAxis < fromOutputRank)
                 {
-                    if (batchAxis + 1 != fromRank)
+                    if (batchAxis + 1 != fromOutputRank)
                         LogicError("stacking axis not adjacent to batch axis??"); // TODO: Can this legally happen?
                     fail_if(batchedInputDims[batchAxis] * batchedInputDims[batchAxis + 1] != batchDim, "batch axis cannot be absorbed into stacking axis??");
                     auto outputShape = batchedInputDims.BackPopped();
@@ -3604,29 +3632,29 @@ class InternalVariable::AutoBatch
                                                              //f0.m_name,
                                                              f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 }
-                else // batchAxis > fromRank
+                else // batchAxis > fromOutputRank
                 {
                     auto& outputShapeVec = m_CreateBatchedInputFor_outputShapeBuffer;
                     outputShapeVec.assign(batchedInputDims.begin(), batchedInputDims.end());
                     //auto outputShapeVec = MakeVector(batchedInputDims); // PERF BUGBUG--can we do better than this? E.g. use a shared vector class member for this?
                     if (outputShapeVec.back() == batchDim)
-                        outputShapeVec.insert(outputShapeVec.end() - 1, batchAxis - fromRank, 1);
+                        outputShapeVec.insert(outputShapeVec.end() - 1, batchAxis - fromOutputRank, 1);
                     else
                     {
-//                        if (batchAxis != fromRank + 1)    // batchAxis > fromRank
+//                        if (batchAxis != fromOutputRank + 1)    // batchAxis > fromOutputRank
 //#if 0                       // happens when disabling Barrier??
 //                            // BUGBUG: Will crash later. Fix this.
 //                            // Observed: [3072*11] -> [1 x 3072 x 11], with expected Placeholder [3072 x FreeDim]
 //                            // op = Block
 //                            // batchAxis==2 vs. [3027 x FreeDim] is already mismatching
 //                            // --> batchAxis is not determined correctly for Block. Reshape?
-//                            outputShapeVec.insert(outputShapeVec.begin() + fromRank, batchAxis - (fromRank + 1), 1);
+//                            outputShapeVec.insert(outputShapeVec.begin() + fromOutputRank, batchAxis - (fromOutputRank + 1), 1);
 //#else
 //                            LogicError("batch axis not adjacent to stacking axis??"); // TODO: Can this legally happen? If yes, then we can just insert ones.
 //#endif
                         fail_if(outputShapeVec.back() / batchDim * batchDim != outputShapeVec.back(), "stacking axis cannot be converted to batching axis??");
                         outputShapeVec.back() /= batchDim;
-                        if (outputShapeVec.size() < batchAxis)    // batchAxis > fromRank
+                        if (outputShapeVec.size() < batchAxis)    // batchAxis > fromOutputRank
                             // Example: input is 10 512-dim vectors stacked -> [5120]
                             //          but batchAxis == 2 --> [512 x 1 x 10]
                             outputShapeVec.resize(batchAxis, 1);
@@ -3684,17 +3712,17 @@ class InternalVariable::AutoBatch
             fail_if(input0Shape != input0Shape1, "shape not set?");
 #endif
             // create a new PrimitiveFunction Splice()
-            vector<NDShapeDimension> outputShape; // determine output shape   --TODO: use a vector<NDShapeDimension> in this class
-            outputShape.reserve(batchAxis + 1);
-            outputShape = vector<NDShapeDimension>(input0Shape.Dimensions());
-            //outputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeInArena()
-            outputShape.resize(batchAxis, 1); // pad to batchAxis
-            outputShape.push_back(batchDim);  // and add the batch axis
-            //fail_if(outputShape[batchAxis] != batchDim, "CreateBatchedInputFor() post=condition not fulfilled??"); // (no need to check; post-condition is obviously fulfilled by construction)
+            vector<NDShapeDimension> batchedInputShape; // determine output shape   --TODO: use a vector<NDShapeDimension> in this class
+            batchedInputShape.reserve(batchAxis + 1);
+            batchedInputShape = vector<NDShapeDimension>(input0Shape.Dimensions());
+            //batchedInputShape = gatherInputs[0]->Shape().Dimensions(); // TODO: no need to force-realize it here; should be done by MemoizeInArena()
+            batchedInputShape.resize(batchAxis, 1); // pad to batchAxis
+            batchedInputShape.push_back(batchDim);  // and add the batch axis
+            //fail_if(batchedInputShape[batchAxis] != batchDim, "CreateBatchedInputFor() post=condition not fulfilled??"); // (no need to check; post-condition is obviously fulfilled by construction)
             // BUGBUG: vv The move(gatherInputs) is ineffective because ultimately, the copy (not move) constructor of PrimtiveFunction ends up being called.
             //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
             //    Break;
-            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), outputShape,
+            return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs), batchedInputShape,
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)batchAxis)),
                                              //f0.m_name,
                                              f0.m_profiler, L"#"/*gatherInputs[0]*/,
@@ -3917,6 +3945,10 @@ class InternalVariable::AutoBatch
         //  - we must batch if the operation does not allow stacking. AreBatchable takes this into account.
         //  - if the op allows stacking, we still want to back off to batching if the operation allows it. It will be more efficient.
         //  - we stack only if it is allowed and required
+        //if (f0.m_op == PrimitiveOpType::TransposeAxes)
+        //    Break;
+        //if (f0.m_uniqueIdForDebugging == 9503)
+        //    Break;
         auto stackingMode = f0.m_autoBatchState.m_stacking;  // we batch or stack?
         auto batchAxis    = f0.m_autoBatchState.m_batchAxis; // we batch along this axis
         NDShapeDimension batchSize;
@@ -4018,6 +4050,8 @@ class InternalVariable::AutoBatch
         //if (f0.m_uniqueIdForDebugging == 23286)
         //    Break;
         auto batchedOp = CreateAndMemoizeBatchedOp(f0, Function::InputsVectorType(move(m_batchedInputs)), /*compositeBatchDim=*/ABSENT_FREE_DIMENSION/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
+        //if (batchedOp->m_uniqueIdForDebugging == 10634)
+        //    Break;
 
         // some stats and checks
         if (!anyBatchedInputs)
@@ -4518,7 +4552,7 @@ public:
         let& f = *fi.first;
         let index = fi.second;
 #ifdef LOG_DETAILS
-        Memoizer::LogFunction(*f, L"bb ", index);
+        Memoizer::LogFunction(f, L"bb ", index);
 #endif
         // function's forward output and received gradient from top live here
         let& outputFields = GetOutputFields(f); // result of f lives here; hence also the gradient we back-propagate
@@ -4620,7 +4654,7 @@ public:
         }
 #else
 #ifdef LOG_DETAILS
-        Memoizer::LogFunction(*f, L"bb# ", SIZE_MAX);
+        Memoizer::LogFunction(f, L"bb# ", SIZE_MAX);
 #endif
         // function's forward output and received gradient from top live here
         let& outputFields = GetOutputFields(f); // result of f lives here; hence also the gradient we back-propagate
