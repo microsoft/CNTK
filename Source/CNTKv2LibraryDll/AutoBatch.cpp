@@ -4942,16 +4942,18 @@ public:
         for (auto& c : m_spliceConsumers)
             BackpropThroughSplice(*c.first);
 
-        // matrix-weight bucket
-        if (!m_matrixWeightConsumers.empty())
-            BackpropToMatrixWeight(m_matrixWeightConsumers);
-
         // summation bucket
         // ...not used yet
 
         // others bucket
         for (auto& c : m_otherConsumers)
             BackpropToUnbatched(c, /*viewAllowed=*/false);
+
+        // matrix-weight bucket
+        // Do this last, so that any dense contribution comes in before a block-sparse update.
+        // BUGBUG: This is not complete. We should also separate dense and sparse matrix-gradients buckets. 
+        if (!m_matrixWeightConsumers.empty())
+            BackpropToMatrixWeight(m_matrixWeightConsumers);
 #endif
     }
 
