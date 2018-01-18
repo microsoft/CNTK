@@ -3455,15 +3455,12 @@ class InternalVariable::AutoBatch
     }
 #endif
 
-    // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
-    vector<Variable> m_batchedInputs;
-
     // helper to create a batched input given a list of operations
     // The result will have outputShape[batchAxis] == batchDim, with one exception:
     // If all inputs are identical and that can be represented by broadcasting (which is only possible if BATCHING).
     // In that case, the output will have no batchAxis (which implies it is 1, which means 'broadcast along the batchAxis' to all ops).
     // The stackingMode passed here does not affect the meaning of batchAxis and batchDim; but rather their constraints.
-    vector<NDShapeDimension> m_CreateBatchedInputFor_shapeBuffer;
+    vector<NDShapeDimension> m_CreateBatchedInputFor_shapeBuffer; // local variable, for which we keep the allocation across invocation
     inline Variable CreateBatchedInputFor(NonOwningFunctionList ops, size_t batchAxis, NDShapeDimension batchDim, StackingMode stackingMode,
                                           size_t i, /*in/out*/bool& anyBatchedInputs)
     {
@@ -3758,6 +3755,7 @@ class InternalVariable::AutoBatch
     // The consumers of the original ops will get a back-reference in the m_redirection field.
     // If such a result is ever accessed individually, it will lead to a lazy NDArrayView::SliceView() call
     // (but no Splice Function object is used for this).
+    vector<Variable> m_ExecuteBatchedOpAndUpdateSchedule_batchedInputsBuffer; // local variable, for which we keep the allocation across invocation
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
         // get a representative op
@@ -3895,7 +3893,8 @@ class InternalVariable::AutoBatch
         //  - For matrix products and convolution, the column axes is already sort of a batch axis. We append the batch axis to them.
         //    Our special matrix product may increase the number of axes. This is fine; the batch axis remains the respective trailing axis.
         //    TODO: Verify that mapRank is never counted from the back.
-        m_batchedInputs.resize(numArgs);
+        auto& batchedInputs = m_ExecuteBatchedOpAndUpdateSchedule_batchedInputsBuffer; // (this is semantically a local var; we use a class var to avoid reallocation across invocations)
+        batchedInputs.resize(numArgs);
         let& unbatchedOutputShape = f0.m_outputs.front().Shape();
         let i0 = (size_t)isTimes;    // index of first batchable argument (1 for matrix-product class; 0 otherwise)
 #if 0
@@ -4011,12 +4010,12 @@ class InternalVariable::AutoBatch
         //    Break;
 #endif
 
-        // create all m_batchedInputs[] by splicing along the batch axis
+        // create all batchedInputs[] by splicing along the batch axis
         // Special optimizations are taken if all elements are identical.
         bool anyBatchedInputs = false; // stays false if for all arguments, all respective batch-item arguments are identical
         for (size_t i = 0; i < numArgs; i++) // if isTimes then skip the first arg
         {
-            m_batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize, stackingMode,
+            batchedInputs[i] = CreateBatchedInputFor(ops, commonInputBatchAxis, batchSize, stackingMode,
                                                        i, /*in/out*/anyBatchedInputs);
         }
         // anyBatchedInputs will still be false if all had identical inputs across all batch items.
@@ -4028,27 +4027,27 @@ class InternalVariable::AutoBatch
             // BatchNorm requires three additional parameters for the current mean and invStdDev, and the zero-mean/unit-variance intermediate. These must be kept for backprop.
             // This is sort of a hack for now. It is not, however, an efficiency problem since there are relatively few batched BatchNorm nodes in the graph.
             // Note that we cannot just move creation of these outside because one depends on the actual size.
-            let dataType = m_batchedInputs[0].GetDataType();
+            let dataType = batchedInputs[0].GetDataType();
             let createParameter = [&](const NDShape& shape) -> Variable // helper to create a Parameter as if it had been initialized by RPrepareForwardGraphAndSchedule()
             {
                 // BUGBUG: We construct a Parameter object as an InternalVariable. Better construct a true Parameter, in case Parameter ever becomes a distinct type with extra members.
                 let p = InternalVariable(shape, VariableKind::Parameter, dataType, /*value=*/nullptr, /*needsGradient=*/false, /*dynamicAxes=*/{}, /*name=*/wstring(), /*uid=*/wstring());
                 return Variable(p, nullptr, nullptr);
             };
-            let& statShape = m_batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
-            m_batchedInputs.push_back(createParameter(               statShape  ));
-            m_batchedInputs.push_back(createParameter(               statShape  ));
-            m_batchedInputs.push_back(createParameter(m_batchedInputs[0].Shape()));
+            let& statShape = batchedInputs[1].Shape(); // note: This is guaranteed to have no batch axis, since they are identical across all instances in this batched op
+            batchedInputs.push_back(createParameter(               statShape  ));
+            batchedInputs.push_back(createParameter(               statShape  ));
+            batchedInputs.push_back(createParameter(batchedInputs[0].Shape()));
             anyBatchedInputs = true; // Note: Even if all operands are the same, we may still have a sequence axis to normalize over
         }
 
         // execute the operation and implant the results
-        // Batched inputs have been prepared in m_batchedInputs[].
+        // Batched inputs have been prepared in batchedInputs[].
         // If all inputs are identical then degrade to computing it only once (this is the easy case that we don't kick off the CSE machinery for).
 
         if (!anyBatchedInputs)
             for (size_t i = 0; i < numArgs; i++)
-                fail_if(&GetInputFields(m_batchedInputs[i]) != &GetInputFields(f0.m_inputs[i]), "all batch args the same, but not??");
+                fail_if(&GetInputFields(batchedInputs[i]) != &GetInputFields(f0.m_inputs[i]), "all batch args the same, but not??");
 
         //if (f0.m_op == PrimitiveOpType::Block)
         //{
@@ -4068,7 +4067,7 @@ class InternalVariable::AutoBatch
         //              Note: This is not covered by CSE, since CSE is only used for complex cases.
         //if (f0.m_uniqueIdForDebugging == 23286)
         //    Break;
-        auto batchedOp = CreateAndMemoizeBatchedOp(f0, Function::InputsVectorType(move(m_batchedInputs)), /*compositeBatchDim=*/ABSENT_FREE_DIMENSION/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
+        auto batchedOp = CreateAndMemoizeBatchedOp(f0, Function::InputsVectorType(move(batchedInputs)), /*compositeBatchDim=*/ABSENT_FREE_DIMENSION/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
         //if (batchedOp->m_uniqueIdForDebugging == 10634)
         //    Break;
 
@@ -4131,7 +4130,7 @@ class InternalVariable::AutoBatch
 
         // release the ref counts on the batched inputs; but keep the vector's memory allocated
         // TODO: CreateAndMemoizeBatchedOp() already moves out the ref counts. Do we still need this? --TODO: double-check that they have been moved out
-        m_batchedInputs.clear();
+        batchedInputs.clear();
     }
 
 public:
