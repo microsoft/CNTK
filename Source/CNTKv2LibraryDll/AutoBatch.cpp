@@ -1465,6 +1465,7 @@ private:
 #endif
         EndCudaStats(cudaStatsPtr, inputValues.front()->Device());
         // special case: a Slice op is non-contiguous. We must copy.
+        // TODO: Do this lazily for inputs of ops that cannot handle non-contiguous data, or for externally requested values.
         if (f.m_op == PrimitiveOpType::Slice && !res->IsContiguous())
         {
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
@@ -4788,15 +4789,54 @@ public:
     // The vectors for building the lists are class members so that we reuse the malloc.
     // This is a subroutine of RAggregateGradientFromAllConsumers().
     vector<AutoBatchConsumer> m_spliceConsumers;       // Scatter optimization: backprop to all inputs at once using ScatterBatch
-    vector<AutoBatchConsumer> m_matrixWeightConsumers; // matrix product optimization: sum -> inner dimension
+    vector<AutoBatchConsumer> m_matrixWeightConsumersDense;  // matrix product optimization: sum -> inner dimension
+    vector<AutoBatchConsumer> m_matrixWeightConsumersSparse; // we distinguish dense and sparse gradients
     vector<AutoBatchConsumer> m_viewableConsumers;     // see-through gradients being aggregated -> Gather and Reduce
     vector<AutoBatchConsumer> m_otherConsumers;        // remaining incoming gradients for which we have no further optimization
     void ClearBuckets()
     {
-        m_spliceConsumers      .clear();
-        m_matrixWeightConsumers.clear();
-        m_viewableConsumers    .clear();
-        m_otherConsumers       .clear();
+        m_spliceConsumers            .clear();
+        m_matrixWeightConsumersDense .clear();
+        m_matrixWeightConsumersSparse.clear();
+        m_viewableConsumers          .clear();
+        m_otherConsumers             .clear();
+    }
+    static bool IsMatrixGradient0Batchable(const PrimitiveFunction& f, const PrimitiveFunction& g)
+    {
+#if 0       // use 1 to disable batching of matrix gradients
+        return false;
+#else
+        // must be the same op (Times vs. TransposeTimes)
+        if (f.m_op != g.m_op)
+            return false;
+        // we compute leftGrad += outGrad @ right^T
+        let&   fOutShape = f.m_outputs.front().Shape().Dimensions();
+        let&   gOutShape = g.m_outputs.front().Shape().Dimensions();
+        let& fRightShape = f.m_inputs .back() .Shape().Dimensions();
+        let& gRightShape = g.m_inputs .back() .Shape().Dimensions();
+        let&   leftShape = f.m_inputs .front().Shape().Dimensions();
+        let    outRank =   fOutShape.size();
+        let   gOutRank =   gOutShape.size();
+        let  rightRank = fRightShape.size();
+        let gRightRank = gRightShape.size();
+        let   leftRank =   leftShape.size();
+        fail_if(leftShape != g.m_inputs.front().Shape().Dimensions(), "dimensions of matrix gradient don't match??");
+        if (outRank != gOutRank || rightRank != gRightRank)
+            return false; // rank not matching: stop batching right here (we could do better)
+        // the center 'reductionRank' dimensions get reduced over
+        if (outRank + rightRank - leftRank != 2) // if 2 then we reduce over a single batch axis
+            return false; // this is not a batch gradient; back out
+        fail_if(fOutShape.back() != fRightShape.back() || gOutShape.back() != gRightShape.back(), "inner dimensions of matrix gradient don't match??");
+        // the two gradient ops match if all dimensions except for the batch dim match
+        for (size_t k = 0; k < outRank - 1; k++) // check outGrad
+            if (fOutShape[k] != gOutShape[k])
+                return false;
+        for (size_t k = 0; k < rightRank - 1; k++) // check right
+            if (fRightShape[k] != gRightShape[k])
+                return false;
+        // gradient is batchable
+        return true;
+#endif
     }
     void DetermineAndAddToBucket (const AutoBatchConsumer& c)
     {
@@ -4805,61 +4845,34 @@ public:
         fail_if(f->m_outputs.size() != 1, "for now only functions with a single output are supported"); // (needs some more plumbing to fix this)
         // backprop into Times' matrix argument
         // BUGBUG: This currently does not capture single time steps that backprop into the same matrix as a batch.
-        let IsMatrixGradient0Batchable = [](const PrimitiveFunction& f, const PrimitiveFunction& g) -> bool
-        {
-#if 0       // use 1 to disable batching of matrix gradients
-            return false;
-#else
-            // we compute leftGrad += outGrad @ right^T
-            let&   fOutShape = f.m_outputs.front().Shape().Dimensions();
-            let&   gOutShape = g.m_outputs.front().Shape().Dimensions();
-            let& fRightShape = f.m_inputs .back() .Shape().Dimensions();
-            let& gRightShape = g.m_inputs .back() .Shape().Dimensions();
-            let&   leftShape = f.m_inputs .front().Shape().Dimensions();
-            let    outRank =   fOutShape.size();
-            let   gOutRank =   gOutShape.size();
-            let  rightRank = fRightShape.size();
-            let gRightRank = gRightShape.size();
-            let   leftRank =   leftShape.size();
-            fail_if(leftShape != g.m_inputs.front().Shape().Dimensions(), "dimensions of matrix gradient don't match??");
-            if (outRank != gOutRank || rightRank != gRightRank)
-                return false; // rank not matching: stop batching right here (we could do better)
-            // the center 'reductionRank' dimensions get reduced over
-            if (outRank + rightRank - leftRank != 2) // if 2 then we reduce over a single batch axis
-                return false; // this is not a batch gradient; back out
-            fail_if(fOutShape.back() != fRightShape.back() || gOutShape.back() != gRightShape.back(), "inner dimensions of matrix gradient don't match??");
-            // the two gradient ops match if all dimensions except for the batch dim match
-            for (size_t k = 0; k < outRank - 1; k++) // check outGrad
-                if (fOutShape[k] != gOutShape[k])
-                    return false;
-            for (size_t k = 0; k < rightRank - 1; k++) // check right
-                if (fRightShape[k] != gRightShape[k])
-                    return false;
-            // gradient is batchable
-            return true;
-#endif
-        };
-        // Note: This needs to be enabled for column-sparse gradients to work!
         // BUGBUG: (perf) We should also have a special path for Reshape(), as to avoid the memory copy.
-        //let opClass = g_oscTable[f->m_op]; // operation-specific auto-batching class
         // splice operation should use scatter
         // BUGBUG: Really only true if the Splice originated from a batching operation.
         //         User-specified Splice ops might have arguments that receive no gradient, e.g. constants.
         let op = f->m_op;
         if (op == PrimitiveOpType::Splice)
+        {
             m_spliceConsumers.push_back(c);
+            return;
+        }
         // backpropagating into the first arg of a matrix product
         // These are shared.
         // We only collect matrix products that fully match the first one. --TODO: when do they not fully match?
-        else if (IsMatrixProduct(op) && index == 0 &&
-            (m_matrixWeightConsumers.empty() || (IsMatrixGradient0Batchable(*f, *m_matrixWeightConsumers.front().first))))
-            m_matrixWeightConsumers.push_back(c);
+        if (IsMatrixProduct(op) && index == 0)
+        {
+            bool isSparse = f->m_inputs.back().IsSparse();
+            auto& consumers = isSparse ? m_matrixWeightConsumersSparse : m_matrixWeightConsumersDense;
+            if (consumers.empty() || (IsMatrixGradient0Batchable(*f, *consumers.front().first)))
+            {
+                consumers.push_back(c);
+                return;
+            }
+        }
         // backprop where gradients are just views that we can sum up
         //else if (f->m_op == PrimitiveOpType::Plus)
         //    return m_viewableConsumers;
         // all other
-        else
-            m_otherConsumers.push_back(c);
+        m_otherConsumers.push_back(c);
     };
 
     // compute a variable's outputs' gradient (var.m_gradient)
@@ -4903,6 +4916,7 @@ public:
         //fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
 
 #ifdef NO_BATCHED_BACKPROP
+        // BUGBUG: This will fail in case of mixed dense/sparse gradients into a matrix.
         if (fields.m_consumers.size() == 1)
             BackpropToUnbatched(fields.m_consumers.front(), /*viewAllowed=*/!fields.m_gradient); // viewAllowed because there is only one, no aggregation needed
         else
@@ -4952,11 +4966,16 @@ public:
         for (auto& c : m_otherConsumers)
             BackpropToUnbatched(c, /*viewAllowed=*/false);
 
-        // matrix-weight bucket
-        // Do this last, so that any dense contribution comes in before a block-sparse update.
-        // BUGBUG: This is not complete. We should also separate dense and sparse matrix-gradients buckets. 
-        if (!m_matrixWeightConsumers.empty())
-            BackpropToMatrixWeight(m_matrixWeightConsumers);
+        // matrix-weight buckets
+        // Matrix-weight gradients may be column-sparse or dense.
+        // If a matrix weight receives both kinds of gradients, we do the dense ones first,
+        // since we have an op to add a sparse matrix into a dense one, but not vice versa.
+        // The use case is tied embeddings in MT, where the same embedding is applied to sparse inputs
+        // and is also used as a Softmax projection, which is transposed and dense.
+        if (!m_matrixWeightConsumersDense.empty())
+            BackpropToMatrixWeight(m_matrixWeightConsumersDense);
+        if (!m_matrixWeightConsumersSparse.empty())
+            BackpropToMatrixWeight(m_matrixWeightConsumersSparse);
 #endif
     }
 
