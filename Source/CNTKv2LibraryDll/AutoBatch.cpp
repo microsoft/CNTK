@@ -2334,6 +2334,12 @@ class InternalVariable::AutoBatch
                 return getLastDim(right, mapRank == 0/*single vector; no batch dim*/ ? reductionRank : rightRank - 1, StackingMode::STACKING);
             }
             // determine maxRank and lastDim over all batchable inputs
+            // We leverage the fact that for any operation with multiple batchable inputs, the batch axis
+            // can be shared (and therefore must be the max over the rank).
+            // For example select(cond, x, y) may have a broadcasting 'cond' with less axes than x or y,
+            // but the result always has a rank that is the max over all.
+            // Note that Times(W,x) has only one batchable input, so this holds here as well.
+            // TODO: Re-understand and validate the above for Splice().
             size_t maxRank = 0;
             NDShapeDimension lastDim = 1; // dimension of last axis encountered (actually max over them, due to broadcasting)
             bool hasSparse = false;
@@ -2371,7 +2377,7 @@ class InternalVariable::AutoBatch
                     return{ StackingMode::STACKING_BUT_MAY_BATCH, freeAxis, lastDim };
                 InvalidArgument("DetermineBatchAxis: The rank of an argument to a basic block invocation exceeds the declared free-axis position.");
             }
-            if ((op == PrimitiveOpType::Splice && !hasSparse) || op == PrimitiveOpType::Reshape || op == PrimitiveOpType::OneHot)
+            if ((op == PrimitiveOpType::Splice && !hasSparse) || op == PrimitiveOpType::Reshape /*|| op == PrimitiveOpType::OneHot*/)
             {
                 // BUGBUG: Without the !hasSparse condition, this will cause it to fail for an unbatched Splice() of sparse vectors.
                 //         Think this through. Maybe now it no longer works for actual batching/stacking.
@@ -2381,7 +2387,7 @@ class InternalVariable::AutoBatch
                 //         Same for OneHot.
                 updateRankDimSparse(GetOutputFields(f));
             }
-            // sparse inputs can only be batched/stacked in axis 1
+            // sparse inputs can only be batched/stacked in axis 1  --TODO: No need, and already seems to work without this constraint.
             if (hasSparse && (maxRank < 1 || maxRank > 2))
                 fprintf(stderr, "DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.\n");
                 //InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
@@ -2422,7 +2428,7 @@ class InternalVariable::AutoBatch
                         goto mustBatch; // touched. Can't stack, must batch.
                 }
                 break;
-            case PrimitiveOpType::OneHot: // TODO
+            case PrimitiveOpType::OneHot: // TODO   --I think this can be removed. OneHotOp always adds one axis, so in input batching, we cater to it
                 // BUGBUG: This is not complete. Think this through. For now, only used for scalar constant to vector expansion.
                 return{ StackingMode::BATCHING, maxRank, 1 };
             case PrimitiveOpType::TransposeAxes:
@@ -3969,12 +3975,12 @@ class InternalVariable::AutoBatch
         //  - we must batch if the operation does not allow stacking. AreBatchable takes this into account.
         //  - if the op allows stacking, we still want to back off to batching if the operation allows it. It will be more efficient.
         //  - we stack only if it is allowed and required
-        //if (f0.m_op == PrimitiveOpType::TransposeAxes)
+        //if (f0.m_op == PrimitiveOpType::OneHot)
         //    Break;
-        //if (f0.m_uniqueIdForDebugging == 9503)
+        //if (f0.m_uniqueIdForDebugging == 4342)
         //    Break;
-        auto stackingMode = f0.m_autoBatchState.m_stacking;  // we batch or stack?
-        auto batchAxis    = f0.m_autoBatchState.m_batchAxis; // we batch along this axis
+        auto stackingMode         = f0.m_autoBatchState.m_stacking;  // we batch or stack?
+        auto commonInputBatchAxis = f0.m_autoBatchState.m_batchAxis; // we batch along this axis
         NDShapeDimension batchSize;
         //if (f0.m_op == PrimitiveOpType::ElementTimes && f0.m_attributes.Size() > 0 && stackingMode == StackingMode::STACKING) // we were batched for batching
         //    Break;
@@ -3995,7 +4001,7 @@ class InternalVariable::AutoBatch
             if (allBatchDimsTheSame && stackingMode == StackingMode::STACKING_BUT_MAY_BATCH) // we don't need to stack
             {
                 stackingMode = StackingMode::BATCHING;
-                batchAxis++;
+                commonInputBatchAxis++;
                 batchSize = (NDShapeDimension)numBatchItems;
             }
             else
@@ -4004,8 +4010,9 @@ class InternalVariable::AutoBatch
             //    fprintf(stderr, "STACKING op %S\n", PrimitiveOpTypeName(f0.m_op).c_str());
         }
         fail_if(stackingMode == StackingMode::STACKING_BUT_MAY_BATCH, "StackingMode::STACKING_BUT_MAY_BATCH should have been decided by now??");
-        let commonInputBatchAxis = batchAxis; // TODO: remove this extra name
-        let outputBatchAxis = isTimes ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : batchAxis;
+        let outputBatchAxis = (isTimes || (f0.m_op == PrimitiveOpType::OneHot)) ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : commonInputBatchAxis;
+        // TODO: ^^ get to a point where this is universally true
+        //       I think for that we need to determine the max input rank.
         if (!isTimes &&
             op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && op != PrimitiveOpType::OneHot && op != PrimitiveOpType::Block &&
             f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
