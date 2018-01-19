@@ -557,7 +557,7 @@ double lattice::forwardbackwardlattice(const std::vector<float> &edgeacscores, p
         const double totalfwacc = logaccalphas.back();
         if (islogzero(totalfwscore))
         {
-            fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+            fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (totalfwscore1) (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
             return LOGZERO; // failed, do not use resulting matrix
         }
 
@@ -617,7 +617,7 @@ double lattice::forwardbackwardlattice(const std::vector<float> &edgeacscores, p
     const double totalfwscore = logalphas.back();
     if (islogzero(totalfwscore))
     {
-        fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+        fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (totalfwscore2) (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
         return LOGZERO; // failed, do not use resulting matrix
     }
 
@@ -1403,7 +1403,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 #endif
     if (islogzero(totalfwscore))
     {
-        fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+        fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (totalfwscore) (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
         return LOGZERO; // failed, do not use resulting matrix
     }
 
