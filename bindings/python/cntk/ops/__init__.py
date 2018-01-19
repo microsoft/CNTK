@@ -330,7 +330,7 @@ def forward_backward(labels_graph, network_out, blank_token_id,
             This is using the original time information to enforce that CTC
             tokens only get aligned within a time margin. Setting this parameter
             smaller will result in shorted delay between label output during
-            decoding, yet may hurt accuracy. delayConstraint=-1 means no
+            decoding, yet may hurt accuracy. delay_constraint=-1 means no
             constraint.
     Returns:
         :class:`~cntk.ops.functions.Function`
