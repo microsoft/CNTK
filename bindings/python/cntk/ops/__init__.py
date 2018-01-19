@@ -261,28 +261,87 @@ def labels_to_graph(labels, name=''):
     return labels_to_graph(labels, name)
 
 @typemap
-def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name=''):
+def forward_backward(labels_graph, network_out, blank_token_id,
+                     delay_constraint=-1, name=''):
     '''
-    Criterion node for training methods that rely on forward-backward Viterbi-like passes, e.g. Connectionist Temporal Classification (CTC) training
-    The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure.
+    Criterion node for training methods that rely on forward-backward Viterbi-like
+    passes, e.g. Connectionist Temporal Classification (CTC) training.
+    The node takes as the input the graph of labels, produced by the labels_to_graph
+    operation that determines the exact forward/backward procedure.
+
     Example:
-        graph = cntk.labels_to_graph(labels)
-        networkOut = model(features)
-        fb = C.forward_backward(graph, networkOut, 132)
+        labels_graph = cntk.labels_to_graph(labels_var)
+        network_out = model(input_var)
+        fb = C.forward_backward(labels_graph, network_out, 132)
+
+    Hint:
+        CNTK requires that both features and labels have the same time dimension.
+        This forward-backward code expects the duplication of these labels to
+        fulfill the requirements. The labels must be encoded as one-hot vectors,
+        where the positive index has values 1 or 2 (from now on referred to as
+        one-hot-1 and one-hot-2, respectively).
+
+        If the labels are frame-aligned, one could encode the vector as one-hot-2
+        if the label is in the frame boundary or as one-hot-1 if it is within the
+        frame. This is already done automatically by the HTKDeserializer.
+
+        If the labels are not frame-aligned, one could encode all labels as
+        one-hot-2, and then duplicate the last label as one-hot-1 until the
+        required time dimension is reached.
+
+        Example:
+            from sklearn.preprocessing import LabelBinarizer
+
+            lb = LabelBinarizer(pos_label=2).fit(range(6))
+            labels = lb.transform([0, 2, 0, 1, 3, 4]) # blank is the label 5
+            # labels = [[2,0,0,...,0,0], [0,0,2,...,0,0], ..., [0,0,0,...,2,0]]
+
+            # Retrieve the input time dimension
+            time_dim = input.shape[-2]
+
+            expanded_labels = np.zeros((time_dim, labels.shape[-1]))
+            # We first copy the original one-hot labels
+            expanded_labels[:len(labels)] = labels
+
+            # Then, we replicate the last label as one-1-hot encoded
+            expanded_labels[len(labels):, labels[-1].argmax()] = 1
+            # expanded_labels = [[2,0,0,...,0,0], [0,0,2,...,0,0], ...,
+                                 [0,0,0,...,2,0], [0,0,0,...,1,0], ...,
+                                 [0,0,0,...,1,0]]
+
+            # We can define the model and the variables
+            input_var = sequence.input_variable((input.shape[-1]), name='input')
+            labels_var = sequence.input_variable((6), name='label')
+            # model = ...
+
+            # Now, we can use the forward-backward algorithm
+            labels_graph =  = cntk.labels_to_graph(labels_var)
+            network_out = model(input_var)
+            fb = forward_backward(labels_graph, network_out, 5)
+            fb.eval({'input': input.astype(np.float32),
+                     'label': expanded_labels.astype(np.float32)})
 
     Args:
-        graph: labels graph
-        features: network output
-        blankTokenId: id of the CTC blank label
-        delayConstraint: label output delay constraint introduced during training that allows to have shorter delay during inference. This is using the original time information to enforce that CTC tokens only get aligned within a time margin. Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy. delayConstraint=-1 means no constraint
+        labels_graph: labels graph
+        network_out: network output
+        blank_token_id: id of the CTC blank label
+        delay_constraint: label output delay constraint introduced during
+            training that allows to have shorter delay during inference.
+            This is using the original time information to enforce that CTC
+            tokens only get aligned within a time margin. Setting this parameter
+            smaller will result in shorted delay between label output during
+            decoding, yet may hurt accuracy. delayConstraint=-1 means no
+            constraint.
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import forward_backward
-    dtype = get_data_type(features, graph)
-    features = sanitize_input(features, dtype)
-    graph = sanitize_input(graph, dtype)
-    return forward_backward(graph, features, blankTokenId, delayConstraint, name)
+    dtype = get_data_type(network_out, labels_graph)
+    network_out = sanitize_input(network_out, dtype)
+    labels_graph = sanitize_input(labels_graph, dtype)
+
+    return forward_backward(labels_graph, network_out, blank_token_id,
+                            delay_constraint, name)
 
 ##########################################################################
 # convolution ops
@@ -335,10 +394,10 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          the input dimension. The last value that lines up with the number of input channels must be false.
         dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
         reduction_rank (`int`, default 1): must be 0 or 1, 0 mean no depth or channel dimension in the input and 1 mean the input has channel or depth dimension.
-        groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+        groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1,
          which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
          divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
-         Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0. 
+         Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -1840,9 +1899,9 @@ def hardmax(x, name=''):
 def top_k(x, k, axis=-1, name=''):
     '''
     Computes the ``k`` largest values of the input tensor and the corresponding indices
-    along the specified axis (default the last axis). The returned 
-    :class:`~cntk.ops.functions.Function` has two outputs. The first one 
-    contains the top ``k`` values in sorted order, and the second one contains 
+    along the specified axis (default the last axis). The returned
+    :class:`~cntk.ops.functions.Function` has two outputs. The first one
+    contains the top ``k`` values in sorted order, and the second one contains
     the corresponding top ``k`` indices.
 
     Example:
@@ -1874,7 +1933,7 @@ def hard_sigmoid(x, alpha, beta, name = ''):
     Computes the element-wise HardSigmoid function, y = max(0, min(1, alpha * x + beta)).
 
     Example:
-        >>> alpha = 1 
+        >>> alpha = 1
         >>> beta = 2
         >>> C.hard_sigmoid([-2.5, -1.5, 1], alpha, beta).eval()
         array([ 0. ,  0.5,  1. ], dtype=float32)
@@ -2333,7 +2392,7 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
 @typemap
 def squeeze(x, axes=None, name=''):
     '''
-        Removes axes whose size is 1. If ``axes`` is specified, and any of 
+        Removes axes whose size is 1. If ``axes`` is specified, and any of
         their size is not 1 an exception will be raised.
 
     Example:
@@ -2757,7 +2816,7 @@ def flatten(x, axis = None, name = ''):
 
     Example:
         >>> # create 2x3x4 matrix, flatten the matrix at axis = 1
-        >>> shape = (2, 3, 4) 
+        >>> shape = (2, 3, 4)
         >>> data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
         >>> C.flatten(data, 1).eval()
         array([[  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.,
@@ -3063,8 +3122,8 @@ def reduce_prod(x, axis=None, name=''):
 @typemap
 def reduce_l1(x, axis=None, keepdims = True, name=''):
     '''
-    Computes the L1 norm of the input tensor's element along the provided axes. 
-    The resulted tensor has the same rank as the input if keepdims equal 1. 
+    Computes the L1 norm of the input tensor's element along the provided axes.
+    The resulted tensor has the same rank as the input if keepdims equal 1.
     If keepdims equal 0, then the resulted tensor have the reduced dimension pruned.
 
     Example:
@@ -3089,8 +3148,8 @@ def reduce_l1(x, axis=None, keepdims = True, name=''):
 @typemap
 def reduce_l2(x, axis=None, keepdims = True, name=''):
     '''
-    Computes the L2 norm of the input tensor's element along the provided axes. 
-    The resulted tensor has the same rank as the input if keepdims equal 1. 
+    Computes the L2 norm of the input tensor's element along the provided axes.
+    The resulted tensor has the same rank as the input if keepdims equal 1.
     If keepdims equal 0, then the resulted tensor have the reduced dimension pruned.
 
     Example:
@@ -3114,8 +3173,8 @@ def reduce_l2(x, axis=None, keepdims = True, name=''):
 @typemap
 def reduce_sum_square(x, axis=None, keepdims = True, name=''):
     '''
-    Computes the sum square of the input tensor's element along the provided axes. 
-    The resulted tensor has the same rank as the input if keepdims equal 1. 
+    Computes the sum square of the input tensor's element along the provided axes.
+    The resulted tensor has the same rank as the input if keepdims equal 1.
     If keepdims equal 0, then the resulted tensor have the reduced dimension pruned.
 
     Example:
@@ -3813,10 +3872,10 @@ def depth_to_space(operand, block_size, name=''):
     '''
     Rearranges elements in the input tensor from the depth dimension into spatial blocks.
 
-    This operation is useful for implementing sub-pixel convolution that is part of models  
-    for image super-resolution (see [1]). It rearranges elements of an input tensor of shape 
+    This operation is useful for implementing sub-pixel convolution that is part of models
+    for image super-resolution (see [1]). It rearranges elements of an input tensor of shape
     (Cxbxb, H, W) to a tensor of shape (C, bxH, bxW), where b is the `block_size`.
-    
+
     Example:
         >>> x = np.array(np.reshape(range(8), (8, 1, 1)), dtype=np.float32)
         >>> x = np.tile(x, (1, 2, 3))
@@ -3835,8 +3894,8 @@ def depth_to_space(operand, block_size, name=''):
 
     Args:
         operand: Input tensor, with dimensions :math:`[C \\times H \\times W]`.
-        block_size (int): Integer value. This defines the size of the spatial block where the 
-         depth elements move to. Number of channels, C, in the input tensor must be divisible 
+        block_size (int): Integer value. This defines the size of the spatial block where the
+         depth elements move to. Number of channels, C, in the input tensor must be divisible
          by math:`(block_size \\times block_size)`
         name (str, optional): the name of the Function instance in the network
     Returns:
@@ -3856,12 +3915,12 @@ def space_to_depth(operand, block_size, name=''):
     '''
     Rearranges elements in the input tensor from the spatial dimensions to the depth dimension.
 
-    This is the reverse transformation of depth_to_space. This operation is useful for implementing 
+    This is the reverse transformation of depth_to_space. This operation is useful for implementing
     and testing sub-pixel convolution that is part of models for image super-resolution (see [1]).
     It rearranges elements of an input tensor of shape (C, H, W) to a tensor of shape (C*b*b, H/b, W/b),
     where b is the `block_size`, by rearranging non-overlapping spatial blocks of size `block_size` x `block_size`
     into the depth/channel dimension at each location.
-    
+
     Example:
         >>> np.random.seed(3)
         >>> x = np.random.randint(low=0, high=100, size=(1, 4, 6)).astype(np.float32)
