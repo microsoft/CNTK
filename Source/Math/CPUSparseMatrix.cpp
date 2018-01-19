@@ -1145,7 +1145,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
 
             for (size_t p = start; p < end; p++)
             {
-                size_t rhsRow = rhs.MajorIndexLocation()[p];
+                size_t rhsRow = rhs.GetUnCompIndex()[p];
                 ElemType val = rhs.Buffer()[p];
 
                 ElemType* results = c.Buffer() + col2BlockId[rhsRow] * m;
@@ -1258,7 +1258,7 @@ void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSpars
             size_t end = lhs.SecondaryIndexLocation()[j + 1];
             for (size_t p = start; p < end; p++)
             {
-                size_t i = lhs.MajorIndexLocation()[p];
+                size_t i = lhs.GetUnCompIndex()[p];
                 ElemType val = lhs.Buffer()[p];
                 size_t r = (lhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? i : j;
                 size_t c = (lhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC) ? j : i;
