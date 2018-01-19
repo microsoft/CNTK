@@ -994,7 +994,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         float ls = inference ? 0.f : mmodel->opt<float>("label-smoothing");
 
         auto cost = Cost(probs, trgData, trgMask, costType, ls);
-        fprintf(stderr, "====> cost/target = %.8f\n", cost.Value()->AsScalar<float>() / trgSubBatch->batchWords()), fflush(stderr);
+        //fprintf(stderr, "====> cost/target = %.8f\n", cost.Value()->AsScalar<float>() / trgSubBatch->batchWords()), fflush(stderr);
 
         if (mmodel->getOptions()->has("guided-alignment") && !inference) {
             auto alignments = mmodel->getDecoders()[0]->getAlignments();

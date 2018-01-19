@@ -901,21 +901,24 @@ namespace marian
             ce = ce * mask;
 
         Expr cost;
-        if (costType == "ce-mean" || costType == "cross-entropy") {
+        // axes:
+        //  - time axis (words): -3
+        //  - batch axis (sentences): -2
+        if (costType == "ce-mean" || costType == "cross-entropy") { // sum over words; average over sentences
             cost = mean(sum(ce, axis = -3), axis = -2);
         }
-        else if (costType == "ce-mean-words") {
-            cost
-                = sum(sum(ce, axis = -3), axis = -2) / sum(sum(mask, axis = -3), axis = -2);
+        else if (costType == "ce-mean-words") { // average over target tokens
+            cost =   sum(sum(ce,   axis = -3), axis = -2)
+                   / sum(sum(mask, axis = -3), axis = -2);
         }
-        else if (costType == "ce-sum") {
+        else if (costType == "ce-sum") { // sum over target tokens
             cost = sum(sum(ce, axis = -3), axis = -2);
         }
-        else if (costType == "perplexity") {
-            cost = exp(sum(sum(ce, axis = -3), axis = -2)
-                / sum(sum(mask, axis = -3), axis = -2));
+        else if (costType == "perplexity") { // ==exp('ce-mean-words')
+            cost = exp(  sum(sum(ce,   axis = -3), axis = -2)
+                       / sum(sum(mask, axis = -3), axis = -2));
         }
-        else if (costType == "ce-rescore") {
+        else if (costType == "ce-rescore") { // sum over words, keep batch axis
             cost = -sum(ce, axis = -3);
         }
         else {  // same as ce-mean
