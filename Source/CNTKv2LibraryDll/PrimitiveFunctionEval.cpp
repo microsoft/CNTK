@@ -580,7 +580,6 @@ namespace CNTK
                 NDArrayView::MatrixProduct(/*transC=*/false,
                                           /*A=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
                                           /*B=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transB=*/false, alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
-            //gradient->LogToFile(L"times grad", stderr);
             handled = true;
             break;
             // unary operations with simple TensorView implementation
