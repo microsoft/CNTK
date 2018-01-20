@@ -82,7 +82,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
 {
     if (systemId == "en_de_bpe") // Marian setup
     {
-        // cat vocab.ende.yml | sed 's/: [0-9]*$//' | tr -d ^" > vocab.ende.txt && "C:\Program Files\Git\usr\bin\echo.exe" >> vocab.ende.txt
+        // cat vocab.ende.yml | sed 's/: [0-9]*$//' | tr -d ^" > vocab.ende.txt && "C:\Program Files\Git\usr\bin\echo.exe" >> ..\data\vocab.ende.txt
         srcVocabSize = 36000;
         tgtVocabSize = 36000;
         srcTrainFile = L"F:/data2/fseide/marian-examples/transformer/data/corpus.bpe.en";
@@ -91,8 +91,8 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtDevFile   = L"F:/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
         srcTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
         tgtTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
-        srcVocabFile = L"F:/data2/fseide/marian-examples/transformer/model/vocab.ende.txt";
-        tgtVocabFile = L"F:/data2/fseide/marian-examples/transformer/model/vocab.ende.txt";
+        srcVocabFile = L"F:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
+        tgtVocabFile = L"F:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         bucketingFactor = 10;
         insertBOS = false; // Marian model does not expect <s>
     }
@@ -836,7 +836,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         L"beam-size",                     6,    
         L"best-deep",                     false,    
         L"clip-norm",                     5,    
-        L"cost-type",                     L"ce-mean",    
+        L"cost-type",                     L"ce-sum",
+        //L"cost-type",                     L"ce-mean",
         L"dec-cell",                      L"gru",    
         L"dec-cell-base-depth",           2,    
         L"dec-cell-high-depth",           1,    
@@ -865,7 +866,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         L"keep-best",                     false,    
         L"label-smoothing",               0.1f,
         L"layer-normalization",           false,    
-        L"learn-rate",                    0.0003,    
+        //L"learn-rate",                    0.0003,     // not used in Dynamite
         L"log",                           L"model/train.log",    
         L"log-level",                     L"info",    
         L"lr-decay",                      0,    
@@ -912,8 +913,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         L"transformer-dropout",           0.1f,    
         L"transformer-dropout-attention", 0.0f,    
         L"transformer-heads",             8,    
-        L"transformer-postprocess",       L"dan",    
-        L"transformer-postprocess-emb",   L"d",    
+        L"transformer-postprocess",       L"an",    
+        L"transformer-postprocess-emb",   L"",    
+        //L"transformer-postprocess",       L"dan",    
+        //L"transformer-postprocess-emb",   L"d",    
         L"transformer-preprocess",        L"",    
         L"type",                          L"transformer",    
         L"valid-freq",                    5000,    
