@@ -5411,6 +5411,7 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
         ElemType w;
         if (!adamax)
         {
+#if 0       // attempts with Adam for sparse matrices only for non-zero columns
             if (g == 0) // if zero then skip all of the below, to save some effort
                 continue;
             ElemType* smoothDenom = smoothMom; // reusing this
@@ -5423,6 +5424,21 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
             // no momentum; we use smoothMom to store the denominator
             //g = mom * smoothMom[idx] + unitGainFactor * g;
             //smoothMom[idx] = g;
+#else       // "naive" Adam, which is expensive
+            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+            smoothAda[idx] = adaSqr;
+            w = adaMul / (sqrt_(adaSqr) + epsilon);
+            //if (sizeof(ElemType) == sizeof(double))
+            //{
+            //    w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
+            //}
+            //else
+            //{
+            //    w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
+            //}
+            g = mom * smoothMom[idx] + unitGainFactor * g;
+            smoothMom[idx] = g;
+#endif
         }
         else
         {

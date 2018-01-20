@@ -112,7 +112,7 @@ static vector<Axis> AxisVector(const vector<size_t>& axisIndexVector) // create 
     return vector<Axis>(Transform(axisIndexVector, [&](size_t axisIndex) -> Axis { return Axis((int)axisIndex); }));
 }
 
-#ifndef _MSC_VER // gcc won't eat this with gazillion errors, so forget about it
+#ifndef _MSC_VER // gcc won't eat this with gazillion errors, so forget about it for now as long as tests pass on Windows
 size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const DeviceDescriptor& device);
 #else
 size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const DeviceDescriptor& device)
@@ -538,6 +538,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 
 void RunDynamiteTests()
 {
+#ifdef _MSC_VER
 #if 1 // (interferes with logging for profiling and reprodible Parameter initialization)
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
@@ -554,4 +555,5 @@ void RunDynamiteTests()
     if (numFailed > 0)
         LogicError("RunDynamiteTests: %d tests failed.", (int)numFailed);
 #endif
+#endif // _MSC_VER
 }

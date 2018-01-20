@@ -91,8 +91,8 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtDevFile   = L"F:/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
         srcTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
         tgtTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
-        srcVocabFile = L"F:/data2/fseide/marian-examples/transformer/model/vocab.ende.txt";
-        tgtVocabFile = L"F:/data2/fseide/marian-examples/transformer/model/vocab.ende.txt";
+        srcVocabFile = L"F:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
+        tgtVocabFile = L"F:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         bucketingFactor = 10;
         insertBOS = false; // Marian model does not expect <s>
     }
@@ -1666,8 +1666,16 @@ int mt_main(int argc, char *argv[])
                       (retry == 0 ? L"" : (L"." + to_wstring(retry))) +
                       L".log" +
                       (ourRank == 0 ? L"" : (L"." + to_wstring(ourRank)));
+#if 1
+            FILE* f = _wfopen(logPath.c_str(), L"r");
+            if (!f)
+                break;
+            fclose(f);
+#else
+            // for a bizarre unknown reason, this crashes on Linux
             if (!boost::filesystem::exists(logPath))
                 break;
+#endif
             fprintf(stderr, "%S already exists, bumping up the retry count\n", logPath.c_str());
         }
         boost::filesystem::create_directories(boost::filesystem::path(logPath).parent_path());
