@@ -24,7 +24,7 @@ protected:
     //auto graph = srcEmbeddings->graph();
     auto chosenEmbeddings =
         /*if*/ (subBatch->oneHot()) ?  // CNTK-specific: CNTK corpus data is stored differently.
-            Times(srcEmbeddings, subBatch->oneHot())//data::embedCntk(srcEmbeddings, subBatch)
+            rows(srcEmbeddings, subBatch->oneHot())
         /*else*/ :
             rows(srcEmbeddings, subBatch->indices());
 
@@ -109,7 +109,7 @@ public:
 
     auto chosenEmbeddings =
         /*if*/ (subBatch->oneHot()) ?  // CNTK-specific: CNTK corpus data is stored differently.
-            Times(yEmb, subBatch->oneHot())//data::embedCntk(yEmb, subBatch)
+            rows(yEmb, subBatch->oneHot())
         /*else*/ :
             rows(yEmb, subBatch->indices());
 

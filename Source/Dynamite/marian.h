@@ -13,9 +13,20 @@
 #include <memory>
 #include <map>
 
-template <typename... Args> __declspec(noreturn) static inline void ABORT_IF(bool cond, const char* msg, Args&&... /*ignoredArgs*/) { if (cond) CNTK::InvalidArgument(msg); } // ignoring additional args for now
-template <typename... Args> __declspec(noreturn) static inline void ABORT(const char* msg, Args&&... /*ignoredArgs*/) { CNTK::InvalidArgument(msg); } // ignoring additional args for now
+#ifdef _MSC_VER
+#ifndef __declspec_noreturn
+#define __declspec_noreturn __declspec(noreturn)
+#endif
+#define __declspec_selectany __declspec(selectany)
+#else
+#ifndef __declspec_noreturn
+#define __declspec_noreturn
+#endif
+#define __declspec_selectany __attribute__((weak))
+#endif
 
+template <typename... Args> static inline void ABORT_IF(bool cond, const char* msg, Args&&... /*ignoredArgs*/) { if (cond) CNTK::InvalidArgument("%s", msg); } // ignoring additional args for now
+template <typename... Args> __declspec_noreturn static inline void ABORT(const char* msg, Args&&... /*ignoredArgs*/) { CNTK::InvalidArgument("%s", msg); } // ignoring additional args for now
 // Marian is not warning-clean
 #pragma warning(disable: 4267) // conversion from 'size_t' to 'int', possible loss of data
 #pragma warning(disable: 4305) // truncation from 'double' to 'float'
@@ -188,17 +199,18 @@ namespace marian
 
     namespace Config
     {
-        // TODO: need an equivalent for gcc
-        __declspec(selectany) size_t seed;
+        __declspec_selectany size_t seed;
     };
+
+    // helper to allow Options::get()'s return type depend on the template parameter
+    template<class T> struct get_return                           { typedef const T& type; };
+    template<>        struct get_return<std::string>              { typedef std::string type; };
+    template<>        struct get_return<std::vector<int>>         { typedef std::vector<int> type; };
+    template<>        struct get_return<std::vector<std::string>> { typedef std::vector<std::string> type; };
 
     class Options : public CNTK::Dictionary
     {
         typedef CNTK::Dictionary Base;
-        template<class T> struct get_return { typedef const T& type; };
-        template<>        struct get_return<std::string> { typedef std::string type; };
-        template<>        struct get_return<std::vector<int>> { typedef std::vector<int> type; };
-        template<>        struct get_return<std::vector<std::string>> { typedef std::vector<std::string> type; };
         static std::wstring widen(const std::string& s) { return std::wstring(s.begin(), s.end()); }
         static std::string narrow(const std::wstring& s) { return std::string(s.begin(), s.end()); } // note: simplistic conversion that only works for 7-bit ASCII
     public:
@@ -220,63 +232,67 @@ namespace marian
             }
         }
         template<typename T>
-        void set(const std::string& key, const T& value)
-        {
-            Base::operator[](widen(key)) = value;
-        }
-        template<>
-        void set<std::string>(const std::string& key, const std::string& value)
-        {
-            Base::operator[](widen(key)) = widen(value);
-        }
-        template<>
-        void set<const char*>(const std::string& key, const char* const& value)
-        {
-            Base::operator[](widen(key)) = widen(value);
-        }
-        bool has(const std::string& key) const
-        {
-            return Base::Contains(widen(key));
-        }
+        void set(const std::string& key, const T& value);
+        bool has(const std::string& key) const { return Base::Contains(widen(key)); }
         template<typename T>
-        typename get_return<T>::type get(const std::string& key) const
-        {
-            return Base::operator[](widen(key)).Value<T>();
-        }
+        typename get_return<T>::type get(const std::string& key) const;
         template<typename T>
-        typename get_return<T>::type get(const std::string& key, const T& deflt) const
-        {
-            return Base::GetOrElse(widen(key), deflt);
-        }
-        // Marian uses narrow strings  --inefficient, involves conversion and copy
-        template<>
-        typename get_return<std::string>::type get<std::string>(const std::string& key) const
-        {
-            const auto& wstr = Base::operator[](widen(key)).Value<std::wstring>();
-            return narrow(wstr);
-        }
-        template<>
-        typename get_return<std::string>::type get<std::string>(const std::string& key, const std::string& deflt) const
-        {
-            if (Base::Contains(widen(key))) // (inefficient due to double conversion, but keeps code simple)
-                return get<std::string>(key);
-            else
-                return deflt;
-        }
-        // vector<int>  --inefficient, involves conversion and copy
-        template<>
-        typename get_return<std::vector<int>>::type get<std::vector<int>>(const std::string& key) const
-        {
-            const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
-            return std::vector<int>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return v.Value<int>(); }));
-        }
-        template<>
-        typename get_return<std::vector<std::string>>::type get<std::vector<std::string>>(const std::string& key) const
-        {
-            const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
-            return std::vector<std::string>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return narrow(v.Value<std::wstring>()); }));
-        }
+        typename get_return<T>::type get(const std::string& key, const T& deflt) const;
     };
+
+    // specializations must be done outside the class declaration
+    template<typename T>
+    inline void Options::set(const std::string& key, const T& value)
+    {
+        Base::operator[](widen(key)) = value;
+    }
+    template<>
+    inline void Options::set<std::string>(const std::string& key, const std::string& value)
+    {
+        Base::operator[](widen(key)) = widen(value);
+    }
+    template<>
+    inline void Options::set<const char*>(const std::string& key, const char* const& value)
+    {
+        Base::operator[](widen(key)) = widen(value);
+    }
+    template<typename T>
+    typename get_return<T>::type Options::get(const std::string& key) const
+    {
+        return Base::operator[](widen(key)).Value<T>();
+    }
+    template<typename T>
+    typename get_return<T>::type Options::get(const std::string& key, const T& deflt) const
+    {
+        return Base::GetOrElse(widen(key), deflt);
+    }
+    // Marian uses narrow strings  --inefficient, involves conversion and copy
+    template<>
+    typename get_return<std::string>::type Options::get<std::string>(const std::string& key) const
+    {
+        const auto& wstr = Base::operator[](widen(key)).Value<std::wstring>();
+        return narrow(wstr);
+    }
+    template<>
+    typename get_return<std::string>::type Options::get<std::string>(const std::string& key, const std::string& deflt) const
+    {
+        if (Base::Contains(widen(key))) // (inefficient due to double conversion, but keeps code simple)
+            return get<std::string>(key);
+        else
+            return deflt;
+    }
+    template<> // vector<int>  --inefficient, involves conversion and copy
+    typename get_return<std::vector<int>>::type Options::get<std::vector<int>>(const std::string& key) const
+    {
+        const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
+        return std::vector<int>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return v.Value<int>(); }));
+    }
+    template<>
+    typename get_return<std::vector<std::string>>::type Options::get<std::vector<std::string>>(const std::string& key) const
+    {
+        const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
+        return std::vector<std::string>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return narrow(v.Value<std::wstring>()); }));
+    }
 
     // -----------------------------------------------------------------------
     // data namespace
@@ -493,7 +509,7 @@ namespace marian
 
     namespace InternalOps // helper functions that are not actually part of the Marian API
     {
-        static inline Expr NotImplemented(const char* s) { CNTK::LogicError(s); return CNTK::Variable(); }
+        static inline Expr NotImplemented(const char* s) { CNTK::LogicError("%s", s); return CNTK::Variable(); }
 
         // helper to implement sum over many elements
         static inline Expr plus(const std::vector<Expr>::const_iterator& b, const std::vector<Expr>::const_iterator& e) // TODO: use fused Gather/ReduceSum?
@@ -510,7 +526,7 @@ namespace marian
         // TODO: for adding and multiplying scalars, we should have special operations, without creating Constants all the time
         // this is not efficient, but all we can do presently
         template<typename Number>
-        static inline Expr Scalar(Number x) { return CNTK::Constant::Scalar(CNTK::DataType::Float, (float)x, Dynamite::CurrentDevice()); }
+        static inline Expr Scalar(Number x) { return (CNTK::Variable)CNTK::Constant::Scalar(CNTK::DataType::Float, (float)x, Dynamite::CurrentDevice()); }
         static inline Expr Constant(const CNTK::NDShape& viewShape, const CNTK::ParameterInitializer& init, bool isVolatile = false)
         {
             if (init.Contains(L"from_vector"))
@@ -520,7 +536,7 @@ namespace marian
                 if (initData.Shape().TotalSize() != viewShape.TotalSize())
                     CNTK::InvalidArgument("marian::constant: vector size does not match viewShape");
                 // copy the supplied CPU buffer, which may be a temporary, to a GPU-side NDArrayView
-                return CNTK::Constant(initData.AsShape(viewShape)->DeepClone(Dynamite::CurrentDevice(), /*readOnly=*/true), isVolatile);
+                return (CNTK::Variable)CNTK::Constant(initData.AsShape(viewShape)->DeepClone(Dynamite::CurrentDevice(), /*readOnly=*/true), isVolatile);
             }
             CNTK::InvalidArgument("BUGBUG: no public Constant() from ParameterInitializer?");
         }
@@ -558,7 +574,7 @@ namespace marian
             // If we change AutoBatch's redirect from redirecting Functions to redirecting Variables, this workaround can be removed.
             const auto& val = operand.Value();
             auto valReshaped = val->AsShape(newShape);
-            return CNTK::Constant(valReshaped);
+            return (CNTK::Variable)CNTK::Constant(valReshaped);
         }
     };
 
@@ -644,8 +660,8 @@ namespace marian
         // TODO: The transposition could be free, but currently is not. At least pass an optimization hint that it does not need to make it dense?
         auto transA = transBMarian;
         auto transB = transAMarian;
-        const auto& a = !transA ? bMarian : TransposeAxes(bMarian, CNTK::Axis(0), CNTK::Axis(1));
-        const auto& b = !transB ? aMarian : TransposeAxes(aMarian, CNTK::Axis(0), CNTK::Axis(1));
+        const auto& a = !transA ? bMarian : (Expr)TransposeAxes(bMarian, CNTK::Axis(0), CNTK::Axis(1));
+        const auto& b = !transB ? aMarian : (Expr)TransposeAxes(aMarian, CNTK::Axis(0), CNTK::Axis(1));
         // This version is hard-coded for 2+ dimensions.
         const auto& aShape = a.Shape();
         const auto& bShape = b.Shape();
@@ -746,6 +762,11 @@ namespace marian
         return CNTK::Times(a, indicesOneHot);
     }
     static inline Expr cols(const Expr& a, const std::vector<size_t>& indices) { return CNTK::Transpose(rows(CNTK::Transpose(a), indices)); } // note: not efficient
+    // CNTK only:
+    static inline Expr rows(const Expr& a, const Expr& oneHot)
+    {
+        return Times(a, oneHot);
+    }
 
     static inline Expr select(const Expr& a, int axis, const std::vector<size_t>& indices)
     {
@@ -1001,7 +1022,7 @@ namespace marian
                     m_allParametersMap.insert(std::make_pair(name, p));
                     m_allParameters.push_back(p);
                     m_allGradients[p] = nullptr;
-                    return p;
+                    return (CNTK::Variable)p;
                 }
                 else
                 {
@@ -1009,7 +1030,7 @@ namespace marian
                     m_allParametersMap.insert(std::make_pair(name, p));
                     m_allParameters.push_back(p);
                     m_allGradients[p] = nullptr;
-                    return p;
+                    return (CNTK::Variable)p;
                 }
             }
             else  // case 2: retrieve an existing parameter
@@ -1017,7 +1038,7 @@ namespace marian
                 const auto& p = iter->second;
                 if (p.Shape() != viewShape)
                     CNTK::InvalidArgument("marian::param: Requested shape for existing parameter '%s' does not match original shape", name.c_str());
-                return p;
+                return (CNTK::Variable)p;
             }
         }
         Expr get(std::string name) const
@@ -1026,7 +1047,7 @@ namespace marian
             //    name = namespace_ + "::" + name;
             auto iter = m_allParametersMap.find(name);
             if (iter != m_allParametersMap.end())
-                return iter->second;
+                return (CNTK::Variable)iter->second;
             else
                 return nullptr;
         }

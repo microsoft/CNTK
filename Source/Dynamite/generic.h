@@ -69,7 +69,7 @@ public:
 
     auto layerNorm = opt<bool>("layer-normalization", false);
     auto nematusNorm = opt<bool>("nematus-normalization", false);
-    auto activation = opt<int/*act*/>("activation", (int)act::linear);
+    auto activation = (act)opt<int/*act*/>("activation", (int)act::linear);
 
     auto g = graph_;
 
@@ -143,7 +143,7 @@ public:
 
     auto layerNorm = options_->get<bool>("layer-normalization", false);
     auto nematusNorm = opt<bool>("nematus-normalization", false);
-    auto activation = options_->get<int/*act*/>("activation", (int)act::linear);
+    auto activation = (act)options_->get<int/*act*/>("activation", (int)act::linear); // TODO: add an overload to get()?
 
     Expr W;
     std::string nameW = "W";
