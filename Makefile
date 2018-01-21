@@ -90,9 +90,9 @@ SOURCEDIR:= Source
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
-COMMON_FLAGS:= -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
+COMMON_FLAGS:= -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K 
 CPPFLAGS:= 
-CXXFLAGS:= $(SSE_FLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
+CXXFLAGS:= $(SSE_FLAGS) -fopenmp -fpermissive -fPIC -Werror -fcheck-new -std=c++14
 LIBPATH:=
 LIBS_LIST:=
 LDFLAGS:=
@@ -115,7 +115,7 @@ SRC:=
 all : buildall
 
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -m 64
+CUFLAGS = -m 64 -std=c++11
 
 ifdef CUDA_PATH
   ifndef GDK_INCLUDE_PATH
@@ -1487,6 +1487,7 @@ ifdef CUDA_PATH
 endif
 	cp -p $(JAVA_SWIG_DIR)/CNTKNativeUtils.java $(JAVA_SWIG_DIR)/com/microsoft/CNTK/CNTKNativeUtils.java
 	$(JDK_BIN_PATH)/javac $(GENERATED_JAVA_DIR)/*.java
+	cd $(JAVA_SWIG_DIR) && mkdir -p doc && $(JDK_BIN_PATH)/javadoc com/microsoft/CNTK/*.java -d doc
 	mkdir -p $(LIBDIR)/java
 	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk.jar com
 	cp $(JAVA_SWIG_DIR)/cntk.jar $(LIBDIR)/java
