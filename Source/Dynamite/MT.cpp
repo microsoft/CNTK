@@ -1078,30 +1078,34 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             (int)minibatchSize, (int)workerMinibatchSize, (int)partialMinibatchSize, (int)numPartialBatchesPerWorker, (int)numWorkers), fflush(stderr);
     AdditionalLearningOptions learnerOptions;
     LearnerPtr baseLearner;
-    double lr0;
+    let f = 1.0;
+    double lr0 = learningRate * f;
+    let LRSchedule = [&](double multiplier)
+    {
+        double lr1 = lr0 * multiplier;
+        fprintf(stderr, "Base Learning Rate = %.16f\n", lr1), fflush(stderr);
+        return TrainingParameterPerSampleSchedule(vector<double>{ lr1, lr1/2, lr1/4, lr1/8 }, epochSize);
+    };
     if (learnerType == "sgd")
     {
-        let f = 1.0;
-        lr0 = learningRate * f;
         //learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096; // mimics Frantic but only before LR decay
-        baseLearner = SGDLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0 / 2, lr0 / 4, lr0 / 8 }, epochSize), learnerOptions);
+        baseLearner = SGDLearner(parameters, LRSchedule(/*multiplier=*/1), learnerOptions);
     }
     else if (learnerType == "adam")
     {
-        // AdaGrad correction-correction:
+        // AdaGrad correction-correction:   --TODO: how to do this correctly?
         //  - LR is specified for av gradient
         //  - numer should be /minibatchSize
         //  - denom should be /sqrt(minibatchSize)
-        let f = 1.0;// / sqrt(4096/*minibatchSize*/)/*AdaGrad correction-correction*/;
-        // ...TODO: Haven't I already added that to the base code?? Or is this only for compat with Jacob's parameters?
-        lr0 = learningRate * f;
         //learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096;
-        baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
+        baseLearner = AdamLearner(parameters, LRSchedule(/*multiplier=*/1),
                                   MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-9, /*adamax=*/false,
                                   learnerOptions);
     }
     else InvalidArgument("Invalid --learner %s", learnerType.c_str());
-    let globalNormClipping = 0.0; // set to 0 to disable. For ce-sum, this does not make much sense.
+    // Marian-compatible options, for testing (we can disable them later if CNTK has replacements that work equally well)
+    let globalNormClipping = 0.0;   // set to 0 to disable. For ce-sum, this does not make much sense.
+    let learningRateWarmupInUpdates = 16000; // linearly ramp up LR up to this many sentences (..?).
     // TODO: move this out
     let CreateDistributedLearner = [](const LearnerPtr& baseLearner, const DistributedCommunicatorPtr& communicator)
     {
@@ -1234,7 +1238,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
                     (int)mbCount,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
-                    lr0, learner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
+                    lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
 #if 0       // log the sequences
         for (size_t n = 0; n < numSeq; n++)
         {
@@ -1373,6 +1377,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             }
             learner->Update(gradients, info);
             totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
+            // Marian-compatible LR warmup (TODO: We should rather do that by #labels)
+            // It is done after the first Update() call to replicate a Marian bug, in that it does not update the LR for the very first MB.
+            if (learningRateWarmupInUpdates != 0)
+            {
+                let totalUpdates = mbCount / numPartialBatchesPerWorker + 1; // first MB gets no update
+                let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
+                baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
+            }
         }
         // keep track of loss
         let mbLoss          = isFinalPartialBatch ? info.trainingLossValue : partialWorkerLoss;
