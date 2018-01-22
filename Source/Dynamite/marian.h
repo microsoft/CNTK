@@ -257,24 +257,24 @@ namespace marian
         Base::operator[](widen(key)) = widen(value);
     }
     template<typename T>
-    typename get_return<T>::type Options::get(const std::string& key) const
+    inline typename get_return<T>::type Options::get(const std::string& key) const
     {
         return Base::operator[](widen(key)).Value<T>();
     }
     template<typename T>
-    typename get_return<T>::type Options::get(const std::string& key, const T& deflt) const
+    inline typename get_return<T>::type Options::get(const std::string& key, const T& deflt) const
     {
         return Base::GetOrElse(widen(key), deflt);
     }
     // Marian uses narrow strings  --inefficient, involves conversion and copy
     template<>
-    typename get_return<std::string>::type Options::get<std::string>(const std::string& key) const
+    inline typename get_return<std::string>::type Options::get<std::string>(const std::string& key) const
     {
         const auto& wstr = Base::operator[](widen(key)).Value<std::wstring>();
         return narrow(wstr);
     }
     template<>
-    typename get_return<std::string>::type Options::get<std::string>(const std::string& key, const std::string& deflt) const
+    inline typename get_return<std::string>::type Options::get<std::string>(const std::string& key, const std::string& deflt) const
     {
         if (Base::Contains(widen(key))) // (inefficient due to double conversion, but keeps code simple)
             return get<std::string>(key);
@@ -282,13 +282,13 @@ namespace marian
             return deflt;
     }
     template<> // vector<int>  --inefficient, involves conversion and copy
-    typename get_return<std::vector<int>>::type Options::get<std::vector<int>>(const std::string& key) const
+    inline typename get_return<std::vector<int>>::type Options::get<std::vector<int>>(const std::string& key) const
     {
         const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
         return std::vector<int>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return v.Value<int>(); }));
     }
     template<>
-    typename get_return<std::vector<std::string>>::type Options::get<std::vector<std::string>>(const std::string& key) const
+    inline typename get_return<std::vector<std::string>>::type Options::get<std::vector<std::string>>(const std::string& key) const
     {
         const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
         return std::vector<std::string>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return narrow(v.Value<std::wstring>()); }));
