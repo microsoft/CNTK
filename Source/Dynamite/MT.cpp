@@ -85,15 +85,15 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         // cat vocab.ende.yml | sed 's/: [0-9]*$//' | tr -d ^" > vocab.ende.txt && "C:\Program Files\Git\usr\bin\echo.exe" >> ..\data\vocab.ende.txt
         srcVocabSize = 36000;
         tgtVocabSize = 36000;
-        srcTrainFile = L"F:/data2/fseide/marian-examples/transformer/data/corpus.bpe.en";
-        tgtTrainFile = L"F:/data2/fseide/marian-examples/transformer/data/corpus.bpe.de";
-        srcDevFile   = L"F:/data2/fseide/marian-examples/transformer/data/valid.bpe.en";
-        tgtDevFile   = L"F:/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
-        srcTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
-        tgtTestFile  = L"F:/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
-        srcVocabFile = L"F:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
-        tgtVocabFile = L"F:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
-        bucketingFactor = 10;
+        srcTrainFile = L"f:/data2/fseide/marian-examples/transformer/data/corpus.bpe.en";
+        tgtTrainFile = L"f:/data2/fseide/marian-examples/transformer/data/corpus.bpe.de";
+        srcDevFile   = L"f:/data2/fseide/marian-examples/transformer/data/valid.bpe.en";
+        tgtDevFile   = L"f:/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
+        srcTestFile  = L"f:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
+        tgtTestFile  = L"f:/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
+        srcVocabFile = L"f:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
+        tgtVocabFile = L"f:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
+        bucketingFactor = 1;//0;
         insertBOS = false; // Marian model does not expect <s>
     }
     else if (systemId == "chs_enu")
@@ -718,8 +718,8 @@ MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& 
     minibatchSourceConfig.maxSamples = isTraining ? MinibatchSource::InfinitelyRepeat : MinibatchSource::FullDataSweep;
     minibatchSourceConfig.isMultithreaded = false;
     minibatchSourceConfig.enableMinibatchPrefetch = false; // TODO: reenable the multi-threading and see if (1) it works and (2) makes things faster
-    // BUGBUG: ^^ I see two possibly related bugs
-    //  - when running on CPU, this fails reliably with what looks like a race condition
+    // BUGBUG: ^^ I see two possibly related bugs --TODO: This has been fixed already. Once everything works, switch back to normal.
+    //  - when running on CPU, this fails reliably with what looks like a race condition.
     //  - even with GPU, training unreliably fails after precisely N data passes minus one data pass. That minus one may indicate a problem in prefetch?
     // -> Trying without, to see if the problems go away.
     return CreateCompositeMinibatchSource(minibatchSourceConfig);
@@ -864,7 +864,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         L"guided-alignment-weight",       1,    
         L"ignore-model-config",           false,    
         L"keep-best",                     false,    
-        L"label-smoothing",               0.1f,
+        L"label-smoothing",               0.0f,//1f, // disable for easier debugging
         L"layer-normalization",           false,    
         //L"learn-rate",                    0.0003,     // not used in Dynamite
         L"log",                           L"model/train.log",    
@@ -940,6 +940,33 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     mmodel->build(graph, fakeBatch);
     auto mparamsVector = graph->GetAllParameters();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
+#if 1 // for comparison to Marian, read all initial values from Marian
+    vector<float> buf;
+    for (auto& p : mparamsVector)
+    {
+        p.Value()->LogToFile(p.Name() + L" (CNTK)");
+        // load it from the Marian init file
+        wstring path = L"/data2/fseide/marian-examples/transformer/initvals/" + p.Name();
+        let numElem = p.Shape().TotalSize();
+        fprintf(stderr, "Loading %d init vals: %S\n", (int)numElem, path.c_str()), fflush(stderr);
+        FILE* f = _wfopen(path.c_str(), L"rw");
+        if (f)
+        {
+            buf.resize(numElem);
+            fread(buf.data(), sizeof(*buf.data()), buf.size(), f) == 0;
+            fclose(f);
+            fprintf(stderr, "first val: %.f\n", buf.front());
+            auto temp = CNTK::NDArrayView(CNTK::DataType::Float, p.Shape(),
+                                      (void*)buf.data(), buf.size() * sizeof(*buf.data()),
+                                      CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
+                                      .DeepClone(p.Value()->Device(), /*readOnly=*/false);
+            p.SetValue(temp);
+            p.Value()->LogToFile(p.Name() + L" (Marian)");
+        }
+        else
+            fprintf(stderr, "######### Failed to open\n"), fflush(stderr);
+    }
+#endif
     // TODO: figure out why make_shared does not work here ^^
     //mparams->LogParameters();
     auto model_fn = BinaryFoldingModel(mparamsVector,
@@ -1024,9 +1051,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #endif
 
     // data
-    if (runProfiling     ||true) // if profiling then use small files so we don't measure the load time
+    if (runProfiling     /*||true*/) // if profiling then use small files so we don't measure the load time
         srcTrainFile = srcDevFile, tgtTrainFile = tgtDevFile;
-    let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/true);
+    let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/false);                   //true);
 
     model_fn.LogParameters();
 
@@ -1056,7 +1083,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     {
         let f = 1.0;
         lr0 = learningRate * f;
-        learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096; // mimics Frantic but only before LR decay
+        //learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096; // mimics Frantic but only before LR decay
         baseLearner = SGDLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0 / 2, lr0 / 4, lr0 / 8 }, epochSize), learnerOptions);
     }
     else if (learnerType == "adam")
@@ -1065,10 +1092,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //  - LR is specified for av gradient
         //  - numer should be /minibatchSize
         //  - denom should be /sqrt(minibatchSize)
-        let f = 1 / sqrt(4096/*minibatchSize*/)/*AdaGrad correction-correction*/;
+        let f = 1.0;// / sqrt(4096/*minibatchSize*/)/*AdaGrad correction-correction*/;
         // ...TODO: Haven't I already added that to the base code?? Or is this only for compat with Jacob's parameters?
         lr0 = learningRate * f;
-        learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096;
+        //learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096;
         baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
                                   MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
                                   learnerOptions);
@@ -1197,7 +1224,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             maxLabels = max(maxLabels, len);
         }
         //partTimer.Log("GetNextMinibatch", numLabels);
+#if 1
+        let numPartialWorkerScoredLabels = numLabels; // Marian: data has no <s>, so don't subtract anything. TODO: Get this info from reader or setup.
+#else
         let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
+#endif
         if (logThisMb)
             fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
                     (int)mbCount,
@@ -1247,8 +1278,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             continue;
         }
 
-        if (logThisMb)
-            fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
+        //if (logThisMb)
+        //    fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
         partTimer.Restart();
         let partialWorkerLoss = partialWorkerLossVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
         let timeForward = partTimer.Elapsed();
@@ -1262,8 +1293,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //partTimer.Log("ForwardProp", numLabels);
         // note: we must use numPartialWorkerScoredLabels here
         //fprintf(stderr, "{%.2f, %d-%d}\n", partialWorkerLoss->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
-        if (logThisMb)
-            fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
+        //if (logThisMb)
+        //    fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
         //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
         partTimer.Restart();
 
