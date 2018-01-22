@@ -1476,7 +1476,7 @@ private:
                                                                             inputValues.front()->Device())));
         }
 #if 0
-        LogFunction(f, f.m_profiler);
+        Memoizer::LogFunction(f, f.m_profiler);
         res->LogToFile(f.Name());
 #endif
         GetOutputFields(f).m_value = move(res);
@@ -2326,9 +2326,11 @@ class InternalVariable::AutoBatch
                 fail_if(reductionRank * 2 != reductionRankX2, "DetermineBatchAxisAndDim: reductionRank for matrix-product class not determined correctly");
                 let outputRank = leftRank  - reductionRank;
                 let mapRank    = rightRank - reductionRank;
+#if 0
                 if (right.IsSparse() && rightRank > 2)
                     fprintf(stderr, "DetermineBatchAxisAndDim: Sparse matrix product currently only supports vectors or matrices.\n");
                     //InvalidArgument("DetermineBatchAxisAndDim: Sparse matrix product currently only supports vectors or matrices.");
+#endif
                 // Note: We could batch Times ops that have the same sequence length. For now, those would be forced to be stacking.
                 // Stacking is fine though in this case. Since there is no funky broadcasting involved, it is equally efficient (same kernel dims).
                 return getLastDim(right, mapRank == 0/*single vector; no batch dim*/ ? reductionRank : rightRank - 1, StackingMode::STACKING);
@@ -2388,9 +2390,11 @@ class InternalVariable::AutoBatch
                 updateRankDimSparse(GetOutputFields(f));
             }
             // sparse inputs can only be batched/stacked in axis 1  --TODO: No need, and already seems to work without this constraint.
+#if 0
             if (hasSparse && (maxRank < 1 || maxRank > 2))
                 fprintf(stderr, "DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.\n");
                 //InvalidArgument("DetermineBatchAxis: A sparse input with rank > 2 was encountered, which is not presently supported.");
+#endif
             // decide stacking vs. batching
             let stackingAxis = maxRank - 1; // (gcc requires me to do this before the 'goto')
             if (maxRank == 0) // can only stack if inputs are not scalars
@@ -4655,7 +4659,8 @@ public:
         PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, op, f.m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, f);
         m_stats.numBatchedBackpropToCalls++;
 #if 0   // debug the actual values
-        fields.m_gradient->LogToFile(L"gradient", stderr);
+        Memoizer::LogFunction(f, f.m_profiler);
+        gradient.view->LogToFile((input.Name() == L"" ? f.OpName() : input.Name()) + L"_" + to_wstring(index), stderr);
 #endif
     }
 
@@ -4794,6 +4799,10 @@ public:
                                       /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
                                       gradient.view, gradient.beta, f0);          // ...into here
         m_stats.numBatchedBackpropToCalls++;
+#if 0   // debug the actual values
+        Memoizer::LogFunction(f0, f0.m_profiler);
+        gradient.view->LogToFile((input0.Name() == L"" ? f0.OpName() : input0.Name()) + L"_" + to_wstring(0), stderr);
+#endif
 #endif
     }
 
