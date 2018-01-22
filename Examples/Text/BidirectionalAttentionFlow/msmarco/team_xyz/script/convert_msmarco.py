@@ -131,42 +131,43 @@ def convert(file, outfile, is_test):
             for i,line in enumerate(f):
                 j = json.loads(line.decode('utf-8'))
                 p = j['passages']
-                
-                context = preprocess(' '.join([pp['passage_text'] for pp in p]))
-                ctokens = trim_empty(tokenize(context, context_mode=True))
-                normalized_context = ' '.join(ctokens)
-                nctokens = normalized_context.split()
+            
+                if j['query_type'] == 'description':
+                    context = preprocess(' '.join([pp['passage_text'] for pp in p]))
+                    ctokens = trim_empty(tokenize(context, context_mode=True))
+                    normalized_context = ' '.join(ctokens)
+                    nctokens = normalized_context.split()
 
-                query   = preprocess(j['query'])
-                qtokens =  trim_empty(tokenize(query))
+                    query   = preprocess(j['query'])
+                    qtokens =  trim_empty(tokenize(query))
 
-                if not is_test:
-                    for a in j['answers']:
-                        bad = False
-                        answer = preprocess(a)
-                        atokens = trim_empty(tokenize(answer, context_mode=True))
-                        normalized_answer = ' '.join(atokens).lower()
-                        normalized_context_lower = normalized_context.lower()
-                        pos = normalized_context_lower.find(normalized_answer)
-                        if pos >= 0:
-                            # exact match; no need to run smith waterman
-                            start = bisect.bisect(np.cumsum([1+len(t) for t in nctokens]), pos)
-                            end = start + len(atokens)
-                        else:
-                            natokens = normalized_answer.split()
-                            try:
-                                (start, end), (astart, aend), score = smith_waterman(normalized_context_lower.split(), natokens)
-                                ratio = 0.5 * score / min(len(nctokens), len(natokens))
-                                if ratio < 0.8:
+                    if not is_test:
+                        for a in j['answers']:
+                            bad = False
+                            answer = preprocess(a)
+                            atokens = trim_empty(tokenize(answer, context_mode=True))
+                            normalized_answer = ' '.join(atokens).lower()
+                            normalized_context_lower = normalized_context.lower()
+                            pos = normalized_context_lower.find(normalized_answer)
+                            if pos >= 0:
+                                # exact match; no need to run smith waterman
+                                start = bisect.bisect(np.cumsum([1+len(t) for t in nctokens]), pos)
+                                end = start + len(atokens)
+                            else:
+                                natokens = normalized_answer.split()
+                                try:
+                                    (start, end), (astart, aend), score = smith_waterman(normalized_context_lower.split(), natokens)
+                                    ratio = 0.5 * score / min(len(nctokens), len(natokens))
+                                    if ratio < 0.8:
+                                        bad = True
+                                except:
                                     bad = True
-                            except:
-                                bad = True
-                        if not bad:
-                            output = [str(j['query_id']), j['query_type'], ' '.join(nctokens),' '.join(qtokens),' '.join(nctokens[start:end]), normalized_context, str(start), str(end), normalized_answer]
-                else:
-                    output = [str(j['query_id']), j['query_type'], ' '.join(nctokens),' '.join(qtokens)]
-                out.write("%s\n"%'\t'.join(output))
+                            if not bad:
+                                output = [str(j['query_id']), j['query_type'], ' '.join(nctokens),' '.join(qtokens),' '.join(nctokens[start:end]), normalized_context, str(start), str(end), normalized_answer]
+                    else:
+                        output = [str(j['query_id']), j['query_type'], ' '.join(nctokens),' '.join(qtokens)]
+                    out.write("%s\n"%'\t'.join(output))
 
-convert('train.json.gz', 'train.tsv', False)
-convert('dev.json.gz', 'dev.tsv', False)
-convert('test.json.gz', 'test.tsv', True)
+convert('train_v1.1.json.gz', 'train.tsv', False)
+convert('dev_v1.1.json.gz', 'dev.tsv', False)
+convert('test_public_v1.1.json.gz', 'test.tsv', True)
