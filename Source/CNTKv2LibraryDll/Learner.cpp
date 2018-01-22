@@ -795,7 +795,7 @@ namespace CNTK
         const auto momentum = 0.9f;//MomentumValueForMB(thisMinibatchSize);
         const auto unitGainFactor = 1.0f - momentum; //UnitGainFactor<ElementType>(thisMinibatchSize);
 
-        const auto varMomentum = 0.99f;//VarianceMomentumValueForMB(thisMinibatchSize);
+        const auto varMomentum = 0.98f;//VarianceMomentumValueForMB(thisMinibatchSize);
 #else
         const auto momentum = MomentumValueForMB(thisMinibatchSize);
         const auto unitGainFactor = UnitGainFactor<ElementType>(thisMinibatchSize);

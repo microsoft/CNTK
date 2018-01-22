@@ -864,7 +864,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         L"guided-alignment-weight",       1,    
         L"ignore-model-config",           false,    
         L"keep-best",                     false,    
-        L"label-smoothing",               0.0f,//1f, // disable for easier debugging
+        L"label-smoothing",               0.1f, // disable for easier debugging
         L"layer-normalization",           false,    
         //L"learn-rate",                    0.0003,     // not used in Dynamite
         L"log",                           L"model/train.log",    
@@ -895,7 +895,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         L"normalize",                     1,    
         L"optimizer",                     L"adam",    
         L"optimizer-delay",               1,    
-        L"optimizer-params",              Options::VectorOf({ 0.9, 0.98, 1e-09 }),    
+        //L"optimizer-params",              Options::VectorOf({ 0.9, 0.98, 1e-09 }),     // not used in Dynamite
         L"overwrite",                     false,    
         L"quiet",                         false,    
         L"quiet-translation",             true,    
@@ -1097,10 +1097,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         lr0 = learningRate * f;
         //learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096;
         baseLearner = AdamLearner(parameters, TrainingParameterPerSampleSchedule(vector<double>{ lr0, lr0/2, lr0/4, lr0/8 }, epochSize),
-                                  MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-8, /*adamax=*/false,
+                                  MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-9, /*adamax=*/false,
                                   learnerOptions);
     }
     else InvalidArgument("Invalid --learner %s", learnerType.c_str());
+    let globalNormClipping = 0; // set to 0 to disable. For ce-sum, this does not make much sense.
     // TODO: move this out
     let CreateDistributedLearner = [](const LearnerPtr& baseLearner, const DistributedCommunicatorPtr& communicator)
     {
@@ -1355,6 +1356,21 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         partTimer.Restart();
         if (isFinalPartialBatch) // if partial batches then skip Update() for all but the last partial batch
         {
+            // Marian global-gradient-norm clipping
+            if (globalNormClipping != 0) // Marian clips the global gradient vector (all gradient values concatenated)
+            {
+                let normSqrAccVal = make_shared<NDArrayView>(0, CurrentDataType(), NDShape{}, CurrentDevice());
+                for (let& p : parameters)
+                    NDArrayView::NumericOperation({ gradients[p] }, /*alpha=*/1, L"Sqr", normSqrAccVal, /*beta=*/1);
+                let totalL2Norm = sqrt(normSqrAccVal->AsScalar<float>());
+                if (totalL2Norm > globalNormClipping)
+                {
+                    // clip it
+                    fprintf(stderr, "Warning: global gradient L2Norm = %.8f, rescaling to norm %.2f\n", totalL2Norm, globalNormClipping), fflush(stderr);
+                    for (let& p : parameters)
+                        NDArrayView::NumericOperation({ gradients[p] }, /*alpha=*/globalNormClipping / totalL2Norm, L"Copy", gradients[p], /*beta=*/0);
+                }
+            }
             learner->Update(gradients, info);
             totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
         }
