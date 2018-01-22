@@ -1959,44 +1959,48 @@ void Matrix<ElemType>::FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemT
 // Ref: ADAM: A METHOD FOR STOCHASTIC OPTIMIZATION, https://arxiv.org/pdf/1412.6980.pdf
 ///
 template <class ElemType>
-void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
-    const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax)
+void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& parametersToUpdate, const double updateCount,
+                                  const double learnRatePerSample, const double meanMomentum, const double varMomentum,
+                                  const double epsilon, ElemType unitGainFactor,
+                                  size_t refMbSize, size_t actualMbSize, bool doAdamax)
 {
     // Bias correction
-    let meanDenom = 1 - pow(meanMomentum, smoothedCount);
-    let varDenom  = 1 - pow(varMomentum,  smoothedCount);
+    let meanDenom = 1 - pow(meanMomentum, updateCount);
+    let varDenom  = 1 - pow(varMomentum,  updateCount);
     let sqrtVarDenom = sqrt(varDenom);
     let biasCorrection = // adaMul in kernel
-        /*if*/ (adamax) ?
+        /*if*/ (doAdamax) ?
             (ElemType)(1.           / meanDenom)        // adamax
         /*else*/:
             (ElemType)(sqrtVarDenom / meanDenom);       // regular
 
     //let epsilon1 = epsilon;
     let epsilon1 =
-        /*if*/ (adamax) ?
+        /*if*/ (doAdamax) ?
             epsilon
         /*else*/:
             epsilon * sqrtVarDenom; // Marian does it this way
 
+    // note: 'this' = smoothing state, here momentum and RMS accumulator
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
     {
-        m_CPUMatrix->Adam(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
+        m_CPUMatrix->Adam(*gradients.m_CPUMatrix, *parametersToUpdate.m_CPUMatrix,
                           (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
-                          biasCorrection, (ElemType)epsilon1, unitGainFactor, adamax);
+                          biasCorrection, (ElemType)epsilon1, unitGainFactor, doAdamax);
         SetDataLocation(CPU);
     },
     {
-        m_GPUMatrix->Adam(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
-                          (ElemType)learnRatePerSample, /*momentum=*/(ElemType)meanMomentum, /*adaWeight=*/(ElemType)varMomentum,
-                          /*adaMul=*/biasCorrection, (ElemType)epsilon1, unitGainFactor, adamax);
+        // BUGBUG: Need to implement Mb-size correction for CPU and sparse as well
+        m_GPUMatrix->Adam(*gradients.m_GPUMatrix, *parametersToUpdate.m_GPUMatrix,
+                          (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+                          /*adaMul=*/biasCorrection, (ElemType)epsilon1, unitGainFactor, refMbSize, actualMbSize, doAdamax);
         SetDataLocation(GPU);
     },
     { NOT_IMPLEMENTED; },
     {
-        gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
+        gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *parametersToUpdate.m_GPUMatrix, 
                                           (ElemType)learnRatePerSample, (ElemType)meanMomentum,
-                                          (ElemType)varMomentum, biasCorrection, (ElemType)epsilon1, unitGainFactor, adamax);
+                                          (ElemType)varMomentum, biasCorrection, (ElemType)epsilon1, unitGainFactor, doAdamax);
         SetDataLocation(GPU);
     });
 

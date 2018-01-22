@@ -5349,27 +5349,26 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
 }
 
 template <class ElemType>
-__global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
+__global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* varMomentumState, ElemType* momentumState, ElemType* param,
+                      ElemType learningRate, ElemType momentum, ElemType varMomentum,
+                      ElemType biasCorrection, ElemType epsilon, ElemType unitGainFactor,
+                      CUDA_LONG refMbSize, CUDA_LONG actualMbSize,
+                      bool doAdamax)
 {
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
     {
-        ElemType g = grad[idx];
-        ElemType w;
-        if (!adamax)
+        ElemType g = grad[idx]; // gradient of one weight
+        ElemType rms;           // gradient gets divided by this
+        if (!doAdamax)
         {
-            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
-            smoothAda[idx] = adaSqr;
-            if (sizeof(ElemType) == sizeof(double))
-            {
-                w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
-            }
-            else
-            {
-                w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
-            }
+            // rms estimate
+            // BUGBUG: This is not working for varying-length minibatches. Fix this using refMbSize and actualMbSize.
+            ElemType vt = varMomentum * varMomentumState[idx] + (1.0f - varMomentum) * g * g;
+            varMomentumState[idx] = vt;
+            // Adam correction term, including two corrections (one for momentum and one for varMomentum) precomputed outside
+            rms = sqrt_(vt) + epsilon; // note: epsilon = epsilon parameter * sqrt(varDenom)
         }
         else
         {
@@ -5382,14 +5381,26 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemT
             {
                 gAbs = fabsf(g);
             }
-            smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
-            w = adaMul / smoothAda[idx];
+            varMomentumState[idx] = max(varMomentum * varMomentumState[idx], gAbs);
+            rms = varMomentumState[idx];
         }
-
-        g = mom * smoothMom[idx] + unitGainFactor * g;
-        smoothMom[idx] = g;
-        g = lr*g*w;
-        val[idx] -= g;
+        // apply momentum
+        ElemType mt = momentum * momentumState[idx] + unitGainFactor * g; // note: unitGainFactor = 1-momentum, if unit-gain enabled
+        momentumState[idx] = mt;
+        // model update
+        param[idx] -= learningRate * mt * biasCorrection / rms;             // note: bias correction = sqrt(varDenom) / meanDenom
+        // Marian implementation for reference:
+        //  mt = (beta1_ * mt) + ((1 - beta1_) * g);
+        //  vt = (beta2_ * vt) + ((1 - beta2_) * (g * g));
+        //  params -= (multiplyFactor_ * eta_) * (mt / denom1) / (sqrt(vt / denom2) + eps_);
+        // Convert to our factoring:
+        //  params -= (multiplyFactor_ * eta_) * (mt / denom1) / (  sqrt(vt) / sqrt(denom2) + eps_ * sqrt(denom2) / sqrt(denom2)  );
+        //          = (multiplyFactor_ * eta_) * (mt / denom1) / (  (sqrt(vt) + eps_ * sqrt(denom2)) / sqrt(denom2)  );
+        //          = (multiplyFactor_ * eta_) * (mt / denom1) /    (sqrt(vt) + eps_ * sqrt(denom2))    * sqrt(denom2);
+        //          = (multiplyFactor_ * eta_) * (mt / denom1) * sqrt(denom2) / (sqrt(vt) + eps_ * sqrt(denom2));
+        //          = (multiplyFactor_ * eta_) * mt * (sqrt(denom2) / denom1) / (sqrt(vt) + eps_ * sqrt(denom2));
+        //          = (multiplyFactor_ * eta_) * mt * biasCorrection / (sqrt(vt) + eps_ * sqrt(denom2));
+        //          = learningRate * mt * biasCorrection / rms;
     }
 }
 

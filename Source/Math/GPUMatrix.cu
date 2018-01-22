@@ -1871,14 +1871,15 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
-    GPUMatrix<ElemType>& functionValues,
-    ElemType learnRatePerSample,
+    GPUMatrix<ElemType>& parametersToUpdate,
+    ElemType learnRate,
     ElemType momentum,
-    ElemType adaWeight,
-    ElemType adaMul,
+    ElemType varMomentum,
+    ElemType biasCorrection,
     ElemType epsilon,
     ElemType unitGainFactor,
-    bool adamax)
+    size_t refMbSize, size_t actualMbSize,
+    bool doAdamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1890,10 +1891,11 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
 
     assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
 
+    // note: 'this' = state, here momentum accumulator and RMS
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
-    _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainFactor, adamax);
+    _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, parametersToUpdate.Data(),
+        learnRate, momentum, varMomentum, biasCorrection, epsilon, unitGainFactor, (CUDA_LONG)refMbSize, (CUDA_LONG)actualMbSize, doAdamax);
 }
 
 template <class ElemType>

@@ -335,7 +335,7 @@ namespace CNTK
             return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
         }
 
-        double m_smoothedCount;
+        double m_updateCount; // number of updates (minibatches)   --Adam presently has no sample count
         double m_franksAsIfSmoothedCount = 0; // TODO: need checkpointing etc., fix with Yuqing
         MomentumSchedule m_varianceMomentumSchedule;
         double m_epsilon;

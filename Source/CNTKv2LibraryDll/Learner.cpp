@@ -742,14 +742,14 @@ namespace CNTK
             NDArrayViewPtr view = AllocateNDArrayView(parameter, {shape[0], 2 * shape[1]});
             m_smoothedGradientValues.emplace(parameter, view);
         }
-        m_smoothedCount = 0.0;
+        m_updateCount = 0.0;
         m_franksAsIfSmoothedCount = 0.0;
     }
 
     /*virtual*/ Dictionary LearnerAdam::CreateCheckpoint() /*override*/
     {
         auto dict = LearnerBase::CreateCheckpoint();
-        dict[smoothedCountKey] = m_smoothedCount;
+        dict[smoothedCountKey] = m_updateCount;
         dict[L"m_franksAsIfSmoothedCount"] = m_franksAsIfSmoothedCount;
         return dict;
     }
@@ -757,20 +757,20 @@ namespace CNTK
     /*virtual*/ void LearnerAdam::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
         LearnerBase::RestoreFromCheckpoint(checkpoint);
-        m_smoothedCount = checkpoint[smoothedCountKey].Value<double>();
+        m_updateCount = checkpoint[smoothedCountKey].Value<double>();
         m_franksAsIfSmoothedCount = checkpoint[L"m_franksAsIfSmoothedCount"].Value<double>();
     }
 
     /*virtual*/ void LearnerAdam::ResetSmoothedGradients() /*override*/
     {
         LearnerBase::ResetSmoothedGradients();
-        m_smoothedCount = 0.0;
+        m_updateCount = 0.0;
         m_franksAsIfSmoothedCount = 0.0;
     }
 
     /*virtual*/ void LearnerAdam::UpdateOnMinibatch(size_t trainingSampleCount)
     {
-        m_smoothedCount += 1.0;
+        m_updateCount += 1.0;
 
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
         m_franksAsIfSmoothedCount = varMomentum * m_franksAsIfSmoothedCount + (1.0 - varMomentum) * trainingSampleCount; // [fseide]
@@ -779,20 +779,29 @@ namespace CNTK
     /*virtual*/ void LearnerAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
         const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
     {
-        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+        DISPATCH_TO_TYPED_UPDATE_FUNCTION; // forward to Update<ElemType>
     }
 
     template <typename ElementType>
-    void LearnerAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
-        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    void LearnerAdam::Update(const Parameter& parameter,                    // weights to update
+                             const NDArrayViewPtr& gradientValue,           // raw gradient from backprop
+                             const NDArrayViewPtr& smoothedGradientValue,   // state for smoothing
+                             size_t thisMinibatchSize) const                // used for mapping hyper-parameters to specific MB size
     {
         GET_WRITABLE_MATRICES;
 
-        const auto learningRate = LearningRate(trainingSampleCount);
-        const auto momentum = MomentumValueForMB(trainingSampleCount);
-        const auto unitGainFactor = UnitGainFactor<ElementType>(trainingSampleCount);
+        const auto learningRate = LearningRate(thisMinibatchSize);
+#if 1   // hard-coded parameters for Marian comparison
+        const auto momentum = 0.9f;//MomentumValueForMB(thisMinibatchSize);
+        const auto unitGainFactor = 1.0f - momentum; //UnitGainFactor<ElementType>(thisMinibatchSize);
 
-        const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+        const auto varMomentum = 0.99f;//VarianceMomentumValueForMB(thisMinibatchSize);
+#else
+        const auto momentum = MomentumValueForMB(thisMinibatchSize);
+        const auto unitGainFactor = UnitGainFactor<ElementType>(thisMinibatchSize);
+
+        const auto varMomentum = VarianceMomentumValueForMB(thisMinibatchSize);
+#endif
 
         // CNTK gradients are minibatch sums, not averages. Hence, compared to the original Adam formula,
         // the gradients are by a factor of N larger (N=#samples in minibatch).
@@ -803,11 +812,15 @@ namespace CNTK
         //  val[idx] -= lr * smoothMom[idx] * adaMul / (sqrt(smoothAda[idx]) + epsilon);
         //   N x smaller^^   ^^N x larger               ^^^^^^^^^^^^^^^^^^^ N x larger
         // Hence, the update is N x smaller than in the original Adam formula.
-        //const auto franksAsIfFactor = trainingSampleCount;
+        //const auto franksAsIfFactor = thisMinibatchSize;
         // TODO: do this properly!
 
-        smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_smoothedCount, /*learnRatePerSample=*/learningRate   /*  * franksAsIfFactor*/,
-                                           /*meanMomentum=*/momentum, varMomentum, (ElementType)m_epsilon, unitGainFactor, m_adamax);
+        // note: for Adam, m_updateCount is really an integer minibatch count
+        smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, m_updateCount,
+                                           /*learnRatePerSample=*/learningRate   /*  * franksAsIfFactor*/,
+                                           /*meanMomentum=*/momentum, varMomentum, (ElementType)m_epsilon,
+                                           unitGainFactor, /*refMbSize=*/1, /*thisMbSize=*/thisMinibatchSize, m_adamax);
+        // BUGBUG: need to use actual MB sizes
     }
 
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
