@@ -568,6 +568,7 @@ public:
         {
             // This is ugly, temp solution that we can live in short term, since SE fails rarely due to numerical instability
             fprintf(stderr, "WARNING: Minibatch evaluation resulted in an exception. Skipping...\n");
+            m_gammaCalculator.init(m_hmm);
             m_invalidBatch = true;
         }
 

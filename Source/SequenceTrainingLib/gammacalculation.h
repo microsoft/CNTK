@@ -60,15 +60,20 @@ public:
         m_deviceid = DeviceId;
         if (!initialmark)
         {
-            m_hset = hset;
-            m_maxframenum = 0;
-
-            // prep for parallel implementation (CUDA)
-            parallellattice.setdevice(DeviceId);
-            if (parallellattice.enabled())                             // send hmm set to GPU if GPU computation enabled
-                parallellattice.entercomputation(m_hset, mbrclassdef); // cache senone2classmap if mpemode
+            init(hset);
             initialmark = true;
         }
+    }
+
+    void init(msra::asr::simplesenonehmm hset)
+    {
+        m_hset = hset;
+        m_maxframenum = 0;
+
+        // prep for parallel implementation (CUDA)
+        parallellattice.setdevice(m_deviceid);
+        if (parallellattice.enabled())                             // send hmm set to GPU if GPU computation enabled
+            parallellattice.entercomputation(m_hset, mbrclassdef); // cache senone2classmap if mpemode
     }
 
     // ========================================
