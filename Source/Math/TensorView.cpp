@@ -811,7 +811,9 @@ static size_t TensorDataAsString(string& res,
     }
     if (subRank == 0) // scalar: print the item
     {
-        res.append(to_string(*data));
+        char buf[400]; // largest double is 1e309, so 400 should be enough. Enough said.
+        sprintf(buf, "%.8f", (double)*data);
+        res.append(buf);
         if (is_same<ElemType, size_t>())
             res.append(":1");
     }
@@ -856,13 +858,13 @@ string TensorView<ElemType>::AsString(size_t maxItems /*= 6*/, bool columnMajor 
         let dims    = m_shape.GetDims();
         let strides = m_shape.GetStrides();
         let rank = m_shape.GetRank();
-        res.reserve(sobViewPtr->GetNumElements() * 10);
-#if 1   // show the abs max value and its location
+        res.reserve(sobViewPtr->GetNumElements() * 13);
+#if 0   // show the abs max value and its location
         auto maxIter = max_element(data.get(), data.get() + sobViewPtr->GetNumElements());
         let  minIter = min_element(data.get(), data.get() + sobViewPtr->GetNumElements());
         if (-*minIter > *maxIter)
             maxIter = minIter;
-        res += "_[" + to_string(maxIter - data.get()) + "] = " + to_string(*maxIter) + " ";
+        res += "_[" + to_string(maxIter - data.get()) + "] = " + to_string(*maxIter) + "\n";
 #endif
         TensorDataAsString(res, data.get(), dims, strides, rank, rank, 0, maxItems, columnMajor);
     }
