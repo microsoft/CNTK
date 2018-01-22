@@ -1101,7 +1101,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                                   learnerOptions);
     }
     else InvalidArgument("Invalid --learner %s", learnerType.c_str());
-    let globalNormClipping = 0; // set to 0 to disable. For ce-sum, this does not make much sense.
+    let globalNormClipping = 0.0; // set to 0 to disable. For ce-sum, this does not make much sense.
     // TODO: move this out
     let CreateDistributedLearner = [](const LearnerPtr& baseLearner, const DistributedCommunicatorPtr& communicator)
     {
