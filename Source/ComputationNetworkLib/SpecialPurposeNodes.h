@@ -456,13 +456,17 @@ class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, publ
 public:
     DeclareConstructorFromConfigWithNumInputs(SequenceWithSoftmaxNode);
     SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_gammaCalcInitialized(false)
+        : Base(deviceId, name), m_gammaCalcInitialized(false), m_invalidBatch(false)
     {
     }
 
     // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
+        // Check if the forward pass resulted in a valid batch
+        if (m_invalidBatch)
+            return;
+
         // auto t_start_time = Timer::MilliSecondElapsed();
         // left Node must be a scalar
         if (inputIndex == 0) // left derivative
@@ -552,10 +556,20 @@ public:
 
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
-        m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
-                                        Input(0)->Value() /*labels*/, *m_gammaFromLattice,
-                                        m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
-                                        Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+        m_invalidBatch = false;
+        try
+        {
+            m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
+                Input(0)->Value() /*labels*/, *m_gammaFromLattice,
+                m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
+                Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+        }
+        catch (...) 
+        {
+            // This is ugly, temp solution that we can live in short term, since SE fails rarely due to numerical instability
+            fprintf(stderr, "WARNING: Minibatch evaluation resulted in an exception. Skipping...\n");
+            m_invalidBatch = true;
+        }
 
 #if NANCHECK
         Value().HasNan("SequenceWithSoftmaxNode");
@@ -655,6 +669,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
+    bool m_invalidBatch;
     double m_frameDropThreshold;
     double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
     double m_seqGammarAMF;
