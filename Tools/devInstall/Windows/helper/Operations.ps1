@@ -37,7 +37,7 @@ function OpAnacondaEnv(
         $envName = $environmentName
     }
     else {
-        $envName = "cntkdev-py$pyVersion"
+        $envName = "cntk-py$pyVersion"
     }
     $envDir = Join-Path envs $envName
     $envVar = "CNTK_PY$($pyVersion)_PATH";
