@@ -946,14 +946,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     {
         p.Value()->LogToFile(p.Name() + L" (CNTK)");
         // load it from the Marian init file
-        wstring path = L"/data2/fseide/marian-examples/transformer/initvals/" + p.Name();
+        wstring path = L"f:/data2/fseide/marian-examples/transformer/initvals/" + p.Name();
         let numElem = p.Shape().TotalSize();
         fprintf(stderr, "Loading %d init vals: %S\n", (int)numElem, path.c_str()), fflush(stderr);
         FILE* f = _wfopen(path.c_str(), L"rw");
         if (f)
         {
             buf.resize(numElem);
-            fread(buf.data(), sizeof(*buf.data()), buf.size(), f) == 0;
+            let res = fread(buf.data(), sizeof(*buf.data()), buf.size(), f); res;
             fclose(f);
             fprintf(stderr, "first val: %.f\n", buf.front());
             auto temp = CNTK::NDArrayView(CNTK::DataType::Float, p.Shape(),
