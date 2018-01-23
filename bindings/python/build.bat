@@ -2,21 +2,19 @@ setlocal
 
 cd "%~dp0"
 
-if not defined VS140COMNTOOLS (
-  @echo Environment variable VS140COMNTOOLS not defined.
-  @echo Make sure Visual Studion 2015 Update 3 is installed.
-  goto FIN
-)
-set VCDIRECTORY=%VS140COMNTOOLS%
-if "%VCDIRECTORY:~-1%"=="\" set VCDIRECTORY=%VCDIRECTORY:~,-1%
-
-if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
-  echo Error: "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" not found. 
-  echo Make sure you have installed Visual Studion 2015 Update 3 correctly.  
+if not defined VS2017INSTALLDIR (
+  @echo Environment variable VS2017INSTALLDIR not defined.
+  @echo Make sure Visual Studion 2017 is installed.
   goto FIN
 )
 
-call "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" amd64 
+if not exist "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" (
+  echo Error: "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" not found.
+  echo Make sure you have installed Visual Studion 2017 correctly.
+  goto FIN
+)
+
+call "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" amd64 -vcvars_ver=14.11
 
 set MSSdk=1
 set DISTUTILS_USE_SDK=1

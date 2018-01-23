@@ -35,22 +35,28 @@ if errorlevel 1 (
   goto FIN
 )
 
-if not defined VS140COMNTOOLS (
-  @echo Environment variable VS140COMNTOOLS not defined.
-  @echo Make sure Visual Studion 2015 Update 3 is installed.
+if not defined VS2017INSTALLDIR (
+  @echo Environment variable VS2017INSTALLDIR not defined.
+  @echo Make sure Visual Studion 2017 is installed.
   goto FIN
 )
-set VCDIRECTORY=%VS140COMNTOOLS%
+set VCDIRECTORY=%VS2017INSTALLDIR%
 if "%VCDIRECTORY:~-1%"=="\" set VCDIRECTORY=%VCDIRECTORY:~,-1%
 
-if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
-  echo Error: "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" not found. 
-  echo Make sure you have installed Visual Studion 2015 Update 3 correctly.  
+if not exist "%VCDIRECTORY%\VC\Auxiliary\Build\vcvarsall.bat" (
+  echo Error: "%VCDIRECTORY%\VC\Auxiliary\Build\vcvarsall.bat" not found.
+  echo Make sure you have installed Visual Studion 2017 correctly.
+  goto FIN
+)
+
+if not exist "%VCDIRECTORY%\VC\Auxiliary\Build\14.11\Microsoft.VCToolsVersion.14.11.props" (
+  echo Error: "%VCDIRECTORY%\VC\Auxiliary\Build\14.11\Microsoft.VCToolsVersion.14.11.props" not found.
+  echo Make sure you have installed VCTools 14.11 for Visual Studio 2017 correctly.
   goto FIN
 )
 
 @echo.
-@echo This will build Protobuf for CNTK using Visual Studio 2015
+@echo This will build Protobuf for CNTK using Visual Studio 2017
 @echo ----------------------------------------------------------
 @echo The configured settings for the batch file:
 @echo    Visual Studio directory: %VCDIRECTORY%
@@ -60,10 +66,11 @@ if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
 
 pause 
 
-call "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" amd64 
+call "%VCDIRECTORY%\VC\Auxiliary\Build\vcvarsall.bat" amd64 --vcvars_ver=14.11
 
 pushd "%SOURCEDIR%"
 cd cmake
+if exist build (rd /s /q build)
 md build && cd build
 
 md debug && cd debug

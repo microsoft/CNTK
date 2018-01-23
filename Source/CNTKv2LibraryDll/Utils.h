@@ -742,9 +742,18 @@ namespace CNTK
     template <typename T> //T can be Variable or StreamInfo
     static bool IsAtSweepEnd(const std::unordered_map<T, MinibatchData>& arguments)
     {
+        if (arguments.empty()) return true;
+
         return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const T, MinibatchData>& kv)
         {
             return kv.second.sweepEnd;
         });
+    }
+
+    // half is V1 ElemType, so specialize here instead of in CNTKLibrary.h
+    template<>
+    inline DataType AsDataType<half>()
+    {
+        return DataType::Float16;
     }
 }

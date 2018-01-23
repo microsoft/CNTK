@@ -104,6 +104,7 @@ void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count
         {
             ncclTypes[(int)DataType::FLOAT]  = ncclFloat;
             ncclTypes[(int)DataType::DOUBLE] = ncclDouble;
+            ncclTypes[(int)DataType::HALF] = ncclHalf;
             ncclTypes[(int)DataType::INT]    = ncclInt;
         }
         ncclDataType_t Lookup(DataType dtype)

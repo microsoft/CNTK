@@ -587,9 +587,11 @@ template<class ElemType, int direction>
 // instantiate the classes that derive from the above
 template class PastValueNode<float>;
 template class PastValueNode<double>;
+template class PastValueNode<half>;
 
 template class FutureValueNode<float>;
 template class FutureValueNode<double>;
+template class FutureValueNode<half>;
 
 // -----------------------------------------------------------------------
 // DelayedValueNodeState -- helper class for exporting/importing state from/to DelayedValueNodes.

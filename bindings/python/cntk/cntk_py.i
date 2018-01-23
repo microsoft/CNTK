@@ -274,6 +274,11 @@ def dynamic_axes(self):
             numpy_type = NPY_DOUBLE;
             buffer = (void*)cpuView->DataBuffer<double>();
         }
+        else if (cntk_type == CNTK::DataType::Float16)
+        {
+            numpy_type = NPY_HALF;
+            buffer = (void*)cpuView->DataBuffer<float16>();
+        }
         else
         {
             throw std::invalid_argument("unknown CNTK data type");
@@ -1819,11 +1824,11 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
         {
             if (borrow)
             {
-                 view = new NDArrayView(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Float, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Float), DeviceDescriptor::CPUDevice(), readOnly);
             }
             else
             {
-                 NDArrayView  tmp(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 NDArrayView  tmp(DataType::Float, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Float), DeviceDescriptor::CPUDevice(), readOnly);
                  view = new NDArrayView(DataType::Float, tmp.Shape(), device);
                  view->CopyFrom(tmp);
             }
@@ -1832,18 +1837,31 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
         {
             if (borrow)
             {
-                 view = new NDArrayView(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Double, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Double), DeviceDescriptor::CPUDevice(), readOnly);
             }
             else
             {
-                 NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 NDArrayView  tmp(DataType::Double, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Double), DeviceDescriptor::CPUDevice(), readOnly);
                  view = new NDArrayView(DataType::Double, tmp.Shape(), device);
+                 view->CopyFrom(tmp);
+            }
+        }
+        else if (typecode == NPY_HALF)
+        {
+            if (borrow)
+            {
+                 view = new NDArrayView(DataType::Float16, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Float16), DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                 NDArrayView  tmp(DataType::Float16, NDShape(shape), PyArray_DATA(array), num_elements * DataTypeSize(DataType::Float16), DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Float16, tmp.Shape(), device);
                  view->CopyFrom(tmp);
             }
         }
         else
         {
-            throw std::logic_error("NumPy array of type float32 or float64 expected");
+            throw std::logic_error("NumPy array of type float16, float32 or float64 expected");
         }
 
         return view;
@@ -1887,18 +1905,18 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
         {
             if (borrow)
             {
-                view = new NDArrayView(shape,
+                view = new NDArrayView(DataType::Float, shape,
                  (CNTK::SparseIndexType*)PyArray_DATA(indices),
                  (CNTK::SparseIndexType*)PyArray_DATA(indptr),
-                 (float*)PyArray_DATA(data), numNonZeroValues,
+                 PyArray_DATA(data), numNonZeroValues,
                  DeviceDescriptor::CPUDevice(), readOnly);
             }
             else
             {
-                NDArrayView tmp(shape,
+                NDArrayView tmp(DataType::Float, shape,
                  (CNTK::SparseIndexType*)PyArray_DATA(indices),
                  (CNTK::SparseIndexType*)PyArray_DATA(indptr),
-                 (float*)PyArray_DATA(data), numNonZeroValues,
+                 PyArray_DATA(data), numNonZeroValues,
                  DeviceDescriptor::CPUDevice(), readOnly);
                 view = new NDArrayView(DataType::Float, StorageFormat::SparseCSC, tmp.Shape(), device);
                 view->CopyFrom(tmp);
@@ -1908,26 +1926,47 @@ extern "C" CNTKPYTHON_API bool CreateDeserializer(DataDeserializerPtr& deseriali
         {
             if (borrow)
             {
-                view = new NDArrayView(shape,
+                view = new NDArrayView(DataType::Double, shape,
                  (CNTK::SparseIndexType*)PyArray_DATA(indices),
                  (CNTK::SparseIndexType*)PyArray_DATA(indptr),
-                 (double*)PyArray_DATA(data), numNonZeroValues,
+                 PyArray_DATA(data), numNonZeroValues,
                  DeviceDescriptor::CPUDevice(), readOnly);
             }
             else
             {
-                NDArrayView tmp(shape,
+                NDArrayView tmp(DataType::Double, shape,
                  (CNTK::SparseIndexType*)PyArray_DATA(indices),
                  (CNTK::SparseIndexType*)PyArray_DATA(indptr),
-                 (double*)PyArray_DATA(data), numNonZeroValues,
+                 PyArray_DATA(data), numNonZeroValues,
                  DeviceDescriptor::CPUDevice(), readOnly);
                 view = new NDArrayView(DataType::Double, StorageFormat::SparseCSC, tmp.Shape(), device);
                 view->CopyFrom(tmp);
             }
         }
+        else if (typecode == NPY_HALF)
+        {
+            if (borrow)
+            {
+                view = new NDArrayView(DataType::Float16, shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                NDArrayView tmp(DataType::Float16, shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+                view = new NDArrayView(DataType::Float16, StorageFormat::SparseCSC, tmp.Shape(), device);
+                view->CopyFrom(tmp);
+            }
+        }
         else
         {
-            throw std::logic_error("NumPy array of type float32 or float64 expected");
+            throw std::logic_error("NumPy array of type float16, float32 or float64 expected");
         }
 
         return view;

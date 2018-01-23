@@ -21,11 +21,11 @@ public:
     static bool IsSupported(DEVICEID_TYPE deviceId, ConvolveGeometryPtr geometry, PoolKind poolKind);
 };
 
-template <class ElemType>
+template <class InoutType, class StatType>
 class CuDnnBatchNormEngineFactory
 {
 public:
-    static std::unique_ptr<BatchNormEngine<ElemType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
+    static std::unique_ptr<BatchNormEngine<InoutType, StatType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                                                              bool spatial, ImageLayoutKind imageLayout);
 };
 

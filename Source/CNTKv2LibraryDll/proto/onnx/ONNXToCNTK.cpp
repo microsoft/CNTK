@@ -1497,7 +1497,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         CNTK::PaddingMode cntkPaddingMode;
         double cntkConstantValue = 0.0;
         auto mode = GetNamedAttributeAsString(node, "mode", "constant");
-        std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
+        std::transform(mode.begin(), mode.end(), mode.begin(), [](char v) { return (char)::tolower(v); });
         if (mode == "constant")
             cntkPaddingMode = CNTK::PaddingMode::CONSTANTPAD;
         else if (mode == "reflect")

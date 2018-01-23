@@ -63,32 +63,46 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
         multithreaded_deserializer=True)
 
 # Create network
-def create_resnet_network(network_name):
+def create_resnet_network(network_name, fp16):
     # Input variables denoting the features and label data
     input_var = C.input_variable((num_channels, image_height, image_width))
     label_var = C.input_variable((num_classes))
 
-    stride1x1 = (1, 1)
-    stride3x3 = (2, 2)
-
-    # create model, and configure learning parameters
-    if network_name == 'resnet18':
-        z = create_imagenet_model_basic(input_var, [2, 1, 1, 2], num_classes)
-    elif network_name == 'resnet34':
-        z = create_imagenet_model_basic(input_var, [3, 3, 5, 2], num_classes)
-    elif network_name == 'resnet50':
-        z = create_imagenet_model_bottleneck(input_var, [2, 3, 5, 2], num_classes, stride1x1, stride3x3)
-    elif network_name == 'resnet101':
-        z = create_imagenet_model_bottleneck(input_var, [2, 3, 22, 2], num_classes, stride1x1, stride3x3)
-    elif network_name == 'resnet152':
-        z = create_imagenet_model_bottleneck(input_var, [2, 7, 35, 2], num_classes, stride1x1, stride3x3)
+    dtype = np.float16 if fp16 else np.float32
+    if fp16:
+        graph_input = C.cast(input_var, dtype=np.float16)
+        graph_label = C.cast(label_var, dtype=np.float16)
     else:
-        return RuntimeError("Unknown model name!")
+        graph_input = input_var
+        graph_label = label_var
 
-    # loss and metric
-    ce = cross_entropy_with_softmax(z, label_var)
-    errs = classification_error(z, label_var, topN=1)
-    top5Errs = classification_error(z, label_var, topN=5)
+    with C.default_options(dtype=dtype):
+        stride1x1 = (1, 1)
+        stride3x3 = (2, 2)
+
+        # create model, and configure learning parameters
+        if network_name == 'resnet18':
+            z = create_imagenet_model_basic(graph_input, [2, 1, 1, 2], num_classes)
+        elif network_name == 'resnet34':
+            z = create_imagenet_model_basic(graph_input, [3, 3, 5, 2], num_classes)
+        elif network_name == 'resnet50':
+            z = create_imagenet_model_bottleneck(graph_input, [2, 3, 5, 2], num_classes, stride1x1, stride3x3)
+        elif network_name == 'resnet101':
+            z = create_imagenet_model_bottleneck(graph_input, [2, 3, 22, 2], num_classes, stride1x1, stride3x3)
+        elif network_name == 'resnet152':
+            z = create_imagenet_model_bottleneck(graph_input, [2, 7, 35, 2], num_classes, stride1x1, stride3x3)
+        else:
+            return RuntimeError("Unknown model name!")
+
+        # loss and metric
+        ce = cross_entropy_with_softmax(z, graph_label)
+        errs = classification_error(z, graph_label, topN=1)
+        top5Errs = classification_error(z, graph_label, topN=5)
+
+    if fp16:
+        ce = C.cast(ce, dtype=np.float32)
+        errs = C.cast(errs, dtype=np.float32)
+        top5Errs = C.cast(top5Errs, dtype=np.float32)
 
     return {
         'name' : network_name,
@@ -156,7 +170,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
 # Train and evaluate the network.
 def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=None, warm_up=0, 
-                    max_epochs=90, restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, scale_up=False, profiling=False):
+                    max_epochs=90, restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, scale_up=False, profiling=False, fp16=False):
 
     set_computation_network_trace_level(0)
 
@@ -174,7 +188,7 @@ def resnet_imagenet(train_data, test_data, mean_data, network_name, epoch_size, 
         gen_heartbeat=gen_heartbeat,
         num_epochs=max_epochs)
 
-    network = create_resnet_network(network_name)
+    network = create_resnet_network(network_name, fp16)
     trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=C.io.FULL_DATA_SWEEP)
@@ -198,6 +212,7 @@ if __name__=='__main__':
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true', default=False)
     parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
     parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
+    parser.add_argument('-fp16', '--fp16', help="use float16", action='store_true', default=False)
 
     args = vars(parser.parse_args())
 
@@ -237,7 +252,8 @@ if __name__=='__main__':
                     restore=not args['restart'],
                     scale_up=scale_up,
                     log_to_file=args['logdir'],
-                    profiling=args['profile'])
+                    profiling=args['profile'],
+                    fp16=args['fp16'])
 
     # Must call MPI finalize when process exit without exceptions
     Communicator.finalize()

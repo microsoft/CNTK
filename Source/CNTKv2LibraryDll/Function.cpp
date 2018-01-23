@@ -2098,14 +2098,14 @@ namespace CNTK
 
             FunctionPtr classificationErrorComposite;
             if (axis == Axis(0))
-                classificationErrorComposite = Minus(Constant::Scalar(1.0f), TransposeTimes(labelPlaceholder, Hardmax(predictionPlaceholder)));
+                classificationErrorComposite = Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labelPlaceholder, Hardmax(predictionPlaceholder)));
             else
             {
                 auto axMax = ReduceMax(predictionPlaceholder, axis);
                 auto pred = Equal(predictionPlaceholder, axMax);
                 auto wrongPred = NotEqual(labelPlaceholder, pred);
                 auto axErr = ReduceSum(wrongPred, axis);
-                auto capErr = GreaterEqual(axErr, Constant::Scalar(1.0f));
+                auto capErr = GreaterEqual(axErr, Constant::Scalar(prediction.GetDataType(), 1.0));
                 classificationErrorComposite = ReduceMean(capErr, Axis::AllStaticAxes());
             }
 
@@ -2936,6 +2936,17 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(
             PrimitiveOpType::Crop,
             operands, Dictionary(), name), name);
+    }
+
+    FunctionPtr Cast(const Variable& nodeInput, DataType outputType, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { nodeInput };
+        Dictionary additionalAttributes;
+        additionalAttributes.Add(
+                PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(outputType));
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(
+            PrimitiveOpType::Cast,
+            operands, std::move(additionalAttributes), name), name);
     }
 
     namespace Internal

@@ -19,9 +19,9 @@ if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
 if IS_WINDOWS:
     if os.system('cl 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
         print("Compiler was not found in path.\n"
-              "Make sure you installed the C++ tools during Visual Studio 2015 install and \n"
+              "Make sure you installed the C++ tools during Visual Studio 2017 install and \n"
               "run vcvarsall.bat from a DOS command prompt:\n"
-              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall\" amd64\n")
+              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio\\17\\Community\\VC\\Auxiliary\\Build\\vcvarsall\" amd64 -vcvars_ver=14.11\n")
         sys.exit(1)
 
     try:

@@ -1249,15 +1249,19 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     use_cntk_engine             = get_default_override(BatchNormalization, use_cntk_engine=use_cntk_engine)
     disable_regularization      = get_default_override(BatchNormalization, disable_regularization=disable_regularization)
 
+    # for fp16 batch_normalization, we need to use fp32 statistics
+    dtype = get_default_override(None, dtype=default_override_or(np.float32))
+    stat_dtype = np.float32 if dtype == np.float16 or dtype == 'float16' else dtype
+    
     # parameters bound to this Function
     norm_shape  = _INFERRED
     if map_rank is not None and map_rank != 1:
         UntestedBranchError("BatchNormalization map_rank can only be 1 or None for now")
-    scale        = Parameter(norm_shape, init=init_scale, name='scale')
-    bias         = Parameter(norm_shape, init=0,          name='bias')
-    run_mean     = Constant(0, shape=norm_shape, name='aggregate_mean')  # note: these are not really constants; they are updated differently
-    run_variance = Constant(0, shape=norm_shape, name='aggregate_variance')
-    run_count    = Constant(0, shape=(),         name='aggregate_count')
+    scale        = Parameter(norm_shape, init=init_scale, dtype=stat_dtype, name='scale')
+    bias         = Parameter(norm_shape, init=0,          dtype=stat_dtype, name='bias')
+    run_mean     = Constant(0, shape=norm_shape, dtype=stat_dtype, name='aggregate_mean')  # note: these are not really constants; they are updated differently
+    run_variance = Constant(0, shape=norm_shape, dtype=stat_dtype, name='aggregate_variance')
+    run_count    = Constant(0, shape=(),         dtype=stat_dtype, name='aggregate_count')
 
     # expression
     @BlockFunction('BatchNormalization', name)

@@ -478,7 +478,7 @@ function SetRegistryKeyNameData(
     }
 }
 
-function CreateBuildProtobufBatch(
+function CreateBuildSimpleBatch(
     [Parameter(Mandatory = $true)][hashtable] $table
 )
 {

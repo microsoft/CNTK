@@ -44,21 +44,27 @@ if errorlevel 1 (
   goto FIN
 )
 
-if not defined VS140COMNTOOLS ( 
-  @echo Environment variable VS140COMNTOOLS not defined.
-  @echo Make sure Visual Studion 2015 Update 3 is installed.
+if not defined VS2017INSTALLDIR (
+  @echo Environment variable VS2017INSTALLDIR not defined.
+  @echo Make sure Visual Studion 2017 is installed.
   goto FIN
 )
-set VCDIRECTORY=%VS140COMNTOOLS%
+set VCDIRECTORY=%VS2017INSTALLDIR%
 if "%VCDIRECTORY:~-1%"=="\" set VCDIRECTORY=%VCDIRECTORY:~,-1%
 
-if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
-  echo Error: "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" not found. 
-  echo Make sure you have installed Visual Studion 2015 Update 3 correctly.  
+if not exist "%VCDIRECTORY%\VC\Auxiliary\Build\vcvarsall.bat" (
+  echo Error: "%VCDIRECTORY%\VC\Auxiliary\Build\vcvarsall.bat" not found.
+  echo Make sure you have installed Visual Studion 2017 correctly.
   goto FIN
 )
 
-@set CMAKEGEN="Visual Studio 14 2015 Win64"
+if not exist "%VCDIRECTORY%\VC\Auxiliary\Build\14.11\Microsoft.VCToolsVersion.14.11.props" (
+  echo Error: "%VCDIRECTORY%\VC\Auxiliary\Build\14.11\Microsoft.VCToolsVersion.14.11.props" not found.
+  echo Make sure you have installed VCTools 14.11 for Visual Studio 2017 correctly.
+  goto FIN
+)
+
+@set CMAKEGEN="Visual Studio 15 Win64"
 
 @echo.
 @echo This will build cthe compression library used by the CNTK image reader
@@ -68,14 +74,15 @@ if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
 @echo    CMake Generator: %CMAKEGEN%
 @echo    LibZip source directory: %LIBZIPSOURCEDIR%
 @echo    Zlib source directory: %ZLIBSOURCEDIR%
-@echo    Zlib-VS15 target directory: %TARGETDIR%
+@echo    Zlib-VS17 target directory: %TARGETDIR%
 @echo.
 
 @pause 
 
-call "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" amd64 
+call "%VCDIRECTORY%\VC\Auxiliary\Build\vcvarsall.bat" amd64 --vcvars_ver=14.11
 
 @pushd "%ZLIBSOURCEDIR%"
+if exist build (rd /s /q build)
 @mkdir build
 @cd build
 @cmake .. -G%CMAKEGEN% -DCMAKE_INSTALL_PREFIX="%TARGETDIR%"
@@ -83,6 +90,7 @@ call "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" amd64
 @popd
 
 @pushd "%LIBZIPSOURCEDIR%"
+if exist build (rd /s /q build)
 @md build
 @cd build
 @cmake .. -G%CMAKEGEN% -DCMAKE_INSTALL_PREFIX="%TARGETDIR%"
@@ -98,10 +106,10 @@ goto FIN
 @echo The script requires three parameter
 @echo   Parameter 1: The complete path to the LibZip source directory 
 @echo                e.g C:\local\src\libzip-1.1.3
-@echo   Parameter 1: The complete path to the ZLib source directory 
+@echo   Parameter 2: The complete path to the ZLib source directory 
 @echo                e.g C:\local\src\zlib-1.2.8
-@echo   Parameter 2: The target path for the created binaries
-@echo                e.g C:\local\zlib-vs15
+@echo   Parameter 3: The target path for the created binaries
+@echo                e.g C:\local\zlib-vs17
 @echo.
 goto FIN
 

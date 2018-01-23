@@ -446,6 +446,7 @@ public:
 
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
+template class HardmaxNode<half>;
 
 
 
@@ -517,7 +518,8 @@ public:
             CreateMatrixIfNull(m_steps);
             auto dim = Input(0)->GetSampleLayout().GetDimPadded(0);
             auto tmp = new ElemType[numCols];
-            std::generate(tmp, tmp + numCols, [i = ElemType(0), dim]() mutable { auto ret = i; i += dim; return ret; });
+            ElemType i = ElemType(0);
+            std::generate(tmp, tmp + numCols, [&i, dim]() mutable { auto ret = i; i += dim; return ret; });
             m_steps->SetValue(1, numCols, this->m_deviceId, tmp);
             delete[] tmp;
             m_sortedIndices->ScaleAndAdd(ElemType(1), *m_steps, *m_sortedIndices);
@@ -768,7 +770,8 @@ public:                                                                 \
 };                                                                      \
                                                                         \
 template class ClassName<float>;                                        \
-template class ClassName<double>;
+template class ClassName<double>;                                       \
+template class ClassName<half>;
 
 DefineComparisonNode(LessNode,         -1, 0)
 DefineComparisonNode(EqualNode,         0, 0)

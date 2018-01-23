@@ -37,22 +37,35 @@ num_classes  = 10
 model_name   = "ResNet_CIFAR10_DataAug.model"
 
 # Create network
-def create_resnet_network(network_name):
+def create_resnet_network(network_name, fp16):
     # Input variables denoting the features and label data
     input_var = C.input_variable((num_channels, image_height, image_width))
     label_var = C.input_variable((num_classes))
 
-    # create model, and configure learning parameters
-    if network_name == 'resnet20':
-        z = create_cifar10_model(input_var, 3, num_classes)
-    elif network_name == 'resnet110':
-        z = create_cifar10_model(input_var, 18, num_classes)
+    dtype = np.float16 if fp16 else np.float32
+    if fp16:
+        graph_input = C.cast(input_var, dtype=np.float16)
+        graph_label = C.cast(label_var, dtype=np.float16)
     else:
-        return RuntimeError("Unknown model name!")
+        graph_input = input_var
+        graph_label = label_var
 
-    # loss and metric
-    ce = cross_entropy_with_softmax(z, label_var)
-    pe = classification_error(z, label_var)
+    with C.default_options(dtype=dtype):
+        # create model, and configure learning parameters
+        if network_name == 'resnet20':
+            z = create_cifar10_model(graph_input, 3, num_classes)
+        elif network_name == 'resnet110':
+            z = create_cifar10_model(graph_input, 18, num_classes)
+        else:
+            return RuntimeError("Unknown model name!")
+
+        # loss and metric
+        ce = cross_entropy_with_softmax(z, graph_label)
+        pe = classification_error(z, graph_label)
+
+    if fp16:
+        ce = C.cast(ce, dtype=np.float32)
+        pe = C.cast(pe, dtype=np.float32)
 
     return {
         'name' : network_name,
@@ -120,7 +133,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
 # Train and evaluate the network.
 def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=None, warm_up=0, 
-                   max_epochs=160, restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiling=False):
+                   max_epochs=160, restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiling=False, fp16=False):
 
     set_computation_network_trace_level(0)
 
@@ -138,7 +151,7 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
         gen_heartbeat=gen_heartbeat,
         num_epochs=max_epochs)
 
-    network = create_resnet_network(network_name)
+    network = create_resnet_network(network_name, fp16)
     trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=C.io.FULL_DATA_SWEEP)
@@ -162,6 +175,7 @@ if __name__=='__main__':
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
     parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
+    parser.add_argument('-fp16', '--fp16', help="use float16", action='store_true', default=False)
 
     args = vars(parser.parse_args())
 
@@ -201,7 +215,8 @@ if __name__=='__main__':
                    restore=not args['restart'],
                    scale_up=scale_up,
                    log_to_file=args['logdir'],
-                   profiling=args['profile'])
+                   profiling=args['profile'],
+                   fp16=args['fp16'])
 
     # Must call MPI finalize when process exit without exceptions
     Communicator.finalize()

@@ -45,7 +45,7 @@
 #     defaults to /usr/local/mpi
 # These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
-# TODO: Build static libraries for common dependencies that are shared by multiple 
+# TODO: Build static libraries for common dependencies that are shared by multiple
 # targets, e.g. eval and CNTK.
 
 ARCH=$(shell uname)
@@ -90,8 +90,8 @@ SOURCEDIR:= Source
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
-COMMON_FLAGS:= -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
-CPPFLAGS:= 
+COMMON_FLAGS:= -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11 -DCUDA_NO_HALF -D__CUDA_NO_HALF_OPERATORS__
+CPPFLAGS:=
 CXXFLAGS:= $(SSE_FLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS_LIST:=
@@ -168,10 +168,10 @@ endif
 
 ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/include
-  LIBS_LIST += m iomp5 pthread mklml_intel
+  LIBS_LIST += m iomp5 pthread mklml_intel mkldnn
   MKL_LIB_PATH := $(MKL_PATH)/lib
   LIBPATH += $(MKL_LIB_PATH)
-  COMMON_FLAGS += -DUSE_MKL
+  COMMON_FLAGS += -DUSE_MKL -DUSE_MKLDNN
 endif
 
 ifeq ($(CUDA_GDR),1)
@@ -212,6 +212,7 @@ GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
 GENCODE_SM52 := -gencode arch=compute_52,code=\"sm_52,compute_52\"
 GENCODE_SM60 := -gencode arch=compute_60,code=\"sm_60,compute_60\"
 GENCODE_SM61 := -gencode arch=compute_61,code=\"sm_61,compute_61\"
+GENCODE_SM70 := -gencode arch=compute_70,code=\"sm_70,compute_70\"
 
 # Should we relocate *.gcno and *.gcda files using -fprofile-dir option?
 # Use GCOV_PREFIX and GCOV_PREFIX_STRIP if relocating:
@@ -241,7 +242,7 @@ ifeq ("$(BUILDTYPE)","release")
   ifdef CNTK_CUDA_CODEGEN_RELEASE
     GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_RELEASE)
   else
-    GENCODE_FLAGS := $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50) $(GENCODE_SM60) $(GENCODE_SM61)
+    GENCODE_FLAGS := $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50) $(GENCODE_SM60) $(GENCODE_SM61) $(GENCODE_SM70)
   endif
 
   CXXFLAGS += -g -O4
@@ -365,6 +366,10 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixFloat.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixDouble.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixHalf.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixTensorFloat.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixTensorDouble.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixTensorHalf.cpp \
 	$(SOURCEDIR)/Math/CPURNGHandle.cpp \
 	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
@@ -415,7 +420,7 @@ $(CNTKMATH_LIB): $(MATH_OBJ) | $(PERF_PROFILER_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(LIBDIR) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp -l$(PERF_PROFILER)
 
 
-# Any executable using Common or ReaderLib needs to link these libraries. 
+# Any executable using Common or ReaderLib needs to link these libraries.
 READER_LIBS := $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 L_READER_LIBS := -l$(CNTKMATH) -l$(PERF_PROFILER)
 
@@ -711,7 +716,7 @@ $(CNTKLIBRARY_CPP_EVAL_EXAMPLES): $(CNTKLIBRARY_CPP_EVAL_EXAMPLES_OBJ) | $(CNTKL
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) $(L_READER_LIBS)
 
 ########################################
-# Eval V2 Sample test 
+# Eval V2 Sample test
 ########################################
 CNTKLIBRARY_CPP_EVAL_TEST:=$(BINDIR)/CNTKLibraryCPPEvalExamplesTest
 
@@ -1047,13 +1052,13 @@ ifeq (,$(wildcard Source/1BitSGD/*.h))
   $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://docs.microsoft.com/en-us/cognitive-toolkit/Enabling-1bit-SGD for instructions)
 endif
 
-  INCLUDEPATH += $(SOURCEDIR)/1BitSGD 
+  INCLUDEPATH += $(SOURCEDIR)/1BitSGD
 
   COMMON_FLAGS += -DCNTK_PARALLEL_TRAINING_SUPPORT
   # temporarily adding to 1bit, need to work with others to fix it
 endif
 
- 
+
 ########################################
 # ASGD(multiverso) setup
 ########################################
@@ -1081,7 +1086,7 @@ MULTIVERSO_CMAKE_BUILDTYPE=Debug
 endif
 
 # TODO need to align Multiverso OpenMP with the one we use (libiomp). For now, disabled.
-$(MULTIVERSO_LIB): 
+$(MULTIVERSO_LIB):
 	@echo "Build Multiverso lib"
 	@mkdir -p $(LIBDIR)
 	@mkdir -p $(BINDIR)
@@ -1322,6 +1327,7 @@ UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/MatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/MatrixLearnerTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/stdafx.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/MathTests/HalfGPUTests.cpp \
 
 UNITTEST_MATH_SRC += $(CNTK_COMMON_SRC)
 UNITTEST_MATH_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_MATH_SRC))
@@ -1530,13 +1536,13 @@ $(OBJDIR)/%.o : %.cu $(BUILD_CONFIGURATION)
 	@mkdir -p $(dir $@)
 	$(NVCC) -c $< -o $@ $(COMMON_FLAGS) $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
 
-$(OBJDIR)/%.pb.o : %.pb.cc $(BUILD_CONFIGURATION) 
+$(OBJDIR)/%.pb.o : %.pb.cc $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-$(OBJDIR)/%.o : %.cpp $(BUILD_CONFIGURATION) 
+$(OBJDIR)/%.o : %.cpp $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)

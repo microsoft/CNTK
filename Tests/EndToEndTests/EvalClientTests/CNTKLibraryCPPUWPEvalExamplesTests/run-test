@@ -18,7 +18,7 @@ fi
 
 TEST_DATA_DIR=$(cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY)
 
-VSTEST_CONSOLE=$(cygpath -au "$VS140COMNTOOLS\\..\\IDE\\CommonExtensions\\Microsoft\\TestWindow\\vstest.console.exe")
+VSTEST_CONSOLE=$(cygpath -au "$VS2017INSTALLDIR\\Common7\\IDE\\CommonExtensions\\Microsoft\\TestWindow\\vstest.console.exe")
 
 test -x "$VSTEST_CONSOLE" || exit $?
 

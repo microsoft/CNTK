@@ -77,6 +77,7 @@ for %%D in (
   Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
   mklml.dll
+  mkldnn.dll
 ) do (
   if defined CNTK_LIBRARIES (
     set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D

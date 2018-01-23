@@ -27,7 +27,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         sequence_axis (:class:`~cntk.axis.Axis`): a dynamic axis (e.g., default_dynamic_axis())
@@ -53,7 +53,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         sequence_axis (:class:`~cntk.axis.Axis`): a dynamic axis (e.g., default_dynamic_axis())
@@ -81,7 +81,7 @@ def unpack(x, padding_value, no_mask_output=False, name=''):
 
     Args:
         x: the sequence tensor (or its name) which is unpacked
-        padding_value (np.float32 or np.float64): The value to pad gaps in the unpacked tensor with.
+        padding_value (np.float32 or np.float64 or np.float16): The value to pad gaps in the unpacked tensor with.
         no_mask_output (bool, optional): whether the Function has a mask tensor output denoting the
             gaps in the unpacked output due to differences across lengths of the sequences in the operand.
         name (str, optional): the name of the Function instance in the network

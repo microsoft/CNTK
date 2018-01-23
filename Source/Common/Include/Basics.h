@@ -296,7 +296,7 @@ struct utf8 : std::string
         }                                   // empty string
         std::vector<char> buf(3 * len + 1); // max: 1 wchar => up to 3 mb chars
         // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
-        std::fill(buf.begin(), buf.end(), 0);
+        std::fill(buf.begin(), buf.end(), (char)0);
         int rc = WideCharToMultiByte(CP_UTF8, 0, p.c_str(), (int) len,
                                      &buf[0], (int) buf.size(), NULL, NULL);
         if (rc == 0)
@@ -335,7 +335,7 @@ static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
     size_t len = p.length();
     std::vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    std::fill(buf.begin(), buf.end(), 0);
+    std::fill(buf.begin(), buf.end(), (char)0);
     ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
     return std::string(&buf[0]);
 }

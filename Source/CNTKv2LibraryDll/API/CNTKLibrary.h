@@ -31,6 +31,7 @@
 #endif
 
 #include "CNTKLibraryInternals.h"
+#include "HalfConverter.hpp"
 
 // undef max in the rest of the file to avoid conflicts with the max macro defined in windows.h.
 #pragma push_macro("max")
@@ -38,6 +39,43 @@
 
 namespace CNTK
 {
+    class float16
+    {
+    protected:
+        unsigned short __x;
+
+    public:
+        float16() = default;
+        float16(const float16& other) { __x = other.__x; }
+
+#ifndef SWIG
+        // construction from build-in types
+        float16(float f) { floatToFloat16(&f, &__x); }
+        float16(double d) : float16((float)d) {}
+        float16(int i) : float16((float)i) {}
+        float16(size_t u) : float16((float)u) {}
+
+        // cast to build-in types
+        operator float() const { float f; float16ToFloat(&__x, &f); return f; }
+
+        // compare functions
+        inline bool operator==(const float16& rhs) const { return (__x == rhs.__x); }
+        inline bool operator!=(const float16& rhs) const { return (__x != rhs.__x); }
+#endif
+
+        static float16 create(float f)
+        {
+            float16 v;
+            floatToFloat16(&f, &v.__x);
+            return v;
+        }
+
+        static float16 create(double d)
+        {
+            return create((float)d);
+        }
+    };
+
     ///
     /// Enumeration type denoting data type of symbolic data entities or actual data.
     ///
@@ -47,6 +85,7 @@ namespace CNTK
         Float = 1,
         Double = 2,
         UChar = 3, // So far only used internally in deserializers.
+        Float16 = 4,
 
         /* TODO:
         Bit,
@@ -74,6 +113,8 @@ namespace CNTK
             return DataType::Float;
         else if (std::is_same<ElementType, double>())
             return DataType::Double;
+        else if (std::is_same<ElementType, float16>())
+            return DataType::Float16;
         else
             NOT_IMPLEMENTED;
     }
@@ -84,6 +125,8 @@ namespace CNTK
             return "Float";
         else if (dataType == DataType::Double)
             return "Double";
+        else if (dataType == DataType::Float16)
+            return "Float16";
         else
             LogicError("Unknown DataType.");
     }
@@ -94,6 +137,8 @@ namespace CNTK
             return sizeof(float);
         else if (dataType == DataType::Double)
             return sizeof(double);
+        else if (dataType == DataType::Float16)
+            return sizeof(float16);
         else
             LogicError("Unknown DataType.");
     }
@@ -621,8 +666,7 @@ namespace CNTK
         /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
         /// with the specified Sparse CSC format data.
         ///
-        template <typename ElementType>
-        CNTK_API NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
+        CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const void* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
 
         ///
         /// Construct a NDArrayView over newly allocated storage in the specified format on the specified 'device'.
@@ -706,6 +750,9 @@ namespace CNTK
                 break;
             case DataType::Double:
                 SetValue(value);
+                break;
+            case DataType::Float16:
+                SetValue(float16::create(value));
                 break;
             default:
                 LogicError("Unsupported DataType %s.", DataTypeName(m_dataType));
@@ -802,6 +849,11 @@ namespace CNTK
         CNTK_API void SetValue(double value);
 
         ///
+        /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Double.
+        ///
+        CNTK_API void SetValue(float16 value);
+
+        ///
         /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.
         ///
         CNTK_API NDArrayViewPtr DeepClone(const DeviceDescriptor& device, bool readOnly = false) const;
@@ -876,6 +928,25 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;
 
+        // template functions connecting V1ElemType and ElementType
+        template <typename ElementType, typename V1ElemType>
+        const ElementType* _DataBuffer() const;
+
+        template <typename ElementType, typename V1ElemType>
+        std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> _SparseCSCDataBuffers() const;
+
+        template <typename ElementType, typename V1ElemType>
+        std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> _SparseBlockColumnDataBuffers() const;
+
+        template <typename ElementType, typename V1ElemType>
+        static NDArrayViewPtr _RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device);
+
+        template <typename ElementType, typename V1ElemType>
+        static NDArrayViewPtr _RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed, const DeviceDescriptor& device);
+
+        template<typename ElementType, typename V1ElemType>
+        ElementType _AsScalar() const;
+
     private:
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
@@ -890,6 +961,10 @@ namespace CNTK
 
         template <typename ElementType>
         std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
+
+        std::shared_ptr<const Microsoft::MSR::CNTK::MatrixBase> GetMatrixBase(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
+
+        std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase> GetWritableMatrixBase(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
 
         template <typename ElementType>
         const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView() const;
@@ -2835,6 +2910,10 @@ namespace CNTK
             else if (dataType == DataType::Double)
             {
                 CopyVariableValueToVector<double>(outputVariable, sequences);
+            }
+            else if (dataType == DataType::Float16)
+            {
+                CopyVariableValueToVector<float16>(outputVariable, sequences);
             }
         }
 
@@ -6384,6 +6463,16 @@ namespace CNTK
     /// ancestorReferent: ancestor of nodeReferent which is treated as equal to ancestorInput for the purpose of computing crop offsets.
     ///
     CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const Variable& ancestorInput, const Variable& ancestorReferent, const std::wstring& name = L"");
+
+    ///
+    /// Creates an instance of crop node with automatically computed crop offsets and specified ancestor nodes.
+    /// This is used in cases when input nodes do not have common ancestor in the network.
+    /// nodeInput: input node to be cropped.
+    /// nodeReferent: input node which determines the spatial size of output.
+    /// ancestorInput: ancestor of nodeInput.
+    /// ancestorReferent: ancestor of nodeReferent which is treated as equal to ancestorInput for the purpose of computing crop offsets.
+    ///
+    CNTK_API FunctionPtr Cast(const Variable& nodeInput, DataType outputType, const std::wstring& name = L"");
 
 #endif // !CNTK_HEADERONLY_DEFINITIONS
 }

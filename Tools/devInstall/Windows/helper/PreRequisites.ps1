@@ -30,28 +30,28 @@ function PreRequisiteItem(
     Invoke-Expression $expr 
 }
 
-function PrereqInfoVS15(
+function PrereqInfoVS17(
     [Parameter(Mandatory = $true)][hashtable] $table
 )
 {
     FunctionIntro $table
     Write-Warning "
 
-Installation of Visual Studio 2015 Update 3 is a pre-requisite before installation can continue.
+Installation of Visual Studio 2017 is a pre-requisite before installation can continue.
 Please check 
   https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows
 for more details.
 "
 }
 
-function PrereqInfoCuda8(
+function PrereqInfoCuda9(
     [Parameter(Mandatory = $true)][hashtable] $table
 )
 {
     FunctionIntro $table
     Write-Warning "
 
-Installation of NVidia CUDA 8.0 is a pre-requisite before installation can continue.
+Installation of NVidia CUDA 9.0 is a pre-requisite before installation can continue.
 Please check 
   https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows
 for more details.

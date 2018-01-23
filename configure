@@ -24,7 +24,7 @@ nccl_path=
 nccl_check=include/nccl.h
 
 # MKLML Version
-mklml_version=mklml_lnx_2018.0.1.20171007
+mklml_version=mklml_lnx_2018.0.1.20171227
 
 have_mkl=no
 mkl_path=
@@ -94,7 +94,7 @@ py_versions=
 declare -A py_paths
 
 jdk_check=include/jni.h
-default_jdk="jvm/java-7-openjdk-amd64"
+default_jdk="jvm/java-8-openjdk-amd64"
 
 mathlib=
 
@@ -119,13 +119,13 @@ default_openblas=""
 
 default_boost="boost-1.60.0"
 
-default_cudas="cuda-8.0 cuda-7.5"
+default_cudas="cuda-9.0"
 default_nccls="nccl"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
-default_gdk_includes="include/nvidia/gdk"
-default_gdk_nvml_libs="src/gdk/nvml/lib"
-default_cubs="cub-1.4.1"
-default_cudnns="cudnn-6.0 cudnn-5.1 cudnn-5.0"
+default_gdk_includes="include/nvidia/gdk cuda/include"
+default_gdk_nvml_libs="src/gdk/nvml/lib cuda/lib64/stubs"
+default_cubs="cub-1.7.4"
+default_cudnns="cudnn-7.0"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"

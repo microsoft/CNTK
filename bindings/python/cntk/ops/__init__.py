@@ -13,7 +13,7 @@ import numpy as np
 import numbers
 from . import sequence
 from .functions import ModelFormat, CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, sanitize_multi_axis_reduction_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, sanitize_multi_axis_reduction_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation, sanitize_dtype_cntk
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
@@ -3436,7 +3436,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
@@ -3462,7 +3462,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
@@ -3493,7 +3493,7 @@ def output_variable(shape, dtype, dynamic_axes, needs_gradient=True, name=''):
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type
+        dtype (np.float32 or np.float64 or np.float16): data type
         dynamic_axes (list or tuple): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
 
@@ -3877,3 +3877,20 @@ def space_to_depth(operand, block_size, name=''):
     if not float(block_size).is_integer():
         raise ValueError('block_size must be an integer.')
     return space_to_depth(operand, block_size, name)
+
+@typemap
+def cast(node_input, dtype, name=''):
+    '''
+    cast input to dtype, with the same shape and dynamic axes. This function currently only support forward.
+    
+    Args:
+        node_input: class:`~cntk.input_variable` that needs the dtype conversion
+        dtype: data_type (np.float32, np.float64, np.float16): data type of the converted output
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`    
+    '''
+    from cntk.cntk_py import cast
+    arg_node_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_dtype = sanitize_dtype_cntk(dtype)
+    return cast(arg_node_input, arg_dtype, name)

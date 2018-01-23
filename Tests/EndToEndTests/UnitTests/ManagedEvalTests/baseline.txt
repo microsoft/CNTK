@@ -18,7 +18,7 @@ Passed   EvalManagedScalarTimesTest
 Passed   EvalManagedSparseTimesTest
 Passed   EvalManagedUsingSparseValueBufferTest
 Passed   EvalManagedScalarTimesDualOutputTest
-Passed   EvalManagedCrossAppDomainExceptionTest
+Skipped  EvalManagedCrossAppDomainExceptionTest
 Passed   EvalManagedImageApiErrorHandling
 Passed   EvalManagedRNNTest
 
