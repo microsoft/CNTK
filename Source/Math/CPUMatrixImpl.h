@@ -5936,7 +5936,7 @@ void CPUMatrix<ElemType>::BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& 
     else
         c.VerifySize(cSampleElemNum, aBatchSize); // Can't resize if beta != 0
 
-#if CNTK_UWP
+#ifdef USE_OPENBLAS
     int lda, ldb, ldc;
     CBLAS_TRANSPOSE blasTransA;
     CBLAS_TRANSPOSE blasTransB;

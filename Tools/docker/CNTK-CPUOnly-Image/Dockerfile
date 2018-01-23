@@ -156,15 +156,18 @@ RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh &&
     bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
-RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/$COMMIT/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O /tmp/conda-linux-cntk-py35-environment.yml && \
-    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35/ --file /tmp/conda-linux-cntk-py35-environment.yml
+RUN CONDA_ENV_PATH=/tmp/conda-linux-cntk-py35-environment.yml; \
+    wget -q https://raw.githubusercontent.com/Microsoft/CNTK/$COMMIT/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O "$CONDA_ENV_PATH" && \
+    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35 --file "$CONDA_ENV_PATH" && \
+    rm -f "$CONDA_ENV_PATH"
 
 ENV PATH /root/anaconda3/envs/cntk-py35/bin:$PATH
 
 WORKDIR /cntk
 
 # Build CNTK
-RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
+RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git cntksrc && \
+    cd cntksrc && \
     MKLML_VERSION_DETAIL=mklml_lnx_2018.0.1.20171227 && \
     CONFIGURE_OPTS="\
       --with-kaldi=${KALDI_PATH} \
@@ -179,12 +182,12 @@ RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK
     ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/$MKLML_VERSION_DETAIL && \
     make -j"$(nproc)" all
 
-RUN cd Examples/Image/DataSets/CIFAR-10 && \
+RUN cd cntksrc/Examples/Image/DataSets/CIFAR-10 && \
     python install_cifar10.py && \
     cd ../../../..
 
-RUN cd Examples/Image/DataSets/MNIST && \
+RUN cd cntksrc/Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/cpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+ENV PATH=/cntk/cntksrc/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/cntksrc/bindings/python LD_LIBRARY_PATH=/cntk/cntksrc/bindings/python/cntk/libs:$LD_LIBRARY_PATH

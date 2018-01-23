@@ -169,23 +169,28 @@ ENV PATH /root/anaconda3/envs/cntk-py35/bin:$PATH
 
 WORKDIR /cntk
 
-RUN mkdir -p /usr/local/cudnn/cuda/include && \
-    ln -s /usr/include/cudnn.h /usr/local/cudnn/cuda/include/cudnn.h && \
-    mkdir -p /usr/local/cudnn/cuda/lib64 && \
-    ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn/cuda/lib64/libcudnn.so && \
-    ln -s /usr/local/cuda/lib64/stubs/libnvidia-ml.so /usr/local/cuda/lib64/stubs/libnvidia-ml.so.1
+# Allow CNTK's configure to pick up GDK and CuDNN where it expects it.
+# (Note: $CUDNN_VERSION is defined by NVidia's base image)
+# TODO hack, CNTK configure should be improved.
+RUN _CUDNN_VERSION=$(echo $CUDNN_VERSION | cut -d. -f1-2) && \
+    mkdir -p /usr/local/cudnn-$_CUDNN_VERSION/cuda/include && \
+    ln -s /usr/include/cudnn.h /usr/local/cudnn-$_CUDNN_VERSION/cuda/include/cudnn.h && \
+    mkdir -p /usr/local/cudnn-$_CUDNN_VERSION/cuda/lib64 && \
+    ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn-$_CUDNN_VERSION/cuda/lib64/libcudnn.so && \
+    ln -s /usr/local/cudnn{-$_CUDNN_VERSION,} && \
+    mkdir -p /usr/src/gdk/nvml/lib && \
+    cp -av /usr/local/cuda/lib64/stubs/libnvidia-ml* /usr/src/gdk/nvml/lib && \
+    cp -av /usr/local/cuda/lib64/stubs/libnvidia-ml.so /usr/src/gdk/nvml/lib/libnvidia-ml.so.1 && \
+    mkdir -p /usr/include/nvidia/gdk && \
+    cp -av /usr/local/cuda/include/nvml.h /usr/include/nvidia/gdk/nvml.h
 
 # Build CNTK
-RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
+RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git cntksrc && \
+    cd cntksrc && \
     MKLML_VERSION_DETAIL=mklml_lnx_2018.0.1.20171227 && \
     CONFIGURE_OPTS="\
-      --with-cuda=/usr/local/cuda \
-      --with-gdk-include=/usr/local/cuda/include \
-      --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
       --with-kaldi=${KALDI_PATH} \
-      --with-py35-path=/root/anaconda3/envs/cntk-py35 \
-      --with-cudnn=/usr/local/cudnn \
-      --with-nccl=/usr" && \
+      --with-py35-path=/root/anaconda3/envs/cntk-py35" && \
     mkdir -p build/gpu/release && \
     cd build/gpu/release && \
     ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/local/openblas && \
@@ -196,12 +201,12 @@ RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK
     ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/$MKLML_VERSION_DETAIL && \
     make -j"$(nproc)" all
 
-RUN cd Examples/Image/DataSets/CIFAR-10 && \
+RUN cd cntksrc/Examples/Image/DataSets/CIFAR-10 && \
     python install_cifar10.py && \
     cd ../../../..
 
-RUN cd Examples/Image/DataSets/MNIST && \
+RUN cd cntksrc/Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+ENV PATH=/cntk/cntksrc/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/cntksrc/bindings/python LD_LIBRARY_PATH=/cntk/cntksrc/bindings/python/cntk/libs:$LD_LIBRARY_PATH
