@@ -547,6 +547,7 @@ namespace marian
         }
 
         // dropout
+#if 0
         static inline std::vector<float> DropoutMask(size_t n, float dropProb)
         {
             // PERF BUGBUG: For now, we determine the dropout mask on the CPU. Instead, we should get the rand op to work under Dynamite.
@@ -561,8 +562,14 @@ namespace marian
             }));
             return mask;
         }
-        static inline Expr DropoutMask(float prob, const Shape& shape)      { return Constant(shape,              inits::Internal::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
-        static inline Expr DropoutMask(float prob, const ShapeProxy& shape) { return Constant(shape.GetNDShape(), inits::Internal::WrappedVectorInitializer(DropoutMask(shape.elements(), prob))); }
+#endif
+        static inline Expr DropoutMask(float dropRate, const CNTK::NDShape& shape)
+        {
+            // TODO: Where to store the state? Note that Marian uses a static in the back end.
+            static CNTK::RNGState rngState;
+            return CNTK::BernoulliRandom(CNTK::NDArrayView::LazilyCreateRNGState(rngState, /*seed=*/ CNTK::SentinelValueForAutoSelectRandomSeed, Dynamite::CurrentDevice()),
+                                         shape, Dynamite::CurrentDataType(), /*mean=*/1 - dropRate);
+        }
 
         // Reshape helper
         static inline Expr Reshape(const CNTK::Variable& operand, const CNTK::NDShape& newShape)
@@ -844,10 +851,10 @@ namespace marian
     }
 
     static inline Expr dropout(const Expr& x, const Expr& mask) { return x * mask; }
-    static inline Expr dropout(const Expr& x, float dropProb)
+    static inline Expr dropout(const Expr& x, float dropRate)
     {
         // untested. Check the dimension stuff.
-        auto mask = InternalOps::DropoutMask(dropProb, x.shape());
+        auto mask = InternalOps::DropoutMask(dropRate, x->Shape());
         return dropout(x, mask);
     }
 
@@ -1051,8 +1058,8 @@ namespace marian
             else
                 return nullptr;
         }
-        Expr dropout(float dropProb, const Shape& shape)      { return InternalOps::DropoutMask(dropProb, shape); }
-        Expr dropout(float dropProb, const ShapeProxy& shape) { return InternalOps::DropoutMask(dropProb, shape); }
+        Expr dropout(float dropRate, const Shape& npShape)    { return InternalOps::DropoutMask(dropRate, mappers::ToNDShape(npShape)); }
+        Expr dropout(float dropRate, const ShapeProxy& shape) { return InternalOps::DropoutMask(dropRate, shape.GetNDShape()); }
         // forward/backward
         void forward() { }
         void forwardNext() { }
