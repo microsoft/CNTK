@@ -9,6 +9,7 @@
 #include "stdafx.h"
 #include "PrimitiveFunction.h"
 #include "Utils.h"
+#include "TrainingNodes.h" // for RandomDistributionTypeXXX. TODO: move those out of the V1 header
 
 #include <vector>
 #include <string>
@@ -170,6 +171,46 @@ namespace CNTK
         case PrimitiveOpType::StableSigmoid: op = Microsoft::MSR::CNTK::ElementWiseOperator::opStableSigmoid;         break;
             // ternary operations
         case PrimitiveOpType::Select:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opCond;                  break;
+            // nullary operations --these have no arguments, and generate data
+        case PrimitiveOpType::RandomDistribution:
+            {
+                // TODOs:
+                //  - how about gradient? Will it automatically know to not backprop into it?
+                //  - maybe use this one to generate small constants?
+                let& type = attributes[PrimitiveFunction::AttributeNameRandomDistributionType].Value<wstring>();
+                if (type == Microsoft::MSR::CNTK::RandomDistributionTypeConstant)
+                {
+                    NOT_IMPLEMENTED; // TODO: use this for scalar constants
+                }
+                else
+                {
+                    // the shared_ptr<RNGState> was passed through as an opaque intptr_t, in a size_t
+                    auto& rngState = *(RNGState*)attributes[PrimitiveFunction::AttributeNameRandomDistributionRNGHandle].Value<size_t>();
+                    let& argsValueVec = attributes[PrimitiveFunction::AttributeNameRandomDistributionArgs].Value<vector<DictionaryValue>>(); // vector<double>
+                    // TODO: add all the other types
+                    //if (type == Microsoft::MSR:CNTK::RandomDistributionTypeUniform)
+                    //{
+                    //    result.SetUniformRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+                    //    UpdateRngOffset(GetRngOffset() + result.GetNumElements());
+                    //}
+                    //else if (type == Microsoft::MSR:CNTK::RandomDistributionTypeNormal)
+                    //{
+                    //    result.SetGaussianRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+                    //    UpdateRngOffset(GetRngOffset() + AsMultipleOf(result.GetNumElements(), 2));
+                    //}
+                    //else if (type == Microsoft::MSR:CNTK::RandomDistributionTypeGumbel)
+                    //{
+                    //    result.SetGumbelRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+                    //    UpdateRngOffset(GetRngOffset() + result.GetNumElements());
+                    //}
+                    //else 
+                    if (type == Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli)
+                        out->SetToRandomDistributionBernoulli(rngState, /*mean=*/argsValueVec[0].Value<double>(), /*scale=*/argsValueVec[1].Value<double>());
+                    else
+                        InvalidArgument("RandomDistribution: Unknown random distribution type '%S'", type.c_str());
+                }
+            }
+            break;
             // Transpose
         case PrimitiveOpType::TransposeAxes:
             // TODO: I hope that one day this can be a see-through op (needs more solid support for non-dense objects)

@@ -238,7 +238,6 @@ namespace CNTK
     // 
     // TODO: implement these V1 nodes somehow via TensorView
     //  - Convolution, Pooling, Unpooling
-    //  - RandomDistribution  // for dropout
     //  - OptimizedRNNStack   // for MT
     //  - Hardmax. Can we have a OneHot-like op in TensorView?
 
@@ -247,7 +246,7 @@ namespace CNTK
         UnaryElementWise, Reducing, NoOp, ReshapeOneHot, BinaryElementWise, TernaryElementWise, Pooling,
         Slice, Splice, Transpose,
         MatrixProduct, Convolution,
-        Barrier, BatchNormalization, OptimizedRNNStack, RandomDistribution,
+        Barrier, BatchNormalization, OptimizedRNNStack, Generative,
         BasicBlockInvocation,
         NotSupportedDynamicAxis, NotSupportedTempMem, NotSupportedStaticGraph, ToDo, Undefined
     };
@@ -497,29 +496,27 @@ namespace CNTK
         // RandomDistribution()
         // --------------------
         // 
-        { OpSpecificConditionKind::RandomDistribution,{
-            PrimitiveOpType::RandomDistribution // covers also the -Like version
+        { OpSpecificConditionKind::Generative,{
+            PrimitiveOpType::RandomDistribution // covers also the -Like version and constants
         }},
         //
         // Condition (stacking):
-        //   Initially: general.
-        //   Future: true.
+        //   Attributes must match, including the random seed.
         //
-        // This op is either nullary or unary (-Like() version).
-        // 
-        // FutureL This can always be stacked, independent of shapes, because all elements are independent.
-        // The stacked operation must be followed by a reshape. TODO: That's why we won't stack all, since reshapes block re-batching.
+        // This op is nullary. The unary (-Like) version is mapped immediately to a nullary version.
+        // A potential FreeDimension in the -Like version's input is kept (static invocable only),
+        // otherwise all dimensions and data type must be known for Dynamite.
+        // This operation returns a new constant upon each invocation.
         //
-        // Each invocation gives rise to a new set of random numbers. This is used to implement Dropout.
-        // This operation returns a Constant upon each invocation.
-        // 
-        // To share random numbers, e.g. across all time steps of a sequence for Dropout, users must manually compute it once.
-        // Random numbers cannot be shared across batch items unless users explicitly compute them outside of Batch::Map().
-        // The random numbers are lazily computed upon first Value() call, to allow for batching.
-        // 
-        // This is presently not implemented.
-        // TODO: Does this need to hold on to a RNG state? How to do that?
-
+        // If multiple instances are to share the same random numbers (e.g. Dropout within a sequence),
+        // then user must pass the same 'rngState' parameter for all those invocation. Instances with
+        // matching rngStates (and shape/other attributes) will be batched and CSE'ed.
+        // Hence, they will be computed only once per Value() invocation.
+        // However, any invocations that are not batchable (not ready at the same time) will cause
+        // a new random tensor to be created.
+        // BUGBUG: Naw, that won't work for dropout inside loops. Sigh. We need an explicit reset signal or something. Dang.
+        //
+        // This operation is also used to create scalar constants where needed, e.g. (x+1).
         //
         // Invoke(isBasicBlock=true)
         // -------------------------
@@ -1430,11 +1427,17 @@ private:
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
+        let& outputDevice = /*if*/ (f.m_op == PrimitiveOpType::RandomDistribution) ? // special case: generators have no inputs; they must have an init device instead
+                                AsDeviceDescriptor((*(RNGState*)f.m_attributes[PrimitiveFunction::AttributeNameRandomDistributionRNGHandle].Value<size_t>())->DeviceId())
+                            /*else*/ :
+                                inputValues.front()->Device();
         auto outValue =
             /*if*/ (isFree) ?
                 NDArrayViewPtr()
             /*else*/:
-                m_arena.NewNDArrayView(outputShape, output.GetDataType(), output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense, inputValues.front()->Device());
+                m_arena.NewNDArrayView(outputShape, output.GetDataType(),
+                                       output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense,
+                                       outputDevice);
         cudaStatsGuardPrepareO.Stop();
         // logging
         if (Memoizer::ShouldProfile(f))
@@ -1446,7 +1449,7 @@ private:
         {
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             let logAsOp = (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
-            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false), inputValues.front()->Device());
+            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, IsViewOp(f.m_op) ? 2 : hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false), outputDevice);
         }
         //if (f.m_op == PrimitiveOpType::Slice && !any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); }))
         //    Break;
@@ -1463,7 +1466,7 @@ private:
             fflush(stderr);
         }
 #endif
-        EndCudaStats(cudaStatsPtr, inputValues.front()->Device());
+        EndCudaStats(cudaStatsPtr, outputDevice);
         // special case: a Slice op is non-contiguous. We must copy.
         // TODO: Do this lazily for inputs of ops that cannot handle non-contiguous data, or for externally requested values.
         if (f.m_op == PrimitiveOpType::Slice && !res->IsContiguous())
@@ -2100,6 +2103,27 @@ class InternalVariable::AutoBatch
                     return false;
             }
             // all input dimensions must match (with exception of a few special cases)
+            let ShapeAndDataTypeMatches = [&](const VariableFields& aFields, const VariableFields& bFields)
+            {
+                // BUGBUG: How about strides? Intuitively, strides should be OK, since auto-batching involves a copy that undoes the stride.
+                let rank = aFields.m_shape.Rank();
+                if (rank != bFields.m_shape.Rank())
+                    return false;
+#if 1
+                // shapes must have same rank and match up to the batch axis
+                // If the batch axis is not outside the shape, then this is the stacking case.
+                for (size_t k = 0; k < rank && k < batchAxis; k++)
+                    if (aFields.m_shape[k] != bFields.m_shape[k])
+                        return false;
+#else
+                // this branch disables stacking (unless special rare cases where it is forced)
+                if (aFields.m_shape != bFields.m_shape)
+                    return false;
+#endif
+                if (aFields.m_dataType != bFields.m_dataType)
+                    return false;
+                return true;
+            };
             let isTimes = IsMatrixProduct(op);
             let numInputs = a.m_inputs.size();
             for (size_t i = 0; i < numInputs; i++)
@@ -2120,24 +2144,7 @@ class InternalVariable::AutoBatch
                 else
                 {
                     // shapes and data types must match
-                    // BUGBUG: How about strides?
-                    let rank = aFields.m_shape.Rank();
-                    if (rank != bFields.m_shape.Rank())
-                        return false;
-#if 1
-                    // shapes must have same rank and match up to the batch axis
-                    // If the batch axis is not outside the shape, then this is the stacking case.
-                    for (size_t k = 0; k < rank && k < batchAxis; k++)
-                    {
-                        if (aFields.m_shape[k] != bFields.m_shape[k])
-                            return false;
-                    }
-#else
-                    // this branch disables stacking (unless special rare cases where it is forced)
-                    if (aFields.m_shape != bFields.m_shape)
-                        return false;
-#endif
-                    if (aFields.m_dataType != bFields.m_dataType)
+                    if (!ShapeAndDataTypeMatches(aFields, bFields))
                         return false;
                     if (aFields.m_isSparse != bFields.m_isSparse)
                         return false;
@@ -2152,6 +2159,14 @@ class InternalVariable::AutoBatch
                         return false;
 #endif
                 }
+            }
+            // special case: random generation has no inputs, so we must check the output shape
+            if (op == PrimitiveOpType::RandomDistribution)
+            {
+                let& aFields = GetOutputFields(a);
+                let& bFields = GetOutputFields(b);
+                if (!ShapeAndDataTypeMatches(aFields, bFields))
+                    return false;
             }
             // attributes must also match
             if (a.m_attributes != b.m_attributes) // TODO: this could be an expensive operation; check that. We only need to compare for some ops; for most, attributes are already known from the shapes.
@@ -2334,6 +2349,13 @@ class InternalVariable::AutoBatch
                 // Note: We could batch Times ops that have the same sequence length. For now, those would be forced to be stacking.
                 // Stacking is fine though in this case. Since there is no funky broadcasting involved, it is equally efficient (same kernel dims).
                 return getLastDim(right, mapRank == 0/*single vector; no batch dim*/ ? reductionRank : rightRank - 1, StackingMode::STACKING);
+            }
+            else if (op == PrimitiveOpType::RandomDistribution) // RandomDistribution: never stack; batchAxis determined by output shape
+            {
+                let& outputFields = GetOutputFields(f);
+                // batch axis is appended to output shape
+                // Note that we will never actually batch, since this op cannot be batched. But it can be CSE'd.
+                return{ StackingMode::BATCHING, outputFields.m_shape.Rank(), 1 };
             }
             // determine maxRank and lastDim over all batchable inputs
             // We leverage the fact that for any operation with multiple batchable inputs, the batch axis
@@ -2862,11 +2884,11 @@ class InternalVariable::AutoBatch
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
     Variable CreateAndMemoizeOpAsInput(PrimitiveOpType op, Function::InputsVectorType&& inputs, Dictionary&& attributes/*, const wstring& name*/,
-                                       const ShapeType& shape, bool isSparse,
+                                       const ShapeType& shape, DataType dataType, bool isSparse,
                                        const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                        bool isFree = false, bool logSpliceAsGather = false)
     {
-        auto fPtr = CreateAndMemoizeOp(op, move(inputs), move(attributes), shape, isSparse/*, name*/, profiler, logPrefix, isFree, logSpliceAsGather);
+        auto fPtr = CreateAndMemoizeOp(op, move(inputs), move(attributes), shape, dataType, isSparse/*, name*/, profiler, logPrefix, isFree, logSpliceAsGather);
         let& output = fPtr->m_outputs.front();
         // To make the consumer of this hold a reference to this PrimitiveFunction, inject a strong ref to the copy of its Output.
         //input = output.CompositePreservingCopy(fPtr);         // without the acyclic trick, this works as well, but is not quite right since fPtr is not a Composite
@@ -2905,7 +2927,7 @@ class InternalVariable::AutoBatch
         if (IsMatrixProduct(clonee.m_op))
             fail_if(inputs.front().Shape() != clonee.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
-        return CreateAndMemoizeOp(clonee.m_op, move(inputs), move(attributes), shape, output.IsSparse()/*, clonee.m_name*/, clonee.m_profiler, L"*"/*clonee*/, isFree);
+        return CreateAndMemoizeOp(clonee.m_op, move(inputs), move(attributes), shape, output.GetDataType(), output.IsSparse()/*, clonee.m_name*/, clonee.m_profiler, L"*"/*clonee*/, isFree);
     }
 
     // create a PrimitiveFunction and execute it right away
@@ -2913,7 +2935,7 @@ class InternalVariable::AutoBatch
     // This is a commonly needed pattern in auto-batched execution. All ops generated in here are known to be acyclic.
     template<typename ShapeType>
     PrimitiveFunctionPtr CreateAndMemoizeOp(PrimitiveOpType op, Function::InputsVectorType&& inputs, Dictionary&& attributes,
-                                            const ShapeType& shape, bool isSparse/*, const wstring& name*/,
+                                            const ShapeType& shape, DataType dataType, bool isSparse/*, const wstring& name*/,
                                             const DynamicProfilerPtr& profiler, const wchar_t* logPrefix,
                                             bool isFree = false, bool logSpliceAsGather = false)
     {
@@ -2925,7 +2947,7 @@ class InternalVariable::AutoBatch
         let isVolatile    = any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsVolatile();    }); // PERF BUGBUG: caller knows this already; should pass it in
         let needsGradient = !isVolatile &&
                             any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.NeedsGradient(); }); // PERF BUGBUG: caller knows this already; should pass it in
-        fPtr->InitOutput(OutputVariable(NDShape(shape)/*it's a &&*/, fInputs.front().GetDataType(), needsGradient, isSparse, isVolatile));
+        fPtr->InitOutput(OutputVariable(NDShape(shape)/*it's a &&*/, dataType, needsGradient, isSparse, isVolatile));
         //if (fPtr->m_uniqueIdForDebugging == 194962)
         //    Break;
         //if (!fPtr->m_outputs.front().NeedsGradient())
@@ -3589,7 +3611,7 @@ class InternalVariable::AutoBatch
                                                              PrimitiveFunction::AttributeNameBeginIndex, (int)beginIndex,
                                                              PrimitiveFunction::AttributeNameEndIndex,   (int)endIndex
                                                          ),
-                                                         outputShape, batchedInput.IsSparse(),
+                                                         outputShape, batchedInput.GetDataType(), batchedInput.IsSparse(),
                                                          //f0.m_name,
                                                          f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                                          /*isFree=*/true);
@@ -3634,7 +3656,7 @@ class InternalVariable::AutoBatch
                 // insert a Reshape() op
                 let batchedInputTotalSizePre = batchedInput.Shape().TotalSize();
                 batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), Dictionary(),
-                                                         expectedBatchedInputShapeVec, batchedInput.IsSparse(),
+                                                         expectedBatchedInputShapeVec, batchedInput.GetDataType(), batchedInput.IsSparse(),
                                                          //f0.m_name,
                                                          f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 let batchedInputTotalSizePost = batchedInput.Shape().TotalSize();
@@ -3728,7 +3750,7 @@ class InternalVariable::AutoBatch
                     // insert a ReduceElements op, which in fact ignores its axes and therefore can also be used to broadcast
                     return CreateAndMemoizeOpAsInput(PrimitiveOpType::ReduceElements, Function::InputsVectorType(nullptr/*1*/, input),
                                                      Dictionary(PrimitiveFunction::AttributeNameReductionOpName, PrimitiveFunction::InternalSumReductionOpName),
-                                                     broadcastShape, input.IsSparse(),
+                                                     broadcastShape, input.GetDataType(), input.IsSparse(),
                                                      //f0.m_name,
                                                      f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/false);
                     // Note that at this point, the inputs to the Gather operation will have inconsistent
@@ -3744,6 +3766,7 @@ class InternalVariable::AutoBatch
             CudaStatsGuard cudaStatsguard(PrimitiveOpType::Splice, L"batch", 3, numBatchItems);
             let& input0Shape    = gatherInputs.front().Shape();
             let  input0IsSparse = gatherInputs.front().IsSparse();
+            let  input0DataType = gatherInputs.front().GetDataType();
 #if 0       // TODO: remove this. I used this earlier. Not sure why.
             let& input0Shape1 = MTCacheAndGetValue(gatherInputs[0])->Shape();
             fail_if(input0Shape != input0Shape1, "shape not set?");
@@ -3761,7 +3784,7 @@ class InternalVariable::AutoBatch
             //    Break;
             return CreateAndMemoizeOpAsInput(PrimitiveOpType::Splice, move(gatherInputs),
                                              Dictionary(PrimitiveFunction::AttributeNameAxis, Axis((int)batchAxis)),
-                                             batchedInputShape, input0IsSparse,
+                                             batchedInputShape, input0DataType, input0IsSparse,
                                              //f0.m_name,
                                              f0.m_profiler, L"#"/*gatherInputs[0]*/,
                                              /*isFree=*/false, /*logSpliceAsGather=*/true);
@@ -3793,8 +3816,6 @@ class InternalVariable::AutoBatch
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of Pooling ops not implemented yet.");
         case OpSpecificConditionKind::OptimizedRNNStack:
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of OptimizedRNNStack() not implemented yet.");
-        case OpSpecificConditionKind::RandomDistribution:
-            LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of RandomDistribution ops not implemented yet.");
         case OpSpecificConditionKind::NoOp:
         case OpSpecificConditionKind::Barrier:
             LogicError("ExecuteBatchedOpAndUpdateSchedule: Auto-batching of No-op attempted, should have been short-circuited before getting here.");
@@ -3839,6 +3860,8 @@ class InternalVariable::AutoBatch
             m_stats.numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
         //if (GetOutputFields(f0).m_uniqueIdForDebugging == 241565 || GetOutputFields(f0).m_uniqueIdForDebugging == 241579 || GetOutputFields(f0).m_uniqueIdForDebugging == 241593 || GetOutputFields(f0).m_uniqueIdForDebugging == 241607)
+        //    Break;
+        //if (f0.m_op == PrimitiveOpType::RandomDistribution)
         //    Break;
 
         // special case: under certain circumstances, we don't actually execute an op batched
@@ -3985,7 +4008,7 @@ class InternalVariable::AutoBatch
         //  - we must batch if the operation does not allow stacking. AreBatchable takes this into account.
         //  - if the op allows stacking, we still want to back off to batching if the operation allows it. It will be more efficient.
         //  - we stack only if it is allowed and required
-        //if (f0.m_op == PrimitiveOpType::OneHot)
+        //if (f0.m_op == PrimitiveOpType::RandomDistribution)
         //    Break;
         //if (f0.m_uniqueIdForDebugging == 4342)
         //    Break;
@@ -4024,7 +4047,8 @@ class InternalVariable::AutoBatch
         // TODO: ^^ get to a point where this is universally true
         //       I think for that we need to determine the max input rank.
         if (!isTimes &&
-            op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && op != PrimitiveOpType::OneHot && op != PrimitiveOpType::Block &&
+            op != PrimitiveOpType::Splice && op != PrimitiveOpType::Reshape && op != PrimitiveOpType::OneHot && 
+            op != PrimitiveOpType::RandomDistribution && op != PrimitiveOpType::Block &&
             f0.m_outputs.front().Shape().Rank() > DetermineMaxElementwiseInputRank(f0))
             LogicError("elementwise op that increases rank??");
         //if (op == PrimitiveOpType::Block && stackingMode == StackingMode::BATCHING)
@@ -4090,6 +4114,7 @@ class InternalVariable::AutoBatch
         //              Note: This is not covered by CSE, since CSE is only used for complex cases.
         //if (f0.m_uniqueIdForDebugging == 23286)
         //    Break;
+        // TODO: If !anyBatchedInputs then why even clone?
         auto batchedOp = CreateAndMemoizeBatchedOp(f0, Function::InputsVectorType(move(batchedInputs)), /*compositeBatchDim=*/ABSENT_FREE_DIMENSION/*dummy*/, anyBatchedInputs ? outputBatchAxis : SIZE_MAX, batchSize, L"*"/*f0*/, /*isFree=*/false);
         //if (batchedOp->m_uniqueIdForDebugging == 10634)
         //    Break;
@@ -4119,7 +4144,10 @@ class InternalVariable::AutoBatch
                 //arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                 // Reshape() here does not need the properties at this level anymore; output shape is sufficient
-                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(arg)), Dictionary(), batchedOutputShape, arg.IsSparse()/*, f0.m_name*/, f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
+                let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape,
+                                                   Function::InputsVectorType(nullptr/*1*/, move(arg)), Dictionary(),
+                                                   batchedOutputShape, arg.GetDataType(), arg.IsSparse()/*, f0.m_name*/,
+                                                   f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
 
                 batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
             }

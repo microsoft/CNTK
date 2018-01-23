@@ -28,6 +28,7 @@ static const wstring RandomDistributionTypeUniform   = L"uniform";
 static const wstring RandomDistributionTypeNormal    = L"normal";
 static const wstring RandomDistributionTypeGumbel    = L"gumbel";
 static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
+static const wstring RandomDistributionTypeConstant  = L"constant"; // we borrow the random infrastructure for creating scalar constants
 
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)
