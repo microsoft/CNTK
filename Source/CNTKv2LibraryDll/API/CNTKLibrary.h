@@ -1096,6 +1096,17 @@ namespace CNTK
         CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
         ///
+        /// Fill an instance with random values in { 0, scale }, with the proportion of 0 being equal to 'mean'.
+        /// Scale != 1 is useful implementing the dropout mask (mean = keep rate = 1 - drop rate).
+        /// The rngState must be initialized by LazilyCreateRNGState(). This function only does something
+        /// upon first call, so you can chain them: SetToRandomDistributionBernoulli(LazilyCreateRNGState(rngState, device), 0.5).
+        ///
+        CNTK_API void SetToRandomDistributionBernoulli(RNGState& rngState, double mean, double scale = 1.0);
+
+        // internal helper to initialize the rngState once
+        CNTK_API static RNGState& NDArrayView::LazilyCreateRNGState(RNGState& rngState, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+
+        ///
         /// If the value stored is a scalar, returns it. Otherwise, throws an error.
         ///
         template<typename ElementType>
@@ -4509,14 +4520,25 @@ namespace CNTK
     CNTK_API FunctionPtr GumbelRandomLike(const Variable& operand, double loc = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
-    /// Create an instance of a Bernoulli random operation. This produces random numbers with the specified shape (no dynamic axes), distributed according to the Bernoulli distribution with the specified success probability
+    /// Create an instance of a Bernoulli random operation. This produces random numbers with the specified shape (no dynamic axes).
+    /// The probability of emitting a 1 is 'mean'.
     ///
     CNTK_API FunctionPtr BernoulliRandom(const NDShape& shape, DataType dataType, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
-    /// Create an instance of a Bernoulli random operation. This produces random numbers with the shape and dynamic axes specified by the operand, distributed according to the Bernoulli distribution with the specified success probability
+    /// Create an instance of a Bernoulli random operation. This produces random numbers with the shape and dynamic axes specified by the operand.
+    /// The probability of emitting a 1 is 'mean'.
     ///
     CNTK_API FunctionPtr BernoulliRandomLike(const Variable& operand, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Bernoulli random operation. This produces random numbers with the specified shape (no dynamic axes).
+    /// This version passes back and forth a state variable for the random-number generator to persist its state. This is for use with Dymamite.
+    /// The probability of emitting a 1 is 'mean'.
+    /// The rngState must be initialized by LazilyCreateRNGState(). This function only does something
+    /// upon first call, so you can chain them: BernoulliRandom(LazilyCreateRNGState(rngState, device), shape, 0.5).
+    ///
+    CNTK_API FunctionPtr BernoulliRandom(RNGState& rngState, const NDShape& shape, DataType dataType, double mean = 0.5, double scale = 1.0, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the reshape operation on specified tensor input operand

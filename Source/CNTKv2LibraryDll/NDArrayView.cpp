@@ -1492,6 +1492,7 @@ namespace CNTK
         m_device = device;
     }
 
+    // create a new NDArrayView initialized with random data
     template <typename ElementType>
     /*static*/ NDArrayViewPtr NDArrayView::RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
@@ -1501,6 +1502,7 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), shape, false, randomNormalMatrix);
     }
 
+    // create a new NDArrayView initialized with random data
     template <typename ElementType>
     /*static*/ NDArrayViewPtr NDArrayView::RandomUniform(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/)
     {
@@ -1508,6 +1510,34 @@ namespace CNTK
         auto randomUniformMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomUniform(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)rangeBegin, (ElementType)rangeEnd, seed));
 
         return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), shape, false, randomUniformMatrix);
+    }
+
+    /*static*/ RNGState& NDArrayView::LazilyCreateRNGState(RNGState& rngHandlePtr, unsigned long seed, const DeviceDescriptor& device)
+    {
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed(true);
+        if (!rngHandlePtr)
+            rngHandlePtr = RNGHandle::Create(AsCNTKImplDeviceId(device), (uint64_t)seed);
+        else if (rngHandlePtr->DeviceId() != AsCNTKImplDeviceId(device))
+            InvalidArgument("NDArrayView::LazilyCreateRNGState: It is not allowed to use the same RNGState for more than one device");
+        return rngHandlePtr;
+    }
+
+    void NDArrayView::SetToRandomDistributionBernoulli(RNGState& rngState, double mean, double scale /*= 1*/)
+    {
+        double dropRate = 1 - mean; // mean = keep rate => dropRate = proportion of zeroes in output
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            WritableNativeTensorView<float>().GetSOBViewPtr()->SetUniformRandomMask((float)dropRate, (float)scale, *rngState);
+            break;
+        case DataType::Double:
+            WritableNativeTensorView<double>().GetSOBViewPtr()->SetUniformRandomMask((double)dropRate, (double)scale, *rngState);
+            break;
+        default:
+            LogicError("NDArrayView::SetToRandomDistributionBernoulli: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
     }
 
     template <typename ElementType>

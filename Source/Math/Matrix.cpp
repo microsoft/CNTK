@@ -1760,8 +1760,8 @@ void Matrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const ElemTyp
                             NOT_IMPLEMENTED);
 }
 
-//maskRate: percentage of values masked out (similar to dropout rate)
-//scaleValue: which scale value to set to the left ones (unmasked items).
+// maskRate: percentage of zeroes (similar to dropout's drop rate)
+// scaleValue: which scale value to set to the non-zero ones (unmasked items).
 template <class ElemType>
 void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle)
 {

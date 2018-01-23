@@ -278,6 +278,7 @@ namespace CNTK
         static const std::wstring AttributeNameSequenceUnpackSuppressMaskOutput;
         static const std::wstring AttributeNameRandomDistributionType;
         static const std::wstring AttributeNameRandomDistributionArgs;
+        static const std::wstring AttributeNameRandomDistributionRNGHandle;
         static const std::wstring AttributeNameSpatialScale;
         static const std::wstring AttributeNameSliceStrides;
         static const std::wstring AttributeNameSliceStridesVec;

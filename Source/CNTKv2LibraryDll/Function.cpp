@@ -1400,6 +1400,7 @@ namespace CNTK
         return additionalProperties;
     }
 
+    // this version is used for the nullary case
     Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed, const NDShape& shape, DataType dataType)
     {
         auto additionalProperties = CreateRandomDistributionAttributes(type, args, seed);
@@ -1407,6 +1408,18 @@ namespace CNTK
             PrimitiveFunction::AttributeNameNewShape, shape,
             PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(dataType));
         return additionalProperties;
+    }
+
+    // this version for the Dynamite case
+    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, RNGState& rngState, const NDShape& shape, DataType dataType)
+    {
+        // we pass the address of the rngState object through as an opaque integer
+        return Dictionary(
+            PrimitiveFunction::AttributeNameRandomDistributionType,      type,
+            PrimitiveFunction::AttributeNameRandomDistributionArgs,      AsDictionaryValueVector(args),
+            PrimitiveFunction::AttributeNameRandomDistributionRNGHandle, (size_t)(intptr_t)&rngState,
+            PrimitiveFunction::AttributeNameNewShape,                    shape,
+            PrimitiveFunction::AttributeNameNewDataType,                 static_cast<int>(dataType));
     }
 
     FunctionPtr UniformRandom(const NDShape& shape, DataType dataType, double low, double high, unsigned long seed, const std::wstring& name)
@@ -1500,6 +1513,14 @@ namespace CNTK
             LogicError("BernoulliRandomLike: mean (%g) must be between 0 and 1", mean);
         Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed);
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BernoulliRandom(RNGState& rngState, const NDShape& shape, DataType dataType, double mean, double scale, const std::wstring& name)
+    {
+        if (mean < 0 || mean > 1)
+            LogicError("BernoulliRandom: mean (%g) must be between 0 and 1", mean);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean, scale }, rngState, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
     FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)

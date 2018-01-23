@@ -104,6 +104,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionType = L"randomDistributionType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionArgs = L"randomDistributionArgs";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionRNGHandle = L"randomDistributionRNGHandle";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSpatialScale = L"spatialScale";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStrides = L"sliceStrides";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStridesVec = L"sliceStridesVec";
@@ -442,6 +443,7 @@ namespace CNTK
                                 if (dataType != DataType::Float && dataType != DataType::Double)
                                     InvalidArgument("RandomDistribution: data type must be one of float, double.");
                                 outputDataType = dataType;
+                                isSparse = false;
                             }
                             break;
                         }

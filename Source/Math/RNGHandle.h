@@ -12,12 +12,12 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-class MATH_API RNGHandle
+class RNGHandle
 {
 public:
-    static std::shared_ptr<RNGHandle> Create(DEVICEID_TYPE deviceId, uint64_t seed, uint64_t offset = 0);
-    
-    virtual ~RNGHandle() {}
+    MATH_API static std::shared_ptr<RNGHandle> Create(DEVICEID_TYPE deviceId, uint64_t seed, uint64_t offset = 0);
+
+    MATH_API virtual ~RNGHandle() {}
 
     DEVICEID_TYPE DeviceId() const
     {

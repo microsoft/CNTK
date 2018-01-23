@@ -65,6 +65,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef std::shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
 
     struct GpuData;
+
+    class RNGHandle;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -233,6 +235,8 @@ namespace CNTK
     typedef std::weak_ptr<PackedValue> PackedValueWeakPtr;
 
     struct MinibatchSourceConfig;
+
+    typedef std::shared_ptr<Microsoft::MSR::CNTK::RNGHandle> RNGState;
 
 #ifndef CNTK_HEADERONLY_DEFINITIONS
 
