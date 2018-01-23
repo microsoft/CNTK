@@ -567,25 +567,26 @@ $(CPP_EXTENSIBILITY_EXAMPLES_LIB): $(CPP_EXTENSIBILITY_EXAMPLES_LIBRARY_OBJ) | $
 
 
 ##############################################
-# Binary convolution example library
+# Binary convolution library
 ##############################################
+ifdef $(HALIDE_PATH)
+INCLUDEPATH += $(HALIDE_PATH)/include
+BINARY_CONVOLUTION_LIBRARY_SRC =\
+	$(SOURCEDIR)/Extensibility/BinaryConvolutionLib/BinaryConvolutionLib.cpp \
 
-BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC =\
-	$(SOURCEDIR)/../Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/BinaryConvolutionLib.cpp \
+BINARY_CONVOLUTION_LIBRARY_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARY_CONVOLUTION_LIBRARY_SRC))
 
-BINARY_CONVOLUTION_EXAMPLE_LIBRARY_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC))
+BINARY_CONVOLUTION_LIB:= $(LIBDIR)/Cntk.BinaryConvolution-$(CNTK_COMPONENT_VERSION).so
+ALL_LIBS += $(BINARY_CONVOLUTION_LIB)
+PYTHON_LIBS += $(BINARY_CONVOLUTION_LIB)
+SRC += $(BINARY_CONVOLUTION_LIBRARY_SRC)
 
-BINARY_CONVOLUTION_EXAMPLE_LIB:= $(LIBDIR)/Cntk.BinaryConvolutionExample-$(CNTK_COMPONENT_VERSION).so
-ALL_LIBS += $(BINARY_CONVOLUTION_EXAMPLE_LIB)
-PYTHON_LIBS += $(BINARY_CONVOLUTION_EXAMPLE_LIB)
-SRC += $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC)
-
-$(BINARY_CONVOLUTION_EXAMPLE_LIB): $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_OBJ) | $(CNTKLIBRARY_LIB)
+$(BINARY_CONVOLUTION_LIB): $(BINARY_CONVOLUTION_LIBRARY_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY) $(SOURCEDIR)/../Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.a
-
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY) $(HALIDE_PATH)/bin/libHalide.so
+endif
 
 ##############################################
 # Native implementation of the Proposal Layer
@@ -605,7 +606,7 @@ $(PROPOSAL_LAYER_LIB): $(PROPOSAL_LAYER_LIBRARY_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(LIBPATH) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY)
+	$(CXX) $(LDFLAGS) -shared $(CXXFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(LIBPATH) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY)
 
 
 ########################################
