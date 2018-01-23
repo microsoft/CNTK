@@ -57,10 +57,10 @@ static NDArrayViewPtr TestTensor(const NDShape& shape, double scale, const char*
         res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
         res += constT(1.0);
     }
-    else if (strcmp(opName, "Reciprocal") == 0) // Reciprocal should not use too small a number -> use abs(x) + 0.2
+    else if (strcmp(opName, "Reciprocal") == 0) // Reciprocal should not use too small a number -> use abs(x) + 0.3
     {
         res = NDArrayView::NumericOperation({ res }, 1.0, L"Abs");
-        res += constT(0.2);
+        res += constT(0.3);
     }
     else if (strcmp(opName, "Cond") == 0 && argIndex == 0) // Cond requires a flag as the condition
     {
@@ -188,8 +188,14 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
 #define ValOp(opCode) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode)), #opCode))
 #define ValRedOp(redOpCode, shape, denom) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0/denom, L"Copy", make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L#redOpCode)), "Reduce" #redOpCode))
 #define ValOpWithRed(opCode, shape) (pair<function<NDArrayViewPtr(const vector<NDArrayViewPtr>&)>, const char*>(ValExpr(NDArrayView::NumericOperation(argValues, 1.0, L#opCode, make_shared<NDArrayView>(dataType, NDShape(shape), device), 0, L"Sum")), #opCode "|Reduce"))
+    RNGState rngState;
+    NDArrayView::LazilyCreateRNGState(rngState, SentinelValueForAutoSelectRandomSeed, device);
     vector<TensorViewTest> tests =
     {
+        // random  --for now, only Bernoulli, for Dropout support
+        { { ValExpr(make_shared<NDArrayView>(0.9, dataType, NDShape{}, device)), "Bernoulli90%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.9              ), Axis::AllStaticAxes())),{ { 10000, 1000 } } },
+        { { ValExpr(make_shared<NDArrayView>(3  , dataType, NDShape{}, device)), "Bernoulli90%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.3, /*scale=*/10), Axis::AllStaticAxes())),{ { 1000, 10000 } } },
+        // one-hot
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, ArgmaxOneHot(argValues[1]), false, 1.0, 1)), "Times_sparse" }, VarExpr(CNTK::Times(args[0], ArgmaxOneHotOp(args[1]))),{ { 13, 4 },{ 4, 3, 5 } } },
         // transpose. Note: Reference must be cloned, because AvSqrErr cannot reduce over >2 non-contiguous dimensions.
         { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 0, 2, 1, 3 })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 0, 2, 1, 3 }))),{ { 13, 42, 4, 2 } } }, // 2-axis permutation (stackable)
@@ -448,6 +454,8 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
                 if (strstr(test.op.second, "Cond") && argIndexUnderTest == 0)
                     continue;
                 if (strstr(test.op.second, "Times_sparse") && argIndexUnderTest == 1)
+                    continue;
+                if (strstr(test.op.second, "Bernoulli"))
                     continue;
                 // determine all gradients. That is args[*][argIndexUnderTest].
                 // Note: args that are shared across the batch will only get a single entry in the gradients[] map
