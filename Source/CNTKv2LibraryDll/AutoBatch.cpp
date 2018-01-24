@@ -787,7 +787,7 @@ struct CudaStatsGuard
     ~CudaStatsGuard() { EndCudaStats(cudaStatsPtr); }
 };
 // and this at the end of when you want to dump the log
-void ShowCudaStats()
+void ShowCudaStats(bool updateCounter = false) // TODO: updateCounter flag is at the wrong place. Should be in Reser or something
 {
     if (ShouldLogMemoizeStats())
     {
@@ -816,6 +816,11 @@ void ShowCudaStats()
         cudaStats.clear();
     }
     // control how often this is active
+#if 1 // hack for now, to get synced logs for fw and bw
+    if (!updateCounter)
+        return;
+#endif
+
     logMemoizeStatsCounter++;
     if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
         logMemoizeStatsCounter = 0;
@@ -4314,7 +4319,7 @@ public:
 #endif
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
-        ShowCudaStats();
+        ShowCudaStats(/*updateCounter=*/false);
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward:  %d fw calcs + %d gathers + %d views, %d CSEs, in nominally %d+%ds ops (%d inlined) on %d known values\n",
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated,
@@ -5093,6 +5098,10 @@ public:
         //  - root is a m_redirection
         // first get the forward computation, batching, etc. done if not yet
         BatchedForward(root);
+
+        ResetCudaStats();
+        CudaStatsGuard cudaStatsGuardBackward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched backward", 3);
+
         // if user passed NDArrayViewPtrs for the gradients, then implant those
         // If nulls are passed, then the existing gradient memory will be reused, if any, and gradients[] will be updated to return that.
         // If gradients[] gets initialized with nulls, and then never changed outside, one will keep reusing the existing buffers.
@@ -5153,6 +5162,15 @@ public:
         // implant the results into the map the user passed in
         for (auto& kv : gradients)
             kv.second = kv.first.m_dataFields->m_gradient;
+
+        cudaStatsGuardBackward.Stop(); // this measures the backprop process, which submits actual computation to GPU, with occasional (undesired) internal syncs
+        //CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward bg thread hangover", 3);
+        //m_memoizer.WaitForCompletion(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
+        //cudaStatsGuardCalc.Stop(); // this measures the bg thread; specifically, how much longer it needs after the fg thread has submitted the last item
+        // log stats
+        // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
+        ShowCudaStats();
+
         // note: we will leave the m_consumers fields dangling, and reset them upon next use
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedBackward: %d bp calcs + %d views + %d gathers + %d scatters + %d set-zeroes, %d skipped matmuls for %d ops (total %d inputs)\n",
