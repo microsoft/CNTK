@@ -33,9 +33,9 @@ using namespace std;
 
 //#define LOG_DETAILS     // if defined, log all forward and backward operations
 //#define LOG_STATS         // if defined, log statistics (#operations)
-//#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
+#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
 //#define LOG_GPU         // if defined, profile the GPU (warning: this will disturb the CPU measurements)
-#define NUM_MBS_TO_LOG 10 // 4
+#define NUM_MBS_TO_LOG 4
 
 // these options allow to turn features on or off, for benchmarking
 //#define NO_CSE              // if defined, disable CSE
@@ -95,13 +95,13 @@ static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
 #endif
 static bool ShouldLogMemoizeStats()     { return logMemoizeStatsCounter < NUM_MBS_TO_LOG; }
-//static inline bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter & 1; }
+static inline bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter & 1; }
 //static inline bool ShouldLogMemoizeStatsCUDA() { return true;  }
-#ifdef LOG_GPU
-static inline bool ShouldLogMemoizeStatsCUDA() { return true; }
-#else
-static inline bool ShouldLogMemoizeStatsCUDA() { return false; }
-#endif
+//#ifdef LOG_GPU
+//static inline bool ShouldLogMemoizeStatsCUDA() { return true; }
+//#else
+//static inline bool ShouldLogMemoizeStatsCUDA() { return false; }
+//#endif
 
 
 #define BarrierOp NoOp // for now, we use Alias() (=NoOp) to denote a Barrier(). Should become an op in its own right.
@@ -4300,16 +4300,18 @@ public:
             // execute it, and also update all outputs' values and consumers, and the schedule
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
-        cudaStatsGuardForward.Stop();
-        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward calc", 3);
+        cudaStatsGuardForward.Stop(); // this measures the auto-batching process, which submits actual computation to a bg thread
+        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward bg thread hangover", 3);
         m_memoizer.WaitForCompletion(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
         Memoizer::MTCacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
-        cudaStatsGuardCalc.Stop();
+        cudaStatsGuardCalc.Stop(); // this measures the bg thread; specifically, how much longer it needs after the fg thread has submitted the last item
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
+#if 0   // this syncs the GPU before backprop, wasting CPU cycles
         CudaStatsGuard cudaStatsGuardGPU(PrimitiveOpType::Exp/*misusing this for actual op*/, L"batched forward gpu", 3);
         if (fields.m_shape.TotalSize() == 1) // BUGBUG: we use AsScalar() to force a GPU sync, but that won't work for logging intermediate results
             fields.m_value->AsScalar<float>();
         cudaStatsGuardGPU.Stop();
+#endif
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
         ShowCudaStats();

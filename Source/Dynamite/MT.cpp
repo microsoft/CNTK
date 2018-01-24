@@ -70,7 +70,7 @@ size_t bucketingFactor = 10; // group 10 minibatches together, sort, re-split; f
 string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
-size_t saveEvery = 2000;
+size_t saveEvery = 10000;
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
@@ -1083,7 +1083,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     let LRSchedule = [&](double multiplier)
     {
         double lr1 = lr0 * multiplier;
-        fprintf(stderr, "Base Learning Rate = %.16f\n", lr1), fflush(stderr);
+        //fprintf(stderr, "Base Learning Rate = %.16f\n", lr1), fflush(stderr);
         return TrainingParameterPerSampleSchedule(vector<double>{ lr1, lr1/2, lr1/4, lr1/8 }, epochSize);
     };
     if (learnerType == "sgd")
@@ -1099,7 +1099,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //  - denom should be /sqrt(minibatchSize)
         //learnerOptions.gradientClippingThresholdPerSample = 0.001 / 0.002 / 4096;
         baseLearner = AdamLearner(parameters, LRSchedule(/*multiplier=*/1),
-                                  MomentumAsTimeConstantSchedule(40000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-9, /*adamax=*/false,
+                                  MomentumAsTimeConstantSchedule(80000), true, MomentumAsTimeConstantSchedule(400000), /*eps=*/1e-9, /*adamax=*/false,
                                   learnerOptions);
     }
     else InvalidArgument("Invalid --learner %s", learnerType.c_str());
@@ -1122,7 +1122,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
     vector<vector<vector<Variable>>> args; // [subMinibatchIndex, streamIndex, sequenceIndex]
     size_t totalLabels = 0;
-    Microsoft::MSR::CNTK::Timer updateTimer; // timer between Update() calls end-to-end
+    Microsoft::MSR::CNTK::Timer updateTimer;       // timer between Update() calls end-to-end. Update() is not called for sub-minibatches.
+    Microsoft::MSR::CNTK::Timer subMinibatchTimer; // timer between Forward() calls end-to-end. This counts sub-minibatches, but has no Update() except for the last sub-minibatch
     class // helper for timing GPU-side operations
     {
         Microsoft::MSR::CNTK::Timer m_timer;
@@ -1175,10 +1176,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     //         In current code, the meaning of startMbCount is broken. mbCount should refer to full minibatches.
     SmoothedCriterion smoothedLoss;
     updateTimer.Restart();
+    subMinibatchTimer.Restart();
     size_t lastUpdateLogTotalLabels = totalLabels; // sample count for updateTimer
     for (mbCount = startMbCount; ; mbCount++)
     {
-        let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
+        let logThisMb = mbCount <= 20 || (mbCount / numPartialBatchesPerWorker) % 10 == 0; // (use this to cut down on logging)
         // checkpoint
         if (mbCount % saveEvery == 0 &&
             (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
@@ -1250,7 +1252,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         fprintf(stderr, "src=%s\n", OneHotToWordSequence(subBatchArgs[0][0].Value(), srcVocabFile).c_str());
         fprintf(stderr, "tgt=%s\n", OneHotToWordSequence(subBatchArgs[1][0].Value(), tgtVocabFile).c_str());
 #endif
-        // train minibatch
+        // --- train one (worker sub-) minibatch
+
+        // forward
         let numAPICalls0 = CountAPICalls(0);
         //criterion_fn(subBatchArgs[0], subBatchArgs[1]); // call it once before, to flush that thing that we otherwise also measure, whatever that is
         partTimer.Restart();
@@ -1375,7 +1379,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                         NDArrayView::NumericOperation({ gradients[p] }, /*alpha=*/globalNormClipping / totalL2Norm, L"Copy", gradients[p], /*beta=*/0);
                 }
             }
-            learner->Update(gradients, info);
+            learner->Update(gradients, info); // GPU sync happens here, at least in case of parallel training
             totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
             // Marian-compatible LR warmup (TODO: We should rather do that by #labels)
             // It is done after the first Update() call to replicate a Marian bug, in that it does not update the LR for the very first MB.
@@ -1427,7 +1431,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // clean up
         partTimer.Restart();
-        partialWorkerLossVar = Variable(); // this destructs the entire graph
+        partialWorkerLossVar = Variable(); // this destructs the entire graph. It will also return m_value and m_gradient to the arena. TODO: does that cause GPU syncs?
         let timeDeleteGraph = partTimer.Elapsed();
 
         // log progress
@@ -1450,6 +1454,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 updateTimer.Restart();                      // restart timer right away so that we get a true end-to-end measurement including everything
                 let numTimedLabels = totalLabels - lastUpdateLogTotalLabels;
                 lastUpdateLogTotalLabels = totalLabels;
+                fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numTimedLabels / elapsed, 1000.0/*ms*/ * elapsed / numTimedLabels);
+            }
+            else
+            {
+                let elapsed = subMinibatchTimer.ElapsedSeconds(); // elapsed time between forward/backwards for a sub-minibatch
+                subMinibatchTimer.Restart();                      // restart timer right away so that we get a true end-to-end measurement including everything
+                let numTimedLabels = numPartialWorkerScoredLabels;
                 fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numTimedLabels / elapsed, 1000.0/*ms*/ * elapsed / numTimedLabels);
             }
             fprintf(stderr, "m=%.0f, g=%.0f, f=%.0f+%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
