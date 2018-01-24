@@ -1,4 +1,5 @@
-# Node: ResNet-18 with ImageNet -- 18 layers plain ResNet for image classification
+# Node: ResNet-20 with ImageNet -- 20 layers plain ResNet for image classification
+# This network is similar to a ResNet-18 with an extra residual block at the last stage
 # Reference: "Deep Residual Learning for Image Recognition" https://arxiv.org/abs/1512.03385
 
 command = TrainNetwork:Eval
@@ -12,8 +13,8 @@ OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 MeanDir = "$DataDir$"
 
-modelPath = "$ModelDir$/ResNet_18"
-stderr = "$OutputDir$/ResNet_18_BS_out"
+modelPath = "$ModelDir$/ResNet_20"
+stderr = "$OutputDir$/ResNet_20_BS_out"
 
 parallelTrain = true
 
