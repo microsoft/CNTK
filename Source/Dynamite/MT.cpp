@@ -940,7 +940,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     mmodel->build(graph, fakeBatch);
     auto mparamsVector = graph->GetAllParameters();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
-#if 1 // for comparison to Marian, read all initial values from Marian
+#if 0 // for comparison to Marian, read all initial values from Marian
     vector<float> buf;
     for (auto& p : mparamsVector)
     {

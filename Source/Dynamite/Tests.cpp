@@ -193,8 +193,8 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     vector<TensorViewTest> tests =
     {
         // random  --for now, only Bernoulli, for Dropout support
-        { { ValExpr(make_shared<NDArrayView>(0.9, dataType, NDShape{}, device)), "Bernoulli90%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.9              ), Axis::AllStaticAxes())),{ { 10000, 1000 } } },
-        { { ValExpr(make_shared<NDArrayView>(3  , dataType, NDShape{}, device)), "Bernoulli90%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.3, /*scale=*/10), Axis::AllStaticAxes())),{ { 1000, 10000 } } },
+        { { ValExpr(make_shared<NDArrayView>(0.9, dataType, NDShape{}, device)), "BernoulliRandom90%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.9                   ), Axis::AllStaticAxes())),{ { 100, 1000 } } },
+        { { ValExpr(make_shared<NDArrayView>(1.0, dataType, NDShape{}, device)), "BernoulliRandom30%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.3, /*scale=*/1 / 0.3), Axis::AllStaticAxes())),{ { 1000, 100 } } }, // Dropout-like scaling
         // one-hot
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, ArgmaxOneHot(argValues[1]), false, 1.0, 1)), "Times_sparse" }, VarExpr(CNTK::Times(args[0], ArgmaxOneHotOp(args[1]))),{ { 13, 4 },{ 4, 3, 5 } } },
         // transpose. Note: Reference must be cloned, because AvSqrErr cannot reduce over >2 non-contiguous dimensions.
@@ -430,7 +430,12 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         fprintf(stderr, ") -> %S", resVal->AsString().c_str());
         // compare reference result with Dynamite result
         let avSqrErr = AvSqrErr(resVal, refVal, dataType, device);
-        if (isnan(avSqrErr) || avSqrErr > 1e-5)
+        let thresh =
+            /*if*/ (strstr(test.op.second, "Random")) ?
+                1e-2
+            /*else*/ :
+                1e-5;
+        if (isnan(avSqrErr) || avSqrErr > thresh)
         {
             fprintf(stderr, "\n>>>>>>>>>> FWD FAILED: avSqrErr = %.10f\n", avSqrErr);
             resVal->LogToFile(L"result (Dynamite)");
@@ -455,7 +460,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
                     continue;
                 if (strstr(test.op.second, "Times_sparse") && argIndexUnderTest == 1)
                     continue;
-                if (strstr(test.op.second, "Bernoulli"))
+                if (strstr(test.op.second, "Random"))
                     continue;
                 // determine all gradients. That is args[*][argIndexUnderTest].
                 // Note: args that are shared across the batch will only get a single entry in the gradients[] map
@@ -551,7 +556,7 @@ void RunDynamiteTests()
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true, DeviceDescriptor::GPUDevice(0));
-#if 1 // only do a stacked one (most complicated) on the GPU by default
+#if 0 // only do a stacked one (most complicated) on the GPU by default
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());
