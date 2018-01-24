@@ -82,6 +82,8 @@ def create_resnet_network(network_name, fp16):
 
         # create model, and configure learning parameters
         if network_name == 'resnet18':
+            z = create_imagenet_model_basic(graph_input, [2, 1, 1, 1], num_classes)
+        elif network_name == 'resnet20':
             z = create_imagenet_model_basic(graph_input, [2, 1, 1, 2], num_classes)
         elif network_name == 'resnet34':
             z = create_imagenet_model_basic(graph_input, [3, 3, 5, 2], num_classes)

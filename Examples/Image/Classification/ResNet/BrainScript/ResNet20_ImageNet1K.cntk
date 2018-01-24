@@ -42,7 +42,7 @@ TrainNetwork = {
             ResNetBasic {cMap[2], bnTimeConst} :
 
             ResNetBasicInc {cMap[3], (2:2), bnTimeConst} :
-            ResNetBasic {cMap[3], bnTimeConst} :
+            ResNetBasicStack {2, cMap[3], bnTimeConst} :
 
             # avg pooling
             AveragePoolingLayer {(7: 7), stride = 1} :
