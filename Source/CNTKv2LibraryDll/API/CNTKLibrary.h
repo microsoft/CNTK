@@ -1104,7 +1104,7 @@ namespace CNTK
         CNTK_API void SetToRandomDistributionBernoulli(RNGState& rngState, double mean, double scale = 1.0);
 
         // internal helper to initialize the rngState once
-        CNTK_API static RNGState& NDArrayView::LazilyCreateRNGState(RNGState& rngState, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static RNGState& LazilyCreateRNGState(RNGState& rngState, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// If the value stored is a scalar, returns it. Otherwise, throws an error.
