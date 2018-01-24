@@ -4838,22 +4838,23 @@ public:
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
     // This is a subroutine of RAggregateGradientFromAllConsumers().
-    vector<AutoBatchConsumer> m_spliceConsumers;       // Scatter optimization: backprop to all inputs at once using ScatterBatch
-    vector<AutoBatchConsumer> m_matrixWeightConsumersDense;  // matrix product optimization: sum -> inner dimension
-    vector<AutoBatchConsumer> m_matrixWeightConsumersSparse; // we distinguish dense and sparse gradients
-    vector<AutoBatchConsumer> m_viewableConsumers;     // see-through gradients being aggregated -> Gather and Reduce
-    vector<AutoBatchConsumer> m_otherConsumers;        // remaining incoming gradients for which we have no further optimization
+    vector<AutoBatchConsumer> m_spliceConsumers;             // Scatter optimization: backprop to all inputs at once using ScatterBatch
+    vector<AutoBatchConsumer> m_matrixWeightConsumers[2][2]; // [isTransposed][isSparse] matrix product optimization: sum -> inner dimension
+    vector<AutoBatchConsumer> m_viewableConsumers;           // see-through gradients being aggregated -> Gather and Reduce
+    vector<AutoBatchConsumer> m_otherConsumers;              // remaining incoming gradients for which we have no further optimization
     void ClearBuckets()
     {
         m_spliceConsumers            .clear();
-        m_matrixWeightConsumersDense .clear();
-        m_matrixWeightConsumersSparse.clear();
+        m_matrixWeightConsumers[0][0].clear();
+        m_matrixWeightConsumers[0][1].clear();
+        m_matrixWeightConsumers[1][0].clear();
+        m_matrixWeightConsumers[0][1].clear();
         m_viewableConsumers          .clear();
         m_otherConsumers             .clear();
     }
     static bool IsMatrixGradient0Batchable(const PrimitiveFunction& f, const PrimitiveFunction& g)
     {
-#if 0       // use 1 to disable batching of matrix gradients
+#if 0       // use 1 to disable batching of matrix gradients --BUGBUG: This is currently not functional.
         return false;
 #else
         // must be the same op (Times vs. TransposeTimes)
@@ -4907,16 +4908,26 @@ public:
         }
         // backpropagating into the first arg of a matrix product
         // These are shared.
-        // We only collect matrix products that fully match the first one. --TODO: when do they not fully match?
-        if (IsMatrixProduct(op) && index == 0)
+        // We only collect matrix products that fully match the first one. --TODO: when do they ever not fully match? Below we now enforce that they do.
+        if (op == PrimitiveOpType::Times && op == PrimitiveOpType::TransposeTimes && index == 0)
         {
+            bool isTransposed = op == PrimitiveOpType::TransposeTimes;
             bool isSparse = f->m_inputs.back().IsSparse();
-            auto& consumers = isSparse ? m_matrixWeightConsumersSparse : m_matrixWeightConsumersDense;
+            auto& consumers = m_matrixWeightConsumers[isTransposed][isSparse]; // there are 4 categories that are not batchable across
+#if 1       // BUGBUG: Currently, we don't handle multiple non-batchable operations. Does that ever occur?
+            // I believe that for gradients into the same first arg of Times(), as long as isTranspose and isSparse
+            // are the same, they must always be batchable. Hence we only need to distinguish these 4 catergories.
+            // This may be wrong. In that case, we need to change the [][] array to a variable one.
+            fail_if(!consumers.empty() && (!IsMatrixGradient0Batchable(*f, *consumers.front().first)), "DetermineAndAddToBucket: gradient batching of incompatible matrix products should never happen. Since it just did, there is a bug either in the thinking or in the code.");
+            consumers.push_back(c);
+            return;
+#else
             if (consumers.empty() || (IsMatrixGradient0Batchable(*f, *consumers.front().first)))
             {
                 consumers.push_back(c);
                 return;
             }
+#endif
         }
         // backprop where gradients are just views that we can sum up
         //else if (f->m_op == PrimitiveOpType::Plus)
@@ -4942,6 +4953,8 @@ public:
     {
         if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
+        //if (fields.m_uniqueIdForDebugging == 5526)
+        //    Break;
 
         fail_if(fields.m_consumers.empty(), "root gradient not set up??"); // this is the root. It should already have been visited manually.
 
@@ -5022,10 +5035,13 @@ public:
         // since we have an op to add a sparse matrix into a dense one, but not vice versa.
         // The use case is tied embeddings in MT, where the same embedding is applied to sparse inputs
         // and is also used as a Softmax projection, which is transposed and dense.
-        if (!m_matrixWeightConsumersDense.empty())
-            BackpropToMatrixWeight(m_matrixWeightConsumersDense);
-        if (!m_matrixWeightConsumersSparse.empty())
-            BackpropToMatrixWeight(m_matrixWeightConsumersSparse);
+        for (size_t isSparse = 0; isSparse < 2; isSparse++) // watch out: all dense must be before sparse
+            for (size_t isTransposed = 0; isTransposed < 2; isTransposed++)
+            {
+                let& consumers = m_matrixWeightConsumers[isTransposed][isSparse];
+                if (!consumers.empty())
+                    BackpropToMatrixWeight(consumers);
+            }
 #endif
     }
 

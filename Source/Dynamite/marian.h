@@ -563,12 +563,13 @@ namespace marian
             return mask;
         }
 #endif
-        static inline Expr DropoutMask(float dropRate, const CNTK::NDShape& shape)
+        static inline Expr DropoutMask(double dropRate, const CNTK::NDShape& shape)
         {
             // TODO: Where to store the state? Note that Marian uses a static in the back end.
             static CNTK::RNGState rngState;
+            let keepRate = 1 - dropRate;
             return CNTK::BernoulliRandom(CNTK::NDArrayView::LazilyCreateRNGState(rngState, /*seed=*/ CNTK::SentinelValueForAutoSelectRandomSeed, Dynamite::CurrentDevice()),
-                                         shape, Dynamite::CurrentDataType(), /*mean=*/1 - dropRate);
+                                         shape, Dynamite::CurrentDataType(), /*mean=*/keepRate, /*scale=*/1 / keepRate);
         }
 
         // Reshape helper

@@ -913,10 +913,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         L"transformer-dropout",           0.1f,    
         L"transformer-dropout-attention", 0.0f,    
         L"transformer-heads",             8,    
-        L"transformer-postprocess",       L"an",    
-        L"transformer-postprocess-emb",   L"",    
-        //L"transformer-postprocess",       L"dan",    
-        //L"transformer-postprocess-emb",   L"d",    
+        //L"transformer-postprocess",       L"an",    
+        //L"transformer-postprocess-emb",   L"",    
+        L"transformer-postprocess",       L"dan",    
+        L"transformer-postprocess-emb",   L"d",    
         L"transformer-preprocess",        L"",    
         L"type",                          L"transformer",    
         L"valid-freq",                    5000,    
@@ -940,7 +940,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     mmodel->build(graph, fakeBatch);
     auto mparamsVector = graph->GetAllParameters();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
-#if 1 // for comparison to Marian, read all initial values from Marian
+#if 0 // for comparison to Marian, read all initial values from Marian
     vector<float> buf;
     for (auto& p : mparamsVector)
     {
