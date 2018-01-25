@@ -35,7 +35,7 @@ for %%x in (libiomp5md.dll mklml.dll Cntk.Math-%version%.dll Cntk.PerformancePro
   echo %%x>> .\com\microsoft\CNTK\lib\windows\NATIVE_MANIFEST
 )
 
-for %%x in (mkldnn.dll) do (
+for %%x in (zip.dll zlib.dll opencv_world310.dll mkldnn.dll) do (
   (copy "%output_dir%/%%x" ".\com\microsoft\CNTK\lib\windows\%%x") && (
    echo %%x>> .\com\microsoft\CNTK\lib\windows\NATIVE_MANIFEST) || (
    echo "Could not find %%x, skipping")
