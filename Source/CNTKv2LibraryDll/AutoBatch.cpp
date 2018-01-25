@@ -1211,11 +1211,9 @@ class WorkerThread
 {
     bool m_enableThreading = true; // set to false for emulating behavior via in-thread immediate computaton
     thread m_thread;
-    volatile bool m_terminateRequest; // set by ~WorkerThread()
-    volatile bool m_hasException;     // set by MTThreadProc() in case of exception
-    exception_ptr m_exception;        // if any  --TODO: does this need to be volatile?
+    volatile bool m_terminateRequest; // set by WorkerThread destructor; bg thread must return asap, destructor will wait
     Event m_consumerStateChanged, m_workerStateChanged;
-    void MTNotifyConsumerOfStateChange()
+    void MTNotifyConsumerOfWorkerStateChange()
     {
         //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
         m_workerStateChanged.Set(); // my state has changed
@@ -1229,71 +1227,63 @@ class WorkerThread
     }
     void MTThreadProc()
     {
-        MTNotifyConsumerOfStateChange();
+        MTNotifyConsumerOfWorkerStateChange(); // hello world!
         try
         {
-            while (!m_terminateRequest)
+            // main worker loop
+            for (;;)
             {
-                let hasWorkPending = MTDoWork(); // may throw
-                if (!hasWorkPending)
-                {
-                    MTNotifyConsumerOfStateChange();
-                    MTWaitForConsumerStateChange();
-                }
+                if (m_terminateRequest)          // object destructor was called: return without further ado
+                    return;
+                let hasWorkPending = MTDoWork(); // may not throw
+                if (hasWorkPending)              // if there is more known work to do, do that right away
+                    continue;
+                // queue has run empty: wait for replenishment
+                MTNotifyConsumerOfWorkerStateChange(); // tell consumer that the worker is out of work
+                MTWaitForConsumerStateChange();  // wait for consumer to tell us that something may have been done
             }
+        }
+        // uncaught exception. Note: MTDoWork() must not throw.
+        catch (const exception& e)
+        {
+            fprintf(stderr, "Uncaught exception in background thread: %s\n", e.what()), fflush(stderr);
+            abort(); // tear down the program immediately
         }
         catch (...)
         {
-            // save exception
-            m_exception = current_exception();
-            m_hasException = true; // not sure if exception_ptr can be assigned atomically, so use this as a guard
-            MTNotifyConsumerOfStateChange();
-            //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
-            // and finish the thread
+            fprintf(stderr, "Uncaught exception in background thread\n"), fflush(stderr);
+            abort(); // tear down the program immediately
         }
+        // cannot get here
     }
     void NonThreadedProc() // emulation if threading not enabled
     {
         while (MTDoWork()) // run all pending tasks
             ;
     }
-    void ThrowIfException()
-    {
-        if (m_hasException)
-        {
-            FinishThread();
-            rethrow_exception(m_exception);
-        }
-    }
-    void FinishThread()
-    {
-        if (m_thread.joinable())
-            m_thread.join();
-        // note: any potential exception goes unnoticed since we may not throw in destructor
-    }
 public:
-    WorkerThread() :
-        m_terminateRequest(false), m_hasException(false)
-    {
-    }
-    void WakeUp()
-    {
-        if (m_enableThreading && !m_thread.joinable())
-        {
-            m_exception = nullptr;
-            m_thread = thread([this]() { MTThreadProc(); });
-        }
-    }
     ~WorkerThread()
     {
-        m_terminateRequest = true;
-        FinishThread();
+        m_terminateRequest = true;           // signal the thread to stop
+        NotifyWorkerOfConsumerStateChange(); // if worker is in wait state, then get it out
+        if (m_thread.joinable())             // and wait until it's gone (if it was not in wait state, it may still in the midst of processing one item)
+            m_thread.join();
+        fprintf(stderr, "WorkerThread: bg thread is gone\n"), fflush(stderr);
     }
-    virtual bool MTDoWork() = 0; // override this. Do one limited package of work
-    void NotifyWorkerOfStateChange() // tell the worker that state has (may have) changed by main thread
+    void Reset()
     {
         if (!m_enableThreading)
-            return NonThreadedProc();
+            return;
+        if (!m_thread.joinable()) // thread does not exist yet
+        {
+            m_terminateRequest = false;
+            m_thread = thread([this]() { MTThreadProc(); });
+            fprintf(stderr, "WorkerThread: bg thread started\n"), fflush(stderr);
+        }
+    }
+    virtual bool MTDoWork() noexcept = 0; // override this. Do one limited package of work. Returns true if it should be called again immediately
+    void NotifyWorkerOfConsumerStateChange() // tell the worker that state has (may have) changed by main thread
+    {
         //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
         m_consumerStateChanged.Set();
         //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
@@ -1302,12 +1292,9 @@ public:
     {
         if (!m_enableThreading)
             return NonThreadedProc();
-        {
-            //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
-            m_workerStateChanged.Wait();
-            //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
-        }
-        ThrowIfException();
+        //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
+        m_workerStateChanged.Wait();
+        //fprintf(stderr, __FUNCTION__ " %d\n", __LINE__), fflush(stderr);
     }
 };
 
@@ -1318,17 +1305,18 @@ class ConcurrentQueue
     mutable recursive_mutex m_mutex; // guards m_queue
     deque<T> m_queue;
 public:
-    size_t Size() const { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.size(); }
-    bool Empty() const { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.empty(); }
+    size_t Size() const noexcept { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.size(); }
+    bool Empty() const noexcept { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.empty(); }
+    void Clear() noexcept { lock_guard<recursive_mutex> guard(m_mutex); m_queue.clear (); }
     void EmplaceBack(T&& item) { lock_guard<recursive_mutex> guard(m_mutex); return m_queue.emplace_back(move(item)); }
-    const T* Front() const // returns null if empty. Once done, use PopFront() to complete the operation.
+    const T* Front() const noexcept // returns null if empty. Once done, use PopFront() to complete the operation.
     {
         lock_guard<recursive_mutex> guard(m_mutex);
         if (m_queue.empty())
             return nullptr;
         return &m_queue.front();
     }
-    void PopFront() { lock_guard<recursive_mutex> guard(m_mutex); m_queue.pop_front(); }
+    void PopFront() noexcept { lock_guard<recursive_mutex> guard(m_mutex); m_queue.pop_front(); }
 };
 
 class InternalVariable::Memoizer
@@ -1345,32 +1333,80 @@ class InternalVariable::Memoizer
     // worker thread with callback and queue
     class MemoizeWorkerThread : public WorkerThread
     {
+        typedef WorkerThread Base;
         ConcurrentQueue<WorkItem> m_queue;
+        volatile bool m_hasException;     // set by MTDoWork() in case of exception
+        exception_ptr m_exception;        // if any  --TODO: does this need to be volatile?
         // callback. Process one work item in each call.
-        bool MTDoWork() override
+        bool MTDoWork() noexcept override
         {
-            let* item = m_queue.Front();
-            if (!item)
-                return false;
-            item->us->MTProcessNextItem(*item);
-            m_queue.PopFront(); // only now remove it, so that consumer sees it disappear once done
-            return true;
+            if (!m_hasException)
+            {
+                try
+                {
+                    let* item = m_queue.Front();
+                    if (!item)
+                        return false;
+                    // do some work. This may throw an exception upon error.
+                    item->us->MTProcessNextItem(*item);
+                    m_queue.PopFront();
+                    // only now remove it, so that consumer sees it disappear only after it has been done
+                    return !m_queue.Empty();
+                }
+                catch (...)
+                {
+                    // newly caught exception: save it
+                    m_exception = current_exception();
+                    m_hasException = true; // not sure if exception_ptr can be assigned atomically, so use this as a guard
+                }
+            }
+            // an exception has been caught, or was already present
+            // we get here in three occasions:
+            //  - a newly caught exception from MTProcessNextItem()
+            //  - an error occured in a work item, but fg thread then submitted more work before seeing the flag
+            //  - fg thread's Reset() may have set this. The queue can only be shrunk in the worker thread, so do this here.
+            m_queue.Clear(); // what's already there, clear it
+            // Note: fg thread might just have submitted another item before m_hasException was set.
+            // That is OK. Worker thread will do one more round, only to find the queue empty already.
+            return false;
         }
     public:
-        void Submit(WorkItem&& item)
+        // before submitting the first thing in a run, call Reset()
+        // If there is still a dangling operation, it will be terminated, and its error code ignored.
+        void Reset()
         {
-            m_queue.EmplaceBack(move(item));
-            NotifyWorkerOfStateChange();
+            m_hasException = true; // if still some bg activity then tell MTDoWork() to skip all of that
+            NotifyWorkerOfConsumerStateChange(); // (not sure if it is needed, but won't harm)
+            while (Pending() > 0)  // and wait until all operations have ceased.
+                WaitForWorkerStateChange(); // note: This will re-throw any exception from the worker
+            // The m_queue items are removed after bg thread has complete them, so at this point we are sure the bg thread is idle.
+            // now reset the thread state.
+            Base::Reset(); // reset thread. This really just starts it if it is not there yet.
+            m_hasException = false; // if still some bg activity then skip all of that
+            m_exception = nullptr;
         }
-        size_t Pending() const { return m_queue.Size(); }
+        // after the last submission, and before accessing any resulting m_value, call Join()
+        // In case of an error, this will forward the error.
         void Join()
         {
             //fprintf(stderr, "### QUEUE SIZE=%d\n", (int)s_workerThread.Pending()), fflush(stderr);
-            NotifyWorkerOfStateChange();
+            NotifyWorkerOfConsumerStateChange();
             // wait until all done
             while (Pending() > 0)
                 WaitForWorkerStateChange(); // note: This will re-throw any exception from the worker
+            // if error then pass to caller
+            if (m_hasException)
+                rethrow_exception(m_exception);
         }
+        // main operation, call for each work item
+        void Submit(WorkItem&& item)
+        {
+            if (m_hasException) // if in error state, ignore it
+                return;
+            m_queue.EmplaceBack(move(item));
+            NotifyWorkerOfConsumerStateChange();
+        }
+        size_t Pending() const { return m_queue.Size(); }
     };
     // methods that run on worker thread
     // get the value of an input Variable, with full redirection
@@ -1507,7 +1543,6 @@ private:
 public:
     Memoizer()
     {
-        s_workerThread.WakeUp(); // start thread if presently none
         // BUGBUG: The bg thread can theoretically be used from multiple consuming threads.
         //         But they share the queue. Hence, if an exception is thrown, it is not clear
         //         how the queue should be cleaned up, and how all consumers receive the exception.
@@ -1516,8 +1551,8 @@ public:
     }
     ~Memoizer()
     {
-        s_workerThread.Join(); // wait for bg thread to complete all pending work
-        // Note: The queue is expected to be empty when destructing, except in case of an exception. We could try to clear the queue just in case.
+        s_workerThread.Reset(); // wait for bg thread to complete all pending work
+        // Note: The queue is expected to be empty when destructing, except in case of an exception
     }
     // submit a Function evaluation
     void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
@@ -1531,13 +1566,17 @@ public:
             logSpliceAsGather
         });
 #if 0   // for testing: simulate sync operation via the bg thread
-        WaitForCompletion();
+        s_workerThread.Join();
 #endif
     }
-    // wait for all submitted work to be completed
-    void WaitForCompletion()
+    // enclose all usage in these two
+    void Begin()
     {
-        s_workerThread.Join();
+        s_workerThread.Reset();
+    }
+    void End() // sync with thread and catch its error state if any
+    {
+        s_workerThread.Join(); // will throw any caught error
     }
     // temporarily, the arena is also used from outside
     // Once we go fully multi-threaded, then this should no longer be exposed.
@@ -4271,6 +4310,7 @@ public:
         cudaStatsGuardInit.Stop();
         // phase 2:
         //  - compute the entire graph
+        m_memoizer.Begin(); // sync the worker thread at this point in time, for error handling
         while (!m_schedule.empty()) // main computation loop over all operations
         {
             // select the "best" amongst the scheduled op batches
@@ -4305,9 +4345,16 @@ public:
         }
         cudaStatsGuardForward.Stop(); // this measures the auto-batching process, which submits actual computation to a bg thread
         CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward bg thread hangover", 3);
-        m_memoizer.WaitForCompletion(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
-        Memoizer::MTCacheAndGetValue(fields); // force-flush a potential final lazily-indexed value
+
+        // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
+        // Until this is completed, the m_value fields are not filled in yet.
+        m_memoizer.End();
+        // now all m_values that were submitted for are filled in
+        // the final m_value may be a reshape, which the bg thread would not have filled in yet, as those are done lazily. Do it now if needed.
+        Memoizer::MTCacheAndGetValue(fields); // (note: this is a view op that costs nearly nothing) --TODO: It may make a copy in the future, if the result is not memory-contiguous.
+
         cudaStatsGuardCalc.Stop(); // this measures the bg thread; specifically, how much longer it needs after the fg thread has submitted the last item
+
         fail_if(!fields.m_value, "BatchedForward process did not produce a value??");
 #if 0   // this syncs the GPU before backprop, wasting CPU cycles
         CudaStatsGuard cudaStatsGuardGPU(PrimitiveOpType::Exp/*misusing this for actual op*/, L"batched forward gpu", 3);
@@ -5096,6 +5143,7 @@ public:
         //  - root is a m_redirection
         // first get the forward computation, batching, etc. done if not yet
         BatchedForward(root);
+        // note: if BatchedForward runs out of GPU RAM, then this call will have thrown an exception
 
         ResetCudaStats(/*updateCounter=*/false); // false means keep the same logging dis/enable conditions as Forward
         CudaStatsGuard cudaStatsGuardBackward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched backward", 3);
@@ -5112,11 +5160,14 @@ public:
         // --- Phase 1: form the inverted backprop graph
         //  - set up the m_consumer fields to form the inverted backprop graph
         //  - this will also short-circuit chains of see-through ops (in-place, as an equivalence transform)
+        // Note: We may consider to do this phase concurrently with BatchedForward's memoization thread.
+        // This will require to not call End() in BatchedForward(). We'd need to verify that RPrepareBackwardGraph()
+        // does not access m_value fields (nor can any other part in this phase), as those are populated by the bg thread.
+        // For the Marian scenario, doing this concurrently would not save much time, but that may be different for a real auto-batched scenario.
         CudaStatsGuard cudaStatsGuardInit(PrimitiveOpType::LabelsToGraph/*misusing this for graph initializing*/, L"backward init", 3);
         m_visitorTag.Begin();
         // first set it up for the Parameters for which we have requested a gradient
         // This way we won't backprop into gradients of Parameters that we did not ask for.  --TODO: implement this
-        // BUGBUG:  --TODO: What did this BUGBUG comment want to tell me?? It's empty!
         for (auto& kv : gradients)
         {
             auto& gradFields = GetGradientFieldsForBackprop(ResetInputGradient(kv.first), /*firstTimes=*/true);
@@ -5125,7 +5176,7 @@ public:
             RPrepareBackwardGraph(gradFields, /*userOwnsGradients=*/true, beta);
             // BUGBUG: ^^ userOwnsGradients won't work correctly if one Var in gradients[] is an input to another
         }
-        // now build the graph. We use visited information for the gradients to infer our own needsGradient flag  --TODO: No, not done yet.
+        // now build the backward graph. We use visited information for the gradients to infer our own needsGradient flag  --TODO: No, not done yet.
         auto& rootGradFields = GetGradientFieldsForBackprop(ResetInputGradient(root), /*firstTimes=*/true);
         if (!m_visitorTag.Visited(rootGradFields.m_visitedTag)) // (A crazy user may have passed root itself in gradients[]. That is OK.)
             RPrepareBackwardGraph(rootGradFields);
@@ -5153,6 +5204,7 @@ public:
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
+        m_memoizer.Begin(); // reset bg thread
         for (auto& kv : gradients)
         {
             auto& gradFields = GetGradientFieldsForBackprop(kv.first);
@@ -5164,14 +5216,18 @@ public:
             kv.second = kv.first.m_dataFields->m_gradient;
 
         cudaStatsGuardBackward.Stop(); // this measures the backprop process, which submits actual computation to GPU, with occasional (undesired) internal syncs
-        //CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward bg thread hangover", 3);
-        //m_memoizer.WaitForCompletion(); // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
-        //cudaStatsGuardCalc.Stop(); // this measures the bg thread; specifically, how much longer it needs after the fg thread has submitted the last item
+
+        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward bg thread hangover", 3);
+
+        m_memoizer.End(); // let CUDA submission thread complete its submitting work
+        // At this point, no more CUDA submissions will be made, but the CUDA ops themselves should still be ongoing.
+
+        cudaStatsGuardCalc.Stop(); // this measures the bg thread; specifically, how much longer it needs after the fg thread has submitted the last item
+
         // log stats
-        // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
         ShowCudaStats();
 
-        // note: we will leave the m_consumers fields dangling, and reset them upon next use
+        // note: we will leave the m_consumers fields dangling, and reset them upon next call to Backward() (which users are not meant to do)
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedBackward: %d bp calcs + %d views + %d gathers + %d scatters + %d set-zeroes, %d skipped matmuls for %d ops (total %d inputs)\n",
                 (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBatchedBackpropToViews,
