@@ -300,6 +300,15 @@ namespace CNTK
             UpdateAcyclicReferences();
         }
 
+        PrimitiveFunction(PrimitiveOpType op, InputsVectorType&& inputs, Dictionary&& functionConfig, const std::wstring& functionName = std::wstring())
+            : Function(std::move(inputs), std::move(functionConfig), functionName),
+            m_op(op),
+            m_profiler(CurrentDynamicProfiler())
+        {
+            // set inputs' acyclic strong references if possible
+            UpdateAcyclicReferences();
+        }
+
         PrimitiveFunction(PrimitiveOpType op, const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& functionName = std::wstring())
             : Function(input0, input1, std::move(functionConfig), functionName),
             m_op(op),
@@ -428,7 +437,7 @@ namespace CNTK
         }
 
     public:
-        PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
+        PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = std::wstring())
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, std::wstring())//GenerateUid(op))
         {}
 
