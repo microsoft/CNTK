@@ -1438,16 +1438,16 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // Note: Without logging, there is no GPU-CPU transfer.
         if (logThisMb && communicator->CurrentWorker().IsMain())
         {
-            fprintf(stderr, "%5d:   loss, PPL = ", (int)mbCount);
+            fprintf(stderr, "%5d:   ", (int)mbCount);
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
-                fprintf(stderr, "[smoothed] %4.2f, ### %8.2f ### [this] ", smoothedLossVal, exp(smoothedLossVal));
+                fprintf(stderr, "[smoothed] L=%4.2f @ %d, PPL=%8.2f [this] ", smoothedLossVal, (int)totalLabels, exp(smoothedLossVal));
             }
             else
                 fprintf(stderr, "[partial] ");
             let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
-            fprintf(stderr, "%9.7f * %d, %6.3f, seenLabels=%d, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel), (int)totalLabels);
+            fprintf(stderr, "L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
             if (isFinalPartialBatch)
             {
                 let elapsed = updateTimer.ElapsedSeconds(); // elapsed time between updates
