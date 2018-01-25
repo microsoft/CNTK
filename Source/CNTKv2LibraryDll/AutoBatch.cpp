@@ -4629,6 +4629,7 @@ public:
 
     // helper to batch an array of NDArrayViews of the same rank along either the last or into a new axis
     // TODO: do this with a lambda so we can go straight into gatherBatchResultDims
+    // Only used for backprop so far.
     NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputValues, size_t axis, size_t batchDim)
     {
         let& inputValue0 = *inputValues[0];
@@ -4642,7 +4643,18 @@ public:
             gatherBatchResultDims[axis] = batchDim; // stacking
         auto out = m_memoizer.Arena().NewNDArrayView(gatherBatchResultDims, inputValue0.GetDataType(), inputValue0.GetStorageFormat(), inputValue0.Device());
         m_stats.numBackpropGathers++;
-        return move(NDArrayView::GatherBatch(inputValues, (int)axis, move(out)));
+
+        CudaStats* cudaStatsPtr = nullptr;
+        if (ShouldLogMemoizeStats())
+        {
+            cudaStatsPtr = BeginCudaStats(PrimitiveOpType::Gather, nullptr, /*category=*/out->IsSparse() ? 1 : 0, out->Shape().TotalSize(/*check=*/false), out->Device());
+        }
+
+        auto res = NDArrayView::GatherBatch(inputValues, (int)axis, move(out));
+
+        EndCudaStats(cudaStatsPtr, out->Device());
+
+        return res;
     }
 
     typedef Internal::AutoBatchConsumer AutoBatchConsumer; // TODO: shouldn't this be done with using?
@@ -4850,8 +4862,18 @@ public:
         }
 
         // backprop into all inputs
+        CudaStats* cudaStatsPtr = nullptr;
+        if (ShouldLogMemoizeStats())
+        {
+            bool logSpliceAsGather = true; // TODO
+            let logAsOp = (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather) ? PrimitiveOpType::ScatterPacked : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
+            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, /*category=dense*/0, outputFields.m_shape.TotalSize(/*check=*/false), outputFields.m_gradient->Device());
+        }
+
         let& outputGradient = outputFields.m_gradient; // this is the incoming batch of gradients
         NDArrayView::ScatterBatch(outputGradient, inputGradients, (size_t)f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex(), beta);
+
+        EndCudaStats(cudaStatsPtr, outputFields.m_gradient->Device());
 #endif
         m_stats.numBackpropScatters++;
     }
@@ -4904,11 +4926,21 @@ public:
         inputValues[0] = nullptr;
         inputValues[1] = rightBatch.get();
         let gradient = CacheAndGetGradientView(input0, DetermineGradientStorageType(f0, 0));
+
+        CudaStats* cudaStatsPtr = nullptr;
+        if (ShouldLogMemoizeStats())
+        {
+            cudaStatsPtr = BeginCudaStats(f0.m_op, nullptr, /*category=*/gradient.view->IsSparse() ? 1 : 0, input0.Shape().TotalSize(/*check=*/false), gradient.view->Device());
+        }
+
         PrimitiveFunction::BackpropTo(/*outputGradient=*/outGradBatch.get(),      // incoming gradient from top...
                                       /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
                                       /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
                                       gradient.view, gradient.beta, f0);          // ...into here
         m_stats.numBatchedBackpropToCalls++;
+
+        EndCudaStats(cudaStatsPtr, gradient.view->Device());
+
 #if 0   // debug the actual values
         Memoizer::LogFunction(f0, f0.m_profiler);
         gradient.view->LogToFile((input0.Name() == L"" ? f0.OpName() : input0.Name()) + L"_" + to_wstring(0), stderr);
