@@ -32,8 +32,8 @@ using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
 //#define LOG_DETAILS     // if defined, log all forward and backward operations
-//#define LOG_STATS         // if defined, log statistics (#operations)
-#define DETAILED_STATS    // if defined, print detailed statistics for function calls and operations
+//#define LOG_STATS         // if defined, log high-level statistics (#operations)
+#define DETAILED_STATS    // if defined, print detailed statistics (counts of function calls and operations)
 //#define LOG_GPU         // if defined, profile the GPU (warning: this will disturb the CPU measurements)
 #define NUM_MBS_TO_LOG 4
 
@@ -87,14 +87,14 @@ static const char* compilationOptionsAsString =
     "BATCHED_BACKPROP "
     ;
 
-#ifdef LOG_STATS
+#ifdef DETAILED_STATS
 static size_t logMemoizeStatsPeriod = 500;
 static size_t logMemoizeStatsCounter = logMemoizeStatsPeriod - 2; // counts up to logMemoizeStatsPeriod and wraps. We log if it is 0, starting with the second MB.
 #else
 static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
 #endif
-static bool ShouldLogMemoizeStats()     { return logMemoizeStatsCounter < NUM_MBS_TO_LOG; }
+static inline bool ShouldLogMemoizeStats()     { return logMemoizeStatsCounter < NUM_MBS_TO_LOG; }
 static inline bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter & 1; }
 //static inline bool ShouldLogMemoizeStatsCUDA() { return true;  }
 //#ifdef LOG_GPU
