@@ -94,7 +94,14 @@ namespace CNTK
         Acos = 82,
         Pad = 83,
         Crop = 84,
-        // New op types should only be appended to the end of this list 
+        // New op types should only be appended to the end of this list at this point
+        // The following are Dynamite-only operators. As merging with master will move these back, don't persist graphs using these.
+        Affine,                     // W dot x + b
+        TransposeAffine,            // W^T dot x + b
+        ElementAffine,              // s * x + b
+        InverseStandardDeviation,   // (ReduceMean((x-x0)^2) + eps)^0.5
+        NormalizeDenormalize,       // (x - x0) * s0 * s1 + x1
+        ScaleAndShift,              // x * scale + shift   (constant scalars)
         UnknownOP
         // and UnknownOP should always be last.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)

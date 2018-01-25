@@ -4266,6 +4266,7 @@ namespace CNTK
         CNTK_API Function(const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& name);
         CNTK_API Function(const Variable& input0, Dictionary&& functionConfig, const std::wstring& name);
         // move constructor where everything is prepared outside; used in auto-batching
+        CNTK_API Function(InputsVectorType&& inputs, Dictionary&& functionConfig, const std::wstring& name);
         Function(InputsVectorType&& inputs, Dictionary&& functionConfig/*, std::wstring&& name, std::wstring&& uid*/);
 
         // --- data members ---
@@ -4579,10 +4580,18 @@ namespace CNTK
         return Minus(leftOperand, rightOperand);
     }
 
+    ///
+    /// Create an instance of the CNTK operator to compute (x * scale + shift) where scale and shift are scalar constants.
+    /// Use this form to avoid creating intermediate Constant() objects for this common form of expression.
+    ///
+    CNTK_API FunctionPtr ScaleAndShift(const Variable& x, double scale, double shift, const std::wstring& name = std::wstring());
+
+    ///
     /// Create an instance of the CNTK built-in elementwise tensor operation that computes the log of the sum of the exponentials of the specified input operands.
     ///
     CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
+    ///
     /// Create an instance of the CNTK built-in elementwise tensor operation that computes the leftOperand raised to the power of the right operand.
     ///
     CNTK_API FunctionPtr Pow(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
@@ -4596,6 +4605,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in inner-product operation on specified tensor input operands.
     ///
     CNTK_API FunctionPtr InnerProduct(const Variable& leftOperand, const Variable& rightOperand, const Axis& axis, const std::wstring& name = std::wstring());
+
+    ///
+    /// Create an instance of the CNTK operation equivalent to (ElementTimes(leftFactor, rightFactor) + additiveTerm).
+    ///
+    CNTK_API FunctionPtr ElementAffine(const Variable& leftFactor, const Variable& rightFactor, const Variable& additiveTerm, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise division operation on specified tensor input operands.
@@ -4667,6 +4681,27 @@ namespace CNTK
         return Times(leftOperand, rightOperand, /*outputRank =*/ 1, name);
     }
 
+    CNTK_API FunctionPtr Affine(const Variable& W, const Variable& x, const Variable& b, size_t outputRank, int inferInputRankToMap, const std::wstring& name = std::wstring());
+
+    ///
+    /// Create an instance of the CNTK operation equivalent to Times(W, x) + b.
+    /// This operator needs half the memory compared to writing it out explicitly.
+    ///
+    inline FunctionPtr Affine(const Variable& W, const Variable& x, const Variable& b, size_t outputRank, const std::wstring& name = std::wstring())
+    {
+        return Affine(W, x, b, outputRank, TimesNoInferredInputRank, name);
+    }
+
+    ///
+    /// Create an instance of the CNTK built-in tensor multiplication operation with the specified input operands.
+    /// TODO: Specify the constraints on the shapes of the operands.
+    /// TODO: Document inferInputRankToMap
+    ///
+    inline FunctionPtr Affine(const Variable& W, const Variable& x, const Variable& b, const std::wstring& name = std::wstring())
+    {
+        return Affine(W, x, b, /*outputRank =*/ 1, name);
+    }
+
     ///
     /// Create an instance of the CNTK built-in matrix multiplication operation with the transpose of the left input operand
     /// and the specified right operand. Only accepts left operands of ranks 1 or 2.
@@ -4684,6 +4719,16 @@ namespace CNTK
         return TransposeTimes(leftOperand, rightOperand, /*outputRank =*/ 1, name);
     }
 
+    CNTK_API FunctionPtr TransposeAffine(const Variable& W, const Variable& x, const Variable& b, size_t outputRank, const std::wstring& name = std::wstring());
+
+    ///
+    /// Create an instance of the CNTK operation equivalent to TransposeTimes(W, x) + b.
+    /// This operator needs half the memory compared to writing it out explicitly.
+    ///
+    inline FunctionPtr TransposeAffine(const Variable& W, const Variable& x, const Variable& b, const std::wstring& name = std::wstring())
+    {
+        return TransposeAffine(W, x, b, /*outputRank =*/ 1, name);
+    }
 
     ///
     /// Create an instance of the CNTK built-in operation to compute the cosine distance for the specified input operands.
@@ -4860,7 +4905,14 @@ namespace CNTK
     /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr ReduceProd(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-    //multiple axes reduction below:
+
+    ///
+    /// Create an instance of the CNTK to peration that computes Pow(ReduceMean(Sqr(x - mean)) + epsilon, -0.5) along the specified axis.
+    /// This uses significantly less memory than the explicit expression.
+    ///
+    CNTK_API FunctionPtr ReduceInvStdDev(const Variable& x, const Variable& mean, const Variable& epsilon, const Axis& axis, const std::wstring& name = L"");
+
+    // multiple axes reduction below:
 
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axes
@@ -4894,6 +4946,19 @@ namespace CNTK
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
+
+    ///
+    /// Create an instance of the CNTK operation that computes Pow(ReduceMean(Sqr(x - mean)) + epsilon, -0.5) along the specified axis.
+    /// This uses significantly less memory than the explicit expression.
+    ///
+    CNTK_API FunctionPtr ReduceInvStdDev(const Variable& x, const Variable& mean, const Variable& epsilon, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK operation that computes (x - x0) * s0 * s1 + x1.
+    /// This is useful as part of normalization operations like LayerNormalization.
+    ///
+    CNTK_API FunctionPtr NormalizeDenormalize(const Variable& x, const Variable& x0, const Variable& s0, const Variable& s1, const Variable& x1, const std::wstring& name = L"");
+
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name = std::wstring());
 
     ///
