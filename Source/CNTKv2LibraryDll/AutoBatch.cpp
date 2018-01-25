@@ -89,7 +89,7 @@ static const char* compilationOptionsAsString =
 
 #ifdef LOG_STATS
 static size_t logMemoizeStatsPeriod = 500;
-static size_t logMemoizeStatsCounter = logMemoizeStatsPeriod - 1; // counts up to logMemoizeStatsPeriod and wraps. We log if it is 0, starting with the second MB.
+static size_t logMemoizeStatsCounter = logMemoizeStatsPeriod - 2; // counts up to logMemoizeStatsPeriod and wraps. We log if it is 0, starting with the second MB.
 #else
 static size_t logMemoizeStatsPeriod = SIZE_MAX;
 static size_t logMemoizeStatsCounter = 1;
@@ -787,7 +787,7 @@ struct CudaStatsGuard
     ~CudaStatsGuard() { EndCudaStats(cudaStatsPtr); }
 };
 // and this at the end of when you want to dump the log
-void ShowCudaStats(bool updateCounter = false) // TODO: updateCounter flag is at the wrong place. Should be in Reser or something
+void ShowCudaStats()
 {
     if (ShouldLogMemoizeStats())
     {
@@ -816,19 +816,17 @@ void ShowCudaStats(bool updateCounter = false) // TODO: updateCounter flag is at
         cudaStats.clear();
     }
     // control how often this is active
-#if 0 // hack for now, to get synced logs for fw and bw
-    if (!updateCounter)
-        return;
-#endif
-
-    logMemoizeStatsCounter++;
-    if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
-        logMemoizeStatsCounter = 0;
 }
 // call this at start to eliminate potential carry-over from the previous minibatch
-void ResetCudaStats()
+void ResetCudaStats(bool updateCounter)
 {
     cudaStats.clear();
+    if (updateCounter)
+    {
+        logMemoizeStatsCounter++;
+        if (logMemoizeStatsCounter == logMemoizeStatsPeriod)
+            logMemoizeStatsCounter = 0;
+    }
 }
 #else // no DETAILED_STATS. Makes very little runtime difference.
 typedef void CudaStats;
@@ -843,7 +841,7 @@ struct CudaStatsGuard
 };
 // and this at the end of when you want to dump the log
 void ShowCudaStats() { }
-void ResetCudaStats() { }
+void ResetCudaStats(bool) { }
 #endif // DETAILED_STATS
 
 // ---------------------------------------------------------------------------
@@ -4261,16 +4259,16 @@ public:
 #ifdef LOG_DETAILS
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { Memoizer::LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"r "); });
 #endif
-        ResetCudaStats();
+        ResetCudaStats(/*updateCounter=*/true);
         CudaStatsGuard cudaStatsGuardForward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched forward", 3);
         // phase 1 (all done in the same function call):
         //  - create our graph overlay, esp. short-circuit see-through ops
         //  - mark all nodes w.r.t. how many inputs they are waiting for before being computable
         //  - prepare and schedule first set
-        auto* cudaStatsPtr = BeginCudaStats(PrimitiveOpType::LabelsToGraph/*misusing this for graph initializing*/, L"forward init", 3);
+        CudaStatsGuard cudaStatsGuardInit(PrimitiveOpType::LabelsToGraph/*misusing this for graph initializing*/, L"forward init", 3);
         m_visitorTag.Begin();
         RPrepareForwardGraphAndSchedule(v, 0);
-        EndCudaStats(cudaStatsPtr);
+        cudaStatsGuardInit.Stop();
         // phase 2:
         //  - compute the entire graph
         while (!m_schedule.empty()) // main computation loop over all operations
@@ -4319,7 +4317,7 @@ public:
 #endif
         // log stats
         // TODO: clean this all up, also the SyncDevice() function which no longer does what its name says.
-        ShowCudaStats(/*updateCounter=*/false);
+        ShowCudaStats();
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward:  %d fw calcs + %d gathers + %d views, %d CSEs, in nominally %d+%ds ops (%d inlined) on %d known values\n",
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneGatherOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numCommonSubexpressionsEliminated,
@@ -5099,7 +5097,7 @@ public:
         // first get the forward computation, batching, etc. done if not yet
         BatchedForward(root);
 
-        ResetCudaStats();
+        ResetCudaStats(/*updateCounter=*/false); // false means keep the same logging dis/enable conditions as Forward
         CudaStatsGuard cudaStatsGuardBackward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched backward", 3);
 
         // if user passed NDArrayViewPtrs for the gradients, then implant those
@@ -5114,6 +5112,7 @@ public:
         // --- Phase 1: form the inverted backprop graph
         //  - set up the m_consumer fields to form the inverted backprop graph
         //  - this will also short-circuit chains of see-through ops (in-place, as an equivalence transform)
+        CudaStatsGuard cudaStatsGuardInit(PrimitiveOpType::LabelsToGraph/*misusing this for graph initializing*/, L"backward init", 3);
         m_visitorTag.Begin();
         // first set it up for the Parameters for which we have requested a gradient
         // This way we won't backprop into gradients of Parameters that we did not ask for.  --TODO: implement this
@@ -5139,6 +5138,7 @@ public:
             if (!gradFields.m_needsGradient) // (we could also just leave the gradient 0)
                 LogicError("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False."); // such as a Constant. Actually, why? User can certainly get that if desired.
         }
+        cudaStatsGuardInit.Stop();
         // --- Phase 2: backprop through the inverted backprop graph
         //  - perform backprop operation, by depth-first traversal of inverted backprop graph starting from gradients
         m_visitorTag.Begin();
