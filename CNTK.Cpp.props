@@ -131,6 +131,13 @@
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
 
+  <PropertyGroup Condition="Exists('$(HALIDE_PATH)')">
+    <HalidePath>$(HALIDE_PATH)</HalidePath>
+    <HalideInclude>$(HALIDE_PATH)\include;</HalideInclude>
+    <HalideLibPath>$(HALIDE_PATH)\Release;</HalideLibPath>
+    <HalideLib>halide.lib</HalideLib>
+  </PropertyGroup>
+ 
   <!-- TODO warn if ConfigurationType not (yet) defined -->
 
   <PropertyGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
