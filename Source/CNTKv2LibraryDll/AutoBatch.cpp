@@ -816,7 +816,7 @@ void ShowCudaStats(bool updateCounter = false) // TODO: updateCounter flag is at
         cudaStats.clear();
     }
     // control how often this is active
-#if 1 // hack for now, to get synced logs for fw and bw
+#if 0 // hack for now, to get synced logs for fw and bw
     if (!updateCounter)
         return;
 #endif
