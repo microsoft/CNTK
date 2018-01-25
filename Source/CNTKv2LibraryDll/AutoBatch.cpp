@@ -1325,7 +1325,8 @@ class InternalVariable::Memoizer
     struct WorkItem
     {
         Memoizer* us;
-        bool isForward; // is forward prop
+        size_t backpropTo;         // backprop: which input to backprop into; forward: SentinelForForward
+        static const size_t SentinelForForward = SIZE_MAX;
         PrimitiveFunctionPtr fPtr; // the function to execute
         bool isFree;
         bool logSpliceAsGather;
@@ -1535,7 +1536,7 @@ private:
     }
     void MTProcessNextItem(const WorkItem& item)
     {
-        if (item.isForward)
+        if (item.backpropTo == WorkItem::SentinelForForward)
             MTForward(*item.fPtr, item.isFree, item.logSpliceAsGather);
         else
             LogicError("MTProcessNextItem: backprop not yet implemented");
@@ -1560,7 +1561,7 @@ public:
         s_workerThread.Submit(WorkItem
         {
             this,
-            /*isForward=*/ true,
+            /*backpropTo=*/ WorkItem::SentinelForForward,
             static_pointer_cast<PrimitiveFunction>(f.shared_from_this()),
             isFree,
             logSpliceAsGather
