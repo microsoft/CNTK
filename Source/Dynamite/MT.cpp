@@ -1084,7 +1084,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     {
         double lr1 = lr0 * multiplier;
         //fprintf(stderr, "Base Learning Rate = %.16f\n", lr1), fflush(stderr);
-        return TrainingParameterPerSampleSchedule(vector<double>{ lr1, lr1/2, lr1/4, lr1/8 }, epochSize);
+        return TrainingParameterPerSampleSchedule(vector<double>{ lr1/*, lr1/2, lr1/4, lr1/8*/ }, epochSize);
     };
     if (learnerType == "sgd")
     {
@@ -1446,7 +1446,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             }
             else
                 fprintf(stderr, "[partial] ");
-            let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
+            let lossPerLabel = isFinalPartialBatch ? mbLoss->AsScalar<double>() / numScoredLabels : 0.0; // avoid GPU sync altogether
             fprintf(stderr, "L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
             if (isFinalPartialBatch)
             {
