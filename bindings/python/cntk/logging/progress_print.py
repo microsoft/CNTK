@@ -527,7 +527,7 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
             # This allows to easier correlate the training and test metric graphs in TensorBoard.
             self.write_value('minibatch/test_avg_metric', avg_metric, self.total_training_updates())
         else:
-            self.write_value('summary/test_avg_metric', avg_metric, self.summaries)
+            self.write_value('summary/test_avg_metric', avg_metric, summaries)
 
 
 class TrainingSummaryProgressCallback(cntk_py.ProgressWriter):
