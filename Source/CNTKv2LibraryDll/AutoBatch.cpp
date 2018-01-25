@@ -1547,13 +1547,11 @@ public:
         // BUGBUG: The bg thread can theoretically be used from multiple consuming threads.
         //         But they share the queue. Hence, if an exception is thrown, it is not clear
         //         how the queue should be cleaned up, and how all consumers receive the exception.
-        //         In particular if one receives the exception, anmd while another is not looking,
-        //         restarts the thread. The queue will be in inconsistent state.
+        //         So for now, use this only from one thread.
     }
     ~Memoizer()
     {
-        s_workerThread.Reset(); // wait for bg thread to complete all pending work
-        // Note: The queue is expected to be empty when destructing, except in case of an exception
+        s_workerThread.Reset(); // wait for bg thread to flush all pending work
     }
     // submit a Function evaluation
     void SubmitForward(PrimitiveFunction& f, bool isFree, bool logSpliceAsGather)
@@ -3698,8 +3696,10 @@ class InternalVariable::AutoBatch
                 expectedBatchedInputShapeVec.push_back(batchDim);
                 // insert a Reshape() op
                 let batchedInputTotalSizePre = batchedInput.Shape().TotalSize();
+                let batchedInputDataType = batchedInput.GetDataType();
+                let batchedInputIsSparse = batchedInput.IsSparse();
                 batchedInput = CreateAndMemoizeOpAsInput(PrimitiveOpType::Reshape, Function::InputsVectorType(nullptr/*1*/, move(batchedInput)), Dictionary(),
-                                                         expectedBatchedInputShapeVec, batchedInput.GetDataType(), batchedInput.IsSparse(),
+                                                         expectedBatchedInputShapeVec, batchedInputDataType, batchedInputIsSparse,
                                                          //f0.m_name,
                                                          f0.m_profiler, L"#,"/*gatherInputs[0]*/, /*isFree=*/true);
                 let batchedInputTotalSizePost = batchedInput.Shape().TotalSize();
@@ -4187,9 +4187,11 @@ class InternalVariable::AutoBatch
                 //arg./*m_outputComposite*/m_acyclicOutputPrimitiveReference = batchedOp;
 
                 // Reshape() here does not need the properties at this level anymore; output shape is sufficient
+                let argDataType = arg.GetDataType();
+                let argIsSparse = arg.IsSparse();
                 let reshapeOp = CreateAndMemoizeOp(PrimitiveOpType::Reshape,
                                                    Function::InputsVectorType(nullptr/*1*/, move(arg)), Dictionary(),
-                                                   batchedOutputShape, arg.GetDataType(), arg.IsSparse()/*, f0.m_name*/,
+                                                   batchedOutputShape, argDataType, argIsSparse/*, f0.m_name*/,
                                                    f0.m_profiler, L"*,"/*arg*/, /*isFree=*/true);
 
                 batchedOp = reshapeOp; // this is the result that we redistribute from to the individual consumers
@@ -4427,6 +4429,7 @@ public:
             // create a new one
             // TODO: allocate parameter gradients as separate objects
             gradFields.m_gradient = m_memoizer.Arena().NewNDArrayView(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
+            // BUGBUG: gradFields.m_value may not exist, once we optimize memory. Device should be passed in (borrowing from the incoming gradient from top)
             beta = 0.0; // has not been initialized (random section in arena)
             // if there is no redirect, then writing to the physical one is the same as writing to the cached one. Then we are done.
             if (inputFields.m_gradient)
@@ -4434,7 +4437,7 @@ public:
         }
 
         // we now have a physical one, but no cached view
-        // Reminder: cached view = physical  value |> Barrier >> Slice >> Reshape
+        // Reminder: cached view = physical value |> Barrier >> Slice >> Reshape
         // We must do this backwards. 
         let sliceRange = inputFields.m_redirection.m_sliceRange;
         auto gradient = gradFields.m_gradient;
@@ -4665,7 +4668,7 @@ public:
     }
 
     // back-propagate f's outputs' m_gradient to a specified input
-    // This is the standard path for all unbatched ops.
+    // This is the standard path for all ops which have no further batching beyond the forward pass.
     // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
     // Note that each input that is redirected should redirect the gradient into a slice in its lazy source.
     // If the target only has one consumer, pass viewAllowed. This will allow views for trivial gradients such as Plus.
@@ -4680,6 +4683,9 @@ public:
         let& outputFields = GetOutputFields(f); // result of f lives here; hence also the gradient we back-propagate
         fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
+
+        // the input's gradient will live on the same device as the incoming gradient from top
+        let& inputDevice = outputFields.m_gradient->Device();
 
         // get the TensorViews for the forward inputs to this function
         // TODO: Can we know which ones are actually needed? We could save some time. This info would be shared with a memory-sharing mechanism.
@@ -4698,6 +4704,14 @@ public:
         let op = f.m_op;
         if (viewAllowed && IsOpGradientViewable(op, index, outputFields, input))
         {
+            CudaStats* cudaStatsPtr = nullptr;
+            if (ShouldLogMemoizeStats())
+            {
+                bool logSpliceAsGather = false; // TODO
+                let logAsOp = (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
+                cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, /*category=viewOp*/2, input.Shape().TotalSize(/*check=*/false), inputDevice);
+            }
+
             // TODO: Splice can also be viewable, but is tricky, as the Scatter optimization conflicts with it. A Splice gradient is only viewable of all its inputs'
             //       gradients are viewable; since the Scatter call currently cannot exclude slices.
             //       Also we need to set up an elaborate view, possibly determine the starting offset.
@@ -4726,19 +4740,34 @@ public:
                 ReplaceWithReshapedViewIfNeeded(grad, redirectedInputFields.m_shape);
                 redirectedInputFields.m_gradient = move(grad); // and the redirected location. If it is the same, then this will do nothing.
             }
-            // Nota bene: This is a little scary. If this condition is not correct, and more gradients get accumulated
+            // Nota bene: This is a little scary. If this condition is not correct: When more gradients get accumulated
             // into this input, then those will get into the output as well, which would be incorrect. There is no good
             // way to ensure this.
+
+            EndCudaStats(cudaStatsPtr, inputDevice);
+
             m_stats.numBatchedBackpropToViews++;
             return;
         }
-        let gradient = CacheAndGetGradientView(input, DetermineGradientStorageType(f, 0));
+        let gradient = CacheAndGetGradientView(input, DetermineGradientStorageType(f, index));
+        // BUGBUG: This ^^ should use inputDevice. Currently it uses input[index]'s device. But that input may not exist, once we optimize. The one that always exists is outputGradientValue.
 
         // compute gradients for the desired input
         // backprop into the input
         // BUGBUG: (perf) In case of Reshape we currently make a copy, which is not needed --> see-through the op, and backprop through a reshaped view into Reshape's argument gradient?
+        CudaStats* cudaStatsPtr = nullptr;
+        if (ShouldLogMemoizeStats())
+        {
+            bool logSpliceAsGather = false; // TODO
+            let isSparse = DetermineGradientStorageType(f, index) != StorageFormat::Dense;
+            let logAsOp = (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
+            cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, /*category=*/isSparse ? 1 : 0, input.Shape().TotalSize(/*check=*/false), inputDevice);
+        }
+
         PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, op, f.m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, f);
         m_stats.numBatchedBackpropToCalls++;
+
+        EndCudaStats(cudaStatsPtr, inputDevice);
 #if 0   // debug the actual values
         Memoizer::LogFunction(f, f.m_profiler);
         gradient.view->LogToFile((input.Name() == L"" ? f.OpName() : input.Name()) + L"_" + to_wstring(index), stderr);
