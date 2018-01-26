@@ -49,7 +49,12 @@ public:
   Expr InverseMask(Expr mask) {
     // convert 0/1 mask to transformer style -inf mask
     auto ms = mask->shape();
+#if     0// def MOCKUP // we are running on the Marian-On-CntK Unified Platform
+    static const float infinity = 99999999.f; // isn't it?
+    mask = CNTK::ScaleAndShift(mask, infinity, -infinity);
+#else
     mask = (1 - mask) * -99999999.f;
+#endif
     return reshape(mask, {ms[-3], 1, ms[-2], ms[-1]}) ;
   }
 
