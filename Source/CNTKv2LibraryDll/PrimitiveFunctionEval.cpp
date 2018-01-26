@@ -627,12 +627,12 @@ namespace CNTK
             {
                 arg2 = inputValues[1 - i]; // arg1 is the incoming gradient from above
                 if (i == 0) // left input
-                    NDArrayView::MatrixProduct(/*transC=*/primitiveOp == PrimitiveOpType::TransposeTimes,
+                    NDArrayView::MatrixProduct(/*transC=*/(primitiveOp == PrimitiveOpType::TransposeTimes || primitiveOp == PrimitiveOpType::TransposeAffine),
                                               /*A=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transA=*/false,
                                               /*B=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transB=*/true,  alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
                 else // right input
                     NDArrayView::MatrixProduct(/*transC=*/false,
-                                              /*A=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
+                                              /*A=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transA=*/(primitiveOp != PrimitiveOpType::TransposeTimes && primitiveOp != PrimitiveOpType::TransposeAffine),
                                               /*B=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transB=*/false, alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
                 handled = true;
             }
