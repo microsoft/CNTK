@@ -570,20 +570,20 @@ public:
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
         m_invalidBatch = false;
-        try
-        {
+        /*try
+        {*/
             m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
                 Input(0)->Value() /*labels*/, *m_gammaFromLattice,
                 m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
                 Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
-        }
-        catch (...) 
-        {
-            // This is ugly, temp solution that we can live in short term, since SE fails rarely due to numerical instability
-            fprintf(stderr, "WARNING: Minibatch evaluation resulted in an exception. Skipping...\n");
-            m_gammaCalculator.init(m_hmm);
-            m_invalidBatch = true;
-        }
+        //}
+        //catch (...) 
+        //{
+        //    // This is ugly, temp solution that we can live in short term, since SE fails rarely due to numerical instability
+        //    fprintf(stderr, "WARNING: Minibatch evaluation resulted in an exception. Skipping...\n");
+        //    m_gammaCalculator.init(m_hmm);
+        //    m_invalidBatch = true;
+        //}
 
 #if NANCHECK
         Value().HasNan("SequenceWithSoftmaxNode");
