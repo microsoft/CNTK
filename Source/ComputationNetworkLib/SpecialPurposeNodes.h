@@ -463,9 +463,9 @@ public:
     // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        // Check if the forward pass resulted in a valid batch
-        if (m_invalidBatch)
-            return;
+        //// Check if the forward pass resulted in a valid batch
+        //if (m_invalidBatch)
+        //    return;
 
         // auto t_start_time = Timer::MilliSecondElapsed();
         // left Node must be a scalar
@@ -475,10 +475,17 @@ public:
         }
         else if (inputIndex == 1)
         {
-            FrameRange fr(Input(0)->GetMBLayout());
-            BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
-            MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+            if (m_invalidBatch)
+            {
+                Input(inputIndex)->Gradient().SetValue(0.0f);
+            }
+            else
+            {
+                FrameRange fr(Input(0)->GetMBLayout());
+                BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+                    Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold, m_invalidBatch);
+                MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+            }
 
 #ifdef _DEBUG
             Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
@@ -513,7 +520,7 @@ public:
 
     static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
                                        Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-                                       const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+                                       const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh, bool invalidBatch)
     {
 #if DUMPOUTPUT
         softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -521,9 +528,15 @@ public:
         gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif
-
-        inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
-        inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
+        if (invalidBatch)
+        {
+            inputGradientValues.SetValue(0.0f);
+        }
+        else 
+        {
+            inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
+            inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType)frameDropThresh);
+        }
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
 #endif
