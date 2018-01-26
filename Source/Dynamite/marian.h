@@ -5,6 +5,8 @@
 #ifndef __MARIAN_CNTK
 #define __MARIAN_CNTK
 
+#define MOCKUP // we are running on the Marian-On-CntK Unified Platform
+
 #include "CNTKLibrary.h"
 #include "Models.h" // for the helper functions
 #include "Layers.h" // for some functions missing in main CNTK, e.g. LogSoftmax
@@ -805,6 +807,7 @@ namespace marian
             return Dynamite::CrossEntropyWithSoftmax(o, CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0)), CNTK::Axis(0));
     }
 
+    // TODO: use Affine() to save memory
     static inline Expr affine(const Expr& x, const Expr& W, const Expr& b) { Expr y = CNTK::Times(W, x) + b; return Alias(y, L"Times(" + W.Name() + L"," + x.Name() + L")+(" + b.Name() + L")"); }
 
     static inline Expr scalar_product(const Expr& a, Expr b, keywords::axis_k ax = 0) { return CNTK::InnerProduct(a, b, mappers::ToCNTKAxis(a, ax)); }
@@ -834,7 +837,7 @@ namespace marian
         // TODO: add a Mean flag to InnerProduct
         auto var = InnerProduct(x0, x0, axis) / (float)x0.Shape().Dimensions().front();
         auto stdDev = Sqrt(var + eps);
-        auto xNorm = x0 / stdDev * gamma;
+        auto xNorm = x0 * (gamma / stdDev);
         //if (beta)
             xNorm = xNorm + beta;
         return xNorm;
