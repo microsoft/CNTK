@@ -1301,10 +1301,23 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
 
 
 
+
+
 double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, const size_t numPathsEMBR, std::vector<double>& vt_edge_weights) const
 {
+
+    struct PATHINFO
+    {
+        size_t count;
+        float WER;
+    };
+
+    std::map<string, PATHINFO> mp_path_info;
+    std::map<string, PATHINFO>::iterator mp_itr;
+
     std::vector<double> vt_path_weights;
     vt_path_weights.resize(vt_paths.size());
+    
 
     vector<size_t> path_ids;
     double sum_wer, avg_wer;
@@ -1323,6 +1336,21 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             if (!is_special_words[edges[vt_paths[i][j]].E]) path_ids.push_back(nodes[edges[vt_paths[i][j]].E].wid);
         }
         vt_path_weights[i] = compute_wer(wids, path_ids);
+        string pathidstr = "$";
+        for (size_t j = 0; j < path_ids.size(); j++) pathidstr += ("_" + path_ids[j]);
+        mp_itr = mp_path_info.find(pathidstr);
+        if (mp_itr != mp_path_info.end())
+        {
+            mp_itr->second.count++;
+        }
+        else
+        {
+            PATHINFO pathinfo;
+            pathinfo.count = 1;
+            pathinfo.WER = vt_path_weights[i];
+            mp_path_info.insert(pair<string, PATHINFO>(pathidstr, pathinfo));
+        }
+
         sum_wer += vt_path_weights[i];
     }
     avg_wer = sum_wer / vt_paths.size();
@@ -1345,7 +1373,13 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
         }
     }
+    
+    fprintf(stderr, "get_edge_weights: average_WER = %f \n", avg_wer);
 
+    for (mp_itr = mp_path_info.begin(); mp_itr != mp_path_info.end(); mp_itr++)
+    {
+        fprintf(stderr, "get_edge_weights: count = %d, WER = %f, pathidstr = %s \n", int(mp_itr->second.count), mp_itr->second.WER, mp_itr->first);
+    }
     return avg_wer;
 }
 
