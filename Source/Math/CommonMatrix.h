@@ -118,6 +118,7 @@ enum ElementWiseOperator
     opElementwiseProductWithPowExponentDerivative, /* a * b * log(c) */
     opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
     opAxBplusC, /* a * b + c */
+    opAxBxC, /* a * b * c */
     opAminusCoverB, /* (a-c) / b + c */
     opSubtractQuotient, /* a - (b ? b / c : 0)) */
     opNormalizeMeanVar, /* (a - b) / (eps + sqrt(max(c,0))) */
@@ -126,6 +127,7 @@ enum ElementWiseOperator
     opAxBxCoverD, /* a * b * c / d */
     opAminusBtimesCplusD, /* (a-b)*c+d */
     opMVNormFromStats, /* (x, sqrSum, sum, count) -> (x-mu)/sigma */
+    opAminusBxCxD, /* (a-b) * c * d */
     // Note: not all that's implemented in CNTK ComputationNodes has a TensorView opcode yet
 };
 
@@ -208,6 +210,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithPowExponentDerivative); \
     Macro(ElementwiseProductWithPowBaseDerivative);     \
     Macro(AxBplusC);                                    \
+    Macro(AxBxC);                                       \
     Macro(AminusCoverB);                                \
     Macro(SubtractQuotient);                            \
     Macro(NormalizeMeanVar);
@@ -216,7 +219,8 @@ enum ElementWiseOperator
     Macro(AxBplusCxD);                                  \
     Macro(AxBxCoverD);                                  \
     Macro(AminusBtimesCplusD);                          \
-    Macro(MVNormFromStats);
+    Macro(MVNormFromStats);                             \
+    Macro(AminusBxCxD);
 
 #define ForAllElementWiseOps(Macro) ForAllNullaryOps(Macro) ForAllUnaryOps(Macro) ForAllBinaryOps(Macro) ForAllTernaryOps(Macro) ForAllQuaternaryOps(Macro)
 

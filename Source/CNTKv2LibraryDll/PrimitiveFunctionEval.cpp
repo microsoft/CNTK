@@ -186,6 +186,11 @@ namespace CNTK
             // special case since arg order of opClip is different
             NDArrayView::NumericOperation({ args[1], args[2], args[0] }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opClip, out, 0.0, reductionOp);
             break;
+        case PrimitiveOpType::NormalizeDenormalize: // (x - x0) * (s0 * s1) + x1
+            // currently in two steps since we don't support quinternary ops yet
+            NDArrayView::NumericOperation({ args[0], args[1], args[2], args[3] }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusBxCxD, out, 0.0, reductionOp);
+            NDArrayView::NumericOperation({ args[4]                            }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,        out, 1.0, reductionOp);
+            break;
             // nullary operations --these have no arguments, and generate data
         case PrimitiveOpType::RandomDistribution:
             {
@@ -771,6 +776,29 @@ namespace CNTK
                 op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
             else // factors are like ElementTimes
                 op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; arg2 = inputValues[1 - i];
+            break;
+        case PrimitiveOpType::NormalizeDenormalize: // (x - x0) * (s0 * s1) + x1
+            if (i == 4) // + x1
+                op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+            else if (i >= 2) // (x - x0) * g * s1 or s0
+            {
+                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(inputValues[0]     )->shared_from_this(),   // x
+                                                const_cast<NDArrayView*>(inputValues[1]     )->shared_from_this(),   // x0
+                                                const_cast<NDArrayView*>(outputGradientValue)->shared_from_this(),   // g
+                                                const_cast<NDArrayView*>(inputValues[5 - i] )->shared_from_this() }, // s1 or s0 (2->3, 3->2)
+                                              alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opAminusBxCxD, gradient, beta,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                handled = true;
+            }
+            else // x/x0: +/-g * (s0 * s1)
+            {
+                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradientValue)->shared_from_this(),   // g
+                                                const_cast<NDArrayView*>(inputValues[2]     )->shared_from_this(),   // s0
+                                                const_cast<NDArrayView*>(inputValues[3]     )->shared_from_this() }, // s1
+                                              (i == 0) ? alpha : -alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opAxBxC, gradient, beta,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                handled = true;
+            }
             break;
         case PrimitiveOpType::Clip:
             if (i == 0)

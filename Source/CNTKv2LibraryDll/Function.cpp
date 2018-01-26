@@ -2052,6 +2052,12 @@ namespace CNTK
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalProdReductionOpName, axis, name);
     }
 
+    FunctionPtr NormalizeDenormalize(const Variable& x, const Variable& x0, const Variable& s0, const Variable& s1, const Variable& x1, const std::wstring& name)
+    {
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::NormalizeDenormalize,
+                                         Function::InputsVectorType({ x, x0, s0, s1, x1 }), Dictionary(), name));
+    }
+
     FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable(L"operand");

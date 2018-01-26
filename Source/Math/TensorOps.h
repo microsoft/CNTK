@@ -369,6 +369,7 @@ DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
 DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? 0 : a * b * log_(c)); // same behavior as other toolkits
 DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
 DefTernaryOp(AxBplusC, a * b + c);
+DefTernaryOp(AxBxC, a * b * c);
 DefTernaryOp(AminusCoverB, (a - c) / b);
 DefTernaryOp(SubtractQuotient, a - (b ? b / c : 0));
 DefTernaryOp(NormalizeMeanVar, NormalizeMeanVar(/*x=*/a, /*mu=*/b, /*sigma2=*/c));
@@ -387,6 +388,7 @@ DefQuaternaryOp(AxBplusCxD, a * b + c * d);
 DefQuaternaryOp(AxBxCoverD, a * b * c * OpReciprocal(d));
 DefQuaternaryOp(AminusBtimesCplusD, (a - b) * c + d);
 DefQuaternaryOp(MVNormFromStats, NormalizeMeanVarFromStats(/*x=*/a, /*sqr sum=*/b, /*sum=*/c, /*count=*/d));
+DefQuaternaryOp(AminusBxCxD, (a - b) * c * d);
 
 #pragma pop_macro("DefQuaternaryOp")
 

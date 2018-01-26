@@ -418,7 +418,8 @@ namespace CNTK
                 case PrimitiveOpType::Clip:
                 case PrimitiveOpType::Select:
                 case PrimitiveOpType::ElementAffine:
-                    assert(m_inputs.size() == 3);
+                case PrimitiveOpType::NormalizeDenormalize:
+                    assert(m_inputs.size() == 3 + (m_op == PrimitiveOpType::NormalizeDenormalize));
                     outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);
                     break;
                 default:

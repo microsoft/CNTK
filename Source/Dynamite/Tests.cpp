@@ -193,6 +193,8 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     NDArrayView::LazilyCreateRNGState(rngState, SentinelValueForAutoSelectRandomSeed, device);
     vector<TensorViewTest> tests =
     {
+        // normalization
+        { { ValExpr((argValues[0] - argValues[1]) * argValues[2] * argValues[3] + argValues[4]), "NormalizeDenormalize" }, VarExpr(CNTK::NormalizeDenormalize(args[0], args[1], args[2], args[3], args[4])),{ { 13, 42 },{ 1, 42 }, { 1, 42 },{ 1, 42 },{ 1, 42 } } },
         // scalar operations
         { { ValExpr(argValues[0]                    + constScalar(  1)), "ScaleAndShift"               }, VarExpr(CNTK::ScaleAndShift(args[0],  1,     1  )),{ { 13, 42 } } }, // +1
         { { ValExpr(argValues[0] * constScalar(  2)                   ), "ScaleAndShift"               }, VarExpr(CNTK::ScaleAndShift(args[0],  2,     0  )),{ { 13, 42 } } }, // *2
