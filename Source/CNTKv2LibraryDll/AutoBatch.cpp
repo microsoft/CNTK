@@ -4956,47 +4956,6 @@ public:
         m_viewableConsumers          .clear();
         m_otherConsumers             .clear();
     }
-#if 0 // misguied attempt. Delete once the right solution works.
-    static bool IsMatrixGradient0Batchable(const PrimitiveFunction& f, const PrimitiveFunction& g)
-    {
-#if 0       // use 1 to disable batching of matrix gradients --BUGBUG: This is currently not functional.
-        return false;
-#else
-        // must be the same op (Times vs. TransposeTimes)
-        if (f.m_op != g.m_op)
-            return false;
-        // we compute leftGrad += outGrad @ right^T
-        let&   fOutShape = f.m_outputs.front().Shape().Dimensions();
-        let&   gOutShape = g.m_outputs.front().Shape().Dimensions();
-        let& fRightShape = f.m_inputs[1].Shape().Dimensions();
-        let& gRightShape = g.m_inputs[1].Shape().Dimensions();
-        let&   leftShape = f.m_inputs[0].Shape().Dimensions();
-        let    outRank =   fOutShape.size();
-        let   gOutRank =   gOutShape.size();
-        let  rightRank = fRightShape.size();
-        let gRightRank = gRightShape.size();
-        let   leftRank =   leftShape.size();
-        fail_if(leftShape != g.m_inputs.front().Shape().Dimensions(), "dimensions of matrix gradient don't match??");
-        if (outRank != gOutRank || rightRank != gRightRank)
-            return false; // rank not matching: stop batching right here (we could do better)
-        // the center 'reductionRank' dimensions get reduced over
-        if (outRank + rightRank - leftRank != 2) // if 2 then we reduce over a single batch axis
-            return false; // this is not a batch gradient; back out
-        // BUGBUG: This prevents from reducing over more complex map shapes.
-        //         We should reshape out and arg to flatten the map dims. Then they must match.
-        fail_if(fOutShape.back() != fRightShape.back() || gOutShape.back() != gRightShape.back(), "inner dimensions of matrix gradient don't match??");
-        // the two gradient ops match if all dimensions except for the batch dim match
-        for (size_t k = 0; k < outRank - 1; k++) // check outGrad
-            if (fOutShape[k] != gOutShape[k])
-                return false;
-        for (size_t k = 0; k < rightRank - 1; k++) // check right
-            if (fRightShape[k] != gRightShape[k])
-                return false;
-        // gradient is batchable
-        return true;
-#endif
-    }
-#endif
     void DetermineAndAddToBucket (const AutoBatchConsumer& c)
     {
         let* f = c.first;
@@ -5049,25 +5008,14 @@ public:
         };
         if (IsTimesOp(op) && index == 0)
         {
-            Memoizer::LogFunction(*f, L"mb", index), fflush(stderr);
+            //Memoizer::LogFunction(*f, L"mb", index), fflush(stderr);
             bool isTransposed = (op == PrimitiveOpType::TransposeTimes || op == PrimitiveOpType::TransposeAffine);
             bool isSparse = f->m_inputs[1].IsSparse();
             auto& consumers = m_matrixWeightConsumers[isTransposed][isSparse]; // there are 4 categories that are not batchable across
-#if 1       // BUGBUG: Currently, we don't handle multiple non-batchable operations. Does that ever occur?
-            // I believe that for gradients into the same first arg of Times(), as long as isTranspose and isSparse
-            // are the same, they must always be batchable. Hence we only need to distinguish these 4 catergories.
-            // This may be wrong. In that case, we need to change the [][] array to a variable one.
-            if (!consumers.empty())
+            if (!consumers.empty()) // verify that we got here with correct dimensions
                 VerifyMatrixGradient0Batchable(*f, *consumers.front().first);
             consumers.push_back(c);
             return;
-#else
-            if (consumers.empty() || (IsMatrixGradient0Batchable(*f, *consumers.front().first)))
-            {
-                consumers.push_back(c);
-                return;
-            }
-#endif
         }
         // backprop where gradients are just views that we can sum up
         //else if (f->m_op == PrimitiveOpType::Plus)
