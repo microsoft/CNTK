@@ -249,7 +249,7 @@ public:
             if (samplesInRecurrentStep > 1)
                 validframes[mapi] += numframes; // advance the cursor within the parallel sequence
             fprintf(stderr, "dengamma value %f\n", denavlogp);
-            if (isnan(denavlogp))
+            if (::isnan(denavlogp))
                 throw std::runtime_error("dengamma is nan, skipping the minibatch\n");
             ts += numframes;
         }

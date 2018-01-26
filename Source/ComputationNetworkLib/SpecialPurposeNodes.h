@@ -727,8 +727,8 @@ public:
 
         if (symListPath.size() == 0 || phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
-        
-        InitSEParams(symListPath, phonePath, stateListPath, transProbPath);
+        LoadConfigsFromFile();
+        InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
         this->m_fsSmoothingWeight = hSmoothingWeight;
         this->m_frameDropThreshold = frameDropThresh;
         this->m_doReferenceAlignment = doReferenceAlign;
@@ -854,8 +854,27 @@ public:
         fstream >> this->m_seqGammarbMMIFactor;
         fstream >> this->m_seqGammarUsesMBR;
         fstream >> this->m_doReferenceAlignment;
+        LoadConfigsFromFile();
         InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
         this->SetGammarCalculationParam(this->m_seqGammarAMF, this->m_seqGammarLMF, this->m_seqGammarWP, this->m_seqGammarbMMIFactor, this->m_seqGammarUsesMBR);
+    }
+
+    void LoadConfigsFromFile()
+    {
+        // Workaround for loading a trained model from a different location
+        wifstream file("LatticeNode.config");
+        if (file.good())
+        {
+            wstring str;
+            getline(file, str);
+            m_symListPath = str;
+            getline(file, str);
+            m_phonePath = str;
+            getline(file, str);
+            m_stateListPath = str;
+            getline(file, str);
+            m_transProbPath = str;
+        }
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
