@@ -257,7 +257,14 @@ namespace CNTK
             // non-elementwise ops are done here
         case PrimitiveOpType::Times:
         case PrimitiveOpType::TransposeTimes:
-            out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+        case PrimitiveOpType::Affine:
+        case PrimitiveOpType::TransposeAffine:
+            NDArrayView::MatrixProduct(false,
+                                       args[0], (primitiveOp == PrimitiveOpType::TransposeTimes || primitiveOp == PrimitiveOpType::TransposeAffine),
+                                       args[1], false,
+                                       1.0, attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            if (args.size() == 3) // affine
+                NDArrayView::NumericOperation({ args[2] }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, out, 1.0);
             break;
         case PrimitiveOpType::Splice:
             // TODO: We may communicate from outside by not providing an Axis attribute that batching is along a new axis, and all shapes are the same.
@@ -612,16 +619,23 @@ namespace CNTK
             // Times family
         case PrimitiveOpType::Times:
         case PrimitiveOpType::TransposeTimes:
-            arg2 = inputValues[1 - i];
-            if (i == 0) // left input
-                NDArrayView::MatrixProduct(/*transC=*/primitiveOp == PrimitiveOpType::TransposeTimes,
-                                          /*A=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transA=*/false,
-                                          /*B=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transB=*/true,  alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
-            else // right input
-                NDArrayView::MatrixProduct(/*transC=*/false,
-                                          /*A=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
-                                          /*B=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transB=*/false, alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
-            handled = true;
+        case PrimitiveOpType::Affine:
+        case PrimitiveOpType::TransposeAffine:
+            if (i == 2) // Affine only: bias
+                op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+            else // weight and input (for Affine, the incoming bias is passed through Plus unmodified)
+            {
+                arg2 = inputValues[1 - i]; // arg1 is the incoming gradient from above
+                if (i == 0) // left input
+                    NDArrayView::MatrixProduct(/*transC=*/primitiveOp == PrimitiveOpType::TransposeTimes,
+                                              /*A=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transA=*/false,
+                                              /*B=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transB=*/true,  alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
+                else // right input
+                    NDArrayView::MatrixProduct(/*transC=*/false,
+                                              /*A=*/const_cast<NDArrayView*>(arg2)->shared_from_this(), /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
+                                              /*B=*/const_cast<NDArrayView*>(arg1)->shared_from_this(), /*transB=*/false, alpha, /*outputRank dummy=*/0, /*C=*/gradient, beta);
+                handled = true;
+            }
             break;
             // unary operations with simple TensorView implementation
         case PrimitiveOpType::ReLU:          op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput;       arg2 = outputValue; break;

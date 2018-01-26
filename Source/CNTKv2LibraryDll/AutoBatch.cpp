@@ -243,7 +243,7 @@ namespace CNTK
 
     enum class OpSpecificConditionKind  :  size_t // the meanings of these are specified below
     {
-        UnaryElementWise, Reducing, NoOp, ReshapeOneHot, BinaryElementWise, TernaryElementWise, Pooling,
+        UnaryElementWise, Reducing, NoOp, ReshapeOneHot, BinaryElementWise, NaryElementWise, Pooling,
         Slice, Splice, Transpose,
         MatrixProduct, Convolution,
         Barrier, BatchNormalization, OptimizedRNNStack, Generative,
@@ -260,10 +260,11 @@ namespace CNTK
             PrimitiveOpType::ReLU, PrimitiveOpType::Exp, PrimitiveOpType::Log, PrimitiveOpType::Sqrt,
             PrimitiveOpType::Floor, PrimitiveOpType::Abs, PrimitiveOpType::Reciprocal,
             PrimitiveOpType::Sin, PrimitiveOpType::Cos, PrimitiveOpType::ELU,
-            PrimitiveOpType::StableSigmoid
+            PrimitiveOpType::StableSigmoid, PrimitiveOpType::ScaleAndShift,
         }},
         { OpSpecificConditionKind::Reducing, {
-            PrimitiveOpType::ReduceElements /*(=ReduceSum, ReduceLogSum, etc.)*/
+            PrimitiveOpType::ReduceElements /*(=ReduceSum, ReduceLogSum, etc.)*/,
+            PrimitiveOpType::InverseStandardDeviation
         }},
         // 
         // Conditions for batching:
@@ -325,10 +326,12 @@ namespace CNTK
             PrimitiveOpType::Equal, PrimitiveOpType::NotEqual, PrimitiveOpType::Less,
             PrimitiveOpType::LessEqual, PrimitiveOpType::Greater, PrimitiveOpType::GreaterEqual
         }},
-        { OpSpecificConditionKind::TernaryElementWise, {
-            PrimitiveOpType::Clip, PrimitiveOpType::Select
+        { OpSpecificConditionKind::NaryElementWise, {
+            PrimitiveOpType::Clip, PrimitiveOpType::Select,
+            PrimitiveOpType::ElementAffine,
+            PrimitiveOpType::NormalizeDenormalize
         }},
-        // 
+        //
         // Conditions:
         //   Same conditions as for unary element-wise ops must hold for all inputs.
         // 
@@ -341,9 +344,9 @@ namespace CNTK
         // --------------------
         // 
         { OpSpecificConditionKind::MatrixProduct, {
-            PrimitiveOpType::Times, PrimitiveOpType::TransposeTimes
+            PrimitiveOpType::Times, PrimitiveOpType::TransposeTimes, PrimitiveOpType::Affine, PrimitiveOpType::TransposeAffine,
         }},
-        // 
+        //
         // Conditions (batching):
         //   The first input (the matrix) must be the same for all items.
         //   The second one has the same conditions as for unary element-wise ops.
@@ -1153,6 +1156,17 @@ static bool IsAliasOp(PrimitiveOpType op)
         op == PrimitiveOpType::BarrierOp;
 }
 
+// predicate whether an op is a matrix product
+// These have special treatment for the bacthing of the weight matrix.
+static bool IsTimesOp(PrimitiveOpType op)
+{
+    return
+        op == PrimitiveOpType::Times ||
+        op == PrimitiveOpType::TransposeTimes ||
+        op == PrimitiveOpType::Affine ||
+        op == PrimitiveOpType::TransposeAffine;
+}
+
 #if 0
 // predicate whether an op's gradient is a no-op (just copies the output gradient)
 // These are short-circuited in backprop.
@@ -1866,13 +1880,6 @@ class InternalVariable::AutoBatch
         return f.m_op == PrimitiveOpType::BarrierOp && f.m_attributes.Size() > 0;
     }
 
-    // predicate whether an op has an unbatchable first weigth parameter, like Times
-    // TODO: Find a better name that eventually also includes Convolution.
-    static bool IsMatrixProduct(PrimitiveOpType op)
-    {
-        return g_oscTable[op] == OpSpecificConditionKind::MatrixProduct;
-    }
-
     // inlining of a composite 
     // This makes a deep copy of the graph below 'f', which must live in a composite owned by a BlockFunction; *not* the dynamic graph.
     // The actual PrimitiveFunction copy is made via the cloneFn. This way, this function can be used
@@ -2019,10 +2026,12 @@ class InternalVariable::AutoBatch
                 for (size_t i = 1; i < 6; i++)
                     IncorporateFieldsId(GetInputFields(inputs[i]));
             }
-            else if (IsMatrixProduct(op)) // Times(): first arg must be the same object
+            else if (IsTimesOp(op)) // Times(): first arg must be the same object
             {
-                IncorporateFieldsId(GetInputFields(inputs.front()));
-                IncorporateType(GetInputFields(inputs.back()));
+                IncorporateFieldsId(GetInputFields(inputs[0]));
+                IncorporateType(GetInputFields(inputs[1]));
+                if (inputs.size() == 3) // Affine
+                    IncorporateType(GetInputFields(inputs[2]));
             }
             else // general case: all input dimensions must match (with exception of a few special cases)
             {
@@ -2165,7 +2174,7 @@ class InternalVariable::AutoBatch
                     return false;
                 return true;
             };
-            let isTimes = IsMatrixProduct(op);
+            let isTimes = IsTimesOp(op);
             let numInputs = a.m_inputs.size();
             for (size_t i = 0; i < numInputs; i++)
             {
@@ -2368,12 +2377,13 @@ class InternalVariable::AutoBatch
                 // BUGBUG: Get this from a parameter. For now only support vectors, batch axis is always 1.
                 return getLastDim(f.m_inputs.front(), 1, StackingMode::STACKING);
             }
-            else if (IsMatrixProduct(op)) // Times: stacking if input has a batch dimension already
+            else if (IsTimesOp(op)) // Times: stacking if input has a batch dimension already
             {
                 let& inputs = f.m_inputs;
                 let& output = GetOutputFields(f);
-                let& left  = inputs.front();
-                let& right = inputs.back();
+                let& left  = inputs[0];
+                let& right = inputs[1];
+                // for Affine there is also inputs[2], but we can ignore it, as its shape must be same or broadcast into the result of the matrix product
                 let leftRank  = left .Shape().Rank();
                 let rightRank = right.Shape().Rank();
                 let reductionRankX2 = leftRank + rightRank - output.m_shape.Rank();
@@ -2965,7 +2975,7 @@ class InternalVariable::AutoBatch
         Dictionary attributes;
         clonee.Attributes().ShallowCloneTo(attributes); // (this just copies the shared_ptr, not the content)
 #if 1   // a sanity check whether we batched correctly. Can be removed once this stuff works.
-        if (IsMatrixProduct(clonee.m_op))
+        if (IsTimesOp(clonee.m_op))
             fail_if(inputs.front().Shape() != clonee.m_inputs.front().Shape(), "attempted to batch the weight matrix of a matrix product??");
 #endif
         return CreateAndMemoizeOp(clonee.m_op, move(inputs), move(attributes), shape, output.GetDataType(), output.IsSparse()/*, clonee.m_name*/, clonee.m_profiler, L"*"/*clonee*/, isFree);
@@ -2982,7 +2992,7 @@ class InternalVariable::AutoBatch
     {
         // create the object
         CudaStatsGuard cudaStatsguard(PrimitiveOpType::Pass, L"RawPrimitiveFunction", 3);
-        auto fPtr = MakeSharedObject<PrimitiveFunction>(op, move(inputs), move(attributes)/*, move(name)*/);
+        auto fPtr = MakeSharedObject<PrimitiveFunction>(op, move(inputs), move(attributes), wstring()/*dummy for overload resolution; move(name)*/);
         // unfortunately output initialization must be separated out since it requires s shared_ptr to f
         let& fInputs = fPtr->m_inputs;
         let isVolatile    = any_of(fInputs.begin(), fInputs.end(), [](const Variable& input) { return input.IsVolatile();    }); // PERF BUGBUG: caller knows this already; should pass it in
@@ -3086,7 +3096,7 @@ class InternalVariable::AutoBatch
             /*if*/ (clonee.m_op == PrimitiveOpType::Block) ?                     // PERF BUGBUG: vvv short-circuit this as well
                 MakeSharedObject<BlockFunction>(static_cast<BlockFunction&>(clonee).Composite(), MakeVector(newInputs), static_cast<BlockFunction&>(clonee).IsBasicBlock(), wstring(), wstring()/*static_cast<BlockFunction&>(clonee).OpName()), wstring(clonee.Name())*/)
             /*else*/:
-                MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(ShallowCloneDictionary(clonee.m_attributes)));// , wstring(clonee.Name()));
+                MakeSharedObject<PrimitiveFunction>(clonee.m_op, move(newInputs), move(ShallowCloneDictionary(clonee.m_attributes)), wstring()/*dummy for overload resolution*/);// , wstring(clonee.Name()));
         // Note: We can use make_shared since no shared_ptrs to these clones are ever exposed across the DLL boundary.
         //if (fCloned->m_uniqueIdForDebugging == 20000)
         //    fprintf(stderr, "");
@@ -3484,8 +3494,8 @@ class InternalVariable::AutoBatch
     // This function is currently only used in an error check.
     size_t DetermineMaxElementwiseInputRank(const PrimitiveFunction& f)
     {
-        if (IsMatrixProduct(f.m_op)) // special case for Times
-            return f.m_inputs.back().Shape().Rank();
+        if (IsTimesOp(f.m_op)) // special case for Times and its Affine and Transpose- variants
+            return f.m_inputs[1].Shape().Rank();
         size_t maxInputRank = 0;
         for (let& input : f.m_inputs)
             maxInputRank = max(input.Shape().Rank(), maxInputRank);
@@ -3548,7 +3558,7 @@ class InternalVariable::AutoBatch
         let& f0 = ops.front();
         // special case: for matrix-product class operations, the first argument is non-batchable
         // It has already been verified to be identical as part of the batchability condition.
-        if (IsMatrixProduct(f0.m_op) && i == 0)
+        if (IsTimesOp(f0.m_op) && i == 0)
         {
             return f0.m_inputs.front();
         }
@@ -3985,67 +3995,6 @@ class InternalVariable::AutoBatch
         batchedInputs.resize(numArgs);
         let& unbatchedOutputShape = f0.m_outputs.front().Shape();
         let i0 = (size_t)isTimes;    // index of first batchable argument (1 for matrix-product class; 0 otherwise)
-#if 0
-        size_t commonInputBatchAxis; // batch axis of all batched args (it is the same across all args)
-        size_t outputBatchAxis;      // batch axis in output (may differ from commonInputBatchAxis for Times/Convolution)
-        // TODO: We restrict this to a single shared batch axis, with exception of unbatched inputs (first Times arg).
-        //       All batch axes must be the same across all inputs. Then we can always batch along those.
-        //       If all shapes happen to be the same, then there is an optimization (batch into a new axis and then reshape).
-        //       We probably want to make that a part of the Gather function, deep inside, and basically ignore here.
-        //       So: Select a common batch axis for all, and batch along those.
-        //       TODO: We still need a shift from inputs to output; Times() may shift the axis.
-        if (isTimes)
-        {
-            // for matrix product, second arg is batched, and batch axes differ for arg and output. Just append one axis, respectively.
-            commonInputBatchAxis = f0.m_inputs.back().Shape().Rank();
-            outputBatchAxis      = unbatchedOutputShape      .Rank();
-        }
-        else if (isBasicBlock)
-        {
-            outputBatchAxis = max(unbatchedOutputShape.Rank(), CacheAndGetBasicBlockBatchAxis(static_cast<const BlockFunction&>(f0)));
-            commonInputBatchAxis = outputBatchAxis;
-        }
-        else if (isElementWise)
-        {
-            // Elementwise ops may remove the last axis (e.g. InnerProduct()), or add axes (Splice, see-through Reshape).
-            // So the batch axis must be the max over all inputs' and output's rank.
-            // From the batching condition, we know that all input shapes are the same. So we only need to look at the first op instead.
-            // TODO: We could also handle this by an implied AsShape() right before execution.
-            outputBatchAxis = max(unbatchedOutputShape.Rank(), DetermineMaxElementwiseInputRank(f0));
-            commonInputBatchAxis = outputBatchAxis;
-        }
-        else
-            fail_if(true, "should not get here");
-
-        // enable stacking; that is, along the last axis
-        // This is tricky. E.g. must consider whether it's a scalar. For now we stack Times().
-        // We must check the last axis over all inputs.
-        let stackIt = isTimes && outputBatchAxis == 2; // TODO: correctly consider the mapRank
-        if (stackIt)
-        {
-            outputBatchAxis--;
-            commonInputBatchAxis--;
-        }
-        size_t batchSize = numBatchItems; // dimension of batch axis
-        if (stackIt)
-        {
-            // this is for Times only for now
-            batchSize = 0;
-            for (let& f : ops) // create the batched tensors
-            {
-                let& input = f.m_inputs.back();
-                batchSize += input.Shape().Dimensions().back();
-            }
-        }
-        //if (batchAxis != commonInputBatchAxis)
-        //    Break;
-#else
-        //if (f0.m_uniqueIdForDebugging == 359496)
-        //{
-        //    for (auto iter = ops.begin(); iter != ops.end(); ++iter) // create the batched tensors
-        //        LogFunction(*iter, nullptr), fflush(stderr);
-        //    Break;
-        //}
         // TODO: Make this work logically, then speed this up!
         // determine stacking vs. batching
         //  - we must batch if the operation does not allow stacking. AreBatchable takes this into account.
@@ -4086,7 +4035,11 @@ class InternalVariable::AutoBatch
             //    fprintf(stderr, "STACKING op %S\n", PrimitiveOpTypeName(f0.m_op).c_str());
         }
         fail_if(stackingMode == StackingMode::STACKING_BUT_MAY_BATCH, "StackingMode::STACKING_BUT_MAY_BATCH should have been decided by now??");
-        let outputBatchAxis = (isTimes || (f0.m_op == PrimitiveOpType::OneHot)) ? commonInputBatchAxis + f0.m_outputs.front().Shape().Rank() - f0.m_inputs.back().Shape().Rank() : commonInputBatchAxis;
+        auto outputBatchAxis = commonInputBatchAxis;
+        if (isTimes) // Times family: may shift the batch axis
+            outputBatchAxis += f0.m_outputs.front().Shape().Rank() - f0.m_inputs[1].Shape().Rank();
+        else if (f0.m_op == PrimitiveOpType::OneHot) // will shift the batch axis
+            outputBatchAxis += f0.m_outputs.front().Shape().Rank() - f0.m_inputs[0].Shape().Rank(); // should be by 1, but this expression is more universal
         // TODO: ^^ get to a point where this is universally true
         //       I think for that we need to determine the max input rank.
         if (!isTimes &&
@@ -4098,7 +4051,6 @@ class InternalVariable::AutoBatch
         //    Break;
         //if (op == PrimitiveOpType::Block && f0.m_inputs.empty())
         //    Break;
-#endif
 
         // create all batchedInputs[] by splicing along the batch axis
         // Special optimizations are taken if all elements are identical.
@@ -4393,8 +4345,8 @@ public:
         //if (f.m_op == PrimitiveOpType::Times && f.m_inputs[1].Shape()[0] == 2000)
         //    fprintf(stderr, "%S --> %d\n", f.m_inputs[1].Shape().AsString().c_str(), (int)f.m_inputs[1].IsSparse());
         // Special case for DENSE * SPARSE -> DENSE, which leads to a SPARSE gradient for input0 (common for embedding).
-        if (f.m_op == PrimitiveOpType::Times && index == 0 && f.m_inputs.back().IsSparse())
-            return StorageFormat::SparseBlockCol;
+        if ((f.m_op == PrimitiveOpType::Times || f.m_op == PrimitiveOpType::Affine) && index == 0 && f.m_inputs[1].IsSparse())
+            return StorageFormat::SparseBlockCol;  // BUGBUG? how about TransposeTimes? Not sparse?
         else
             return StorageFormat::Dense;
     }
@@ -4901,7 +4853,7 @@ public:
 #ifdef LOG_DETAILS
         Memoizer::LogFunction(f0, L"bb* ", 0);
 #endif
-        let& input0 = f0.m_inputs.front(); // all consumers share this weight, so it's OK to just get it from f0
+        let& input0 = f0.m_inputs[0]; // all consumers share this weight, so it's OK to just get it from f0
         size_t batchDim = 0;
         for (size_t i = 0; i < numBatchItems; i++)
         {
@@ -4910,15 +4862,15 @@ public:
             let& f = *c.first;
             fail_if(&GetInputFields(f.m_inputs.front()) != &GetInputFields(input0), "batched matrix gradients do nto share the matrix??");
             let& outGrad = GetOutputFields(f).m_gradient;
-            let& right   = GetInputFields(f.m_inputs.back()).m_value;
+            let& right   = GetInputFields(f.m_inputs[1]).m_value;
             timesOutGrads       [i] = outGrad; // incoming gradients from top
             timesDataRightInputs[i] = right;   // second arguments
             let numItems = outGrad->Shape().Dimensions().back();
             fail_if(numItems != right->Shape().Dimensions().back(), "batch dimension of two inputs not the same??");
             batchDim += numItems;
         }
-        auto outGradBatch = GatherBatchInArena(timesOutGrads       , GetOutputFields(f0)                .m_shape.Rank() - 1, batchDim);
-        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, GetInputFields (f0.m_inputs.back()).m_shape.Rank() - 1, batchDim);
+        auto outGradBatch = GatherBatchInArena(timesOutGrads       , GetOutputFields(f0)            .m_shape.Rank() - 1, batchDim);
+        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, GetInputFields (f0.m_inputs[1]).m_shape.Rank() - 1, batchDim);
         m_stats.numAvoidedBackpropToMatrix += batchDim - 1; // these were saved
 
         // backprop into the left input from the batched outGrad and right
@@ -4977,9 +4929,9 @@ public:
         // we compute leftGrad += outGrad @ right^T
         let&   fOutShape = f.m_outputs.front().Shape().Dimensions();
         let&   gOutShape = g.m_outputs.front().Shape().Dimensions();
-        let& fRightShape = f.m_inputs .back() .Shape().Dimensions();
-        let& gRightShape = g.m_inputs .back() .Shape().Dimensions();
-        let&   leftShape = f.m_inputs .front().Shape().Dimensions();
+        let& fRightShape = f.m_inputs[1].Shape().Dimensions();
+        let& gRightShape = g.m_inputs[1].Shape().Dimensions();
+        let&   leftShape = f.m_inputs[0].Shape().Dimensions();
         let    outRank =   fOutShape.size();
         let   gOutRank =   gOutShape.size();
         let  rightRank = fRightShape.size();
@@ -5023,10 +4975,10 @@ public:
         // backpropagating into the first arg of a matrix product
         // These are shared.
         // We only collect matrix products that fully match the first one. --TODO: when do they ever not fully match? Below we now enforce that they do.
-        if (op == PrimitiveOpType::Times && op == PrimitiveOpType::TransposeTimes && index == 0)
+        if (IsTimesOp(op) && index == 0)
         {
-            bool isTransposed = op == PrimitiveOpType::TransposeTimes;
-            bool isSparse = f->m_inputs.back().IsSparse();
+            bool isTransposed = (op == PrimitiveOpType::TransposeTimes || op == PrimitiveOpType::TransposeAffine);
+            bool isSparse = f->m_inputs[1].IsSparse();
             auto& consumers = m_matrixWeightConsumers[isTransposed][isSparse]; // there are 4 categories that are not batchable across
 #if 1       // BUGBUG: Currently, we don't handle multiple non-batchable operations. Does that ever occur?
             // I believe that for gradients into the same first arg of Times(), as long as isTranspose and isSparse

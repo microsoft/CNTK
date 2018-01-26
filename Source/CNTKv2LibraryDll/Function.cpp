@@ -235,6 +235,10 @@ namespace CNTK
         : m_inputs(std::move(inputs))/*, m_name(std::move(name)), m_uid(std::move(uid))*/, m_attributes(std::move(functionConfig))
     {}
 
+    Function::Function(InputsVectorType&& inputs, Dictionary&& functionConfig, const std::wstring& name)
+        : m_inputs(std::move(inputs)), m_name(name), m_attributes(std::move(functionConfig))
+    {}
+
     /*virtual*/ Function::~Function() {}
 
     /*virtual*/ const std::wstring& Function::OpName() const
@@ -1576,6 +1580,13 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::ElementTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ElementAffine(const Variable& leftFactor, const Variable& rightFactor, const Variable& additiveTerm, const std::wstring& name)
+    {
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ElementAffine,
+                                         Function::InputsVectorType({ leftFactor, rightFactor, additiveTerm }),
+                                         Dictionary(), name));
+    }
+
     FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return ElementTimes(leftOperand, Reciprocal(rightOperand), name);
@@ -1611,14 +1622,10 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::GreaterEqual, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name)
+    // helper to optimize Times(Transpose(W), x) into TransposeTimes(W, x)
+    static bool IsTransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap)
     {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
-        additionalProperties[PrimitiveFunction::AttributeNameInferInputRankToMap] = inferInputRankToMap;
-        // special optimization: if left operand is a matrix that is the result of a Transpose, then call TransposeTimes instead
-        // This is needed for Marian interop, where an explicit transpose() is used for the Softmax projection. This saves cost and memory.
-        if (leftOperand.IsOutput() && leftOperand.Shape().Rank() == 2 && outputRank == 1)
+        if (leftOperand.IsOutput() && leftOperand.Shape().Rank() == 2 && outputRank == 1 && inferInputRankToMap == TimesNoInferredInputRank)
         {
             const auto& f = (const PrimitiveFunction&)*leftOperand.Owner();            // shapes match: check the op type
             if (f.OpType() == PrimitiveOpType::TransposeAxes)
@@ -1628,7 +1635,7 @@ namespace CNTK
                     attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>().IsStaticAxis() &&
                     attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>().StaticAxisIndex())
                 {
-                    return BinaryOp(PrimitiveOpType::TransposeTimes, f.OpInputs().front(), rightOperand, std::move(additionalProperties), name);
+                    return true;
                 }
                 else // alternative parameterization: by permutation array
                 {
@@ -1638,19 +1645,54 @@ namespace CNTK
                         const auto& axis1 = axisVector.front().Value<Axis>();
                         const auto& axis2 = axisVector.back() .Value<Axis>();
                         if (axis1.IsStaticAxis() && axis2.IsStaticAxis() && axis1.StaticAxisIndex(false) == 1 && axis2.StaticAxisIndex(false) == 0)
-                            return BinaryOp(PrimitiveOpType::TransposeTimes, f.OpInputs().front(), rightOperand, std::move(additionalProperties), name);
+                            return true;
                     }
                 }
             }
         }
-        return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, std::move(additionalProperties), name);
+        return false;
     }
 
     FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank /*= 1*/, const std::wstring& name)
     {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
-        return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
+        return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand,
+                        Dictionary(PrimitiveFunction::AttributeNameOutputRank, outputRank),
+                        name);
+    }
+
+    FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name)
+    {
+        // special optimization: if left operand is a matrix that is the result of a Transpose, then call TransposeTimes instead
+        // This is needed for Marian interop, where an explicit transpose() is used for the Softmax projection. This saves cost and memory.
+        if (IsTransposeTimes(leftOperand, rightOperand, outputRank, inferInputRankToMap))
+            return TransposeTimes(((const PrimitiveFunction&)*leftOperand.Owner()).OpInputs().front(), rightOperand, outputRank, name);
+        return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand,
+                        Dictionary(
+                            PrimitiveFunction::AttributeNameOutputRank,          outputRank,
+                            PrimitiveFunction::AttributeNameInferInputRankToMap, inferInputRankToMap
+                        ),
+                        name);
+    }
+
+    FunctionPtr TransposeAffine(const Variable& W, const Variable& x, const Variable& b, size_t outputRank /*= 1*/, const std::wstring& name)
+    {
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::TransposeAffine,
+                        Function::InputsVectorType({ W, x, b }),
+                        Dictionary(PrimitiveFunction::AttributeNameOutputRank, outputRank),
+                        name));
+    }
+
+    FunctionPtr Affine(const Variable& W, const Variable& x, const Variable& b, size_t outputRank, int inferInputRankToMap, const std::wstring& name)
+    {
+        if (IsTransposeTimes(W, x, outputRank, inferInputRankToMap))
+            return TransposeAffine(((const PrimitiveFunction&)*W.Owner()).OpInputs().front(), x, b, outputRank, name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Affine,
+                        Function::InputsVectorType({ W, x, b }),
+                        Dictionary(
+                            PrimitiveFunction::AttributeNameOutputRank,          outputRank,
+                            PrimitiveFunction::AttributeNameInferInputRankToMap, inferInputRankToMap
+                        ),
+                        name));
     }
 
     FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)

@@ -890,28 +890,29 @@ namespace CNTK
                             break;
                         }
                         case PrimitiveOpType::Times:
+                        case PrimitiveOpType::Affine:
                         {
-                            assert(m_inputs.size() == 2);
+                            assert(m_inputs.size() == 2 + m_op == PrimitiveOpType::Affine);
                             auto outputRank = m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
                             auto inferInputRankToMap = m_attributes[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
                             outputShape = TimesOpOutputShape(m_inputs[0], m_inputs[1], outputRank, inferInputRankToMap, true);
+                            // TODO: verify the shape of the additive term
                             break;
                         }
                         case PrimitiveOpType::TransposeTimes:
+                        case PrimitiveOpType::TransposeAffine:
                         {
-                            assert(m_inputs.size() == 2);
-
+                            assert(m_inputs.size() == 2 + m_op == PrimitiveOpType::TransposeAffine);
                             auto transposeShapeFunc = [](const NDShape& shape)
                             {
                                 NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
                                 for (size_t i = 0; i < shape.Rank(); ++i)
                                     transposedShape[transposedShape.Rank() - i - 1] = shape[i];
-
                                 return transposedShape;
                             };
 
                             if (m_inputs[0].Shape().Rank() > 2)
-                                LogicError("Function '%S': TransposeTimes operation currently requires the %s operand '%S' to be of rank 1 or 2", AsString().c_str(), Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left", m_inputs[0].AsString().c_str());
+                                LogicError("Function '%S': TransposeTimes and TransposeAffine operations currently requires the %s operand '%S' to be of rank 1 or 2", AsString().c_str(), Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left", m_inputs[0].AsString().c_str());
 
                             NDShape transposedLeftOperandShape = transposeShapeFunc(m_inputs[0].Shape());
                             Variable dummyLeftOperand = PlaceholderVariable(transposedLeftOperandShape);
@@ -919,7 +920,7 @@ namespace CNTK
                             outputShape = TimesOpOutputShape(dummyLeftOperand, m_inputs[1], outputRank, -1, true);
                             if (dummyLeftOperand.Shape() != transposedLeftOperandShape)
                                 m_inputs[0].m_dataFields->m_shape = transposeShapeFunc(dummyLeftOperand.Shape());
-
+                            // TODO: verify the shape of the additive term
                             break;
                         }
                         case PrimitiveOpType::Convolution:

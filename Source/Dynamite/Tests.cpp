@@ -192,9 +192,21 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     NDArrayView::LazilyCreateRNGState(rngState, SentinelValueForAutoSelectRandomSeed, device);
     vector<TensorViewTest> tests =
     {
+        // matrix products
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1) + argValues[2]), "Affine_shared_W" }, VarExpr(CNTK::Affine(args[0], args[1], args[2])),{ { 13, 42 },{ 42, 9 },{ 13 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times_shared_W"  }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"           }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"           }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42       } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"           }, VarExpr(CNTK::Times         (args[0], args[1], 0)),{ {     42 },{ 42       } } }, // should get batched
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"           }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9, 5 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes"  }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9    } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes"  }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42       } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes"  }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9, 3 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "Transpose|Times()" }, VarExpr(CNTK::Times(CNTK::Transpose(args[0])                      , args[1])),{ { 42, 13 },{ 42, 9, 3 } } }, // Transpose optimization, from axes
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "Transpose|Times{}" }, VarExpr(CNTK::Times(CNTK::Transpose(args[0], AxisVector({ 1, 0 })), args[1])),{ { 42, 13 },{ 42, 9, 3 } } }, // Transpose optimization, from permutation
         // random  --for now, only Bernoulli, for Dropout support
-        { { ValExpr(make_shared<NDArrayView>(0.9, dataType, NDShape{}, device)), "BernoulliRandom90%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.9                   ), Axis::AllStaticAxes())),{ { 100, 1000 } } },
-        { { ValExpr(make_shared<NDArrayView>(1.0, dataType, NDShape{}, device)), "BernoulliRandom30%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.3, /*scale=*/1 / 0.3), Axis::AllStaticAxes())),{ { 1000, 100 } } }, // Dropout-like scaling
+        { { ValExpr((argValues, make_shared<NDArrayView>(0.9, dataType, NDShape{}, device))), "BernoulliRandom90%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.9                   ), Axis::AllStaticAxes())),{ { 100, 1000 } } },
+        { { ValExpr((argValues, make_shared<NDArrayView>(1.0, dataType, NDShape{}, device))), "BernoulliRandom30%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.3, /*scale=*/1 / 0.3), Axis::AllStaticAxes())),{ { 1000, 100 } } }, // Dropout-like scaling
         // one-hot
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, ArgmaxOneHot(argValues[1]), false, 1.0, 1)), "Times_sparse" }, VarExpr(CNTK::Times(args[0], ArgmaxOneHotOp(args[1]))),{ { 13, 4 },{ 4, 3, 5 } } },
         // transpose. Note: Reference must be cloned, because AvSqrErr cannot reduce over >2 non-contiguous dimensions.
@@ -225,17 +237,6 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         { { ValExpr(argValues[0]->SliceView(NDShapeDimensions{ 0, 1 }, NDShapeDimensions{ 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // contiguous slice of rank > 1
         { { ValExpr(argValues[0]->Slice    (NDShapeDimensions{ 0, 1 }, NDShapeDimensions{ 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
         { { ValExpr(argValues[0]->SliceView(NDShapeDimensions{    1 }, NDShapeDimensions{      3 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 1    }, { 1+3     })),{ { 13     } } }, // slice of rank 1
-        // matrix product
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times_shared"   }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42       } } },
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1], 0)),{ {     42 },{ 42       } } }, // should get batched
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"          }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9, 5 } } },
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9    } } },
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42       } } },
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "TransposeTimes" }, VarExpr(CNTK::TransposeTimes(args[0], args[1]   )),{ { 42, 13 },{ 42, 9, 3 } } },
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "Transpose|Times()" }, VarExpr(CNTK::Times(CNTK::Transpose(args[0])                      , args[1])),{ { 42, 13 },{ 42, 9, 3 } } }, // Transpose optimization, from axes
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  argValues[1], false, 1.0, 1)), "Transpose|Times{}" }, VarExpr(CNTK::Times(CNTK::Transpose(args[0], AxisVector({ 1, 0 })), args[1])),{ { 42, 13 },{ 42, 9, 3 } } }, // Transpose optimization, from permutation
         // ternary
         { ValOp(Clip), VarExpr(CNTK::Clip         (args[2], args[0], args[1])), { { 13,  1 }, { 13, 1 }, { 13, 42 } } },
         { ValOp(Cond), VarExpr(CNTK::ElementSelect(args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13,  1 } } },
@@ -280,8 +281,8 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     size_t numFailed = 0;
     for (let& test : tests) // loop over all tests
     {
-        let isTimes                 = strstr(test.op.second, "Times")               != nullptr;
-        let isTimesSparse           = strstr(test.op.second, "Times_sparse")        != nullptr; // Times with sparse
+        let isTimes                 = strstr(test.op.second, "Times") || strstr(test.op.second, "Affine");
+        let isTimesSparse           = strstr(test.op.second, "Times_sparse")        != nullptr; // OneHot select (Times with sparse)
         let isSplice                = strstr(test.op.second, "Splice")              != nullptr;
         let isSlice                 = strstr(test.op.second, "Slice")               != nullptr;
         let isBatchNorm             = strstr(test.op.second, "BatchNormalization")  != nullptr; // BatchNormalization requires some special-casing
@@ -317,7 +318,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
                 let isTimesWeight = isTimes && j == 0; // is first arg of Times op
                 let isShared = // some tests share arguments across batch items
                     (isBatchNorm && j > 0) ||
-                    (strstr(test.op.second, "Times_shared") && j == 0);
+                    (strstr(test.op.second, "_shared_W") && j == 0);
                 auto argShape = test.shapes[j].Dimensions();
                 // patch up the last dimension to test stacking
                 if (testStacking)
@@ -556,7 +557,7 @@ void RunDynamiteTests()
     size_t numFailed = 0;
     size_t N = 7; // (make it odd, otherwise some stuff will cancel out in BatchNorm, causing huge rel error since it does not cancel out 100% numerically)
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/true, DeviceDescriptor::GPUDevice(0));
-#if 0 // only do a stacked one (most complicated) on the GPU by default
+#if 1 // only do a stacked one (most complicated) on the GPU by default
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(1, DataType::Double, /*testStacking=*/false, DeviceDescriptor::GPUDevice(0));
     numFailed += DynamiteTest(N, DataType::Double, /*testStacking=*/false, DeviceDescriptor::CPUDevice());

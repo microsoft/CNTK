@@ -111,6 +111,12 @@ namespace CNTK
         {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
         {PrimitiveOpType::Pad, L"Pad"},
         {PrimitiveOpType::Crop, L"Crop"},
+        {PrimitiveOpType::Affine,                   L"Affine"},
+        {PrimitiveOpType::TransposeAffine,          L"TransposeAffine"},
+        {PrimitiveOpType::ElementAffine,            L"ElementAffine"},
+        {PrimitiveOpType::InverseStandardDeviation, L"InverseStandardDeviation"},
+        {PrimitiveOpType::NormalizeDenormalize,     L"NormalizeDenormalize"},
+        {PrimitiveOpType::ScaleAndShift,            L"ScaleAndShift"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
