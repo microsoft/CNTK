@@ -22,10 +22,11 @@ from prepare_test_data import prepare_Grocery_data, prepare_alexnet_v0_model
 
 grocery_path = prepare_Grocery_data()
 
-python34_only = pytest.mark.skipif(sys.version_info[:2] != (3,4), reason="requires python 3.4")
+python_35_or_36 = pytest.mark.skipif(not (sys.version_info[:2] == (3,5) or
+                                          sys.version_info[:2] == (3,6)), reason="requires python 3.5 or 3.6")
 linux_only = pytest.mark.skipif(sys.platform == 'win32', reason="it runs currently only in linux")
 
-@python34_only
+@python_35_or_36
 @linux_only
 def test_fastrcnn_grocery_visualization():
     from A1_GenerateInputROIs import generate_input_rois
@@ -37,7 +38,7 @@ def test_fastrcnn_grocery_visualization():
     from B2_EvaluateInputROIs import evaluate_rois
     assert evaluate_rois()
 
-@python34_only
+@python_35_or_36
 @linux_only
 def test_fastrcnn_with_config_file(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
@@ -52,7 +53,7 @@ def test_fastrcnn_with_config_file(device_id):
     from A2_RunWithBSModel import run_fastrcnn_with_config_file
     assert run_fastrcnn_with_config_file(os.environ["TEST_CNTK_BINARY"])
 
-@python34_only
+@python_35_or_36
 @linux_only
 def test_fastrcnn_grocery_training(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:

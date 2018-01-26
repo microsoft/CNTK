@@ -41,9 +41,6 @@ def test_convnet_cifar_error(device_id):
     expected_error = 0.7
     assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)
 
-python34_only = pytest.mark.skipif(sys.version_info[:2] != (3,4), reason="requires python 3.4")
-
-@python34_only
 def test_check_percentages_after_restarting_training(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')

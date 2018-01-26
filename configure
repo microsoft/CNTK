@@ -398,7 +398,7 @@ function show_help ()
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
     echo "  --with-boost[=directory] $(show_default $(find_boost))"
     echo "  --with-protobuf[=directory] $(show_default $(find_protobuf))"
-    echo "  --with-py-versions=(space-separated list of 27, 34, 35, 36)"
+    echo "  --with-py-versions=(space-separated list of 27, 35, 36)"
     echo "  --with-py27-path[=directory] $(show_default $(find_python 27))"
     echo "  --with-py34-path[=directory] $(show_default $(find_python 34))"
     echo "  --with-py35-path[=directory] $(show_default $(find_python 35))"

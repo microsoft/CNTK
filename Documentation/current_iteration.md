@@ -2,6 +2,7 @@
 
 ## Highlights of this Release
 - Move to CUDA9, cuDNN 7 and Visual Studio 2017.
+- Removed Python 3.4 support.
 - Support Volta GPU and FP16.
 - Better ONNX support.
 - CPU perf improvement.
