@@ -9,6 +9,7 @@ Unit tests for the function class.
 """
 
 import numpy as np
+import os
 import pytest
 import cntk as C
 from .ops_test_utils import compare_lists_of_np_arrays, AA, cntk_device
@@ -530,6 +531,23 @@ def test_set_rng_seed_attribute():
 
     random_sample_node.set_attribute(key, 2**31)
     assert root.attributes[key] == 2**31
+
+    
+def test_custom_attributes(tmpdir):
+    root = 0 + C.input_variable(())
+    assert not root.custom_attributes.keys()
+    root.custom_attributes['cleared'] = 'none'
+    assert 'none' == root.custom_attributes['cleared']
+    # replace the custom attributes entirely, so 'cleared' is dropped
+    root.custom_attributes = {'test':'abc', 'dict':{'a':1, 'b':2}, 'list':[1,2,3]}
+    root.custom_attributes['test2'] = 'def'
+    model_file = os.path.join(str(tmpdir), 'custom_attr.dnn')
+    root.save(model_file)
+    root2 = C.load_model(model_file)
+    assert 'abc' == root2.custom_attributes['test']
+    assert {'a':1, 'b':2} == root2.custom_attributes['dict']
+    assert [1,2,3]==root2.custom_attributes['list']
+    assert 'def' == root2.custom_attributes['test2']
 
 
 def test_clone_with_different_dynamic_axes():

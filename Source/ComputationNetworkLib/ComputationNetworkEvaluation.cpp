@@ -479,7 +479,7 @@ void ComputationNetwork::VerifyIsCompiled(const char* where) const
 void ComputationNetwork::CompileNetwork()
 {
     if (TraceLevel() > 0)
-    fprintf(stderr, "\nPost-processing network...\n");
+        fprintf(stderr, "\nPost-processing network...\n");
 
     // We may only get here if not !IsCompiled(). We could now verify each member to be virgin.
     // Or just invalidate it again, which is easier and safer.
@@ -513,9 +513,7 @@ void ComputationNetwork::CompileNetwork()
     ResetMBLayouts();
 
     // STEP: Discover nested loops.
-    FormRecurrentLoops(nullptr); // form the global one  --TODO: just use this; should be no need to do this for each root
-    //for (auto& node : m_allRoots)
-    //    FormRecurrentLoops(node); // BUGBUG: These calls are needed because they patch EvalOrders. Will be unnecessary once we move this out.
+    FormRecurrentLoops();
 
     // STEP: Create loop-corrected depth-first traversals and cached input/parameter sets for every actual root node.
     for (auto& root : m_allRoots)

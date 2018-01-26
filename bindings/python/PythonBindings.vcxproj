@@ -85,6 +85,7 @@
     <None Include="cntk\logging\graph.py" />
     <None Include="cntk\logging\progress_print.py" />
     <None Include="cntk\logging\tests\graph_test.py" />
+    <None Include="cntk\logging\tests\progress_print_test.py" />
     <None Include="cntk\logging\tests\__init__.py" />
     <None Include="cntk\logging\__init__.py" />
     <None Include="cntk\losses\tests\cosine_distance_test.py" />
@@ -105,6 +106,8 @@
     <None Include="cntk\pytest.ini" />
     <None Include="cntk\sample_installer.py" />
     <None Include="cntk\tensor.py" />
+    <None Include="cntk\tests\onnx_format_test.py" />
+    <None Include="cntk\tests\onnx_op_test.py" />
     <None Include="cntk\tests\user_learner.py" />
     <None Include="cntk\tests\variables_test.py" />
     <None Include="cntk\train\distributed.py" />

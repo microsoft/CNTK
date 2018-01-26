@@ -109,6 +109,7 @@ public:
                      const bool initialized);
 
     void AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
+    void AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -228,6 +229,9 @@ public:
     CPUMatrix<ElemType>& InplaceTanh();
     CPUMatrix<ElemType>& AssignTanhOf(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& InplaceAtanh();
+    CPUMatrix<ElemType>& AssignAtanhOf(const CPUMatrix<ElemType>& a);
+
     CPUMatrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     CPUMatrix<ElemType>& AssignLogSoftmaxOf(const CPUMatrix<ElemType>& a, const bool isColWise);
 
@@ -267,6 +271,9 @@ public:
 
     CPUMatrix<ElemType>& InplaceSinh();
     CPUMatrix<ElemType>& AssignSinhOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAsinh();
+    CPUMatrix<ElemType>& AssignAsinhOf(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& InplaceAbs();
     CPUMatrix<ElemType>& AssignAbsOf(const CPUMatrix<ElemType>& a);

@@ -28,6 +28,7 @@ namespace CNTK
         {PrimitiveOpType::Negate, L"Negate"},
         {PrimitiveOpType::Sigmoid, L"Sigmoid"},
         {PrimitiveOpType::Tanh, L"Tanh"},
+        {PrimitiveOpType::Atanh, L"Atanh"},
         {PrimitiveOpType::ReLU, L"ReLU"},
         {PrimitiveOpType::Exp, L"Exp"},
         {PrimitiveOpType::Log, L"Log"},
@@ -87,6 +88,7 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Cosh, L"Cosh"},
+        {PrimitiveOpType::Asinh, L"Asinh"},
         {PrimitiveOpType::Sinh, L"Sinh"},
         {PrimitiveOpType::Pass, L"Pass"},
         {PrimitiveOpType::Block, L"Block"},
@@ -110,6 +112,10 @@ namespace CNTK
         {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
         {PrimitiveOpType::Pad, L"Pad"},
         {PrimitiveOpType::Crop, L"Crop"},
+        {PrimitiveOpType::TopK, L"TopK"},
+        {PrimitiveOpType::ConstantOp, L"ConstantOp"},
+        {PrimitiveOpType::Squeeze, L"Squeeze"},
+        {PrimitiveOpType::ElementMaxPooling, L"ElementMaxPooling" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -242,6 +248,7 @@ namespace CNTK
         static const std::wstring AttributeNameBlendTimeConstant;
         static const std::wstring AttributeNameEpsilon;
         static const std::wstring AttributeNameUseCuDNNEngine;
+        static const std::wstring AttributeNameDisableRegularization;
         static const std::wstring AttributeNameNewDataType;
         static const std::wstring AttributeNameNewDynamicAxes;
         static const std::wstring AttributeNameNewSequenceAxisLengthScalingFactor;
@@ -281,6 +288,16 @@ namespace CNTK
         static const std::wstring AttributeNamePaddingFoot;
         static const std::wstring AttributeNamePaddingMode;
         static const std::wstring AttributeNamePaddingConstantValue;
+        static const std::wstring AttributeNameAlpha;
+        static const std::wstring AttributeNameBeta;
+        static const std::wstring AttributeNameGamma;
+        static const std::wstring AttributeNameKernelShape;
+        static const std::wstring AttributeNameBias;
+        static const std::wstring AttributeNameDepthRadius;
+        static const std::wstring AttributeNameBlockSize;
+        static const std::wstring AttributeNameCustomAttributes;
+        static const std::wstring AttributeNameNumItems;
+        static const std::wstring AttributeNameFillValue;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -794,7 +811,9 @@ namespace CNTK
         // Version 16: Add to_batch/unpack_batch.
         // Version 17: Add Pad.
         // Version 18: Add Crop node.
-        static const size_t s_serializationVersion = 18;
+        // Version 19: Add TopK
+        // Version 20: Add squeeze, expand dims, zeros like, ones like
+        static const size_t s_serializationVersion = 20;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

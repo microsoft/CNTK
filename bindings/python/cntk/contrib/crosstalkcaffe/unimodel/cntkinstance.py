@@ -203,9 +203,9 @@ class ApiSetup(object):
             mean_tensor = cntk_layer.parameter_tensor[0]
             variance_tensor = cntk_layer.parameter_tensor[1]
             global_scale = cntk_layer.parameter_tensor[2].data[0]
-            scale_init = 1 / global_scale if global_scale != 0 else 0
-            mean_init = np.asarray(mean_tensor.data, dtype=np.float32) * scale_init
-            var_init = np.asarray(variance_tensor.data, dtype=np.float32) * scale_init
+            moving_average_factor = 1 / global_scale if global_scale != 0 else 0
+            mean_init = np.asarray(mean_tensor.data, dtype=np.float32) * moving_average_factor
+            var_init = np.asarray(variance_tensor.data, dtype=np.float32) * moving_average_factor
             if len(cntk_layer.parameter_tensor) == 5:
                 scale_tensor = cntk_layer.parameter_tensor[3]
                 bias_tensor = cntk_layer.parameter_tensor[4]

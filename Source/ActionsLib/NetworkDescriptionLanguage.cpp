@@ -155,6 +155,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
          if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AcosNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AsinNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AsinhNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AtanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
 #ifdef COMING_SOON
@@ -223,12 +225,16 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseRowStackNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ElementMaxNode))) ret = true;
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceDecoderNode), L"SEWithSM")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinhNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(StochasticBinaryNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AnnealTanhNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AnnealBinaryNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput")) ret = true;

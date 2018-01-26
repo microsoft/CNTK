@@ -1013,6 +1013,9 @@ static const std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWr
     { L"CNTKTextFormatReader",  L"Cntk.Deserializers.TextFormat" },
     { L"CNTKBinaryReader",      L"Cntk.Deserializers.Binary" },
     { L"ImageReader",           L"Cntk.Deserializers.Image" },
+
+    // Image writer
+    { L"ImageWriter",           L"Cntk.ImageWriter" },
 };
 
 #ifdef _WIN32

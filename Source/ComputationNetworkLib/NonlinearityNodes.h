@@ -17,6 +17,7 @@
 #include <list>
 #include <memory>
 #include <algorithm>
+#include <numeric>
 #include <assert.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -117,7 +118,9 @@ public:
 // AsinNode (input)
 // AcosNode (input)
 // CoshNode (input)
+// AsinhNode (input)
 // SinhNode (input)
+// AtanhNode (input)
 // Abs(input)
 // Negate (input)
 // Sqrt (input)
@@ -151,6 +154,8 @@ public:
 DeclareUnaryElementWiseWithOpCodeNode(Abs,                   Abs,                   ElementwiseProductWithAbsDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Acos,                  Acos,                  ElementwiseProductWithAcosDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Asin,                  Asin,                  ElementwiseProductWithAsinDerivative,                            binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Asinh,                 Asinh,                 ElementwiseProductWithAsinhDerivative,                           binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Atanh,                 Atanh,                 ElementwiseProductWithAtanhDerivative,                           binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosh,                  Cosh,                  ElementwiseProductWithCoshDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,                Cosine,                ElementwiseProductWithCosDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Exp,                   Exp,                   ElementwiseProduct,                                              binaryWithOutputGradient);
@@ -442,6 +447,114 @@ public:
 template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 
+
+
+template <class ElemType>
+class TopKNode : public ComputationNode<ElemType>, public MultiOutputNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"TopK"; }
+
+public:
+    TopKNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name), MultiOutputNode<ElemType>(2) {}
+    TopKNode(DEVICEID_TYPE deviceId, const wstring& name, size_t k)
+        : Base(deviceId, name), MultiOutputNode<ElemType>(2), m_k(k) {}
+
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_sortedIndices, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_sortedIndices, matrixPool);
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+#ifdef _MSC_VER 
+        auto& outputValuePtrRef = this->ValuePtrRef();
+        auto& inputValuePtrRef = Input(0)->ValuePtrRef();
+#else
+        auto& outputValuePtrRef = this->template ValuePtrRef();
+        auto& inputValuePtrRef = Input(0)->template ValuePtrRef();
+#endif
+        auto dim = Input(0)->GetSampleLayout().GetDimPadded(0);
+        if (m_k > dim)
+            LogicError("TopK: number of requested elements k (=%zd) exceeds total number of elements (=%zd) on this axis", m_k, dim);
+
+        auto&& topkOutput = outputValuePtrRef->Reshaped(m_k, outputValuePtrRef->GetNumElements() / m_k);
+        auto&& topkInput = inputValuePtrRef->Reshaped(dim, inputValuePtrRef->GetNumElements() / dim);
+        topkInput.VectorMax(*m_sortedIndices, topkOutput, true, m_k);
+        this->m_outputsValue[1]->SetValue(m_sortedIndices->Reshaped(outputValuePtrRef->GetNumRows(), outputValuePtrRef->GetNumCols()));
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // Backpropagation works the same way as for other nodes that take top element(s) such as max pooling.
+        // The values that are not selected get a gradient of zero, otherwise the gradient is copied to the
+        // positions that were responsible for the top values. This is a scatter operation.
+#ifdef _MSC_VER 
+        auto&& inputGradient = Input(0)->GradientPtrRef();
+        auto&& outputGradient = GradientPtrRef();
+#else
+        auto&& inputGradient = Input(0)->template GradientPtrRef();
+        auto&& outputGradient = this->template GradientPtrRef();
+#endif
+
+        auto&& reshapedInputGradient = inputGradient->Reshaped(1, inputGradient->GetNumElements());
+        auto&& reshapedOutputGradient = outputGradient->Reshaped(1, outputGradient->GetNumElements());
+
+        // The indices take values between 0 and the dimension of the axis over which we compute the top k
+        // Since the matrix class lacks a scatter that can handle indices arising from gather operations 
+        // over a particular axis of a multidimensional tensor, we patch the indices here so that they look
+        // as if they were generated from a gather-like operation over a 1-dimensional tensor.
+        auto numCols = m_sortedIndices->GetNumCols();
+        if (numCols != 1)
+        {
+            CreateMatrixIfNull(m_steps);
+            auto dim = Input(0)->GetSampleLayout().GetDimPadded(0);
+            auto tmp = new ElemType[numCols];
+            std::generate(tmp, tmp + numCols, [i = ElemType(0), dim]() mutable { auto ret = i; i += dim; return ret; });
+            m_steps->SetValue(1, numCols, this->m_deviceId, tmp);
+            delete[] tmp;
+            m_sortedIndices->ScaleAndAdd(ElemType(1), *m_steps, *m_sortedIndices);
+        }
+        reshapedInputGradient.DoScatterColumnsOf(ElemType(1), m_sortedIndices->Reshaped(1, m_sortedIndices->GetNumElements()), reshapedOutputGradient, ElemType(1));
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return false; }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        assert(m_inputs.size() == 1);
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        auto&& inputShape = Input(0)->GetSampleLayout();
+        SmallVector<size_t> outDims = inputShape.GetDims();
+        if (outDims.size() > 0)
+            outDims[0] = m_k;
+        auto outShape = TensorShape(outDims);
+        SetDims(outShape, Input(0)->HasMBLayout());
+        this->m_outputsMBLayout[1] = Input(0)->GetMBLayout();
+        this->m_outputsShape[1] = outShape;
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_sortedIndices;
+    shared_ptr<Matrix<ElemType>> m_steps;
+    size_t m_k;
+};
+
+template class TopKNode<float>;
+template class TopKNode<double>;
+
+
+
 // -----------------------------------------------------------------------
 // If (flag, ifValue, elseValue)
 // -----------------------------------------------------------------------
@@ -578,6 +691,299 @@ public:
 template class ClipNode<float>;
 template class ClipNode<double>;
 
+
+// -----------------------------------------------------------------------
+// StochastciBinaryNode (tensor)
+// -----------------------------------------------------------------------
+// This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
+// The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
+// not been clipped, and 0 if the value has been clipped.
+
+template <class ElemType>
+class StochasticBinaryNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"StochasticBinary"; }
+
+public:
+    StochasticBinaryNode(DEVICEID_TYPE deviceId, const wstring& name, bool neuronST = true, bool RFAdjusted = false, const bool passThrough = true, const float annealRate = 1.0)
+        : Base(deviceId, name), m_neuronST(neuronST), m_RFAdjusted(RFAdjusted), m_passThrough(passThrough), m_annealRate(annealRate)
+    {
+    }
+
+    StochasticBinaryNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : StochasticBinaryNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"neuronST"), configp->Get(L"RFAdjusted"), configp->Get(L"passThrough"), configp->Get(L"annealRate"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        if (!m_passThrough && m_neuronST) m_annealSlope *= m_annealRate;
+        Matrix<ElemType> result = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr); 
+        Matrix<ElemType>::StochasticBinaryForward(inputm, result, m_annealSlope);
+    }
+    
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //NOT_IMPLEMENTED;
+        Matrix<ElemType> gradient = GradientFor(fr);
+        Matrix<ElemType> output = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+
+        Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
+        Matrix<ElemType>::StochasticBinaryBackward(inputm, output, gradient, inputGrad, m_neuronST, m_RFAdjusted, m_passThrough, m_annealSlope);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_neuronST;
+        fstream << m_RFAdjusted;
+        fstream << m_passThrough;
+        fstream << m_annealRate;
+        fstream << m_annealSlope;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_neuronST;
+        fstream >> m_RFAdjusted;
+        fstream >> m_passThrough;
+        fstream >> m_annealRate;
+        fstream >> m_annealSlope;
+    }
+
+protected:
+    bool m_neuronST = true;
+    bool m_RFAdjusted = false;
+    bool m_passThrough = true; 
+    float m_annealRate = 1.0;
+    float m_annealSlope = 1.0;
+};
+
+template class StochasticBinaryNode<float>;
+template class StochasticBinaryNode<double>;
+
+// -----------------------------------------------------------------------
+// AnnealTanhNode (tensor)
+// -----------------------------------------------------------------------
+// This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
+// The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
+// not been clipped, and 0 if the value has been clipped.
+
+template <class ElemType>
+class AnnealTanhNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"AnnealTanh"; }
+
+public:
+    AnnealTanhNode(DEVICEID_TYPE deviceId, const wstring& name, const float annealRate = 1.0)
+        : Base(deviceId, name), m_annealRate(annealRate)
+    {
+    }
+
+    AnnealTanhNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : AnnealTanhNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"annealRate"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        m_annealSlope *= m_annealRate;
+        Matrix<ElemType> result = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+        Matrix<ElemType>::AnnealTanhForward(inputm, result, m_annealSlope);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //NOT_IMPLEMENTED;
+        Matrix<ElemType> gradient = GradientFor(fr);
+        Matrix<ElemType> output = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+
+        Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
+        Matrix<ElemType>::AnnealTanhBackward(inputm, output, gradient, inputGrad, m_annealSlope);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_annealRate;
+        fstream << m_annealSlope;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_annealRate;
+        fstream >> m_annealSlope;
+    }
+
+protected:
+    float m_annealRate = 1.0;
+    float m_annealSlope = 1.0;
+};
+
+template class AnnealTanhNode<float>;
+template class AnnealTanhNode<double>;
+
+
+// -----------------------------------------------------------------------
+// AnnealBinaryNode (tensor)
+// -----------------------------------------------------------------------
+// This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
+// The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
+// not been clipped, and 0 if the value has been clipped.
+
+template <class ElemType>
+class AnnealBinaryNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"AnnealBinary"; }
+
+public:
+    AnnealBinaryNode(DEVICEID_TYPE deviceId, const wstring& name, const float annealRate = 1.0, float annealSlope = 1.0)
+        : Base(deviceId, name), m_annealRate(annealRate), m_annealSlope(annealSlope)
+    {
+    }
+
+    AnnealBinaryNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : AnnealBinaryNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"annealRate"), configp->Get(L"annealSlope"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        m_annealSlope *= m_annealRate;
+        Matrix<ElemType> result = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+        Matrix<ElemType>::AnnealBinaryForward(inputm, result, m_annealSlope);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //NOT_IMPLEMENTED;
+        Matrix<ElemType> gradient = GradientFor(fr);
+        Matrix<ElemType> output = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+
+        Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
+        Matrix<ElemType>::AnnealBinaryBackward(inputm, output, gradient, inputGrad, m_annealSlope);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_annealRate;
+        fstream << m_annealSlope;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_annealRate;
+        fstream >> m_annealSlope;
+    }
+
+protected:
+    float m_annealRate = 1.0;
+    float m_annealSlope = 1.0;
+};
+
+template class AnnealBinaryNode<float>;
+template class AnnealBinaryNode<double>;
+
+// -----------------------------------------------------------------------
+// ElementMax (input0, input1, ...)
+// Element Wise Max of the input (dense) matrixes
+// The output is also a dense matrix
+// -----------------------------------------------------------------------
+template <class ElemType>
+class ElementMaxNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ElementMax"; }
+
+public:
+    DeclareConstructorFromConfig(ElementMaxNode);
+    ElementMaxNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> result = ValueFor(fr);
+        Matrix<ElemType> nWords = Input(0)->ValueFor(fr);
+        result.SetValue(Input(1)->ValueFor(fr));
+
+        for (size_t inputIndex = 2; inputIndex < GetNumInputs(); inputIndex++)
+        {
+            let input = Input(inputIndex)->ValueFor(fr);
+            Matrix<ElemType>::DoElementMaxOf(result, input, inputIndex, nWords);
+        }
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        if (inputIndex == 0) { return; } // does not backpropate to the nWords matrix.
+        Matrix<ElemType> outputGradient = GradientFor(fr);
+        Matrix<ElemType> outputValue = ValueFor(fr);
+        Matrix<ElemType> inputGradient = Input(inputIndex)->GradientFor(fr);
+        Matrix<ElemType> inputValue = Input(inputIndex)->ValueFor(fr);
+        Matrix<ElemType> nWords = Input(0)->ValueFor(fr);
+        inputGradient.AddElementMaxGradient(inputValue, outputValue, outputGradient, inputIndex, nWords);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        // the dimension of column must be the same (i.e., the Minibatch size)
+        if (isFinalValidationPass)
+        {
+            for (int i = 2; i < GetNumInputs(); i++)
+            {
+                //fprintf(stderr, "number of inputs: %d\n", GetNumInputs());
+                // the dimension of column must be the same (i.e., the Minibatch size)
+                if (Input(i)->GetSampleMatrixNumCols() != Input(i - 1)->GetSampleMatrixNumCols() ||
+                    Input(i)->GetSampleMatrixNumRows() != Input(i - 1)->GetSampleMatrixNumRows())
+                    LogicError("%ls: Input matrix size does not match.", NodeDescription().c_str());
+            }
+        }
+
+        // calculate the row size of the output matrix
+        auto dims = Input(1)->GetSampleLayout().GetDims();
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+};
+
+template class ElementMaxNode<float>;
+template class ElementMaxNode<double>;
 
 // -----------------------------------------------------------------------
 // CompareNode(a,b)

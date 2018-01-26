@@ -423,6 +423,7 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
     va_list arg_ptr;
     va_start(arg_ptr, fmt);
     int rc = vfprintf(f, fmt, arg_ptr);
+    va_end(arg_ptr);
     if (rc < 0)
     {
         RuntimeError("error writing to file: %s", strerror(errno));

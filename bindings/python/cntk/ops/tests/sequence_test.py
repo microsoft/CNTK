@@ -172,6 +172,23 @@ def test_sequence_softmax():
   expected = np_softmax(a, 1)
   assert np.allclose(val, expected)
 
+def test_sequence_past_future_delay_value():
+    v = C.sequence.input_variable(shape=(2))
+    seq_data = np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]], dtype=np.float32)
+    future_seq_data = np.array([[2.0, 2.0], [3.0, 3.0], [0.0, 0.0]], dtype=np.float32)
+    past_seq_data = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0]], dtype=np.float32)
+
+    future_v = C.sequence.future_value(v, initial_state=0)
+    past_v = C.sequence.past_value(v, initial_state=0)
+
+    assert np.allclose(future_v.eval({v: seq_data}), future_seq_data)
+    assert np.allclose(past_v.eval({v: seq_data}), past_seq_data)
+
+    future_v = C.sequence.delay(v, initial_state=0, time_step=-1)
+    past_v = C.sequence.delay(v, initial_state=0, time_step=1)
+
+    assert np.allclose(future_v.eval({v: seq_data}), future_seq_data)
+    assert np.allclose(past_v.eval({v: seq_data}), past_seq_data)
 
 def test_sequence_max_with_variable_lengths():
     np.random.seed(0)

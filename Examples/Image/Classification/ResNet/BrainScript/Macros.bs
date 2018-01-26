@@ -1,13 +1,13 @@
 # assembly components
 ## Convolution + Batch Normalization
-ConvBNLayer {outChannels, kernel, stride, bnTimeConst} = Sequential(
+ConvBNLayer {outChannels, kernel, stride, bnTimeConst, bnInitialScale} = Sequential(
     ConvolutionalLayer {outChannels, kernel, init = "heNormal", stride = stride, pad = true, bias = false} :
-    BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = bnTimeConst, useCntkEngine = false}
+    BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = bnTimeConst, useCntkEngine = false, initialScale = bnInitialScale}
 )
 
 ## Convolution + Batch Normalization + Rectifier Linear
 ConvBNReLULayer {outChannels, kernelSize, stride, bnTimeConst} = Sequential(
-    ConvBNLayer {outChannels, kernelSize, stride, bnTimeConst} :
+    ConvBNLayer {outChannels, kernelSize, stride, bnTimeConst, 1} :
     ReLU
 )
 
@@ -20,7 +20,7 @@ ResNetBasic {outChannels, bnTimeConst} = {
         # Convolution
         b = Sequential (
             ConvBNReLULayer {outChannels, (3:3), (1:1), bnTimeConst} : 
-            ConvBNLayer {outChannels, (3:3), (1:1), bnTimeConst}) (x) 
+            ConvBNLayer {outChannels, (3:3), (1:1), bnTimeConst, 1}) (x) 
 
         p = Plus(b, x)
         r = ReLU(p)
@@ -34,10 +34,10 @@ ResNetBasicInc {outChannels, stride, bnTimeConst} = {
         # Convolution 
         b = Sequential (
             ConvBNReLULayer {outChannels, (3:3), stride, bnTimeConst} :
-            ConvBNLayer {outChannels, (3:3), (1:1), bnTimeConst}) (x)
+            ConvBNLayer {outChannels, (3:3), (1:1), bnTimeConst, 1}) (x)
 
         # Shortcut
-        s = ConvBNLayer {outChannels, (1:1), stride, bnTimeConst} (x)
+        s = ConvBNLayer {outChannels, (1:1), stride, bnTimeConst, 1} (x)
 
         p = Plus(b, s)
         r = ReLU(p)
@@ -54,7 +54,7 @@ ResNetBottleneck {outChannels, interOutChannels, bnTimeConst} = {
         b = Sequential (
             ConvBNReLULayer {interOutChannels, (1:1), (1:1), bnTimeConst} :
             ConvBNReLULayer {interOutChannels, (3:3), (1:1), bnTimeConst} :
-            ConvBNLayer {outChannels, (1:1), (1:1), bnTimeConst}) (x)
+            ConvBNLayer {outChannels, (1:1), (1:1), bnTimeConst, 0}) (x)
 
         p = Plus(b, x)
         r = ReLU(p)
@@ -70,11 +70,11 @@ ResNetBottleneckInc {outChannels, interOutChannels, stride1x1, stride3x3, bnTime
         b = Sequential (
             ConvBNReLULayer {interOutChannels, (1:1), stride1x1, bnTimeConst} :
             ConvBNReLULayer {interOutChannels, (3:3), stride3x3, bnTimeConst} :
-            ConvBNLayer {outChannels, (1:1), (1:1), bnTimeConst}) (x)
+            ConvBNLayer {outChannels, (1:1), (1:1), bnTimeConst, 0}) (x)
 
         # Shortcut
         stride[i:0..Length(stride1x1)-1] = stride1x1[i] * stride3x3[i]
-        s = ConvBNLayer {outChannels, (1:1), stride, bnTimeConst} (x)
+        s = ConvBNLayer {outChannels, (1:1), stride, bnTimeConst, 1} (x)
 
         p = Plus(b, s)
         r = ReLU(p)

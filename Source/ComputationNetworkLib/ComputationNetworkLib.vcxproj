@@ -114,6 +114,7 @@
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\Math\Matrix.h" />
     <ClInclude Include="ComputationEnvironment.h" />
+    <ClInclude Include="ComputationGraphAlgorithms.h" />
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkBuilder.h" />
     <ClInclude Include="ComputationNode.h" />

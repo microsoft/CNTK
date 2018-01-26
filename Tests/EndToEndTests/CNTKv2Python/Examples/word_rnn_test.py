@@ -75,7 +75,7 @@ def test_word_rnn(device_id):
     W.sequences_per_batch = 2
     W.alpha = 0.75
     W.learning_rate = 0.02
-    W.momentum_as_time_constant = 5
+    W.momentum_per_sample = 0.8187307530779818
     W.clipping_threshold_per_sample = 5.0
     W.segment_sepparator = '<eos>'
     W.num_samples_between_progress_report = 2

@@ -47,9 +47,9 @@ class CaffeValidCore(ValidCore):
         caffe_solver = CaffeResolver()
         caffe = caffe_solver.caffe
         if not caffe_solver.runtime():
-            sys.stdout.write('No caffe runtime support, ignore validation...\n')
+            sys.__stdout__.write('No caffe runtime support, ignore validation...\n')
             return
-        sys.stdout.write('Start valid feature map...\n')
+        sys.__stdout__.write('Start valid feature map...\n')
         caffe.set_mode_gpu()
         caffe.set_device(0)
         net = caffe.Net(source_solver.model_path, source_solver.weights_path, caffe.TEST)
@@ -66,7 +66,7 @@ class CaffeValidCore(ValidCore):
             test_result = net.blobs[target].data
             power_error = np.power(gt_result.flatten() - test_result.flatten(), 2).sum()
             rsme_diff = np.sqrt(power_error / gt_result.size)
-            sys.stdout.write('Validating %s with RMSE = %s, MAX = %s, MIN = %s\n' %
-                             (target, str(rsme_diff), str(gt_result.max()), str(gt_result.min())))
-        sys.stdout.write('Validation finished...\n')
-        sys.stdout.flush()
+            sys.__stdout__.write(('Validating %s with RMSE = %s, MAX = %s, MIN = %s\n' %
+                             (target, str(rsme_diff), str(gt_result.max()), str(gt_result.min()))))
+        sys.__stdout__.write('Validation finished...\n')
+        sys.__stdout__.flush()

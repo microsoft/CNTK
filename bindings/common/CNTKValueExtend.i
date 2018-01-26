@@ -31,23 +31,27 @@
         return CNTK::Value::Create<double>(sampleShape, sequences, sequenceStartFlags, device, readOnly);
     }
 
-    static CNTK::ValuePtr CNTK::Value::CreateBatchFloat(const NDShape& sampleShape, const std::vector<float>& batchData,
-        const DeviceDescriptor& device, bool readOnly = false ) {
+    static CNTK::ValuePtr CNTK::Value::CreateBatchFloat(const NDShape& sampleShape, const float *dataBuffer, int dataStart, int dataSize,
+        const DeviceDescriptor& device, bool readOnly = false) {
+        std::vector<float> batchData(dataBuffer + dataStart, dataBuffer + dataStart + dataSize);
         return CNTK::Value::CreateBatch<float>(sampleShape, batchData, device, readOnly);
     }
 
-    static CNTK::ValuePtr CNTK::Value::CreateBatchDouble(const NDShape& sampleShape, const std::vector<double>& batchData,
-        const DeviceDescriptor& device, bool readOnly = false ) {
+    static CNTK::ValuePtr CNTK::Value::CreateBatchDouble(const NDShape& sampleShape, const double *dataBuffer, int dataStart, int dataSize,
+        const DeviceDescriptor& device, bool readOnly = false) {
+        std::vector<double> batchData(dataBuffer + dataStart, dataBuffer + dataStart + dataSize);
         return CNTK::Value::CreateBatch<double>(sampleShape, batchData, device, readOnly);
     }
 
-    static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(const NDShape& sampleShape, const std::vector<float>& sequenceData,
+    static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(const NDShape& sampleShape, const float *dataBuffer, int dataSize,
         bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
+        std::vector<float> sequenceData(dataBuffer, dataBuffer + dataSize);
         return CNTK::Value::CreateSequence<float>(sampleShape, sequenceData, sequenceStartFlag, device, readOnly);
     }
 
-    static CNTK::ValuePtr CNTK::Value::CreateSequenceDouble(const NDShape& sampleShape, const std::vector<double>& sequenceData,
+    static CNTK::ValuePtr CNTK::Value::CreateSequenceDouble(const NDShape& sampleShape, const double *dataBuffer, int dataSize,
         bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
+        std::vector<double> sequenceData(dataBuffer, dataBuffer + dataSize);
         return CNTK::Value::CreateSequence<double>(sampleShape, sequenceData, sequenceStartFlag, device, readOnly);
     }
 

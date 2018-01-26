@@ -18,17 +18,7 @@
 
 %pragma(java) jniclasscode=%{
   static {
-    String libName = "Cntk.Core.JavaBinding-2.2";
-    try {
-       System.loadLibrary(libName);
-    } catch (UnsatisfiedLinkError e) {
-       try {
-           System.loadLibrary(libName+'d');
-       } catch (UnsatisfiedLinkError e2) {
-          System.err.println("Native code library failed to load. \n" + e2);
-          System.exit(1);
-       }
-    }
+      CNTKNativeUtils.loadAll();
   }
 %}
 
@@ -150,7 +140,7 @@
         VariableVector varVect = new VariableVector();
         for (int i = 0; i < outputVariable.size(); ++i)
         {
-            varVect.add(varVect.get(i));
+            varVect.add(outputVariable.get(i));
         }
         return CNTKLib.Combine(varVect);
     }

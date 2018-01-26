@@ -65,31 +65,17 @@
 
   <PropertyGroup Condition="!$(IsUWP)">
     <MathLibrary>MKL</MathLibrary>
-    <CNTKCustomMKLVersion>3</CNTKCustomMKLVersion>
-    <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
-    <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
+    <MathIncludePath>$(MKLML_PATH)\include</MathIncludePath>
     <MathDefine>USE_MKL</MathDefine>
     <!-- Only non-UWP configurations consume PerformanceProfiler -->
     <ReaderLibs>Cntk.PerformanceProfiler-$(CntkComponentVersion).lib;$(ReaderLibs)</ReaderLibs>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="!$(IsUWP) And '$(CNTK_MKL_SEQUENTIAL)' != '1'">
-    <MathLibraryName>CNTK custom MKL Parallel (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
-    <MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
-    <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
-    <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
+    <MathLibraryName>MKL-ML Library</MathLibraryName>
+    <MathLibraryPath>$(MKLML_PATH)\lib</MathLibraryPath>
+    <MathLinkLibrary>mklml.lib</MathLinkLibrary>
+    <MathDelayLoad>mklml.dll</MathDelayLoad>
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
-    <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+    <UnitTestDlls>$(OutDir)mklml.lib;$(OutDir)libiomp5md.dll;</UnitTestDlls>
   </PropertyGroup>
-  <PropertyGroup Condition="!$(IsUWP) And '$(CNTK_MKL_SEQUENTIAL)' == '1'">
-    <MathLibraryName>CNTK custom MKL Sequential (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
-    <MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
-    <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
-    <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
-    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
-    <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
-  </PropertyGroup>
-
   <PropertyGroup Condition="$(UseZip)">
     <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
     <ZipDefine>USE_ZIP</ZipDefine>

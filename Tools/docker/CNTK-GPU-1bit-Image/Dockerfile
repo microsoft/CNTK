@@ -65,7 +65,7 @@ ENV PATH /usr/local/mpi/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
 
 RUN LIBZIP_VERSION=1.1.2 && \
-    wget -q -O - http://nih.at/libzip/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
+    wget -q -O - https://libzip.org/download/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
     cd libzip-${LIBZIP_VERSION} && \
     ./configure && \
     make -j"$(nproc)" install && \
@@ -113,11 +113,11 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install CNTK custom MKL
-RUN CNTK_CUSTOM_MKL_VERSION=3 && \
-    mkdir /usr/local/CNTKCustomMKL && \
-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-$CNTK_CUSTOM_MKL_VERSION.tgz | \
-    tar -xzf - -C /usr/local/CNTKCustomMKL
+# Install MKLML
+RUN MKLML_VERSION=v0.11/mklml_lnx_2018.0.1.20171007 && \
+    mkdir /usr/local/mklml && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/$MKLML_VERSION.tgz | \
+    tar -xzf - -C /usr/local/mklml
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
@@ -185,6 +185,7 @@ RUN mkdir -p /usr/local/cudnn/cuda/include && \
 
 # Build CNTK
 RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
+    MKLML_VERSION_DETAIL=mklml_lnx_2018.0.1.20171007 && \
     CONFIGURE_OPTS="\
       --1bitsgd=yes \
       --with-cuda=/usr/local/cuda \
@@ -201,7 +202,7 @@ RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK
     cd ../../.. && \
     mkdir -p build-mkl/gpu/release && \
     cd build-mkl/gpu/release && \
-    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
+    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/$MKLML_VERSION_DETAIL && \
     make -j"$(nproc)" all
 
 RUN cd Examples/Image/DataSets/CIFAR-10 && \

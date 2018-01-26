@@ -96,25 +96,25 @@ function OpCMake362(
         } )
 }
 
-function OpCNTKMKL3
+function OpMKLML011
     ([parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "CNTK Custom MKL Version 3"
-    $prodFile = "CNTKCustomMKL-Windows-3.zip"
-    $prodSubDir = "CNTKCustomMKL"
+    $prodName = "MKLML Version 0.11"
+    $prodFile = "mklml_win_2018.0.1.20171007"
+    $prodSubDir = "mklml"
     $targetPath = join-path $targetFolder $prodSubDir
-    $targetPathCurrenVersion = join-path $targetPath "3"
-    $envVar = "CNTK_MKL_PATH";
-    $envValue = $targetPath
-    $downloadSource = "https://www.cntk.ai/mkl/$prodFile";
-    $expectedHash = "BFE38CC72F669AD9468AD18B681718C3F02125DCF24DCC87C4696DD89D0E3CDE"
+    $targetPathCurrentVersion = join-path $targetPath $prodFile
+    $envVar = "MKLML_PATH";
+    $envValue = $targetPathCurrentVersion
+    $downloadSource = "https://github.com/01org/mkl-dnn/releases/download/v0.11/$prodFile.zip";
+    $expectedHash = "5B24445DE0D8912751F4BAEDE98FCC7CB3988FECF58295D63D3796436A54202E"
 
-    @(  @{ShortName = "CNTKMKL3"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPathCurrenVersion"; ActionInfo = "Installing $prodName"; 
-          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPathCurrenVersion },
+    @(  @{ShortName = "MKLML011"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPathCurrentVersion"; ActionInfo = "Installing $prodName"; 
+          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPathCurrentVersion },
                             @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
-          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; destinationFolder = $prodSubDir },
+          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile.zip"; ExpectedHash = $expectedHash } );
+          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile.zip"; destination = $targetFolder; destinationFolder = $prodSubDir },
                       @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
 }

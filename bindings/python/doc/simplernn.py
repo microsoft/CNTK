@@ -3,7 +3,7 @@ import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs,\
         INFINITELY_REPEAT
-from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.learners import sgd, learning_parameter_schedule_per_sample
 from cntk import input_variable, cross_entropy_with_softmax, \
         classification_error, sequence
 from cntk.logging import ProgressPrinter
@@ -58,7 +58,7 @@ def train_sequence_classifier():
             label:    reader.streams.labels
     }
 
-    lr_per_sample = learning_rate_schedule(0.0005, UnitType.sample)
+    lr_per_sample = learning_parameter_schedule_per_sample(0.0005)
     # Instantiate the trainer object to drive the model training
     progress_printer = ProgressPrinter(0)
     trainer = Trainer(classifier_output, (ce, pe),

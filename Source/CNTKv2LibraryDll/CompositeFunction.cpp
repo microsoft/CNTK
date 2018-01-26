@@ -365,7 +365,7 @@ namespace CNTK
             return;
         }
 
-        // build a map of souce funtion to the destination (this) function UIDs.
+        // build a map of souce function to the destination (this) function UIDs.
         map<wstring, wstring> uidMap;
         for (auto i = 0; i < theirUIDs.size(); i++)
             uidMap[theirUIDs[i]] = ourUIDs[i];
@@ -626,6 +626,9 @@ namespace CNTK
                 case PrimitiveOpType::Sigmoid:
                     computationNodePtr = New<SigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::Atanh:
+                    computationNodePtr = New<AtanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Tanh:
                     computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
@@ -643,6 +646,9 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::Cosh:
                     computationNodePtr = New<CoshNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Asinh:
+                    computationNodePtr = New<AsinhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
                 case PrimitiveOpType::Sinh:
                     computationNodePtr = New<SinhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
@@ -677,6 +683,12 @@ namespace CNTK
                 case PrimitiveOpType::Hardmax:
                     computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::TopK:
+                {
+                    auto k = functionConfig[PrimitiveFunction::AttributeNameNumItems].Value<size_t>();
+                    computationNodePtr = New<TopKNode<ElementType>>(network->GetDeviceId(), internalNodeName, k);
+                    break;
+                }
                 case PrimitiveOpType::StableSigmoid:
                     computationNodePtr = New<StableSigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
@@ -759,6 +771,9 @@ namespace CNTK
                     computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis), strides);
                     break;
                 }
+                case PrimitiveOpType::ElementMaxPooling:
+                    computationNodePtr = New<ElementMaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::RandomSample:
                 {
                     auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
@@ -818,6 +833,22 @@ namespace CNTK
                     }
 
                     computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(replacementShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
+                    break;
+                }
+                case PrimitiveOpType::Squeeze:
+                {
+                    auto beginAxis = Axis(0);
+                    auto inputShape = functionInputs[0].Shape();
+                    auto endAxis = Axis((int)inputShape.Rank());
+                    auto outputShape = GetSqueezedShape(inputShape, functionConfig);
+
+                    computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(outputShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
+                    break;
+                }
+                case PrimitiveOpType::ConstantOp:
+                {
+                    double fillValue = functionConfig[PrimitiveFunction::AttributeNameFillValue].Value<double>();
+                    computationNodePtr = New<ConstantNode<ElementType>>(network->GetDeviceId(), internalNodeName, fillValue);
                     break;
                 }
                 case PrimitiveOpType::ROIPooling:
@@ -1043,8 +1074,14 @@ namespace CNTK
                     auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
                     auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
                     auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
-
-                    computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW);
+                    
+                    bool disableRegularization = false;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDisableRegularization))
+                    {
+                        disableRegularization = functionConfig[PrimitiveFunction::AttributeNameDisableRegularization].Value<bool>();
+                    }
+                    
+                    computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, disableRegularization, ImageLayoutKind::CHW);
                     break;
                 }
                 case PrimitiveOpType::Combine:

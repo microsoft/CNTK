@@ -5,7 +5,7 @@ import numpy as np
 import cntk as C
 from cntk import Axis, NDArrayView
 from cntk.logging import ProgressPrinter
-from cntk.learners import UserLearner, sgd, learning_rate_schedule, UnitType
+from cntk.learners import UserLearner, sgd, learning_parameter_schedule
 from cntk.layers import Dense, Sequential
 import pytest
 
@@ -79,7 +79,7 @@ class MySgdFast(UserLearner):
 
 ADDITIONAL_ARGUMENTS = [
     #(additional learning rate arguments (args), additional learner arguments (kwargs))
-    (C.learning_rate_schedule, [UnitType.minibatch], {'minibatch_size': 0}), #for backward compatible test
+    (C.learning_rate_schedule, [C.learners.UnitType.minibatch], {'minibatch_size': 0}), #for backward compatible test
     (C.learning_parameter_schedule, [25], {'minibatch_size': 25}),  # test new API; 25 is the actually minibatch size
     (C.learning_parameter_schedule, [], {'minibatch_size': 0}),  # test new API
 ]

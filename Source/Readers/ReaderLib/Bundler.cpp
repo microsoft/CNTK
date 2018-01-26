@@ -90,34 +90,38 @@ void Bundler::CreateChunkDescriptions()
         // Iterating thru all sequences and identifying whether they are valid among all deserializers.
         m_primaryDeserializer->SequenceInfosForChunk(chunks[chunkIndex].m_id, sequenceDescriptions);
         std::set<size_t> invalid;
+
+        // Also remember necessary secondary chunks.
+        std::vector<std::vector<ChunkIdType>> secondaryChunks;
+        secondaryChunks.resize(m_deserializers.size());
+        secondaryChunks[0].push_back(chunks[chunkIndex].m_id);
         for (size_t sequenceIndex = 0; sequenceIndex < sequenceDescriptions.size(); ++sequenceIndex)
         {
             auto sequence = sequenceDescriptions[sequenceIndex];
             bool isValid = true;
             size_t sequenceSamples = sequence.m_numberOfSamples;
 
+            // Need to check the sequence length for all deserializers and create
+            // mapping for chunks.
+            for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
+            {
+                isValid = m_deserializers[deserializerIndex]->GetSequenceInfo(sequenceDescriptions[sequenceIndex], s);
+                if (!isValid)
+                {
+                    invalid.insert(sequenceIndex);
+                    break;
+                }
+
+                sequenceSamples = std::max<size_t>(sequenceSamples, s.m_numberOfSamples);
+                if (std::find(secondaryChunks[deserializerIndex].begin(), secondaryChunks[deserializerIndex].end(), s.m_chunkId) == secondaryChunks[deserializerIndex].end())
+                    secondaryChunks[deserializerIndex].push_back(s.m_chunkId);
+            }
+
             if (m_mbDefiningDeserializer != std::numeric_limits<size_t>::max())
             {
                 // Pick up the sequence from the main deserializer.
                 if (m_deserializers[m_mbDefiningDeserializer]->GetSequenceInfo(sequenceDescriptions[sequenceIndex], s))
                     sequenceSamples = s.m_numberOfSamples;
-                else
-                    invalid.insert(sequenceIndex);
-            }
-            else
-            {
-                // Need to check the sequence length for all deserializers.
-                for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
-                {
-                    isValid = m_deserializers[deserializerIndex]->GetSequenceInfo(sequenceDescriptions[sequenceIndex], s);
-                    if (!isValid)
-                    {
-                        invalid.insert(sequenceIndex);
-                        break;
-                    }
-
-                    sequenceSamples = std::max<size_t>(sequenceSamples, s.m_numberOfSamples);
-                }
             }
 
             if (isValid)
@@ -140,6 +144,7 @@ void Bundler::CreateChunkDescriptions()
             cd.m_id = (ChunkIdType) m_chunks.size();
             cd.m_original = chunks[chunkIndex];
             cd.m_invalid = std::move(invalid);
+            cd.m_secondaryChunks = std::move(secondaryChunks);
             m_chunks.push_back(cd);
         }
     }
@@ -238,14 +243,33 @@ public:
     {
         const BundlerChunkDescription& chunk = m_parent->m_chunks[m_chunkId];
         const ChunkInfo& original = chunk.m_original;
-
         auto& deserializers = m_parent->m_deserializers;
+
+        // Fetch all chunks in parallel.
+        std::vector<std::map<ChunkIdType, std::future<ChunkPtr>>> chunks;
+        chunks.resize(chunk.m_secondaryChunks.size());
+        for (size_t i = 0; i < chunk.m_secondaryChunks.size(); ++i)
+        {
+            for (const auto& c : chunk.m_secondaryChunks[i])
+            {
+                chunks[i].insert(
+                    std::make_pair(c, std::async(launch::async,
+                    [this, c, i]()
+                {
+                    ChunkPtr chunk = m_parent->m_weakChunkTable[i][c].lock();
+                    if (chunk)
+                        return chunk;
+                    return m_parent->m_deserializers[i]->GetChunk(c); 
+                })));
+            }
+        }
+
         std::vector<SequenceInfo> sequences;
         sequences.reserve(original.m_numberOfSequences);
 
         // Creating chunk mapping.
         m_parent->m_primaryDeserializer->SequenceInfosForChunk(original.m_id, sequences);
-        ChunkPtr drivingChunk = m_parent->m_primaryDeserializer->GetChunk(original.m_id);
+        ChunkPtr drivingChunk = chunks.front().find(original.m_id)->second.get();
         m_sequenceToSequence.resize(deserializers.size() * sequences.size());
         m_innerChunks.resize(deserializers.size() * sequences.size());
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
@@ -279,7 +303,7 @@ public:
                 ChunkPtr secondaryChunk = chunkTable[s.m_chunkId].lock();
                 if (!secondaryChunk)
                 {
-                    secondaryChunk = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
+                    secondaryChunk = chunks[deserializerIndex].find(s.m_chunkId)->second.get();
                     chunkTable[s.m_chunkId] = secondaryChunk;
                 }
 

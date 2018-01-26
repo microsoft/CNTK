@@ -50,7 +50,7 @@ class AgentBaseClass(object):
         # _discrete_observation_space: True for cases 1 and 2, False otherwise.
         #   State is represented by a scalar.
         # _space_discretizer: Not none for case 2 to indicate a conversion on
-        #   state is requried. None otherwise.
+        #   state is required. None otherwise.
         # _shape_of_inputs: (n, ) for cases 1 and 2 to indicate it is a vector
         #   of length n. For case 3, it is the shape of array that represents
         #   the state. For example, an image input will have shape denoted as

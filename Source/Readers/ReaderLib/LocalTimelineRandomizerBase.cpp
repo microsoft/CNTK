@@ -16,6 +16,7 @@ const SequenceInfo LocalTimelineRandomizerBase::s_endOfSweep = { std::numeric_li
 
 LocalTimelineRandomizerBase::LocalTimelineRandomizerBase(
     DataDeserializerPtr deserializer,
+    const std::map<std::wstring, size_t>& initialState,
     bool multithreadedGetNextSequences,
     size_t maxNumberOfInvalidSequences)
 : m_deserializer(deserializer),
@@ -23,7 +24,8 @@ LocalTimelineRandomizerBase::LocalTimelineRandomizerBase(
   m_cleaner(maxNumberOfInvalidSequences),
   m_sweepCount(0),
   m_sampleCount(0),
-  m_originalChunkDescriptions(deserializer->ChunkInfos())
+  m_originalChunkDescriptions(deserializer->ChunkInfos()),
+  m_currentState(initialState)
 {
     if (m_originalChunkDescriptions.empty())
         RuntimeError("The deserializer does not have any data, the number of chunks is 0.");
@@ -237,6 +239,7 @@ std::map<std::wstring, size_t> LocalTimelineRandomizerBase::GetState()
     state[s_sequencePositionProperty] = m_window.m_sequencePosition;
     state[s_numberOfSamplesSeenSoFarProperty] = m_sampleCount;
     size_t originalSize = state.size();
+
     state.insert(m_currentState.begin(), m_currentState.end());
     if (originalSize + m_currentState.size() != state.size())
         LogicError("Key collision during checkpointing. "

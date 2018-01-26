@@ -480,7 +480,7 @@ protected:
                                       std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
-    // Attemps to compute the error signal for the whole utterance, which will
+    // Attempts to compute the error signal for the whole utterance, which will
     // be fed to the neural network as features. Currently it is a workaround
     // for the two-forward-pass sequence and ctc training, which allows
     // processing more utterances at the same time. Only used in Kaldi2Reader.

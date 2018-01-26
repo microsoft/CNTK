@@ -24,8 +24,9 @@
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
 #ifdef USE_MKL
-// requires MKL 10.0 and above
-#include <mkl.h>
+// requires MKLML 0.11 and above
+#include <mkl_cblas.h>
+#include <mkl_lapacke.h>
 #else
 #ifdef _MSC_VER
 // Visual Studio doesn't define standard complex types properly
@@ -1422,7 +1423,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp)
 {
     size_t numColsNeeded = 2 * GetNumCols();
 
@@ -1443,23 +1444,26 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
     ElemType* smoothAda = c.Data();
     ElemType* smoothX2 = c.Data() + n;
     ElemType* val = functionValues.Data();
+    auto rows = GetNumRows();
 
 #pragma omp parallel for
     // TODO: Unroll 4-times for better performance leveraging vectorization
-    for (int j = 0; j < (int)GetBlockSize(); j++)
+    for (auto blockid = 0; blockid < (int)GetBlockSize(); ++blockid)
     {
-        size_t i = GetBlockIds()[j] - GetBlockIdShift();
-        size_t len = GetNumRows();
-        size_t start = j * len;
-        for (size_t p = start; p < start + len; p++)
+        auto col = GetBlockIds()[blockid] - GetBlockIdShift();
+        auto columnOffset = col * rows;
+        auto blockOffset = blockid * rows;
+        auto decay = std::pow(rho, currentTimestamp - 1 - timestamps[col]);
+        timestamps[col] = currentTimestamp;
+        for (auto row = 0; row < rows; ++row)
         {
-            size_t denseIndex = i * len + (p - start);
-            ElemType g = grad[p];
-            ElemType adaSqr = rho * smoothAda[denseIndex] + (1 - rho) * g * g;
+            size_t denseIndex = columnOffset + row;;
+            ElemType g = grad[blockOffset + row];
+            ElemType adaSqr = rho * decay * smoothAda[denseIndex] + (1 - rho) * g * g;
             smoothAda[denseIndex] = adaSqr;
-            ElemType x2 = smoothX2[denseIndex];
+            ElemType x2 = decay * smoothX2[denseIndex];
             ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
-            smoothX2[denseIndex] = rho * smoothX2[denseIndex] + (1 - rho) * deltaX * deltaX;
+            smoothX2[denseIndex] = rho * x2 + (1 - rho) * deltaX * deltaX;
             val[denseIndex] += learningRate * deltaX;
         }
     }
@@ -1758,46 +1762,6 @@ MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
 
 template MATH_API File& operator>>(File& stream, CPUSparseMatrix<float>& us);
 template MATH_API File& operator>>(File& stream, CPUSparseMatrix<double>& us);
-
-template <typename ElemType>
-MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
-{
-    if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
-        NOT_IMPLEMENTED;
-
-    stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
-    stream << sizeof(ElemType);
-    stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
-
-    size_t nz, numRows, numCols;
-    size_t compressedSize = us.SecondaryIndexCount();
-    int format = us.GetFormat();
-
-    stream << format << nz << numCols << numRows;
-
-    if (nz > 0)
-    {
-        ElemType* dataBuffer = us.NzValues();
-        CPUSPARSE_INDEX_TYPE* unCompressedIndex = us.MajorIndexLocation();
-        CPUSPARSE_INDEX_TYPE* compressedIndex = us.SecondaryIndexLocation();
-
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream << dataBuffer[i];
-        }
-        for (size_t i = 0; i < nz; ++i)
-        {
-            stream << unCompressedIndex[i];
-        }
-        for (size_t i = 0; i < compressedSize; ++i)
-        {
-            stream << compressedIndex[i];
-        }
-    }
-    stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
-
-    return stream;
-}
 
 template class CPUSparseMatrix<float>;
 template class CPUSparseMatrix<double>;

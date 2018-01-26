@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Run test on a GPU device.\n");
             TrainCifarResnet();
         }
-        
+
         if (ShouldRunOnCpu())
         {
             fprintf(stderr, "Cannot run TrainCifarResnet test on a CPU device.\n");

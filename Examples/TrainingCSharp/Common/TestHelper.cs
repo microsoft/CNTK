@@ -20,7 +20,7 @@ namespace CNTK.CSTrainingExamples
     }
     public class TestHelper
     {
-        public static Function Dense(Variable input, int outputDim, DeviceDescriptor device, 
+        public static Function Dense(Variable input, int outputDim, DeviceDescriptor device,
             Activation activation = Activation.None, string outputName = "")
         {
             if (input.Shape.Rank != 1)

@@ -48,11 +48,7 @@ void ComputationNode<ElemType>::LazyZeroGradient(const ComputationNodeBase* grad
         gradientInitializedBy->ImplementsGradientOptimization(this) != ParentGradientOptimization::None &&
         1 == std::count_if(inputs.begin(), inputs.end(), [this](ComputationNodeBasePtr p) { return &*p == this; }))
     {
-        // don't need update size as parent already set it to the right size when reusing
-        if (!ParentGradientReused())
-        {
-            UpdateDataSize(Gradient());
-        }
+        UpdateDataSize(Gradient(), ParentGradientReused());
         m_gradientInitializedBy = gradientInitializedBy;
     }
     else

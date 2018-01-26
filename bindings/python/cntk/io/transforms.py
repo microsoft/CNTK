@@ -14,11 +14,11 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
     Args:
         crop_type (str, default 'center'): 'center', 'randomside', 'randomarea',
           or 'multiview10'.  'randomside' and 'randomarea' are usually used during
-          training.  If either 'randomside' and 'randomarea' are set, Horizontal 
-          flipping will be enabled and the image will be randomly flipped in 
-          horizontal direction. Horizontal flipping is another popular data augmentation 
-          technique and should be used if images exhibit vertical symmetry, 
-          for example, like many real-world objects. 
+          training.  If either 'randomside' and 'randomarea' are set, Horizontal
+          flipping will be enabled and the image will be randomly flipped in
+          horizontal direction. Horizontal flipping is another popular data augmentation
+          technique and should be used if images exhibit vertical symmetry,
+          for example, like many real-world objects.
           'center' and 'multiview10' are usually used during testing.
           Random cropping is a popular data augmentation technique used to improve
           generalization of the DNN.
@@ -46,12 +46,17 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
           which means the crop will have size between 100 (sqrt(30,000*0.3333)) and
           155 (sqrt(30,000*0.8)).
         aspect_ratio (`float`, default 1.0): It specifies the aspect ratio (width/height
-          or height/width) of the crop window. Must be set within `(0,1]`. For example,
-          if due to size_ratio the crop size is 240x240, an aspect_ratio of 0.64 will
-          change the window size to non-square: 192x300 or 300x192, each having 50%
-          chance. Note the area of the crop window does not change. To enable aspect
-          ratio jitter, use tuple such as aspect_ratio=(0.64,1.0), which means
-          the crop will have size between 192x300 (or euqally likely 300x192) and 240x240.
+          or height/width) of the crop window. It is recommended to set it within `(0,1]`,
+          although a value greater than 1 is also allowed. In practice, values of 1.333(4/3)
+          or 0.75(3/4) should cause the same aspect deformation effect. For example, if
+          due to size_ratio the crop size is 240x240, an aspect_ratio of 0.64 will change
+          the window size to non-square: 192x300 or 300x192, each having 50% chance. Note
+          the area of the crop window does not change. To enable aspect ratio jitter, use
+          tuple such as aspect_ratio=(0.64,1.0), which means the crop will have size
+          between 192x300 (or equally likely 300x192) and 240x240. One can also use
+          aspect_ratio=(0.64,1.5625), which will create rectangles in the same aspect ratio
+          range, although there is a subtle difference due to uniratio sampling between
+          the boundary of the specified ratio range.
         jitter_type (str, default 'none'): crop scale jitter type, possible
           values are 'none' and 'uniratio'. 'uniratio' means uniform distributed jitter
           scale between the minimum and maximum ratio values.

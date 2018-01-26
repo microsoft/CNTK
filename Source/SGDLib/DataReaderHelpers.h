@@ -116,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
         // Note: Decimation may have reduced this to 0 frames. We still must return 'true'.
-        // BUGBUG: This has a definitional problem once we support multiple feature streams with different lenghts.
+        // BUGBUG: This has a definitional problem once we support multiple feature streams with different lengths.
         // BUGBUG: We should discount gaps.
         actualMBSize = net->DetermineActualMBSizeFromFeatures();
 

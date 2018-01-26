@@ -8,7 +8,7 @@ import numpy as np
 from cntk.device import cpu, try_set_default_device
 from cntk import Trainer
 from cntk.layers import Dense, Sequential, For
-from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.learners import sgd, learning_parameter_schedule
 from cntk.ops import input_variable, sigmoid
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -50,7 +50,7 @@ def ffnet():
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
-    lr_per_minibatch = learning_rate_schedule(0.5, UnitType.minibatch)
+    lr_per_minibatch = learning_parameter_schedule(0.5)
     # Instantiate the trainer object to drive the model training
     learner = sgd(netout.parameters, lr=lr_per_minibatch)
     progress_printer = ProgressPrinter(128)

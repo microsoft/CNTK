@@ -73,7 +73,7 @@ public:
     ComputationNodePtr BatchNormalization(const ComputationNodePtr input, const ComputationNodePtr scale, const ComputationNodePtr bias,
                                           const ComputationNodePtr runMean, const ComputationNodePtr runVariance, const ComputationNodePtr runSampleCount,
                                           bool spatial = false, double normalizationTimeConstant = 0, double blendTimeConstant = 0, double epsilon = 1e-5, bool useCntkEngine = true,
-                                          ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, const std::wstring nodeName = L"");
+                                          bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, const std::wstring nodeName = L"");
     ComputationNodePtr Convolution(const ComputationNodePtr weight,
                                    const ComputationNodePtr inputValues,
                                    const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
@@ -116,6 +116,8 @@ public:
     ComputationNodePtr Abs(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Acos(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Asin(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr Asinh(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr Atanh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Less(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Equal(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Greater(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
@@ -177,11 +179,15 @@ public:
     ComputationNodePtr RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName = L"");
     ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
     ComputationNodePtr SparseRowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
+    ComputationNodePtr ElementMax(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
 #ifdef COMING_SOON
     ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"");
 #endif
     ComputationNodePtr SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName = L"");
     ComputationNodePtr Sigmoid(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr StochasticBinary(const ComputationNodePtr a, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealRate, const std::wstring nodeName = L"");
+    ComputationNodePtr AnnealTanh(const ComputationNodePtr a, const float annealRate, const std::wstring nodeName = L"");
+    ComputationNodePtr AnnealBinary(const ComputationNodePtr a, const float annealRate, float annealSlope, const std::wstring nodeName = L"");
     ComputationNodePtr Sin(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sinh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");

@@ -12,7 +12,7 @@ from cntk.core import Value
 from cntk.initializer import he_uniform
 from cntk.layers import Sequential, Convolution2D, Dense, default_options
 from cntk.layers.typing import Signature, Tensor
-from cntk.learners import adam, learning_rate_schedule, momentum_schedule, UnitType
+from cntk.learners import adam, learning_parameter_schedule, momentum_schedule
 from cntk.logging import TensorBoardProgressWriter
 from cntk.ops import abs, argmax, element_select, less, relu, reduce_max, reduce_sum, square
 from cntk.ops.functions import CloneMethod, Function
@@ -317,7 +317,7 @@ class DeepQAgent(object):
             return huber_loss(q_targets, q_acted, 1.0)
 
         # Adam based SGD
-        lr_schedule = learning_rate_schedule(learning_rate, UnitType.minibatch)
+        lr_schedule = learning_parameter_schedule(learning_rate)
         m_schedule = momentum_schedule(momentum)
         vm_schedule = momentum_schedule(0.999)
         l_sgd = adam(self._action_value_net.parameters, lr_schedule,

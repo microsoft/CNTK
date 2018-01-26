@@ -1918,7 +1918,6 @@ Test module "ReaderTests" has passed with:
     Test case "TextInputIndexBuilderTests/Index_with_caching" has passed with:
       20 assertions out of 20 passed
 
-    Test case "TextInputIndexBuilderTests/Index_64MB_with_caching_check_perf" has passed with:
-      12583825 assertions out of 12583825 passed
+    Test case "TextInputIndexBuilderTests/Index_64MB_with_caching_check_perf" has passed
 
     Test case "TextInputIndexBuilderTests/Index_1GB_with_caching_check_perf" has passed

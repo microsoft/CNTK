@@ -177,10 +177,9 @@ struct ComputationNetworkOwnedNodeState
     friend class ComputationNetwork;
 
     ComputationNetworkOwnedNodeState()
-        : m_needsGradient(false), m_needsDynamicValidation(false), m_valueSharable(true), m_parentGradientOptimization(ParentGradientOptimization::None)
+        : m_needsGradient(false), m_needsDynamicValidation(false), m_valueSharable(true), m_parentGradientOptimization(ParentGradientOptimization::None),
+          m_isPartOfLoop{false}
     {
-        PurgeStateForFormingRecurrentLoops();
-        m_isPartOfLoop = false;
     }
 
     void CopyTo(ComputationNetworkOwnedNodeState& other) const
@@ -233,26 +232,7 @@ private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
 
 protected:
-    // owned by FormRecurrentLoops() and stuff it calls, only used from inside there (FormRecurrentLoops() calls PurgeStateForFormingRecurrentLoops() at its end to make that super-clear)
-    void PurgeStateForFormingRecurrentLoops()
-    {
-        m_loopId = -1;
-        m_visitedOrder = -1;
-        m_numNonDelayedParentsInLoop = 0;
-        m_visited = false;
-        m_index = -1;
-        m_minIndex = -1;
-        m_inStack = false;
-    }
-
-    int m_loopId;       // index into m_allSEQNodes array, for use by reordering operation only
-    int m_visitedOrder; // remembers order in which nodes were visited by EnumerateNodes(), but gets updated
-    bool m_visited;     // note: also used by ValidateSubNetwork()
-    int m_numNonDelayedParentsInLoop;
-    // only used inside DetermineSCCs():
-    int m_index;    // index denoting order in which nodes were visited in DetermineSCCs()
-    int m_minIndex; // min of m_index over all nodes within a single loop
-    bool m_inStack;
+    bool m_visited;     // currently used by ValidateSubNetwork()
 };
 
 // =======================================================================
@@ -576,6 +556,12 @@ public:
     }
     const MBLayoutPtr& GetMBLayout() const { return m_pMBLayout; }
     bool HasMBLayout() const { return !!m_pMBLayout; }
+
+    bool IsMBLayoutCompatibleWith(ComputationNodeBasePtr otherNode)
+    {
+        if (!HasMBLayout() || !otherNode->HasMBLayout()) return true; // broadcasting is compatible
+        return *m_pMBLayout == *(otherNode->m_pMBLayout);
+    }
 
     // for logging: get the string fragment for displaying the dimension
     std::wstring GetMBLayoutAxisString() const
@@ -1730,11 +1716,11 @@ protected:
 protected:
 
     // set the size of the underlying Matrix object to match node dimensions
-    void UpdateDataSize(Matrix<ElemType>& m)
+    void UpdateDataSize(Matrix<ElemType>& m, bool keepValue = false)
     {
         size_t rows, cols;
         DetermineDataSize(rows, cols);
-        m.Resize(rows, cols);
+        m.Resize(rows, cols, keepValue);
     }
     // and verify the condition that UpdateDataSize() creates (used for sanity checking after loading parameters)
     void VerifyDataSize(Matrix<ElemType>& m)

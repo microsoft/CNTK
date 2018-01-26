@@ -8,10 +8,14 @@
 
 namespace CNTK {
 
+// Properties used in the checkpoint.
+const static std::wstring s_currentChunkPositionProperty = L"currentChunkPosition";
+const static std::wstring s_currentSequencePositionProperty = L"currentSequencePosition";
+
 LTNoRandomizer::LTNoRandomizer(DataDeserializerPtr deserializer, bool multithreadedGetNextSequences, size_t maxNumberOfInvalidSequences)
-: Base(deserializer, multithreadedGetNextSequences, maxNumberOfInvalidSequences),
-  m_currentChunkPosition(0),
-  m_currentSequencePosition(0)
+    : Base(deserializer, { { s_currentChunkPositionProperty, 0 }, { s_currentSequencePositionProperty, 0} }, multithreadedGetNextSequences, maxNumberOfInvalidSequences),
+      m_currentChunkPosition(0),
+      m_currentSequencePosition(0)
 {
 }
 
@@ -54,10 +58,6 @@ void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
     // Moving to the next chunk.
     m_currentChunkPosition = (m_currentChunkPosition + 1) % m_originalChunkDescriptions.size();
 }
-
-// Properties used in the checkpoint.
-const static std::wstring s_currentChunkPositionProperty = L"currentChunkPosition";
-const static std::wstring s_currentSequencePositionProperty = L"currentSequencePosition";
 
 std::map<std::wstring, size_t> LTNoRandomizer::GetInnerState()
 {

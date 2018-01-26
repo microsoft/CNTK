@@ -959,13 +959,16 @@ public:
         SetDims(outDims, HasMBLayout());
         if (isFinalValidationPass)
         {
-            if (m_convEng == nullptr)
+            bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
+                (outDims != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
+            if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), m_ceilOutDim);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(), m_poolIncludePad);
+                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
+                                                                m_poolIncludePad, recomputeConvGeometry);
             }
         }
     }
@@ -1087,7 +1090,9 @@ public:
         SetDims(outputShape, HasMBLayout());
         if (isFinalValidationPass)
         {
-            if (m_convEng == nullptr)
+            bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
+                (outputShape != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
+            if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(outputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
@@ -1095,7 +1100,7 @@ public:
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
                                                                 ConvolutionEngineKind::Reference,
-                                                                NodeName());
+                                                                NodeName(), false, false, recomputeConvGeometry);
             }
         }
     }

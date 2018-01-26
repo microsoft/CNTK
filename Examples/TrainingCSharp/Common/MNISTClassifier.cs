@@ -71,7 +71,7 @@ namespace CNTK.CSTrainingExamples
             var labels = CNTKLib.InputVariable(new int[] { numClasses }, DataType.Float, labelsStreamName);
             var trainingLoss = CNTKLib.CrossEntropyWithSoftmax(new Variable(classifierOutput), labels, "lossFunction");
             var prediction = CNTKLib.ClassificationError(new Variable(classifierOutput), labels, "classificationError");
-            
+
             // prepare training data
             var minibatchSource = MinibatchSource.TextFormatMinibatchSource(
                 Path.Combine(ImageDataFolder, "Train_cntk_text.txt"), streamConfigurations, MinibatchSource.InfinitelyRepeat);
@@ -122,7 +122,7 @@ namespace CNTK.CSTrainingExamples
                                 imageDim, numClasses, featureStreamName, labelsStreamName, classifierName, device);
         }
 
-        private static Function CreateMLPClassifier(DeviceDescriptor device, int numOutputClasses, int hiddenLayerDim, 
+        private static Function CreateMLPClassifier(DeviceDescriptor device, int numOutputClasses, int hiddenLayerDim,
             Function scaledInput, string classifierName)
         {
             Function dense1 = TestHelper.Dense(scaledInput, hiddenLayerDim, device, Activation.Sigmoid, "");
@@ -160,8 +160,8 @@ namespace CNTK.CSTrainingExamples
             return denseLayer;
         }
 
-        private static Function ConvolutionWithMaxPooling(Variable features, DeviceDescriptor device, 
-            int kernelWidth, int kernelHeight, int numInputChannels, int outFeatureMapCount, 
+        private static Function ConvolutionWithMaxPooling(Variable features, DeviceDescriptor device,
+            int kernelWidth, int kernelHeight, int numInputChannels, int outFeatureMapCount,
             int hStride, int vStride, int poolingWindowWidth, int poolingWindowHeight)
         {
             // parameter initialization hyper parameter

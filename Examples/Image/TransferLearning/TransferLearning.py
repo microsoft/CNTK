@@ -11,12 +11,12 @@ import os
 from PIL import Image
 from cntk.device import try_set_default_device, gpu
 from cntk import load_model, placeholder, Constant
-from cntk import Trainer, UnitType
+from cntk import Trainer
 from cntk.logging.graph import find_by_name, get_node_outputs
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
 import cntk.io.transforms as xforms
 from cntk.layers import Dense
-from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_schedule
+from cntk.learners import momentum_sgd, learning_parameter_schedule, momentum_schedule
 from cntk.ops import combine, softmax
 from cntk.ops.functions import CloneMethod
 from cntk.losses import cross_entropy_with_softmax
@@ -114,7 +114,7 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
     pe = classification_error(tl_model, label_input)
 
     # Instantiate the trainer object
-    lr_schedule = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch)
+    lr_schedule = learning_parameter_schedule(lr_per_mb)
     mm_schedule = momentum_schedule(momentum_per_mb)
     learner = momentum_sgd(tl_model.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
     progress_printer = ProgressPrinter(tag='Training', num_epochs=num_epochs)

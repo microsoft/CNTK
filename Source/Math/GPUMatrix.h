@@ -243,6 +243,7 @@ public:
                      const bool initialized);
 
     void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
+    void AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -352,6 +353,9 @@ public:
     GPUMatrix<ElemType>& InplaceTanh();
     GPUMatrix<ElemType>& AssignTanhOf(const GPUMatrix<ElemType>& a);
 
+    GPUMatrix<ElemType>& InplaceAtanh();
+    GPUMatrix<ElemType>& AssignAtanhOf(const GPUMatrix<ElemType>& a);
+
     GPUMatrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     GPUMatrix<ElemType>& AssignLogSoftmaxOf(const GPUMatrix<ElemType>& a, const bool isColWise);
 
@@ -392,6 +396,9 @@ public:
 
     GPUMatrix<ElemType>& InplaceSinh();
     GPUMatrix<ElemType>& AssignSinhOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceAsinh();
+    GPUMatrix<ElemType>& AssignAsinhOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& InplaceAbs();
     GPUMatrix<ElemType>& AssignAbsOf(const GPUMatrix<ElemType>& a);
@@ -534,6 +541,15 @@ public:
     void RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const struct RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
 
 public:
+    // stochastic binary node
+    static void StochasticBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope);
+    static void StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope);
+    static void AnnealTanhForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope);
+    static void AnnealTanhBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope);
+    static void AnnealBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope);
+    static void AnnealBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope);
+
+public:
     // static BLAS functions
     static void MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c);
     static void MultiplyAndAdd(const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, GPUMatrix<ElemType>& c);
@@ -551,6 +567,9 @@ public:
     static void AssignScaledDifference(const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
 
     static void AddElementToElement(ElemType beta, const GPUMatrix<ElemType>& a, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj);
+
+    static void DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t InputIndex, const GPUMatrix<ElemType>& nWords);
+    void AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, const size_t InputIndex, const GPUMatrix<ElemType>& nWords);
 
     // minus one at a specific position
     static void MinusOneAt(GPUMatrix<ElemType>& c, const size_t position);

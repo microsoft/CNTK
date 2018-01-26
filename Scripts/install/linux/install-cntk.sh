@@ -107,7 +107,7 @@ TARGET_CONFIGURATION="${BASH_REMATCH[1]}"
 
 # Anaconda download / install dependencies
 # [coreutils for sha{1,256}sum]
-PACKAGES="bzip2 wget ca-certificates coreutils"
+PACKAGES="bzip2 wget ca-certificates coreutils cmake zlib1g-dev"
 
 # CNTK run-time dependencies (OpenMPI)
 if [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*14\.04 ]]; then
