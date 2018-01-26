@@ -595,33 +595,38 @@ namespace marian
     static inline Expr operator*(const Expr& a, const Expr& b) { return CNTK::ElementTimes(a, b); }
     static inline Expr operator/(const Expr& a, const Expr& b) { return CNTK::ElementDivide(a, b); }
 
-    static inline Expr operator+(float  a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
-    static inline Expr operator+(int    a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
-    static inline Expr operator+(double a, const Expr& b) { return a == 0 ? b : InternalOps::Scalar(a) + b; }
-    static inline Expr operator+(const Expr& a, float  b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
-    static inline Expr operator+(const Expr& a, int    b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
-    static inline Expr operator+(const Expr& a, double b) { return b == 0 ? a : a + InternalOps::Scalar(b); }
+    static inline Expr operator+(double a, const Expr& b) { return a == 0 ? b : CNTK::ScaleAndShift(b, /*scale=*/1, /*shift=*/a); }
+    static inline Expr operator+(const Expr& a, double b) { return b == 0 ? a : CNTK::ScaleAndShift(a, /*scale=*/1, /*shift=*/b); }
 
-    static inline Expr operator-(float  a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
-    static inline Expr operator-(int    a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
-    static inline Expr operator-(double a, const Expr& b) { return a == 0 ? -b : InternalOps::Scalar(a) - b; }
-    static inline Expr operator-(const Expr& a, float  b) { return b == 0 ?  a : a - InternalOps::Scalar(b); }
-    static inline Expr operator-(const Expr& a, int    b) { return b == 0 ? a : a - InternalOps::Scalar(b); }
-    static inline Expr operator-(const Expr& a, double b) { return b == 0 ? a : a - InternalOps::Scalar(b); }
+    static inline Expr operator-(double a, const Expr& b) { return a == 0 ? -b : CNTK::ScaleAndShift(b, /*scale=*/-1, /*shift=*/ a); }
+    static inline Expr operator-(const Expr& a, double b) { return b == 0 ?  a : CNTK::ScaleAndShift(a, /*scale=*/ 1, /*shift=*/-b); }
 
-    static inline Expr operator*(float  a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
-    static inline Expr operator*(int    a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
-    static inline Expr operator*(double a, const Expr& b) { return a == 1 ? b : InternalOps::Scalar(a) * b; }
-    static inline Expr operator*(const Expr& a, float  b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
-    static inline Expr operator*(const Expr& a, int    b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
-    static inline Expr operator*(const Expr& a, double b) { return b == 1 ? a : a * InternalOps::Scalar(b); }
+    static inline Expr operator*(double a, const Expr& b) { return a == 1 ? b : CNTK::ScaleAndShift(b, /*scale=*/a, /*shift=*/0); }
+    static inline Expr operator*(const Expr& a, double b) { return b == 1 ? a : CNTK::ScaleAndShift(a, /*scale=*/b, /*shift=*/0); }
 
-    static inline Expr operator/(float  a, const Expr& b) { return InternalOps::Scalar(a) / b; }
-    static inline Expr operator/(int    a, const Expr& b) { return InternalOps::Scalar(a) / b; }
-    static inline Expr operator/(double a, const Expr& b) { return InternalOps::Scalar(a) / b; }
-    static inline Expr operator/(const Expr& a, float  b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
-    static inline Expr operator/(const Expr& a, int    b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
-    static inline Expr operator/(const Expr& a, double b) { return b == 1 ? a : a / InternalOps::Scalar(b); }
+    static inline Expr operator/(double a, const Expr& b) { return a == 1 ? CNTK::Reciprocal(b) : InternalOps::Scalar(a) / b; } // TODO: watch out for our weird Reciprocal definition
+    static inline Expr operator/(const Expr& a, double b) { return b == 1 ? a : CNTK::ScaleAndShift(a, /*scale=*/1.0 / b, /*shift=*/0); }
+
+    // these explicit overloads seem needed to avoid compiler confusion
+    static inline Expr operator+(float  a, const Expr& b) { return (double)a + b; }
+    static inline Expr operator+(int    a, const Expr& b) { return (double)a + b; }
+    static inline Expr operator+(const Expr& a, float  b) { return a + (double)b; }
+    static inline Expr operator+(const Expr& a, int    b) { return a + (double)b; }
+
+    static inline Expr operator-(float  a, const Expr& b) { return (double)a - b; }
+    static inline Expr operator-(int    a, const Expr& b) { return (double)a - b; }
+    static inline Expr operator-(const Expr& a, float  b) { return a - (double)b; }
+    static inline Expr operator-(const Expr& a, int    b) { return a - (double)b; }
+
+    static inline Expr operator*(float  a, const Expr& b) { return (double)a * b; }
+    static inline Expr operator*(int    a, const Expr& b) { return (double)a * b; }
+    static inline Expr operator*(const Expr& a, float  b) { return a * (double)b; }
+    static inline Expr operator*(const Expr& a, int    b) { return a * (double)b; }
+
+    static inline Expr operator/(float  a, const Expr& b) { return (double)a / b; }
+    static inline Expr operator/(int    a, const Expr& b) { return (double)a / b; }
+    static inline Expr operator/(const Expr& a, float  b) { return a / (double)b; }
+    static inline Expr operator/(const Expr& a, int    b) { return a / (double)b; }
 
     static inline Expr debug(const Expr& a, const std::string& message = "") { message; return a; } // not implemented presently
 
