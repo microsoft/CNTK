@@ -259,6 +259,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         { ValOp(Cond),     VarExpr(CNTK::ElementSelect(args[0], args[1], args[2])),{ { 13, 42 },{ 13,  1 },{ 13,  1    } } },
         { ValOp(AxBplusC), VarExpr(CNTK::ElementAffine(args[0], args[1], args[2])),{ { 13, 42 },{ 13,  1 },{ 13,  1    } } },
         { ValOp(AxBplusC), VarExpr(CNTK::ElementAffine(args[0], args[1], args[2])),{ {  1, 42 },{ 13,  1 },{ 13,  1, 2 } } }, // weird broadcasting. Note that when testing stacking, the "2" is the batch axis that is reduced over
+        { { ValExpr(argValues[0] * argValues[1] + argValues[2]), "ElementAffine" }, VarExpr(CNTK::ElementAffine(args[0], args[1], args[2])),{ { 13, 42 },{ 13, 1 },{ 13,  1 } } }, // explicit expression, to test opAxBplusC
         // binary
         { ValOp(Sum               ), VarExpr(CNTK::Plus         (args[0], args[1])), { { 13, 42     }, { 13, 42 } } },
         { ValOp(Difference        ), VarExpr(CNTK::Minus        (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },
