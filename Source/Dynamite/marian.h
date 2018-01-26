@@ -807,8 +807,7 @@ namespace marian
             return Dynamite::CrossEntropyWithSoftmax(o, CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0)), CNTK::Axis(0));
     }
 
-    // TODO: use Affine() to save memory
-    static inline Expr affine(const Expr& x, const Expr& W, const Expr& b) { Expr y = CNTK::Times(W, x) + b; return Alias(y, L"Times(" + W.Name() + L"," + x.Name() + L")+(" + b.Name() + L")"); }
+    static inline Expr affine(const Expr& x, const Expr& W, const Expr& b) { return CNTK::Affine(W, x, b); }
 
     static inline Expr scalar_product(const Expr& a, Expr b, keywords::axis_k ax = 0) { return CNTK::InnerProduct(a, b, mappers::ToCNTKAxis(a, ax)); }
 

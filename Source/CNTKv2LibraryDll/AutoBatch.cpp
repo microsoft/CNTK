@@ -1654,6 +1654,8 @@ public:
                     else
                         fprintf(stderr, "[%d:%d]", (int)fields.m_redirection.m_sliceRange.BeginIndex(), (int)(fields.m_redirection.m_sliceRange.EndIndex()));
                 }
+                if (input1.Shape() != fields.m_shape)
+                    fprintf(stderr, "r%S", input.Shape().AsString().c_str());
             }
             else
                 fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input).c_str(), input.Shape().AsString().c_str());
@@ -4254,7 +4256,7 @@ public:
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { Memoizer::LogFunction(dynamic_cast<PrimitiveFunction&>(*f), L"r "); });
 #endif
         ResetCudaStats(/*updateCounter=*/true);
-        CudaStatsGuard cudaStatsGuardForward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched forward", 3);
+        CudaStatsGuard cudaStatsGuardForward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched FORWARD", 3);
         // phase 1 (all done in the same function call):
         //  - create our graph overlay, esp. short-circuit see-through ops
         //  - mark all nodes w.r.t. how many inputs they are waiting for before being computable
@@ -4299,7 +4301,7 @@ public:
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
         cudaStatsGuardForward.Stop(); // this measures the auto-batching process, which submits actual computation to a bg thread
-        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward bg thread hangover", 3);
+        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"backward thread hangover", 3);
 
         // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
         // Until this is completed, the m_value fields are not filled in yet.
@@ -4597,14 +4599,13 @@ public:
         m_stats.numBackpropGathers++;
 
         CudaStats* cudaStatsPtr = nullptr;
+        let& outDevice = out->Device();
         if (ShouldLogMemoizeStats())
-        {
-            cudaStatsPtr = BeginCudaStats(PrimitiveOpType::Gather, nullptr, /*category=*/out->IsSparse() ? 1 : 0, out->Shape().TotalSize(/*check=*/false), out->Device());
-        }
+            cudaStatsPtr = BeginCudaStats(PrimitiveOpType::Gather, nullptr, /*category=*/out->IsSparse() ? 1 : 0, out->Shape().TotalSize(/*check=*/false), outDevice);
 
         auto res = NDArrayView::GatherBatch(inputValues, (int)axis, move(out));
 
-        EndCudaStats(cudaStatsPtr, out->Device());
+        EndCudaStats(cudaStatsPtr, outDevice);
 
         return res;
     }
@@ -4830,6 +4831,25 @@ public:
         m_stats.numBackpropScatters++;
     }
 
+    // helper to determine the outputRank of the transform
+    static size_t DetermineTimesOutputRank(const PrimitiveFunction& f)
+    {
+        fail_if(!IsTimesOp(f.m_op), "DetermineTimesOutputRank unexpectedly called for non-Times operation");
+        let&   resShape = f.m_outputs.front().Shape().Dimensions();
+        let&  leftShape = f.m_inputs[0].Shape().Dimensions();
+        let& rightShape = f.m_inputs[1].Shape().Dimensions();
+        let    resRank = resShape.size(); // output rank must match
+        let   leftRank = leftShape.size();
+        let  rightRank = rightShape.size();
+        // matrix-product dimensions for y = W * x:
+        //               [ output dimensions , reduction dimensions , map dimensions ]
+        // left =    W : [ output dimensions x reduction dimensions                  ]
+        // right =   x : [                     reduction dimensions x map dimensions ]
+        // res =     y : [ output dimensions                        x map dimensions ]
+        return (leftRank + rightRank - resRank) / 2; // #dimenions over which matrix product reduces
+        // Note: since we only deal with ranks, and not actual dimensions, this is correct for TransposeTimes aswell.
+    };
+
     // backprop into weight parameter of a Times op (input 0)
     // This can be batched into a single matrix product.
     void BackpropToMatrixWeight(const vector<pair<PrimitiveFunction*, size_t>>& consumers)
@@ -4854,23 +4874,43 @@ public:
         Memoizer::LogFunction(f0, L"bb* ", 0);
 #endif
         let& input0 = f0.m_inputs[0]; // all consumers share this weight, so it's OK to just get it from f0
+        let outputRank0 = DetermineTimesOutputRank(f0);
+        let FlattenMapAxes = [&](const NDArrayViewPtr& arg) -> NDArrayViewPtr // helper to flatten
+        {
+            let& shape = arg->Shape();
+            let rank = shape.Rank();
+            fail_if(rank <= outputRank0, "FlattenMapAxes: input has too few axes??");
+            if (rank <= outputRank0 + 1) // if it has no max axes to flatten, return
+                return arg;
+            // it has multiple axes
+            auto flattenedShape = shape.SubShape(0, outputRank0 + 1);
+            for (size_t k = outputRank0 + 1; k < rank; k++)
+                flattenedShape[outputRank0] *= shape[k];
+            return arg->AsShape(flattenedShape);
+        };
         size_t batchDim = 0;
         for (size_t i = 0; i < numBatchItems; i++)
         {
             let &c = consumers[i];
             fail_if(c.second != 0, "wrong input??");
             let& f = *c.first;
-            fail_if(&GetInputFields(f.m_inputs.front()) != &GetInputFields(input0), "batched matrix gradients do nto share the matrix??");
+            if (i > 0) // sanity checks
+            {
+                fail_if(&GetInputFields(f.m_inputs.front()) != &GetInputFields(input0), "batched matrix gradients do not share the matrix??");
+                let outputRank = DetermineTimesOutputRank(f);
+                fail_if(outputRank != outputRank0, "BackpropToMatrixWeight() called on incompatibly-shaped operations?");
+            }
             let& outGrad = GetOutputFields(f).m_gradient;
             let& right   = GetInputFields(f.m_inputs[1]).m_value;
-            timesOutGrads       [i] = outGrad; // incoming gradients from top
-            timesDataRightInputs[i] = right;   // second arguments
-            let numItems = outGrad->Shape().Dimensions().back();
-            fail_if(numItems != right->Shape().Dimensions().back(), "batch dimension of two inputs not the same??");
+            // to be able to batch gradient ops with different map rank, we flatten all to a single map dimension
+            timesOutGrads       [i] = move(FlattenMapAxes(outGrad)); // incoming gradients from top
+            timesDataRightInputs[i] = move(FlattenMapAxes(right  )); // second arguments
+            let numItems = timesOutGrads[i]->Shape().Dimensions().back();
+            fail_if(numItems != timesDataRightInputs[i]->Shape().Dimensions().back(), "batch dimension of two inputs not the same??");
             batchDim += numItems;
         }
-        auto outGradBatch = GatherBatchInArena(timesOutGrads       , GetOutputFields(f0)            .m_shape.Rank() - 1, batchDim);
-        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, GetInputFields (f0.m_inputs[1]).m_shape.Rank() - 1, batchDim);
+        auto outGradBatch = GatherBatchInArena(timesOutGrads       , outputRank0, batchDim);
+        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, outputRank0, batchDim);
         m_stats.numAvoidedBackpropToMatrix += batchDim - 1; // these were saved
 
         // backprop into the left input from the batched outGrad and right
@@ -4881,9 +4921,7 @@ public:
 
         CudaStats* cudaStatsPtr = nullptr;
         if (ShouldLogMemoizeStats())
-        {
             cudaStatsPtr = BeginCudaStats(f0.m_op, nullptr, /*category=*/gradient.view->IsSparse() ? 1 : 0, input0.Shape().TotalSize(/*check=*/false), gradient.view->Device());
-        }
 
         PrimitiveFunction::BackpropTo(/*outputGradient=*/outGradBatch.get(),      // incoming gradient from top...
                                       /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
@@ -4918,6 +4956,7 @@ public:
         m_viewableConsumers          .clear();
         m_otherConsumers             .clear();
     }
+#if 0 // misguied attempt. Delete once the right solution works.
     static bool IsMatrixGradient0Batchable(const PrimitiveFunction& f, const PrimitiveFunction& g)
     {
 #if 0       // use 1 to disable batching of matrix gradients --BUGBUG: This is currently not functional.
@@ -4943,6 +4982,8 @@ public:
         // the center 'reductionRank' dimensions get reduced over
         if (outRank + rightRank - leftRank != 2) // if 2 then we reduce over a single batch axis
             return false; // this is not a batch gradient; back out
+        // BUGBUG: This prevents from reducing over more complex map shapes.
+        //         We should reshape out and arg to flatten the map dims. Then they must match.
         fail_if(fOutShape.back() != fRightShape.back() || gOutShape.back() != gRightShape.back(), "inner dimensions of matrix gradient don't match??");
         // the two gradient ops match if all dimensions except for the batch dim match
         for (size_t k = 0; k < outRank - 1; k++) // check outGrad
@@ -4955,6 +4996,7 @@ public:
         return true;
 #endif
     }
+#endif
     void DetermineAndAddToBucket (const AutoBatchConsumer& c)
     {
         let* f = c.first;
@@ -4973,10 +5015,41 @@ public:
             return;
         }
         // backpropagating into the first arg of a matrix product
-        // These are shared.
+        // These are shared. This is how it works:
+        //  - y = W x ; b = W a
+        //  - dL/dW = dL/dy dy/dx + dL/db db/da
+        //          = dL/dy x' + dL/db a'
+        //          = [dL/dy dL/db] [x' ;
+        //                           a']
+        //          = [dL/dy dL/db] [x a]'
+        // Algorithm:
+        //  - for each (outputGradient, input),
+        //     - the first outputRank dimension(s) get flattened and match the dims of W, flattened
+        //     - the remaining dimension(s), the "map" axes, match between each (outputGradient, input)
+        //        - flatten them -> one axis
+        //        - splice all outputGradients and all inputs, respectively, along that axis
+        //        - then multiply them
+        //  - for this to work, all operations...
+        //     - must interpret W the same way
+        //        - same outputRank --> for now we will simply forbid using inconsistent outputRanks on the same matrix
+        //     - remember these ops have not been batched in forward, possibly due to
+        //        - complex map axes that were not obvious to match for batching,
+        //          e.g. W * [13 x 42 x 5] and W * [13 x 100 x 200] which we'd not batch in forward, but can easily batch in backward
+        //        - dependencies, e.g. same matrix in a recurrent loop
         // We only collect matrix products that fully match the first one. --TODO: when do they ever not fully match? Below we now enforce that they do.
+        let VerifyMatrixGradient0Batchable = [](const PrimitiveFunction& f, const PrimitiveFunction& g)
+        {
+            // must be the same op (Times vs. TransposeTimes)
+            fail_if(f.m_op != g.m_op, "VerifyMatrixGradient0Batchable: should not mix operations");
+            // we compute leftGrad += resGrad @ right^T
+            let  reductionRank = DetermineTimesOutputRank(f); // #dimenions over which matrix product reduces
+            let gReductionRank = DetermineTimesOutputRank(g);
+            if (reductionRank != gReductionRank) // this is not strictly required, but makes everything much easier, and never happens anyway
+                InvalidArgument("VerifyMatrixGradient0Batchable: higher-order weight tensors of Times() and Affine() must presently be interpreted in the same way (same output rank)");
+        };
         if (IsTimesOp(op) && index == 0)
         {
+            Memoizer::LogFunction(*f, L"mb", index), fflush(stderr);
             bool isTransposed = (op == PrimitiveOpType::TransposeTimes || op == PrimitiveOpType::TransposeAffine);
             bool isSparse = f->m_inputs[1].IsSparse();
             auto& consumers = m_matrixWeightConsumers[isTransposed][isSparse]; // there are 4 categories that are not batchable across
@@ -4984,7 +5057,8 @@ public:
             // I believe that for gradients into the same first arg of Times(), as long as isTranspose and isSparse
             // are the same, they must always be batchable. Hence we only need to distinguish these 4 catergories.
             // This may be wrong. In that case, we need to change the [][] array to a variable one.
-            fail_if(!consumers.empty() && (!IsMatrixGradient0Batchable(*f, *consumers.front().first)), "DetermineAndAddToBucket: gradient batching of incompatible matrix products should never happen. Since it just did, there is a bug either in the thinking or in the code.");
+            if (!consumers.empty())
+                VerifyMatrixGradient0Batchable(*f, *consumers.front().first);
             consumers.push_back(c);
             return;
 #else
@@ -5160,7 +5234,7 @@ public:
         // note: if BatchedForward runs out of GPU RAM, then this call will have thrown an exception
 
         ResetCudaStats(/*updateCounter=*/false); // false means keep the same logging dis/enable conditions as Forward
-        CudaStatsGuard cudaStatsGuardBackward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched backward", 3);
+        CudaStatsGuard cudaStatsGuardBackward(PrimitiveOpType::ForwardBackward/*misusing this for actual op*/, L"batched BACKWARD", 3);
 
         // if user passed NDArrayViewPtrs for the gradients, then implant those
         // If nulls are passed, then the existing gradient memory will be reused, if any, and gradients[] will be updated to return that.
@@ -5231,7 +5305,7 @@ public:
 
         cudaStatsGuardBackward.Stop(); // this measures the backprop process, which submits actual computation to GPU, with occasional (undesired) internal syncs
 
-        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"batched forward bg thread hangover", 3);
+        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"forward thread hangover", 3);
 
         m_memoizer.End(); // let CUDA submission thread complete its submitting work
         // At this point, no more CUDA submissions will be made, but the CUDA ops themselves should still be ongoing.
