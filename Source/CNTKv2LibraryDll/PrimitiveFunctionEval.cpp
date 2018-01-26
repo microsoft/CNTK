@@ -169,6 +169,16 @@ namespace CNTK
         case PrimitiveOpType::Reciprocal:    op = Microsoft::MSR::CNTK::ElementWiseOperator::opReciprocal;            break;
         case PrimitiveOpType::ELU:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opExponentialLinearUnit; break;
         case PrimitiveOpType::StableSigmoid: op = Microsoft::MSR::CNTK::ElementWiseOperator::opStableSigmoid;         break;
+        case PrimitiveOpType::ScaleAndShift:
+        {
+            let scale = attributes[PrimitiveFunction::AttributeNameScale].Value<double>();
+            let shift = attributes[PrimitiveFunction::AttributeNameShift].Value<double>();
+            // PERF BUGBUG: We don't have a single op to just add a constant. Shouldn't be hard, since the shapes are trivial.
+            NDArrayView::NumericOperation(args, scale, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,     out);
+            if (shift != 0)
+                NDArrayView::NumericOperation({ },  shift, Microsoft::MSR::CNTK::ElementWiseOperator::opConstOne, out, 1.0);
+        }
+        break;
             // ternary operations
         case PrimitiveOpType::Select:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opCond;                  break;
             // nullary operations --these have no arguments, and generate data
@@ -651,6 +661,11 @@ namespace CNTK
         case PrimitiveOpType::Reciprocal:    op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithReciprocalDerivative;                      arg2 = outputValue; break;
         case PrimitiveOpType::ELU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput; arg2 = outputValue; break;
         case PrimitiveOpType::StableSigmoid: op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithSigmoidDerivativeFromOutput;               arg2 = outputValue; break;
+        case PrimitiveOpType::ScaleAndShift:
+            // PERF BUGBUG: Without scale, this should not require a copy, just a view, like Plus.
+            alpha = attributes[PrimitiveFunction::AttributeNameScale].Value<double>();
+            op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+            break;
         case PrimitiveOpType::TransposeAxes:
             // TODO: one day we may treat this as a see-through gradient, in Autobatch
             NDArrayView::NumericOperation({ outputGradientValue->AsTransposed(TransposePermutationArg(attributes), /*invert=*/true) }, 1, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta);

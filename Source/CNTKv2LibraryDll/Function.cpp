@@ -1550,6 +1550,36 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::Plus, leftOperand, rightOperand, Dictionary(), name);
     }
 
+    FunctionPtr ScaleAndShift(const Variable& x, double scale, double shift, const std::wstring& name)
+    {
+        // to optimize users writing things like (1-mask)-0.999, we merge consecutive such operations right here
+        if (x.IsOutput())
+        {
+            const auto& f = (const PrimitiveFunction&)*x.Owner();
+            if (f.OpType() == PrimitiveOpType::ScaleAndShift)
+            {
+                const auto& input = ((const PrimitiveFunction&)*x.Owner()).OpInputs().front();
+                let inputScale = f.Attributes()[PrimitiveFunction::AttributeNameScale].Value<double>();
+                let inputShift = f.Attributes()[PrimitiveFunction::AttributeNameShift].Value<double>();
+                let mergedScale = scale * inputScale;
+                let mergedShift = inputShift * scale + shift;
+                return UnaryOp(PrimitiveOpType::ScaleAndShift, input,
+                               Dictionary(
+                                   PrimitiveFunction::AttributeNameScale, mergedScale,
+                                   PrimitiveFunction::AttributeNameShift, mergedShift
+                               ),
+                               name);
+            }
+        }
+        // TODO: we can further optimize for the special case of scale==1
+        return UnaryOp(PrimitiveOpType::ScaleAndShift, x,
+                       Dictionary(
+                           PrimitiveFunction::AttributeNameScale, scale,
+                           PrimitiveFunction::AttributeNameShift, shift
+                       ),
+                       name);
+    }
+
     FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::LogPlus, leftOperand, rightOperand, Dictionary(), name);

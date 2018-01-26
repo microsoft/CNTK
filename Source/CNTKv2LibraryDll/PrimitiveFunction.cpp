@@ -113,6 +113,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingMode = L"paddingMode";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePaddingConstantValue = L"paddingConstantValue";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSyncId = L"syncId";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameScale = L"scale";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameShift = L"shift";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, decltype(m_inputs)& inputs, bool inferDimensions)
     {
@@ -472,6 +474,7 @@ namespace CNTK
                         case PrimitiveOpType::StopGradient:
                         case PrimitiveOpType::ELU:
                         case PrimitiveOpType::StableSigmoid:
+                        case PrimitiveOpType::ScaleAndShift:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;

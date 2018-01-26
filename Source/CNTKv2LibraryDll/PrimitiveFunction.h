@@ -293,6 +293,8 @@ namespace CNTK
         static const std::wstring AttributeNamePaddingMode;
         static const std::wstring AttributeNamePaddingConstantValue;
         static const std::wstring AttributeNameSyncId;
+        static const std::wstring AttributeNameScale;
+        static const std::wstring AttributeNameShift;
 
     protected:
         // base constructor, called by all others except the move one

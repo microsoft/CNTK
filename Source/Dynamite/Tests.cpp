@@ -180,6 +180,7 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         //out->LogToFile(L"out");
         return out;
     };
+    let constScalar = [&](double val) { return make_shared<NDArrayView>(val, dataType, NDShape{}, device); };
     // definition of all tests
     //  - Var* = CNTK function under test, implemented on Variables
     //  - Val* = reference operation, implemented on values (NDArrayView)
@@ -192,6 +193,11 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     NDArrayView::LazilyCreateRNGState(rngState, SentinelValueForAutoSelectRandomSeed, device);
     vector<TensorViewTest> tests =
     {
+        // scalar operations
+        { { ValExpr(argValues[0]                    + constScalar(  1)), "ScaleAndShift"               }, VarExpr(CNTK::ScaleAndShift(args[0],  1,     1  )),{ { 13, 42 } } }, // +1
+        { { ValExpr(argValues[0] * constScalar(  2)                   ), "ScaleAndShift"               }, VarExpr(CNTK::ScaleAndShift(args[0],  2,     0  )),{ { 13, 42 } } }, // *2
+        { { ValExpr(argValues[0] * constScalar( 13) + constScalar(-42)), "ScaleAndShift"               }, VarExpr(CNTK::ScaleAndShift(args[0], 13.0, -42.0)),{ { 13, 42 } } }, // more complex
+        { { ValExpr(argValues[0] * constScalar(-26) + constScalar( -3)), "ScaleAndShift|ScaleAndShift" }, VarExpr(CNTK::ScaleAndShift(CNTK::ScaleAndShift(args[0], -2.0, 3.0), 13.0, -42.0)),{ { 13, 42 } } }, // nested
         // matrix products
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times_shared_W"  }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
         { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, argValues[1], false, 1.0, 1)), "Times"           }, VarExpr(CNTK::Times         (args[0], args[1]   )),{ { 13, 42 },{ 42, 9    } } },
