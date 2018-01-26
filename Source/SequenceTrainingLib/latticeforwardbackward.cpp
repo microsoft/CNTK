@@ -1407,6 +1407,9 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         return LOGZERO; // failed, do not use resulting matrix
     }
 
+    //if (rand() % 10 == 1)
+        //return LOGZERO;
+
     // PHASE 3: compute final state-level posteriors (MMI mode)
 
     // compute expected frames correct in sMBRmode

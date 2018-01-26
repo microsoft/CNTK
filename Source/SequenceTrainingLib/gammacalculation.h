@@ -228,6 +228,13 @@ public:
             else
                 parallellattice.getgamma(tempmatrix);
 
+            if (denavlogp < LOGZERO / 2)
+            {
+                std::wstring key = lattices[i]->second.getkey();
+                fprintf(stderr, "bad utt: %ls\n", key.c_str());
+                tempmatrix.SetValue(0.0f);
+            }
+
             // set gamma for multi channel
             if (samplesInRecurrentStep > 1)
             {
