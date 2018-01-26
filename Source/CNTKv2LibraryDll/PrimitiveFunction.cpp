@@ -416,12 +416,8 @@ namespace CNTK
                     break;
                 }
                 case PrimitiveOpType::Clip:
-#if 0               // same as PrimitiveOpType::Select
-                    assert(m_inputs.size() == 3);
-                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);
-                    break;
-#endif
                 case PrimitiveOpType::Select:
+                case PrimitiveOpType::ElementAffine:
                     assert(m_inputs.size() == 3);
                     outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);
                     break;

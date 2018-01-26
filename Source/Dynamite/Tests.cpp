@@ -255,8 +255,10 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         { { ValExpr(argValues[0]->Slice    (NDShapeDimensions{ 0, 1 }, NDShapeDimensions{ 13,  4 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(1)          }, { 1    }, { 1+4     })),{ { 13, 42 } } }, // same but testing SlicedTensorView() on the reference path
         { { ValExpr(argValues[0]->SliceView(NDShapeDimensions{    1 }, NDShapeDimensions{      3 })), "Slice" }, VarExpr(CNTK::Slice(args[0], { Axis(0)          }, { 1    }, { 1+3     })),{ { 13     } } }, // slice of rank 1
         // ternary
-        { ValOp(Clip), VarExpr(CNTK::Clip         (args[2], args[0], args[1])), { { 13,  1 }, { 13, 1 }, { 13, 42 } } },
-        { ValOp(Cond), VarExpr(CNTK::ElementSelect(args[0], args[1], args[2])), { { 13, 42 }, { 13, 1 }, { 13,  1 } } },
+        { ValOp(Clip),     VarExpr(CNTK::Clip         (args[2], args[0], args[1])),{ { 13,  1 },{ 13,  1 },{ 13, 42    } } },
+        { ValOp(Cond),     VarExpr(CNTK::ElementSelect(args[0], args[1], args[2])),{ { 13, 42 },{ 13,  1 },{ 13,  1    } } },
+        { ValOp(AxBplusC), VarExpr(CNTK::ElementAffine(args[0], args[1], args[2])),{ { 13, 42 },{ 13,  1 },{ 13,  1    } } },
+        { ValOp(AxBplusC), VarExpr(CNTK::ElementAffine(args[0], args[1], args[2])),{ {  1, 42 },{ 13,  1 },{ 13,  1, 2 } } }, // weird broadcasting. Note that when testing stacking, the "2" is the batch axis that is reduced over
         // binary
         { ValOp(Sum               ), VarExpr(CNTK::Plus         (args[0], args[1])), { { 13, 42     }, { 13, 42 } } },
         { ValOp(Difference        ), VarExpr(CNTK::Minus        (args[0], args[1])), { { 13, 42     }, { 13,  1 } } },

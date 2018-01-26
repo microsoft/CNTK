@@ -180,7 +180,12 @@ namespace CNTK
         }
         break;
             // ternary operations
-        case PrimitiveOpType::Select:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opCond;                  break;
+        case PrimitiveOpType::Select:        op = Microsoft::MSR::CNTK::ElementWiseOperator::opCond;   break;
+        case PrimitiveOpType::ElementAffine: op = Microsoft::MSR::CNTK::ElementWiseOperator::opAxBplusC; break;
+        case PrimitiveOpType::Clip:
+            // special case since arg order of opClip is different
+            NDArrayView::NumericOperation({ args[1], args[2], args[0] }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opClip, out, 0.0, reductionOp);
+            break;
             // nullary operations --these have no arguments, and generate data
         case PrimitiveOpType::RandomDistribution:
             {
@@ -231,10 +236,6 @@ namespace CNTK
         case PrimitiveOpType::Slice:
             // The slice view has already completed, but we must copy the result over. The following op is the same as the shared one except for taking the slice view as its input.
             NDArrayView::NumericOperation({ sliceView }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, out, 0.0, reductionOp);
-            break;
-        case PrimitiveOpType::Clip:
-            // special case since arg order of opClip is different
-            NDArrayView::NumericOperation({ args[1], args[2], args[0] }, alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opClip, out, 0.0, reductionOp);
             break;
             // reduction ops are also done outside, but set the reductionOp
         case PrimitiveOpType::ReduceElements:
@@ -764,6 +765,12 @@ namespace CNTK
                                           beta); // keep beta; although we just cleared it, beta=0 avoids the memory access
             // This ^^ op is the same as the shared one, except for the output slice.
             handled = true;
+            break;
+        case PrimitiveOpType::ElementAffine:
+            if (i == 2) // bias is like Plus
+                op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+            else // factors are like ElementTimes
+                op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; arg2 = inputValues[1 - i];
             break;
         case PrimitiveOpType::Clip:
             if (i == 0)
