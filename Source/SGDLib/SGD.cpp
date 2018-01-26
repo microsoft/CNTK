@@ -1160,7 +1160,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
-    int countModel = 0;
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1249,25 +1248,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
-                try
-                {
-                    net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
-                    if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
-                        net->Backprop(criterionNodes[0]);
-                }
-                catch (...)
-                {
-                    // This is ugly, temp solution that we can live in short term, since SE fails rarely due to numerical instability
-                    auto modelName = GetModelNameForEpoch(1);
-                    fprintf(stderr, "Saving the model after a bad MB to %ls....\n", modelName.c_str());
-                    net->Save(modelName+L"" + std::to_wstring(countModel));
-                }
+                net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
 
                 // ===========================================================
                 // backprop
                 // ===========================================================
 
-               
+                if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                    net->Backprop(criterionNodes[0]);
 
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)

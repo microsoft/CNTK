@@ -478,6 +478,7 @@ public:
             if (m_invalidBatch)
             {
                 Input(inputIndex)->Gradient().SetValue(0.0f);
+                Value().SetValue(2.0f);
             }
             else
             {
@@ -528,15 +529,8 @@ public:
         gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif
-        if (invalidBatch)
-        {
-            inputGradientValues.SetValue(0.0f);
-        }
-        else 
-        {
-            inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
-            inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType)frameDropThresh);
-        }
+        inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
+        inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType)frameDropThresh);
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
 #endif

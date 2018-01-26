@@ -228,13 +228,6 @@ public:
             else
                 parallellattice.getgamma(tempmatrix);
 
-            if (denavlogp < LOGZERO / 2)
-            {
-                std::wstring key = lattices[i]->second.getkey();
-                fprintf(stderr, "bad utt: %ls\n", key.c_str());
-                tempmatrix.SetValue(0.0f);
-            }
-
             // set gamma for multi channel
             if (samplesInRecurrentStep > 1)
             {
@@ -256,6 +249,8 @@ public:
             if (samplesInRecurrentStep > 1)
                 validframes[mapi] += numframes; // advance the cursor within the parallel sequence
             fprintf(stderr, "dengamma value %f\n", denavlogp);
+            if (isnan(denavlogp))
+                throw std::runtime_error("dengamma is nan, skipping the minibatch\n");
             ts += numframes;
         }
         functionValues.SetValue(objectValue);
