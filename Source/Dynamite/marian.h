@@ -834,16 +834,14 @@ namespace marian
 
     static inline Expr layer_norm(const Expr& x, Expr gamma, Expr beta = nullptr, float eps = 1e-9)
     {
-        // TODO: Expr == nullptr must be implemented. Variable::IsValid()
+        // TODO: Expr == nullptr must be implemented. Variable::IsValid()?
         // Marian LayerNorm normalizes over Axis(0).
         auto axis = CNTK::Axis(0);
         Expr mean = ReduceMean(x, axis);
         Expr x0 = x - mean;
-        // TODO: add a Mean flag to InnerProduct
         auto var = InnerProduct(x0, x0, axis) / (float)x0.Shape().Dimensions().front();
         auto invStdDev = 1 / Sqrt(var + eps);
-        //return CNTK::NormalizeDenormalize(x, mean, invStdDev, gamma, beta);
-        return ElementAffine(x0, gamma * invStdDev, beta);
+        return CNTK::NormalizeDenormalize(x, mean, invStdDev, gamma, beta);
     }
 
     static inline Expr highway(const Expr& y, Expr x, Expr t)
