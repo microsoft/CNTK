@@ -1465,7 +1465,7 @@ private:
     {
         // fetch the NDArrayViewPtrs for all inputs
         let& inputs = f.m_inputs;
-        CudaStatsGuard cudaStatsGuardPrepareI(PrimitiveOpType::Pooling, L"Memoize: MT prepare inputs", 3, inputs.size());
+        CudaStatsGuard cudaStatsGuardPrepareI(PrimitiveOpType::Pooling, L"Memoize: MT prep inputs", 3, inputs.size());
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -1477,7 +1477,7 @@ private:
             inputValues[i] = MTCacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
         }
         cudaStatsGuardPrepareI.Stop();
-        CudaStatsGuard cudaStatsGuardPrepareO(PrimitiveOpType::Log, L"Memoize: MT prepare output", 3, inputs.size());
+        CudaStatsGuard cudaStatsGuardPrepareO(PrimitiveOpType::Log, L"Memoize: MT prep output", 3, inputs.size());
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs.front(); // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
@@ -4301,7 +4301,7 @@ public:
             ExecuteBatchedOpAndUpdateSchedule(opBatch);
         }
         cudaStatsGuardForward.Stop(); // this measures the auto-batching process, which submits actual computation to a bg thread
-        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"backward thread hangover", 3);
+        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"forward thread hangover", 3);
 
         // let CUDA submission thread complete its submitting work (but the CUDA ops themselves do not need to be complete)
         // Until this is completed, the m_value fields are not filled in yet.
@@ -5253,7 +5253,7 @@ public:
 
         cudaStatsGuardBackward.Stop(); // this measures the backprop process, which submits actual computation to GPU, with occasional (undesired) internal syncs
 
-        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"forward thread hangover", 3);
+        CudaStatsGuard cudaStatsGuardCalc(PrimitiveOpType::Assign/*misusing this for actual op*/, L"backward thread hangover", 3);
 
         m_memoizer.End(); // let CUDA submission thread complete its submitting work
         // At this point, no more CUDA submissions will be made, but the CUDA ops themselves should still be ongoing.

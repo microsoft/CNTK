@@ -840,7 +840,8 @@ namespace marian
         Expr mean = ReduceMean(x, axis);
         Expr x0 = x - mean;
         auto var = InnerProduct(x0, x0, axis) / (float)x0.Shape().Dimensions().front();
-        auto invStdDev = 1 / Sqrt(var + eps);
+        //auto invStdDev = 1 / Sqrt(var / (float)x0.Shape().Dimensions().front() + eps);
+        auto invStdDev = Pow(var + eps, InternalOps::Scalar(-0.5));
         return CNTK::NormalizeDenormalize(x, mean, invStdDev, gamma, beta);
     }
 
