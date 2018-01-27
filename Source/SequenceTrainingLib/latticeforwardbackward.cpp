@@ -1337,7 +1337,7 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         }
         vt_path_weights[i] = compute_wer(wids, path_ids);
         string pathidstr = "$";
-        for (size_t j = 0; j < path_ids.size(); j++) pathidstr += ("_" + path_ids[j]);
+        for (size_t j = 0; j < path_ids.size(); j++) pathidstr += ("_" + std::to_string(path_ids[j]));
         mp_itr = mp_path_info.find(pathidstr);
         if (mp_itr != mp_path_info.end())
         {
