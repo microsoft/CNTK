@@ -142,10 +142,10 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags)
+CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter)
 {
     ZeroInit();
-    SetValue(numRows, numCols, pArray, matrixFlags);
+    SetValue(numRows, numCols, pArray, matrixFlags, deleter);
 }
 
 //copy constructor, deep copy
@@ -873,7 +873,7 @@ void CPUMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& /*deepCopyFr
 #endif
 
 template <class ElemType>
-void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags)
+void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr)
 {
     if (pArray == nullptr && numRows * numCols > 0)
         InvalidArgument("Invalid pArray. pArray == nullptr, but matrix is of size %d * %d = %d.", (int)numRows, (int)numCols, (int)(numRows * numCols));
@@ -885,11 +885,17 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free previous array allocation if any before overwriting
-        delete[] Buffer();
+        if (Buffer())
+        {
+            if (HasExternalBuffer())
+                ReleaseExternalBuffer();
+            else
+                delete[] Buffer();
+        }
 
         m_numRows = numRows;
         m_numCols = numCols;
-        SetBuffer(pArray, GetNumElements() * sizeof(ElemType), true);
+        SetBuffer(pArray, GetNumElements() * sizeof(ElemType), true, deleter);
         SetSizeAllocated(GetNumElements());
     }
     else
@@ -900,7 +906,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
         {
             if (!(matrixFlags & matrixFormatRowMajor)) // compatible to internal structure
                 memcpy(Data(), pArray, GetNumElements() * sizeof(ElemType));
-            else // need to transpose
+            else // passed data is row-major: need to transpose
             {
                 ElemType* bufPtr = Data();
                 auto& us = *this;
@@ -7532,7 +7538,7 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explicitly instantiate the methods we need for that purpose
 template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols);
-template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols, char* pArray, const size_t matrixFlags);
+template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols, char* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template CPUMatrix<char>::CPUMatrix();
 template CPUMatrix<char>::CPUMatrix(CPUMatrix<char> const&);
 template CPUMatrix<char>::CPUMatrix(CPUMatrix<char>&&);
@@ -7540,7 +7546,7 @@ template size_t CPUMatrix<char>::LocateElement(size_t, size_t) const;
 template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols, size_t pretendNumCols) const;
 template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 template void CPUMatrix<char>::SetValue(const char);
-template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char* pArray, size_t matrixFlags);
+template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char* pArray, size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
@@ -7553,7 +7559,7 @@ template void CPUMatrix<char>::Reshape(const size_t, const size_t);
 
 // Support <short>
 template CPUMatrix<short>::CPUMatrix(const size_t numRows, const size_t numCols);
-template CPUMatrix<short>::CPUMatrix(const size_t numRows, const size_t numCols, short* pArray, const size_t matrixFlags);
+template CPUMatrix<short>::CPUMatrix(const size_t numRows, const size_t numCols, short* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template CPUMatrix<short>::CPUMatrix();
 template CPUMatrix<short>::CPUMatrix(CPUMatrix<short> const&);
 template CPUMatrix<short>::CPUMatrix(CPUMatrix<short>&&);
@@ -7561,7 +7567,7 @@ template size_t CPUMatrix<short>::LocateElement(size_t, size_t) const;
 template CPUMatrix<short> CPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols, size_t pretendNumCols) const;
 template CPUMatrix<short>& CPUMatrix<short>::operator=(CPUMatrix<short>&&);
 template void CPUMatrix<short>::SetValue(const short);
-template void CPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, short* pArray, size_t matrixFlags);
+template void CPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, short* pArray, size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template void CPUMatrix<short>::SetValue(CPUMatrix<short> const&);
 //template void CPUMatrix<short>::SetValue(GPUMatrix<short> const&);
 //template void CPUMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
@@ -7573,7 +7579,7 @@ template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, shor
 template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 
 // Support <int>
-template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
+template CPUMatrix<int>::CPUMatrix(const size_t numRows, const size_t numCols, int* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template void CPUMatrix<int>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
 
 }}}

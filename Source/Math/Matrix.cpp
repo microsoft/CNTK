@@ -392,6 +392,7 @@ Matrix<ElemType>::Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* 
 }
 #endif
 
+// main constructor of a new matrix with given dimensions
 template <class ElemType>
 Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz)
 {
@@ -432,37 +433,45 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TY
     }
 }
 
+// construct a matrix that wraps an external buffer
+// BUGBUG: The interface indicates that sparse is supported here, but our sparse types cannot handle external buffers.
+//         For now, I made that a runtime error. If this is actually used, we can turn it back, but should then revisit this interface.
 template <class ElemType>
-Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz)
+Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId,
+                         const size_t matrixFlags, const size_t /*nnz*/, IBaseMatrixStorageExternalBufferDeleter* deleter)
 {
     Init(deviceId);
 
+    if (matrixFlags & matrixFormatSparse)
+    {
+        // note: I made this change since this function just ignores pArray
+        InvalidArgument("Matrix: CPUSparseMatrix does not support initialization from/with buffer");
+    }
     if (m_preferredDeviceId == CPUDEVICE)
     {
-        if (matrixFlags & matrixFormatSparse)
+        //if (matrixFlags & matrixFormatSparse)
+        //{
+        //    //m_CPUSparseMatrix = MakeSharedMatrixObject<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nnz);
+        //    //SetDataLocation(CPU, SPARSE);
+        //}
+        //else
         {
-            // WARNING: matrixFlag is not passed in and externally managed array cannot be passed in
-            m_CPUSparseMatrix = MakeSharedMatrixObject<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nnz);
-            SetDataLocation(CPU, SPARSE);
-        }
-        else
-        {
-            m_CPUMatrix = MakeSharedMatrixObject<CPUMatrix<ElemType>>(numRows, numCols, pArray, matrixFlags);
+            m_CPUMatrix = MakeSharedMatrixObject<CPUMatrix<ElemType>>(numRows, numCols, pArray, matrixFlags, deleter);
             SetDataLocation(CPU, DENSE);
         }
     }
     else
     {
-        if (matrixFlags & matrixFormatSparse)
+        //if (matrixFlags & matrixFormatSparse)
+        //{
+        //    // m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows,numCols,nnz, pArray,matrixFlags,m_preferredDeviceId);
+        //    //m_GPUSparseMatrix = MakeSharedMatrixObject<GPUSparseMatrix<ElemType>>(m_preferredDeviceId, MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask));
+        //    //m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, nnz, true, false);
+        //    //SetDataLocation(GPU, SPARSE);
+        //}
+        //else
         {
-            // m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows,numCols,nnz, pArray,matrixFlags,m_preferredDeviceId);
-            m_GPUSparseMatrix = MakeSharedMatrixObject<GPUSparseMatrix<ElemType>>(m_preferredDeviceId, MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask));
-            m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, nnz, true, false);
-            SetDataLocation(GPU, SPARSE);
-        }
-        else
-        {
-            m_GPUMatrix = MakeSharedMatrixObject<GPUMatrix<ElemType>>(numRows, numCols, m_preferredDeviceId, pArray, matrixFlags);
+            m_GPUMatrix = MakeSharedMatrixObject<GPUMatrix<ElemType>>(numRows, numCols, m_preferredDeviceId, pArray, matrixFlags, deleter);
             SetDataLocation(GPU, DENSE);
         }
     }
@@ -6376,7 +6385,7 @@ template class Matrix<double>;
 template Matrix<char>::Matrix(DEVICEID_TYPE);
 template Matrix<char>::Matrix(Matrix<char>&&);
 template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
-template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
+template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template Matrix<char>::~Matrix();
 template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
 template char* Matrix<char>::Data() const;
@@ -6404,7 +6413,7 @@ template char* Matrix<char>::CopyToArray(void) const;
 template Matrix<short>::Matrix(DEVICEID_TYPE);
 template Matrix<short>::Matrix(Matrix<short>&&);
 template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
-template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, short* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
+template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, short* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template Matrix<short>::~Matrix();
 template Matrix<short>& Matrix<short>::operator=(Matrix<short>&& moveFrom);
 template short* Matrix<short>::Data() const;
@@ -6428,5 +6437,5 @@ template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, 
 template Matrix<short>& Matrix<short>::Reshape(const size_t, const size_t);
 template short* Matrix<short>::CopyToArray(void) const;
 
-template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
+template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t, IBaseMatrixStorageExternalBufferDeleter* deleter);
 }}}

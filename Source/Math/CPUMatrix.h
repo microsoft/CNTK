@@ -65,7 +65,7 @@ public:
     CPUMatrix();
     CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow);     // copy constructor, shallow
     CPUMatrix(const size_t numRows, const size_t numCols);
-    CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
+    CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr);
     CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
     CPUMatrix<ElemType>& operator=(const CPUMatrix<ElemType>& deepCopyFrom); // assignment operator, deep copy
     CPUMatrix(CPUMatrix<ElemType>&& moveFrom);                               // move constructor, shallow copy
@@ -144,7 +144,7 @@ public:
     //void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
+    void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr);
 
     void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 

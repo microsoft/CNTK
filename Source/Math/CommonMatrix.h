@@ -238,7 +238,7 @@ enum MatrixFlagBitPosition
     bitPosSetValueOnDevice = 4, // in a setValue situation, the copy from buffer is already on the device
 };
 
-enum MatrixFormat
+enum MatrixFormat // TODO: these are also included in MatrixFlags below. They should be merged into a single type.
 {
     // TODO: remove all formats that are actually not supported
     matrixFormatDense = 0,                          // default is dense
@@ -257,9 +257,10 @@ enum MatrixFormat
 };
 
 // common matrix flags for use on all matrices
+// Note: these include all MatrixFormat flags
 enum MatrixFlags
 {
-    // first bits of matrix flags are MatrixFormat
+    // all MatrixFormat flags go here
     matrixFlagNormal = 0,
     matrixFlagDontOwnBuffer = 1 << bitPosDontOwnBuffer,       // the matrix memory pointers are externally managed, don't allocate/free or attempt to copy to another location
     matrixFlagSetValueOnDevice = 1 << bitPosSetValueOnDevice, // SetValue() call has a buffer that is already on the device
@@ -269,6 +270,12 @@ enum MatrixFlags
 // BaseMatrixStorage -- storage object (m_sob) for all matrix types (CPU, GPU) x (dense, sparse)
 // Storage objects are shared by vies into the same data.
 // -----------------------------------------------------------------------
+
+// interface for user-specified delete function for externally-owned storage
+struct/*interface*/ IBaseMatrixStorageExternalBufferDeleter
+{
+    virtual void Delete(void* pArray) = 0;
+};
 
 template <class ElemType>
 class BaseMatrixStorage : public ::CNTK::enable_strong_shared_ptr<BaseMatrixStorage<ElemType>> //enable_shared_from_this<BaseMatrixStorage<ElemType>>
@@ -317,7 +324,7 @@ public:
             {
                 delete[] m_pArray;
                 m_pArray = nullptr;
-                m_nzValues = nullptr;
+                m_nzValues = nullptr; // TODO: These should be defined and freed in the sparse-specific derived class
 
                 delete[] m_unCompIndex;
                 m_unCompIndex = nullptr;
@@ -347,6 +354,11 @@ public:
             m_elemSizeAllocated = 0;
             m_totalBufferSizeAllocated = 0;
         }
+        else if (m_deleter)
+        {
+            ReleaseExternalBuffer();
+            // TODO: don't we need to reset all those count variables as well? Or are they never used for external buffers?
+        }
     }
 
 protected:
@@ -354,6 +366,15 @@ protected:
     void SetFormat(MatrixFormat format) { m_format = format; }
 
     bool HasExternalBuffer() const { return m_externalBuffer; }
+    void ReleaseExternalBuffer()
+    {
+        if (m_deleter)
+        {
+            m_deleter->Delete(m_pArray);
+            m_pArray = nullptr;
+            m_deleter = nullptr; // also remove the deleter. Note: The deleter may have deleted itself in the Delete() call.
+        }
+    }
 
     DEVICEID_TYPE GetComputeDeviceId() const { return m_computeDevice; }
     void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_computeDevice = computeId; }
@@ -371,7 +392,13 @@ protected:
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
 
     ElemType* Buffer() const { return m_pArray; }
-    void SetBuffer(ElemType* pArray, size_t alloc, bool external = false) { m_pArray = pArray; m_totalBufferSizeAllocated = alloc; m_externalBuffer = external; }
+    void SetBuffer(ElemType* pArray, size_t alloc, bool external = false, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr)
+    {
+        m_pArray = pArray;
+        m_totalBufferSizeAllocated = alloc;
+        m_externalBuffer = external;
+        m_deleter = deleter;
+    }
 
     size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
     
@@ -424,6 +451,7 @@ protected:
     MatrixFormat m_format;
     mutable DEVICEID_TYPE m_computeDevice; // current GPU device Id or CPUDEVICE
     bool m_externalBuffer; // is the buffer used by this matrix,
+    IBaseMatrixStorageExternalBufferDeleter* m_deleter = nullptr; // if given, then for external buffers, call this upon deletion
 
     // m_numRows and m_numCols should be removed
     size_t m_numRows;
@@ -466,6 +494,10 @@ protected:
 
 // -----------------------------------------------------------------------
 // BaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
+// All four matrix types derive from this (e.g. GPUMatrix).
+// This implements a view into a (Base)MatrixStorage object, which can be
+// shared by multiple BaseMatrices.
+// This class really only contains dimensions, view offset, and reference to the storage object.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -538,6 +570,7 @@ protected:
     void SetFormat(MatrixFormat format) { m_sob->SetFormat(format); }
 
     bool HasExternalBuffer() const { return m_sob->HasExternalBuffer(); }
+    void ReleaseExternalBuffer() { return m_sob->ReleaseExternalBuffer(); }
 
     DEVICEID_TYPE GetComputeDeviceId() const { return m_sob->GetComputeDeviceId(); }
     void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_sob->SetComputeDeviceId(computeId); }
@@ -552,7 +585,7 @@ protected:
     void SetSizeAllocated(size_t alloc) { m_sob->SetSizeAllocated(alloc); }
 
     ElemType* Buffer() const { return m_sob->Buffer(); }
-    void SetBuffer(ElemType* parray, size_t alloc, bool external = false) { m_sob->SetBuffer(parray, alloc, external); }
+    void SetBuffer(ElemType* parray, size_t alloc, bool external = false, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr) { m_sob->SetBuffer(parray, alloc, external, deleter); }
 
     size_t GetBlockSize() const { return m_sob->GetBlockSize(); }
     void SetBlockSize(size_t blockSize) { m_sob->SetBlockSize(blockSize); }

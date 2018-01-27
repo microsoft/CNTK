@@ -138,9 +138,15 @@ public:
 #if 0
     Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
 #endif
+    // construct a new matrix
     Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense, const size_t nnz = 0);
+
     // TODO: Rewrite this constructor to eliminate the external buffers flag. Make a separate construction mechanism for Matrix objects that don't own their storage.
-    Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
+    // construct a new matrix with external storage
+    // If matrixFlags & matrixFlagDontOwnBuffer, then deleter can be specified.
+    // TODO: This API does not actually work for sparse matrices, so the nnz parameter should be removed (not sure if this API is used incorrectly, relying on this).
+    Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr);
+
     Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
     Matrix(Matrix<ElemType>&& moveFrom);                                                    // move constructor, shallow copy
     Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               // move assignment operator, shallow copy

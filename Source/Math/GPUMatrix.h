@@ -184,7 +184,7 @@ private:
 public:
     explicit GPUMatrix(int deviceId);
     GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
-    GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
+    GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr);
     GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom);
     GPUMatrix<ElemType>& operator=(const GPUMatrix<ElemType>& deepCopyFrom); // assignment operator, deep copy
     GPUMatrix(GPUMatrix<ElemType>&& moveFrom);
@@ -272,7 +272,7 @@ public:
     void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
+    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr);
 
     void AssignValues(const double* data, size_t size);
 

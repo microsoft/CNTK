@@ -553,11 +553,11 @@ GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int d
 };
 
 template <class ElemType>
-GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags) :
+GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter) :
     BaseMatrix<ElemType>(/*doNotInitializeFields=*/true) // don't initialize anything, since we do that in here
 {
     ZeroInit(deviceId);
-    SetValue(numRows, numCols, deviceId, pArray, matrixFlags);
+    SetValue(numRows, numCols, deviceId, pArray, matrixFlags, /*dataTransferer=*/nullptr, deleter);
 };
 
 template <class ElemType>
@@ -1515,7 +1515,8 @@ void GPUMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom
 #endif
 
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags, DataTransferer* transferer)
+void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray,
+                                   size_t matrixFlags, DataTransferer* transferer, IBaseMatrixStorageExternalBufferDeleter* deleter)
 {
     // handle externally managed case
     // BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
@@ -1523,13 +1524,16 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free the existing array if it used to be an owned array
-        if ( Buffer() != NULL)
+        if (Buffer())
         {
-            TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+            if (HasExternalBuffer())
+                ReleaseExternalBuffer();
+            else
+                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
         }
         m_numRows = numRows;
         m_numCols = numCols;
-        SetBuffer(pArray, GetNumElements() * sizeof(ElemType), true);
+        SetBuffer(pArray, GetNumElements() * sizeof(ElemType), true, deleter);
         SetSizeAllocated(GetNumElements());
         SetFormat(matrixFormatDense);
         SetComputeDeviceId(deviceId);
@@ -5434,7 +5438,7 @@ void* GPUMatrix<ElemType>::s_curandGenerator = NULL;
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explicitly instantiate the methods we need for that purpose
 template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
-template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, char* pArray, const size_t matrixFlags);
+template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, char* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
 template GPUMatrix<char>::GPUMatrix(GPUMatrix<char>&&);
 template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&, size_t startColumn, size_t numCols, size_t sourceNumCols);
@@ -5447,7 +5451,7 @@ template GPUMatrix<char>::~GPUMatrix();
 template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
 template GPUMatrix<char>::GPUMatrix(int);
 template void GPUMatrix<char>::SetValue(const char);
-template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer);
+template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer, IBaseMatrixStorageExternalBufferDeleter* deleter);
 //template void GPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
@@ -5459,7 +5463,7 @@ template DEVICEID_TYPE GPUMatrix<char>::PrepareDevice(DEVICEID_TYPE deviceId) co
 
 // Support <short>
 template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
-template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, short* pArray, const size_t matrixFlags);
+template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, short* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&);
 template GPUMatrix<short>::GPUMatrix(GPUMatrix<short>&&);
 template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&, size_t startColumn, size_t numCols, size_t sourceNumCols);
@@ -5472,7 +5476,7 @@ template GPUMatrix<short>::~GPUMatrix();
 template GPUMatrix<short>& GPUMatrix<short>::operator=(GPUMatrix<short>&&);
 template GPUMatrix<short>::GPUMatrix(int);
 template void GPUMatrix<short>::SetValue(const short);
-template void GPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags, DataTransferer* transferer);
+template void GPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags, DataTransferer* transferer, IBaseMatrixStorageExternalBufferDeleter* deleter);
 //template void GPUMatrix<short>::SetValue(CPUMatrix<short> const&);
 template void GPUMatrix<short>::SetValue(GPUMatrix<short> const&);
 //template void GPUMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
@@ -5483,7 +5487,7 @@ template GPUMatrix<short>& GPUMatrix<short>::operator*=(short);
 template DEVICEID_TYPE GPUMatrix<short>::PrepareDevice(DEVICEID_TYPE deviceId) const;
 
 // Support <int>
-template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
+template GPUMatrix<int>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, int* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template GPUMatrix<int>::~GPUMatrix();
 template void GPUMatrix<int>::Resize(size_t, size_t, bool);
 
