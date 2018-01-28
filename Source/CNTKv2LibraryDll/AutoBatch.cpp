@@ -879,6 +879,33 @@ public:
 
 class NDArrayViewArena
 {
+    struct Gap : IBaseMatrixStorageExternalBufferDeleter
+    {
+        set<Gap>* m_recycledGaps; // recycle the gap into here
+        MatrixBasePtr m_sob;    // underlying storage object
+        void* m_data;           // data pointer, points inside m_sob's memory
+        size_t m_size;          // (we could pass this in as well, to save RAM)
+        Gap(const MatrixBasePtr& sob, void* data, size_t size, set<Gap>& recycledGaps) :
+            m_sob(sob), m_data(data), m_size(size), m_recycledGaps(&recycledGaps) {}
+        // for set support --borrowed from Marian toolkit
+        size_t size() const { return m_size; }
+        void*  data() const { return m_data; }
+        bool operator<(const Gap& other) const // this defines the ordering of the set
+        {
+            return (m_size < other.size()) || (m_size == other.size() && m_data < other.data());
+        }
+        bool operator==(const Gap& other) const
+        {
+            return m_data == other.data() && m_size == other.size();
+        }
+        virtual void Delete(void*) override // called when the BaseMatrixStorage instance is destructed
+        {
+            auto& recycledGaps = *m_recycledGaps;
+            recycledGaps.emplace(move(*this)); // we move this gap into the gap set
+            //fprintf(stderr, "Delete [%d:%d]\n", (int)m_firstIndex, (int)(m_firstIndex + m_size));
+            delete this; // this will deref the underlying arena, so that eventually it can be freed
+        }
+    };
     // allocate a new tensor in a large arena
     static recursive_mutex s_mutex;
     static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
@@ -890,6 +917,7 @@ class NDArrayViewArena
     static array<size_t                        , numStorageFormats> s_currentArenaUseds;      // allocation cursor. Elements below this are already allocated.
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
     static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass;
+    static array<set<Gap>                      , numStorageFormats> s_recycledGapss;
     static const NDShapeDimension defaultDenseArenaSize = 64000000; // we allocate in this chunk size (dense only)
     static bool IsMatrixType(const MatrixBase& matrix, DataType dataType) // helper for checking the DataType of the MatrixBase object
     {
@@ -900,36 +928,24 @@ class NDArrayViewArena
         default: LogicError("GetMatrixType: Unsupported element type.");
         }
     }
-    struct Gap : IBaseMatrixStorageExternalBufferDeleter
+    template<typename ElementType>
+    static MatrixBasePtr CreateSOBAsView(const MatrixBasePtr& sob, size_t firstIndex, size_t size, set<Gap>& recycledGaps)
     {
-        MatrixBasePtr m_sob;    // underlying storage object
-        size_t m_firstIndex;    // element offset into storage object's memory
-        size_t m_size;          // (we could pass this in as well, to save RAM)
-        Gap(const MatrixBasePtr& sob, size_t firstIndex, size_t size) : m_sob(sob), m_firstIndex(firstIndex), m_size(size) {}
-        virtual void Delete(void*) override
+        let& mat = (const Matrix<ElementType>&)(*sob);
+        auto* p = mat.Data();
+        p += firstIndex;
+        auto* deleter = new Gap(sob, p, size, recycledGaps); // PERF BUGBUG: This is a plain malloc(), not good
+        return MakeSharedObject<Matrix<ElementType>>(/*rows=*/1, /*cols=*/size, p, sob->GetDeviceId(), matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
+    }
+    static MatrixBasePtr CreateSOBAsView(const MatrixBasePtr& sob, DataType dataType, size_t firstIndex, size_t size, set<Gap>& recycledGaps)
+    {
+        switch (dataType)
         {
-            //fprintf(stderr, "Delete [%d:%d]\n", (int)m_firstIndex, (int)(m_firstIndex + m_size));
-            delete this; // this will deref the underlying arena, so that eventually it can be freed
+        case DataType::Float:  return CreateSOBAsView<float >(sob, firstIndex, size, recycledGaps); break;
+        case DataType::Double: return CreateSOBAsView<double>(sob, firstIndex, size, recycledGaps); break;
+        default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
         }
-        template<typename ElementType>
-        static MatrixBasePtr CreateSOBAsView(const MatrixBasePtr& sob, size_t firstIndex, size_t size)
-        {
-            auto* deleter = new Gap(sob, firstIndex, size); // PERF BUGBUG: This is a plain malloc(), not good
-            let& mat = (const Matrix<ElementType>&)(*sob);
-            auto* p = mat.Data();
-            p += firstIndex;
-            return MakeSharedObject<Matrix<ElementType>>(/*rows=*/1, /*cols=*/size, p, sob->GetDeviceId(), matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
-        }
-        static MatrixBasePtr CreateSOBAsView(const MatrixBasePtr& sob, DataType dataType, size_t firstIndex, size_t size)
-        {
-            switch (dataType)
-            {
-            case DataType::Float:  return CreateSOBAsView<float >(sob, firstIndex, size); break;
-            case DataType::Double: return CreateSOBAsView<double>(sob, firstIndex, size); break;
-            default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
-            }
-        }
-    };
+    }
 public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
@@ -949,6 +965,7 @@ public:
         auto& s_currentArenaDataType = s_currentArenaDataTypes[formatAsIndex];
         auto& s_currentArenaDevice   = s_currentArenaDevices  [formatAsIndex];
         auto& s_recycledArenas       = s_recycledArenass      [formatAsIndex];
+        auto& s_recycledGaps         = s_recycledGapss        [formatAsIndex];
         // TODO: This ^^ calls for a struct!
         let numElements = shape.TotalSize(/*check=*/false);
         // The logic below fuses two cases: Dense and sparse.
@@ -964,6 +981,7 @@ public:
         //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
         //  Sparse outputs are used rarely, and sparse CSC matrices are small, so for sparse, we just cache individual objects.
         //  Practically, this is the same as using one "arena" per object, which is how it is implemented below.
+        // BUGBUG: The matrix lib may change sparse types. Hence, we should just merge the two recycled lists.
         if (!s_currentArena                                         ||
             isSparse                                                ||
             numElements > (s_currentArenaSize - s_currentArenaUsed) ||
@@ -1052,7 +1070,7 @@ public:
             // We create a new matrix storage object that wraps a pointer into the arena.
             // Any view into such object will reference the same underlying storage object.
             // The storage object has a custom deleter. We use that to track gaps.
-            let matrixViewPtr = Gap::CreateSOBAsView(s_currentArena, dataType, s_currentArenaUsed, numElements);
+            let matrixViewPtr = CreateSOBAsView(s_currentArena, dataType, s_currentArenaUsed, numElements, s_recycledGaps);
             auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
             s_currentArenaUsed = newArenaUsed;
             return region;
@@ -1073,6 +1091,7 @@ public:
 /*static*/ array<size_t                        , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaSizes;
 /*static*/ array<size_t                        , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaUseds;
 /*static*/ array<vector<unique_ptr<MatrixBase>>, NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledArenass;
+/*static*/ array<set<NDArrayViewArena::Gap>    , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledGapss;
 
 // ===========================================================================
 // DynamicProfiler -- helper for profiling dynamic batching of functions
