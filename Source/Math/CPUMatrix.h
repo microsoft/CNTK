@@ -38,6 +38,7 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::m_numCols;
     using Base::m_sliceViewOffset;
     using Base::HasExternalBuffer;
+    using Base::ReleaseExternalBuffer;
     using Base::SetBuffer;
     using Base::SetComputeDeviceId;
     using Base::SetSizeAllocated;

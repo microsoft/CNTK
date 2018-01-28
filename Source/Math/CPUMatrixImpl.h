@@ -873,7 +873,7 @@ void CPUMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& /*deepCopyFr
 #endif
 
 template <class ElemType>
-void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter = nullptr)
+void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter)
 {
     if (pArray == nullptr && numRows * numCols > 0)
         InvalidArgument("Invalid pArray. pArray == nullptr, but matrix is of size %d * %d = %d.", (int)numRows, (int)numCols, (int)(numRows * numCols));
