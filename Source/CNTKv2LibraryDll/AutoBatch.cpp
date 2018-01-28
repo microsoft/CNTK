@@ -900,6 +900,36 @@ class NDArrayViewArena
         default: LogicError("GetMatrixType: Unsupported element type.");
         }
     }
+    struct Gap : IBaseMatrixStorageExternalBufferDeleter
+    {
+        MatrixBasePtr m_sob;    // underlying storage object
+        size_t m_firstIndex;    // element offset into storage object's memory
+        size_t m_size;          // (we could pass this in as well, to save RAM)
+        Gap(const MatrixBasePtr& sob, size_t firstIndex, size_t size) : m_sob(sob), m_firstIndex(firstIndex), m_size(size) {}
+        virtual void Delete(void*) override
+        {
+            fprintf(stderr, "Delete [%d:%d]\n", (int)m_firstIndex, (int)(m_firstIndex + m_size));
+            delete this; // this will deref the underlying arena, so that eventually it can be freed
+        }
+        template<typename ElementType>
+        static MatrixBasePtr CreateSOBAsView(const MatrixBasePtr& sob, size_t firstIndex, size_t size)
+        {
+            auto* deleter = new Gap(sob, firstIndex, size); // PERF BUGBUG: This is a plain malloc(), not good
+            let& mat = (const Matrix<ElementType>&)(*sob);
+            auto* p = mat.Data();
+            p += firstIndex;
+            return MakeSharedObject<Matrix<ElementType>>(/*rows=*/1, /*cols=*/size, p, sob->GetDeviceId(), matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
+        }
+        static MatrixBasePtr CreateSOBAsView(const MatrixBasePtr& sob, DataType dataType, size_t firstIndex, size_t size)
+        {
+            switch (dataType)
+            {
+            case DataType::Float:  return CreateSOBAsView<float >(sob, firstIndex, size); break;
+            case DataType::Double: return CreateSOBAsView<double>(sob, firstIndex, size); break;
+            default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
+            }
+        }
+    };
 public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
@@ -1017,9 +1047,22 @@ public:
             s_currentArenaSize = s_currentArena->GetNumElements();
         }
         size_t newArenaUsed = s_currentArenaUsed + numElements;
-        auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/s_currentArenaUsed, /*end*/newArenaUsed, s_currentArena);
-        s_currentArenaUsed = newArenaUsed;
-        return region;
+        if (!isSparse)
+        {
+            // We create a new matrix storage object that wraps a pointer into the arena.
+            // Any view into such object will reference the same underlying storage object.
+            // The storage object has a custom deleter. We use that to track gaps.
+            let matrixViewPtr = Gap::CreateSOBAsView(s_currentArena, dataType, s_currentArenaUsed, numElements);
+            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
+            s_currentArenaUsed = newArenaUsed;
+            return region;
+        }
+        else // if sparse, then just use the object in its entirety
+        {
+            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/s_currentArenaUsed, /*end*/newArenaUsed, s_currentArena);
+            s_currentArenaUsed = newArenaUsed;
+            return region;
+        }
     }
 };
 
