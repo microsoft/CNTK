@@ -976,6 +976,9 @@ class NDArrayViewArena
         default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
         }       
     }
+
+    // diagnostics
+    size_t wastedBytes = 0;
 public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
@@ -1022,6 +1025,7 @@ public:
             if (iter != s_recycledMemoryBlocks.end()) // found one
             {
                 // TODO: for now I ignore to split the block
+                wastedBytes += iter->size() - desiredMemoryBlock.size();
                 let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(*iter), dataType, s_recycledMemoryBlocks);
                 auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
                 s_recycledMemoryBlocks.erase(iter);
@@ -1103,8 +1107,8 @@ public:
                         totalRecyclable += b.size();
                         maxRecyclable = max(maxRecyclable, b.size());
                     }
-                    fprintf(stderr, "%d recyclable blocks, max %d bytes, total %d bytes, %d recycable arenas\n",
-                            (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size());
+                    fprintf(stderr, "%d recyclable blocks, max %d bytes, total %d bytes, %d recycable arenas, %f wasted bytes\n",
+                            (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)wastedBytes);
                     fflush(stderr);
                     throw;
                 }
