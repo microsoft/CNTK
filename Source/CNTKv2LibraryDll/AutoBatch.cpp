@@ -908,7 +908,7 @@ class NDArrayViewArena
         Gap(const MatrixBasePtr& sob, size_t firstIndex, size_t size) : m_sob(sob), m_firstIndex(firstIndex), m_size(size) {}
         virtual void Delete(void*) override
         {
-            fprintf(stderr, "Delete [%d:%d]\n", (int)m_firstIndex, (int)(m_firstIndex + m_size));
+            //fprintf(stderr, "Delete [%d:%d]\n", (int)m_firstIndex, (int)(m_firstIndex + m_size));
             delete this; // this will deref the underlying arena, so that eventually it can be freed
         }
         template<typename ElementType>
