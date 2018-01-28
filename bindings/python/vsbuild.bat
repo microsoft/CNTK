@@ -76,13 +76,17 @@ for %%D in (
   Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
   mklml.dll
-  mkldnn.dll
 ) do (
   if defined CNTK_LIBRARIES (
     set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
   ) else (
     set CNTK_LIBRARIES=%CNTK_LIB_PATH%\%%D
   )
+)
+
+@REM mkldnn.dll is optional
+if exist mkldnn.dll (
+ set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\mkldnn.dll
 )
 
 @REM Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll is optional
