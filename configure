@@ -1151,6 +1151,17 @@ then
     fi
 fi
 
+if test x$halide_path = x
+then
+    halide_path=$(find_halide)
+    if test x${halide_path} = x
+    then
+        echo Cannot locate optional Halide library.
+    else
+        echo Found Halide at $halide_path
+    fi
+fi
+
 if test x$mpi_path = x
 then
     mpi_path=$(find_mpi)

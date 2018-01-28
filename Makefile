@@ -569,7 +569,7 @@ $(CPP_EXTENSIBILITY_EXAMPLES_LIB): $(CPP_EXTENSIBILITY_EXAMPLES_LIBRARY_OBJ) | $
 ##############################################
 # Binary convolution library
 ##############################################
-ifdef $(HALIDE_PATH)
+ifdef HALIDE_PATH
 INCLUDEPATH += $(HALIDE_PATH)/include
 BINARY_CONVOLUTION_LIBRARY_SRC =\
 	$(SOURCEDIR)/Extensibility/BinaryConvolutionLib/BinaryConvolutionLib.cpp \
