@@ -890,6 +890,8 @@ class NDArrayViewArena
         // for set support --borrowed from Marian toolkit
         size_t   size() const { return m_size; } // note: bytes, not elements
         uint8_t* data() const { return m_data; }
+        uint8_t* begin() const { return m_data; }
+        uint8_t* end() const { return m_data + m_size; }
         bool operator<(const MemoryBlock& other) const // this defines the ordering of the set
         {
             return (m_size < other.size()) || (m_size == other.size() && m_data < other.data());
@@ -1017,16 +1019,62 @@ public:
 
         let numElements = shape.TotalSize(/*check=*/false);
 
+        let DebugSnapShot = [&]()
+        {
+            size_t totalRecyclable = 0;
+            size_t maxRecyclable = 0;
+            for (let& b : s_recycledMemoryBlocks)
+            {
+                totalRecyclable += b.size();
+                maxRecyclable = max(maxRecyclable, b.size());
+            }
+            fprintf(stderr, "NDArrayView snapshot: %d recyclable blocks, max %d bytes, total %d bytes, %d recycable arenas, %f wasted bytes\n",
+                    (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)wastedBytes);
+            fflush(stderr);
+        };
+
+        static size_t debugCounter = 0;
+        if (debugCounter++ % 10000 == 0)
+            DebugSnapShot();
+
         // for dense, we can recover memory from the gaps
         if (!isSparse)
         {
             let desiredMemoryBlock = MemoryBlock::Create(dataType, numElements);
-            auto iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
+            //auto iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
+            //if (iter == s_recycledMemoryBlocks.end() && !s_recycledMemoryBlocks.empty()) // none: try to defrag
+            //{
+            //    DebugSnapShot();
+if (s_recycledMemoryBlocks.size() > 1){
+                // consolidate by sorting by address, then merging
+                vector<MemoryBlock> all(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end());
+                sort(all.begin(), all.end(), [](const MemoryBlock& a, const MemoryBlock& b){ return a.begin() < b.begin(); });
+                size_t j = 1;
+                for (size_t i = 1; i < all.size(); i++)
+                {
+                    if (all[j-1].end() == all[i].begin())
+                        all[j-1].m_size += all[i].size();
+                    else if (j != i)
+                        all[j++] = all[i];
+                }
+                s_recycledMemoryBlocks.clear();
+                for (size_t i = 0; i < j; i++)
+                    s_recycledMemoryBlocks.insert(move(all[i]));
+}
+                //fprintf(stderr, "consolidated into: ");
+                //DebugSnapShot();
+            auto    iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
+            //}
             if (iter != s_recycledMemoryBlocks.end()) // found one
             {
-                // TODO: for now I ignore to split the block
-                wastedBytes += iter->size() - desiredMemoryBlock.size();
-                let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(*iter), dataType, s_recycledMemoryBlocks);
+                // for unused bytes, we create a new recycled memory block
+                let unusedBytes = iter->size() - desiredMemoryBlock.size();
+                //if (unusedBytes > 0)
+                //    fprintf(stderr, "splitting off %d unused bytes\n", (int)unusedBytes);
+                if (unusedBytes > 0)
+                    s_recycledMemoryBlocks.emplace(iter->m_sob, iter->data() + desiredMemoryBlock.size(), unusedBytes);
+                let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(iter->m_sob, iter->data(), desiredMemoryBlock.size()), dataType, s_recycledMemoryBlocks);
+                //fprintf(stderr, "reused %d bytes\n", (int)desiredMemoryBlock.size());
                 auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
                 s_recycledMemoryBlocks.erase(iter);
                 return region;
@@ -1100,16 +1148,7 @@ public:
                 catch (const exception& e)
                 {
                     fprintf(stderr, "NewNDArrayView: Out of memory allocating %d elements: %s.\n", (int)numElements, e.what());
-                    size_t totalRecyclable = 0;
-                    size_t maxRecyclable = 0;
-                    for (let& b : s_recycledMemoryBlocks)
-                    {
-                        totalRecyclable += b.size();
-                        maxRecyclable = max(maxRecyclable, b.size());
-                    }
-                    fprintf(stderr, "%d recyclable blocks, max %d bytes, total %d bytes, %d recycable arenas, %f wasted bytes\n",
-                            (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)wastedBytes);
-                    fflush(stderr);
+                    DebugSnapShot();
                     throw;
                 }
             }
