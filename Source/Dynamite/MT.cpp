@@ -93,7 +93,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTestFile  = L"f:/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
         srcVocabFile = L"f:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         tgtVocabFile = L"f:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
-        bucketingFactor = 1;//0;
+        bucketingFactor = 10;
         insertBOS = false; // Marian model does not expect <s>
     }
     else if (systemId == "chs_enu")
@@ -1072,10 +1072,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // aggregation before model update/data exchange.
     // (We ignore MB size ramp-up here, i.e. we use unnecessarily small MBs for a while.)
     let workerMinibatchSize = minibatchSize / numWorkers; // worker processes this many samples between model updates
-    let numPartialBatchesPerWorker = CeilDiv(workerMinibatchSize, maxBatchSizePerWorker); // need to break local worker's minibatch if >1
-    let partialMinibatchSize = minibatchSize / numPartialBatchesPerWorker; // partial MB size across all workers
-    fprintf(stderr, "Minibatch size = %d, per worker = %d, per fw/bw = %d across all for %d fw/bws, for each of %d workers\n",
-            (int)minibatchSize, (int)workerMinibatchSize, (int)partialMinibatchSize, (int)numPartialBatchesPerWorker, (int)numWorkers), fflush(stderr);
+    fprintf(stderr, "Minibatch size = %d, per worker = %d, for each of %d workers\n",
+            (int)minibatchSize, (int)workerMinibatchSize, (int)numWorkers), fflush(stderr);
     AdditionalLearningOptions learnerOptions;
     LearnerPtr baseLearner;
     let f = 1.0;
@@ -1120,7 +1118,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         gradients[p] = nullptr;
     unordered_map<Parameter, NDArrayViewPtr> parameterNorms; // for in-place weight norm
 
-    vector<vector<vector<Variable>>> args; // [subMinibatchIndex, streamIndex, sequenceIndex]
+    vector<vector<vector<vector<Variable>>>> bucketedMinibatchSet; // [minibatchIndex, partialIndex, streamIndex, sequenceIndex]
     size_t totalLabels = 0;
     Microsoft::MSR::CNTK::Timer updateTimer;       // timer between Update() calls end-to-end. Update() is not called for sub-minibatches.
     Microsoft::MSR::CNTK::Timer subMinibatchTimer; // timer between Forward() calls end-to-end. This counts sub-minibatches, but has no Update() except for the last sub-minibatch
@@ -1178,9 +1176,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     updateTimer.Restart();
     subMinibatchTimer.Restart();
     size_t lastUpdateLogTotalLabels = totalLabels; // sample count for updateTimer
-    for (mbCount = startMbCount; ; mbCount++)
+    for (mbCount = startMbCount; ; mbCount++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
-        let logThisMb = mbCount <= 20 || (mbCount / numPartialBatchesPerWorker) % 10 == 0; // (use this to cut down on logging)
+        let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         // checkpoint
         if (mbCount % saveEvery == 0 &&
             (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
@@ -1196,80 +1194,85 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         }
 
         // get next minibatch
+        // We get 10 x the minibatch size, sort it by source length, and then process it in consecutive chunks of 1/10, which form the actual minibatch for training
+        // Each multiple of bucketingFactor, we reload the bucketedMinibatchSet[][][][] array.
+        // This is already filtered for this worker.
+        // The minibatch is then already broken down further into partial batches that fit into GPU RAM.
         partTimer.Restart();
-#if 0
-        // dynamically adjust the MB size lower at the start to ramp up
-        let fullMbSizeAt = 4000000;
-        let lowMbSize = (isDebugging || runProfiling || startMbCount > 0) ? partialMinibatchSize : 750;//partialMinibatchSize / (numWorkers > 6 ? 8 : 16);
-        let clamp = [](size_t v, size_t lo, size_t hi) { if (v < lo) return lo; else if (v > hi) return hi; else return v; };
-        let partialMinibatchSizeConsideringRampUp = clamp(lowMbSize + (partialMinibatchSize - lowMbSize) * totalLabels / fullMbSizeAt, lowMbSize, partialMinibatchSize);
-#else
-        let partialMinibatchSizeConsideringRampUp = partialMinibatchSize;
-#endif
-        if (mbCount % bucketingFactor == 0)
-            Dynamite::GetSubBatches(args, { L"src", L"tgt" }, bucketingFactor, /*shuffleSeed=*/mbCount, minibatchSource, partialMinibatchSizeConsideringRampUp,
+        if (bucketedMinibatchSet.empty() || mbCount % bucketingFactor == 0) // time to get the next bucketedMinibatchSet
+            Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
+                                    minibatchSize, bucketingFactor, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
                                     numWorkers, workerId,
+                                    /*shuffleSeed=*/mbCount,
                                     /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
         let timeGetNextMinibatch = partTimer.Elapsed();
-        //partTimer.Log("FromCNTKMB", minibatchData[minibatchSource->StreamInfo(L"tgt")].numberOfSamples);
+        let& minibatchForWorker = bucketedMinibatchSet[mbCount % bucketingFactor]; // [partial][stream][seq]
+        // This is a minibatch of approximately uniform length.
+        let numPartialBatchesPerWorker = minibatchForWorker.size();
+        //let partialMinibatchSize = minibatchSize / numPartialBatchesPerWorker; // partial MB size across all workers
 
-        // We get 10 x the minibatch, sort it by source length, and then process it in consecutive chunks of 1/10, which form the actual minibatch for training
+        // --- partial minibatch loop
+        for (size_t partialMbIndex = 0; partialMbIndex < numPartialBatchesPerWorker; partialMbIndex++)
+        {
+        let isFirstPartialBatch = partialMbIndex == 0;
+        let isFinalPartialBatch = partialMbIndex == numPartialBatchesPerWorker - 1;
+
+        let& partialMinibatch = minibatchForWorker[partialMbIndex];
+
         let numAPICalls00 = CountAPICalls(0);
-        let& subBatchArgs = args[mbCount % bucketingFactor];
-        let numSeq = subBatchArgs[0].size();
-        size_t numLabels = 0, numSamples = 0, maxSamples = 0, maxLabels = 0;
-        for (let& seq : subBatchArgs[0])
+        let numSeq = partialMinibatch[0].size();
+        size_t numLabels = 0;   // number of target words in current per-worker partial sub-batch
+        size_t numSamples = 0;  // number of source words
+        size_t maxLabels = 0;   // max target length over sequences
+        size_t maxSamples = 0;  // max source length
+        for (let& seq : partialMinibatch[0])
         {
             let len = seq.size();
             numSamples += len;
             maxSamples = max(maxSamples, len);
         }
-        for (let& seq : subBatchArgs[1])
+        for (let& seq : partialMinibatch[1])
         {
             let len = seq.size();
             numLabels += len;
             maxLabels = max(maxLabels, len);
         }
         //partTimer.Log("GetNextMinibatch", numLabels);
+
+        // break it further into sub-minibatches if they don't fit
 #if 1
         let numPartialWorkerScoredLabels = numLabels; // Marian: data has no <s>, so don't subtract anything. TODO: Get this info from reader or setup.
 #else
         let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
 #endif
         if (logThisMb)
-            fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
-                    (int)mbCount,
+            fprintf(stderr, "%5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
+                    (int)mbCount, (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
 #if 0       // log the sequences
         for (size_t n = 0; n < numSeq; n++)
         {
-            subBatchArgs[0][n].Value()->LogToFile(L"Source_" + to_wstring(n), stderr, SIZE_MAX);
-            subBatchArgs[1][n].Value()->LogToFile(L"Target_" + to_wstring(n), stderr, SIZE_MAX);
+            partialMinibatch[0][n].Value()->LogToFile(L"Source_" + to_wstring(n), stderr, SIZE_MAX);
+            partialMinibatch[1][n].Value()->LogToFile(L"Target_" + to_wstring(n), stderr, SIZE_MAX);
         }
 #endif
 #if 0       // log the first sequence
-        fprintf(stderr, "src=%s\n", OneHotToWordSequence(subBatchArgs[0][0].Value(), srcVocabFile).c_str());
-        fprintf(stderr, "tgt=%s\n", OneHotToWordSequence(subBatchArgs[1][0].Value(), tgtVocabFile).c_str());
+        fprintf(stderr, "src=%s\n", OneHotToWordSequence(partialMinibatch[0][0].Value(), srcVocabFile).c_str());
+        fprintf(stderr, "tgt=%s\n", OneHotToWordSequence(partialMinibatch[1][0].Value(), tgtVocabFile).c_str());
 #endif
         // --- train one (worker sub-) minibatch
 
-        // forward
+        // --- forward
         let numAPICalls0 = CountAPICalls(0);
-        //criterion_fn(subBatchArgs[0], subBatchArgs[1]); // call it once before, to flush that thing that we otherwise also measure, whatever that is
         partTimer.Restart();
         // BUGBUG: In extreme cases, we can have 0 sentences. HANDLE THAT! Then we can use more GPUs.
-        auto partialWorkerLossVar = criterion_fn(subBatchArgs[0], subBatchArgs[1]);
+        auto partialWorkerLossVar = criterion_fn(partialMinibatch[0], partialMinibatch[1]);
         let timeBuildGraph = partTimer.Elapsed();
         let numAPICalls = CountAPICalls(0) - numAPICalls0;
         numAPICalls;
-        //fprintf(stderr, "#API calls = %d\n", (int)numAPICalls), fflush(stderr);
-        //exit(1);
-        //partTimer.Log("criterion_fn", numLabels);
-        // backprop and model update
 
-        // special code branch for profiling the forward operation
-        // This code is presently not up-to-date.
+#if 0
         if (runProfiling)
         {
             double lossPerLabel = partialWorkerLossVar.Value()->AsScalar<float>() / numPartialWorkerScoredLabels, smoothedLossVal = 0;
@@ -1286,26 +1289,17 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             lastUpdateLogTotalLabels = totalLabels;
             continue;
         }
+#endif
 
+        // backprop and model update
+        partTimer.Restart();
+        try { // catch bad_alloc for more detailed logging
         //if (logThisMb)
         //    fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
-        partTimer.Restart();
-        try {
         let partialWorkerLoss = partialWorkerLossVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
         let timeForward = partTimer.Elapsed();
-        //fprintf(stderr, "%.7f\n", partialWorkerLoss->AsScalar<float>()), fflush(stderr);
-        //exit(1);
         partTimer.Restart();
-#if 0
-        partialWorkerLoss->AsScalar<float>(); // wait for completion of computation  --don't do this unless we want time measurement
-#endif
         let timeForwardGpu = partTimer.Elapsed(); // note: enable the #if above to see the remaining GPU time
-        //partTimer.Log("ForwardProp", numLabels);
-        // note: we must use numPartialWorkerScoredLabels here
-        //fprintf(stderr, "{%.2f, %d-%d}\n", partialWorkerLoss->AsScalar<float>(), (int)numLabels, (int)numSeq), fflush(stderr);
-        //if (logThisMb)
-        //    fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
-        //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
         partTimer.Restart();
 
 #if 0
@@ -1318,15 +1312,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let logName = L"encode.[2].stepBwd.projectInput.W"s;
         LogGradByName(logName);
 #endif
+
         // implement local gradient aggregation if the desired MB size does not fit into local GPU RAM
-        let isFirstPartialBatch = mbCount % numPartialBatchesPerWorker == 0;
-        let isFinalPartialBatch = mbCount % numPartialBatchesPerWorker == (numPartialBatchesPerWorker - 1);
-        double beta = isFirstPartialBatch ? 0 : 1; // partial batches except for first are aggregated into the existing gradient memory, without model update
-        partialWorkerLossVar.Backward(gradients, beta);
-        //LogGradByName(logName);
-        //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
+        // partial batches except for first are aggregated into the existing gradient memory, without model update
+        // --- backward
+        partialWorkerLossVar.Backward(gradients, /*beta=*/isFirstPartialBatch ? 0 : 1);
         let timeBackward = partTimer.Elapsed();
-        //partTimer.Log("BackProp", numLabels);
+
+        // --- update
         if (isFirstPartialBatch)
         {
             info.numberOfSamples = numPartialWorkerScoredLabels;
@@ -1339,8 +1332,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             info.trainingLossValue  += partialWorkerLoss; // note: these are GPU objects
             info.evalCriterionValue += partialWorkerLoss;
         }
-        //info.trainingLossValue->AsScalar<float>();
-        //CNTK::NDArrayView::Sync(DeviceDescriptor::CPUDevice()); // (currently a special sentinel to flush the GPU...)
 #if 0       // log the gradients
         //for (let& p : parameters) if (p.Name() == L"project1.W")
         //{
@@ -1365,7 +1356,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         partTimer.Restart();
         if (isFinalPartialBatch) // if partial batches then skip Update() for all but the last partial batch
         {
-            // Marian global-gradient-norm clipping
+#if 0
+            // Marian global-gradient-norm clipping  --not used
             if (globalNormClipping != 0) // Marian clips the global gradient vector (all gradient values concatenated)
             {
                 let normSqrAccVal = make_shared<NDArrayView>(0, CurrentDataType(), NDShape{}, CurrentDevice());
@@ -1380,22 +1372,26 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                         NDArrayView::NumericOperation({ gradients[p] }, /*alpha=*/globalNormClipping / totalL2Norm, L"Copy", gradients[p], /*beta=*/0);
                 }
             }
+#endif
+
             learner->Update(gradients, info); // GPU sync happens here, at least in case of parallel training
             totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
             // Marian-compatible LR warmup (TODO: We should rather do that by #labels)
             // It is done after the first Update() call to replicate a Marian bug, in that it does not update the LR for the very first MB.
             if (learningRateWarmupInUpdates != 0)
             {
-                let totalUpdates = mbCount / numPartialBatchesPerWorker + 1; // first MB gets no update
+                let totalUpdates = mbCount + 1; // +1 to include the one we just did
                 let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
                 baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
             }
         }
-        // keep track of loss
+
+        // --- keep track of loss
+        // This is done after Update() to give access to the aggregate loss across all workers.
         let mbLoss          = isFinalPartialBatch ? info.trainingLossValue : partialWorkerLoss;
         let numScoredLabels = isFinalPartialBatch ? info.numberOfSamples   : numPartialWorkerScoredLabels;
         if (isFinalPartialBatch) // TODO: only needed on the main thread which logs
-            smoothedLoss.Update(mbLoss, numScoredLabels); // note: this happens on the GPU; no GPU sync here
+            smoothedLoss.Update(mbLoss, numScoredLabels); // keep track of smoothed loss
         // TODO: if Update() is distributed, then the resulting NDArrayView should be allowed to be on the CPU (in case of no NCCL)
         let timePerUpdate = partTimer.Elapsed();
 
@@ -1439,7 +1435,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // Note: Without logging, there is no GPU-CPU transfer.
         if (logThisMb && communicator->CurrentWorker().IsMain())
         {
-            fprintf(stderr, "%5d:   ", (int)mbCount);
+            fprintf(stderr, "%5d.%d:   ", (int)mbCount, (int)partialMbIndex);
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
@@ -1481,12 +1477,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         }
         catch (const exception& e)
         {
-            fprintf(stderr, "\n\nFAILED: %5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
-                    (int)mbCount,
+            fprintf(stderr, "\n\nFAILED: %5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
+                    (int)mbCount, (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
             throw;
         }
+        } // partial MB loop
     } // mb loop
 }
 
@@ -1521,26 +1518,28 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount,
 
     // MINIBATCH LOOP
     auto criterion_fn = CreateCriterionFunction(model_fn); // ...for now
-    vector<vector<vector<Variable>>> args; // [subMinibatchIndex, streamIndex, sequenceIndex]
+    vector<vector<vector<vector<Variable>>>> bucketedMinibatchSet; // [minibatchIndex, partialIndex, streamIndex, sequenceIndex]
     for (mbCount = 0; ; mbCount++)
     {
         // get next minibatch
-        bool gotData = Dynamite::GetSubBatches(args, { L"src", L"tgt" }, /*bucketingFactor=*/1, /*shuffleSeed=*/0, minibatchSource, /*minibatchSize=*/1,
+        bool gotData = Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
+                                               /*minibatchSize=*/1, /*bucketingFactor=*/1, /*maxBatchSizePerWorker=*/SIZE_MAX, /*hasPadding=*/false,
                                                /*numWorkers=*/1, /*currentWorker=*/0,
-                                               /*inferenceOnly=*/true, CurrentDataType(), CurrentDevice());
+                                               /*shuffleSeed=*/0, /*inferenceOnly=*/true,
+                                               CurrentDataType(), CurrentDevice());
         if (!gotData)
             break;
-        auto& subBatchArgs = args.front(); // there is only one
+        auto& partialMinibatch = bucketedMinibatchSet.front().front(); // (partial) minibatch (partial in case the whole does not fit into GPU RAM)
 
-        let numSeq = subBatchArgs[0].size();
+        let numSeq = partialMinibatch[0].size();
         size_t numLabels = 0, numSamples = 0, maxSamples = 0, maxLabels = 0;
-        for (let& seq : subBatchArgs[0])
+        for (let& seq : partialMinibatch[0])
         {
             let len = seq.size();
             numSamples += len;
             maxSamples = max(maxSamples, len);
         }
-        for (let& seq : subBatchArgs[1])
+        for (let& seq : partialMinibatch[1])
         {
             let len = seq.size();
             numLabels += len;
@@ -1549,8 +1548,8 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount,
         // beam decoding
         for (size_t seqId = 0; seqId < numSeq; seqId++)
         {
-            let& srcSeq = subBatchArgs[0][seqId];
-            let& tgtSeq = subBatchArgs[1][seqId];
+            let& srcSeq = partialMinibatch[0][seqId];
+            let& tgtSeq = partialMinibatch[1][seqId];
             let outSeq = model_fn(srcSeq, Variable());
             let src = PrintSequence("src", srcSeq, srcVocabFile);
             let tgt = PrintSequence("tgt", tgtSeq, tgtVocabFile);
@@ -1565,7 +1564,7 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount,
         fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d\n", (int)mbCount,
                 (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels);
         // decode all sequences
-        auto mbLoss = criterion_fn(subBatchArgs[0], subBatchArgs[1]).Value()->AsScalar<double>();
+        auto mbLoss = criterion_fn(partialMinibatch[0], partialMinibatch[1]).Value()->AsScalar<double>();
         let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
         let lossPerLabel = mbLoss / numPartialWorkerScoredLabels; // note: this does the GPU sync, so better do that only every N
         totalLabels += numPartialWorkerScoredLabels;
