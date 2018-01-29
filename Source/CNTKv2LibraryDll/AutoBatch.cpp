@@ -947,8 +947,7 @@ class NDArrayViewArena
         size_t totalRecyclable = 0;
         for (let& b : s_recycledMemoryBlocks)
             totalRecyclable += b.size();
-        if (totalRecyclable != s_totalGaps)
-            Break;
+        fail_if(totalRecyclable != s_totalGaps, "gaps out of sync with stats??");
     }
     static void RecycleMemoryBlock(MemoryBlock&& memoryBlock) // callback from Deleter()
     {
@@ -1152,8 +1151,8 @@ public:
                 totalRecyclable += b.size();
                 maxRecyclable = max(maxRecyclable, b.size());
             }
-            fprintf(stderr, "NDArrayView snapshot: %d recyclable gaps, max %d bytes, total %d bytes, %d recycable arenas, %f total alloc, %f total gaps\n",
-                    (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)s_totalAllocated, (double)s_totalGaps);
+            fprintf(stderr, "NDArrayView snapshot: %f MB alloc, %f MB in %d recyclable gaps (max %f), %d recycable arenas\n",
+                    s_totalAllocated*1e-6, s_totalGaps*1e-6, (int)s_recycledMemoryBlocks.size(), maxRecyclable*1e-6, (int)s_recycledArenas.size());
             fflush(stderr);
             fail_if(totalRecyclable != s_totalGaps, "s_totalGaps out of sync with gap list??");
         };
