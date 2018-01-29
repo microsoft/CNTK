@@ -1290,6 +1290,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //if (logThisMb)
         //    fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
         partTimer.Restart();
+        try {
         let partialWorkerLoss = partialWorkerLossVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
         let timeForward = partTimer.Elapsed();
         //fprintf(stderr, "%.7f\n", partialWorkerLoss->AsScalar<float>()), fflush(stderr);
@@ -1477,7 +1478,16 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //    //if (runProfiling)
         //        return;
         //}
-    }
+        }
+        catch (const exception& e)
+        {
+            fprintf(stderr, "\n\nFAILED: %5d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
+                    (int)mbCount,
+                    (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
+                    lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
+            throw;
+        }
+    } // mb loop
 }
 
 static void Evaluate(const wstring& modelPath, size_t modelMbCount,
