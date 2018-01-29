@@ -958,6 +958,31 @@ class NDArrayViewArena
         s_totalGaps += memoryBlock.size();
         s_recycledMemoryBlocks.emplace(move(memoryBlock)); // we move this gap into the gap set
         CheckGaps();
+        // consolidate rigth away --TODO: currently this is highly inefficient; do it right
+        if (s_recycledMemoryBlocks.size() > 1)
+        {
+            // consolidate by sorting by address, then merging
+            s_mergeBuffer.assign(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end());
+            sort(s_mergeBuffer.begin(), s_mergeBuffer.end(), [](const MemoryBlock& a, const MemoryBlock& b) { return a.begin() < b.begin(); });
+            size_t j = 1;
+            for (size_t i = 1; i < s_mergeBuffer.size(); i++)
+            {
+                if (s_mergeBuffer[j - 1].end() == s_mergeBuffer[i].begin())
+                    s_mergeBuffer[j - 1].m_size += s_mergeBuffer[i].size();
+                else if (j != i)
+                    s_mergeBuffer[j++] = s_mergeBuffer[i];
+                else
+                    j++;
+            }
+            if (j < s_recycledMemoryBlocks.size())
+            {
+                s_recycledMemoryBlocks.clear();
+                for (size_t i = 0; i < j; i++)
+                    s_recycledMemoryBlocks.insert(move(s_mergeBuffer[i]));
+            }
+            s_mergeBuffer.clear(); // release all ref counts
+            CheckGaps();
+        }
     }
     // allocate a new tensor in a large arena
     static recursive_mutex s_mutex;
@@ -975,6 +1000,7 @@ class NDArrayViewArena
 
     static size_t s_totalAllocated; // diagnostics
     static size_t s_totalGaps;
+    static vector<MemoryBlock> s_mergeBuffer;
 
     static bool IsMatrixOfDataType(const MatrixBase& matrix, DataType dataType) // helper for checking the DataType of the MatrixBase object
     {
@@ -1129,42 +1155,16 @@ public:
             fprintf(stderr, "NDArrayView snapshot: %d recyclable gaps, max %d bytes, total %d bytes, %d recycable arenas, %f total alloc, %f total gaps\n",
                     (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)s_totalAllocated, (double)s_totalGaps);
             fflush(stderr);
+            fail_if(totalRecyclable != s_totalGaps, "s_totalGaps out of sync with gap list??");
         };
 
         static size_t debugCounter = 0;
         if (debugCounter++ % 10000 == 0)
             DebugSnapShot();
 
-        // for dense, we can recover memory from the gaps
+        // try to allocate from existing gaps first
         let desiredMemoryBlock = MemoryBlock::Create(dataType, numElements);
-        //auto iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
-        //if (iter == s_recycledMemoryBlocks.end() && !s_recycledMemoryBlocks.empty()) // none: try to defrag
-        //{
-        //    DebugSnapShot();
-if (s_recycledMemoryBlocks.size() > 1){
-            // consolidate by sorting by address, then merging
-            CheckGaps();
-            vector<MemoryBlock> all(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end());
-            sort(all.begin(), all.end(), [](const MemoryBlock& a, const MemoryBlock& b){ return a.begin() < b.begin(); });
-            size_t j = 1;
-            for (size_t i = 1; i < all.size(); i++)
-            {
-                if (all[j - 1].end() == all[i].begin())
-                    all[j - 1].m_size += all[i].size();
-                else if (j != i)
-                    all[j++] = all[i];
-                else
-                    j++;
-            }
-            s_recycledMemoryBlocks.clear();
-            for (size_t i = 0; i < j; i++)
-                s_recycledMemoryBlocks.insert(move(all[i]));
-            CheckGaps();
-}
-            //fprintf(stderr, "consolidated into: ");
-            //DebugSnapShot();
-        auto    iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
-        //}
+        auto iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
         if (iter != s_recycledMemoryBlocks.end()) // found one
         {
             CheckGaps();
@@ -1187,7 +1187,6 @@ if (s_recycledMemoryBlocks.size() > 1){
             return region;
         }
 
-        // Dense:
         //  If arena not large enough then waste its remainder and just allocate a fresh one.
         //  This abandons the current m_arena. This will not cause a memory leak, however:
         //  Since the slices into it that were returned before all hold a ref-count to that arena,
@@ -1286,6 +1285,7 @@ if (s_recycledMemoryBlocks.size() > 1){
 /*static*/ set<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_recycledMemoryBlocks;
 /*static*/ size_t NDArrayViewArena::s_totalAllocated = 0;
 /*static*/ size_t NDArrayViewArena::s_totalGaps = 0;
+/*static*/ vector<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_mergeBuffer;
 
 // ===========================================================================
 // DynamicProfiler -- helper for profiling dynamic batching of functions
