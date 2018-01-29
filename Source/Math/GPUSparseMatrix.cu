@@ -910,7 +910,8 @@ void GPUSparseMatrix<ElemType>::ClearNzCount()
     //    1. We must clear the secondary column index.    --TODO: Why? It should be considered virgin memory when reused!
     //    2. Set the block size to 0.
     // These requirements can be deduced by the NzCount method.
-    CUDA_CALL(cudaMemsetAsync(Buffer(), 0, BufferSizeAllocated(), t_stream));
+    if (BufferSizeAllocated() > 0)
+        CUDA_CALL(cudaMemsetAsync(Buffer(), 0, BufferSizeAllocated(), t_stream));
     SetBlockSize(0);
     UpdateCachedNzCount(0, /*shouldVerify=*/false);
 }

@@ -878,9 +878,6 @@ public:
 // BUGBUGBUGBUG: This class is a prototype hack, full of subtle bugs. Redo it.
 // ---------------------------------------------------------------------------
 
-size_t g_totalAllocated = 0;
-size_t g_totalGaps = 0;
-
 class NDArrayViewArena
 {
     // MemoryBlock -- represents one consecutive range of allocated memory
@@ -932,21 +929,36 @@ class NDArrayViewArena
     };
     struct Deleter : public IBaseMatrixStorageExternalBufferDeleter
     {
+        //NDArrayViewArena& m_arena;
         MemoryBlock m_memoryBlock;
-        set<MemoryBlock>* m_recycledMemoryBlocks; // recycle the gap into here
-        Deleter(MemoryBlock&& memoryBlock, set<MemoryBlock>& recycledMemoryBlocks) :
-            m_memoryBlock(move(memoryBlock)), m_recycledMemoryBlocks(&recycledMemoryBlocks)
+        Deleter(MemoryBlock&& memoryBlock, NDArrayViewArena& /*arena*/) :
+            m_memoryBlock(move(memoryBlock)) //, m_arena(arena)
         {}
         virtual void Delete(void*) override // called when the BaseMatrixStorage instance is destructed
         {
-            g_totalAllocated -= m_memoryBlock.size();
-            g_totalGaps += m_memoryBlock.size();
-            auto& recycledMemoryBlocks = *m_recycledMemoryBlocks;
-            recycledMemoryBlocks.emplace(move(m_memoryBlock)); // we move this gap into the gap set
-            //fprintf(stderr, "Delete [%d:%d]\n", (int)m_firstIndex, (int)(m_firstIndex + m_size));
+            NDArrayViewArena::/*m_arena.*/RecycleMemoryBlock(move(m_memoryBlock));
             delete this; // this will deref the underlying arena, so that eventually it can be freed
+            // TODO: merge the matrix and the Deleter into a single object that is MakeShared controlled
         }
     };
+
+    static void CheckGaps()
+    {
+        size_t totalRecyclable = 0;
+        for (let& b : s_recycledMemoryBlocks)
+            totalRecyclable += b.size();
+        if (totalRecyclable != s_totalGaps)
+            Break;
+    }
+    static void RecycleMemoryBlock(MemoryBlock&& memoryBlock) // callback from Deleter()
+    {
+        lock_guard<recursive_mutex> guard(s_mutex);
+        CheckGaps();
+        s_totalAllocated -= memoryBlock.size();
+        s_totalGaps += memoryBlock.size();
+        s_recycledMemoryBlocks.emplace(move(memoryBlock)); // we move this gap into the gap set
+        CheckGaps();
+    }
     // allocate a new tensor in a large arena
     static recursive_mutex s_mutex;
     static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
@@ -958,9 +970,13 @@ class NDArrayViewArena
     static array<size_t                        , numStorageFormats> s_currentArenaUseds;      // allocation cursor. Elements below this are already allocated.
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
     static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass;
-    static array<set<MemoryBlock>              , numStorageFormats> s_recycledMemoryBlockss;
+    static set<MemoryBlock> s_recycledMemoryBlocks; // free set
     static const NDShapeDimension defaultDenseArenaSize = 256000000; // we allocate in this chunk size (dense only)
-    static bool IsMatrixType(const MatrixBase& matrix, DataType dataType) // helper for checking the DataType of the MatrixBase object
+
+    static size_t s_totalAllocated; // diagnostics
+    static size_t s_totalGaps;
+
+    static bool IsMatrixOfDataType(const MatrixBase& matrix, DataType dataType) // helper for checking the DataType of the MatrixBase object
     {
         switch (dataType)
         {
@@ -969,13 +985,13 @@ class NDArrayViewArena
         default: LogicError("GetMatrixType: Unsupported element type.");
         }
     }
-    static MatrixBasePtr WrapStorageRangeAsMatrix(MemoryBlock&& memoryBlock, DataType dataType, set<MemoryBlock>& recycledMemoryBlocks)
+    MatrixBasePtr WrapStorageRangeAsMatrix(MemoryBlock&& memoryBlock, DataType dataType)
     {
         let* data = memoryBlock.data();
         let deviceId = memoryBlock.m_sob->GetDeviceId();
         let sizeInBytes = memoryBlock.size();
-        auto* deleter = new Deleter(move(memoryBlock), recycledMemoryBlocks);
-        // PERF BUGBUG: ^^ This is a plain malloc(), not good. Use our allocator.
+        auto* deleter = new Deleter(move(memoryBlock), *this);
+        // PERF BUGBUG: ^^ This is a plain malloc(), not good. Use our allocator, and/or merge with Matrix object itself.
         switch (dataType)
         {
         case DataType::Float:  return MakeSharedObject<Matrix<float >>(/*rows=*/1, /*cols=*/sizeInBytes / sizeof(float ), (float *)data, deviceId, matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
@@ -983,9 +999,6 @@ class NDArrayViewArena
         default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
         }       
     }
-
-    // diagnostics
-    size_t wastedBytes = 0;
 public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
@@ -1005,7 +1018,6 @@ public:
         auto& s_currentArenaDataType = s_currentArenaDataTypes[formatAsIndex];
         auto& s_currentArenaDevice   = s_currentArenaDevices  [formatAsIndex];
         auto& s_recycledArenas       = s_recycledArenass      [formatAsIndex];
-        auto& s_recycledMemoryBlocks = s_recycledMemoryBlockss        [formatAsIndex];
         // TODO: This ^^ calls for a struct!
 
         // for now, we only support one data type/device. If it changes,. we tear down the entire thing.
@@ -1024,6 +1036,87 @@ public:
 
         let numElements = shape.TotalSize(/*check=*/false);
 
+        // --- sparse uses a different strategy
+        // Sparse:
+        //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
+        //  Sparse outputs are used rarely, and sparse CSC matrices are small, so for sparse, we just cache individual objects.
+        if (isSparse)
+        {
+            // allocation size is arena size for dense, and the actual required size for sparse
+            //if (shape.Rank() < 1)
+            ////if (shape.Rank() != 1 && shape.Rank() != 2)
+            //    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
+            // TODO: This is where we decide which dimensions are sparse. Currently only the first axis, hard-coded.
+            let numRows = shape[0];
+            let numCols = shape.Rank() > 1 ? shape.TotalSize() / numRows : 1;
+            let matrixStorageFormat = AsCNTKImplMatrixFormat(storageFormat);
+            // reuse an existing object if possible; otherwise create a new one
+            MatrixBase* matrixPtr = nullptr;
+            for (auto iter = s_recycledArenas.begin(); iter != s_recycledArenas.end(); ++iter)
+            {
+                let& thisMatrixPtr = *iter;
+                if (thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device) &&
+                    IsMatrixOfDataType(*thisMatrixPtr, dataType) &&
+                    thisMatrixPtr->GetFormat() == matrixStorageFormat)
+                {
+                    matrixPtr = iter->release();  // take back ownership from the unique_ptr
+                    s_recycledArenas.erase(iter); // remove from recycling buffer
+                    //fprintf(stderr, "@@ reactivating %s arena matrix of %d elements\n", isSparse ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                    matrixPtr->Resize1(numRows, numCols, /*reserveNzElems=*/numCols, /*growOnly=*/true);
+                    break;
+                }
+            }
+            if (!matrixPtr) // no reusable found: create a new one
+            {
+                CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
+                try
+                {
+                    //fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledArenas.size()), fflush(stderr);
+                    switch (dataType)
+                    {
+                    case DataType::Float:  matrixPtr = new Matrix<float >(numRows, numCols, AsCNTKImplDeviceId(device), MatrixType::SPARSE, matrixStorageFormat, /*nnz=*/numCols); break;
+                    case DataType::Double: matrixPtr = new Matrix<double>(numRows, numCols, AsCNTKImplDeviceId(device), MatrixType::SPARSE, matrixStorageFormat, /*nnz=*/numCols); break;
+                    default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
+                    }
+                }
+                catch (const exception& e)
+                {
+                    fprintf(stderr, "NewNDArrayView: Out of memory allocating sparse matrix: %s.\n", e.what());
+                    throw;
+                }
+            }
+            // create a shared ptr out of it with a destructor
+            s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
+                [&s_recycledArenas](MatrixBase* matrixPtr)
+                {
+                    lock_guard<recursive_mutex> guard(s_mutex);
+                    //fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                    // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
+                    if (matrixPtr->GetNumViews() == 1)
+                    {
+                        if (matrixPtr->GetMatrixType() == MatrixType::SPARSE)
+                            matrixPtr->Reset(); // this resets the sparse matrix, but does not release its (small) memory
+                        s_recycledArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
+                    }
+                    else
+                    {
+                        // if it still has a view, then we won't recycle it, just destruct the view, so that the storage object will be freed when the last view is done
+                        // I think I have never observed this.
+                        static bool errorShown = false;
+                        if (!errorShown)
+                        {
+                            fprintf(stderr, "WARNING: NewNDArrayView cannot recycle arena because it is still used by Matrix object not under the control of the arena allocator. This message will only be shown once.\n"), fflush(stderr);
+                            errorShown = true;
+                        }
+                        delete matrixPtr;
+                    }
+                });
+            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, s_currentArena);
+            return region;
+        }
+
+        // --- dense
+
         let DebugSnapShot = [&]()
         {
             size_t totalRecyclable = 0;
@@ -1034,7 +1127,7 @@ public:
                 maxRecyclable = max(maxRecyclable, b.size());
             }
             fprintf(stderr, "NDArrayView snapshot: %d recyclable gaps, max %d bytes, total %d bytes, %d recycable arenas, %f total alloc, %f total gaps\n",
-                    (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)g_totalAllocated, (double)g_totalGaps);
+                    (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)s_totalAllocated, (double)s_totalGaps);
             fflush(stderr);
         };
 
@@ -1043,53 +1136,57 @@ public:
             DebugSnapShot();
 
         // for dense, we can recover memory from the gaps
-        if (!isSparse)
-        {
-            let desiredMemoryBlock = MemoryBlock::Create(dataType, numElements);
-            //auto iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
-            //if (iter == s_recycledMemoryBlocks.end() && !s_recycledMemoryBlocks.empty()) // none: try to defrag
-            //{
-            //    DebugSnapShot();
+        let desiredMemoryBlock = MemoryBlock::Create(dataType, numElements);
+        //auto iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
+        //if (iter == s_recycledMemoryBlocks.end() && !s_recycledMemoryBlocks.empty()) // none: try to defrag
+        //{
+        //    DebugSnapShot();
 if (s_recycledMemoryBlocks.size() > 1){
-                // consolidate by sorting by address, then merging
-                vector<MemoryBlock> all(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end());
-                sort(all.begin(), all.end(), [](const MemoryBlock& a, const MemoryBlock& b){ return a.begin() < b.begin(); });
-                size_t j = 1;
-                for (size_t i = 1; i < all.size(); i++)
-                {
-                    if (all[j-1].end() == all[i].begin())
-                        all[j-1].m_size += all[i].size();
-                    else if (j != i)
-                        all[j++] = all[i];
-                }
-                s_recycledMemoryBlocks.clear();
-                for (size_t i = 0; i < j; i++)
-                    s_recycledMemoryBlocks.insert(move(all[i]));
-}
-                //fprintf(stderr, "consolidated into: ");
-                //DebugSnapShot();
-            auto    iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
-            //}
-            if (iter != s_recycledMemoryBlocks.end()) // found one
+            // consolidate by sorting by address, then merging
+            CheckGaps();
+            vector<MemoryBlock> all(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end());
+            sort(all.begin(), all.end(), [](const MemoryBlock& a, const MemoryBlock& b){ return a.begin() < b.begin(); });
+            size_t j = 1;
+            for (size_t i = 1; i < all.size(); i++)
             {
-                g_totalGaps -= iter->size();
-                // for unused bytes, we create a new recycled memory block
-                let unusedBytes = iter->size() - desiredMemoryBlock.size();
-                //if (unusedBytes > 0)
-                //    fprintf(stderr, "splitting off %d unused bytes\n", (int)unusedBytes);
-                if (unusedBytes > 0)
-                    s_recycledMemoryBlocks.emplace(iter->m_sob, iter->data() + desiredMemoryBlock.size(), unusedBytes);
-                g_totalGaps += unusedBytes;
-                g_totalAllocated += desiredMemoryBlock.size();
-                let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(iter->m_sob, iter->data(), desiredMemoryBlock.size()), dataType, s_recycledMemoryBlocks);
-                //fprintf(stderr, "reused %d bytes\n", (int)desiredMemoryBlock.size());
-                auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
-                s_recycledMemoryBlocks.erase(iter);
-                return region;
+                if (all[j - 1].end() == all[i].begin())
+                    all[j - 1].m_size += all[i].size();
+                else if (j != i)
+                    all[j++] = all[i];
+                else
+                    j++;
             }
+            s_recycledMemoryBlocks.clear();
+            for (size_t i = 0; i < j; i++)
+                s_recycledMemoryBlocks.insert(move(all[i]));
+            CheckGaps();
+}
+            //fprintf(stderr, "consolidated into: ");
+            //DebugSnapShot();
+        auto    iter = lower_bound(s_recycledMemoryBlocks.begin(), s_recycledMemoryBlocks.end(), desiredMemoryBlock);
+        //}
+        if (iter != s_recycledMemoryBlocks.end()) // found one
+        {
+            CheckGaps();
+            s_totalGaps -= iter->size(); // check it out
+            // for unused bytes, we create a new recycled memory block
+            let unusedBytes = iter->size() - desiredMemoryBlock.size();
+            //if (unusedBytes > 0)
+            //    fprintf(stderr, "splitting off %d unused bytes\n", (int)unusedBytes);
+            if (unusedBytes > 0)
+            {
+                s_recycledMemoryBlocks.emplace(iter->m_sob, iter->data() + desiredMemoryBlock.size(), unusedBytes);
+                s_totalGaps += unusedBytes;
+            }
+            s_totalAllocated += desiredMemoryBlock.size();
+            let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(iter->m_sob, iter->data(), desiredMemoryBlock.size()), dataType);
+            //fprintf(stderr, "reused %d bytes\n", (int)desiredMemoryBlock.size());
+            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
+            s_recycledMemoryBlocks.erase(iter);
+            CheckGaps();
+            return region;
         }
 
-        // The logic below fuses two cases: Dense and sparse.
         // Dense:
         //  If arena not large enough then waste its remainder and just allocate a fresh one.
         //  This abandons the current m_arena. This will not cause a memory leak, however:
@@ -1098,13 +1195,7 @@ if (s_recycledMemoryBlocks.size() > 1){
         //  The deleter, though, will intercept that and retire it into the recycledArenas array.
         //  Next time we need a new arena, we will look there first and recycle one.
         //  If the data type is different, we drop the current arena. CNTK can'really presently mix dataTypes properly anyway, so this is ah-OK.
-        // Sparse:
-        //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
-        //  Sparse outputs are used rarely, and sparse CSC matrices are small, so for sparse, we just cache individual objects.
-        //  Practically, this is the same as using one "arena" per object, which is how it is implemented below.
-        // BUGBUG: The matrix lib may change sparse types. Hence, we should just merge the two recycled lists.
         if (!s_currentArena                                         ||
-            isSparse                                                ||
             numElements > (s_currentArenaSize - s_currentArenaUsed))
         {
             let requiredDenseArenaSize = max(defaultDenseArenaSize, numElements);
@@ -1114,9 +1205,9 @@ if (s_recycledMemoryBlocks.size() > 1){
             for (auto iter = s_recycledArenas.begin(); iter != s_recycledArenas.end(); ++iter)
             {
                 let& thisMatrixPtr = *iter;
-                if ((isSparse || requiredDenseArenaSize <= thisMatrixPtr->GetNumElements()) &&
-                    thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device)              &&
-                    IsMatrixType(*thisMatrixPtr, dataType))
+                if (requiredDenseArenaSize <= thisMatrixPtr->GetNumElements()  &&
+                    thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device) &&
+                    IsMatrixOfDataType(*thisMatrixPtr, dataType))
                 {
                     matrixPtr = iter->release();  // take back ownership from the unique_ptr
                     s_recycledArenas.erase(iter); // remove from recycling buffer
@@ -1125,21 +1216,7 @@ if (s_recycledMemoryBlocks.size() > 1){
                 }
             }
             // allocation size is arena size for dense, and the actual required size for sparse
-            size_t numRows, numCols;
-            if (isSparse)
-            {
-                //if (shape.Rank() < 1)
-                ////if (shape.Rank() != 1 && shape.Rank() != 2)
-                //    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
-                numRows = shape[0];
-                numCols = shape.Rank() > 1 ? shape.TotalSize()/numRows : 1;
-                //numCols = shape.Rank() > 1 ? shape[1] : 1;
-            }
-            else
-            {
-                numRows = 1;
-                numCols = requiredDenseArenaSize;
-            }
+            let numCols = requiredDenseArenaSize + 1; // we add 1 so that we won't accidentally merge two consecutive arenas when merging gaps
             if (!matrixPtr) // create a new one
             {
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
@@ -1148,8 +1225,8 @@ if (s_recycledMemoryBlocks.size() > 1){
                     //fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledArenas.size()), fflush(stderr);
                     switch (dataType)
                     {
-                    case DataType::Float:  matrixPtr = new Matrix<float >(numRows, numCols, AsCNTKImplDeviceId(device), isSparse ? MatrixType::SPARSE : MatrixType::DENSE, AsCNTKImplMatrixFormat(storageFormat), /*nnz=*/numCols); break;
-                    case DataType::Double: matrixPtr = new Matrix<double>(numRows, numCols, AsCNTKImplDeviceId(device), isSparse ? MatrixType::SPARSE : MatrixType::DENSE, AsCNTKImplMatrixFormat(storageFormat), /*nnz=*/numCols); break;
+                    case DataType::Float:  matrixPtr = new Matrix<float >(1, numCols, AsCNTKImplDeviceId(device)); break;
+                    case DataType::Double: matrixPtr = new Matrix<double>(1, numCols, AsCNTKImplDeviceId(device)); break;
                     default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
                     }
                 }
@@ -1159,10 +1236,6 @@ if (s_recycledMemoryBlocks.size() > 1){
                     DebugSnapShot();
                     throw;
                 }
-            }
-            else if (isSparse) // if reusing then resize it
-            {
-                matrixPtr->Resize1(numRows, numCols, /*reserveNzElems=*/numCols, /*growOnly=*/true);
             }
             s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
                 [&s_recycledArenas](MatrixBase* matrixPtr)
@@ -1192,25 +1265,14 @@ if (s_recycledMemoryBlocks.size() > 1){
             s_currentArenaUsed = 0;
             s_currentArenaSize = s_currentArena->GetNumElements();
         }
-        if (!isSparse)
-        {
-            // We create a new matrix storage object that wraps a pointer into the arena.
-            // Any view into such object will reference the same underlying storage object.
-            // The storage object has a custom deleter. We use that to track gaps.
-            let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock::Create(s_currentArena, dataType, /*firstIndex=*/s_currentArenaUsed, numElements),
-                                                         dataType, s_recycledMemoryBlocks);
-            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
-            s_currentArenaUsed += numElements;
-            g_totalAllocated += numElements * 4; // BUGBUG!! wrong for double
-            return region;
-        }
-        else // if sparse, then just use the object in its entirety
-        {
-            size_t newArenaUsed = s_currentArenaUsed + numElements; // (TODO: this is overly complex)
-            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/s_currentArenaUsed, /*end*/newArenaUsed, s_currentArena);
-            s_currentArenaUsed = newArenaUsed;
-            return region;
-        }
+        // We create a new matrix storage object that wraps a pointer into the arena.
+        // Any view into such object will reference the same underlying storage object.
+        // The storage object has a custom deleter. We use that to track gaps.
+        let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock::Create(s_currentArena, dataType, /*firstIndex=*/s_currentArenaUsed, numElements), dataType);
+        auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
+        s_currentArenaUsed += numElements;
+        s_totalAllocated += MemoryBlock::Create(dataType, numElements).size(); // (unnecessarily slow, but this is for diags only)
+        return region;
     }
 };
 
@@ -1221,7 +1283,9 @@ if (s_recycledMemoryBlocks.size() > 1){
 /*static*/ array<size_t                            , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaSizes;
 /*static*/ array<size_t                            , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaUseds;
 /*static*/ array<vector<unique_ptr<MatrixBase>>    , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledArenass;
-/*static*/ array<set<NDArrayViewArena::MemoryBlock>, NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledMemoryBlockss;
+/*static*/ set<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_recycledMemoryBlocks;
+/*static*/ size_t NDArrayViewArena::s_totalAllocated = 0;
+/*static*/ size_t NDArrayViewArena::s_totalGaps = 0;
 
 // ===========================================================================
 // DynamicProfiler -- helper for profiling dynamic batching of functions
