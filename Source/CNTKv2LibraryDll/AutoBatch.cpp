@@ -878,6 +878,9 @@ public:
 // BUGBUGBUGBUG: This class is a prototype hack, full of subtle bugs. Redo it.
 // ---------------------------------------------------------------------------
 
+size_t g_totalAllocated = 0;
+size_t g_totalGaps = 0;
+
 class NDArrayViewArena
 {
     // MemoryBlock -- represents one consecutive range of allocated memory
@@ -936,6 +939,8 @@ class NDArrayViewArena
         {}
         virtual void Delete(void*) override // called when the BaseMatrixStorage instance is destructed
         {
+            g_totalAllocated -= m_memoryBlock.size();
+            g_totalGaps += m_memoryBlock.size();
             auto& recycledMemoryBlocks = *m_recycledMemoryBlocks;
             recycledMemoryBlocks.emplace(move(m_memoryBlock)); // we move this gap into the gap set
             //fprintf(stderr, "Delete [%d:%d]\n", (int)m_firstIndex, (int)(m_firstIndex + m_size));
@@ -954,7 +959,7 @@ class NDArrayViewArena
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
     static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass;
     static array<set<MemoryBlock>              , numStorageFormats> s_recycledMemoryBlockss;
-    static const NDShapeDimension defaultDenseArenaSize = 64000000; // we allocate in this chunk size (dense only)
+    static const NDShapeDimension defaultDenseArenaSize = 256000000; // we allocate in this chunk size (dense only)
     static bool IsMatrixType(const MatrixBase& matrix, DataType dataType) // helper for checking the DataType of the MatrixBase object
     {
         switch (dataType)
@@ -1028,8 +1033,8 @@ public:
                 totalRecyclable += b.size();
                 maxRecyclable = max(maxRecyclable, b.size());
             }
-            fprintf(stderr, "NDArrayView snapshot: %d recyclable blocks, max %d bytes, total %d bytes, %d recycable arenas, %f wasted bytes\n",
-                    (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)wastedBytes);
+            fprintf(stderr, "NDArrayView snapshot: %d recyclable gaps, max %d bytes, total %d bytes, %d recycable arenas, %f total alloc, %f total gaps\n",
+                    (int)s_recycledMemoryBlocks.size(), (int)maxRecyclable, (int)totalRecyclable, (int)s_recycledArenas.size(), (double)g_totalAllocated, (double)g_totalGaps);
             fflush(stderr);
         };
 
@@ -1067,12 +1072,15 @@ if (s_recycledMemoryBlocks.size() > 1){
             //}
             if (iter != s_recycledMemoryBlocks.end()) // found one
             {
+                g_totalGaps -= iter->size();
                 // for unused bytes, we create a new recycled memory block
                 let unusedBytes = iter->size() - desiredMemoryBlock.size();
                 //if (unusedBytes > 0)
                 //    fprintf(stderr, "splitting off %d unused bytes\n", (int)unusedBytes);
                 if (unusedBytes > 0)
                     s_recycledMemoryBlocks.emplace(iter->m_sob, iter->data() + desiredMemoryBlock.size(), unusedBytes);
+                g_totalGaps += unusedBytes;
+                g_totalAllocated += desiredMemoryBlock.size();
                 let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(iter->m_sob, iter->data(), desiredMemoryBlock.size()), dataType, s_recycledMemoryBlocks);
                 //fprintf(stderr, "reused %d bytes\n", (int)desiredMemoryBlock.size());
                 auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
@@ -1193,6 +1201,7 @@ if (s_recycledMemoryBlocks.size() > 1){
                                                          dataType, s_recycledMemoryBlocks);
             auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
             s_currentArenaUsed += numElements;
+            g_totalAllocated += numElements * 4; // BUGBUG!! wrong for double
             return region;
         }
         else // if sparse, then just use the object in its entirety
