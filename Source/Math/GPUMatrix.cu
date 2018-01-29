@@ -255,7 +255,12 @@ AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size
     // In case numElements is odd we allocate a buffer with one more element. The reason is 
     // we might call curandGenerateNormal (e.g. for Gaussian noise injection) which would fail
     // if the number of elements it needs to generate is odd.
-    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * AsMultipleOf(numElements, 2)));
+    auto rc = cudaMalloc((void**)&deviceBufferPtr, sizeof(AllocatedElemType) * AsMultipleOf(numElements, 2));
+    if (rc != cudaSuccess)
+        if (rc == cudaErrorMemoryAllocation)
+            throw bad_alloc();
+        else
+            CUDA_CALL(rc);
 
     return deviceBufferPtr;
 }

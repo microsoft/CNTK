@@ -986,15 +986,15 @@ class NDArrayViewArena
     }
     // allocate a new tensor in a large arena
     static recursive_mutex s_mutex;
-    static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
-    static array<MatrixBasePtr                 , numStorageFormats> s_currentArenas;          // currently active arena (for the given storage format)
-    static array<DataType                      , numStorageFormats> s_currentArenaDataTypes;  // == s_currentArena's dataType
-    static array<DeviceDescriptor              , numStorageFormats> s_currentArenaDevices;    // == s_currentArena's device
-    static array<size_t                        , numStorageFormats> s_currentArenaSizes;      // == s_currentArena's number of elements (== s_currentArena->GetNumElements())
-    // allocation state
-    static array<size_t                        , numStorageFormats> s_currentArenaUseds;      // allocation cursor. Elements below this are already allocated.
+    static MatrixBasePtr    s_currentArena;          // currently active arena (for the given storage format)
+    static DataType         s_currentArenaDataType;  // == s_currentArena's dataType
+    static DeviceDescriptor s_currentArenaDevice;    // == s_currentArena's device
+    static size_t           s_currentArenaSize;      // == s_currentArena's number of elements (== s_currentArena->GetNumElements())
+    static size_t           s_currentArenaUsed;      // allocation cursor. Elements below this are already allocated.
+    // TODO: This ^^ calls for a struct!
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
-    static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass;
+    static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
+    static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass; // TODO: we can simplify this further
     static set<MemoryBlock> s_recycledMemoryBlocks; // free set
     static const NDShapeDimension defaultDenseArenaSize = 256000000; // we allocate in this chunk size (dense only)
 
@@ -1036,29 +1036,10 @@ public:
     {
         lock_guard<recursive_mutex> guard(s_mutex);
         let isSparse = IsSparseStorageFormat(storageFormat);
-        let formatAsIndex = (size_t)storageFormat;
-        fail_if(formatAsIndex >= s_currentArenas.size(), "unexpected storageFormat int value??");
-        auto& s_currentArena         = s_currentArenas        [formatAsIndex];
-        auto& s_currentArenaSize     = s_currentArenaSizes    [formatAsIndex];
-        auto& s_currentArenaUsed     = s_currentArenaUseds    [formatAsIndex];
-        auto& s_currentArenaDataType = s_currentArenaDataTypes[formatAsIndex];
-        auto& s_currentArenaDevice   = s_currentArenaDevices  [formatAsIndex];
-        auto& s_recycledArenas       = s_recycledArenass      [formatAsIndex];
-        // TODO: This ^^ calls for a struct!
 
-        // for now, we only support one data type/device. If it changes,. we tear down the entire thing.
-        if (dataType != s_currentArenaDataType || device != s_currentArenaDevice)
-        {
-            // tear down everything (we use ref-counting, so existing objects will continue to exist)
-            // subtle BUGBUG: if we still have pending views of wrong type, they will go back into the recycling area
-            s_currentArena.reset();
-            s_currentArenaSize = 0;
-            s_currentArenaUsed = 0;
-            s_currentArenaDataType = dataType;
-            s_currentArenaDevice = device;
-            s_recycledArenas.clear();
-            s_recycledMemoryBlocks.clear();
-        }
+        let formatAsIndex = (size_t)storageFormat;
+        fail_if(formatAsIndex >= s_recycledArenass.size(), "unexpected storageFormat int value??");
+        auto& s_recycledArenas = s_recycledArenass[formatAsIndex];
 
         let numElements = shape.TotalSize(/*check=*/false);
 
@@ -1066,9 +1047,10 @@ public:
         // Sparse:
         //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
         //  Sparse outputs are used rarely, and sparse CSC matrices are small, so for sparse, we just cache individual objects.
+        //  Unlike dense, we do not clear out the sparse storage-object cache when device or type are changed.
+        // Instead, we check these when for a reusable object.
         if (isSparse)
         {
-            // allocation size is arena size for dense, and the actual required size for sparse
             //if (shape.Rank() < 1)
             ////if (shape.Rank() != 1 && shape.Rank() != 2)
             //    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
@@ -1105,14 +1087,14 @@ public:
                     default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
                     }
                 }
-                catch (const exception& e)
+                catch (const bad_alloc& e)
                 {
                     fprintf(stderr, "NewNDArrayView: Out of memory allocating sparse matrix: %s.\n", e.what());
                     throw;
                 }
             }
             // create a shared ptr out of it with a destructor
-            s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
+            auto storage = shared_ptr<MatrixBase>(matrixPtr,
                 [&s_recycledArenas](MatrixBase* matrixPtr)
                 {
                     lock_guard<recursive_mutex> guard(s_mutex);
@@ -1137,11 +1119,25 @@ public:
                         delete matrixPtr;
                     }
                 });
-            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, s_currentArena);
+            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, storage); // TODO: what's the role of numElements for sparse?
             return region;
         }
 
         // --- dense
+
+        // for now, we only support one data type/device. If it changes,. we tear down the entire thing.
+        if (dataType != s_currentArenaDataType || device != s_currentArenaDevice)
+        {
+            // tear down everything (we use ref-counting, so existing objects will continue to exist)
+            // subtle BUGBUG: if we still have pending views of wrong type, they will go back into the recycling area
+            s_currentArena.reset();
+            s_currentArenaSize = 0;
+            s_currentArenaUsed = 0;
+            s_currentArenaDataType = dataType;
+            s_currentArenaDevice = device;
+            s_recycledArenas.clear();
+            s_recycledMemoryBlocks.clear(); // this will free the arena if no reference anymore
+        }
 
         let DebugSnapShot = [&]()
         {
@@ -1149,7 +1145,7 @@ public:
             size_t maxRecyclable = 0;
             for (let& b : s_recycledMemoryBlocks)
             {
-                totalRecyclable += b.size();
+                totalRecyclable += b.size(); // recompute this as a sanity check
                 maxRecyclable = max(maxRecyclable, b.size());
             }
             fprintf(stderr, "NDArrayView snapshot: %d recyclable gaps, max %d bytes, total %d bytes, %d recycable arenas, %f total alloc, %f total gaps\n",
@@ -1229,7 +1225,7 @@ public:
                     default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
                     }
                 }
-                catch (const exception& e)
+                catch (const bad_alloc& e)
                 {
                     fprintf(stderr, "NewNDArrayView: Out of memory allocating %d elements: %s.\n", (int)numElements, e.what());
                     DebugSnapShot();
@@ -1276,11 +1272,11 @@ public:
 };
 
 /*static*/ recursive_mutex NDArrayViewArena::s_mutex;
-/*static*/ array<MatrixBasePtr                     , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenas;
-/*static*/ array<DataType                          , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaDataTypes;// = { DataType::Unknown, DataType::Unknown };
-/*static*/ array<DeviceDescriptor                  , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaDevices = { DeviceDescriptor::CPUDevice(), DeviceDescriptor::CPUDevice(), DeviceDescriptor::CPUDevice() };
-/*static*/ array<size_t                            , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaSizes;
-/*static*/ array<size_t                            , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_currentArenaUseds;
+/*static*/ MatrixBasePtr    NDArrayViewArena::s_currentArena;
+/*static*/ DataType         NDArrayViewArena::s_currentArenaDataType = DataType::Unknown;
+/*static*/ DeviceDescriptor NDArrayViewArena::s_currentArenaDevice = DeviceDescriptor::CPUDevice();
+/*static*/ size_t           NDArrayViewArena::s_currentArenaSize;
+/*static*/ size_t           NDArrayViewArena::s_currentArenaUsed;
 /*static*/ array<vector<unique_ptr<MatrixBase>>    , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledArenass;
 /*static*/ set<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_recycledMemoryBlocks;
 /*static*/ size_t NDArrayViewArena::s_totalAllocated = 0;
