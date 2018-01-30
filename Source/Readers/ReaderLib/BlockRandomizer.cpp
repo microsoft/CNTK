@@ -147,7 +147,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t globalSampleCount, size_t loc
         numGlobalSamplesLoaded += numGlobalSamples;
         numLocalSamplesLoaded += numLocalSamples;
 
-    } while (m_config.m_allowMinibatchesToCrossSweepBoundaries && 
+    } while ( false && //m_config.m_allowMinibatchesToCrossSweepBoundaries &&  Currently UNSUPPORTED
              !result.m_endOfEpoch &&
              result.m_endOfSweep &&
              globalSampleCount > numGlobalSamplesLoaded &&
