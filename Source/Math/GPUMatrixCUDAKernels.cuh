@@ -689,7 +689,7 @@ __global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, CUDA_LO
         b[id] = 1;
     }
     else {
-        b[id] = 0.001;
+        b[id] = 1.e-10;
     }
 }
 
