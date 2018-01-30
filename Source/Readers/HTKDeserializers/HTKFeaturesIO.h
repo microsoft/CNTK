@@ -607,7 +607,6 @@ struct htkmlfentry
     unsigned int firstframe; // range [firstframe,firstframe+numframes)
     unsigned int numframes;
     unsigned short classid;  // numeric state id
-    unsigned short phonestart; // numeric phone start  time
 
 private:
     // verify and save data
@@ -648,8 +647,7 @@ private:
 
 public:
     // parse format with original HTK state align MLF format and state list
-    void parsewithstatelist(const vector<char*>& toks, const unordered_map<std::string, size_t>& statelisthash, const double htkTimeToFrame,
-        std::unordered_map<std::string, size_t>& hmmnamehash)
+    void parsewithstatelist(const vector<char*>& toks, const unordered_map<std::string, size_t>& statelisthash, const double htkTimeToFrame)
     {
         size_t ts, te;
         parseframerange(toks, ts, te, htkTimeToFrame);
@@ -658,23 +656,6 @@ public:
             RuntimeError("htkmlfentry: state %s not found in statelist", toks[2]);
         const size_t uid = iter->second; // get state index
         setdata(ts, te, uid);
-        // phone boundary
-        if (hmmnamehash.size() > 0)
-        {
-            if (toks.size() > 4)
-            {
-                auto hmmiter = hmmnamehash.find(toks[4]);
-                if (hmmiter == hmmnamehash.end())
-                    RuntimeError("htkmlfentry: hmm %s not found in hmmlist", toks[4]);
-                phonestart = (unsigned short)(hmmiter->second + 1);
-
-                // check for numeric overflow
-                if ((hmmiter->second + 1) != phonestart)
-                    RuntimeError("htkmlfentry: not enough bits for one of the values");
-            }
-            else
-                phonestart = 0;
-        }
     }
 
     // ... note: this will be too simplistic for parsing more complex MLF formats. Fix when needed.

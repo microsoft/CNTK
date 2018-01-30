@@ -1237,9 +1237,9 @@ void fputText<bool>(FILE* f, bool v)
 
 std::string fgetTag(FILE* f)
 {
-    char tag[5];
-    freadOrDie(&tag[0], sizeof(tag[0]), 4, f);
-    tag[4] = 0;
+    char tag[LATTICE_TAG_LENGTH +1];
+    freadOrDie(&tag[0], sizeof(tag[0]), LATTICE_TAG_LENGTH, f);
+    tag[LATTICE_TAG_LENGTH] = 0;
     return std::string(tag);
 }
 
@@ -2099,7 +2099,7 @@ static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
     size_t len = p.length();
     vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    fill(buf.begin(), buf.end(), 0);
+    fill(buf.begin(), buf.end(), (char)0);
     ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
     return std::string(&buf[0]);
 }

@@ -52,6 +52,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlendTimeConstant = L"blendTimeConstant";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEpsilon = L"epsilon";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUseCuDNNEngine = L"useCuDNNEngine";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDisableRegularization = L"disableRegularization";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewDataType = L"newDataType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewDynamicAxes = L"newDynamicAxes";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewSequenceAxisLengthScalingFactor = L"newSequenceAxisLengthScalingFactor";
@@ -76,6 +77,18 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTokensToIgnore = L"TokensToIgnore";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDelayConstraint = L"DelayConstraint";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlankTokenId = L"BlankTokenId";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNamePhonePath = L"PhonePath";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSymListPath = L"SymListPath";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameStateListPath = L"StateListPath";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameTransProbPath = L"TransProbPath";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameHSmoothingWeight = L"HSmoothingWeight";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameFrameDropThresh = L"FrameDropThresh";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDoReferenceAlign = L"DoReferenceAlign";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSeqGammarUsesMBR = L"SeqGammarUsesMBR";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSeqGammarAMF = L"SeqGammarAMF";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSeqGammarLMF = L"SeqGammarLMF";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSeqGammarBMMIFactor = L"SeqGammarBMMIFactor";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSeqGammarWordPen = L"SeqGammarWordPen";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumClass = L"numClass";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotOutputSparse = L"oneHotOutputSparse";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotAxis = L"onehotAxis";
@@ -97,5 +110,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameKernelShape = L"kernelShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBias = L"bias";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDepthRadius = L"depthRadius";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlockSize = L"blockSize";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomAttributes = L"customAttributes";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumItems = L"numItems";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameFillValue = L"fillValue";
 }

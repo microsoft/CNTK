@@ -104,7 +104,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         static unsigned long randomSeed = 1;
         int forcedRandomSeed = configp->Get(L"randomSeed"); // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
         m_randomSeed = forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed;
-        m_initValueScale = configp->Get(L"initValueScale");
+        m_initValueScale = (ElemType)(float)configp->Get(L"initValueScale");
         m_initFilterRank = configp->Get(L"initFilterRank"); 
         m_initOutputRank = configp->Get(L"initOutputRank");
         m_initOnCPUOnly  = configp->Get(L"initOnCPUOnly");
@@ -112,12 +112,12 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     else if (initString == L"zero")
     {
         m_initString = L"fromValue";
-        m_initValue = 0;
+        m_initValue = (ElemType)0;
     }
     else if (initString == L"fromValue") // from 'initValue'
     {
         m_initString = initString;
-        m_initValue = initValue;
+        m_initValue = (ElemType)(float)initValue;
     }
     else if (initString == L"bilinear")
     {
@@ -138,7 +138,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     else if (initString == L"fixedValue") // deprecated. Use initValue=... instead
     {
         m_initString = L"fromValue";
-        m_initValue = (ElemType)configp->Get(L"value");
+        m_initValue = (ElemType)(float)configp->Get(L"value");
     }
     else if (initString == L"fromLiteral") // deprecated. Use initValue=array instead
     {
@@ -549,7 +549,7 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     if (m_initString == L"fromValue")
     {
         if (GetEnvironmentPtr() && Environment().traceLevel > 0) // note: this will not log before node is part of network
-            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %f.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initValue);
+            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %f.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), (float)m_initValue);
         Value().SetValue(m_initValue);
     }
     else if (ParseRandomizationType(m_initString).second != 0)
@@ -651,5 +651,6 @@ template <class ElemType>
 
 template class LearnableParameter<float>;
 template class LearnableParameter<double>;
+template class LearnableParameter<half>;
 
 }}}

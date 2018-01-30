@@ -12,7 +12,7 @@
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId>{51b3a70c-2ea2-4fe4-aeba-ff2cea35103f}</InterpreterId>
-    <InterpreterVersion>3.4</InterpreterVersion>
+    <InterpreterVersion>3.5</InterpreterVersion>
     <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
     <IsWindowsApplication>False</IsWindowsApplication>
     <Environment>PYTHONPATH=$(SolutionDir)bindings\python;$(SolutionDir)bindings\python\examples</Environment>
@@ -62,7 +62,7 @@
     <Folder Include="test\" />
   </ItemGroup>
   <ItemGroup>
-    <InterpreterReference Include="{51b3a70c-2ea2-4fe4-aeba-ff2cea35103f}\3.4" />
+    <InterpreterReference Include="{51b3a70c-2ea2-4fe4-aeba-ff2cea35103f}\3.5" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />

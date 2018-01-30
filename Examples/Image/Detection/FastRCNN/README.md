@@ -19,7 +19,7 @@ To run Fast R-CNN you need a CNTK Python environment. Install the following addi
 pip install opencv-python easydict pyyaml dlib
 ```
 
-The code uses prebuild Cython modules for parts of the region proposal network. These binaries are contained in the folder (`Examples/Image/Detection/utils/cython_modules`) for Python 3.5 for Windows and Python 3.4, 3.5, and 3.6 for Linux.
+The code uses prebuild Cython modules for parts of the region proposal network. These binaries are contained in the folder (`Examples/Image/Detection/utils/cython_modules`) for Python 3.5 for Windows and Python 3.5, and 3.6 for Linux.
 If you require other versions please follow the instructions at [https://github.com/rbgirshick/py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#installation-sufficient-for-the-demo).
 
 If you want to use the debug output you need to run `pip install pydot_ng` ([website](https://pypi.python.org/pypi/pydot-ng)) and install [graphviz](http://graphviz.org/) (GraphViz executable has to be in the system’s PATH) to be able to plot the CNTK graphs.

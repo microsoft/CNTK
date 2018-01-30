@@ -84,11 +84,19 @@ namespace ONNXIR
         return m_hasDefaultValue;
     }
 
-
-
     const std::string& OpSignature::GetName() const
     {
         return m_name;
+    }
+
+    int OpSignature::SinceVersion() const
+    {
+        return m_sinceVersion;
+    }
+
+    const std::string& OpSignature::Domain() const
+    {
+        return m_domain;
     }
 
     const std::string& OpSignature::GetDescription() const
@@ -126,26 +134,25 @@ namespace ONNXIR
             return false;
         }
 
-        int num_fields =
-            p_attr.has_f() +
-            p_attr.has_i() +
-            p_attr.has_s() +
-            p_attr.has_t() +
-            p_attr.has_g() +
-            (p_attr.floats_size() > 0) +
-            (p_attr.ints_size() > 0) +
-            (p_attr.strings_size() > 0) +
-            (p_attr.tensors_size() > 0) +
-            (p_attr.graphs_size() > 0) +
-            p_attr.has_type() +
-            (p_attr.types_size() > 0) +
-            p_attr.has_shape() +
-            (p_attr.shapes_size() > 0);
-
-        if (num_fields == 1)
+        if (p_attr.type() == AttributeProto_AttributeType_UNDEFINED)
         {
-            return true;
+            int num_fields =
+                p_attr.has_f() +
+                p_attr.has_i() +
+                p_attr.has_s() +
+                p_attr.has_t() +
+                p_attr.has_g() +
+                (p_attr.floats_size() > 0) +
+                (p_attr.ints_size() > 0) +
+                (p_attr.strings_size() > 0) +
+                (p_attr.tensors_size() > 0) +
+                (p_attr.graphs_size() > 0);
+
+            if (num_fields != 1)
+            {
+                return false;
+            }
         }
-        return false;
+        return true;
     }
 }

@@ -47,6 +47,7 @@ template <class ElemType>
 
 template class RandomDistributionNode<float>;
 template class RandomDistributionNode<double>;
+template class RandomDistributionNode<half>;
 
 template<class ElemType>
 void RandomSampleNodeBase<ElemType>::Validate(bool isFinalValidationPass)
@@ -108,9 +109,9 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
     {
         ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
         if (currentWeight < 0)
-            InvalidArgument("Sampling weights contain negative number %f.", currentWeight);
+            InvalidArgument("Sampling weights contain negative number %f.", (float)currentWeight);
 
-        runningWeightsSum += currentWeight;
+        runningWeightsSum += (double)currentWeight;
         m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
     }
 }
@@ -231,6 +232,7 @@ bool RandomSampleNode<ElemType>::IsOutOfDateWrtInputs() const
 
 template class RandomSampleNode<float>;
 template class RandomSampleNode<double>;
+template class RandomSampleNode<half>;
 
 template<class ElemType>
 double RandomSampleInclusionFrequencyNode<ElemType>::EstimateNumberOfTries()
@@ -303,6 +305,7 @@ void RandomSampleInclusionFrequencyNode<ElemType>::Validate(bool isFinalValidati
 
 template class RandomSampleInclusionFrequencyNode<float>;
 template class RandomSampleInclusionFrequencyNode<double>;
+template class RandomSampleInclusionFrequencyNode<half>;
 
 template<class ElemType>
 void DropoutNode<ElemType>::Save(File& fstream) const
@@ -336,8 +339,10 @@ void BatchNormalizationNode<ElemType>::AttachInputs(const std::vector<Computatio
 
 template class DropoutNode<float>;
 template class DropoutNode<double>;
+template class DropoutNode<half>;
 
 template class BatchNormalizationNode<float>;
 template class BatchNormalizationNode<double>;
+template class BatchNormalizationNode<half>;
 
 }}}

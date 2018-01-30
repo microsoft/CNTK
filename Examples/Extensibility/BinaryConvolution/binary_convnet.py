@@ -55,11 +55,11 @@ def create_binary_convolution_model():
     scaled_input = C.element_times(C.constant(0.00390625), feature_var)
 
     # first layer is ok to be full precision
-    z = C.layers.Convolution((3, 3), 32, pad=True, activation=C.relu)(scaled_input)
+    z = C.layers.Convolution((3, 3), 64, pad=True, activation=C.relu)(scaled_input)
     z = C.layers.MaxPooling((3,3), strides=(2,2))(z)
 
     z = C.layers.BatchNormalization(map_rank=1)(z)
-    z = BinaryConvolution(z, (3,3), 128, channels=32, pad=True)
+    z = BinaryConvolution(z, (3,3), 128, channels=64, pad=True)
     z = C.layers.MaxPooling((3,3), strides=(2,2))(z)
 
     z = C.layers.BatchNormalization(map_rank=1)(z)
@@ -93,13 +93,16 @@ def create_binary_convolution_model():
 # python 'binary_convolve' Function instances used during training, faster C++ NativeBinaryConvolveFunction
 # instances that uses optimized binary convolution implementations generated using the Halide framework
 def clone_with_native_binary_convolutions(model):
-    ops.register_native_user_function('NativeBinaryConvolveFunction', 'Cntk.BinaryConvolutionExample-' + C.__version__.rstrip('+'), 'CreateBinaryConvolveFunction')
+    # using a different name to avoid conflict with netopt package. 
+    # netopt uses NativeBinaryConvolveFunction as the name.
+    ops.register_native_user_function('BinaryConvolutionFunction', 'Cntk.BinaryConvolution-' + C.__version__.rstrip('+'), 'CreateBinaryConvolveFunction')
     filter = lambda x : type(x) == C.Function and x.root_function.op_name == 'binary_convolve'
 
     def converter(x):
         # TODO: The attributes should be read from x instead of hardcoded values
-        attributes = {'stride' : 1, 'padding' : True, 'size' : x.inputs[0].shape[-1]}
-        return ops.native_user_function('NativeBinaryConvolveFunction', list(x.inputs), attributes, 'native_binary_convolve')
+        attributes = {'stride' : 1, 'padding' : True, 'size' : x.inputs[0].shape[-1], 'w' : x.inputs[1].shape[-2], 'h'
+                : x.inputs[1].shape[-1], 'channels' : x.inputs[1].shape[0], 'filters' : x.inputs[0].shape[0]}
+        return ops.native_user_function('BinaryConvolutionFunction', list(x.inputs), attributes, 'native_binary_convolve')
 
     return C.misc.convert(model, filter, converter)
 

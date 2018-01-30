@@ -1,6 +1,5 @@
 dataDir: ../Data
 tags:
-     # Note: Batch normalization training on CPU is not yet implemented.
      - bvt-i (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release')
      - nightly-i (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release')
      - weekly-i (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release')

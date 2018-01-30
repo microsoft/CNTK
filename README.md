@@ -2,6 +2,112 @@
 
 ## Latest news
 
+***2018-01-22.*** CNTK support for CUDA 9
+
+CNTK now supports CUDA 9/cuDNN 7. This requires an update to build environment to Ubuntu 16/GCC 5 for Linux, and Visual Studio 2017/VCTools 14.11 for Windows. With CUDA 9, CNTK also added a preview for 16-bit floating point (a.k.a FP16) computation.
+
+Please check out the example of FP16 in ResNet50 [here](./Examples/Image/Classification/ResNet/Python/TrainResNet_ImageNet_Distributed.py)
+
+Notes on FP16 preview:
+* FP16 implementation on CPU is not optimized, and it's not supposed to be used in CPU inference directly. User needs to convert the model to 32-bit floating point before running on CPU.
+* Loss/Criterion for FP16 training needs to be 32bit for accumulation without overflow, using cast function. Please check the example above.
+* Readers do not have FP16 output unless using numpy to feed data, cast from FP32 to FP16 is needed. Please check the example above.
+* FP16 gradient aggregation is currently only implemented on GPU using NCCL2. Distributed training with FP16 with MPI is not supported.
+* FP16 math is a subset of current FP32 implementation. Some model may get Feature Not Implemented exception using FP16.
+* FP16 is currently not supported in BrainScript. Please use Python for FP16.
+
+To setup build and runtime environment on Windows:
+* Install [Visual Studio 2017](https://www.visualstudio.com/downloads/) with following workloads and components. From command line (use Community version installer as example):
+    vs_community.exe --add Microsoft.VisualStudio.Workload.NativeDesktop --add Microsoft.VisualStudio.Workload.ManagedDesktop --add Microsoft.VisualStudio.Workload.Universal --add Microsoft.Component.PythonTools --add Microsoft.VisualStudio.Component.VC.Tools.14.11
+* Install [NVidia CUDA 9](https://developer.nvidia.com/cuda-90-download-archive?target_os=Windows&target_arch=x86_64)
+* From PowerShell, run:
+    [DevInstall.ps1](./Tools/devInstall/Windows/DevInstall.ps1)
+* Start VCTools 14.11 command line, run:
+    cmd /k "%VS2017INSTALLDIR%\VC\Auxiliary\Build\vcvarsall.bat" x64 --vcvars_ver=14.11
+* Open [CNTK.sln](./CNTK.sln) from the VCTools 14.11 command line. Note that starting CNTK.sln other than VCTools 14.11 command line, would causes CUDA 9 [build error](https://developercommunity.visualstudio.com/content/problem/163758/vs-2017-155-doesnt-support-cuda-9.html).
+
+To setup build and runtime environment on Linux using docker, please build Unbuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
+
+***2017-12-05.* CNTK 2.3.1**
+Release of Cognitive Toolkit v.2.3.1.
+
+CNTK support for ONNX format is now out of preview mode.
+
+If you want to try ONNX, you can build from master or `pip install` one of the below wheel that matches you Python environment.
+
+For Windows CPU-Only:
+* Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp27-cp27m-win_amd64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp34-cp34m-win_amd64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp35-cp35m-win_amd64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp36-cp36m-win_amd64.whl
+
+For Windows GPU:
+* Python 2.7: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp27-cp27m-win_amd64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp34-cp34m-win_amd64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp35-cp35m-win_amd64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp36-cp36m-win_amd64.whl
+
+For Windows GPU-1bit-SGD:
+* Python 2.7: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp27-cp27m-win_amd64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp34-cp34m-win_amd64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp35-cp35m-win_amd64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp36-cp36m-win_amd64.whl
+
+Linux CPU-Only:
+* Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp27-cp27mu-linux_x86_64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp34-cp34m-linux_x86_64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp35-cp35m-linux_x86_64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp36-cp36m-linux_x86_64.whl
+
+Linux GPU:
+* Python 2.7: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp27-cp27mu-linux_x86_64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp34-cp34m-linux_x86_64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp35-cp35m-linux_x86_64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp36-cp36m-linux_x86_64.whl
+
+Linux GPU-1bit-SGD:
+* Python 2.7: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp27-cp27mu-linux_x86_64.whl
+* Python 3.4: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp34-cp34m-linux_x86_64.whl
+* Python 3.5: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp35-cp35m-linux_x86_64.whl
+* Python 3.6: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp36-cp36m-linux_x86_64.whl
+
+You can also try one of the below NuGet package.
+* [CNTK, CPU-Only Build](https://www.nuget.org/packages/CNTK.CPUOnly/2.3.1)
+* [CNTK, GPU Build](https://www.nuget.org/packages/CNTK.GPU/2.3.1)
+* [CNTK, UWP CPU-Only Build](http://www.nuget.org/packages/CNTK.UWP.CPUOnly/2.3.1)
+* [CNTK CPU-only Model Evaluation Libraries (MKL based)](http://www.nuget.org/packages/Microsoft.Research.CNTK.CpuEval-mkl/2.3.1)
+
+
+***2017-11-22.* CNTK 2.3**
+Release of Cognitive Toolkit v.2.3.
+
+Highlights:
+* Better ONNX support.
+* Switched to NCCL2 for better performance in distributed training.
+* Improved C# API.
+* OpenCV is not required to install CNTK, it is only required for Tensorboard Image feature and image reader.
+* Various performance improvement.
+* Added Network Optimization API.
+* Faster Adadelta for sparse.
+
+See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_3_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
+***2017-11-10.*** Switch from CNTKCustomMKL to Intel MKLML. MKLML is released with [Intel MKL-DNN](https://github.com/01org/mkl-dnn/releases) as a trimmed version of Intel MKL for MKL-DNN. To set it up:
+
+On Linux:
+
+    sudo mkdir /usr/local/mklml
+    sudo wget https://github.com/01org/mkl-dnn/releases/download/v0.11/mklml_lnx_2018.0.1.20171007.tgz
+    sudo tar -xzf mklml_lnx_2018.0.1.20171007.tgz -C /usr/local/mklml
+
+On Windows:
+
+    Create a directory on your machine to hold MKLML, e.g. mkdir c:\local\mklml
+    Download the file [mklml_win_2018.0.1.20171007.zip](https://github.com/01org/mkl-dnn/releases/download/v0.11/mklml_win_2018.0.1.20171007.zip).
+    Unzip it into your MKLML path, creating a versioned sub directory within.
+    Set the environment variable `MKLML_PATH` to the versioned sub directory, e.g. setx MKLML_PATH c:\local\mklml\mklml_win_2018.0.1.20171007
+
 ***2017-10-10.*** Preview: CNTK ONNX Format Support
 Update CNTK to support load and save ONNX format from https://github.com/onnx/onnx, please try it and provide feedback. We only support ONNX OPs. This is a preview, and we expect a breaking change in the future.
 
@@ -68,22 +174,6 @@ Hightlights:
 * Tensorboard image support for CNTK
 
 See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_2_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-08-04.*** CNTK August interation plan posted [here](https://github.com/Microsoft/CNTK/issues/2194).
-
-***2017-07-31.* CNTK 2.1**  
-Release of Cognitive Toolkit v.2.1.
-
-Highlights:
-* cuDNN 6.0 integration
-* Support of Universal Windows Platform (UWP)
-* Improvements in backend for Keras
-* Performance improvements
-* New manuals, tutorials and examples
-* Multiple bug fixes
-
-See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_1_Release_Notes).  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
 See [all news](https://docs.microsoft.com/en-us/cognitive-toolkit/news)

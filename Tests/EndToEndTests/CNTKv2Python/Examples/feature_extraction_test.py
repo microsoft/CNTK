@@ -20,7 +20,7 @@ TOLERANCE_ABSOLUTE = 1E-1
 
 def test_feature_extraction(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU') # due to batch normalization in ResNet_18
+        pytest.skip('test only runs on GPU for speed')
     try_set_default_device(cntk_device(device_id))
 
     base_path = os.path.dirname(os.path.abspath(__file__))

@@ -28,9 +28,7 @@ prepare_alexnet_v0_model()
 from install_data_and_model import create_grocery_mappings
 create_grocery_mappings(grocery_path)
 
-win35_linux34 = pytest.mark.skipif(not ((sys.platform == 'win32' and sys.version_info[:2] == (3,5)) or
-                                        (sys.platform != 'win32' and sys.version_info[:2] == (3,4))),
-                                   reason="it runs currently only in windows-py35 and linux-py34 due to precompiled cython modules")
+from test_decorators import run_if_win35_linux35_linux36
 
 def run_fasterrcnn_grocery_training(e2e):
     from FasterRCNN_eval import compute_test_set_aps
@@ -73,7 +71,7 @@ def run_fasterrcnn_grocery_training(e2e):
     assert meanAP > 0.01
     return trained_model, meanAP, cfg
 
-@win35_linux34
+@run_if_win35_linux35_linux36
 def reenable_once_sorting_is_stable_test_native_fasterrcnn_eval(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')  # it runs very slow in CPU
@@ -97,12 +95,12 @@ def reenable_once_sorting_is_stable_test_native_fasterrcnn_eval(device_id):
     print("Python: {}, native: {}".format(meanAP_python, meanAP_native))
     assert abs(meanAP_python - meanAP_native) < 0.1
 
-@win35_linux34
+@run_if_win35_linux35_linux36
 def test_fasterrcnn_grocery_training_e2e(device_id):
     try_set_default_device(cntk_device(device_id))
     _, _, _ = run_fasterrcnn_grocery_training(e2e = True)
 
-@win35_linux34
+@run_if_win35_linux35_linux36
 def test_fasterrcnn_grocery_training_4stage(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')  # it runs very slow in CPU

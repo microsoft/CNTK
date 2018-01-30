@@ -43,7 +43,7 @@ private:
 
     // Initialization functions.
     void InitializeChunkInfos(ConfigHelper& config);
-    void InitializeStreams(const std::wstring& featureName);
+    void InitializeStreams(const std::wstring& featureName, bool definesMbSize);
     void InitializeFeatureInformation();
     void InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow);
 
@@ -82,6 +82,9 @@ private:
     // A flag that indicates whether the utterance should be extended to match the length of the utterance from the primary deserializer.
     // TODO: This should be moved to the packers when deserializers work in sequence mode only.
     bool m_expandToPrimary;
+
+    // Upper limit of utterance lengths. Longer utterances are skipped.
+    size_t m_maxSequenceSize;
 };
 
 typedef std::shared_ptr<HTKDeserializer> HTKDeserializerPtr;

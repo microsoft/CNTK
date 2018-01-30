@@ -159,12 +159,10 @@ public:
     template <typename T>
     File& operator<<(T val)
     {
-        {
-            if (IsTextBased())
-                fputText(m_file, val);
-            else
-                fput(m_file, val);
-        }
+        if (IsTextBased())
+            fputText(m_file, val);
+        else
+            fput(m_file, val);
         return *this;
     }
     File& operator<<(const std::wstring& val);

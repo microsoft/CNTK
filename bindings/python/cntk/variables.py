@@ -214,11 +214,13 @@ class VariableMixin(object):
             if shape == Variable._Type._unknown_shape:
                 s = 'tensor'
             elif shape == ():
-                s = 'np.float64' if dtype == np.float64 else 'np.float32' if dtype == np.float32 else 'float'
+                s = 'np.float64' if dtype == np.float64 else 'np.float32' if dtype == np.float32 else 'np.float16' if dtype == np.float16 else 'float'
             else:
                 s = 'Tensor['
                 if dtype == np.float64:
                     s += 'np.float64,'
+                if dtype == np.float16:
+                    s += 'np.float16,'
                 if shape == ():
                     s += '()'
                 else:
@@ -249,7 +251,7 @@ class VariableMixin(object):
         @staticmethod
         def _sanitize(the_type):
             '''
-            Converts type into Variable._Type if given a float, float32, or float64.
+            Converts type into Variable._Type if given a float, float32, float64 or float16.
             '''
             # TODO: it would be great if in a future version we could recognize and support Python 3.5 typing.Sequence
             import sys
@@ -259,7 +261,7 @@ class VariableMixin(object):
                     raise TypeError("Python's typing.Sequence is not a valid CNTK type; use cntk.layers.typing.Sequence instead")
             if the_type == float:
                 return Variable._Type(shape=(), is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
-            elif the_type == np.float32 or  the_type == np.float64:
+            elif the_type == np.float32 or the_type == np.float64 or the_type == np.float16:
                 return Variable._Type(shape=(), dtype=the_type, is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
             else:
                 return the_type
@@ -287,7 +289,7 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
 
     Args:
        shape (`tuple`): the shape of this variable.
-       dtype (`np.float32 or np.float64`): data type of the values that will be bound to this variable.
+       dtype (`np.float32 or np.float64 or np.float16`): data type of the values that will be bound to this variable.
         Default is np.float32
        needs_gradient (`bool`): if set to True any expression that contains this variable
         will also be differentiated with respect to this variable.
@@ -356,7 +358,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         If a numpy array is specified the shape argument is ignored and
         the tensor gets the shape of this argument. Alternatively, an
         initializer from :class:`~cntk.initializer` can be specified.
-       dtype (`np.float32` or `np.float64`): data type of the values stored.
+       dtype (`np.float32` or `np.float64` or `np.float16`): data type of the values stored.
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
 
@@ -437,7 +439,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
-       dtype (`np.float32` or `np.float64`): data type to store the values as.
+       dtype (`np.float32` or `np.float64` or `np.float16`): data type to store the values as.
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     Todo:

@@ -17,7 +17,7 @@ testCases:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
       - Training
-      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.1%}}
       - EvalClassificationError = {{float,tolerance=0.00000001}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
@@ -26,7 +26,7 @@ testCases:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
       - Validate
-      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.1%}}
       - EvalClassificationError = {{float,tolerance=0.00000001}}
 
   Per-minibatch training results must match for each MPI Rank:
@@ -34,7 +34,7 @@ testCases:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.1%}}
       - EvalClassificationError = {{float,tolerance=0.00000001}}
 
   DataParallelSGD training parameters must match for each MPI Rank:

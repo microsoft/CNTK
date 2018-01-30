@@ -100,7 +100,7 @@ BOOST_FIXTURE_TEST_CASE(RmsPropSparse, MatrixLearnerFixture)
     float avg = matSG.RmsProp(matG, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true, false);
     float avgSparse = matSGsparse.RmsProp(matGsparseBSC, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true, false);
 
-    BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
+    BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE3));
     BOOST_CHECK(fabsf(avg - avgSparse) < c_epsilonFloatE5);
 }
 

@@ -1,34 +1,21 @@
-#pragma warning(push)
-#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456)
-
 #ifndef CORE_GRAPH_OPSCHEMA_H
 #define CORE_GRAPH_OPSCHEMA_H
 
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
-#include "proto/onnx/protobuf/graph.pb.h"
 #include "utils.h"
+#pragma warning(push)
+#pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996 4503)
+#include "proto/onnx/protobuf/onnx-ml.pb.h"
+#pragma warning(pop)
+
+using namespace onnx;
 
 namespace ONNXIR
 {
-    enum class AttrType {
-        NONE,
-        FLOAT,
-        INT,
-        STRING,
-        GRAPH,
-        TENSOR,
-        TYPE,
-        SHAPE,
-        FLOATS,
-        INTS,
-        STRINGS,
-        GRAPHS,
-        TENSORS,
-        TYPES,
-        SHAPES
-    };
+    typedef AttributeProto_AttributeType AttrType;
 
     // This string array should exactly match the AttrType defined above.
     static const std::string c_attrTypeStr[14] =
@@ -38,15 +25,11 @@ namespace ONNXIR
         "STRING",
         "GRAPH",
         "TENSOR",
-        "TYPE",
-        "SHAPE",
         "FLOATS",
         "INTS",
         "STRINGS",
         "GRAPHS",
-        "TENSORS",
-        "TYPES",
-        "SHAPES"
+        "TENSORS"
     };
 
     typedef std::unordered_set<PTYPE> DataTypeSet;
@@ -162,6 +145,8 @@ namespace ONNXIR
 
         // Get operator name.
         const std::string& GetName() const;
+        int SinceVersion() const;
+        const std::string& Domain() const;
 
         // Get operator description.
         const std::string& GetDescription() const;
@@ -178,32 +163,15 @@ namespace ONNXIR
         // Get type constraint map.
         const TypeConstraintMap& GetTypeConstraintMap() const;
 
-        // To support ONNX variable input/output compatibility.
-        // Min and Max num arguments of last input/output.
-        int GetOnnxMinInput() const { return m_onnxMinInput; }
-        int GetOnnxMaxInput() const { return m_onnxMaxInput; }
-        int GetOnnxMinOutput() const { return m_onnxMinOutput; }
-        int GetOnnxMaxOutput() const { return m_onnxMaxOutput; }
-        std::function<bool(int)> GetOnnxNumInputsAllowedFunc() const
-        {
-            return m_onnxNumInputsAllowed;
-        }
-        std::function<bool(int)> GetOnnxNumOutputsAllowedFunc() const
-        {
-            return m_onnxNumOutputsAllowed;
-        }
-        std::function<bool(int, int)> GetOnnxNumInputsOutputsAllowedFunc() const
-        {
-            return m_onnxNumInputsOutputsAllowed;
-        }
-
     private:
 
         friend class OperatorSchemaSetter;
-        friend class OperatorSchemaRegistry;
+        friend class OpSchemaRegistry;
 
         // Operator name.
         std::string m_name;
+        int m_sinceVersion = 1;
+        std::string m_domain = "";
 
         // Operator description.
         std::string m_description;
@@ -219,21 +187,6 @@ namespace ONNXIR
 
         // Map from constraint name to DataTypeSet
         TypeConstraintMap m_typeConstraintMap;
-
-        // To support ONNX variable input/output compatibility.
-        // Min and Max num arguments of last input/output.
-        int m_onnxMinInput = 0;
-        int m_onnxMaxInput = std::numeric_limits<int>::max();
-        int m_onnxMinOutput = 0;
-        int m_onnxMaxOutput = std::numeric_limits<int>::max();
-        std::function<bool(int)> m_onnxNumInputsAllowed =
-            [](int) { return true; };
-        std::function<bool(int)> m_onnxNumOutputsAllowed =
-            [](int) { return true; };
-        std::function<bool(int, int)> m_onnxNumInputsOutputsAllowed =
-            [](int, int) { return true; };
     };
 }
 #endif
-
-#pragma warning(pop)

@@ -8,6 +8,9 @@ export MKL_NUM_THREADS=4
 export MKL_CBWR=COMPATIBLE
 export OMP_NUM_THREADS=1
 
+# increase stack limit
+ulimit -s 65536
+
 if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/Train_cntk_text.txt || ! -e $TEST_DATA_DIR/train_map.txt ]]; then
     # Cannot find test data locally.
     # Try external test data directory (not part of the CNTK repository) as an alternative.

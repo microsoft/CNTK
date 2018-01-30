@@ -357,6 +357,8 @@ namespace CNTK
         return{ paddedOutputMapCount, kernelShape };
     }
 
+
+
     template <typename SourceElementType, typename TargetElementType>
     inline TargetElementType* Copy(const SourceElementType* src, size_t srcSize)
     {
@@ -608,6 +610,14 @@ namespace CNTK
         return fullyDefinedVarShape;
     }
 
+    std::vector<Axis> GetSqueezableAxes(const NDShape& inputShape);
+
+    NDShape GetSqueezedShape(const NDShape& inputShape, const std::vector<Axis>& axes);
+
+    NDShape GetSqueezedShape(const NDShape& inputShape);
+
+    NDShape GetSqueezedShape(const NDShape& inputShape, const Dictionary& squeezeConfig);
+
     NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags = {}, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
 
     double ReductionIdentityValue(const std::wstring& reductionOpName);
@@ -646,6 +656,8 @@ namespace CNTK
             return m_isDistributed;
         }
 
+        std::function<void(NDArrayViewPtr&, NDArrayViewPtr&)> DoAggregateMetricsIfNeededLambda;
+        
     private:
         void GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients);
         void CheckDistributedLearners();
@@ -713,15 +725,15 @@ namespace CNTK
     class Accumulator : public Value
     {
     public:
-        Accumulator() : Value(nullptr), m_numUpdates(0), m_isUninitialized(true) {}
+        Accumulator() : Value(nullptr), m_numUpdates(0), m_isInitialized(false) {}
 
         void Update(const ValuePtr& delta, const DeviceDescriptor& device);
         void Reset();
-
+        bool IsInitialized() { return m_isInitialized; }
     private:
         void ResetToZero();
 
-        bool m_isUninitialized;
+        bool m_isInitialized;
         size_t   m_numUpdates;
     };
 
@@ -730,9 +742,18 @@ namespace CNTK
     template <typename T> //T can be Variable or StreamInfo
     static bool IsAtSweepEnd(const std::unordered_map<T, MinibatchData>& arguments)
     {
+        if (arguments.empty()) return true;
+
         return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const T, MinibatchData>& kv)
         {
             return kv.second.sweepEnd;
         });
+    }
+
+    // half is V1 ElemType, so specialize here instead of in CNTKLibrary.h
+    template<>
+    inline DataType AsDataType<half>()
+    {
+        return DataType::Float16;
     }
 }

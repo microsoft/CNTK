@@ -231,7 +231,7 @@ std::string ConfigHelper::GetRootPath()
     string rootPath = m_config(L"prefixPathInSCP", "");
 
     // first make slash consistent (sorry for Linux users:this is not necessary for you)
-    replace(rootPath.begin(), rootPath.end(), L'\\', L'/');
+    replace(rootPath.begin(), rootPath.end(), '\\', '/');
 
     // second, remove trailing slash if there is any
     regex trailer("/+$");
@@ -246,6 +246,11 @@ std::string ConfigHelper::GetRootPath()
 std::string ConfigHelper::GetScpFilePath()
 {
     return m_config(L"scpFile");
+}
+
+std::string ConfigHelper::GetLatticeIndexFilePath()
+{
+    return m_config(L"latticeIndexFile");
 }
 
 std::string ConfigHelper::GetScpDir()
@@ -281,7 +286,7 @@ void ConfigHelper::AdjustUtterancePath(const std::string& rootPath, const string
         else
         {
 #ifdef WIN32
-            replace(path.begin(), path.end(), L'\\', L'/');
+            replace(path.begin(), path.end(), '\\', '/');
 #endif
             path = rootPath + path;
         }
@@ -340,7 +345,7 @@ vector<string> ConfigHelper::GetSequencePaths()
     if (!rootPath.empty()) // user has specified a path prefix for this feature
     {
         // first make slash consistent (sorry for Linux users:this is not necessary for you)
-        replace(rootPath.begin(), rootPath.end(), L'\\', L'/');
+        replace(rootPath.begin(), rootPath.end(), '\\', '/');
 
         // second, remove trailing slash if there is any
         regex trailer("/+$");
@@ -362,7 +367,7 @@ vector<string> ConfigHelper::GetSequencePaths()
                 else
                 {
 #ifdef WIN32
-                    replace(path.begin(), path.end(), L'\\', L'/');
+                    replace(path.begin(), path.end(), '\\', '/');
 #endif
                     path = rootPath + "/" + path;
                 }

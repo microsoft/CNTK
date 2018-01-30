@@ -1358,7 +1358,7 @@ class Function(cntk_py.Function):
          ... def criterion(data, label_one_hot):
          ...     z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
          ...     return cntk.cross_entropy_with_softmax(z, label_one_hot)
-         >>> learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(0.1, cntk.UnitType.minibatch))
+         >>> learner = cntk.sgd(model.parameters, 0.1)
          >>> progress = criterion.train((X, Y), minibatch_size=25, max_epochs=2, epoch_size=125, parameter_learners=[learner])
          >>> print("%.2f" % progress.epoch_summaries[-1].loss) # get the final epoch's loss value
          0.68

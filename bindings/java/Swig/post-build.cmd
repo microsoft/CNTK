@@ -4,6 +4,7 @@ set test_dir=%~f2
 set output_dir=%~f3
 set version=%4
 set is_gpu=%5
+set is_debug=%6
 
 echo Assembling jar in post build step...
 echo The project directory is "%project_dir%"
@@ -24,15 +25,27 @@ echo Building java.
 if not exist "%project_dir%com\microsoft\CNTK\lib\windows" mkdir "%project_dir%com\microsoft\CNTK\lib\windows"
 
 if "%is_gpu%" == "true" (
-  for %%x in (cublas64_80.dll cudart64_80.dll cudnn64_6.dll curand64_80.dll cusparse64_80.dll nvml.dll) do (
+  for %%x in (cublas64_90.dll cudart64_90.dll cudnn64_7.dll curand64_90.dll cusparse64_90.dll nvml.dll) do (
     copy "%output_dir%/%%x" ".\com\microsoft\CNTK\lib\windows\%%x" 
     echo %%x>> .\com\microsoft\CNTK\lib\windows\NATIVE_MANIFEST
   )
 )
 
-for %%x in (libiomp5md.dll mkl_cntk_p.dll Cntk.Math-%version%.dll Cntk.PerformanceProfiler-%version%.dll Cntk.Core-%version%.dll Cntk.Core.JavaBinding-%version%.dll) do (
+if "%is_debug%" == "true" (
+  set opencv_dll=opencv_world310d.dll
+) else (
+  set opencv_dll=opencv_world310.dll
+)
+
+for %%x in (libiomp5md.dll mklml.dll Cntk.Math-%version%.dll Cntk.PerformanceProfiler-%version%.dll Cntk.Core-%version%.dll Cntk.Core.JavaBinding-%version%.dll) do (
   copy "%output_dir%/%%x" ".\com\microsoft\CNTK\lib\windows\%%x" 
   echo %%x>> .\com\microsoft\CNTK\lib\windows\NATIVE_MANIFEST
+)
+
+for %%x in (zip.dll zlib.dll %opencv_dll% mkldnn.dll) do (
+  (copy "%output_dir%/%%x" ".\com\microsoft\CNTK\lib\windows\%%x") && (
+   echo %%x>> .\com\microsoft\CNTK\lib\windows\NATIVE_MANIFEST) || (
+   echo "Could not find %%x, skipping")
 )
 
 copy .\CNTKNativeUtils.java .\com\microsoft\CNTK\CNTKNativeUtils.java

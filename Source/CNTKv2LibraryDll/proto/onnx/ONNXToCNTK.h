@@ -15,6 +15,16 @@ namespace ONNXIR
 
 namespace CNTK
 {
+    namespace ONNX 
+    {
+        enum class ConvAutoPadType 
+        {
+            VALID = 0,
+            SAME_UPPER = 1,
+            SAME_LOWER = 2,
+        };
+    }
+
     class ONNXToCNTK
     {
     public:

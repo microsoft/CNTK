@@ -107,3 +107,45 @@ def test_input_variable():
     assert sequence_i.name == 'sequence_i'
     assert len(sequence_i.dynamic_axes)==2
 
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_zeros_like(operand, device_id, precision):
+    operand = AA(operand)
+    expected = np.zeros_like(operand)
+
+    expected_forward = [expected]
+    expected_backward = {
+        'arg': [np.zeros_like(expected)],
+    }
+
+    from .. import zeros_like
+    _test_unary_op(precision, device_id, zeros_like, operand,
+                   expected_forward, expected_backward)
+
+def test_zeros_like_empty_shape(device_id, precision):
+    operand = np.array(3)
+    expected = np.zeros_like(operand)
+
+    expected_forward = [expected]
+    expected_backward = {
+        'arg': [np.zeros_like(expected)],
+    }
+
+    from .. import zeros_like
+    _test_unary_op(precision, device_id, zeros_like, operand,
+                   expected_forward, expected_backward)
+
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_ones_like(operand, device_id, precision):
+    operand = AA(operand)
+    expected = np.ones_like(operand)
+
+    expected_forward = [expected]
+    expected_backward = {
+        'arg': [np.zeros_like(expected)],
+    }
+
+    from .. import ones_like
+    _test_unary_op(precision, device_id, ones_like, operand,
+                   expected_forward, expected_backward)

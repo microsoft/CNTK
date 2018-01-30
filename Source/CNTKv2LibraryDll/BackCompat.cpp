@@ -452,6 +452,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDisableRegularization] = batchNormalizationNode->DisableRegularization();
 
                     opType = PrimitiveOpType::BatchNormalization;
                 }
@@ -496,6 +497,14 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(edNode->TokensToIgnore());
 
                     opType = PrimitiveOpType::EditDistanceError;
+                }
+                else if (node->OperationName() == OperationNameOf(StopGradientNode))
+                {
+                    opType = PrimitiveOpType::StopGradient;
+                }
+                else if (node->OperationName() == OperationNameOf(LatticeSequenceWithSoftmaxNode))
+                {
+                    opType = PrimitiveOpType::LatticeSequenceWithSoftmax;
                 }
                 else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
                 {

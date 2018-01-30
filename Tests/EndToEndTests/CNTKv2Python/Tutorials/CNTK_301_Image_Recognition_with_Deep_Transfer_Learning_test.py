@@ -15,7 +15,7 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb")
 
 notebook_timeoutSeconds = 900
-# Runs on GPU only, batch normalization training on CPU is not yet implemented.
+# Runs on GPU only for speed
 notebook_deviceIdsToRun = [0]
 
 

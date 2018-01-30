@@ -31,6 +31,7 @@
 #endif
 
 #include "CNTKLibraryInternals.h"
+#include "HalfConverter.hpp"
 
 // undef max in the rest of the file to avoid conflicts with the max macro defined in windows.h.
 #pragma push_macro("max")
@@ -38,6 +39,43 @@
 
 namespace CNTK
 {
+    class float16
+    {
+    protected:
+        unsigned short __x;
+
+    public:
+        float16() = default;
+        float16(const float16& other) { __x = other.__x; }
+
+#ifndef SWIG
+        // construction from build-in types
+        float16(float f) { floatToFloat16(&f, &__x); }
+        float16(double d) : float16((float)d) {}
+        float16(int i) : float16((float)i) {}
+        float16(size_t u) : float16((float)u) {}
+
+        // cast to build-in types
+        operator float() const { float f; float16ToFloat(&__x, &f); return f; }
+
+        // compare functions
+        inline bool operator==(const float16& rhs) const { return (__x == rhs.__x); }
+        inline bool operator!=(const float16& rhs) const { return (__x != rhs.__x); }
+#endif
+
+        static float16 create(float f)
+        {
+            float16 v;
+            floatToFloat16(&f, &v.__x);
+            return v;
+        }
+
+        static float16 create(double d)
+        {
+            return create((float)d);
+        }
+    };
+
     ///
     /// Enumeration type denoting data type of symbolic data entities or actual data.
     ///
@@ -47,6 +85,7 @@ namespace CNTK
         Float = 1,
         Double = 2,
         UChar = 3, // So far only used internally in deserializers.
+        Float16 = 4,
 
         /* TODO:
         Bit,
@@ -74,6 +113,8 @@ namespace CNTK
             return DataType::Float;
         else if (std::is_same<ElementType, double>())
             return DataType::Double;
+        else if (std::is_same<ElementType, float16>())
+            return DataType::Float16;
         else
             NOT_IMPLEMENTED;
     }
@@ -84,6 +125,8 @@ namespace CNTK
             return "Float";
         else if (dataType == DataType::Double)
             return "Double";
+        else if (dataType == DataType::Float16)
+            return "Float16";
         else
             LogicError("Unknown DataType.");
     }
@@ -94,6 +137,8 @@ namespace CNTK
             return sizeof(float);
         else if (dataType == DataType::Double)
             return sizeof(double);
+        else if (dataType == DataType::Float16)
+            return sizeof(float16);
         else
             LogicError("Unknown DataType.");
     }
@@ -372,6 +417,7 @@ namespace CNTK
         DataType m_elementType;        // Element type of the stream
         NDShape m_sampleLayout;        // Layout of the sample for the stream
         bool m_definesMbSize = false;  // Flag indicating whether this stream defines minibatch size.
+        bool m_isBinary = false;       // Whether this is an opaque binary stream. Currently in use only for lattices.
 
         std::wstring AsString() const
         {
@@ -620,8 +666,7 @@ namespace CNTK
         /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
         /// with the specified Sparse CSC format data.
         ///
-        template <typename ElementType>
-        CNTK_API NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
+        CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const void* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
 
         ///
         /// Construct a NDArrayView over newly allocated storage in the specified format on the specified 'device'.
@@ -706,6 +751,9 @@ namespace CNTK
             case DataType::Double:
                 SetValue(value);
                 break;
+            case DataType::Float16:
+                SetValue(float16::create(value));
+                break;
             default:
                 LogicError("Unsupported DataType %s.", DataTypeName(m_dataType));
                 break;
@@ -784,6 +832,11 @@ namespace CNTK
         ///
         bool IsReadOnly() const { return m_isReadOnly; }
 
+        ///
+        /// Returns a boolean indicating if 'this' view is slice.
+        ///
+        CNTK_API bool IsSliceView();
+
         // TODO: The set methods should be offered in template from
         ///
         /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Float.
@@ -794,6 +847,11 @@ namespace CNTK
         /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Double.
         ///
         CNTK_API void SetValue(double value);
+
+        ///
+        /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Double.
+        ///
+        CNTK_API void SetValue(float16 value);
 
         ///
         /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.
@@ -870,6 +928,25 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;
 
+        // template functions connecting V1ElemType and ElementType
+        template <typename ElementType, typename V1ElemType>
+        const ElementType* _DataBuffer() const;
+
+        template <typename ElementType, typename V1ElemType>
+        std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> _SparseCSCDataBuffers() const;
+
+        template <typename ElementType, typename V1ElemType>
+        std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> _SparseBlockColumnDataBuffers() const;
+
+        template <typename ElementType, typename V1ElemType>
+        static NDArrayViewPtr _RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device);
+
+        template <typename ElementType, typename V1ElemType>
+        static NDArrayViewPtr _RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed, const DeviceDescriptor& device);
+
+        template<typename ElementType, typename V1ElemType>
+        ElementType _AsScalar() const;
+
     private:
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
@@ -884,6 +961,10 @@ namespace CNTK
 
         template <typename ElementType>
         std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
+
+        std::shared_ptr<const Microsoft::MSR::CNTK::MatrixBase> GetMatrixBase(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
+
+        std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase> GetWritableMatrixBase(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
 
         template <typename ElementType>
         const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView() const;
@@ -1920,6 +2001,11 @@ namespace CNTK
         ///
         CNTK_API size_t CurrentValueTimeStamp() const;
 
+        ///
+        /// Returns a const pointer to the Value of the variable.
+        ///
+        CNTK_API const NDArrayViewPtr GetValue() const;
+
     protected:
 #ifdef SWIGPYTHON
     public:
@@ -2830,6 +2916,10 @@ namespace CNTK
             {
                 CopyVariableValueToVector<double>(outputVariable, sequences);
             }
+            else if (dataType == DataType::Float16)
+            {
+                CopyVariableValueToVector<float16>(outputVariable, sequences);
+            }
         }
 
         ///
@@ -3385,6 +3475,16 @@ namespace CNTK
         }
 
         ///
+        ///  Recursively traverses the Function graph underlying 'this' Function invoking the provided functor for all visited nodes in the graph.
+        ///  A wrapper for PreorderTraverseFunctions.
+        ///
+        template <typename FunctionType>
+        void PreorderTraverse(const FunctionType& functor, bool traverseInsideBlockFunction = false)
+        {
+            PreorderTraverseFunctions(RootFunction(), functor, traverseInsideBlockFunction);
+        }
+
+        ///
         /// Find a function with the given name in the Function graph underlying 'this' Function.
         /// If more than one function with the same name, an exception is thrown.
         /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given name.
@@ -3552,16 +3652,21 @@ namespace CNTK
             visitedFunctions.insert(rootFunction);
             functor(rootFunction);
 
-            if (traverseInsideBlockFunction && rootFunction->IsBlock())
-                PreorderTraverseFunctions(rootFunction->BlockRoot(), visitedFunctions, functor, traverseInsideBlockFunction);
-
-            std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
-            for (const auto& rootInput : rootFunctionInputs)
+            if (rootFunction->IsComposite())
+                PreorderTraverseFunctions(rootFunction->RootFunction(), visitedFunctions, functor, traverseInsideBlockFunction);
+            else
             {
-                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                if (traverseInsideBlockFunction && rootFunction->IsBlock())
+                    PreorderTraverseFunctions(rootFunction->BlockRoot(), visitedFunctions, functor, traverseInsideBlockFunction);
+
+                std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
+                for (const auto& rootInput : rootFunctionInputs)
                 {
-                    const auto& function = rootInput.Owner();
-                    PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
+                    if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                    {
+                        const auto& function = rootInput.Owner();
+                        PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
+                    }
                 }
             }
         }
@@ -3675,6 +3780,26 @@ namespace CNTK
 
         static const size_t s_serializationVersion = 1;
     };
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise AND logical operation on the input operands.
+    ///
+    CNTK_API FunctionPtr ElementAnd(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise NOT logical operation on the input operand.
+    ///
+    CNTK_API FunctionPtr ElementNot(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise OR logical operation on the input operands.
+    ///
+    CNTK_API FunctionPtr ElementOr(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise XOR logical operation on the input operands.
+    ///
+    CNTK_API FunctionPtr ElementXor(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise negate operation with the specified input operand.
@@ -3801,9 +3926,37 @@ namespace CNTK
     CNTK_API FunctionPtr Softmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in log softmax operation on a specified tensor input operand
+    ///
+    CNTK_API FunctionPtr LogSoftmax(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in log softmax operation on specified axis
+    /// on a specified tensor input operand
+    ///
+    CNTK_API FunctionPtr LogSoftmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in hardmax operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Hardmax(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of hard sigmoid operation: f(x) = max(0,min(alpha*x+beta,1))
+    ///
+    CNTK_API FunctionPtr HardSigmoid(const Variable& operand, float alpha, float beta, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in top k operation over the first static axis on a
+    /// specified tensor input operand
+    ///
+    CNTK_API FunctionPtr TopK(const Variable& operand, size_t k, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in top k operation over the specified axis on a
+    /// specified tensor input operand
+    ///
+    CNTK_API FunctionPtr TopK(const Variable& operand, size_t k, const Axis& axis, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in transpose dimensions operation on specified tensor input operand
@@ -3906,6 +4059,18 @@ namespace CNTK
     CNTK_API FunctionPtr BernoulliRandomLike(const Variable& operand, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of a flatten operation that reshape the specified tensor into 2D tensor.
+    /// If input tensor has shape (d_0, d_1, ... d_n) then the output will have shape (d_0 X d_1 ... d_(axis-1), d_axis X d_(axis+1) ... X dn).
+    ///
+    CNTK_API FunctionPtr Flatten(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a flatten operation that reshape the specified tensor into 2D tensor.
+    /// The output tensor will have shape (d_0 X d_1 ...X d_n-1, d_n)
+    ///
+    CNTK_API FunctionPtr Flatten(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the reshape operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name = L"");
@@ -3917,6 +4082,32 @@ namespace CNTK
     {
         return Reshape(operand, newShape, Axis(0), Axis::EndStaticAxis(), name);
     }
+
+    ///
+    /// Create an instance of the squeeze operation on specified tensor input operand
+    ///
+    CNTK_API FunctionPtr Squeeze(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the squeeze operation on specified tensor input operand, for the specified axis 
+    ///
+    CNTK_API FunctionPtr Squeeze(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the expand dims operation on specified tensor input operand, for the specified axis 
+    ///
+    CNTK_API FunctionPtr ExpandDims(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    
+    ///
+    /// Create an instance of a zeros-like operation. This produces zeros with the shape and dynamic axes specified by the operand.
+    ///
+    CNTK_API FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a ones-like operation. This produces ones with the shape and dynamic axes specified by the operand.
+    ///
+    CNTK_API FunctionPtr OnesLike(const Variable& operand, const std::wstring& name = L"");
+
 
     ///
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
@@ -4097,7 +4288,15 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the edit distance error for specified operands.
     ///
-    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
+    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, 
+        const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation for sequence with lattice training (typically for speech).
+    ///
+    CNTK_API FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symbolListPath, 
+        const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transitionProbabilityPath, float smoothingWeight, float frameDropThreshold, bool doReferenceAlign, bool gammarUsesMBR, 
+        float gammarAMF, float gammarLMF, float gammarBMMIFactor, float gammarWordPenalty, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the forwardbackward for specified operands.
@@ -4139,13 +4338,22 @@ namespace CNTK
         return ClassificationError(prediction, labels, Axis(0), name);
     }
 
-
     ///
     /// Create an instance of the CNTK built-in noise contrastive estimation loss for specified operands. 
     ///
     CNTK_API FunctionPtr NCELoss(const Variable& weights, const Variable& biases, const Variable& inputs, const Variable& labels, 
         const Constant& noiseWeights, size_t numSamples, bool allowDuplicates=true, unsigned long seed = SentinelValueForAutoSelectRandomSeed,
         const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Depth-to-Space operation for an operand and specified blockSize.
+    ///
+    CNTK_API FunctionPtr DepthToSpace(const Variable& operand, size_t blockSize, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Space-To-Depth operation for an operand and specified blockSize.
+    ///
+    CNTK_API FunctionPtr SpaceToDepth(const Variable& operand, size_t blockSize, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in LambdaRank loss an effective proxy for optimizing the NDCG metric
@@ -4200,6 +4408,12 @@ namespace CNTK
     /// Create an instance of the CNTK build-in operation to get a tensor that is gathered from reference tensor by indices.
     ///
     CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK build-in operation to get a tensor that is gathered from reference tensor by indices.
+    ///
+    CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const Axis& axis, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///
@@ -4260,6 +4474,22 @@ namespace CNTK
     /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in L1 norm reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceL1(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in L2 norm reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceL2(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in square sum reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceSumSquare(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
+
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
@@ -4360,6 +4590,7 @@ namespace CNTK
                                             double blendTimeConstant = 0,
                                             double epsilon = 0.00001,
                                             bool useCuDNNEngine = true,
+                                            bool disableRegularization = false,
                                             const std::wstring& name = L"");
 
     //
@@ -4399,6 +4630,16 @@ namespace CNTK
     /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
     ///
     CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in element-wise mean operation
+    ///
+    CNTK_API FunctionPtr Mean(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in element-wise sum operation
+    ///
+    CNTK_API FunctionPtr Sum(const std::vector<Variable>& operands, const std::wstring& name = L"");
 
     ///
     /// Creates a new Function instance which is just an alias of the specified operand.
@@ -4464,6 +4705,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise softplus operation
     ///
     CNTK_API FunctionPtr Softplus(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise softsign operation
+    ///
+    CNTK_API FunctionPtr Softsign(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
@@ -5027,6 +5273,15 @@ namespace CNTK
             return 1;
         }
 
+        //
+        // Method to do loss and eval metrics aggregation across workers before summarization. 
+        // Eg BlockMomentumUpdateAndFiltering BMUF needs an aggregation of metrics. 
+        // Arguments are local training loss value and local eval criterion value.
+        //
+        virtual void DoAggregateMetricsIfNeeded(NDArrayViewPtr&, NDArrayViewPtr&)
+        {
+        }
+
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),
@@ -5138,6 +5393,14 @@ namespace CNTK
     protected:
         Evaluator(const FunctionPtr& evaluationFunction, const std::vector<ProgressWriterPtr>& progressWriters = {}, bool initializeCombined = true);
 
+        void SetCommunicator(DistributedCommunicatorPtr communicator)
+        {
+            if (m_communicator != nullptr)
+                LogicError("Communicator has already been initialized.");
+
+            m_communicator = communicator;
+        }
+
         // Helper functions.
         std::vector<Variable> GetCombinedEvalFunctionArgs() const;
         static size_t GetSampleCount(const Variable& var, const ValuePtr& value);
@@ -5164,6 +5427,7 @@ namespace CNTK
         const AccumulatorPtr m_aggregatedTestEvalCriterionValue;
         Variable             m_testSampleCountVar;
         FunctionPtr          m_combinedEvalFunction;
+        DistributedCommunicatorPtr m_communicator;
     };
 
     ///
@@ -5571,8 +5835,8 @@ namespace CNTK
 
     struct HTKFeatureConfiguration
     {
-        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast, bool definesMbSize = false)
-            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast), m_definesMbSize(definesMbSize)
+        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast, bool definesMbSize = false, size_t maxSequenceLength = SIZE_MAX)
+            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast), m_definesMbSize(definesMbSize), m_maxSequenceLength(maxSequenceLength)
         {}
 
         std::wstring m_streamName;
@@ -5582,6 +5846,7 @@ namespace CNTK
         size_t m_right;
         bool m_broadcast;
         bool m_definesMbSize;
+        size_t m_maxSequenceLength;
     };
 
     typedef Dictionary ImageTransform;
@@ -5643,6 +5908,11 @@ namespace CNTK
     /// Create an HTKMLFDeserializer with the specified options
     ///
     CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false);
+
+    ///
+    /// Create a LatticeDeserializer with the specified options
+    ///
+    CNTK_API  Deserializer LatticeDeserializer(const std::wstring& streamName, const std::wstring& latticeIndexFile);
 
     ///
     /// Instantiate the CNTK built-in text format minibatch source
@@ -6198,6 +6468,16 @@ namespace CNTK
     /// ancestorReferent: ancestor of nodeReferent which is treated as equal to ancestorInput for the purpose of computing crop offsets.
     ///
     CNTK_API FunctionPtr Crop(const Variable& nodeInput, const Variable& nodeReferent, const Variable& ancestorInput, const Variable& ancestorReferent, const std::wstring& name = L"");
+
+    ///
+    /// Creates an instance of crop node with automatically computed crop offsets and specified ancestor nodes.
+    /// This is used in cases when input nodes do not have common ancestor in the network.
+    /// nodeInput: input node to be cropped.
+    /// nodeReferent: input node which determines the spatial size of output.
+    /// ancestorInput: ancestor of nodeInput.
+    /// ancestorReferent: ancestor of nodeReferent which is treated as equal to ancestorInput for the purpose of computing crop offsets.
+    ///
+    CNTK_API FunctionPtr Cast(const Variable& nodeInput, DataType outputType, const std::wstring& name = L"");
 
 #endif // !CNTK_HEADERONLY_DEFINITIONS
 }

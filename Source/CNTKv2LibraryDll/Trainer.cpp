@@ -51,6 +51,10 @@ namespace CNTK
             combinedFunctionArgs = m_model->Outputs();
 
         combinedFunctionArgs.push_back(m_lossFunction);
+
+        if (m_lossFunction->Output().GetDataType() == DataType::Float16)
+            fprintf(stderr, "WARNING: using Float16 for loss function may cause overflow, please cast to float");
+
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
             m_aggregatedLossFunction = ReduceSum(lossFunction, Axis::AllAxes(), L"aggregateLoss");
@@ -136,6 +140,9 @@ namespace CNTK
             fprintf(stderr, "[Note:] Trainer ctor: %d of the model parameters are not covered by any of the specified Learners; these parameters will not be learned\n", (int)m_modelParametersNotCoveredByLearners.size());
 
         m_distributed = m_parameterLearners->IsDistributed();
+
+        if (m_distributed)
+            Evaluator::SetCommunicator(dynamic_cast<DistributedLearner*>(m_parameterLearners->ParameterLearners()[0].get())->GetCommunicator());
 
         for (auto& learner : m_parameterLearners->ParameterLearners())
         {
@@ -223,6 +230,9 @@ namespace CNTK
             // Gradients are not existing.
             for (const auto& parameter : m_learnerParameters)
                 gradients[parameter] = nullptr;
+
+            trainingLoss = MakeSharedObject<NDArrayView>(0, (m_aggregatedLossFunction ? m_aggregatedLossFunction->Output().GetDataType() : DataType::Float), NDShape{}, computeDevice);
+            evalCriterion = MakeSharedObject<NDArrayView>(0, (m_aggregatedEvaluationFunction ? m_aggregatedEvaluationFunction->Output().GetDataType() : DataType::Float), NDShape{}, computeDevice);
         }
         else
         {
@@ -287,6 +297,24 @@ namespace CNTK
 
     void Trainer::SummarizeTrainingProgress()
     {
+        // Aggregate across workers training loss and eval criteria. Needed for BMUF like learner which don't aggregate after every minibatch.
+        if (m_parameterLearners->DoAggregateMetricsIfNeededLambda)
+        {
+            NDArrayViewPtr localLossValue = nullptr;
+            if (m_aggregatedTrainingLossValue && m_aggregatedTrainingLossValue->IsInitialized())
+            {
+                localLossValue = m_aggregatedTrainingLossValue->Data();
+            }
+
+            NDArrayViewPtr localEvalCriterion = nullptr;
+            if (m_aggregatedTrainingEvalCriterionValue && m_aggregatedTrainingEvalCriterionValue->IsInitialized())
+            {
+                localEvalCriterion = m_aggregatedTrainingEvalCriterionValue->Data();
+            }
+
+            m_parameterLearners->DoAggregateMetricsIfNeededLambda(localLossValue, localEvalCriterion);
+        }
+
         for (auto& progressWriter : m_progressWriters)
         {
             progressWriter->WriteTrainingSummary(m_aggregatedTrainingLossValue, m_aggregatedTrainingEvalCriterionValue);
@@ -342,8 +370,10 @@ namespace CNTK
 
         if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Float)
             m_rootGradientValue->Data()->SetValue(1.0f);
-        else
+        else if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Double)
             m_rootGradientValue->Data()->SetValue(1.0);
+        else
+            m_rootGradientValue->Data()->SetValue(half(1.0));
 
         for (const auto& parameter : m_learnerParameters)
             parameterGradients[parameter] = nullptr;
@@ -520,7 +550,7 @@ namespace CNTK
             return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
         default:
             //should not be here; whenever a new data unit is defined, there should be a new case in this function.
-            LogicError("Unsupported data unit: %d", unit);
+            LogicError("Unsupported data unit: %d", (int)unit);
         }
     }
 

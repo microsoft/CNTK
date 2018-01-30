@@ -80,8 +80,7 @@ public:
             IdToKey = [this](size_t id)
             {
                 if (m_useHash)
-                    RuntimeError("Retrieving original sequence key is not supported."
-                        " Please disable hashing in configuration.");
+                    return "<Unknown, hash " + std::to_string(id) + std::string(">");
 
                 // This will throw if the id is not present.
                 return m_keyToIdMap[id];

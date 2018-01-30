@@ -349,3 +349,15 @@ def nce_loss(weights, biases, inputs, labels, noise_distribution, num_samples=32
     noise_distribution = sanitize_input(noise_distribution, dtype)
     return nce_loss(weights, biases, inputs, labels, noise_distribution,
                     num_samples, allow_duplicates, seed, name)
+
+@typemap
+def lattice_sequence_with_softmax(label, prediction, loglikelihood, lattice, symListPath, phonePath, stateListPath, transProbPath, 
+                                  hSmoothingWeight = 0.95, frameDropThresh = 1e-10, doReferenceAlign = False, seqGammarUsesMBR = False, 
+                                  seqGammarAMF = 14.0, seqGammarLMF = 14.0, seqGammarBMMIFactor = 0.0, seqGammarWordPen = 0.0, name=''):
+    from cntk.cntk_py import lattice_sequence_with_softmax
+    dtype = get_data_type(label, prediction, loglikelihood, lattice)
+    label = sanitize_input(label, dtype)
+    prediction = sanitize_input(prediction, dtype)
+    loglikelihood = sanitize_input(loglikelihood, dtype)
+    lattice = sanitize_input(lattice, dtype)
+    return lattice_sequence_with_softmax(label, prediction, loglikelihood, lattice, symListPath, phonePath, stateListPath, transProbPath, hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen, name)

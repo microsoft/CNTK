@@ -129,7 +129,7 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     np.random.seed(0)
 
     learning_rate = 0.5
-    lr_schedule = C.learning_rate_schedule(learning_rate)
+    lr_schedule = C.learning_parameter_schedule(learning_rate)
 
     hidden_layers_dim = 50
 

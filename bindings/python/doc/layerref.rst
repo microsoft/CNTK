@@ -926,6 +926,8 @@ Parameters
    when computing the inverse
 -  ``use_cntk_engine``: if ``True``, use CNTK's native implementation.
    If false, use cuDNN's implementation (GPU only).
+-  ``disable_regularization``: if ``True`` then disable regularization
+   in BatchNormalization.
 
 ``LayerNormalization``:
 
