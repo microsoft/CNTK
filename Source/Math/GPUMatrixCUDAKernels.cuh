@@ -682,7 +682,14 @@ __global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, CUDA_LO
 	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 	if (id >= N)
 		return;
-	b[id] = a[id] <= 0 ? -1 : 1;
+    if (a[id] <= - 0.33) {
+        b[id] = -1;
+    else if (a[id] >= 0.33) {
+        b[id] = 1;
+    }
+    else {
+        b[id] = 0;
+    }
 }
 
 template <class ElemType>
