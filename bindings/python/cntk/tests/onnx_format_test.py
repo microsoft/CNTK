@@ -16,7 +16,7 @@ def test_load_save_constant(tmpdir):
     expected = [[[[5,15]]]]
     assert np.allclose(result, expected)
 
-    filename = os.path.join(str(tmpdir), R'c_plus_c.onnx')
+    filename = os.path.join(str(tmpdir), R'constant.onnx')
     root_node.save(filename, format=C.ModelFormat.ONNX)
 
     loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
@@ -186,7 +186,10 @@ def test_batch_norm_model(tmpdir):
         return model(input)
 
     feature_scale = 1.0 / 256.0
-    input_var_norm = C.element_times(feature_scale, input_var)
+
+    #TODO: ONNX only do right hand-side broadcast. This test fails 
+    # if input_var, feature_scale is swapped. 
+    input_var_norm = C.element_times(input_var, feature_scale)
     
     # apply model to input
     z = create_basic_model_with_batch_normalization(input_var_norm, out_dims=10)
