@@ -66,7 +66,7 @@
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)bindings\java\Swig\post-build.cmd $(ProjectDir) $(SolutionDir)\Tests\EndToEndTests\EvalClientTests\ $(OutDir) $(CntkComponentVersion) $(GpuBuild)</Command>
+      <Command>$(SolutionDir)bindings\java\Swig\post-build.cmd $(ProjectDir) $(SolutionDir)\Tests\EndToEndTests\EvalClientTests\ $(OutDir) $(CntkComponentVersion) $(GpuBuild) $(DebugBuild)</Command>
       <Message>Creating Jar</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
