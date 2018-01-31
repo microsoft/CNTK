@@ -101,8 +101,10 @@ namespace CNTK
                      const Dictionary& attributes, bool isVolatile,                                // with these additional parameters
                      const vector<NDArrayViewPtr>& args,                                           // on these inputs
                      const NDShape& outputShape, NDArrayViewPtr&& out,                             // into this output (if null then create a new one)
+                     NDArrayView::IAllocator& allocator,                                           // allocator for temp objects
                      const PrimitiveFunction& funcForErrMsg)
     {
+        allocator;
         // Slice() can either create new data or not, so do it first
         let sliceView = primitiveOp == PrimitiveOpType::Slice ? GetSliceView(args[0], attributes, outputShape, /*readOnly=*/true, funcForErrMsg) : nullptr;
 
@@ -597,8 +599,10 @@ namespace CNTK
                               size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes,           // ...goes through this backprop function...
                               const NDArrayView* outputValue, const vector<const NDArrayView*>& inputValues, // ...using these values from forward pass...
                               const NDArrayViewPtr& gradient, double beta,                                   // ...into here. (Despite 'const', *gradient is the output.)
+                              NDArrayView::IAllocator& allocator,                                            // allocator for temp objects
                               const PrimitiveFunction& funcForErrMsg)
     {
+        allocator;
         // The majority of operators are handled by shared code after the switch statement, based on the following op-code variables.
         // Special cases do operations inside the cases themselves, and leave the opcodes untouched.
         bool handled = false; // set this for gradients that do not use the shared code at the end

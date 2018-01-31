@@ -970,8 +970,8 @@ namespace CNTK
 
     private:
         void Forward() const;
-        static NDArrayViewPtr Forward(PrimitiveOpType, const Dictionary&, bool isVolatile, const std::vector<NDArrayViewPtr>&, const NDShape&, NDArrayViewPtr&&, const PrimitiveFunction& funcForErrMsg);
-        static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& inputGradient, double beta, const PrimitiveFunction& funcForErrMsg);
+        static NDArrayViewPtr Forward(PrimitiveOpType, const Dictionary&, bool isVolatile, const std::vector<NDArrayViewPtr>&, const NDShape&, NDArrayViewPtr&&, NDArrayView::IAllocator& allocator, const PrimitiveFunction& funcForErrMsg);
+        static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& inputGradient, double beta, NDArrayView::IAllocator& allocator, const PrimitiveFunction& funcForErrMsg);
 
     private:
         // --- data members ---

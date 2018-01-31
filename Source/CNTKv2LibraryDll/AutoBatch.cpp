@@ -878,7 +878,7 @@ public:
 // BUGBUGBUGBUG: This class is a prototype hack, full of subtle bugs. Redo it.
 // ---------------------------------------------------------------------------
 
-class NDArrayViewArena
+class NDArrayViewArena : public NDArrayView::IAllocator
 {
     // MemoryBlock -- represents one consecutive range of allocated memory
     struct MemoryBlock
@@ -888,10 +888,10 @@ class NDArrayViewArena
         size_t   m_size;        // number of bytes
         MemoryBlock(const MatrixBasePtr& sob, uint8_t* data, size_t size) : m_sob(sob), m_data(data), m_size(size) {} // note: size in bytes
         // for set support --borrowed from Marian toolkit
-        size_t   size() const { return m_size; } // note: bytes, not elements
-        uint8_t* data() const { return m_data; }
+        size_t   size() const  { return m_size; } // note: bytes, not elements
+        uint8_t* data() const  { return m_data; }
         uint8_t* begin() const { return m_data; }
-        uint8_t* end() const { return m_data + m_size; }
+        uint8_t* end() const   { return m_data + m_size; }
         bool operator<(const MemoryBlock& other) const // this defines the ordering of the elements as lower_bound() sees them
         {
             return (m_size < other.size()) || (m_size == other.size() && m_data < other.data());
@@ -1030,7 +1030,7 @@ public:
     // Sparse objects cannot be arena-allocated. Which is fine, since they are inputs or
     // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
     // For sparse objects, it is assumed that the first axis is sparse.
-    NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
+    NDArrayViewPtr New(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
         lock_guard<recursive_mutex> guard(s_mutex);
         let isSparse = IsSparseStorageFormat(storageFormat);
@@ -1722,7 +1722,7 @@ private:
             // special treatment for BatchNorm which needs additional temp buffers, which we keep track of as additional inputs
             // TODO: disentangle xHat (remove scale/bias and keep xHat as the main output) from the temp buffers
             if (f.m_op == PrimitiveOpType::BatchNormalization && i >= 6)
-                GetInputFields(inputs[i]).m_value = m_arena.NewNDArrayView(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
+                GetInputFields(inputs[i]).m_value = m_arena.New(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
             // fetch the m_value from the input
             inputValues[i] = MTCacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
         }
@@ -1739,7 +1739,7 @@ private:
             /*if*/ (isFree) ?
                 NDArrayViewPtr()
             /*else*/:
-                m_arena.NewNDArrayView(outputShape, output.GetDataType(),
+                m_arena.New(outputShape, output.GetDataType(),
                                        output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense,
                                        outputDevice);
         cudaStatsGuardPrepareO.Stop();
@@ -1760,7 +1760,7 @@ private:
         // execute it
         //if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
         //    Break;
-        auto res = PrimitiveFunction::Forward(f.m_op, f.Attributes(), output.IsVolatile(), inputValues, outputShape, move(outValue), f);
+        auto res = PrimitiveFunction::Forward(f.m_op, f.Attributes(), output.IsVolatile(), inputValues, outputShape, move(outValue), m_arena, /*funcForErrMsg=*/f);
 #if 0
         if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
         {
@@ -1778,7 +1778,7 @@ private:
             let hasSparse = any_of(inputs.begin(), inputs.end(), [](const Variable& v) { return v.IsSparse(); });
             CudaStatsGuard cudaStatsGuard(f.m_op, nullptr, hasSparse ? 1 : 0, outputShape.TotalSize(/*check=*/false));
             res = move(NDArrayView::NumericOperation({ move(res) }, 1.0, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy,
-                                                     m_arena.NewNDArrayView(outputShape, output.GetDataType(),
+                                                     m_arena.New(outputShape, output.GetDataType(),
                                                                             output.IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense,
                                                                             inputValues.front()->Device())));
         }
@@ -4632,7 +4632,7 @@ public:
         {
             // create a new one
             // TODO: allocate parameter gradients as separate objects
-            gradFields.m_gradient = m_memoizer.Arena().NewNDArrayView(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
+            gradFields.m_gradient = m_memoizer.Arena().New(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
             // BUGBUG: gradFields.m_value may not exist, once we optimize memory. Device should be passed in (borrowing from the incoming gradient from top)
             beta = 0.0; // has not been initialized (random section in arena)
             // if there is no redirect, then writing to the physical one is the same as writing to the cached one. Then we are done.
@@ -4845,7 +4845,7 @@ public:
             gatherBatchResultDims.push_back(inputValues.size()); // batching
         else
             gatherBatchResultDims[axis] = batchDim; // stacking
-        auto out = m_memoizer.Arena().NewNDArrayView(gatherBatchResultDims, inputValue0.GetDataType(), inputValue0.GetStorageFormat(), inputValue0.Device());
+        auto out = m_memoizer.Arena().New(gatherBatchResultDims, inputValue0.GetDataType(), inputValue0.GetStorageFormat(), inputValue0.Device());
         m_stats.numBackpropGathers++;
 
         CudaStats* cudaStatsPtr = nullptr;
@@ -4979,7 +4979,7 @@ public:
             cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, /*category=*/isSparse ? 1 : 0, input.Shape().TotalSize(/*check=*/false), inputDevice);
         }
 
-        PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, op, f.m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, f);
+        PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, op, f.m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, m_memoizer.Arena(), /*funcForErrMsg=*/f);
         m_stats.numBatchedBackpropToCalls++;
 
         EndCudaStats(cudaStatsPtr, inputDevice);
@@ -5176,7 +5176,8 @@ public:
         PrimitiveFunction::BackpropTo(/*outputGradient=*/outGradBatch.get(),      // incoming gradient from top...
                                       /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
                                       /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
-                                      gradient.view, gradient.beta, f0);          // ...into here
+                                      gradient.view, gradient.beta,               // ...into here
+                                      m_memoizer.Arena(), /*funcForErrMsg=*/f0);
         m_stats.numBatchedBackpropToCalls++;
 
         EndCudaStats(cudaStatsPtr, gradient.view->Device());
@@ -5484,7 +5485,7 @@ public:
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
         //if (root.Value()->Shape() != NDShape{})
         //    LogicError("BatchedBackward: root must be a scalar, or root gradient must have been implanted already");
-        rootGradFields.m_gradient = m_memoizer.Arena().NewNDArrayView(root.Shape(), root.GetDataType(), StorageFormat::Dense, root.Value()->Device());
+        rootGradFields.m_gradient = m_memoizer.Arena().New(root.Shape(), root.GetDataType(), StorageFormat::Dense, root.Value()->Device());
         rootGradFields.m_gradient->SetValue(1.0f);
         m_visitorTag.Visited(rootGradFields.m_visitedTag); // done with this
         // perform backprop
@@ -5564,7 +5565,15 @@ void PrimitiveFunction::Forward() const
     for (size_t i = 0; i < args.size(); i++)
         args[i] = m_inputs[i].Value();
     NDArrayViewPtr out;
-    output.m_dataFields->m_value = move(Forward(m_op, m_attributes, output.IsVolatile(), args, output.Shape(), move(out), *this));
+    struct : public NDArrayView::IAllocator
+    {
+        NDArrayViewPtr New(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device) override
+        {
+            LogicError("Variable '%S' Value(): plain Forward has no allocator implementation yet. Finish this.");
+            // TODO: finish this. It's just a simple call to MakeSharedPtr<NDArrayView>(...), but don't have a test currently.
+        }
+    } simpleAllocator;
+    output.m_dataFields->m_value = move(Forward(m_op, m_attributes, output.IsVolatile(), args, output.Shape(), move(out), simpleAllocator, /*funcForErrMsg=*/*this));
 }
 
 // ===========================================================================

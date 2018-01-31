@@ -1129,6 +1129,15 @@ namespace CNTK
         ///
         CNTK_API static double Sync(const DeviceDescriptor& device);
 
+        ///
+        /// An interface to provide an efficient allocator for NDArrayViews.
+        /// Currently not used by NDArrayView itself, but by auto-batching. In the future, we can pass this to functions in here as well.
+        ///
+        /*interface*/ struct IAllocator
+        {
+            virtual NDArrayViewPtr New(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device) = 0;
+        };
+
     private:
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;

@@ -25,6 +25,7 @@ using namespace marian;
 #include <sstream>
 #ifdef _MSC_VER
 #include <Windows.h> // for process killing
+static inline int getpid() { return ::GetCurrentProcessId(); }
 #endif
 
 #define let const auto
