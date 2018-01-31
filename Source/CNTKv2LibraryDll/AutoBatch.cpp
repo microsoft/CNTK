@@ -1023,12 +1023,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
         }       
     }
-    // allocate an NDArrayView of a given shape, data type, and device
-    // The returned memory region is a slice into a much larger NDArrayView; therefore,
-    // this operation short-circuits CUDA and is very fast.
-    // Sparse objects cannot be arena-allocated. Which is fine, since they are inputs or
-    // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
-    // For sparse objects, it is assumed that the first axis is sparse.
 
     // Sparse:
     //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
@@ -1045,85 +1039,86 @@ class NDArrayViewArena : public NDArrayView::IAllocator
 
         let numElements = shape.TotalSize(/*check=*/false);
 
-            //if (shape.Rank() < 1)
-            ////if (shape.Rank() != 1 && shape.Rank() != 2)
-            //    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
-            // TODO: This is where we decide which dimensions are sparse. Currently only the first axis, hard-coded.
-            let numRows = shape[0];
-            let numCols = shape.Rank() > 1 ? shape.TotalSize() / numRows : 1;
-            let matrixStorageFormat = AsCNTKImplMatrixFormat(storageFormat);
-            // reuse an existing object if possible; otherwise create a new one
-            MatrixBase* matrixPtr = nullptr;
-            for (auto iter = s_recycledArenas.begin(); iter != s_recycledArenas.end(); ++iter)
+        //if (shape.Rank() < 1)
+        ////if (shape.Rank() != 1 && shape.Rank() != 2)
+        //    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
+        // TODO: This is where we decide which dimensions are sparse. Currently only the first axis, hard-coded.
+        let numRows = shape[0];
+        let numCols = shape.Rank() > 1 ? shape.TotalSize() / numRows : 1;
+        let matrixStorageFormat = AsCNTKImplMatrixFormat(storageFormat);
+        // reuse an existing object if possible; otherwise create a new one
+        MatrixBase* matrixPtr = nullptr;
+        for (auto iter = s_recycledArenas.begin(); iter != s_recycledArenas.end(); ++iter)
+        {
+            let& thisMatrixPtr = *iter;
+            if (thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device) &&
+                IsMatrixOfDataType(*thisMatrixPtr, dataType) &&
+                thisMatrixPtr->GetFormat() == matrixStorageFormat)
             {
-                let& thisMatrixPtr = *iter;
-                if (thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device) &&
-                    IsMatrixOfDataType(*thisMatrixPtr, dataType) &&
-                    thisMatrixPtr->GetFormat() == matrixStorageFormat)
+                matrixPtr = iter->release();  // take back ownership from the unique_ptr
+                s_recycledArenas.erase(iter); // remove from recycling buffer
+                //fprintf(stderr, "@@ reactivating %s arena matrix of %d elements\n", isSparse ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                matrixPtr->Resize1(numRows, numCols, /*reserveNzElems=*/numCols, /*growOnly=*/true);
+                break;
+            }
+        }
+        if (!matrixPtr) // no reusable found: create a new one
+        {
+            CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
+            try
+            {
+                //fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledArenas.size()), fflush(stderr);
+                switch (dataType)
                 {
-                    matrixPtr = iter->release();  // take back ownership from the unique_ptr
-                    s_recycledArenas.erase(iter); // remove from recycling buffer
-                    //fprintf(stderr, "@@ reactivating %s arena matrix of %d elements\n", isSparse ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
-                    matrixPtr->Resize1(numRows, numCols, /*reserveNzElems=*/numCols, /*growOnly=*/true);
-                    break;
+                case DataType::Float:  matrixPtr = new Matrix<float >(numRows, numCols, AsCNTKImplDeviceId(device), MatrixType::SPARSE, matrixStorageFormat, /*nnz=*/numCols); break;
+                case DataType::Double: matrixPtr = new Matrix<double>(numRows, numCols, AsCNTKImplDeviceId(device), MatrixType::SPARSE, matrixStorageFormat, /*nnz=*/numCols); break;
+                default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
                 }
             }
-            if (!matrixPtr) // no reusable found: create a new one
+            catch (const bad_alloc& e)
             {
-                CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
-                try
-                {
-                    //fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledArenas.size()), fflush(stderr);
-                    switch (dataType)
-                    {
-                    case DataType::Float:  matrixPtr = new Matrix<float >(numRows, numCols, AsCNTKImplDeviceId(device), MatrixType::SPARSE, matrixStorageFormat, /*nnz=*/numCols); break;
-                    case DataType::Double: matrixPtr = new Matrix<double>(numRows, numCols, AsCNTKImplDeviceId(device), MatrixType::SPARSE, matrixStorageFormat, /*nnz=*/numCols); break;
-                    default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
-                    }
-                }
-                catch (const bad_alloc& e)
-                {
-                    fprintf(stderr, "NewNDArrayView: Out of memory allocating sparse matrix: %s.\n", e.what());
-                    throw;
-                }
+                fprintf(stderr, "NewNDArrayView: Out of memory allocating sparse matrix: %s.\n", e.what());
+                throw;
             }
-            // create a shared ptr out of it with a destructor
-            auto storage = shared_ptr<MatrixBase>(matrixPtr,
-                [&s_recycledArenas](MatrixBase* matrixPtr)
+        }
+        // create a shared ptr out of it with a destructor
+        auto storage = shared_ptr<MatrixBase>(matrixPtr,
+            [&s_recycledArenas](MatrixBase* matrixPtr)
+            {
+                lock_guard<recursive_mutex> guard(s_mutex);
+                //fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
+                if (matrixPtr->GetNumViews() == 1)
                 {
-                    lock_guard<recursive_mutex> guard(s_mutex);
-                    //fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
-                    // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
-                    if (matrixPtr->GetNumViews() == 1)
+                    if (matrixPtr->GetMatrixType() == MatrixType::SPARSE)
+                        matrixPtr->Reset(); // this resets the sparse matrix, but does not release its (small) memory
+                    s_recycledArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
+                }
+                else
+                {
+                    // if it still has a view, then we won't recycle it, just destruct the view, so that the storage object will be freed when the last view is done
+                    // I think I have never observed this.
+                    static bool errorShown = false;
+                    if (!errorShown)
                     {
-                        if (matrixPtr->GetMatrixType() == MatrixType::SPARSE)
-                            matrixPtr->Reset(); // this resets the sparse matrix, but does not release its (small) memory
-                        s_recycledArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
+                        fprintf(stderr, "WARNING: NewNDArrayView cannot recycle arena because it is still used by Matrix object not under the control of the arena allocator. This message will only be shown once.\n"), fflush(stderr);
+                        errorShown = true;
                     }
-                    else
-                    {
-                        // if it still has a view, then we won't recycle it, just destruct the view, so that the storage object will be freed when the last view is done
-                        // I think I have never observed this.
-                        static bool errorShown = false;
-                        if (!errorShown)
-                        {
-                            fprintf(stderr, "WARNING: NewNDArrayView cannot recycle arena because it is still used by Matrix object not under the control of the arena allocator. This message will only be shown once.\n"), fflush(stderr);
-                            errorShown = true;
-                        }
-                        delete matrixPtr;
-                    }
-                });
-            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, storage); // TODO: what's the role of numElements for sparse?
-            return region;
+                    delete matrixPtr;
+                }
+            });
+        auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, storage); // TODO: what's the role of numElements for sparse?
+        return region;
     }
 
+    // dense version
     NDArrayViewPtr NewDense(const NDShape& shape, const DataType& dataType, const DeviceDescriptor& device)
     {
+        lock_guard<recursive_mutex> guard(s_mutex);
+
         auto& s_recycledArenas = s_recycledArenass[0];
 
         let numElements = shape.TotalSize(/*check=*/false);
-
-        // --- dense
 
         // for now, we only support one data type/device. If it changes,. we tear down the entire thing.
         if (dataType != s_currentArenaDataType || device != s_currentArenaDevice)
@@ -1183,6 +1178,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             return region;
         }
 
+        // TODO: just create a new gap, then try again
         //  If arena not large enough then waste its remainder and just allocate a fresh one.
         //  This abandons the current m_arena. This will not cause a memory leak, however:
         //  Since the slices into it that were returned before all hold a ref-count to that arena,
@@ -1271,6 +1267,12 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     }
 
 public:
+    // allocate an NDArrayView of a given shape, data type, and device
+    // The returned memory region is a slice into a much larger NDArrayView; therefore,
+    // this operation short-circuits CUDA and is very fast.
+    // Sparse objects cannot be arena-allocated. Which is fine, since they are inputs or
+    // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
+    // For sparse objects, it is assumed that the first axis is sparse.
     NDArrayViewPtr New(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
         if (IsSparseStorageFormat(storageFormat))
