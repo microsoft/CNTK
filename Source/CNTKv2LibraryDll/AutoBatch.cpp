@@ -1023,17 +1023,21 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
         }       
     }
-public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
     // this operation short-circuits CUDA and is very fast.
     // Sparse objects cannot be arena-allocated. Which is fine, since they are inputs or
     // gradients (of embeddings) that can be kept around across minibatches, and thus not part of batched computation.
     // For sparse objects, it is assumed that the first axis is sparse.
-    NDArrayViewPtr New(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
+
+    // Sparse:
+    //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
+    //  Sparse outputs are used rarely, and sparse CSC matrices are small, so for sparse, we just cache individual objects.
+    //  Unlike dense, we do not clear out the sparse storage-object cache when device or type are changed.
+    // Instead, we check these when for a reusable object.
+    NDArrayViewPtr NewSparse(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
         lock_guard<recursive_mutex> guard(s_mutex);
-        let isSparse = IsSparseStorageFormat(storageFormat);
 
         let formatAsIndex = (size_t)storageFormat;
         fail_if(formatAsIndex >= s_recycledArenass.size(), "unexpected storageFormat int value??");
@@ -1041,14 +1045,6 @@ public:
 
         let numElements = shape.TotalSize(/*check=*/false);
 
-        // --- sparse uses a different strategy
-        // Sparse:
-        //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
-        //  Sparse outputs are used rarely, and sparse CSC matrices are small, so for sparse, we just cache individual objects.
-        //  Unlike dense, we do not clear out the sparse storage-object cache when device or type are changed.
-        // Instead, we check these when for a reusable object.
-        if (isSparse)
-        {
             //if (shape.Rank() < 1)
             ////if (shape.Rank() != 1 && shape.Rank() != 2)
             //    InvalidArgument("NewNDArrayView(): Currently, only sparse vectors and matrices are supported (no tensors of higher ranks)."), fflush(stderr);
@@ -1119,7 +1115,13 @@ public:
                 });
             auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, storage); // TODO: what's the role of numElements for sparse?
             return region;
-        }
+    }
+
+    NDArrayViewPtr NewDense(const NDShape& shape, const DataType& dataType, const DeviceDescriptor& device)
+    {
+        auto& s_recycledArenas = s_recycledArenass[0];
+
+        let numElements = shape.TotalSize(/*check=*/false);
 
         // --- dense
 
@@ -1266,6 +1268,15 @@ public:
         s_currentArenaUsed += numElements;
         s_totalAllocated += MemoryBlock::Create(dataType, numElements).size(); // (unnecessarily slow, but this is for diags only)
         return region;
+    }
+
+public:
+    NDArrayViewPtr New(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
+    {
+        if (IsSparseStorageFormat(storageFormat))
+            return NewSparse(shape, dataType, storageFormat, device);
+        else
+            return NewDense(shape, dataType, device);
     }
 };
 
