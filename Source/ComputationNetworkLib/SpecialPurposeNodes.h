@@ -665,7 +665,7 @@ public:
         param.numPathsEMBR = numPathsEMBR;
         param.enforceValidPathEMBR = enforceValidPathEMBR;
         param.getPathMethodEMBR = getPathMethodEMBR;
-		param.showWERMode = showWERMode;
+        param.showWERMode = showWERMode;
         
         /* guoye: end */
         m_gammaCalculator.SetGammarCalculationParams(param);
