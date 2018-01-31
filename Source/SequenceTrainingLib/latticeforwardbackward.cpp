@@ -1420,22 +1420,21 @@ void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
 void lattice::EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<vector<size_t>> & vt_paths, std::vector<double>& path_posterior_probs) const
 {
 
-    double nbest_posterior_prob;
+    double log_nbest_posterior_prob;
 
-    nbest_posterior_prob = 0;
     path_posterior_probs.resize(tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens.size());
-
+    log_nbest_posterior_prob = LOGZERO;
+    
     for (size_t i = 0; i < tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens.size(); i++)
     {
-        path_posterior_probs[i] = exp(tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens[i].score);
-        nbest_posterior_prob += path_posterior_probs[i];
+        logadd(log_nbest_posterior_prob, tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens[i].score);
     }
     for (size_t i = 0; i < tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens.size(); i++)
     {
-        path_posterior_probs[i] /= nbest_posterior_prob;
+        path_posterior_probs[i] = exp(tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens[i].score - log_nbest_posterior_prob);
     }
 
-    fprintf(stderr, "EMBRnbestpaths:  path_posterior_probs.size() = %d, nbest_posterior_prob = %f\n", int(path_posterior_probs.size()), nbest_posterior_prob);
+    fprintf(stderr, "EMBRnbestpaths:  path_posterior_probs.size() = %d, log_nbest_posterior_prob = %f\n", int(path_posterior_probs.size()), log_nbest_posterior_prob);
 
     std::vector<size_t> path; // stores the edges in the path
     vt_paths.clear();
@@ -1499,7 +1498,7 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
 
 
 
-double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs) const
+double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs, string getPathMethodEMBR) const
 {
 
     struct PATHINFO
@@ -1556,7 +1555,7 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
     {
         // loss - mean_loss
         vt_path_weights[i] -= avg_wer;
-        vt_path_weights[i] /= (vt_paths.size() - 1);
+        if(getPathMethodEMBR == "sampling") vt_path_weights[i] /= (vt_paths.size() - 1);
 
         vt_path_weights[i] *= vt_path_posterior_probs[i];
     }
@@ -2228,7 +2227,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 
         
         
-        double avg_wer = get_edge_weights(wids, vt_paths, edge_weights, path_posterior_probs);
+        double avg_wer = get_edge_weights(wids, vt_paths, edge_weights, path_posterior_probs, getPathMethodEMBR);
 
         auto &errorsignal = result;
         EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
