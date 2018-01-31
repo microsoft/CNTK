@@ -987,8 +987,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     static recursive_mutex s_mutex;
     static DataType         s_currentArenaDataType;  // == s_currentArena's dataType
     static DeviceDescriptor s_currentArenaDevice;    // == s_currentArena's device
-    static size_t           s_currentArenaSize;      // == s_currentArena's number of elements (== s_currentArena->GetNumElements())
-    static size_t           s_currentArenaUsed;      // allocation cursor. Elements below this are already allocated.
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
     static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
     static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledSparseArenass; // TODO: we can simplify this further, just use one
@@ -1162,8 +1160,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             // tear down everything (we use ref-counting, so existing objects will continue to exist)
             // subtle BUGBUG: if we still have pending views of wrong type, they will go back into the recycling area
             fprintf(stderr, "WARNING: New: data-type or device change detected, reinitializing. This may lead to incorrect reporting and even subtle errors.\n"), fflush(stderr);
-            s_currentArenaSize = 0;
-            s_currentArenaUsed = 0;
             s_currentArenaDataType = dataType;
             s_currentArenaDevice = device;
             s_recycledDenseArenas.clear();
@@ -1227,6 +1223,8 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 throw;
             }
         }
+        // wrap the new storage object into a shared_ptr with a deleter
+        // When the storage object becomes unused, we don't actually free it, but rather put it into a recycling list.
         let newArena = shared_ptr<MatrixBase>(matrixPtr,
             [&](MatrixBase* matrixPtr)
             {
@@ -1252,19 +1250,13 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             });
         s_currentArenaDataType = dataType;
         s_currentArenaDevice = device;
-        s_currentArenaUsed = 0;
-        s_currentArenaSize = newArena->GetNumElements();
 
-        fail_if(s_currentArenaUsed != 0, "code change not completed??");
         // convert newly allocated storage into a memoryBlock and allocate from it
-        // If it is not fully consumed, then the rest goes straight into the recycled memory blocks
-        auto memoryBlock = MemoryBlock::Create(newArena, dataType, /*firstIndex=*/0, s_currentArenaSize);
+        // Note: The new arena will have a ref-count to it through the gap and/or the allocated block.
+        auto memoryBlock = MemoryBlock::Create(newArena, dataType, /*firstIndex=*/0, newArena->GetNumElements());
         CheckGaps();
         auto region = NewDenseFromMemoryBlock(memoryBlock, desiredMemoryBlock.size(), shape, dataType);
         CheckGaps();
-        // and remove it immediately as the current arena, so we never actually allocate in it
-        // TODO: next step: remove the -Size and -Used variables as well.
-        s_currentArenaUsed = s_currentArenaSize;
         return region;
     }
 
@@ -1284,14 +1276,12 @@ public:
     }
 };
 
-/*static*/ recursive_mutex NDArrayViewArena::s_mutex;
-/*static*/ DataType         NDArrayViewArena::s_currentArenaDataType = DataType::Unknown;
-/*static*/ DeviceDescriptor NDArrayViewArena::s_currentArenaDevice = DeviceDescriptor::CPUDevice();
-/*static*/ size_t           NDArrayViewArena::s_currentArenaSize;
-/*static*/ size_t           NDArrayViewArena::s_currentArenaUsed;
-/*static*/ array<vector<unique_ptr<MatrixBase>>    , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledSparseArenass;
-/*static*/ vector<unique_ptr<MatrixBase>>NDArrayViewArena::s_recycledDenseArenas;
+/*static*/ recursive_mutex                    NDArrayViewArena::s_mutex;
+/*static*/ DataType                           NDArrayViewArena::s_currentArenaDataType = DataType::Unknown;
+/*static*/ DeviceDescriptor                   NDArrayViewArena::s_currentArenaDevice = DeviceDescriptor::CPUDevice();
 /*static*/ set<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_recycledMemoryBlocks;
+/*static*/ vector<unique_ptr<MatrixBase>>     NDArrayViewArena::s_recycledDenseArenas;
+/*static*/ array<vector<unique_ptr<MatrixBase>>, NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledSparseArenass;
 /*static*/ size_t NDArrayViewArena::s_totalAllocated = 0;
 /*static*/ size_t NDArrayViewArena::s_totalGaps = 0;
 /*static*/ vector<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_mergeBuffer;
