@@ -519,7 +519,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         */
         ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR,
-                                                  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR, m_enforceValidPathEMBR, m_getPathMethodEMBR);
+                                                  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR, m_enforceValidPathEMBR, m_getPathMethodEMBR, m_showWERMode);
         /* guoye: end */
     }
 
@@ -3074,7 +3074,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_enforceValidPathEMBR = configSGD(L"enforceValidPathEMB", false); 
     //could be sampling or nbest
     m_getPathMethodEMBR = configSGD(L"getPathMethodEMBR", "sampling");
-
+    // could be average or onebest
+    m_showWERMode = configSGD(L"showWERMode", "average");
     /* guoye： end */
     
     m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);

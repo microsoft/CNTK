@@ -1498,7 +1498,7 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
 
 
 
-double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs, string getPathMethodEMBR) const
+double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs, string getPathMethodEMBR, double& onebest_wer) const
 {
 
     struct PATHINFO
@@ -1549,7 +1549,7 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         sum_wer += vt_path_weights[i];
     }
     avg_wer = sum_wer / vt_paths.size();
-
+    onebest_wer = vt_path_weights[0];
 
     for (size_t i = 0; i < vt_path_weights.size(); i++)
     {
@@ -2037,7 +2037,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::ssematrixbase &logLLs, const msra::asr::simplesenonehmm &hset,
                                 msra::math::ssematrixbase &result, msra::math::ssematrixbase &errorsignalbuf,
                                 const float lmf, const float wp, const float amf, const float boostingfactor,
-                                const bool sMBRmode, const bool EMBR, const string  EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const string getPathMethodEMBR, array_ref<size_t> uids, vector<size_t> wids, const_array_ref<size_t> bounds,
+                                const bool sMBRmode, const bool EMBR, const string  EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const string getPathMethodEMBR, const string showWERMode, array_ref<size_t> uids, vector<size_t> wids, const_array_ref<size_t> bounds,
                                 const_array_ref<htkmlfwordsequence::word> transcript, const std::vector<float> &transcriptunigrams) const
                                 
 /* guoye: end*/
@@ -2226,16 +2226,16 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         else EMBRnbestpaths(tokenlattice, vt_paths, path_posterior_probs);
 
         
-        
-        double avg_wer = get_edge_weights(wids, vt_paths, edge_weights, path_posterior_probs, getPathMethodEMBR);
+        double onebest_wer;
+        double avg_wer = get_edge_weights(wids, vt_paths, edge_weights, path_posterior_probs, getPathMethodEMBR, onebest_wer);
 
         auto &errorsignal = result;
         EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
 
         
         // fprintf(stderr, "\n forwardbackward: average WER for an utterance is %f, #words = %d \n", avg_wer, int(wids.size()));
-
-        return avg_wer;
+        if(showWERMode == "average") return avg_wer;
+        else return onebest_wer;
     }
     
     else

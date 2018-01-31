@@ -629,7 +629,8 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
                                      const string& EMBRUnit /* = "word" */,
                                      const size_t& numPathsEMBR,
                                      const bool& enforceValidPathEMBR,
-                                    const string& getPathMethodEMBR
+                                    const string& getPathMethodEMBR,
+                                    const string& showWERMode 
                                     /* guoye: end */
                                      )
 {
@@ -643,8 +644,8 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
     
     if(EMBR)
     {
-        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useEMBR=true, EMBRUnit=%s, numPathsEMBR=%d, enforceValidPathEMBR = %d, getPathMethodEMBR = %s \n",
-            amf, lmf, wp, bMMIfactor, EMBRUnit.c_str(), int(numPathsEMBR), int(enforceValidPathEMBR), getPathMethodEMBR.c_str());
+        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useEMBR=true, EMBRUnit=%s, numPathsEMBR=%d, enforceValidPathEMBR = %d, getPathMethodEMBR = %s, showWERMode = %s \n",
+            amf, lmf, wp, bMMIfactor, EMBRUnit.c_str(), int(numPathsEMBR), int(enforceValidPathEMBR), getPathMethodEMBR.c_str(), showWERMode.c_str());
     }
     else if(sMBR)
     {
@@ -672,7 +673,7 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
             node->SetReferenceAlign(doreferencealign);
             /* guoye: start */
             // node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR);
-            node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR);
+            node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode);
             /* guoye: end */
         }
     }
@@ -1560,7 +1561,7 @@ template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, 
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 */
 
-template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR, const bool& enforceValidPathEMBR, const string& getPathMethodEMBR);
+template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR, const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode);
 
 /* guoye: end */
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
@@ -1579,7 +1580,7 @@ template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net,
 */
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR,
-    const bool& enforceValidPathEMBR, const string& getPathMethodEMBR);
+    const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode);
                                                   
 /* guoye: end */
 
