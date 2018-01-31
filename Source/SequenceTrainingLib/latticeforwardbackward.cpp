@@ -733,7 +733,7 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
         }
 
         if (tokenlattice[e.S].vt_nbest_tokens.size() == 0)
-            RuntimeError("nbestlatticeEMBR: node = %d,  vt_nbest_tokens.size() is 0!", int(e.S), int(tokenlattice[e.S].vt_nbest_tokens.size()));
+            RuntimeError("nbestlatticeEMBR: node = %d,  vt_nbest_tokens.size() is 0!", int(e.S));
 
         prevtokeninfo.prev_edge_index = j;
 
