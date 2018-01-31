@@ -1597,7 +1597,10 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Concat")
     {
-        Axis axis = GetNamedAttributeAsAxis(node, "axis");
+        // We allow the 'axis' attribute to be optional, and not required (as
+        // given in Concat's ONNX spec), to be consistent with other frameworks. 
+        // 'axis' can be enforced as a required attribute, if needed.
+        Axis axis = GetNamedAttributeAsAxis(node, "axis", Axis(0));
         axis = ConvertAxisToCNTKCppApi(axis, inputs[0]);
         std::vector<Variable> fixedInputs;
         if (FixConstantShapeForConstantVariableInputPair(inputs, fixedInputs))
