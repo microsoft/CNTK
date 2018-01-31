@@ -12,7 +12,7 @@ import pytest
 @pytest.fixture(scope="module")
 def notebook_path():
     abs_path = os.path.dirname(os.path.abspath(__file__))
-    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_206C_WGAN_LSGAN.ipynb"")
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_206C_WGAN_LSGAN.ipynb")
    
     return notebook
 
