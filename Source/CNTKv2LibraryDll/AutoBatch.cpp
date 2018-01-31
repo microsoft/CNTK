@@ -1157,7 +1157,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
 
         let numElements = shape.TotalSize(/*check=*/false);
 
-        // for now, we only support one data type/device. If it changes,. we tear down the entire thing.
+        // for now, we only support one data type/device. If it changes, we tear down the entire thing.
         if (dataType != s_currentArenaDataType || device != s_currentArenaDevice)
         {
             // tear down everything (we use ref-counting, so existing objects will continue to exist)
@@ -1189,10 +1189,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             return region;
         }
 
-        // create a new gap
-        if (!s_currentArena                                         ||
-            numElements > (s_currentArenaSize - s_currentArenaUsed))
-        {
+        // entering a new arena
             let requiredDenseArenaSize = max(defaultDenseArenaSize, numElements);
             s_currentArena.reset(); // abandon current one. If no references, then this will put itself into recycledArenas right here
             // get hold of an arena; either by recycling an existing one, or creating a new one
@@ -1206,7 +1203,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 {
                     matrixPtr = iter->release();  // take back ownership from the unique_ptr
                     s_recycledDenseArenas.erase(iter); // remove from recycling buffer
-                    //fprintf(stderr, "@@ reactivating %s arena matrix of %d elements\n", isSparse ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                    fprintf(stderr, "New: reactivating arena matrix of %d elements\n", (int)matrixPtr->GetNumElements()), fflush(stderr);
                     break;
                 }
             }
@@ -1217,7 +1214,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
                 try
                 {
-                    //fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledDenseArenas.size()), fflush(stderr);
+                    fprintf(stderr, "New: allocating new arena matrix of %d elements (recycle buffer has %d entries)\n", (int)requiredDenseArenaSize, (int)s_recycledDenseArenas.size()), fflush(stderr);
                     switch (dataType)
                     {
                     case DataType::Float:  matrixPtr = new Matrix<float >(1, numCols, AsCNTKImplDeviceId(device)); break;
@@ -1236,7 +1233,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 [&](MatrixBase* matrixPtr)
                 {
                     lock_guard<recursive_mutex> guard(s_mutex);
-                    //fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                    fprintf(stderr, "New: retiring arena of %d elements\n", (int)matrixPtr->GetNumElements()), fflush(stderr);
                     // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
                     if (matrixPtr->GetNumViews() == 1)
                     {
@@ -1259,8 +1256,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             s_currentArenaDevice = device;
             s_currentArenaUsed = 0;
             s_currentArenaSize = s_currentArena->GetNumElements();
-        }
-#if 1
+
         fail_if(s_currentArenaUsed != 0, "code change not completed??");
         // convert newly allocated storage into a memoryBlock and allocate from it
         // If it is not fully consumed, then the rest goes straight into the recycled memory blocks
@@ -1273,16 +1269,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         s_currentArena.reset();
         s_currentArenaUsed = s_currentArenaSize;
         return region;
-#else
-        // We create a new matrix storage object that wraps a pointer into the arena.
-        // Any view into such object will reference the same underlying storage object.
-        // The storage object has a custom deleter. We use that to track gaps.
-        let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock::Create(s_currentArena, dataType, /*firstIndex=*/s_currentArenaUsed, numElements), dataType);
-        auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
-        s_currentArenaUsed += numElements;
-        s_totalAllocated += MemoryBlock::Create(dataType, numElements).size(); // (unnecessarily slow, but this is for diags only)
-        return region;
-#endif
     }
 
 public:
