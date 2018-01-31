@@ -985,7 +985,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     }
     // allocate a new tensor in a large arena
     static recursive_mutex s_mutex;
-    static MatrixBasePtr    s_currentArena;          // currently active arena (for the given storage format)
     static DataType         s_currentArenaDataType;  // == s_currentArena's dataType
     static DeviceDescriptor s_currentArenaDevice;    // == s_currentArena's device
     static size_t           s_currentArenaSize;      // == s_currentArena's number of elements (== s_currentArena->GetNumElements())
@@ -1162,7 +1161,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         {
             // tear down everything (we use ref-counting, so existing objects will continue to exist)
             // subtle BUGBUG: if we still have pending views of wrong type, they will go back into the recycling area
-            s_currentArena.reset();
+            fprintf(stderr, "WARNING: New: data-type or device change detected, reinitializing. This may lead to incorrect reporting and even subtle errors.\n"), fflush(stderr);
             s_currentArenaSize = 0;
             s_currentArenaUsed = 0;
             s_currentArenaDataType = dataType;
@@ -1191,7 +1190,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
 
         // entering a new arena
         let requiredDenseArenaSize = max(defaultDenseArenaSize, numElements);
-        s_currentArena.reset(); // abandon current one. If no references, then this will put itself into recycledArenas right here
         // get hold of an arena; either by recycling an existing one, or creating a new one
         MatrixBase* matrixPtr = nullptr;
         for (auto iter = s_recycledDenseArenas.begin(); iter != s_recycledDenseArenas.end(); ++iter)
@@ -1229,7 +1227,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 throw;
             }
         }
-        s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
+        let newArena = shared_ptr<MatrixBase>(matrixPtr,
             [&](MatrixBase* matrixPtr)
             {
                 lock_guard<recursive_mutex> guard(s_mutex);
@@ -1255,18 +1253,17 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         s_currentArenaDataType = dataType;
         s_currentArenaDevice = device;
         s_currentArenaUsed = 0;
-        s_currentArenaSize = s_currentArena->GetNumElements();
+        s_currentArenaSize = newArena->GetNumElements();
 
         fail_if(s_currentArenaUsed != 0, "code change not completed??");
         // convert newly allocated storage into a memoryBlock and allocate from it
         // If it is not fully consumed, then the rest goes straight into the recycled memory blocks
-        auto memoryBlock = MemoryBlock::Create(s_currentArena, dataType, /*firstIndex=*/0, s_currentArenaSize);
+        auto memoryBlock = MemoryBlock::Create(newArena, dataType, /*firstIndex=*/0, s_currentArenaSize);
         CheckGaps();
         auto region = NewDenseFromMemoryBlock(memoryBlock, desiredMemoryBlock.size(), shape, dataType);
         CheckGaps();
         // and remove it immediately as the current arena, so we never actually allocate in it
         // TODO: next step: remove the -Size and -Used variables as well.
-        s_currentArena.reset();
         s_currentArenaUsed = s_currentArenaSize;
         return region;
     }
@@ -1288,7 +1285,6 @@ public:
 };
 
 /*static*/ recursive_mutex NDArrayViewArena::s_mutex;
-/*static*/ MatrixBasePtr    NDArrayViewArena::s_currentArena;
 /*static*/ DataType         NDArrayViewArena::s_currentArenaDataType = DataType::Unknown;
 /*static*/ DeviceDescriptor NDArrayViewArena::s_currentArenaDevice = DeviceDescriptor::CPUDevice();
 /*static*/ size_t           NDArrayViewArena::s_currentArenaSize;
