@@ -1289,6 +1289,7 @@ public:
 /*static*/ size_t           NDArrayViewArena::s_currentArenaSize;
 /*static*/ size_t           NDArrayViewArena::s_currentArenaUsed;
 /*static*/ array<vector<unique_ptr<MatrixBase>>    , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledSparseArenass;
+/*static*/ vector<unique_ptr<MatrixBase>>NDArrayViewArena::s_recycledDenseArenas;
 /*static*/ set<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_recycledMemoryBlocks;
 /*static*/ size_t NDArrayViewArena::s_totalAllocated = 0;
 /*static*/ size_t NDArrayViewArena::s_totalGaps = 0;
