@@ -917,7 +917,7 @@ std::pair<Variable, Variable> ONNXToCNTKHelper::BroadcastElementWiseInput(
             // LogicError("in case of element wise binary ops, rank of lhs shall not be less than the rand of the rhs");
             return{ input1 , input0 };
         }
-        else if (shape0.Rank() > shape1.Rank())
+        else if (shape0.Rank() > shape1.Rank() && shape1.Rank() != 0)
         {
             // axis = 3, ONNX: [2, 3, 4, 5] + [3, 4] with broadcast = 1 and axis = 1
             // coming in this call:

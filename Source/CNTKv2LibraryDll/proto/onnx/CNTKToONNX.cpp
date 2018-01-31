@@ -580,7 +580,7 @@ std::tuple<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool> CNTKT
     const Variable &input1, const Variable &input2)
 {
     bool broadcast;
-    int axis;
+    int axis = 0;
     NDShape shape1 = input1.Shape(), shape2 = input2.Shape();
     bool swapInput = false;
 
