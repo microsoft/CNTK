@@ -649,7 +649,8 @@ public:
     void SetFrameDropThresh(double frameDropThresh) { m_frameDropThreshold = frameDropThresh; }
     void SetReferenceAlign(const bool doreferencealign) { m_doReferenceAlignment = doreferencealign; }
 
-    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR)
+    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR,
+        const bool& enforceValidPathEMBR, const string& getPathMethodEMBR)
     {
         msra::lattices::SeqGammarCalParam param;
         param.amf = amf;
@@ -662,6 +663,9 @@ public:
         param.EMBR = EMBR;
         param.EMBRUnit = EMBRUnit;
         param.numPathsEMBR = numPathsEMBR;
+        param.enforceValidPathEMBR = enforceValidPathEMBR;
+        param.getPathMethodEMBR = getPathMethodEMBR;
+        
         /* guoye: end */
         m_gammaCalculator.SetGammarCalculationParams(param);
     }

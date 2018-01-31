@@ -326,6 +326,8 @@ protected:
     /* guoye： start */
     bool m_seqGammarCalcUseEMBR;
     string m_EMBRUnit; //unit could be: word, phone, state (we all compute edit distance 
+    bool m_enforceValidPathEMBR;
+    string m_getPathMethodEMBR;
     size_t m_numPathsEMBR; // number of sampled paths
     /* guoye： end */
     

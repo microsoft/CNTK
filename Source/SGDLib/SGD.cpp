@@ -519,7 +519,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         */
         ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR,
-                                                  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR);        
+                                                  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR, m_enforceValidPathEMBR, m_getPathMethodEMBR);
         /* guoye: end */
     }
 
@@ -3070,6 +3070,11 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_EMBRUnit =  configSGD(L"EMBRUnit", "word");
     
     m_numPathsEMBR = configSGD(L"numPathsEMBR", (size_t)100);
+    // enforce the path starting with sentence start
+    m_enforceValidPathEMBR = configSGD(L"enforceValidPathEMB", false); 
+    //could be sampling or nbest
+    m_getPathMethodEMBR = configSGD(L"getPathMethodEMBR", "sampling");
+
     /* guoye： end */
     
     m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);

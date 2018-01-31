@@ -31,6 +31,8 @@ struct SeqGammarCalParam
     bool EMBR;
     std::string EMBRUnit;
     size_t numPathsEMBR;
+    bool enforceValidPathEMBR;
+    std::string getPathMethodEMBR;
     /* guoye: end */
     SeqGammarCalParam()
     {
@@ -44,6 +46,8 @@ struct SeqGammarCalParam
         EMBR = false;
         EMBRUnit = "word";
         numPathsEMBR = 100;
+        enforceValidPathEMBR = false;
+        getPathMethodEMBR = "sampling";
         /* guoye: end*/
     }
 };
@@ -102,6 +106,8 @@ public:
         EMBR = gammarParam.EMBR;
         EMBRUnit = gammarParam.EMBRUnit;
         numPathsEMBR = gammarParam.numPathsEMBR;
+        enforceValidPathEMBR = gammarParam.enforceValidPathEMBR;
+        getPathMethodEMBR = gammarParam.getPathMethodEMBR;
         /* guoye: end */
     }
 
@@ -253,7 +259,7 @@ public:
             double denavlogp = lattices[i]->second.forwardbackward(parallellattice,
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
-                                                                   lmf, wp, amf, boostmmifactor, seqsMBRmode, EMBR, EMBRUnit, numPathsEMBR, uidsstripe, widsstripe, boundariesstripe);
+                                                                   lmf, wp, amf, boostmmifactor, seqsMBRmode, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, uidsstripe, widsstripe, boundariesstripe);
             
             /* guoye: end */
             /* guoye: start */
@@ -571,6 +577,8 @@ protected:
     bool EMBR;
     std::string EMBRUnit;
     size_t numPathsEMBR;
+    bool enforceValidPathEMBR;
+    std::string getPathMethodEMBR;
     /* guoye: end */
 
 private:

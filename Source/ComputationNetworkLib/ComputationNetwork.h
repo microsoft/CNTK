@@ -557,7 +557,10 @@ public:
                             const bool& sMBR = false,
                             const bool& EMBR = false,
                             const string& EMBRUnit = "word",
-                            const size_t& numPathsEMBR = 100);
+                            const size_t& numPathsEMBR = 100,
+                            const bool& enforceValidPathEMBR = false,
+                            const string& getPathMethodEMBR = "sampling"
+                            );
                             /* guoye: end */
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 

@@ -70,6 +70,31 @@ enum mbrclassdefinition // used to identify definition of class in minimum bayes
 class lattice
 {
     mutable int verbosity;
+
+    /* guoye: start */
+
+    // definie structure for nbest EMBR
+    struct TokenInfo
+    {
+        double score; // the score of the token
+        size_t prev_edge_index; // edge ending with this token, edge start points to the previous node
+        size_t prev_token_index; // the token index in the previous node
+    };
+    struct PrevTokenInfo
+    {
+        size_t prev_edge_index;
+        size_t prev_token_index;
+    };
+
+    struct NBestToken
+    {
+        // for sorting purpose
+        // make sure the map is stored with keys in descending order
+        std::map<double, std::vector<PrevTokenInfo>, std::greater <double>> mp_score_token_infos; // for sorting the tokens in map
+        std::vector<TokenInfo> vt_nbest_tokens; // stores the nbest tokens in the node
+    };
+
+    /* guoye: end */
     struct header_v1_v2
     {
         size_t numnodes : 32;
@@ -98,11 +123,14 @@ class lattice
     static_assert(sizeof(aligninfo) == 4, "unexpected size of aligninfo");
     std::vector<nodeinfo> nodes;
     /* guoye: start */
-    std::vector<std::vector<uint64_t>> vt_node_out_edge_indices; // vt_node_out_edge_indices[i]: it stores the outgoing edge indices starting from node i
+    mutable std::vector<std::vector<uint64_t>> vt_node_out_edge_indices; // vt_node_out_edge_indices[i]: it stores the outgoing edge indices starting from node i
     std::vector<bool> is_special_words; // true if it is special words that do not count to WER computation, false if it is not
+
+
     /* guoye: end */
     std::vector<edgeinfowithscores> edges;
     std::vector<aligninfo> align;
+   
     // V2 lattices  --for a while, we will store both in RAM, until all code is updated
     static int fsgn(float f)
     {
@@ -224,6 +252,12 @@ class lattice
 public: // TODO: make private again once
     // construct from edges/align
     // This is also used for merging, where the edges[] array is not correctly sorted. So don't assume this here.
+    /* guoye: start */ 
+    void erase_node_out_edges(size_t nodeidx, size_t edgeidx_start, size_t edgeidx_end) const
+    {
+        vt_node_out_edge_indices[nodeidx].erase(vt_node_out_edge_indices[nodeidx].begin() + edgeidx_start, vt_node_out_edge_indices[nodeidx].begin() + edgeidx_end);
+    }
+    /* guoye: end */
     void builduniquealignments(size_t spunit = SIZE_MAX /*fix this later*/)
     {
         // infer /sp/ unit if not given
@@ -763,9 +797,11 @@ private:
         std::vector<double>& logbetas) const;
     
     void EMBRsamplepaths(const std::vector<double> &edgelogbetas,
-        const std::vector<double> &logbetas, const size_t numPathsEMBR, std::vector< std::vector<size_t> > & vt_paths) const;
+        const std::vector<double> &logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR, std::vector< std::vector<size_t> > & vt_paths) const;
 
-    double get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, const size_t numPathsEMBR, std::vector<double>& vt_edge_weights) const;
+    void lattice::EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<std::vector<size_t>> & vt_paths, std::vector<double>& path_posterior_probs) const;
+
+    double get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs) const;
     /* guoye: end */
 
     static double scoregroundtruth(const_array_ref<size_t> uids, const_array_ref<htkmlfwordsequence::word> transcript,
@@ -787,6 +823,10 @@ private:
     double backwardlatticeEMBR(const std::vector<float>& edgeacscores, parallelstate& parallelstate, std::vector<double> &edgelogbetas,
                                   std::vector<double>& logbetas,
                                   const float lmf, const float wp, const float amf) const;
+
+
+    double nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &vt_nbesttokens, const size_t numtokens, const bool enforceValidPathEMBR,
+        const float lmf, const float wp, const float amf) const;
     /* guoye: end */
 public:
     // construct from a HTK lattice file
@@ -837,7 +877,8 @@ public:
             {
                 // an edge with !NULL pointing to not <s>
                 // this code make sure if you always start from <s> in the sampled path. 
-                if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
+                // mask here: we delay the processing in EMBRsamplepaths controlled by flag: enforceValidPathEMBR
+                // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
 
                 vt_node_out_edge_indices[edges2[j].S].push_back(j);
 
@@ -1175,7 +1216,8 @@ public:
     */
     double forwardbackward(parallelstate& parallelstate, const class msra::math::ssematrixbase& logLLs, const class msra::asr::simplesenonehmm& hmms,
                            class msra::math::ssematrixbase& result, class msra::math::ssematrixbase& errorsignalbuf,
-                           const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, const bool EMBR, const std::string EMBRUnit, const size_t numPathsEMBR, array_ref<size_t> uids, std::vector<size_t> wids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
+                           const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, const bool EMBR, const std::string EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const std::string getPathMethodEMBR,
+                            array_ref<size_t> uids, std::vector<size_t> wids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
                            const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float>& transcriptunigrams = std::vector<float>()) const;
     
     /*
@@ -1472,3 +1514,4 @@ public:
 };
 };
 };
+
