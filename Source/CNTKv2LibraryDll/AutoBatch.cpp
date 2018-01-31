@@ -1105,6 +1105,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         let* data = memoryBlock.data();
         let deviceId = memoryBlock.m_sob->GetDeviceId();
         let sizeInBytes = memoryBlock.size();
+        fail_if(memoryBlock.data() == nullptr, "MemoryBlock::m_data == null??");
         auto* deleter = new Deleter(move(memoryBlock), *this);
         // PERF BUGBUG: ^^ This is a plain malloc(), not good. Use our allocator, and/or merge with Matrix object itself.
         switch (dataType)
@@ -1130,6 +1131,24 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         fflush(stderr);
         fail_if(totalRecyclable != s_totalGaps, "s_totalGaps out of sync with gap list??");
     };
+
+    // subroutine for NewDense(): allocate memory from a given memory block
+    NDArrayViewPtr NewDenseFromMemoryBlock(const MemoryBlock& memoryBlock, size_t sizeInBytes, const NDShape& shape, const DataType& dataType)
+    {
+        // for unused bytes, we create a new recycled memory block
+        let unusedBytes = memoryBlock.size() - sizeInBytes;
+        //if (unusedBytes > 0)
+        //    fprintf(stderr, "splitting off %d unused bytes\n", (int)unusedBytes);
+        if (unusedBytes > 0)
+        {
+            s_recycledMemoryBlocks.emplace(memoryBlock.m_sob, memoryBlock.data() + sizeInBytes, unusedBytes);
+            s_totalGaps += unusedBytes;
+        }
+        s_totalAllocated += sizeInBytes;
+        let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(memoryBlock.m_sob, memoryBlock.data(), sizeInBytes), dataType);
+        //fprintf(stderr, "reused %d bytes\n", (int)sizeInBytes);
+        return MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/shape.TotalSize(), matrixViewPtr); // TODO: change to a version without range, and move the matrixViewPtr
+    }
 
     // dense version
     NDArrayViewPtr NewDense(const NDShape& shape, const DataType& dataType, const DeviceDescriptor& device)
@@ -1163,33 +1182,14 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         if (iter != s_recycledMemoryBlocks.end()) // found one
         {
             CheckGaps();
-            s_totalGaps -= iter->size(); // check it out
-            // for unused bytes, we create a new recycled memory block
-            let unusedBytes = iter->size() - desiredMemoryBlock.size();
-            //if (unusedBytes > 0)
-            //    fprintf(stderr, "splitting off %d unused bytes\n", (int)unusedBytes);
-            if (unusedBytes > 0)
-            {
-                s_recycledMemoryBlocks.emplace(iter->m_sob, iter->data() + desiredMemoryBlock.size(), unusedBytes);
-                s_totalGaps += unusedBytes;
-            }
-            s_totalAllocated += desiredMemoryBlock.size();
-            let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(iter->m_sob, iter->data(), desiredMemoryBlock.size()), dataType);
-            //fprintf(stderr, "reused %d bytes\n", (int)desiredMemoryBlock.size());
-            auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, matrixViewPtr);
+            auto region = NewDenseFromMemoryBlock(*iter, desiredMemoryBlock.size(), shape, dataType);
             s_recycledMemoryBlocks.erase(iter);
+            s_totalGaps -= iter->size(); // and remove this entry from the free set. We temporarily may have overlapping entries.
             CheckGaps();
             return region;
         }
 
-        // TODO: just create a new gap, then try again
-        //  If arena not large enough then waste its remainder and just allocate a fresh one.
-        //  This abandons the current m_arena. This will not cause a memory leak, however:
-        //  Since the slices into it that were returned before all hold a ref-count to that arena,
-        //  it will be deallocated automatically as soon the last slice goes away.
-        //  The deleter, though, will intercept that and retire it into the recycledArenas array.
-        //  Next time we need a new arena, we will look there first and recycle one.
-        //  If the data type is different, we drop the current arena. CNTK can'really presently mix dataTypes properly anyway, so this is ah-OK.
+        // create a new gap
         if (!s_currentArena                                         ||
             numElements > (s_currentArenaSize - s_currentArenaUsed))
         {
@@ -1260,6 +1260,20 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             s_currentArenaUsed = 0;
             s_currentArenaSize = s_currentArena->GetNumElements();
         }
+#if 1
+        fail_if(s_currentArenaUsed != 0, "code change not completed??");
+        // convert newly allocated storage into a memoryBlock and allocate from it
+        // If it is not fully consumed, then the rest goes straight into the recycled memory blocks
+        auto memoryBlock = MemoryBlock::Create(s_currentArena, dataType, /*firstIndex=*/0, s_currentArenaSize);
+        CheckGaps();
+        auto region = NewDenseFromMemoryBlock(memoryBlock, desiredMemoryBlock.size(), shape, dataType);
+        CheckGaps();
+        // and remove it immediately as the current arena, so we never actually allocate in it
+        // TODO: next step: remove the -Size and -Used variables as well.
+        s_currentArena.reset();
+        s_currentArenaUsed = s_currentArenaSize;
+        return region;
+#else
         // We create a new matrix storage object that wraps a pointer into the arena.
         // Any view into such object will reference the same underlying storage object.
         // The storage object has a custom deleter. We use that to track gaps.
@@ -1268,6 +1282,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         s_currentArenaUsed += numElements;
         s_totalAllocated += MemoryBlock::Create(dataType, numElements).size(); // (unnecessarily slow, but this is for diags only)
         return region;
+#endif
     }
 
 public:
