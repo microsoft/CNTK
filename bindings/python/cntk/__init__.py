@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.4+'
+__version__ = '2.4'
 
 import os
 os.environ["PATH"] += os.pathsep + os.path.join(os.path.dirname(__file__), 'libs')
