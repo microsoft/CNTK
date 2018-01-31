@@ -47,6 +47,10 @@ Operators
   * Fixed bug in group convolution. Output of CNTK ``Convolution`` op will change for groups > 1. More optimized implementation of group convolution is expected in the next release.
   * Better error reporting for group convolution in ``Convolution`` layer.
 
+Halide Binary Convolution
+- The CNTK build can now use optional [Halide](http://halide-lang.org/) libraries to build ``Cntk.BinaryConvolution.so/dll`` library that can be used with the ``netopt`` module. The library contains optimized binary convolution operators that perform better than the python based binarized convolution operators. To enable Halide in the build, please download [Halide release](https://github.com/halide/Halide/releases) and set ``HALIDE_PATH`` environment varibale before starting a build. In Linux, you can use ``./configure --with-halide[=directory]`` to enable it. For more information on how to use this feature, please refer to [How_to_use_network_optimization](https://github.com/Microsoft/CNTK/blob/master/Manual/Manual_How_to_use_network_optimizations.ipynb).
+
+
 ***2018-01-22.*** CNTK support for CUDA 9
 
 CNTK now supports CUDA 9/cuDNN 7. This requires an update to build environment to Ubuntu 16/GCC 5 for Linux, and Visual Studio 2017/VCTools 14.11 for Windows. With CUDA 9, CNTK also added a preview for 16-bit floating point (a.k.a FP16) computation.
