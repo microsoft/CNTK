@@ -799,7 +799,7 @@ private:
     void EMBRsamplepaths(const std::vector<double> &edgelogbetas,
         const std::vector<double> &logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR, std::vector< std::vector<size_t> > & vt_paths) const;
 
-    void lattice::EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<std::vector<size_t>> & vt_paths, std::vector<double>& path_posterior_probs) const;
+    void EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<std::vector<size_t>> & vt_paths, std::vector<double>& path_posterior_probs) const;
 
     double get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs) const;
     /* guoye: end */
