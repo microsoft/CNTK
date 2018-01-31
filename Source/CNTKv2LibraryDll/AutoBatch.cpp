@@ -1010,20 +1010,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         default: LogicError("GetMatrixType: Unsupported element type.");
         }
     }
-    MatrixBasePtr WrapStorageRangeAsMatrix(MemoryBlock&& memoryBlock, DataType dataType)
-    {
-        let* data = memoryBlock.data();
-        let deviceId = memoryBlock.m_sob->GetDeviceId();
-        let sizeInBytes = memoryBlock.size();
-        auto* deleter = new Deleter(move(memoryBlock), *this);
-        // PERF BUGBUG: ^^ This is a plain malloc(), not good. Use our allocator, and/or merge with Matrix object itself.
-        switch (dataType)
-        {
-        case DataType::Float:  return MakeSharedObject<Matrix<float >>(/*rows=*/1, /*cols=*/sizeInBytes / sizeof(float ), (float *)data, deviceId, matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
-        case DataType::Double: return MakeSharedObject<Matrix<double>>(/*rows=*/1, /*cols=*/sizeInBytes / sizeof(double), (double*)data, deviceId, matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
-        default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
-        }       
-    }
 
     // Sparse:
     //  Arena allocation is not possible, because  sparse matrices cannot be appended to.
@@ -1110,6 +1096,23 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             });
         auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, storage); // TODO: what's the role of numElements for sparse?
         return region;
+    }
+
+    // helper for NewDense(): create a new Matrix with its own storage object that is indeed a view onto the arena
+    // This is needed so that we can control releasing of the block in case of multiple views taken into it.
+    MatrixBasePtr WrapStorageRangeAsMatrix(MemoryBlock&& memoryBlock, DataType dataType)
+    {
+        let* data = memoryBlock.data();
+        let deviceId = memoryBlock.m_sob->GetDeviceId();
+        let sizeInBytes = memoryBlock.size();
+        auto* deleter = new Deleter(move(memoryBlock), *this);
+        // PERF BUGBUG: ^^ This is a plain malloc(), not good. Use our allocator, and/or merge with Matrix object itself.
+        switch (dataType)
+        {
+        case DataType::Float:  return MakeSharedObject<Matrix<float >>(/*rows=*/1, /*cols=*/sizeInBytes / sizeof(float), (float *)data, deviceId, matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
+        case DataType::Double: return MakeSharedObject<Matrix<double>>(/*rows=*/1, /*cols=*/sizeInBytes / sizeof(double), (double*)data, deviceId, matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
+        default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
+        }
     }
 
     // dense version
