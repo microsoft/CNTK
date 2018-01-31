@@ -992,7 +992,8 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     static size_t           s_currentArenaUsed;      // allocation cursor. Elements below this are already allocated.
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
     static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
-    static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass; // TODO: we can simplify this further
+    static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledSparseArenass; // TODO: we can simplify this further, just use one
+    static vector<unique_ptr<MatrixBase>> s_recycledDenseArenas;
     static set<MemoryBlock> s_recycledMemoryBlocks; // free set
     static const NDShapeDimension defaultDenseArenaSize = 256000000; // we allocate in this chunk size (dense only)
 
@@ -1034,8 +1035,8 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         lock_guard<recursive_mutex> guard(s_mutex);
 
         let formatAsIndex = (size_t)storageFormat;
-        fail_if(formatAsIndex >= s_recycledArenass.size(), "unexpected storageFormat int value??");
-        auto& s_recycledArenas = s_recycledArenass[formatAsIndex];
+        fail_if(formatAsIndex >= s_recycledSparseArenass.size(), "unexpected storageFormat int value??");
+        auto& s_recycledArenas = s_recycledSparseArenass[formatAsIndex]; // TODO: use only one set, since we check the type anyway
 
         let numElements = shape.TotalSize(/*check=*/false);
 
@@ -1116,8 +1117,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     {
         lock_guard<recursive_mutex> guard(s_mutex);
 
-        auto& s_recycledArenas = s_recycledArenass[0];
-
         let numElements = shape.TotalSize(/*check=*/false);
 
         // for now, we only support one data type/device. If it changes,. we tear down the entire thing.
@@ -1130,8 +1129,9 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             s_currentArenaUsed = 0;
             s_currentArenaDataType = dataType;
             s_currentArenaDevice = device;
-            s_recycledArenas.clear();
+            s_recycledDenseArenas.clear();
             s_recycledMemoryBlocks.clear(); // this will free the arena if no reference anymore
+            s_totalGaps = 0;
         }
 
         let DebugSnapShot = [&]()
@@ -1144,7 +1144,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 maxRecyclable = max(maxRecyclable, b.size());
             }
             fprintf(stderr, "NDArrayView snapshot: %f MB alloc, %f MB in %d recyclable gaps (max %f), %d recycable arenas\n",
-                    s_totalAllocated*1e-6, s_totalGaps*1e-6, (int)s_recycledMemoryBlocks.size(), maxRecyclable*1e-6, (int)s_recycledArenas.size());
+                    s_totalAllocated*1e-6, s_totalGaps*1e-6, (int)s_recycledMemoryBlocks.size(), maxRecyclable*1e-6, (int)s_recycledDenseArenas.size());
             fflush(stderr);
             fail_if(totalRecyclable != s_totalGaps, "s_totalGaps out of sync with gap list??");
         };
@@ -1193,7 +1193,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             s_currentArena.reset(); // abandon current one. If no references, then this will put itself into recycledArenas right here
             // get hold of an arena; either by recycling an existing one, or creating a new one
             MatrixBase* matrixPtr = nullptr;
-            for (auto iter = s_recycledArenas.begin(); iter != s_recycledArenas.end(); ++iter)
+            for (auto iter = s_recycledDenseArenas.begin(); iter != s_recycledDenseArenas.end(); ++iter)
             {
                 let& thisMatrixPtr = *iter;
                 if (requiredDenseArenaSize <= thisMatrixPtr->GetNumElements()  &&
@@ -1201,7 +1201,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                     IsMatrixOfDataType(*thisMatrixPtr, dataType))
                 {
                     matrixPtr = iter->release();  // take back ownership from the unique_ptr
-                    s_recycledArenas.erase(iter); // remove from recycling buffer
+                    s_recycledDenseArenas.erase(iter); // remove from recycling buffer
                     //fprintf(stderr, "@@ reactivating %s arena matrix of %d elements\n", isSparse ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
                     break;
                 }
@@ -1213,7 +1213,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
                 try
                 {
-                    //fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledArenas.size()), fflush(stderr);
+                    //fprintf(stderr, "@@ allocating %s arena matrix of %d elements (recycle buffer has %d entries)\n", isSparse ? "sparse" : "dense", (int)requiredDenseArenaSize, (int)s_recycledDenseArenas.size()), fflush(stderr);
                     switch (dataType)
                     {
                     case DataType::Float:  matrixPtr = new Matrix<float >(1, numCols, AsCNTKImplDeviceId(device)); break;
@@ -1229,7 +1229,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 }
             }
             s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
-                [&s_recycledArenas](MatrixBase* matrixPtr)
+                [&](MatrixBase* matrixPtr)
                 {
                     lock_guard<recursive_mutex> guard(s_mutex);
                     //fprintf(stderr, "@@ retiring %s arena of %d elements\n", matrixPtr->GetMatrixType() == MatrixType::SPARSE ? "sparse" : "dense", (int)matrixPtr->GetNumElements()), fflush(stderr);
@@ -1238,7 +1238,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                     {
                         if (matrixPtr->GetMatrixType() == MatrixType::SPARSE)
                             matrixPtr->Reset(); // this resets the sparse matrix, but does not release its (small) memory
-                        s_recycledArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
+                        s_recycledDenseArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
                     }
                     else
                     {
@@ -1288,7 +1288,7 @@ public:
 /*static*/ DeviceDescriptor NDArrayViewArena::s_currentArenaDevice = DeviceDescriptor::CPUDevice();
 /*static*/ size_t           NDArrayViewArena::s_currentArenaSize;
 /*static*/ size_t           NDArrayViewArena::s_currentArenaUsed;
-/*static*/ array<vector<unique_ptr<MatrixBase>>    , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledArenass;
+/*static*/ array<vector<unique_ptr<MatrixBase>>    , NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledSparseArenass;
 /*static*/ set<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_recycledMemoryBlocks;
 /*static*/ size_t NDArrayViewArena::s_totalAllocated = 0;
 /*static*/ size_t NDArrayViewArena::s_totalGaps = 0;
