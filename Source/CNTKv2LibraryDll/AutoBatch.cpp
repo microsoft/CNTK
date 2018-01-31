@@ -1190,72 +1190,72 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         }
 
         // entering a new arena
-            let requiredDenseArenaSize = max(defaultDenseArenaSize, numElements);
-            s_currentArena.reset(); // abandon current one. If no references, then this will put itself into recycledArenas right here
-            // get hold of an arena; either by recycling an existing one, or creating a new one
-            MatrixBase* matrixPtr = nullptr;
-            for (auto iter = s_recycledDenseArenas.begin(); iter != s_recycledDenseArenas.end(); ++iter)
+        let requiredDenseArenaSize = max(defaultDenseArenaSize, numElements);
+        s_currentArena.reset(); // abandon current one. If no references, then this will put itself into recycledArenas right here
+        // get hold of an arena; either by recycling an existing one, or creating a new one
+        MatrixBase* matrixPtr = nullptr;
+        for (auto iter = s_recycledDenseArenas.begin(); iter != s_recycledDenseArenas.end(); ++iter)
+        {
+            let& thisMatrixPtr = *iter;
+            if (requiredDenseArenaSize <= thisMatrixPtr->GetNumElements()  &&
+                thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device) &&
+                IsMatrixOfDataType(*thisMatrixPtr, dataType))
             {
-                let& thisMatrixPtr = *iter;
-                if (requiredDenseArenaSize <= thisMatrixPtr->GetNumElements()  &&
-                    thisMatrixPtr->GetDeviceId() == AsCNTKImplDeviceId(device) &&
-                    IsMatrixOfDataType(*thisMatrixPtr, dataType))
+                matrixPtr = iter->release();  // take back ownership from the unique_ptr
+                s_recycledDenseArenas.erase(iter); // remove from recycling buffer
+                fprintf(stderr, "New: reactivating arena matrix of %d elements\n", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                break;
+            }
+        }
+        // allocation size is arena size for dense, and the actual required size for sparse
+        let numCols = requiredDenseArenaSize + 1; // we add 1 so that we won't accidentally merge two consecutive arenas when merging gaps
+        if (!matrixPtr) // create a new one
+        {
+            CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
+            try
+            {
+                fprintf(stderr, "New: allocating new arena matrix of %d elements (recycle buffer has %d entries)\n", (int)requiredDenseArenaSize, (int)s_recycledDenseArenas.size()), fflush(stderr);
+                switch (dataType)
                 {
-                    matrixPtr = iter->release();  // take back ownership from the unique_ptr
-                    s_recycledDenseArenas.erase(iter); // remove from recycling buffer
-                    fprintf(stderr, "New: reactivating arena matrix of %d elements\n", (int)matrixPtr->GetNumElements()), fflush(stderr);
-                    break;
+                case DataType::Float:  matrixPtr = new Matrix<float >(1, numCols, AsCNTKImplDeviceId(device)); break;
+                case DataType::Double: matrixPtr = new Matrix<double>(1, numCols, AsCNTKImplDeviceId(device)); break;
+                default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
                 }
             }
-            // allocation size is arena size for dense, and the actual required size for sparse
-            let numCols = requiredDenseArenaSize + 1; // we add 1 so that we won't accidentally merge two consecutive arenas when merging gaps
-            if (!matrixPtr) // create a new one
+            catch (const bad_alloc& e)
             {
-                CudaStatsGuard cudaStatsguard(PrimitiveOpType::FutureValue, L"new arena NewNDArrayView", 3, numElements);
-                try
-                {
-                    fprintf(stderr, "New: allocating new arena matrix of %d elements (recycle buffer has %d entries)\n", (int)requiredDenseArenaSize, (int)s_recycledDenseArenas.size()), fflush(stderr);
-                    switch (dataType)
-                    {
-                    case DataType::Float:  matrixPtr = new Matrix<float >(1, numCols, AsCNTKImplDeviceId(device)); break;
-                    case DataType::Double: matrixPtr = new Matrix<double>(1, numCols, AsCNTKImplDeviceId(device)); break;
-                    default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
-                    }
-                }
-                catch (const bad_alloc& e)
-                {
-                    fprintf(stderr, "NewNDArrayView: Out of memory allocating %d elements: %s.\n", (int)numElements, e.what());
-                    DebugSnapShot();
-                    throw;
-                }
+                fprintf(stderr, "NewNDArrayView: Out of memory allocating %d elements: %s.\n", (int)numElements, e.what());
+                DebugSnapShot();
+                throw;
             }
-            s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
-                [&](MatrixBase* matrixPtr)
+        }
+        s_currentArena = shared_ptr<MatrixBase>(matrixPtr,
+            [&](MatrixBase* matrixPtr)
+            {
+                lock_guard<recursive_mutex> guard(s_mutex);
+                fprintf(stderr, "New: retiring arena of %d elements\n", (int)matrixPtr->GetNumElements()), fflush(stderr);
+                // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
+                if (matrixPtr->GetNumViews() == 1)
                 {
-                    lock_guard<recursive_mutex> guard(s_mutex);
-                    fprintf(stderr, "New: retiring arena of %d elements\n", (int)matrixPtr->GetNumElements()), fflush(stderr);
-                    // check the sob's ref count; if > 1 then there are other views into it, we cannot recycle it. It's a workaround.
-                    if (matrixPtr->GetNumViews() == 1)
+                    if (matrixPtr->GetMatrixType() == MatrixType::SPARSE)
+                        matrixPtr->Reset(); // this resets the sparse matrix, but does not release its (small) memory
+                    s_recycledDenseArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
+                }
+                else
+                {
+                    static bool errorShown = false;
+                    if (!errorShown)
                     {
-                        if (matrixPtr->GetMatrixType() == MatrixType::SPARSE)
-                            matrixPtr->Reset(); // this resets the sparse matrix, but does not release its (small) memory
-                        s_recycledDenseArenas.push_back(unique_ptr<MatrixBase>(matrixPtr)); // don't release; rather keep it around
+                        fprintf(stderr, "WARNING: NewNDArrayView cannot recycle arena because it is still used by Matrix object not under the control of the arena allocator. This message will only be shown once.\n"), fflush(stderr);
+                        errorShown = true;
                     }
-                    else
-                    {
-                        static bool errorShown = false;
-                        if (!errorShown)
-                        {
-                            fprintf(stderr, "WARNING: NewNDArrayView cannot recycle arena because it is still used by Matrix object not under the control of the arena allocator. This message will only be shown once.\n"), fflush(stderr);
-                            errorShown = true;
-                        }
-                        delete matrixPtr;
-                    }
-                });
-            s_currentArenaDataType = dataType;
-            s_currentArenaDevice = device;
-            s_currentArenaUsed = 0;
-            s_currentArenaSize = s_currentArena->GetNumElements();
+                    delete matrixPtr;
+                }
+            });
+        s_currentArenaDataType = dataType;
+        s_currentArenaDevice = device;
+        s_currentArenaUsed = 0;
+        s_currentArenaSize = s_currentArena->GetNumElements();
 
         fail_if(s_currentArenaUsed != 0, "code change not completed??");
         // convert newly allocated storage into a memoryBlock and allocate from it
