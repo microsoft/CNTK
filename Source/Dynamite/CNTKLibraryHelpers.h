@@ -159,45 +159,45 @@ namespace Dynamite {
     // Takes a batch containing the data for 'numBuckets' and sorts and distributes them over the buckets.
     // args[1][1][numSequences][numStreams] -> args[numBuckets][1][numSequences][numStreams]
     static inline void GetSubBatches_CreateMinibatches(vector<vector<vector<vector<Variable>>>>& args,
-                                                       vector<vector<Variable>>& allSequences, // not const since we modify it in-place for efficiency
+                                                       vector<vector<Variable>>& streams, // [streamIndex][seqIndex] not const since we modify it in-place for efficiency
                                                        size_t minibatchSize, size_t numBuckets)
     {
         // make space for result
         // We try to not reallocate the existing array, since this is a lot of vectors of vectors of vectors.
         args.resize(numBuckets); // [numBuckets][numPartial][numStreams][numSeq] (will never destruct unless #buckets changes)
-        if (args.front().empty())
-            args.front().resize(1); // create space for at least one partial minibatch; but avoid shrinking, to avoid deallocating the vectors
+        args.front().resize(1); // create space for at least one partial minibatch; but avoid shrinking, to avoid deallocating the vectors
 
         // gather its statistics
-        let& labelSequences = allSequences.back(); // last stream has the labels
-        let numSequences = allSequences[0].size(); // (get actual # sequences in the batch from first stream)
-        size_t numLabels = 0;
-        for (size_t seqIndex = 0; seqIndex < numSequences; seqIndex++)
-            numLabels += labelSequences[seqIndex].size();
+        let& labelSequences = streams.back(); // last stream has the labels
+        let totalNumSequences = streams[0].size(); // (get actual # sequences in the multi-minibatch from first stream)
+        size_t totalNumLabels = 0;
+        for (size_t seqIndex = 0; seqIndex < totalNumSequences; seqIndex++)
+            totalNumLabels += labelSequences[seqIndex].size();
 
         // sort by source length, longest first
-        vector<size_t> indices(numSequences); // index array which we sort
-        for (size_t seqIndex = 0; seqIndex < numSequences; seqIndex++)
+        vector<size_t> indices(totalNumSequences); // index array which we sort
+        for (size_t seqIndex = 0; seqIndex < totalNumSequences; seqIndex++)
             indices[seqIndex] = seqIndex;
-        let numStreams = allSequences.size();
+        let numStreams = streams.size();
         sort(indices.begin(), indices.end(), [&](size_t i, size_t j) // longest first, first stream has highest priority
         {
+            // TODO: It may be better to sort by max len, since longest may influence memory usage and computation efficiency the most
             for (size_t streamIndex = 0; streamIndex < numStreams; streamIndex++)
             {
-                let& streamSequences = allSequences[streamIndex];
+                let& streamSequences = streams[streamIndex];
                 let diff = (int)streamSequences[i].size() - (int)streamSequences[j].size();
                 if (diff != 0) // if equal then decide by next stream
                     return diff > 0;
             }
             return false;
         });
-        vector<Variable> sequencesTemp(numSequences);
+        vector<Variable> sequencesTemp(totalNumSequences);
         for (size_t streamIndex = 0; streamIndex < numStreams; streamIndex++) // update the actual arrays
         {
-            auto& sequences = allSequences[streamIndex];
-            for (size_t seqIndex = 0; seqIndex < numSequences; seqIndex++)
+            auto& sequences = streams[streamIndex];
+            for (size_t seqIndex = 0; seqIndex < totalNumSequences; seqIndex++)
                 sequencesTemp[seqIndex] = move(sequences[indices[seqIndex]]);
-            for (size_t seqIndex = 0; seqIndex < numSequences; seqIndex++)
+            for (size_t seqIndex = 0; seqIndex < totalNumSequences; seqIndex++)
                 sequences[seqIndex] = move(sequencesTemp[seqIndex]); // this way we save a malloc; probably makes little sense
         }
 
@@ -207,13 +207,13 @@ namespace Dynamite {
         size_t numLabelsConsumed = 0;
         for (size_t bucketIndex = 0; bucketIndex < numBuckets; bucketIndex++)
         {
-            let labelsLeft = numLabels - numLabelsConsumed;
+            let labelsLeft = totalNumLabels - numLabelsConsumed;
             let numBucketsLeft = numBuckets - bucketIndex;
             let desiredLabels = (labelsLeft * 2 + numBucketsLeft) / numBucketsLeft / 2;
             // find the end where we consume no more than desiredLabels
             let begin = end;
             size_t thisLabelsConsumed = 0;
-            for (; end < numSequences; end++)
+            for (; end < totalNumSequences; end++)
             {
                 let len = labelSequences[end].size();
                 if (end > begin && thisLabelsConsumed + len > desiredLabels)
@@ -224,26 +224,25 @@ namespace Dynamite {
             ranges.push_back(make_pair(begin, end));
             numLabelsConsumed += thisLabelsConsumed;
         }
-        if (end != numSequences || numLabelsConsumed != numLabels)
+        if (end != totalNumSequences || numLabelsConsumed != totalNumLabels)
             LogicError("GetSubBatched: somehow didn't use all sequences or labels??");
 
         // implant the data into args[][][][]
         for (size_t bucketIndex = 0; bucketIndex < numBuckets; bucketIndex++)
         {
-            if (args[bucketIndex].size() < 1)
-                args[bucketIndex].resize(1);
+            args[bucketIndex].resize(1);
             auto& minibatch = args[bucketIndex][0]; // minibatch for bucket [bucketIndex]
             minibatch.resize(numStreams); // (in case not yet done)
             for (size_t streamIndex = 0; streamIndex < numStreams; streamIndex++)
             {
-                let& sequences = allSequences[streamIndex]; // [numSeq]
-                auto& subSequences = minibatch[streamIndex]; // [numSeq] to be created here
+                let& sequences = streams[streamIndex]; // [numSeq]
+                auto& minibatchStream = minibatch[streamIndex]; // [numSeq] to be created here
                 let& range = ranges[bucketIndex]; // index range for this bucket
                 let numSubSequences = range.second - range.first;
                 // TODO: can we use assign() with Transform() here?
-                subSequences.resize(numSubSequences);
+                minibatchStream.resize(numSubSequences);
                 for (size_t i = 0; i < numSubSequences; i++)
-                    subSequences[i] = move(sequences[i + range.first]);
+                    minibatchStream[i] = move(sequences[i + range.first]);
             }
         }
     }
@@ -258,39 +257,33 @@ namespace Dynamite {
         let numSeq = minibatch[0].size();
 
         vector<pair<size_t, size_t>> ranges; // sequence index ranges for partial minibatches
-        size_t begin = 0;
-        size_t currentTokens = 0;
-        size_t maxLen = 0;
-        for (size_t seqIndex = 0; seqIndex < numSeq; seqIndex++)
+        size_t end = 0; // running index into sequences
+        while (end < numSeq)
         {
-            // determine length of this sequence (over both source and target)
-            if (hasPadding)
+            // find the end where we consume no more than desiredLabels
+            size_t currentTokens = 0;
+            size_t maxLen = 0;
+            let begin = end;
+            for (; end < numSeq; end++)
             {
-                size_t thisMaxLen = 0;
-                for (let& streamData : minibatch)
-                    if (thisMaxLen < streamData[seqIndex].size())
-                        thisMaxLen = streamData[seqIndex].size();
-                // determine global max length, in case of padding
-                if (maxLen < thisMaxLen)
-                    maxLen = thisMaxLen;
+                size_t newTokens; // number of tokens in this chunk incorporating this sequence
+                if (hasPadding)
+                {
+                    for (let& streamData : minibatch)
+                        if (maxLen < streamData[end].size())
+                            maxLen = streamData[end].size();
+                    newTokens = maxLen * (end +1 - begin);
+                }
+                else
+                    newTokens = currentTokens + minibatch.back()[end].size();
+                if (end > begin && newTokens > maxBatchSizePerWorker)
+                    break;
+                currentTokens = newTokens;
             }
-            // determine length
-            let len = hasPadding ? maxLen : minibatch.front().size(); // if not padding then go by source length like CNTK
-            // determine this sequences length
-            let end = seqIndex + 1; // end of current hypothesized range
-            let newCurrentTokens = hasPadding ? len * (end - begin) : currentTokens + len;
-            // aggregate until we hit the limit
-            if (newCurrentTokens < maxBatchSizePerWorker || end - begin == 1/*at least one*/)
-                if (end != numSeq) // (force-flush the last one)
-                    continue; // still space: that's it
-            // we did hit the limit
-            ranges.emplace_back(begin, end); // this range is full, move on to the next range
-            begin = end;
-            currentTokens = 0;
-            maxLen = 0;
+            //fprintf(stderr, "range[%d] = [%d,%d)\n", (int)ranges.size(), (int)begin, (int)end), fflush(stderr);
+            ranges.push_back(make_pair(begin, end));
+            //fprintf(stderr, "[%d:%d, %d -> %d]\n", (int)begin, (int)end, (int)maxLen, (int)currentTokens);
         }
-        if (begin != numSeq)
-            LogicError("didn't close the last range??");
 
         // if nothing to break then avoid any reallocation
         if (ranges.size() == 1)
@@ -346,13 +339,13 @@ namespace Dynamite {
         for (let& streamName : streamNames)
             valuePtrs.push_back(multiMinibatchData[minibatchSource->StreamInfo(streamName)].data);
 #endif
-        vector<vector<Variable>> allSequences;
-        Dynamite::FromCNTKMB(allSequences,  // result goes here
+        vector<vector<Variable>> multiMinibatchStreams;
+        Dynamite::FromCNTKMB(multiMinibatchStreams,  // result goes here
                              valuePtrs,     // Value objects from MinibatchSource, one for each stream
                              /*isSequence[]=*/vector<bool>(streamNames.size(), true), inferenceOnly, dataType, device);
 
         // break into minibatches of similar size
-        GetSubBatches_CreateMinibatches(args, allSequences, minibatchSize, numBuckets);
+        GetSubBatches_CreateMinibatches(args, multiMinibatchStreams, minibatchSize, numBuckets);
 
         // random-shuffle
         // TODO: Use a local RNG, don't change global state.

@@ -892,7 +892,7 @@ class NDArrayViewArena
         uint8_t* data() const { return m_data; }
         uint8_t* begin() const { return m_data; }
         uint8_t* end() const { return m_data + m_size; }
-        bool operator<(const MemoryBlock& other) const // this defines the ordering of the set
+        bool operator<(const MemoryBlock& other) const // this defines the ordering of the elements as lower_bound() sees them
         {
             return (m_size < other.size()) || (m_size == other.size() && m_data < other.data());
         }
@@ -990,7 +990,6 @@ class NDArrayViewArena
     static DeviceDescriptor s_currentArenaDevice;    // == s_currentArena's device
     static size_t           s_currentArenaSize;      // == s_currentArena's number of elements (== s_currentArena->GetNumElements())
     static size_t           s_currentArenaUsed;      // allocation cursor. Elements below this are already allocated.
-    // TODO: This ^^ calls for a struct!
     // arenas no longer referenced get remembered here for reuse, to avoid GPU syncs
     static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
     static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledArenass; // TODO: we can simplify this further
@@ -1005,8 +1004,8 @@ class NDArrayViewArena
     {
         switch (dataType)
         {
-        case DataType::Float:  return dynamic_cast<const Matrix<float>*>(&matrix) != nullptr;
-        case DataType::Double: return dynamic_cast<const Matrix<float>*>(&matrix) != nullptr;
+        case DataType::Float:  return dynamic_cast<const Matrix<float >*>(&matrix) != nullptr;
+        case DataType::Double: return dynamic_cast<const Matrix<double>*>(&matrix) != nullptr;
         default: LogicError("GetMatrixType: Unsupported element type.");
         }
     }
@@ -1154,7 +1153,7 @@ public:
         };
 
         static size_t debugCounter = 0;
-        if (debugCounter++ % 10000 == 0)
+        if (debugCounter++ % 100000 == 0)
             DebugSnapShot();
 
         // try to allocate from existing gaps first

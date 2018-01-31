@@ -70,7 +70,7 @@ size_t bucketingFactor = 10; // group 10 minibatches together, sort, re-split; f
 string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
-size_t saveEvery = 4000;
+size_t saveEvery = 50;//1900;//4000;
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
@@ -1053,7 +1053,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // data
     if (runProfiling     /*||true*/) // if profiling then use small files so we don't measure the load time
         srcTrainFile = srcDevFile, tgtTrainFile = tgtDevFile;
-    let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/false);                   //true);
+    let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/true);
 
     model_fn.LogParameters();
 
@@ -1246,10 +1246,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
 #endif
         if (logThisMb)
-            fprintf(stderr, "%5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
+            fprintf(stderr, "%5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
                     (int)mbCount, (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
-                    lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
+                    lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
+                    (int)(max(maxSamples, maxLabels) * numSeq));
 #if 0       // log the sequences
         for (size_t n = 0; n < numSeq; n++)
         {
@@ -1477,10 +1478,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         }
         catch (const exception& e)
         {
-            fprintf(stderr, "\n\nFAILED: %5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial worker mbSize=%d\n",
+            fprintf(stderr, "\n\nFAILED\n");
+            fprintf(stderr, "%5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
                     (int)mbCount, (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
-                    lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels);
+                    lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
+                    (int)(max(maxSamples, maxLabels) * numSeq));
             throw;
         }
         } // partial MB loop
@@ -1774,7 +1777,7 @@ int mt_main(int argc, char *argv[])
         fprintf(stderr, "command line:");
         for (let* p : Span<char**>(argv, argv + argc))
             fprintf(stderr, " %s", p);
-        fprintf(stderr, "\nstarting %S as worker[%d]\n", command.c_str(), (int)ourRank), fflush(stderr); // write something to test
+        fprintf(stderr, "\nstarting %S as worker[%d], pid %d\n", command.c_str(), (int)ourRank, (int)getpid()), fflush(stderr); // write something to test
 
         // output file (for evaluation commands)
         let outPath = outputDirectory + L"/" + command +
