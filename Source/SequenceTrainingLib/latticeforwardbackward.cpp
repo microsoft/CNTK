@@ -1220,6 +1220,7 @@ void lattice::forwardbackwardalign(parallelstate &parallelstate,
     if (parallelstate.enabled())
     {
         parallelstate.copyalignments(thisedgealignments);
+        parallelstate.getedgeacscores(edgeacscores);
     }
     /* guoye: end */
 }
@@ -2065,7 +2066,9 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     if(nodes[nodes.size()-1].wid != 2 ) RuntimeError("The last node is not 2 (i.e.) </s>, but is %d \n", int(nodes[0].wid));
     for (size_t i = 1; i < nodes.size() - 1; i++)
     {
-        if (nodes[i].wid == 2) RuntimeError("The  node %d is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i),  int(nodes.size()));
+        if (nodes[i].wid == 2) RuntimeError("The  node %d wid is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i),  int(nodes.size()));
+        if (nodes[i].wid == 0) RuntimeError("The  node %d wid is  0 (i.e.) </s>, but it is not the first node, total number of node is %d \n", int(i), int(nodes.size()));
+
     }
     
     /* guoye: end */
