@@ -1115,6 +1115,22 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         }
     }
 
+    // helper for NewDense()
+    static void DebugSnapShot()
+    {
+        size_t totalRecyclable = 0;
+        size_t maxRecyclable = 0;
+        for (let& b : s_recycledMemoryBlocks)
+        {
+            totalRecyclable += b.size(); // recompute this as a sanity check
+            maxRecyclable = max(maxRecyclable, b.size());
+        }
+        fprintf(stderr, "NDArrayView snapshot: %f MB alloc, %f MB in %d recyclable gaps (max %f), %d recycable arenas\n",
+            s_totalAllocated*1e-6, s_totalGaps*1e-6, (int)s_recycledMemoryBlocks.size(), maxRecyclable*1e-6, (int)s_recycledDenseArenas.size());
+        fflush(stderr);
+        fail_if(totalRecyclable != s_totalGaps, "s_totalGaps out of sync with gap list??");
+    };
+
     // dense version
     NDArrayViewPtr NewDense(const NDShape& shape, const DataType& dataType, const DeviceDescriptor& device)
     {
@@ -1136,21 +1152,6 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             s_recycledMemoryBlocks.clear(); // this will free the arena if no reference anymore
             s_totalGaps = 0;
         }
-
-        let DebugSnapShot = [&]()
-        {
-            size_t totalRecyclable = 0;
-            size_t maxRecyclable = 0;
-            for (let& b : s_recycledMemoryBlocks)
-            {
-                totalRecyclable += b.size(); // recompute this as a sanity check
-                maxRecyclable = max(maxRecyclable, b.size());
-            }
-            fprintf(stderr, "NDArrayView snapshot: %f MB alloc, %f MB in %d recyclable gaps (max %f), %d recycable arenas\n",
-                    s_totalAllocated*1e-6, s_totalGaps*1e-6, (int)s_recycledMemoryBlocks.size(), maxRecyclable*1e-6, (int)s_recycledDenseArenas.size());
-            fflush(stderr);
-            fail_if(totalRecyclable != s_totalGaps, "s_totalGaps out of sync with gap list??");
-        };
 
         static size_t debugCounter = 0;
         if (debugCounter++ % 100000 == 0)
