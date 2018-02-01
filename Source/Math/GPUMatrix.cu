@@ -5186,9 +5186,8 @@ static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE dev
     const int CacheSize = 32;
     static shared_ptr<GPUMatrix<ElemType>> * onesCache = new shared_ptr<GPUMatrix<ElemType>>[CacheSize]; // cache of objects
 
-    if (deviceId >= CacheSize){
+    if (deviceId >= CacheSize)
         LogicError("GetOnesVector: onesCache[] too small (%d entries), increase (you need %d) and recompile.", CacheSize, (int)deviceId + 1);
-    }
 
     auto p = onesCache[deviceId];
     if (!p || p->GetNumRows() < N) // must (re-)allocate
@@ -5240,7 +5239,7 @@ template <size_t NUM_ARGS>
             else
                 return UnaryGPUTensorOp<ElemType>(beta, pointers[0] + offsets[0], pointers[1] + offsets[1], alpha, op, regularOpDims[0]);
         }
-    
+
         // special case: sum-reducing a matrix onto a column vector; can be done with SGEMM
         // Note: A minor risk is that with this, our own reduction function will rarely be used.
         // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
@@ -5256,10 +5255,11 @@ template <size_t NUM_ARGS>
             auto ALd = reducingStrides[0][0]; // horizontal step width through matrix
             cublasHandle_t cuHandle = GetCublasHandle(deviceId);
             SyncGuard syncGuard;
-            CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
-                                    /*A00=*/pointers[0] + offsets[0], (int) ALd,
-                                    /*B00=*/GetOnesVector<ElemType>(ACols, deviceId)->Data(), (int) /*BRows=*/ACols, &beta,
-                                    /*C00=*/pointers[1] + offsets[1], (int) /*CRows=*/ARows));
+            // C = A * B : [H x 1] = [H x W] * [W x 1], B = column of ones
+            CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*m=CRows=*/ARows, /*n=CCols=*/1, /*k=inner=*/(int)ACols, &alpha,
+                                    /*A00=*/pointers[0] + offsets[0], /*lda=*/(int)ALd,
+                                    /*B00=*/GetOnesVector<ElemType>(ACols, deviceId)->Data(), (int)/*ldb=BRows=*/ACols, &beta,
+                                    /*C00=*/pointers[1] + offsets[1], (int)/*ldc=CRows=*/ARows));
             return;
         }
     }
