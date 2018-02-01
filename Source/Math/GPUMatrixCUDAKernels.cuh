@@ -3135,8 +3135,8 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     const ElemType* a, // dense
     const bool transposeA,
     const ElemType* bnzValues, // sparse nz values
-    const GPUSPARSE_INDEX_TYPE* rowIndex,
-    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    const GPUSPARSE_INDEX_TYPE* rowIndices, // nz indices, matches layout of nz values
+    const GPUSPARSE_INDEX_TYPE* colOffsets, // nz offsets into nz values and nz indices
     const ElemType beta,
     ElemType* c // dense target
     )
@@ -3149,15 +3149,15 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
     int rowInC = id % (m * numSteps);
     int stepIdx = rowInC / m;
 
-    int start = colCSCIndex[colInC];
-    int end = colCSCIndex[colInC + 1];
+    int start = colOffsets[colInC];
+    int end   = colOffsets[colInC + 1];
 
     // loop over all non-zero elements in a single column
     // In the case of one-hot, that's one loop iteration.
     ElemType s = 0;
     for (int j = start; j < end; j++) // j points to the value
     {
-        int i = rowIndex[j] - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
+        int i = rowIndices[j] - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
 
         if (i >= 0)
         {
@@ -3199,8 +3199,8 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     const ElemType* a, // dense
     bool transposeA,
     const ElemType* bnzValues, // sparse nz values
-    const GPUSPARSE_INDEX_TYPE* rowIndex,
-    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    const GPUSPARSE_INDEX_TYPE* rowIndices, // nz indices, matches layout of nz values
+    const GPUSPARSE_INDEX_TYPE* colOffsets, // nz offsets into nz values and nz indices
     ElemType* c // dense target
     )
 {
@@ -3225,19 +3225,18 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
         i = channel * numPixels + pixel;
     }
 
-    int start = colCSCIndex[rowInB];
-    int end = colCSCIndex[rowInB + 1];
+    int start = colOffsets[rowInB];
+    int end   = colOffsets[rowInB + 1];
 
     ElemType s = 0;
     for (int j = start; j < end; j++) // j points to the value that are in the same row
     {
-        int colInC = rowIndex[j]; // the column index because of transpose
-
-        // bnzValues[j] = the b[][j] value
+        int colInC = rowIndices[j]; // the column index because of transpose
+        auto value = bnzValues[j];  // the b[][j] value
         if (!transposeA)
-            s = a[IDX2C(rowInC % m, i, m)] * bnzValues[j];
+            s = a[IDX2C(rowInC % m, i, m)] * value;
         else
-            s = a[IDX2C(i, rowInC % m, k)] * bnzValues[j];
+            s = a[IDX2C(i, rowInC % m, k)] * value;
 
         atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], alpha * s);
     }
