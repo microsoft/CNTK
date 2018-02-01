@@ -1509,6 +1509,7 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
 
     std::map<string, PATHINFO> mp_path_info;
     std::map<string, PATHINFO>::iterator mp_itr;
+    std::set<string> set_edge_path;
 
     std::vector<double> vt_path_weights;
     vt_path_weights.resize(vt_paths.size());
@@ -1571,7 +1572,20 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         }
     }
     
+    set_edge_path.clear();
+
+    for (size_t i = 0; i < vt_paths.size(); i++)
+    {
+        string pathedgeidstr = "$";
+        for (size_t j = 0; j < vt_paths[i].size(); j++)
+        {
+            pathedgeidstr += ("_" + std::to_string(vt_paths[i][j]));
+
+        }
+        set_edge_path.insert(pathedgeidstr);
+    }
     fprintf(stderr, "get_edge_weights: average_WER = %f \n", avg_wer);
+    fprintf(stderr, "get_edge_weights: num_path = %d, num_distinct_edge_path = %d \n", int(vt_paths.size()), int(set_edge_path.size()));
 
     for (mp_itr = mp_path_info.begin(); mp_itr != mp_path_info.end(); mp_itr++)
     {
