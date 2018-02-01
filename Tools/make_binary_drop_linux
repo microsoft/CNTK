@@ -116,7 +116,7 @@ cd "$scriptDir/.."
 # Dependency files
 
 # MKL
-declare -a mklFiles=("libmklml_intel.so" "libiomp5.so" "libmkldnn.so.0.12.0")
+declare -a mklFiles=("libmklml_intel.so" "libiomp5.so" "libmkldnn.so.0")
 
 # Open CV
 declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgcodecs.so.3.1")
@@ -276,7 +276,7 @@ if [[ $targetConfiguration != "cpu" ]]; then
 
     # Copy cuDNN
     echo "Copying cuDNN..." >&3
-    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath/libcudnn.so.6
+    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath/libcudnn.so.7
     
     # Copy NCCL
     echo "Copying NCCL..." >&3

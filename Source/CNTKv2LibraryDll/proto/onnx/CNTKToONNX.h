@@ -10,7 +10,7 @@
 
 #define CNTK_ONNX_MODEL_VERSION 1
 const std::string CNTK_ONNX_PRODUCER_NAME = "CNTK";
-const std::string CNTK_ONNX_PRODUCER_VERSION = "2.3.1";
+const std::string CNTK_ONNX_PRODUCER_VERSION = "2.4";
 
 namespace ONNXIR
 {
