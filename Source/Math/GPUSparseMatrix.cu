@@ -1284,11 +1284,11 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
                 horizontalSubsample, // convolution step size
                 channelwise,         // channelwise or pixelwise multiplication
                 alpha,
-                reinterpret_cast<const ElemType*>(lhs.Data()), // dense
+                /*reinterpret_cast<const ElemType*>*/(lhs.Data()), // dense
                 transposeA,
-                reinterpret_cast<const ElemType*>(rhs.Buffer()), // sparse nz values. Note that because of the offsets we use the array
-                rhs.RowLocation(),
-                rhs.ColLocation(),
+                /*reinterpret_cast<const ElemType*>*/(rhs.Buffer()), // sparse nz values. Note that because of the offsets we use the array
+                rhs.MajorIndexLocation(),     // nz indices, matching layout of nz values
+                rhs.SecondaryIndexLocation(), // nz offsets into nz indices and nz values
                 beta,
                 reinterpret_cast<ElemType*>(c.Data()) // dense target
                 );
@@ -1296,7 +1296,7 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
         else
         {
             if (beta == 0.0)
-                c.SetValue((ElemType)0);
+                c.SetValue((ElemType)0); // we use atomicAdd(), so we must do this in a separate launch
             else if (beta != 1.0)
                 RuntimeError("Only support c += alpha * a operation");
 
@@ -1314,11 +1314,11 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
                     channelwise,         // channelwise or pixelwise multiplication
                     rowInB,
                     alpha,
-                    reinterpret_cast<const ElemType*>(lhs.Data()), // dense
+                    /*reinterpret_cast<const ElemType*>*/(lhs.Data()), // dense
                     transposeA,
-                    reinterpret_cast<const ElemType*>(rhs.Buffer()), // sparse nz values
-                    rhs.RowLocation(),
-                    rhs.ColLocation(),
+                    /*reinterpret_cast<const ElemType*>*/(rhs.Buffer()), // sparse nz values
+                    rhs.MajorIndexLocation(),     // nz indices, matching layout of nz values
+                    rhs.SecondaryIndexLocation(), // nz offsets into nz indices and nz values
                     reinterpret_cast<ElemType*>(c.Data()) // dense target
                     );
             }
