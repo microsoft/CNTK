@@ -266,6 +266,23 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
         }
         CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Buffer(), Buffer() + nzOffset0, GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
         // PERF BUGBUG: We don't need to copy all GetSizeElemAllocated(), only nnz, which may be smaller.
+#if 1   // sanity check for tracking down a bug
+        let nnz = MajorIndexCount();
+        let sparseDim = GetFormat() == matrixFormatSparseCSC ? GetNumRows() : GetNumCols(); // the dim in which we are sparse
+        auto* cpuNzIndices = cpuSparseMatrix.MajorIndexLocation();
+        for (size_t i = 0; i < numNzOffsets-1; i++)
+        {
+            let begin = cpuNzOffsets[i];
+            let end   = cpuNzOffsets[i + 1];
+            if (begin > end)
+                LogicError("CopyToCPUSparseMatrix: offsets not sorted??");
+            if (end < 0 || end > nnz)
+                LogicError("CopyToCPUSparseMatrix: offset exceesdsd nnz??");
+            for (size_t k = begin; k < end; k++)
+                if (cpuNzIndices[k] < 0 || cpuNzIndices[k] >= (int)sparseDim)
+                    LogicError("CopyToCPUSparseMatrix: row index out of bounds??");
+        }
+#endif
     }
     else if (this->GetFormat() == matrixFormatSparseBlockCol)
     {
@@ -2954,12 +2971,19 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     for (size_t i = 0; i < numInputs; i++)
     {
         let& input = inputs(i);
+#if 1   // sanity check
+        CPUSparseMatrix<ElemType> csm(GetFormat());
+        input.CopyToCPUSparseMatrix(csm);
+#endif
         if (input.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
             InvalidArgument("GatherBatch (sparse): Requires CSC format.");
         if (input.GetNumRows() != numRows)
             InvalidArgument("GatherBatch (sparse): All inputs must have the same number of rows as the output (%d).", (int)numRows);
         let inputCols = input.GetNumCols();
-        nz += 1;//input.NzCount(); // TODO: double-check that this does not actually read data from the GPU, that caching works
+        //if (1) // estimate space. If we know the actual NzCount(); we use it. Otherwise use the upper bound.
+        //    nz += inputCols;
+        //else
+            nz += input.NzCount(); // TODO: double-check that this does not actually read data from the GPU, that caching works
         numCols += inputCols;
     }
     if (numCols != GetNumCols())
@@ -3012,6 +3036,10 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     else if (colsLeft <= capacity) GatherMemcpyCSC<capacity, ElemType>(outputSlice, inputSliceBuffer);
     else LogicError("GatherBatch: We should have flushed inside the loop, but somehow didn't??");
     InvalidateCachedNzCount();
+#if 1   // sanity check
+    CPUSparseMatrix<ElemType> csm(GetFormat());
+    CopyToCPUSparseMatrix(csm);
+#endif
 }
 
 // -> dense
