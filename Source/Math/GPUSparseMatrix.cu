@@ -1246,22 +1246,22 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
 
     // base case (without transpose, matrix product): [m x k] * [l x n] -> [m x n], k == l
     // with transpose: swap accordingly
-    // with convolution: repeat accordingly
+    // with convolution: repeat accordingly (l/k times, l >= k).
     int m = transposeA ? (int) lhs.GetNumCols() : (int) lhs.GetNumRows();
-    int k = transposeA ? (int) lhs.GetNumRows() : (int) lhs.GetNumCols();
-    int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows(); // inner dimension
+    int k = transposeA ? (int) lhs.GetNumRows() : (int) lhs.GetNumCols(); // inner dimension
+    int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows(); // extended inner dimension in case of convolution
     int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols();
 
     assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
 
-    int numSteps = 0;
+    int numSteps;
     if (padding)
         numSteps = (int) ceil(1.0 * l / (horizontalSubsample * numChannels));
     else if (l >= k)
         numSteps = 1 + (l - k) / (horizontalSubsample * numChannels);
-
-    if (numSteps == 0)
+    else
         LogicError("ConvolveAndWeightedAdd: number of steps is zero. Matrix dimensions are incorrect or set padding to true.");
+    // note: for plain matrix product, numSteps == 1
 
     int cRows = m * numSteps;
     int cCols = n;
@@ -1287,13 +1287,13 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
                 horizontalSubsample, // convolution step size
                 channelwise,         // channelwise or pixelwise multiplication
                 alpha,
-                /*reinterpret_cast<const ElemType*>*/(lhs.Data()), // dense
+                lhs.Data(),          // dense
                 transposeA,
-                /*reinterpret_cast<const ElemType*>*/(rhs.Buffer()), // sparse nz values. Note that because of the offsets we use the array
+                rhs.Buffer(),                 // nz values
                 rhs.MajorIndexLocation(),     // nz indices, matching layout of nz values
-                rhs.SecondaryIndexLocation(), // nz offsets into nz indices and nz values
+                rhs.SecondaryIndexLocation(), // nz offsets into nz indices and nz values, shifted by sliceViewOffset
                 beta,
-                reinterpret_cast<ElemType*>(c.Data()) // dense target
+                c.Data()             // dense target
                 );
         }
         else
@@ -1305,26 +1305,23 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
 
             int blocksPerGrid = (int) ceil(1.0 * cRows * l / GridDim::maxThreadsPerBlock);
             SyncGuard syncGuard;
-            //for (int rowInB = 0; rowInB < l; rowInB++)
-            {
-                _dense1DConvMultSparseCSCTransposeAndAddToDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-                    m,                   // rowDense
-                    k,                   // colDense
-                    n,                   // colSparse
-                    numChannels,         // number of input channels
-                    numSteps,            // convolution num steps
-                    horizontalSubsample, // convolution step size
-                    channelwise,         // channelwise or pixelwise multiplication
-                    l,                   // innerDim
-                    alpha,
-                    /*reinterpret_cast<const ElemType*>*/(lhs.Data()), // dense
-                    transposeA,
-                    /*reinterpret_cast<const ElemType*>*/(rhs.Buffer()), // sparse nz values
-                    rhs.MajorIndexLocation(),     // nz indices, matching layout of nz values
-                    rhs.SecondaryIndexLocation(), // nz offsets into nz indices and nz values
-                    reinterpret_cast<ElemType*>(c.Data()) // dense target
-                    );
-            }
+            _dense1DConvMultSparseCSCTransposeAndAddToDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
+                m,                   // rowDense
+                k,                   // colDense
+                l,                   // innerDim
+                n,                   // colSparse
+                numChannels,         // number of input channels (1 in case of matrix product)
+                numSteps,            // convolution num steps (1 in case of matrix product)
+                horizontalSubsample, // convolution step size (1 in case of matrix product)
+                channelwise,         // channelwise or pixelwise multiplication (false in case of matrix product)
+                alpha,
+                lhs.Data(),          // dense
+                transposeA,
+                rhs.Buffer(),                 // nz values
+                rhs.MajorIndexLocation(),     // nz indices, matching layout of nz values
+                rhs.SecondaryIndexLocation(), // nz offsets into nz indices and nz values, shifted by sliceViewOffset
+                c.Data()             // dense target
+                );
         }
     }
     else

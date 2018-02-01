@@ -3189,12 +3189,12 @@ template <class ElemType>
 __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     int m,                   // rowDense
     int k,                   // colDense
+    int l,                   // range of row indices of the sparse matrix
     int n,                   // colSparse
-    int numChannels,         // input num channels
-    int numSteps,            // convolution num steps
-    int horizontalSubsample, // convolution step size
-    bool channelwise,        // pixelwise for normal multiplication and channelwise for convolution operation
-    int innerDim,            // range of row indices of the sparse matrix
+    int numChannels,         // number of input channels (1 in case of matrix product)
+    int numSteps,            // convolution num steps (1 in case of matrix product)
+    int horizontalSubsample, // convolution step size (1 in case of matrix product)
+    bool channelwise,        // channelwise or pixelwise multiplication (false in case of matrix product)
     ElemType alpha,
     const ElemType* a, // dense
     bool transposeA,
@@ -3204,28 +3204,25 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     ElemType* c // dense target
     )
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x; // id range: cRows * innerDim, with C row indices in consecutive threads
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x; // id range: cRows * l, with C row indices in consecutive threads
 
     // note: this code looks a bit weird; it is a refactoring to make one optimization, while keeping it as close as possible to the original
-    int cRows = m * numSteps;
+    int cRows = m * numSteps; // (== m for matrix product)
+
+    int rowInB = id / cRows; // row in Transpose(B) = col in B
+    if (rowInB >= l)
+        return;
 
     int rowInC = id % cRows;
-    if (rowInC >= m * numSteps)
-        return;
+    int stepIdx = rowInC / m; // (== 0 for plain matrix product)
+    int i = rowInB - (horizontalSubsample * numChannels * stepIdx); // row in Transpose(B) offset by the convolution step
 
-    int rowInB = id / cRows;
-    if (rowInB >= innerDim)
-        return;
-
-    int stepIdx = rowInC / m;
-    int i = rowInB - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
-
-    if (i < 0 || i >= k)
+    if (i < 0 || i >= k) // out of range: assume value is 0, hence nothing to do
         return;
 
     // Convert to channelwise index.
-    // This is similar to rowwise to columnwise conversion
-    if (channelwise)
+    // This is similar to rowwise to columnwise conversion.
+    if (channelwise) // (== false for matrix product; but does not matter because numChannels == 1 for matrix product, too)
     {
         int pixel = i / numChannels;
         int channel = i % numChannels;
@@ -3233,20 +3230,23 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
         i = channel * numPixels + pixel;
     }
 
-    int start = colOffsets[rowInB];
+    int start = colOffsets[rowInB]; // using row index into column offsets since B is transposed, hence cols/rows are swapped
     int end   = colOffsets[rowInB + 1];
 
-    ElemType s = 0;
     for (int j = start; j < end; j++) // j points to the value that are in the same row
     {
-        int colInC = rowIndices[j]; // the column index because of transpose
-        auto value = bnzValues[j];  // the b[][j] value
-        if (!transposeA)
-            s = a[IDX2C(rowInC % m, i, m)] * value;
-        else
-            s = a[IDX2C(i, rowInC % m, k)] * value;
+        int colInC = rowIndices[j];  // row index in B = column index in Transpose(B)
+        auto bValue = bnzValues[j];  // the b[][j] value
 
-        atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], alpha * s);
+        ElemType aValue = 0;
+        if (!transposeA)
+            aValue = a[IDX2C(rowInC % m, i, m)];
+        else
+            aValue = a[IDX2C(i, rowInC % m, k)];
+
+        auto res = alpha * aValue * bValue;
+        if (res != 0)
+            atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], res);
     }
 }
 
