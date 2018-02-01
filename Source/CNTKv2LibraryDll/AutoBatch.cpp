@@ -1036,6 +1036,9 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     // Instead, we check these when for a reusable object.
     NDArrayViewPtr NewSparse(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
+#if 1
+        return MakeSharedObject<NDArrayView>(dataType, storageFormat, shape, device);
+#else
         lock_guard<recursive_mutex> guard(s_mutex);
 
         let formatAsIndex = (size_t)storageFormat;
@@ -1114,6 +1117,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             });
         auto region = MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/numElements, storage); // TODO: what's the role of numElements for sparse?
         return region;
+#endif
     }
 
     // helper for NewDense(): create a new Matrix with its own storage object that is indeed a view onto the arena
@@ -1709,6 +1713,31 @@ public: // for call in BatchedForward()  --TODO: clean this up
         }
         return fields.m_value; // return the (now) cached value
     }
+    // helper to validate a sparse object
+    static const void CheckSparse(const NDArrayViewPtr& view)
+    {
+        if (view->GetStorageFormat() != StorageFormat::SparseCSC || view->GetDataType() != DataType::Float)
+            return;
+        if (view->Device() != DeviceDescriptor::CPUDevice())
+            return CheckSparse(view->DeepClone(DeviceDescriptor::CPUDevice()));
+        let& shape = view->Shape();
+        let numRows = shape[0];
+        let numCols = shape.TotalSize() / numRows;
+        fprintf(stderr, "CheckSparse: checking CSC matrix of shape %S in [%d x %d] matrix", shape.AsString().c_str(), (int)numRows, (int)numCols), fflush(stderr);
+        float* nzValues;
+        int* nzIndices;
+        int* nzOffsets;
+        size_t nnz;
+        tie(nzValues, nzOffsets, nzIndices, nnz) = view->SparseCSCDataBuffers<float>();
+        fprintf(stderr, " nnz=%d\n", (int)nnz), fflush(stderr);
+        for (size_t i = 0; i < numCols; i++)
+        {
+            fail_if(nzOffsets[i] > nzOffsets[i+1], "offsets not sorted??");
+            fail_if(nzOffsets[i+1] > nnz, "offset exceesdsd nnz??");
+            for (size_t k = nzOffsets[i]; k < nzOffsets[i+1]; k++)
+                fail_if(nzIndices[k] >= numRows, "row index out of bounds??");
+        }
+    }
 private:
     static const NDArrayViewPtr& MTCacheAndGetValue(const Variable& v)
     {
@@ -1729,6 +1758,7 @@ private:
                 GetInputFields(inputs[i]).m_value = m_arena.New(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
             // fetch the m_value from the input
             inputValues[i] = MTCacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
+CheckSparse(inputValues[i]);
         }
         cudaStatsGuardPrepareI.Stop();
         CudaStatsGuard cudaStatsGuardPrepareO(PrimitiveOpType::Log, L"Memoize: MT prep output", 3, inputs.size());
@@ -1767,6 +1797,7 @@ private:
 static bool trace=false;
 if ((f.m_uniqueIdForDebugging == 116759999 || f.m_uniqueIdForDebugging == 128107999) && f.m_op == PrimitiveOpType::ReduceElements)
     trace=true;
+    //LogFunction(f, L"trace");
 if (trace)
 {
     LogFunction(f, L"trace");
