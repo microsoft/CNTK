@@ -168,7 +168,7 @@ public:
 
     // Terminology and store of sparse matrices:
     //  - nz array    [0..nzIndex..nzCount-1]: array of non-zero element values, all concatenated linearly in memory
-    //  - major index [0..nzIndex..nzCount-1]: corresponding index of non-zero element. CSC: row index (RowLocation(), does not include slice-view offset).
+    //  - major index [0..nzIndex..nzCount-1]: corresponding index of non-zero element, same layout as nz values. CSC: row index (RowLocation(), does not include slice-view offset).
     //  - secondary index [0..j..J-1] -> firstNzIndex: first nzIndex of the non-sparse dimension. CSC: j=colIndex. Secondary index = ColLocation(), *does* include slice-view offset.
     // The three arrays are concatenated in memory.
     // CSC:
@@ -231,15 +231,21 @@ public:
     //     - GetNumCols() == num_cols
     //     - GetNumRows() == num_rows
 
+    // major index location:
+    //  - CSC/CSR: nz value indices, matching layout of nz values
+    //  - other: ...TODO
+    // Use this function to get the array that gets indexed by the secondary index (=nz offsets), to make sure sliceViewOffset is correct.
     // The sparse matrix representation of CSC/CSR uses one large value array (m_pArray) with offsets to the Major/Secondary index location.
-    // m_pArray [0,nz] are the nz elements, [nz+1,2*nz+1] is the major index location, and [2*nz+2,2*nz+2+ numcols/rows] is the secondary
+    // m_pArray [0:nz] are the nz elements, [nz:2*nz] is the major index location, and [2*nz:2*nz+numcols/rows] is the secondary
     // index location.
-    // BUGBUG: This function does not honor the slice-view offset, while CPUSparseMatrix::MajorIndexLocation() does.
+    // Note: This function does not include the slice-view offset, while in CPUSparseMatrix::MajorIndexLocation() does. Should clean this up.
     GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const // row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
     {
         return (GPUSPARSE_INDEX_TYPE*) (Buffer() + GetSizeAllocated());
     }
 
+    // location of major index storage, including slice-view offset
+    // Use this for copy operations.
     // Note: Data is already offset by the sliceViewOffset, so we can just add the allocated size to get the start of the MajorIndexLoc
     GPUSPARSE_INDEX_TYPE* MajorIndexLocationWithSliceViewOffset() const
     {
