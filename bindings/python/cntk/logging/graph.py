@@ -131,6 +131,51 @@ def find_by_name(node, node_name, depth=0):
 
     return result[0]
 
+def find_by_uid(node, node_uid, depth=0):
+    '''
+    Finds a function in the graph based on its UID starting from ``node`` and doing a depth-first
+    search. It assumes that the name occurs only once.
+
+    Args:
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
+        node_uid (`str` or `unicode` (in Python 2)): uid for which we are search nodes.
+        depth (int, default 0): how deep into the block hierarchy the DFS
+         algorithm should go into. Set to -1 for infinite depth.
+
+    Returns:
+        Primitive (or block) function having the specified name
+
+    See also:
+        :func:`~cntk.ops.functions.Function.find_by_uid` in class
+        :class:`~cntk.ops.functions.Function`.
+    '''
+    # The try-except block below is in place to allow working in Python 2, where
+    # the input argument node_uid could be of type 'unicode' instead of 'str'. But
+    # Python 3 does not have type 'unicode', hence the check.
+    try:
+        uid_is_type_unicode = isinstance(node_uid, unicode)
+    except NameError:
+        uid_is_type_unicode = False
+
+    if not (isinstance(node_uid, str) or uid_is_type_unicode):
+        raise ValueError('node_uid must be string of type str or unicode (Python 2.7). You gave '
+                         'a %s' % type(node_uid))
+
+    if uid_is_type_unicode:
+        node_uid = node_uid.encode('ascii')
+
+    result = depth_first_search(node, lambda x: x.uid == node_uid,
+                                depth)
+
+    if len(result) > 1:
+        raise ValueError('found multiple functions matching "%s". '
+                         'This should not happen as UIDs are unique.' % node_uid)
+
+    if not result:
+        return None
+
+    return result[0]
+
 def plot(root, filename=None):
     '''
     Walks through every node of the graph starting at ``root``,
