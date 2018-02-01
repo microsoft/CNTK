@@ -191,12 +191,15 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
         return;
     }
 
-    if (this->GetFormat() == matrixFormatSparseCSR)
+    if (this->GetFormat() == matrixFormatSparseCSR
+#if 0
+        )
     {
-        // we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
         cpuSparseMatrix.RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetNumElemAllocated(), true, false);
 
         PrepareDevice();
+        if (m_sliceViewOffset != 0)
+            NOT_IMPLEMENTED;
 
         if (sizeof(GPUSPARSE_INDEX_TYPE) == sizeof(CPUSPARSE_INDEX_TYPE))
         {
@@ -206,40 +209,63 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
         }
         else
         {
-            GPUSPARSE_INDEX_TYPE* h_CSRRow = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(RowSize());
-            CUDA_CALL(cudaMemcpy(h_CSRRow, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
-            ConvertBuffer(cpuSparseMatrix.RowLocation(), h_CSRRow, SecondaryIndexCount());
+            GPUSPARSE_INDEX_TYPE* tmpBuf = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(RowSize());
+            CUDA_CALL(cudaMemcpy(tmpBuf, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
+            ConvertBuffer(cpuSparseMatrix.RowLocation(), tmpBuf, SecondaryIndexCount());
 
-            GPUSPARSE_INDEX_TYPE* h_Col = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(ColSize());
-            CUDA_CALL(cudaMemcpy(h_Col, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
-            ConvertBuffer(cpuSparseMatrix.ColLocation(), h_Col, MajorIndexCount());
+            tmpBuf = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(ColSize());
+            CUDA_CALL(cudaMemcpy(tmpBuf, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
+            ConvertBuffer(cpuSparseMatrix.ColLocation(), tmpBuf, MajorIndexCount());
         }
 
         CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Data(), Data_IThinkThisShouldBeBuffer(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
     }
-    else if (this->GetFormat() == matrixFormatSparseCSC)
+    else if (
+#else
+        ||
+#endif
+        GetFormat() == matrixFormatSparseCSC)
     {
-        // we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
         cpuSparseMatrix.RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetNumElemAllocated(), true, false);
 
         PrepareDevice();
+        // copy the offsets first
+        auto* cpuNzOffsets = cpuSparseMatrix.SecondaryIndexLocation(); // includes a potential sliceViewOffset
+        let* gpuNzOffsets = SecondaryIndexLocation();
+        let  numNzOffsets = SecondaryIndexCount();
+        let numNzOffsetBytes = SecondaryIndexSize(); // same as numNzOffsets but in bytes
         if (sizeof(GPUSPARSE_INDEX_TYPE) == sizeof(CPUSPARSE_INDEX_TYPE))
         {
-            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.RowLocation(), RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
-            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.ColLocation(), ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(cpuNzOffsets, gpuNzOffsets, numNzOffsetBytes, cudaMemcpyDeviceToHost));
         }
         else
         {
-            GPUSPARSE_INDEX_TYPE* h_CSCCol = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(ColSize());
-            CUDA_CALL(cudaMemcpy(h_CSCCol, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
-            ConvertBuffer(cpuSparseMatrix.ColLocation(), h_CSCCol, SecondaryIndexCount());
-
-            GPUSPARSE_INDEX_TYPE* h_Row = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(RowSize());
-            CUDA_CALL(cudaMemcpy(h_Row, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
-            ConvertBuffer(cpuSparseMatrix.RowLocation(), h_Row, MajorIndexCount());
+            GPUSPARSE_INDEX_TYPE* tmpBuf = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(numNzOffsetBytes);
+            CUDA_CALL(cudaMemcpy(tmpBuf, gpuNzOffsets, numNzOffsetBytes, cudaMemcpyDeviceToHost));
+            ConvertBuffer(cpuNzOffsets, tmpBuf, numNzOffsets);
         }
-
-        CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Data(), Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
+        let nzOffset0 = cpuNzOffsets[0]; // in case of a slice view, we don't start at the very first element
+        if (nzOffset0 == 1065353216)
+            fflush(stderr);
+        // it's a view: correct the offsets
+        if (nzOffset0 != 0)
+        {
+            for (size_t k = 0; k < numNzOffsets; k++)
+                cpuNzOffsets[k] -= nzOffset0;
+        }
+        // copy the indices and data
+        if (sizeof(GPUSPARSE_INDEX_TYPE) == sizeof(CPUSPARSE_INDEX_TYPE))
+        {
+            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.MajorIndexLocation(), MajorIndexLocation() + nzOffset0, MajorIndexSize(), cudaMemcpyDeviceToHost));
+        }
+        else
+        {
+            GPUSPARSE_INDEX_TYPE* tmpBuf = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(MajorIndexSize());
+            CUDA_CALL(cudaMemcpy(tmpBuf, MajorIndexLocation() + nzOffset0, MajorIndexSize(), cudaMemcpyDeviceToHost));
+            ConvertBuffer(cpuSparseMatrix.MajorIndexLocation(), tmpBuf, MajorIndexCount());
+        }
+        CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Buffer(), Buffer() + nzOffset0, GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
+        // PERF BUGBUG: We don't need to copy all GetSizeElemAllocated(), only nnz, which may be smaller.
     }
     else if (this->GetFormat() == matrixFormatSparseBlockCol)
     {

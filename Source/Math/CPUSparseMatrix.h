@@ -342,7 +342,7 @@ public:
     // the column and row locations will swap based on what format we are in. Full index always follows the data array
     CPUSPARSE_INDEX_TYPE* RowLocation() const
     {
-        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation();
+        return (GetFormat() & matrixFormatRowMajor) ? SecondaryIndexLocation()/*CSR*/ : MajorIndexLocation()/*CSC*/;
     }
     size_t RowSize() const
     {
