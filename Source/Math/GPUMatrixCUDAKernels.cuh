@@ -3194,7 +3194,7 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     int numSteps,            // convolution num steps
     int horizontalSubsample, // convolution step size
     bool channelwise,        // pixelwise for normal multiplication and channelwise for convolution operation
-    int rowInB,              // row index of the sparse matrix
+    int innerDim,            // range of row indices of the sparse matrix
     ElemType alpha,
     const ElemType* a, // dense
     bool transposeA,
@@ -3210,10 +3210,12 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
 
     int rowInC = id;
     int stepIdx = rowInC / m;
+    for (int rowInB = 0; rowInB < innerDim; rowInB++)
+    {
     int i = rowInB - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
 
     if (i < 0 || i >= k)
-        return;
+        continue;
 
     // Convert to channelwise index.
     // This is similar to rowwise to columnwise conversion
@@ -3239,6 +3241,7 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
             s = a[IDX2C(i, rowInC % m, k)] * value;
 
         atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], alpha * s);
+    }
     }
 }
 

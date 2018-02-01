@@ -1244,9 +1244,12 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
     if (lhs.IsEmpty() || rhs.IsEmpty())
         LogicError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd:  one of the input matrix is empty.");
 
+    // base case (without transpose, matrix product): [m x k] * [l x n] -> [m x n], k == l
+    // with transpose: swap accordingly
+    // with convolution: repeat accordingly
     int m = transposeA ? (int) lhs.GetNumCols() : (int) lhs.GetNumRows();
     int k = transposeA ? (int) lhs.GetNumRows() : (int) lhs.GetNumCols();
-    int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows();
+    int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows(); // inner dimension
     int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols();
 
     assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
@@ -1302,7 +1305,7 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
 
             int blocksPerGrid = (int) ceil(1.0 * cRows / GridDim::maxThreadsPerBlock);
             SyncGuard syncGuard;
-            for (int rowInB = 0; rowInB < l; rowInB++)
+            //for (int rowInB = 0; rowInB < l; rowInB++)
             {
                 _dense1DConvMultSparseCSCTransposeAndAddToDense<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
                     m,                   // rowDense
@@ -1312,7 +1315,7 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
                     numSteps,            // convolution num steps
                     horizontalSubsample, // convolution step size
                     channelwise,         // channelwise or pixelwise multiplication
-                    rowInB,
+                    l,                   // innerDim
                     alpha,
                     /*reinterpret_cast<const ElemType*>*/(lhs.Data()), // dense
                     transposeA,
