@@ -3204,18 +3204,24 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
     ElemType* c // dense target
     )
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m * numSteps)
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x; // id range: cRows * innerDim, with C row indices in consecutive threads
+
+    // note: this code looks a bit weird; it is a refactoring to make one optimization, while keeping it as close as possible to the original
+    int cRows = m * numSteps;
+
+    int rowInC = id % cRows;
+    if (rowInC >= m * numSteps)
         return;
 
-    int rowInC = id;
+    int rowInB = id / cRows;
+    if (rowInB >= innerDim)
+        return;
+
     int stepIdx = rowInC / m;
-    for (int rowInB = 0; rowInB < innerDim; rowInB++)
-    {
     int i = rowInB - (horizontalSubsample * numChannels * stepIdx); // offset row index by the convolution step
 
     if (i < 0 || i >= k)
-        continue;
+        return;
 
     // Convert to channelwise index.
     // This is similar to rowwise to columnwise conversion
@@ -3241,7 +3247,6 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
             s = a[IDX2C(i, rowInC % m, k)] * value;
 
         atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], alpha * s);
-    }
     }
 }
 
