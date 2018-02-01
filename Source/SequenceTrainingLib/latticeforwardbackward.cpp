@@ -1584,7 +1584,7 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         }
         set_edge_path.insert(pathedgeidstr);
     }
-    fprintf(stderr, "get_edge_weights: average_WER = %f \n", avg_wer);
+    fprintf(stderr, "get_edge_weights: average_WER = %f, one_best WER = %f \n", avg_wer, onebest_wer);
     fprintf(stderr, "get_edge_weights: num_path = %d, num_distinct_edge_path = %d \n", int(vt_paths.size()), int(set_edge_path.size()));
 
     for (mp_itr = mp_path_info.begin(); mp_itr != mp_path_info.end(); mp_itr++)
