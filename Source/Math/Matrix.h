@@ -53,6 +53,9 @@ template <class ElemType> class GPUSparseMatrix;
 template <class ElemType> class CPUSparseMatrix;
 template <class ElemType> class DeviceBoundNumber;
 
+template <class ElemType>
+class Matrix;
+
 // <ElemType>-agnostic base class
 struct /*interface*/ MATH_API MatrixBase   // : public ::CNTK::enable_strong_shared_ptr<MatrixBase>
 {
@@ -69,6 +72,10 @@ struct /*interface*/ MATH_API MatrixBase   // : public ::CNTK::enable_strong_sha
     virtual void CastAssignValuesOf(const MatrixBase& other) = 0; // allows for mixed assignment with conversion
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
+    // helpers for casting
+    template<class ElemType> const Matrix<ElemType>* AsPtr() const { return dynamic_cast<const Matrix<ElemType>*>(this); }
+    template<class ElemType> const Matrix<ElemType>& AsRef() const { return dynamic_cast<const Matrix<ElemType>&>(*this); }
+    template<class ElemType> bool ElemTypeIs() const { return dynamic_cast<const Matrix<ElemType>*>(this) != nullptr; }
 };
 typedef MatrixBase::MatrixBasePtr MatrixBasePtr;
 
