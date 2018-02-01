@@ -27,6 +27,7 @@
 #include <mutex>
 #include <thread>
 #include <time.h>
+#include <typeinfo>
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -109,7 +110,7 @@ static inline bool ShouldLogMemoizeStatsCUDA() { return logMemoizeStatsCounter &
 
 #define let const auto
 #define fail_if(cond, err) (!!(cond) ? (LogicError("%s: %s", __func__, err),0) : 0)
-#define Break fprintf(stderr, "") // use this inside a conditional to be able to set a breakpoint in Release code
+#define Break fflush(stderr) // use this inside a conditional to be able to set a breakpoint in Release code
 
 namespace CNTK
 {
@@ -886,7 +887,33 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         MatrixBasePtr m_sob;    // reference to underlying storage object, to hold ref count
         uint8_t* m_data;        // data pointer, points inside m_sob's memory
         size_t   m_size;        // number of bytes
-        MemoryBlock(const MatrixBasePtr& sob, uint8_t* data, size_t size) : m_sob(sob), m_data(data), m_size(size) {} // note: size in bytes
+        MemoryBlock(const MatrixBasePtr& sob, uint8_t* data, size_t size) : m_sob(sob), m_data(data), m_size(size) // note: size in bytes
+        {
+            // debugging
+            static size_t n = 0;
+            m_uniqueId = n++;
+            // sanity checks
+            Check();
+        }
+        size_t m_uniqueId; // for debugging; delete this once working
+        template<typename ElementType>
+        void CheckTyped() const
+        {
+            let& sob = m_sob->AsRef<ElementType>();
+            let* e = sob.Data() + sob.GetNumElements();
+            fail_if (m_data + m_size > (uint8_t*)e, "MemoryBlock has invalid range w.r.t. storage object??");
+        }
+        void Check() const
+        {
+            if (!m_sob)
+                return; // nothing to check
+            else if (IsMatrixOfDataType(*m_sob, DataType::Float))
+                CheckTyped<float>();
+            else if (IsMatrixOfDataType(*m_sob, DataType::Double))
+                CheckTyped<double>();
+            else
+                LogicError("Check: Unsupported DataType");
+        }
         // for set support --borrowed from Marian toolkit
         size_t   size() const  { return m_size; } // note: bytes, not elements
         uint8_t* data() const  { return m_data; }
@@ -900,20 +927,12 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         {
             return m_data == other.data() && m_size == other.size();
         }
-        template<typename ElementType>
-        static MemoryBlock Create(const MatrixBasePtr& sob, size_t firstIndex, size_t numElements)
-        {
-            let& mat = (const Matrix<ElementType>&)(*sob);
-            auto* p = mat.Data();
-            p += firstIndex;
-            return MemoryBlock(sob, (uint8_t*)p, numElements * sizeof(ElementType));
-        }
-        static MemoryBlock Create(const MatrixBasePtr& sob, DataType dataType, size_t firstIndex, size_t numElements)
+        static MemoryBlock Create(const MatrixBasePtr& sob, DataType dataType, size_t numElements)
         {
             switch (dataType)
             {
-            case DataType::Float:  return Create<float >(sob, firstIndex, numElements); break;
-            case DataType::Double: return Create<double>(sob, firstIndex, numElements); break;
+            case DataType::Float:  return MemoryBlock(sob, (uint8_t*)(sob->AsRef<float >().Data()), numElements * sizeof(float ));
+            case DataType::Double: return MemoryBlock(sob, (uint8_t*)(sob->AsRef<double>().Data()), numElements * sizeof(double));
             default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
             }
         }
@@ -921,8 +940,8 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         {
             switch (dataType)
             {
-            case DataType::Float:  return MemoryBlock(nullptr, nullptr, numElements * sizeof(float )); break;
-            case DataType::Double: return MemoryBlock(nullptr, nullptr, numElements * sizeof(double)); break;
+            case DataType::Float:  return MemoryBlock(nullptr, nullptr, numElements * sizeof(float ));
+            case DataType::Double: return MemoryBlock(nullptr, nullptr, numElements * sizeof(double));
             default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
             }
         }
@@ -946,7 +965,10 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     {
         size_t totalRecyclable = 0;
         for (let& b : s_recycledMemoryBlocks)
+        {
+            b.Check();
             totalRecyclable += b.size();
+        }
         fail_if(totalRecyclable != s_totalGaps, "gaps out of sync with stats??");
     }
     static void RecycleMemoryBlock(MemoryBlock&& memoryBlock) // callback from Deleter()
@@ -969,7 +991,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                 if (s_mergeBuffer[j - 1].end() == s_mergeBuffer[i].begin())
                     s_mergeBuffer[j - 1].m_size += s_mergeBuffer[i].size();
                 else if (j != i)
-                    s_mergeBuffer[j++] = s_mergeBuffer[i];
+                    s_mergeBuffer[j++] = move(s_mergeBuffer[i]);
                 else
                     j++;
             }
@@ -991,7 +1013,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
     static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledSparseArenass; // TODO: we can simplify this further, just use one
     static set<MemoryBlock> s_recycledMemoryBlocks; // free set
-    static const NDShapeDimension defaultDenseArenaSize = 256000000; // we allocate in this chunk size (dense only)
+    static const NDShapeDimension defaultDenseArenaSize = 256*1024*1024;//000000; // we allocate in this chunk size (dense only)
 
     static size_t s_totalAllocated; // diagnostics
     static size_t s_totalGaps;
@@ -1001,8 +1023,8 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     {
         switch (dataType)
         {
-        case DataType::Float:  return dynamic_cast<const Matrix<float >*>(&matrix) != nullptr;
-        case DataType::Double: return dynamic_cast<const Matrix<double>*>(&matrix) != nullptr;
+        case DataType::Float:  return matrix.ElemTypeIs<float >();
+        case DataType::Double: return matrix.ElemTypeIs<double>();
         default: LogicError("GetMatrixType: Unsupported element type.");
         }
     }
@@ -1098,6 +1120,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     // This is needed so that we can control releasing of the block in case of multiple views taken into it.
     MatrixBasePtr WrapStorageRangeAsMatrix(MemoryBlock&& memoryBlock, DataType dataType)
     {
+        memoryBlock.Check();
         let* data = memoryBlock.data();
         let deviceId = memoryBlock.m_sob->GetDeviceId();
         let sizeInBytes = memoryBlock.size();
@@ -1106,7 +1129,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         // PERF BUGBUG: ^^ This is a plain malloc(), not good. Use our allocator, and/or merge with Matrix object itself.
         switch (dataType)
         {
-        case DataType::Float:  return MakeSharedObject<Matrix<float >>(/*rows=*/1, /*cols=*/sizeInBytes / sizeof(float), (float *)data, deviceId, matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
+        case DataType::Float:  return MakeSharedObject<Matrix<float >>(/*rows=*/1, /*cols=*/sizeInBytes / sizeof(float ), (float *)data, deviceId, matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
         case DataType::Double: return MakeSharedObject<Matrix<double>>(/*rows=*/1, /*cols=*/sizeInBytes / sizeof(double), (double*)data, deviceId, matrixFlagDontOwnBuffer, /*nnz=*/0, deleter);
         default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
         }
@@ -1119,6 +1142,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         size_t maxRecyclable = 0;
         for (let& b : s_recycledMemoryBlocks)
         {
+            b.Check();
             totalRecyclable += b.size(); // recompute this as a sanity check
             maxRecyclable = max(maxRecyclable, b.size());
         }
@@ -1149,6 +1173,10 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     // dense version
     NDArrayViewPtr NewDense(const NDShape& shape, const DataType& dataType, const DeviceDescriptor& device)
     {
+#if 1
+        return MakeSharedObject<NDArrayView>(dataType, StorageFormat::Dense, shape, device);
+#else
+
         lock_guard<recursive_mutex> guard(s_mutex);
 
         let numElements = shape.TotalSize(/*check=*/false);
@@ -1194,6 +1222,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         let numCols = requiredDenseArenaSize + 1; // we add 1 so that we won't accidentally merge two consecutive arenas when merging gaps
         try
         {
+            DebugSnapShot();
             fprintf(stderr, "NDArrayViewArena: allocating new arena matrix of %d elements\n", (int)requiredDenseArenaSize), fflush(stderr);
             switch (dataType)
             {
@@ -1223,11 +1252,12 @@ class NDArrayViewArena : public NDArrayView::IAllocator
 
         // convert newly allocated storage into a memoryBlock and allocate from it
         // Note: The new arena will have a ref-count to it through the gap and/or the allocated block.
-        auto memoryBlock = MemoryBlock::Create(newArena, dataType, /*firstIndex=*/0, newArena->GetNumElements());
+        auto memoryBlock = MemoryBlock::Create(newArena, dataType, newArena->GetNumElements());
         CheckGaps();
         auto region = NewDenseFromMemoryBlock(memoryBlock, desiredMemoryBlock.size(), shape, dataType);
         CheckGaps();
         return region;
+#endif
     }
 
 public:
@@ -1734,7 +1764,24 @@ private:
         // execute it
         //if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
         //    Break;
+static bool trace=false;
+if ((f.m_uniqueIdForDebugging == 116759999 || f.m_uniqueIdForDebugging == 128107999) && f.m_op == PrimitiveOpType::ReduceElements)
+    trace=true;
+if (trace)
+{
+    LogFunction(f, L"trace");
+    for (let& in : inputValues)
+        in->LogToFile(L"### in"), fflush(stderr);
+Break;
+    outValue->LogToFile(L"### result mem"), fflush(stderr);
+Break;
+}
         auto res = PrimitiveFunction::Forward(f.m_op, f.Attributes(), output.IsVolatile(), inputValues, outputShape, move(outValue), m_arena, /*funcForErrMsg=*/f);
+if (trace)
+{
+    res->LogToFile(L"### result"), fflush(stderr);
+Break;
+}
 #if 0
         if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
         {
@@ -4953,7 +5000,25 @@ public:
             cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, /*category=*/isSparse ? 1 : 0, input.Shape().TotalSize(/*check=*/false), inputDevice);
         }
 
+static bool trace = false;
+if (f.m_uniqueIdForDebugging == 116613 && index == 1000)
+ trace = true;
+if (trace)
+{
+    Memoizer::LogFunction(f, L"btrace"), fflush(stderr);
+    outputFields.m_gradient->LogToFile(L"incoming"), fflush(stderr);
+    outputFields.m_value->LogToFile(L"outputValue"), fflush(stderr);
+    for (let& in : inputValues)
+        in->LogToFile(L"### in"), fflush(stderr);
+    gradient.view->LogToFile(L"pre target gradient_" + to_wstring(index)), fflush(stderr);
+Break;
+}
         PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, op, f.m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, m_memoizer.Arena(), /*funcForErrMsg=*/f);
+if (trace)
+{
+    gradient.view->LogToFile(L"target gradient_" + to_wstring(index)), fflush(stderr);
+Break;
+}
         m_stats.numBatchedBackpropToCalls++;
 
         EndCudaStats(cudaStatsPtr, inputDevice);
@@ -5543,8 +5608,7 @@ void PrimitiveFunction::Forward() const
     {
         NDArrayViewPtr New(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device) override
         {
-            LogicError("Variable '%S' Value(): plain Forward has no allocator implementation yet. Finish this.");
-            // TODO: finish this. It's just a simple call to MakeSharedPtr<NDArrayView>(...), but don't have a test currently.
+            return MakeSharedObject<NDArrayView>(dataType, storageFormat, shape, device); // simplest of all implementations
         }
     } simpleAllocator;
     output.m_dataFields->m_value = move(Forward(m_op, m_attributes, output.IsVolatile(), args, output.Shape(), move(out), simpleAllocator, /*funcForErrMsg=*/*this));
