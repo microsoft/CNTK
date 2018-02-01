@@ -226,7 +226,8 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
 #endif
         GetFormat() == matrixFormatSparseCSC)
     {
-        cpuSparseMatrix.RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetNumElemAllocated(), true, false);
+        let nnz = NzCount(); // (this is possibly a GPU sync)
+        cpuSparseMatrix.RequireSizeAndAllocate(GetNumRows(), GetNumCols(), nnz, true, false);
 
         PrepareDevice();
         // copy the offsets first
@@ -234,6 +235,7 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
         let* gpuNzOffsets = SecondaryIndexLocation();
         let  numNzOffsets = SecondaryIndexCount();
         let numNzOffsetBytes = SecondaryIndexSize(); // same as numNzOffsets but in bytes
+        assert(numNzOffsetBytes == numNzOffsets * sizeof(GPUSPARSE_INDEX_TYPE));
         if (sizeof(GPUSPARSE_INDEX_TYPE) == sizeof(CPUSPARSE_INDEX_TYPE))
         {
             CUDA_CALL(cudaMemcpy(cpuNzOffsets, gpuNzOffsets, numNzOffsetBytes, cudaMemcpyDeviceToHost));
@@ -245,8 +247,6 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
             ConvertBuffer(cpuNzOffsets, tmpBuf, numNzOffsets);
         }
         let nzOffset0 = cpuNzOffsets[0]; // in case of a slice view, we don't start at the very first element
-        if (nzOffset0 == 1065353216)
-            fflush(stderr);
         // it's a view: correct the offsets
         if (nzOffset0 != 0)
         {
@@ -254,22 +254,32 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
                 cpuNzOffsets[k] -= nzOffset0;
         }
         // copy the indices and data
+        let majorIndexSize = MajorIndexSize();
+        assert(majorIndexSize == nnz * sizeof(GPUSPARSE_INDEX_TYPE));
         if (sizeof(GPUSPARSE_INDEX_TYPE) == sizeof(CPUSPARSE_INDEX_TYPE))
         {
-            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.MajorIndexLocation(), MajorIndexLocation() + nzOffset0, MajorIndexSize(), cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(cpuSparseMatrix.MajorIndexLocation(), MajorIndexLocation() + nzOffset0, majorIndexSize, cudaMemcpyDeviceToHost));
         }
         else
         {
-            GPUSPARSE_INDEX_TYPE* tmpBuf = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(MajorIndexSize());
-            CUDA_CALL(cudaMemcpy(tmpBuf, MajorIndexLocation() + nzOffset0, MajorIndexSize(), cudaMemcpyDeviceToHost));
-            ConvertBuffer(cpuSparseMatrix.MajorIndexLocation(), tmpBuf, MajorIndexCount());
+            GPUSPARSE_INDEX_TYPE* tmpBuf = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(majorIndexSize);
+            CUDA_CALL(cudaMemcpy(tmpBuf, MajorIndexLocation() + nzOffset0, majorIndexSize, cudaMemcpyDeviceToHost));
+            ConvertBuffer(cpuSparseMatrix.MajorIndexLocation(), tmpBuf, nnz);
         }
-        CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Buffer(), Buffer() + nzOffset0, GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
-        // PERF BUGBUG: We don't need to copy all GetSizeElemAllocated(), only nnz, which may be smaller.
+        CUDA_CALL(cudaMemcpy(cpuSparseMatrix.Buffer(), Buffer() + nzOffset0, nnz * sizeof(ElemType), cudaMemcpyDeviceToHost));
 #if 1   // sanity check for tracking down a bug
-        let nnz = MajorIndexCount();
         let sparseDim = GetFormat() == matrixFormatSparseCSC ? GetNumRows() : GetNumCols(); // the dim in which we are sparse
+        fprintf(stderr, "checking CSC [%d x %d] matrix, nnz=%d, sparseDim=%d, offset=%d\n", (int)GetNumRows(), (int)GetNumCols(), (int)nnz, (int)sparseDim, (int)nzOffset0), fflush(stderr);
         auto* cpuNzIndices = cpuSparseMatrix.MajorIndexLocation();
+
+        //auto* cpuNzValues = cpuSparseMatrix.Buffer();
+        //for (size_t i = 0; i < nnz; i++) fprintf(stderr, " %.1f", (double)cpuNzValues[i]), fflush(stderr);
+        //fprintf(stderr, "\nnzIndices:");
+        //for (size_t i = 0; i < nnz; i++) fprintf(stderr, " %d", (int)cpuNzIndices[i]), fflush(stderr);
+        //fprintf(stderr, "\nnzOffsets:");
+        //for (size_t i = 0; i < numNzOffsets; i++) fprintf(stderr, " %d", (int)cpuNzOffsets[i]), fflush(stderr);
+        //fprintf(stderr, "\n"), fflush(stderr);
+
         for (size_t i = 0; i < numNzOffsets-1; i++)
         {
             let begin = cpuNzOffsets[i];
@@ -280,7 +290,8 @@ void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>&
                 LogicError("CopyToCPUSparseMatrix: offset exceesdsd nnz??");
             for (size_t k = begin; k < end; k++)
                 if (cpuNzIndices[k] < 0 || cpuNzIndices[k] >= (int)sparseDim)
-                    LogicError("CopyToCPUSparseMatrix: row index out of bounds??");
+                    fprintf(stderr, "CopyToCPUSparseMatrix: row index out of bounds?? [%d] = %d\n", (int)k, (int)cpuNzIndices[k]), fflush(stderr);
+                    //LogicError("CopyToCPUSparseMatrix: row index out of bounds??");
         }
 #endif
     }
