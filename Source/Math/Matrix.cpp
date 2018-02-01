@@ -5255,6 +5255,10 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
     }
     else // GPU operations
     {
+        //fprintf(stderr, "MultiplyAndWeightedAdd: [%d x %d (%s)]%s * [%d x %d (%s)]%s = [%d x %d (%s)]\n",
+        //    (int)a.GetNumRows(), (int)a.GetNumCols(), (int)a.m_matrixType == MatrixType::DENSE ? "dense" : "sparse", transposeA ? "'" : "",
+        //    (int)b.GetNumRows(), (int)b.GetNumCols(), (int)b.m_matrixType == MatrixType::DENSE ? "dense" : "sparse", transposeB ? "'" : "",
+        //    (int)c.GetNumRows(), (int)c.GetNumCols(), (int)c.m_matrixType == MatrixType::DENSE ? "dense" : "sparse"), fflush(stderr);
         if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * DENSE -> DENSE
         {
             GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, *c.m_GPUMatrix);
