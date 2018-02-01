@@ -1957,13 +1957,28 @@ void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>&c, GPUMatrix<ElemTy
         learningRate, rho, epsilon);
 }
 
+// unified function name for float and double
+static cusparseStatus_t cusparse_csrmm(cusparseHandle_t handle, cusparseOperation_t transA, int m, int n, int k, int nnz, const float *alpha, const cusparseMatDescr_t descrA, const float  *csrSortedValA, const int *csrSortedRowPtrA, const int *csrSortedColIndA, const float *B, int ldb, const float *beta, float *C, int ldc)
+{
+    return cusparseScsrmm(handle, transA, m, n, k, nnz, alpha, descrA, csrSortedValA, csrSortedRowPtrA, csrSortedColIndA, B, ldb, beta, C, ldc);
+}
+static cusparseStatus_t cusparse_csrmm(cusparseHandle_t handle, cusparseOperation_t transA, int m, int n, int k, int nnz, const double *alpha, const cusparseMatDescr_t descrA, const double  *csrSortedValA, const int *csrSortedRowPtrA, const int *csrSortedColIndA, const double *B, int ldb, const double *beta, double *C, int ldc)
+{
+    return cusparseDcsrmm(handle, transA, m, n, k, nnz, alpha, descrA, csrSortedValA, csrSortedRowPtrA, csrSortedColIndA, B, ldb, beta, C, ldc);
+}
+
 // sparse X dense = dense
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA,
                                                        const GPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
 {
+    // for transposeB, we don't have a nice implementation.
+    // For now, we call ourselves with a a transposed copy. This involves cudaMalloc, GPU sync, bad for perf.
+    // This happens in the weight gradient of TransposeTimes(W, oneHotData).
     if (transposeB)
-        NOT_IMPLEMENTED;
+    {
+        return MultiplyAndWeightedAdd(alpha, a, transposeA, b.Transpose(), /*transposeB=*/false, beta, c);
+    }
 
     // Note: This function is written for 'a' being in CSR format. If 'a' is CSC, we reinterpret it as CSR by transposing it.
     if (a.GetFormat() != matrixFormatSparseCSR && a.GetFormat() != matrixFormatSparseCSC)
@@ -1976,34 +1991,30 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     a.PrepareDevice();
     cusparseHandle_t cusparseHandle = 0;
     CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
-    cusparseMatDescr_t descr = 0;
-    CUSPARSE_CALL(cusparseCreateMatDescr(&descr));
-    cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL);
-    cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO);
+    cusparseMatDescr_t descrA = 0;
+    CUSPARSE_CALL(cusparseCreateMatDescr(&descrA));
+    cusparseSetMatType(descrA, CUSPARSE_MATRIX_TYPE_GENERAL);
+    cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ZERO);
 
-    cusparseOperation_t oper = (transposeA != reinterpretAsCSR) ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE;
+    cusparseOperation_t transAOper = (transposeA != reinterpretAsCSR) ? CUSPARSE_OPERATION_TRANSPOSE : CUSPARSE_OPERATION_NON_TRANSPOSE;
 
     int n = (int)b.GetNumCols();
     int m = (int)(reinterpretAsCSR ? a.GetNumCols() : a.GetNumRows());
     int k = (int)(reinterpretAsCSR ? a.GetNumRows() : a.GetNumCols());
     assert(n == (int) c.GetNumCols());
 
-    const auto& aRowLocation = reinterpretAsCSR ? a.ColLocation() : a.RowLocation();
-    const auto& aColLocation = reinterpretAsCSR ? a.RowLocation() : a.ColLocation();
+    const auto* rowOffsetsA = a.SecondaryIndexLocation(); // nz offsets into nz values and nz indices. Must have sliceViewOffset.
+    const auto* colIndicesA = a.MajorIndexLocation();     // nz indices, matching layout of nz values. Note: no sliceViewOffset
 
     SyncGuard syncGuard;
-    if (sizeof(ElemType) == sizeof(float))
-    {
-        CUSPARSE_CALL(cusparseScsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumNZElements(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(a.Buffer()),
-                                     aRowLocation, aColLocation, reinterpret_cast<float*>(b.Data()),
-                                     (int) b.GetNumRows(), reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(c.Data()), (int) c.GetNumRows()));
-    }
-    else
-    {
-        CUSPARSE_CALL(cusparseDcsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumNZElements(), reinterpret_cast<double*>(&alpha), descr, reinterpret_cast<const double*>(a.Buffer()),
-                                     aRowLocation, aColLocation, reinterpret_cast<double*>(b.Data()),
-                                     (int) b.GetNumRows(), reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(c.Data()), (int) c.GetNumRows()));
-    }
+    CUSPARSE_CALL(cusparse_csrmm(cusparseHandle, transAOper, m, n, k,
+                                 /*nnz=*/(int)a.GetNumNZElements(), &alpha, descrA,
+                                 a.Buffer(),                        // nz values
+                                 /*csrSortedRowPtrA=*/rowOffsetsA,  // nz offsets into nz values and nz indices
+                                 /*csrSortedColdInA=*/colIndicesA,  // nz indices, matching layout of nz values
+                                 b.Data(), /*ldb=*/(int)b.GetNumRows(),
+                                 &beta,
+                                 c.Data(), /*ldc=*/(int)c.GetNumRows()));
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
 }
 
