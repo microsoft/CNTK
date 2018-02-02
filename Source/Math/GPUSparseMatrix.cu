@@ -119,7 +119,6 @@ template <class ElemType>
 
     // If the source is a slice, then this copy is only the content of the slice.
     RequireSizeAndAllocate(deepCopy.GetNumRows(), deepCopy.GetNumCols(), deepCopy.GetNumNZElements(), deepCopy.GetFormat(), true, false);
-    m_sliceViewOffset = 0; // reset to zero as we only start copying the indices starting from the offset in the source matrix
 
     // BUGBUG? I suspect Data() here should be Buffer() for CSC, although Data() is the same because m_sliceViewOffset == 0
     CUDA_CALL(cudaMemcpy(Data_IThinkThisShouldBeBuffer(), deepCopy.NzValues(), deepCopy.NzBytes(), cudaMemcpyDeviceToDevice));
@@ -822,9 +821,12 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
     SetNumCols(numCols);
 }
 
+// (re-)initialize the matrix so that it has enough memory for given parameters
+// This function is lazy, in that existing memory is used, and if !growOnly, it is just kept if it is sufficient.
 // Reserves space for numNZElemToReserve non-zero elements. Also verifies that the matrix is indeed [numRows x numCols].
 // If keepExistingValues then the object is assumed already in valid state. This is currently only used for MultiplyAndAdd() for SBC format.
-// If not keepExistingValues, the memory is 0-initialized.
+// If not keepExistingValues, the memory is 0-initialized, and the object is emptied (also m_sliceViewOffset is reset).
+// This is called by RequireSizeAndAllocate() and Resize().
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
 {
@@ -848,6 +850,8 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         {
             if (keepExistingValues)
             {
+                if (m_sliceViewOffset != 0)
+                    InvalidArgument("Allocate: Cannot keep existing values for a slice.")
                 if (NzCount() > numNZElemToReserve || BufferSizeAllocated() > bufferSizeNeeded)
                     LogicError("Allocate: To keep values, m_nz should <= numNZElemToReserve.");
 
@@ -877,6 +881,8 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             CUDA_CALL(cudaMemsetAsync(Buffer(), 0, BufferSizeAllocated(), t_stream));
         UpdateCachedNzCount(0, /*shouldVerify=*/false);
     }
+    if (!keepExistingValues) // (we dealt with slice-view offset up there if we keep values)
+        m_sliceViewOffset = 0; // this is a new game, flatten any slice-view offset
 }
 
 template <class ElemType>
@@ -885,20 +891,18 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
     RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly, keepExistingValues);
 }
 
+// (re-)initialize the matrix so that it has enough memory for given parameters
+// This function is lazy, in that existing memory is used, and if !growOnly, it is just kept if it is sufficient.
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
 {
+    // TODO: This logic is strange in that RequireSize() may also allocate (Allocate() becomes a no-op).
     RequireSize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly); // (does nothing if type and numRows/numCols already match, irrespective of numNZElemToReserve)
 
     if (matrixFormat != GetFormat())
         LogicError("RequireSizeAndAllocate: matrixFormat not set?");
 
-    // this test is redundant; we only short-circuit a comparison of dimensions
-    //size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
-    //bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
-    //
-    //if (reallocate)
-        Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
+    Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
 }
 
 template <class ElemType>
@@ -920,12 +924,12 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
     Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly);
 }
 
+// Resize(). Note: This also destroys all existing values.
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
 {
     VerifyResizable(__FUNCTION__);
 
-    m_sliceViewOffset = 0;
     SetNumRows(numRows);
     SetNumCols(numCols);
     SetNumStorageRows(numRows);
@@ -956,6 +960,7 @@ void GPUSparseMatrix<ElemType>::Reset()
     ClearNzCount();
 }
 
+// deletes all nz elements in the object, by resetting all counts etc. to 0 (but without freeing memory)
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ClearNzCount()
 {
@@ -968,6 +973,7 @@ void GPUSparseMatrix<ElemType>::ClearNzCount()
         CUDA_CALL(cudaMemsetAsync(Buffer(), 0, BufferSizeAllocated(), t_stream));
     SetBlockSize(0);
     UpdateCachedNzCount(0, /*shouldVerify=*/false);
+    m_sliceViewOffset = 0;
 }
 
 // copy features to GPU
@@ -2129,6 +2135,7 @@ size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize() const
 // n - cols in the source
 // canReuseBuffer - target matrix can be reused for temporary space
 // func - function to call to count elements in the result (returns count, and fills csrRowPtr array)
+// This is called when calling CUBLAS functions, where func() would typically call a CUBLAS subroutines to determine the resulting size.
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func)
 {
@@ -2158,7 +2165,7 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
         allocatedBuffer = true;
     }
 
-    // get the non-zero count from the function (and
+    // get the non-zero count from the function
     size_t nnzC = func(csrRowPtrC);
 
     // now we know the number of Non-zeros in the result set, set the output size
