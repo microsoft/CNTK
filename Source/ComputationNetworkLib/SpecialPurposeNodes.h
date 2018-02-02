@@ -705,7 +705,12 @@ public:
         if (symListPath.size() == 0 || phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
         
-        InitSEParams(symListPath, phonePath, stateListPath, transProbPath);
+        if (doReferenceAlign)
+            LogicError("SE training with alignment is currently not supported.\n");
+
+        LoadConfigsFromFile();
+
+        InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
         this->m_fsSmoothingWeight = hSmoothingWeight;
         this->m_frameDropThreshold = frameDropThresh;
         this->m_doReferenceAlignment = doReferenceAlign;
@@ -757,11 +762,14 @@ public:
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
+        vector<size_t> labelSequencesMap(labelSequences.size());
+        size_t nonZeroSeqCount = 0;
         for (size_t i = 0; i < labelSequences.size(); i++)
         {
+            
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
-
+            labelSequencesMap[nonZeroSeqCount++] = labelSequences[i].seqId;
             auto& currentLabelSeq = labelSequences[i];
 
             // Fill up labels
@@ -776,8 +784,8 @@ public:
         }
 
         this->m_lattices.resize(labelMBLayout->GetNumSequences());
-        size_t nonZeroSeqCount = 0;
-//#pragma omp parallel for TODO: test this in philly and enable if performance is good.
+
+#pragma omp parallel for 
         for (long i = 0; i < labelSequences.size(); i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
@@ -791,8 +799,15 @@ public:
             const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
             latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
-            this->m_lattices[nonZeroSeqCount] = latticePair;
-            nonZeroSeqCount++;
+            // Identify the position of the lattice to match the position of the label sequence
+            for (size_t pos = 0; pos < labelSequencesMap.size();i++)
+            {
+                if (labelSequencesMap[pos] == labelSequences[i].seqId)
+                {
+                    this->m_lattices[pos] = latticePair;
+                    break;
+                }
+            }
         }
         this->m_boundaries.resize(this->m_uids.size());
         std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
@@ -831,8 +846,27 @@ public:
         fstream >> this->m_seqGammarbMMIFactor;
         fstream >> this->m_seqGammarUsesMBR;
         fstream >> this->m_doReferenceAlignment;
+        LoadConfigsFromFile();
         InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
         this->SetGammarCalculationParam(this->m_seqGammarAMF, this->m_seqGammarLMF, this->m_seqGammarWP, this->m_seqGammarbMMIFactor, this->m_seqGammarUsesMBR);
+    }
+
+    void LoadConfigsFromFile()
+    {
+        // Workaround for loading a trained model with Lattice data files a different location
+        wifstream file("LatticeNode.config");
+        if (file.good())
+        {
+            wstring str;
+            getline(file, str);
+            m_symListPath = str;
+            getline(file, str);
+            m_phonePath = str;
+            getline(file, str);
+            m_stateListPath = str;
+            getline(file, str);
+            m_transProbPath = str;
+        }
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
