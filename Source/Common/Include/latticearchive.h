@@ -1158,8 +1158,10 @@ public:
         void release(bool cpumode);
         void setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls);
         void setloglls(const Microsoft::MSR::CNTK::Matrix<double>& loglls);
+        void setloglls(const Microsoft::MSR::CNTK::Matrix<half>& loglls);
         void getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls);
         void getgamma(Microsoft::MSR::CNTK::Matrix<double>& loglls);
+        void getgamma(Microsoft::MSR::CNTK::Matrix<half>& loglls);
     };
 
     // forward-backward function

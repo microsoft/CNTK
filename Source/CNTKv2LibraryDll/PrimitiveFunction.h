@@ -116,6 +116,7 @@ namespace CNTK
         {PrimitiveOpType::TopK, L"TopK"},
         {PrimitiveOpType::ConstantOp, L"ConstantOp"},
         {PrimitiveOpType::Squeeze, L"Squeeze"},
+        {PrimitiveOpType::Cast, L"Cast" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

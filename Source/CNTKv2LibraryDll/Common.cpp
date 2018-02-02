@@ -966,7 +966,7 @@ namespace CNTK
 #endif
 #ifdef _CUDA_PATH_
             int cudaVersion = 0;
-            if (cudaDriverGetVersion(&cudaVersion) == cudaSuccess)
+            if (cudaRuntimeGetVersion(&cudaVersion) == cudaSuccess)
             {
                 int major = 0, minor = 0, patchLevel = 0;
                 ExtractCUDAVersion(cudaVersion, major, minor, patchLevel);

@@ -1375,7 +1375,7 @@ public:
         m_inputs.resize(inputs.size());
         for (size_t i = 0; i < m_inputs.size(); i++)
             if (inputs[i])
-                m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
+                m_inputs[i] = inputs[i]; // remove DownCast check here to allow CastNode to pass
             else
                 m_inputs[i] = nullptr; // during network creation, nullptrs are possible
 
@@ -1428,6 +1428,19 @@ protected:
         if (inputIndex >= m_inputs.size())
             LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int) inputIndex, NodeName().c_str(), OperationName().c_str());
         return DownCast(m_inputs[inputIndex]);
+    }
+
+    template<typename InputType>
+    inline shared_ptr<ComputationNode<InputType>> TypedInput(const size_t inputIndex) const
+    {
+        if (inputIndex >= m_inputs.size())
+            LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int)inputIndex, NodeName().c_str(), OperationName().c_str());
+
+        shared_ptr<ComputationNode<InputType>> node = dynamic_pointer_cast<ComputationNode<InputType>>(m_inputs[inputIndex]);
+        if (!node)
+            InvalidArgument("an TypedInput of mismatching precision was passed");
+
+        return node;
     }
 
     // Fast downcast without runtime type check of dynamic_pointer_cast.
@@ -1929,24 +1942,36 @@ protected:
     // if the matrix's size will scale with minibatch size, set mbScale = true 
     // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
     // this is currently a workaround for workspace memory for convolutions
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
+    template<typename ValueType>
+    void TypedRequestMatrixFromPool(shared_ptr<Matrix<ValueType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
     {
         if (matrixPtr == nullptr)
         {
             if (aliasing)
-                matrixPool.RequestAliasedAllocate<ElemType>(m_deviceId, this, &matrixPtr, matrixSize, mbScale);
+                matrixPool.RequestAliasedAllocate<ValueType>(m_deviceId, this, &matrixPtr, matrixSize, mbScale);
             else
-                matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
+                matrixPool.RequestAllocate<ValueType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
         }
     }
 
-    void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
+    template<typename ValueType>
+    void TypedReleaseMatrixToPool(shared_ptr<Matrix<ValueType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
     {
         assert(matrixPtr != nullptr);
         if (aliasing)
-            matrixPool.RequestAliasedRelease<ElemType>(this);
+            matrixPool.RequestAliasedRelease<ValueType>(this);
         else
-            matrixPool.RequestRelease<ElemType>(&matrixPtr);
+            matrixPool.RequestRelease<ValueType>(&matrixPtr);
+    }
+
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize = 0, bool mbScale = false, bool isWorkSpace = false, bool aliasing = false)
+    {
+        TypedRequestMatrixFromPool<ElemType>(matrixPtr, matrixPool, matrixSize, mbScale, isWorkSpace, aliasing);
+    }
+
+    void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing = false)
+    {
+        TypedReleaseMatrixToPool<ElemType>(matrixPtr, matrixPool, aliasing);
     }
 
 public:
@@ -2114,7 +2139,7 @@ public:
             s_constOnes[rows].find(cols) == s_constOnes[rows].end()) // not found
         {
             shared_ptr<Matrix<ElemType>> matrix = make_shared<Matrix<ElemType>>(rows, cols, (DEVICEID_TYPE) deviceId);
-            matrix->SetValue(1);
+            matrix->SetValue((ElemType)1);
             s_constOnes[rows][cols] = matrix;
         }
 
@@ -2516,4 +2541,26 @@ public:
 
 #pragma endregion base computation class
 
+#define SMART_NODE_INVOKE(nodeClass, node, func, ...)                           \
+    do {                                                                        \
+        if (dynamic_pointer_cast<nodeClass<float>>(node))                       \
+            dynamic_pointer_cast<nodeClass<float>>(node)->func(__VA_ARGS__);    \
+        else if (dynamic_pointer_cast<nodeClass<double>>(node))                 \
+            dynamic_pointer_cast<nodeClass<double>>(node)->func(__VA_ARGS__);   \
+        else if (dynamic_pointer_cast<nodeClass<half>>(node))                   \
+            dynamic_pointer_cast<nodeClass<half>>(node)->func(__VA_ARGS__);     \
+        else                                                                    \
+            LogicError("Unknown nodeClass type");                               \
+    } while(0)
+
+#define SMART_NODE_INVOKE_WITH_RET(nodeClass, node, func, ret, ...)                 \
+    do {                                                                            \
+        if (dynamic_pointer_cast<nodeClass<float>>(node))                           \
+            ret = dynamic_pointer_cast<nodeClass<float>>(node)->func(__VA_ARGS__);  \
+        else if (dynamic_pointer_cast<nodeClass<double>>(node))                     \
+            ret = dynamic_pointer_cast<nodeClass<double>>(node)->func(__VA_ARGS__); \
+        else if (dynamic_pointer_cast<nodeClass<half>>(node))                       \
+            ret = dynamic_pointer_cast<nodeClass<half>>(node)->func(__VA_ARGS__);   \
+        else LogicError("Unknown ComputationNode type");                            \
+    } while(0)
 }}}

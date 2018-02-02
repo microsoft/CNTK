@@ -11,20 +11,21 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
-class CuDnnBatchNormEngine : public BatchNormEngine<ElemType>
+template <class InoutType, class StatType>
+class CuDnnBatchNormEngine : public BatchNormEngine<InoutType, StatType>
 {
 public:
-    using Base = BatchNormEngine<ElemType>;
-    using typename Base::Mat;
+    using Base = BatchNormEngine<InoutType, StatType>;
+    using typename Base::InoutMat;
+    using typename Base::StatMat;
 
 public:
     CuDnnBatchNormEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                         bool spatial, ImageLayoutKind imageLayout)
                         : Base(deviceId, inOutT, spatial, imageLayout),
                         m_cudnn(CuDnn::Instance()),
-                        m_inOutCuDnnT(GetInOutTensor(inOutT), CuDnnTensor::GetDataType<ElemType>()),
-                        m_scaleBiasCuDnnT(GetScaleBiasTensor(inOutT, spatial), CuDnnTensor::GetDataType<ElemType>()),
+                        m_inOutCuDnnT(GetInOutTensor(inOutT), CuDnnTensor::GetDataType<InoutType>()),
+                        m_scaleBiasCuDnnT(GetScaleBiasTensor(inOutT, spatial), CuDnnTensor::GetDataType<StatType>()),
                         m_cudnnEpsilon(CUDNN_BN_MIN_EPSILON)
     {
     }
@@ -43,8 +44,8 @@ protected:
             InvalidArgument("cuDNN batch normalization supports tensors of max 4 dimensions.");
     }
 
-    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
-                     Mat& out, double epsilon, Mat& savedMean, Mat& savedInvStdDev) override
+    void ForwardCore(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
+                     InoutMat& out, double epsilon, StatMat& savedMean, StatMat& savedInvStdDev) override
     {
         // TODO batchSize == 1
 
@@ -53,7 +54,8 @@ protected:
             InvalidArgument("cuDNN batch normalization engine currently supports blendTimeConstant of 0 or 1 only.");
 
         m_inOutCuDnnT.UpdateBatchSize(in.GetNumCols());
-        cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+        cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL_PERSISTENT : CUDNN_BATCHNORM_PER_ACTIVATION;
+        if (inferenceOnly) mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
         // cuDNN will fail with BAD_PARAM if epsilon < CUDNN_BN_MIN_EPSILON.
         m_cudnnEpsilon = max(epsilon, CUDNN_BN_MIN_EPSILON);
         if (inferenceOnly)
@@ -75,23 +77,26 @@ protected:
         }
     }
 
-    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
-                      Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) override
+    void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
+                      StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) override
     {
         UNUSED(blendFactor);  // BUGBUG: It should be used.
         m_inOutCuDnnT.UpdateBatchSize(srcGrad.GetNumCols());
-        cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
+        cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL_PERSISTENT : CUDNN_BATCHNORM_PER_ACTIVATION;
         // REVIEW alexeyk: change betaParamDiff to 1 and update CNTK BN engine.
         CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, accumulateDataGrad ? &C::One : &C::Zero, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
                                                    m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), m_cudnnEpsilon, ptr(savedMean), ptr(savedInvStdDev)));
     }
 
 private:
-    static ElemType* ptr(Mat& src)
+    template<typename ElemType>
+    static ElemType* ptr(Matrix<ElemType>& src)
     {
         return src.Data();
     }
-    static const ElemType* ptr(const Mat& src)
+
+    template<typename ElemType>
+    static const ElemType* ptr(const Matrix<ElemType>& src)
     {
         return src.Data();
     }
@@ -123,7 +128,7 @@ private:
     }
 
 private:
-    using C = Consts<ElemType>;
+    using C = Consts<StatType>;
 
     CuDnn::ptr_t m_cudnn;
     CuDnnTensor m_inOutCuDnnT;
@@ -131,18 +136,20 @@ private:
     double m_cudnnEpsilon;
 };
 
-template class CuDnnBatchNormEngine<float>;
-template class CuDnnBatchNormEngine<double>;
+template class CuDnnBatchNormEngine<float, float>;
+template class CuDnnBatchNormEngine<double, double>;
+template class CuDnnBatchNormEngine<half, float>;
 
-template <typename ElemType>
-std::unique_ptr<BatchNormEngine<ElemType>> CuDnnBatchNormEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
+template <typename InoutType, typename StatType>
+std::unique_ptr<BatchNormEngine<InoutType, StatType>> CuDnnBatchNormEngineFactory<InoutType, StatType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                                                                                          bool spatial, ImageLayoutKind imageLayout)
 {
-    return std::make_unique<CuDnnBatchNormEngine<ElemType>>(deviceId, inOutT, spatial, imageLayout);
+    return std::make_unique<CuDnnBatchNormEngine<InoutType, StatType>>(deviceId, inOutT, spatial, imageLayout);
 }
 
-template class CuDnnBatchNormEngineFactory<float>;
-template class CuDnnBatchNormEngineFactory<double>;
+template class CuDnnBatchNormEngineFactory<float, float>;
+template class CuDnnBatchNormEngineFactory<double, double>;
+template class CuDnnBatchNormEngineFactory<half, float>;
 
 CudaTimer::~CudaTimer()
 {

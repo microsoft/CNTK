@@ -23,5 +23,8 @@
     <ClInclude Include="BinaryConvolveOp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="halide_binary_convolve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@
 #   CPU only
 #   No 1-bit SGD
 
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
@@ -30,13 +30,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # For Kaldi
         python-dev \
         automake \
-        libtool \
+        libtool-bin \
         autoconf \
         subversion \
         # For Kaldi's dependencies
         libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 \
         # For Java Bindings
-        openjdk-7-jdk \
+        openjdk-8-jdk \
         # For SWIG
         libpcre3-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -98,11 +98,20 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install MKLML
-RUN MKLML_VERSION=v0.11/mklml_lnx_2018.0.1.20171007 && \
-    mkdir /usr/local/mklml && \
-    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/$MKLML_VERSION.tgz | \
-    tar -xzf - -C /usr/local/mklml
+# Install MKLDNN and MKLML
+RUN mkdir /usr/local/mklml && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v0.12/mklml_lnx_2018.0.1.20171227.tgz | \
+    tar -xzf - -C /usr/local/mklml && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/archive/v0.12.tar.gz | tar -xzf - && \
+    cd mkl-dnn-0.12 && \
+    ln -s /usr/local external && \
+    mkdir -p build && \
+    cd build && \
+    cmake .. && \
+    make && \
+    make install && \
+    cd ../.. && \
+    rm -rf mkl-dnn-0.12
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
@@ -118,6 +127,8 @@ RUN mv /bin/sh /bin/sh.orig && \
    ./extras/check_dependencies.sh && \
    make -j $(nproc) all && \
    cd ../src && \
+   # remove Fermi support as CUDA 9 no longer works on it
+   perl -pi -e 's/-gencode arch=compute_20,code=sm_20//' cudamatrix/Makefile && \
    ./configure --openblas-root=/usr/local/openblas --shared && \
    make -j $(nproc) depend && \
    make -j $(nproc) all && \
@@ -145,20 +156,22 @@ RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh &&
     bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
-RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/$COMMIT/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O /tmp/conda-linux-cntk-py35-environment.yml && \
-    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35/ --file /tmp/conda-linux-cntk-py35-environment.yml
+RUN CONDA_ENV_PATH=/tmp/conda-linux-cntk-py35-environment.yml; \
+    wget -q https://raw.githubusercontent.com/Microsoft/CNTK/$COMMIT/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O "$CONDA_ENV_PATH" && \
+    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35 --file "$CONDA_ENV_PATH" && \
+    rm -f "$CONDA_ENV_PATH"
 
 ENV PATH /root/anaconda3/envs/cntk-py35/bin:$PATH
 
 WORKDIR /cntk
 
 # Build CNTK
-RUN git clone --depth=1 -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
-    MKLML_VERSION_DETAIL=mklml_lnx_2018.0.1.20171007 && \
+RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git cntksrc && \
+    cd cntksrc && \
+    MKLML_VERSION_DETAIL=mklml_lnx_2018.0.1.20171227 && \
     CONFIGURE_OPTS="\
       --with-kaldi=${KALDI_PATH} \
       --with-py35-path=/root/anaconda3/envs/cntk-py35" && \
-    git submodule update --init Source/Multiverso && \
     mkdir -p build/cpu/release && \
     cd build/cpu/release && \
     ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/local/openblas && \
@@ -169,12 +182,12 @@ RUN git clone --depth=1 -b $COMMIT https://github.com/Microsoft/CNTK.git . && \
     ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/$MKLML_VERSION_DETAIL && \
     make -j"$(nproc)" all
 
-RUN cd Examples/Image/DataSets/CIFAR-10 && \
+RUN cd cntksrc/Examples/Image/DataSets/CIFAR-10 && \
     python install_cifar10.py && \
     cd ../../../..
 
-RUN cd Examples/Image/DataSets/MNIST && \
+RUN cd cntksrc/Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/cpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+ENV PATH=/cntk/cntksrc/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/cntksrc/bindings/python LD_LIBRARY_PATH=/cntk/cntksrc/bindings/python/cntk/libs:$LD_LIBRARY_PATH

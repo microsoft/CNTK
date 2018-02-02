@@ -34,7 +34,7 @@ while true; do
           PY_VERSION="$2"
           ;;
         *)
-          die "Invalid value for --py-version option, please specify 27, 34, 35, or 36."
+          die "Invalid value for --py-version option, please specify 27, 35, or 36."
           ;;
       esac
       shift 2

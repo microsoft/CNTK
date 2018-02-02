@@ -4,7 +4,7 @@
 //
 #pragma once
 
-// this header exposes MKL2017's DNN functions
+// this header exposes MKL 2017's DNN functions, and MKL-DNN (https://github.com/01org/mkl-dnn)
 
 #ifdef USE_MKL
 #define USE_MKL2017DNN
@@ -12,8 +12,14 @@
 
 #ifdef USE_MKL2017DNN
 
+// These are headers from MKL 2017
 #include "mkl_dnn.h"
 #include "mkl_cblas.h"
+
+// This header is from MKL-DNN
+#ifdef USE_MKLDNN
+#include "mkldnn.h"
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

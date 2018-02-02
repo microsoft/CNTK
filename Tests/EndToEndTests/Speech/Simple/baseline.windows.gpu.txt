@@ -1,0 +1,1197 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz
+    Hardware threads: 6
+    Total Memory: 58719796 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true makeMode=true
+CNTK 2.3.1+ (HEAD db192c, Jan 10 2018 22:59:43) at 2018/01/11 08:57:59
+
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple  OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  makeMode=true
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Jan 10 2018 22:47:38
+		Last modified date: Wed Jan 10 22:18:32 2018
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		With ASGD: yes
+		Math lib: mkl
+		CUDA version: 9.0.0
+		CUDNN version: 7.0.5
+		Build Branch: HEAD
+		Build SHA1: db192cd3cb9ac688cae719c41e5930a4e3f628ea
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 3072; computeCapability = 5.2; type = "Tesla M60"; total memory = 8124 MB; free memory = 8001 MB
+-------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: cntk.cntk:command=Simple_Demo:Simple_Demo_Output
+configparameters: cntk.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple
+configparameters: cntk.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:deviceId=0
+configparameters: cntk.cntk:DeviceNumber=-1
+configparameters: cntk.cntk:forceDeterministicAlgorithms=true
+configparameters: cntk.cntk:makeMode=true
+configparameters: cntk.cntk:modelPath=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn
+configparameters: cntk.cntk:OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu
+configparameters: cntk.cntk:outputNodeNames=ScaledLogLikelihood
+configparameters: cntk.cntk:precision=float
+configparameters: cntk.cntk:RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu
+configparameters: cntk.cntk:Simple_Demo=[
+    action=train
+    SimpleNetworkBuilder=[
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ClassificationError
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
+        dropoutRate=0.0
+        maxEpochs=50
+        keepCheckPointFiles = true
+    ]
+    reader=[
+        readerType=CNTKTextFormatReader
+        file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/SimpleDataTrain_cntk_text.txt
+        input = [
+            features=[
+dim = 2      
+                format = "dense"
+            ]
+            labels=[
+dim = 2 
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+configparameters: cntk.cntk:Simple_Demo_Output=[
+    action=write
+    reader=[
+        readerType=CNTKTextFormatReader
+        file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/SimpleDataTest_cntk_text.txt
+        input = [
+            features=[
+dim = 2 
+                format = "dense" 
+            ]
+            labels=[
+dim = 2 
+                format = "dense"
+            ]
+        ]
+    ]
+outputPath=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/SimpleOutput    
+]
+
+configparameters: cntk.cntk:timestamping=true
+configparameters: cntk.cntk:traceLevel=1
+01/11/2018 08:57:59: Commands: Simple_Demo Simple_Demo_Output
+01/11/2018 08:57:59: precision = "float"
+01/11/2018 08:57:59: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+01/11/2018 08:57:59: ##############################################################################
+01/11/2018 08:57:59: #                                                                            #
+01/11/2018 08:57:59: # Simple_Demo command (train action)                                         #
+01/11/2018 08:57:59: #                                                                            #
+01/11/2018 08:57:59: ##############################################################################
+
+01/11/2018 08:57:59: 
+Creating virgin network.
+SimpleNetworkBuilder Using GPU 0
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+01/11/2018 08:58:00: 
+Model has 25 nodes. Using GPU 0.
+
+01/11/2018 08:58:00: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+01/11/2018 08:58:00: Evaluation criterion: EvalClassificationError = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Gradient Memory Aliasing: 4 are aliased.
+	W1*H1 (gradient) reuses W1*H1+B1 (gradient)
+	W2*H1 (gradient) reuses HLast (gradient)
+
+Memory Sharing: Out of 40 matrices, 20 are shared as 5, and 20 are not shared.
+
+Here are the ones that share memory:
+	{ PosteriorProb : [2 x 1 x *]
+	  ScaledLogLikelihood : [2 x 1 x *] }
+	{ HLast : [2 x 1 x *] (gradient)
+	  W0*features+B0 : [50 x 1 x *] (gradient)
+	  W1*H1 : [50 x 1 x *] (gradient)
+	  W1*H1+B1 : [50 x 1 x *] (gradient)
+	  W2*H1 : [2 x 1 x *]
+	  W2*H1 : [2 x 1 x *] (gradient) }
+	{ H2 : [50 x 1 x *]
+	  W0*features+B0 : [50 x 1 x *]
+	  W1 : [50 x 50] (gradient)
+	  W1*H1 : [50 x 1 x *] }
+	{ H1 : [50 x 1 x *]
+	  W0 : [50 x 2] (gradient)
+	  W0*features : [50 x *] }
+	{ H1 : [50 x 1 x *] (gradient)
+	  H2 : [50 x 1 x *] (gradient)
+	  HLast : [2 x 1 x *]
+	  W0*features : [50 x *] (gradient)
+	  W1*H1+B1 : [50 x 1 x *] }
+
+Here are the ones that don't share memory:
+	{features : [2 x *]}
+	{EvalClassificationError : [1]}
+	{MeanOfFeatures : [2]}
+	{InvStdOfFeatures : [2]}
+	{W0 : [50 x 2]}
+	{B0 : [50 x 1]}
+	{W1 : [50 x 50]}
+	{B1 : [50 x 1]}
+	{W2 : [2 x 50]}
+	{B2 : [2 x 1]}
+	{CrossEntropyWithSoftmax : [1]}
+	{LogOfPrior : [2]}
+	{labels : [2 x *]}
+	{Prior : [2]}
+	{CrossEntropyWithSoftmax : [1] (gradient)}
+	{B0 : [50 x 1] (gradient)}
+	{B2 : [2 x 1] (gradient)}
+	{MVNormalizedFeatures : [2 x *]}
+	{W2 : [2 x 50] (gradient)}
+	{B1 : [50 x 1] (gradient)}
+
+
+01/11/2018 08:58:00: Training 2802 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+
+01/11/2018 08:58:00: 	Node 'B0' (LearnableParameter operation) : [50 x 1]
+01/11/2018 08:58:00: 	Node 'B1' (LearnableParameter operation) : [50 x 1]
+01/11/2018 08:58:00: 	Node 'B2' (LearnableParameter operation) : [2 x 1]
+01/11/2018 08:58:00: 	Node 'W0' (LearnableParameter operation) : [50 x 2]
+01/11/2018 08:58:00: 	Node 'W1' (LearnableParameter operation) : [50 x 50]
+01/11/2018 08:58:00: 	Node 'W2' (LearnableParameter operation) : [2 x 50]
+
+
+01/11/2018 08:58:00: Precomputing --> 3 PreCompute nodes found.
+
+01/11/2018 08:58:00: 	MeanOfFeatures = Mean()
+01/11/2018 08:58:00: 	InvStdOfFeatures = InvStdDev()
+01/11/2018 08:58:00: 	Prior = Mean()
+
+01/11/2018 08:58:00: Precomputing --> Completed.
+
+
+01/11/2018 08:58:00: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:00: Starting minibatch loop.
+01/11/2018 08:58:00:  Epoch[ 1 of 50]-Minibatch[   1-  10]: CrossEntropyWithSoftmax = 0.84310627 * 1280; EvalClassificationError = 0.51718750 * 1280; time = 0.0083s; samplesPerSecond = 154963.7
+01/11/2018 08:58:00:  Epoch[ 1 of 50]-Minibatch[  11-  20]: CrossEntropyWithSoftmax = 0.79649162 * 1280; EvalClassificationError = 0.51562500 * 1280; time = 0.0076s; samplesPerSecond = 169332.3
+01/11/2018 08:58:00:  Epoch[ 1 of 50]-Minibatch[  21-  30]: CrossEntropyWithSoftmax = 0.72212505 * 1280; EvalClassificationError = 0.48515625 * 1280; time = 0.0078s; samplesPerSecond = 163165.4
+01/11/2018 08:58:00:  Epoch[ 1 of 50]-Minibatch[  31-  40]: CrossEntropyWithSoftmax = 0.71446991 * 1280; EvalClassificationError = 0.49765625 * 1280; time = 0.0386s; samplesPerSecond = 33155.8
+01/11/2018 08:58:00:  Epoch[ 1 of 50]-Minibatch[  41-  50]: CrossEntropyWithSoftmax = 0.70253906 * 1280; EvalClassificationError = 0.50078125 * 1280; time = 0.0076s; samplesPerSecond = 168907.8
+01/11/2018 08:58:00:  Epoch[ 1 of 50]-Minibatch[  51-  60]: CrossEntropyWithSoftmax = 0.70667038 * 1280; EvalClassificationError = 0.51718750 * 1280; time = 0.0075s; samplesPerSecond = 170562.1
+01/11/2018 08:58:00:  Epoch[ 1 of 50]-Minibatch[  61-  70]: CrossEntropyWithSoftmax = 0.70342674 * 1280; EvalClassificationError = 0.50156250 * 1280; time = 0.0083s; samplesPerSecond = 154746.4
+01/11/2018 08:58:00: Finished Epoch[ 1 of 50]: [Training] CrossEntropyWithSoftmax = 0.73692187 * 10000; EvalClassificationError = 0.50500000 * 10000; totalSamplesSeen = 10000; learningRatePerSample = 0.1; epochTime=0.0924129s
+01/11/2018 08:58:00: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.1'
+
+01/11/2018 08:58:00: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:00: Starting minibatch loop.
+01/11/2018 08:58:00:  Epoch[ 2 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.70579815 * 1280; EvalClassificationError = 0.49296875 * 1280; time = 0.0076s; samplesPerSecond = 169148.8
+01/11/2018 08:58:00:  Epoch[ 2 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.74300938 * 1280; EvalClassificationError = 0.47968750 * 1280; time = 0.0073s; samplesPerSecond = 176281.8
+01/11/2018 08:58:00:  Epoch[ 2 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.74903164 * 1280; EvalClassificationError = 0.51171875 * 1280; time = 0.0072s; samplesPerSecond = 177366.4
+01/11/2018 08:58:00:  Epoch[ 2 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.74969616 * 1280; EvalClassificationError = 0.51171875 * 1280; time = 0.0072s; samplesPerSecond = 176861.5
+01/11/2018 08:58:00:  Epoch[ 2 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.74229851 * 1280; EvalClassificationError = 0.50234375 * 1280; time = 0.0074s; samplesPerSecond = 172518.4
+01/11/2018 08:58:00:  Epoch[ 2 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.72703133 * 1280; EvalClassificationError = 0.50546875 * 1280; time = 0.0072s; samplesPerSecond = 177921.1
+01/11/2018 08:58:00:  Epoch[ 2 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.73382492 * 1280; EvalClassificationError = 0.50078125 * 1280; time = 0.0073s; samplesPerSecond = 176403.3
+01/11/2018 08:58:00: Finished Epoch[ 2 of 50]: [Training] CrossEntropyWithSoftmax = 0.73301997 * 10000; EvalClassificationError = 0.49860000 * 10000; totalSamplesSeen = 20000; learningRatePerSample = 0.1; epochTime=0.0586745s
+01/11/2018 08:58:00: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.2'
+
+01/11/2018 08:58:00: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:00: Starting minibatch loop.
+01/11/2018 08:58:00:  Epoch[ 3 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.73711982 * 1280; EvalClassificationError = 0.50000000 * 1280; time = 0.0075s; samplesPerSecond = 171022.4
+01/11/2018 08:58:00:  Epoch[ 3 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.73555017 * 1280; EvalClassificationError = 0.50625000 * 1280; time = 0.0072s; samplesPerSecond = 176991.2
+01/11/2018 08:58:00:  Epoch[ 3 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.76823006 * 1280; EvalClassificationError = 0.52187500 * 1280; time = 0.0074s; samplesPerSecond = 173146.1
+01/11/2018 08:58:00:  Epoch[ 3 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.75786629 * 1280; EvalClassificationError = 0.50234375 * 1280; time = 0.0076s; samplesPerSecond = 167631.4
+01/11/2018 08:58:00:  Epoch[ 3 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.73280983 * 1280; EvalClassificationError = 0.50937500 * 1280; time = 0.0096s; samplesPerSecond = 133005.0
+01/11/2018 08:58:00:  Epoch[ 3 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.71082916 * 1280; EvalClassificationError = 0.48984375 * 1280; time = 0.0330s; samplesPerSecond = 38795.2
+01/11/2018 08:58:00:  Epoch[ 3 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.69264183 * 1280; EvalClassificationError = 0.50703125 * 1280; time = 0.0070s; samplesPerSecond = 181627.3
+01/11/2018 08:58:00: Finished Epoch[ 3 of 50]: [Training] CrossEntropyWithSoftmax = 0.72925596 * 10000; EvalClassificationError = 0.49610000 * 10000; totalSamplesSeen = 30000; learningRatePerSample = 0.1; epochTime=0.0868461s
+01/11/2018 08:58:00: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.3'
+
+01/11/2018 08:58:00: Starting Epoch 4: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:00: Starting minibatch loop.
+01/11/2018 08:58:00:  Epoch[ 4 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.69857616 * 1280; EvalClassificationError = 0.49296875 * 1280; time = 0.0072s; samplesPerSecond = 176969.1
+01/11/2018 08:58:00:  Epoch[ 4 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.68717909 * 1280; EvalClassificationError = 0.47031250 * 1280; time = 0.0077s; samplesPerSecond = 166443.4
+01/11/2018 08:58:00:  Epoch[ 4 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.44480124 * 1280; EvalClassificationError = 0.18593750 * 1280; time = 0.0073s; samplesPerSecond = 175404.9
+01/11/2018 08:58:00:  Epoch[ 4 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.20336590 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0069s; samplesPerSecond = 185308.5
+01/11/2018 08:58:00:  Epoch[ 4 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.16974277 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0080s; samplesPerSecond = 160988.1
+01/11/2018 08:58:00:  Epoch[ 4 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16295624 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0069s; samplesPerSecond = 185927.6
+01/11/2018 08:58:00:  Epoch[ 4 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16088600 * 1280; EvalClassificationError = 0.06718750 * 1280; time = 0.0072s; samplesPerSecond = 178788.4
+01/11/2018 08:58:00: Finished Epoch[ 4 of 50]: [Training] CrossEntropyWithSoftmax = 0.34535120 * 10000; EvalClassificationError = 0.19360000 * 10000; totalSamplesSeen = 40000; learningRatePerSample = 0.1; epochTime=0.0585232s
+01/11/2018 08:58:00: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.4'
+
+01/11/2018 08:58:00: Starting Epoch 5: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:00: Starting minibatch loop.
+01/11/2018 08:58:00:  Epoch[ 5 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.18401880 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0074s; samplesPerSecond = 173101.6
+01/11/2018 08:58:00:  Epoch[ 5 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17633183 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0069s; samplesPerSecond = 186613.4
+01/11/2018 08:58:00:  Epoch[ 5 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15577967 * 1280; EvalClassificationError = 0.06484375 * 1280; time = 0.0072s; samplesPerSecond = 177553.4
+01/11/2018 08:58:00:  Epoch[ 5 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15854549 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0069s; samplesPerSecond = 184824.2
+01/11/2018 08:58:00:  Epoch[ 5 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.18194976 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0069s; samplesPerSecond = 185107.5
+01/11/2018 08:58:00:  Epoch[ 5 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16833982 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0070s; samplesPerSecond = 183897.5
+01/11/2018 08:58:00:  Epoch[ 5 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.17359457 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0069s; samplesPerSecond = 184800.2
+01/11/2018 08:58:00: Finished Epoch[ 5 of 50]: [Training] CrossEntropyWithSoftmax = 0.16894944 * 10000; EvalClassificationError = 0.07490000 * 10000; totalSamplesSeen = 50000; learningRatePerSample = 0.1; epochTime=0.084497s
+01/11/2018 08:58:00: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.5'
+
+01/11/2018 08:58:00: Starting Epoch 6: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:00: Starting minibatch loop.
+01/11/2018 08:58:00:  Epoch[ 6 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.19006202 * 1280; EvalClassificationError = 0.08437500 * 1280; time = 0.0070s; samplesPerSecond = 182087.2
+01/11/2018 08:58:00:  Epoch[ 6 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.19627984 * 1280; EvalClassificationError = 0.08437500 * 1280; time = 0.0067s; samplesPerSecond = 191033.4
+01/11/2018 08:58:00:  Epoch[ 6 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.16198635 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0067s; samplesPerSecond = 190566.9
+01/11/2018 08:58:00:  Epoch[ 6 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.16606755 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0067s; samplesPerSecond = 190136.7
+01/11/2018 08:58:00:  Epoch[ 6 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.18116536 * 1280; EvalClassificationError = 0.08828125 * 1280; time = 0.0067s; samplesPerSecond = 190238.4
+01/11/2018 08:58:00:  Epoch[ 6 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16550684 * 1280; EvalClassificationError = 0.06796875 * 1280; time = 0.0068s; samplesPerSecond = 189312.7
+01/11/2018 08:58:00:  Epoch[ 6 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16042614 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0068s; samplesPerSecond = 189332.3
+01/11/2018 08:58:00: Finished Epoch[ 6 of 50]: [Training] CrossEntropyWithSoftmax = 0.17043514 * 10000; EvalClassificationError = 0.07720000 * 10000; totalSamplesSeen = 60000; learningRatePerSample = 0.1; epochTime=0.0544102s
+01/11/2018 08:58:00: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.6'
+
+01/11/2018 08:58:00: Starting Epoch 7: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:00: Starting minibatch loop.
+01/11/2018 08:58:00:  Epoch[ 7 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15693432 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0073s; samplesPerSecond = 176400.9
+01/11/2018 08:58:00:  Epoch[ 7 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.16458679 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0067s; samplesPerSecond = 190238.4
+01/11/2018 08:58:00:  Epoch[ 7 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15007732 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0071s; samplesPerSecond = 181321.1
+01/11/2018 08:58:00:  Epoch[ 7 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.13501539 * 1280; EvalClassificationError = 0.05937500 * 1280; time = 0.0066s; samplesPerSecond = 193414.8
+01/11/2018 08:58:00:  Epoch[ 7 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14193029 * 1280; EvalClassificationError = 0.06250000 * 1280; time = 0.0078s; samplesPerSecond = 163595.0
+01/11/2018 08:58:00:  Epoch[ 7 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.17521372 * 1280; EvalClassificationError = 0.08281250 * 1280; time = 0.0067s; samplesPerSecond = 191059.0
+01/11/2018 08:58:00:  Epoch[ 7 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16884174 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0068s; samplesPerSecond = 186918.6
+01/11/2018 08:58:00: Finished Epoch[ 7 of 50]: [Training] CrossEntropyWithSoftmax = 0.16109182 * 10000; EvalClassificationError = 0.07630000 * 10000; totalSamplesSeen = 70000; learningRatePerSample = 0.1; epochTime=0.0560551s
+01/11/2018 08:58:00: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.7'
+
+01/11/2018 08:58:00: Starting Epoch 8: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:00: Starting minibatch loop.
+01/11/2018 08:58:00:  Epoch[ 8 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.19287047 * 1280; EvalClassificationError = 0.09375000 * 1280; time = 0.0076s; samplesPerSecond = 168065.0
+01/11/2018 08:58:00:  Epoch[ 8 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.18293436 * 1280; EvalClassificationError = 0.08671875 * 1280; time = 0.0067s; samplesPerSecond = 191047.6
+01/11/2018 08:58:01:  Epoch[ 8 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.18483684 * 1280; EvalClassificationError = 0.07109375 * 1280; time = 0.2091s; samplesPerSecond = 6120.2
+01/11/2018 08:58:01:  Epoch[ 8 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.17957010 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0080s; samplesPerSecond = 159370.5
+01/11/2018 08:58:01:  Epoch[ 8 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.17522516 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0121s; samplesPerSecond = 105546.1
+01/11/2018 08:58:01:  Epoch[ 8 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.20335159 * 1280; EvalClassificationError = 0.08671875 * 1280; time = 0.0094s; samplesPerSecond = 136406.7
+01/11/2018 08:58:01:  Epoch[ 8 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15407667 * 1280; EvalClassificationError = 0.06718750 * 1280; time = 0.0088s; samplesPerSecond = 145987.1
+01/11/2018 08:58:01: Finished Epoch[ 8 of 50]: [Training] CrossEntropyWithSoftmax = 0.18057247 * 10000; EvalClassificationError = 0.08020000 * 10000; totalSamplesSeen = 80000; learningRatePerSample = 0.1; epochTime=0.271226s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.8'
+
+01/11/2018 08:58:01: Starting Epoch 9: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[ 9 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.17599977 * 1280; EvalClassificationError = 0.08515625 * 1280; time = 0.0098s; samplesPerSecond = 131093.8
+01/11/2018 08:58:01:  Epoch[ 9 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17346860 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0071s; samplesPerSecond = 179500.5
+01/11/2018 08:58:01:  Epoch[ 9 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.17637930 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0080s; samplesPerSecond = 160582.1
+01/11/2018 08:58:01:  Epoch[ 9 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.17621803 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0069s; samplesPerSecond = 185343.4
+01/11/2018 08:58:01:  Epoch[ 9 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.16279397 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0067s; samplesPerSecond = 192437.8
+01/11/2018 08:58:01:  Epoch[ 9 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14524059 * 1280; EvalClassificationError = 0.06328125 * 1280; time = 0.0067s; samplesPerSecond = 190990.6
+01/11/2018 08:58:01:  Epoch[ 9 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14306850 * 1280; EvalClassificationError = 0.06484375 * 1280; time = 0.0067s; samplesPerSecond = 191585.2
+01/11/2018 08:58:01: Finished Epoch[ 9 of 50]: [Training] CrossEntropyWithSoftmax = 0.16553330 * 10000; EvalClassificationError = 0.07510000 * 10000; totalSamplesSeen = 90000; learningRatePerSample = 0.1; epochTime=0.0587886s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.9'
+
+01/11/2018 08:58:01: Starting Epoch 10: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[10 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16552613 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0108s; samplesPerSecond = 118932.6
+01/11/2018 08:58:01:  Epoch[10 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14848220 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0733s; samplesPerSecond = 17467.4
+01/11/2018 08:58:01:  Epoch[10 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.16952171 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0065s; samplesPerSecond = 196045.4
+01/11/2018 08:58:01:  Epoch[10 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15449610 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0081s; samplesPerSecond = 157847.4
+01/11/2018 08:58:01:  Epoch[10 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.21318636 * 1280; EvalClassificationError = 0.09453125 * 1280; time = 0.0063s; samplesPerSecond = 201581.2
+01/11/2018 08:58:01:  Epoch[10 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16077089 * 1280; EvalClassificationError = 0.06640625 * 1280; time = 0.0063s; samplesPerSecond = 203048.9
+01/11/2018 08:58:01:  Epoch[10 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.17158928 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0062s; samplesPerSecond = 205655.5
+01/11/2018 08:58:01: Finished Epoch[10 of 50]: [Training] CrossEntropyWithSoftmax = 0.16660631 * 10000; EvalClassificationError = 0.07680000 * 10000; totalSamplesSeen = 100000; learningRatePerSample = 0.1; epochTime=0.124358s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.10'
+
+01/11/2018 08:58:01: Starting Epoch 11: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[11 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.17469569 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0065s; samplesPerSecond = 196084.4
+01/11/2018 08:58:01:  Epoch[11 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.16525284 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0064s; samplesPerSecond = 200441.6
+01/11/2018 08:58:01:  Epoch[11 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.17623069 * 1280; EvalClassificationError = 0.08593750 * 1280; time = 0.0063s; samplesPerSecond = 203219.8
+01/11/2018 08:58:01:  Epoch[11 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.16749387 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0061s; samplesPerSecond = 208241.8
+01/11/2018 08:58:01:  Epoch[11 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.16025534 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0062s; samplesPerSecond = 205249.9
+01/11/2018 08:58:01:  Epoch[11 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15658598 * 1280; EvalClassificationError = 0.07109375 * 1280; time = 0.0062s; samplesPerSecond = 205662.1
+01/11/2018 08:58:01:  Epoch[11 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16311159 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0065s; samplesPerSecond = 197674.2
+01/11/2018 08:58:01: Finished Epoch[11 of 50]: [Training] CrossEntropyWithSoftmax = 0.17151410 * 10000; EvalClassificationError = 0.07770000 * 10000; totalSamplesSeen = 110000; learningRatePerSample = 0.1; epochTime=0.0508464s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.11'
+
+01/11/2018 08:58:01: Starting Epoch 12: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[12 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16809069 * 1280; EvalClassificationError = 0.06562500 * 1280; time = 0.0680s; samplesPerSecond = 18817.1
+01/11/2018 08:58:01:  Epoch[12 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17254847 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0060s; samplesPerSecond = 213432.9
+01/11/2018 08:58:01:  Epoch[12 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.17613344 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0060s; samplesPerSecond = 212723.5
+01/11/2018 08:58:01:  Epoch[12 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.16155581 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0060s; samplesPerSecond = 212272.0
+01/11/2018 08:58:01:  Epoch[12 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15687809 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0060s; samplesPerSecond = 212208.6
+01/11/2018 08:58:01:  Epoch[12 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16276302 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0068s; samplesPerSecond = 188041.7
+01/11/2018 08:58:01:  Epoch[12 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14401045 * 1280; EvalClassificationError = 0.06718750 * 1280; time = 0.0060s; samplesPerSecond = 212398.8
+01/11/2018 08:58:01: Finished Epoch[12 of 50]: [Training] CrossEntropyWithSoftmax = 0.16279980 * 10000; EvalClassificationError = 0.07560000 * 10000; totalSamplesSeen = 120000; learningRatePerSample = 0.1; epochTime=0.111476s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.12'
+
+01/11/2018 08:58:01: Starting Epoch 13: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[13 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.14974458 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0063s; samplesPerSecond = 201816.3
+01/11/2018 08:58:01:  Epoch[13 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17683125 * 1280; EvalClassificationError = 0.08515625 * 1280; time = 0.0067s; samplesPerSecond = 191791.9
+01/11/2018 08:58:01:  Epoch[13 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.17482150 * 1280; EvalClassificationError = 0.08984375 * 1280; time = 0.0061s; samplesPerSecond = 208445.3
+01/11/2018 08:58:01:  Epoch[13 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15381856 * 1280; EvalClassificationError = 0.06562500 * 1280; time = 0.0060s; samplesPerSecond = 212858.0
+01/11/2018 08:58:01:  Epoch[13 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14474854 * 1280; EvalClassificationError = 0.06796875 * 1280; time = 0.0062s; samplesPerSecond = 206791.8
+01/11/2018 08:58:01:  Epoch[13 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16736126 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0060s; samplesPerSecond = 211780.3
+01/11/2018 08:58:01:  Epoch[13 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15166674 * 1280; EvalClassificationError = 0.06796875 * 1280; time = 0.0059s; samplesPerSecond = 215753.4
+01/11/2018 08:58:01: Finished Epoch[13 of 50]: [Training] CrossEntropyWithSoftmax = 0.16015929 * 10000; EvalClassificationError = 0.07590000 * 10000; totalSamplesSeen = 130000; learningRatePerSample = 0.1; epochTime=0.049699s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.13'
+
+01/11/2018 08:58:01: Starting Epoch 14: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[14 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.19459400 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0978s; samplesPerSecond = 13093.2
+01/11/2018 08:58:01:  Epoch[14 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.20189953 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0066s; samplesPerSecond = 193892.4
+01/11/2018 08:58:01:  Epoch[14 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.17680378 * 1280; EvalClassificationError = 0.08281250 * 1280; time = 0.0061s; samplesPerSecond = 210557.5
+01/11/2018 08:58:01:  Epoch[14 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.20349355 * 1280; EvalClassificationError = 0.09218750 * 1280; time = 0.0063s; samplesPerSecond = 204355.3
+01/11/2018 08:58:01:  Epoch[14 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.18833909 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0060s; samplesPerSecond = 211776.8
+01/11/2018 08:58:01:  Epoch[14 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16565113 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0061s; samplesPerSecond = 211158.4
+01/11/2018 08:58:01:  Epoch[14 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15764112 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0073s; samplesPerSecond = 175313.6
+01/11/2018 08:58:01: Finished Epoch[14 of 50]: [Training] CrossEntropyWithSoftmax = 0.18298158 * 10000; EvalClassificationError = 0.08140000 * 10000; totalSamplesSeen = 140000; learningRatePerSample = 0.1; epochTime=0.142668s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.14'
+
+01/11/2018 08:58:01: Starting Epoch 15: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[15 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.17048591 * 1280; EvalClassificationError = 0.08515625 * 1280; time = 0.0064s; samplesPerSecond = 198535.8
+01/11/2018 08:58:01:  Epoch[15 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14827458 * 1280; EvalClassificationError = 0.06484375 * 1280; time = 0.0061s; samplesPerSecond = 210111.6
+01/11/2018 08:58:01:  Epoch[15 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.17491755 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0061s; samplesPerSecond = 210793.3
+01/11/2018 08:58:01:  Epoch[15 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.17042289 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0061s; samplesPerSecond = 209571.5
+01/11/2018 08:58:01:  Epoch[15 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.16541433 * 1280; EvalClassificationError = 0.08281250 * 1280; time = 0.0061s; samplesPerSecond = 209963.4
+01/11/2018 08:58:01:  Epoch[15 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16479816 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0063s; samplesPerSecond = 201991.5
+01/11/2018 08:58:01:  Epoch[15 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15720472 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0060s; samplesPerSecond = 214621.1
+01/11/2018 08:58:01: Finished Epoch[15 of 50]: [Training] CrossEntropyWithSoftmax = 0.16389122 * 10000; EvalClassificationError = 0.07710000 * 10000; totalSamplesSeen = 150000; learningRatePerSample = 0.1; epochTime=0.0494059s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.15'
+
+01/11/2018 08:58:01: Starting Epoch 16: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[16 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.17302433 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0063s; samplesPerSecond = 203413.5
+01/11/2018 08:58:01:  Epoch[16 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.16493438 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0060s; samplesPerSecond = 213209.0
+01/11/2018 08:58:01:  Epoch[16 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.17643499 * 1280; EvalClassificationError = 0.08281250 * 1280; time = 0.0061s; samplesPerSecond = 211005.2
+01/11/2018 08:58:01:  Epoch[16 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.17659817 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0060s; samplesPerSecond = 214812.0
+01/11/2018 08:58:01:  Epoch[16 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.18818760 * 1280; EvalClassificationError = 0.08828125 * 1280; time = 0.0063s; samplesPerSecond = 201603.4
+01/11/2018 08:58:01:  Epoch[16 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.17494001 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0062s; samplesPerSecond = 206658.3
+01/11/2018 08:58:01:  Epoch[16 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.17475004 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0065s; samplesPerSecond = 198363.5
+01/11/2018 08:58:01: Finished Epoch[16 of 50]: [Training] CrossEntropyWithSoftmax = 0.17363783 * 10000; EvalClassificationError = 0.08020000 * 10000; totalSamplesSeen = 160000; learningRatePerSample = 0.1; epochTime=0.0501926s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.16'
+
+01/11/2018 08:58:01: Starting Epoch 17: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[17 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15547833 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0068s; samplesPerSecond = 187433.2
+01/11/2018 08:58:01:  Epoch[17 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.16448460 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0066s; samplesPerSecond = 193517.2
+01/11/2018 08:58:01:  Epoch[17 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.18492689 * 1280; EvalClassificationError = 0.09296875 * 1280; time = 0.0072s; samplesPerSecond = 178978.4
+01/11/2018 08:58:01:  Epoch[17 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15973330 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0070s; samplesPerSecond = 182206.4
+01/11/2018 08:58:01:  Epoch[17 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15462508 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0069s; samplesPerSecond = 184310.6
+01/11/2018 08:58:01:  Epoch[17 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15531902 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0064s; samplesPerSecond = 199048.3
+01/11/2018 08:58:01:  Epoch[17 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15558491 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0060s; samplesPerSecond = 213675.2
+01/11/2018 08:58:01: Finished Epoch[17 of 50]: [Training] CrossEntropyWithSoftmax = 0.16203029 * 10000; EvalClassificationError = 0.07860000 * 10000; totalSamplesSeen = 170000; learningRatePerSample = 0.1; epochTime=0.0534505s
+01/11/2018 08:58:01: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.17'
+
+01/11/2018 08:58:01: Starting Epoch 18: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:01: Starting minibatch loop.
+01/11/2018 08:58:01:  Epoch[18 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15390018 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0063s; samplesPerSecond = 202926.6
+01/11/2018 08:58:01:  Epoch[18 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.15887769 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0070s; samplesPerSecond = 181650.5
+01/11/2018 08:58:01:  Epoch[18 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.16481850 * 1280; EvalClassificationError = 0.08281250 * 1280; time = 0.0061s; samplesPerSecond = 211374.6
+01/11/2018 08:58:01:  Epoch[18 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15366807 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0071s; samplesPerSecond = 180808.8
+01/11/2018 08:58:01:  Epoch[18 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14910550 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0060s; samplesPerSecond = 213024.4
+01/11/2018 08:58:01:  Epoch[18 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15585804 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0061s; samplesPerSecond = 210859.3
+01/11/2018 08:58:01:  Epoch[18 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15353146 * 1280; EvalClassificationError = 0.06796875 * 1280; time = 0.0061s; samplesPerSecond = 210464.0
+01/11/2018 08:58:02: Finished Epoch[18 of 50]: [Training] CrossEntropyWithSoftmax = 0.15599238 * 10000; EvalClassificationError = 0.07440000 * 10000; totalSamplesSeen = 180000; learningRatePerSample = 0.1; epochTime=0.0510087s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.18'
+
+01/11/2018 08:58:02: Starting Epoch 19: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[19 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15185032 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0065s; samplesPerSecond = 197649.8
+01/11/2018 08:58:02:  Epoch[19 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14510214 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0060s; samplesPerSecond = 213294.2
+01/11/2018 08:58:02:  Epoch[19 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.16338732 * 1280; EvalClassificationError = 0.08671875 * 1280; time = 0.0060s; samplesPerSecond = 214032.5
+01/11/2018 08:58:02:  Epoch[19 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14804358 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0061s; samplesPerSecond = 211385.1
+01/11/2018 08:58:02:  Epoch[19 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.17848501 * 1280; EvalClassificationError = 0.08750000 * 1280; time = 0.0060s; samplesPerSecond = 213177.0
+01/11/2018 08:58:02:  Epoch[19 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16291170 * 1280; EvalClassificationError = 0.07109375 * 1280; time = 0.0062s; samplesPerSecond = 207805.7
+01/11/2018 08:58:02:  Epoch[19 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.17254391 * 1280; EvalClassificationError = 0.09140625 * 1280; time = 0.0060s; samplesPerSecond = 212275.5
+01/11/2018 08:58:02: Finished Epoch[19 of 50]: [Training] CrossEntropyWithSoftmax = 0.16105387 * 10000; EvalClassificationError = 0.07880000 * 10000; totalSamplesSeen = 190000; learningRatePerSample = 0.1; epochTime=0.0491264s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.19'
+
+01/11/2018 08:58:02: Starting Epoch 20: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[20 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16133311 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0063s; samplesPerSecond = 201705.0
+01/11/2018 08:58:02:  Epoch[20 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.16010811 * 1280; EvalClassificationError = 0.07109375 * 1280; time = 0.0060s; samplesPerSecond = 212801.3
+01/11/2018 08:58:02:  Epoch[20 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15739422 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0063s; samplesPerSecond = 202810.8
+01/11/2018 08:58:02:  Epoch[20 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.17021790 * 1280; EvalClassificationError = 0.08593750 * 1280; time = 0.0061s; samplesPerSecond = 211461.9
+01/11/2018 08:58:02:  Epoch[20 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.16135745 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0061s; samplesPerSecond = 210446.7
+01/11/2018 08:58:02:  Epoch[20 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15534086 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0060s; samplesPerSecond = 214330.0
+01/11/2018 08:58:02:  Epoch[20 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16405239 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0060s; samplesPerSecond = 212904.0
+01/11/2018 08:58:02: Finished Epoch[20 of 50]: [Training] CrossEntropyWithSoftmax = 0.15970442 * 10000; EvalClassificationError = 0.07630000 * 10000; totalSamplesSeen = 200000; learningRatePerSample = 0.1; epochTime=0.0491142s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.20'
+
+01/11/2018 08:58:02: Starting Epoch 21: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[21 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16151631 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0064s; samplesPerSecond = 201381.4
+01/11/2018 08:58:02:  Epoch[21 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14376364 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0060s; samplesPerSecond = 214003.9
+01/11/2018 08:58:02:  Epoch[21 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15459173 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0060s; samplesPerSecond = 214376.6
+01/11/2018 08:58:02:  Epoch[21 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14109597 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0062s; samplesPerSecond = 207606.8
+01/11/2018 08:58:02:  Epoch[21 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15917463 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0060s; samplesPerSecond = 214678.7
+01/11/2018 08:58:02:  Epoch[21 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16572986 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0060s; samplesPerSecond = 212148.8
+01/11/2018 08:58:02:  Epoch[21 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16026697 * 1280; EvalClassificationError = 0.08281250 * 1280; time = 0.0060s; samplesPerSecond = 214631.9
+01/11/2018 08:58:02: Finished Epoch[21 of 50]: [Training] CrossEntropyWithSoftmax = 0.15594215 * 10000; EvalClassificationError = 0.07770000 * 10000; totalSamplesSeen = 210000; learningRatePerSample = 0.1; epochTime=0.0487353s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.21'
+
+01/11/2018 08:58:02: Starting Epoch 22: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[22 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15155299 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0067s; samplesPerSecond = 190697.5
+01/11/2018 08:58:02:  Epoch[22 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.13562584 * 1280; EvalClassificationError = 0.06250000 * 1280; time = 0.0061s; samplesPerSecond = 209966.9
+01/11/2018 08:58:02:  Epoch[22 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.16118867 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0070s; samplesPerSecond = 183546.8
+01/11/2018 08:58:02:  Epoch[22 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.16034932 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0062s; samplesPerSecond = 207620.3
+01/11/2018 08:58:02:  Epoch[22 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15333858 * 1280; EvalClassificationError = 0.07109375 * 1280; time = 0.0061s; samplesPerSecond = 210772.4
+01/11/2018 08:58:02:  Epoch[22 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14866667 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0065s; samplesPerSecond = 195823.5
+01/11/2018 08:58:02:  Epoch[22 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.18244123 * 1280; EvalClassificationError = 0.08671875 * 1280; time = 0.0061s; samplesPerSecond = 210894.0
+01/11/2018 08:58:02: Finished Epoch[22 of 50]: [Training] CrossEntropyWithSoftmax = 0.15800615 * 10000; EvalClassificationError = 0.07550000 * 10000; totalSamplesSeen = 220000; learningRatePerSample = 0.1; epochTime=0.0510824s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.22'
+
+01/11/2018 08:58:02: Starting Epoch 23: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[23 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.17648998 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0064s; samplesPerSecond = 200203.3
+01/11/2018 08:58:02:  Epoch[23 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17531897 * 1280; EvalClassificationError = 0.08593750 * 1280; time = 0.0060s; samplesPerSecond = 213525.5
+01/11/2018 08:58:02:  Epoch[23 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15463798 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0060s; samplesPerSecond = 211636.7
+01/11/2018 08:58:02:  Epoch[23 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.17028651 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0061s; samplesPerSecond = 210585.2
+01/11/2018 08:58:02:  Epoch[23 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15742364 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0062s; samplesPerSecond = 206768.4
+01/11/2018 08:58:02:  Epoch[23 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16154852 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0061s; samplesPerSecond = 209259.7
+01/11/2018 08:58:02:  Epoch[23 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14952307 * 1280; EvalClassificationError = 0.07109375 * 1280; time = 0.0062s; samplesPerSecond = 204888.5
+01/11/2018 08:58:02: Finished Epoch[23 of 50]: [Training] CrossEntropyWithSoftmax = 0.16315575 * 10000; EvalClassificationError = 0.07850000 * 10000; totalSamplesSeen = 230000; learningRatePerSample = 0.1; epochTime=0.0495063s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.23'
+
+01/11/2018 08:58:02: Starting Epoch 24: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[24 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16309845 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0063s; samplesPerSecond = 201752.7
+01/11/2018 08:58:02:  Epoch[24 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17734957 * 1280; EvalClassificationError = 0.08671875 * 1280; time = 0.0063s; samplesPerSecond = 204084.9
+01/11/2018 08:58:02:  Epoch[24 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14409983 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0060s; samplesPerSecond = 213946.6
+01/11/2018 08:58:02:  Epoch[24 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.12802043 * 1280; EvalClassificationError = 0.05859375 * 1280; time = 0.0061s; samplesPerSecond = 208584.6
+01/11/2018 08:58:02:  Epoch[24 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.17809982 * 1280; EvalClassificationError = 0.08281250 * 1280; time = 0.0061s; samplesPerSecond = 210779.4
+01/11/2018 08:58:02:  Epoch[24 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.13289251 * 1280; EvalClassificationError = 0.05937500 * 1280; time = 0.0060s; samplesPerSecond = 212790.7
+01/11/2018 08:58:02:  Epoch[24 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15595989 * 1280; EvalClassificationError = 0.08281250 * 1280; time = 0.0061s; samplesPerSecond = 210616.4
+01/11/2018 08:58:02: Finished Epoch[24 of 50]: [Training] CrossEntropyWithSoftmax = 0.15495480 * 10000; EvalClassificationError = 0.07510000 * 10000; totalSamplesSeen = 240000; learningRatePerSample = 0.1; epochTime=0.0492585s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.24'
+
+01/11/2018 08:58:02: Starting Epoch 25: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[25 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.13681033 * 1280; EvalClassificationError = 0.06015625 * 1280; time = 0.0071s; samplesPerSecond = 181228.7
+01/11/2018 08:58:02:  Epoch[25 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17395720 * 1280; EvalClassificationError = 0.08750000 * 1280; time = 0.0060s; samplesPerSecond = 211577.2
+01/11/2018 08:58:02:  Epoch[25 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14068034 * 1280; EvalClassificationError = 0.06640625 * 1280; time = 0.0066s; samplesPerSecond = 195223.1
+01/11/2018 08:58:02:  Epoch[25 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15338879 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0060s; samplesPerSecond = 211696.2
+01/11/2018 08:58:02:  Epoch[25 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.16744380 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0059s; samplesPerSecond = 215917.1
+01/11/2018 08:58:02:  Epoch[25 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16937728 * 1280; EvalClassificationError = 0.08828125 * 1280; time = 0.0067s; samplesPerSecond = 191338.9
+01/11/2018 08:58:02:  Epoch[25 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.17972708 * 1280; EvalClassificationError = 0.09765625 * 1280; time = 0.0061s; samplesPerSecond = 209331.6
+01/11/2018 08:58:02: Finished Epoch[25 of 50]: [Training] CrossEntropyWithSoftmax = 0.16098881 * 10000; EvalClassificationError = 0.07980000 * 10000; totalSamplesSeen = 250000; learningRatePerSample = 0.1; epochTime=0.051203s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.25'
+
+01/11/2018 08:58:02: Starting Epoch 26: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[26 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15768273 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0071s; samplesPerSecond = 181097.9
+01/11/2018 08:58:02:  Epoch[26 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.19794986 * 1280; EvalClassificationError = 0.09218750 * 1280; time = 0.0063s; samplesPerSecond = 203148.8
+01/11/2018 08:58:02:  Epoch[26 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.16209564 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0071s; samplesPerSecond = 179515.6
+01/11/2018 08:58:02:  Epoch[26 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14502654 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0061s; samplesPerSecond = 208931.8
+01/11/2018 08:58:02:  Epoch[26 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.16414237 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0060s; samplesPerSecond = 212486.9
+01/11/2018 08:58:02:  Epoch[26 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.12360010 * 1280; EvalClassificationError = 0.05312500 * 1280; time = 0.0060s; samplesPerSecond = 213177.0
+01/11/2018 08:58:02:  Epoch[26 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16247244 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0066s; samplesPerSecond = 194768.6
+01/11/2018 08:58:02: Finished Epoch[26 of 50]: [Training] CrossEntropyWithSoftmax = 0.15834043 * 10000; EvalClassificationError = 0.07490000 * 10000; totalSamplesSeen = 260000; learningRatePerSample = 0.1; epochTime=0.0515486s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.26'
+
+01/11/2018 08:58:02: Starting Epoch 27: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[27 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16252776 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0064s; samplesPerSecond = 199588.3
+01/11/2018 08:58:02:  Epoch[27 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.16304196 * 1280; EvalClassificationError = 0.09218750 * 1280; time = 0.0060s; samplesPerSecond = 213693.0
+01/11/2018 08:58:02:  Epoch[27 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14196091 * 1280; EvalClassificationError = 0.06718750 * 1280; time = 0.0061s; samplesPerSecond = 210360.2
+01/11/2018 08:58:02:  Epoch[27 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15195932 * 1280; EvalClassificationError = 0.06328125 * 1280; time = 0.0060s; samplesPerSecond = 213098.9
+01/11/2018 08:58:02:  Epoch[27 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15752149 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0060s; samplesPerSecond = 213961.0
+01/11/2018 08:58:02:  Epoch[27 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15266395 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0063s; samplesPerSecond = 203123.0
+01/11/2018 08:58:02:  Epoch[27 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16626177 * 1280; EvalClassificationError = 0.08437500 * 1280; time = 0.0060s; samplesPerSecond = 212989.0
+01/11/2018 08:58:02: Finished Epoch[27 of 50]: [Training] CrossEntropyWithSoftmax = 0.15593679 * 10000; EvalClassificationError = 0.07620000 * 10000; totalSamplesSeen = 270000; learningRatePerSample = 0.1; epochTime=0.0502051s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.27'
+
+01/11/2018 08:58:02: Starting Epoch 28: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[28 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15549572 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0064s; samplesPerSecond = 198868.9
+01/11/2018 08:58:02:  Epoch[28 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.16504967 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0062s; samplesPerSecond = 205023.1
+01/11/2018 08:58:02:  Epoch[28 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.16705046 * 1280; EvalClassificationError = 0.08750000 * 1280; time = 0.0062s; samplesPerSecond = 206885.4
+01/11/2018 08:58:02:  Epoch[28 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14224138 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0061s; samplesPerSecond = 208482.6
+01/11/2018 08:58:02:  Epoch[28 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14113736 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0063s; samplesPerSecond = 201841.8
+01/11/2018 08:58:02:  Epoch[28 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15290103 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0061s; samplesPerSecond = 210859.3
+01/11/2018 08:58:02:  Epoch[28 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16408501 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0062s; samplesPerSecond = 207166.7
+01/11/2018 08:58:02: Finished Epoch[28 of 50]: [Training] CrossEntropyWithSoftmax = 0.15697496 * 10000; EvalClassificationError = 0.07790000 * 10000; totalSamplesSeen = 280000; learningRatePerSample = 0.1; epochTime=0.0501495s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.28'
+
+01/11/2018 08:58:02: Starting Epoch 29: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[29 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15316752 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0064s; samplesPerSecond = 200885.2
+01/11/2018 08:58:02:  Epoch[29 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.13558725 * 1280; EvalClassificationError = 0.05859375 * 1280; time = 0.0060s; samplesPerSecond = 211874.9
+01/11/2018 08:58:02:  Epoch[29 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.16534040 * 1280; EvalClassificationError = 0.08750000 * 1280; time = 0.0061s; samplesPerSecond = 210149.6
+01/11/2018 08:58:02:  Epoch[29 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14491835 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0062s; samplesPerSecond = 205721.6
+01/11/2018 08:58:02:  Epoch[29 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.16231375 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0062s; samplesPerSecond = 206488.2
+01/11/2018 08:58:02:  Epoch[29 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14071465 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0063s; samplesPerSecond = 204646.1
+01/11/2018 08:58:02:  Epoch[29 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16054001 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0070s; samplesPerSecond = 182299.8
+01/11/2018 08:58:02: Finished Epoch[29 of 50]: [Training] CrossEntropyWithSoftmax = 0.15658409 * 10000; EvalClassificationError = 0.07700000 * 10000; totalSamplesSeen = 290000; learningRatePerSample = 0.1; epochTime=0.0506206s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.29'
+
+01/11/2018 08:58:02: Starting Epoch 30: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[30 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15555742 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0063s; samplesPerSecond = 201695.5
+01/11/2018 08:58:02:  Epoch[30 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14723208 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0061s; samplesPerSecond = 210401.7
+01/11/2018 08:58:02:  Epoch[30 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14683332 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0060s; samplesPerSecond = 213707.3
+01/11/2018 08:58:02:  Epoch[30 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.16358609 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0061s; samplesPerSecond = 209424.1
+01/11/2018 08:58:02:  Epoch[30 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15779209 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0061s; samplesPerSecond = 210097.8
+01/11/2018 08:58:02:  Epoch[30 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15689759 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0063s; samplesPerSecond = 204727.9
+01/11/2018 08:58:02:  Epoch[30 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15914001 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0061s; samplesPerSecond = 209860.1
+01/11/2018 08:58:02: Finished Epoch[30 of 50]: [Training] CrossEntropyWithSoftmax = 0.15398387 * 10000; EvalClassificationError = 0.07660000 * 10000; totalSamplesSeen = 300000; learningRatePerSample = 0.1; epochTime=0.0499803s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.30'
+
+01/11/2018 08:58:02: Starting Epoch 31: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[31 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15854740 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0066s; samplesPerSecond = 193184.2
+01/11/2018 08:58:02:  Epoch[31 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.15418732 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0061s; samplesPerSecond = 208686.6
+01/11/2018 08:58:02:  Epoch[31 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15642931 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0060s; samplesPerSecond = 212939.4
+01/11/2018 08:58:02:  Epoch[31 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14554515 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0060s; samplesPerSecond = 213074.1
+01/11/2018 08:58:02:  Epoch[31 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.17074995 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0063s; samplesPerSecond = 203281.1
+01/11/2018 08:58:02:  Epoch[31 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.13945341 * 1280; EvalClassificationError = 0.07109375 * 1280; time = 0.0060s; samplesPerSecond = 211619.2
+01/11/2018 08:58:02:  Epoch[31 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14870253 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0061s; samplesPerSecond = 210356.8
+01/11/2018 08:58:02: Finished Epoch[31 of 50]: [Training] CrossEntropyWithSoftmax = 0.15280536 * 10000; EvalClassificationError = 0.07570000 * 10000; totalSamplesSeen = 310000; learningRatePerSample = 0.1; epochTime=0.0497651s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.31'
+
+01/11/2018 08:58:02: Starting Epoch 32: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[32 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15338740 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0064s; samplesPerSecond = 199850.1
+01/11/2018 08:58:02:  Epoch[32 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14309559 * 1280; EvalClassificationError = 0.06562500 * 1280; time = 0.0068s; samplesPerSecond = 188907.6
+01/11/2018 08:58:02:  Epoch[32 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14224100 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0063s; samplesPerSecond = 202112.7
+01/11/2018 08:58:02:  Epoch[32 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15188251 * 1280; EvalClassificationError = 0.07812500 * 1280; time = 0.0061s; samplesPerSecond = 209181.1
+01/11/2018 08:58:02:  Epoch[32 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15083723 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0062s; samplesPerSecond = 206145.7
+01/11/2018 08:58:02:  Epoch[32 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.16061201 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0060s; samplesPerSecond = 212036.4
+01/11/2018 08:58:02:  Epoch[32 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15455847 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0070s; samplesPerSecond = 182310.2
+01/11/2018 08:58:02: Finished Epoch[32 of 50]: [Training] CrossEntropyWithSoftmax = 0.15326575 * 10000; EvalClassificationError = 0.07650000 * 10000; totalSamplesSeen = 320000; learningRatePerSample = 0.1; epochTime=0.0513387s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.32'
+
+01/11/2018 08:58:02: Starting Epoch 33: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[33 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15867492 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0063s; samplesPerSecond = 202262.8
+01/11/2018 08:58:02:  Epoch[33 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17103983 * 1280; EvalClassificationError = 0.08750000 * 1280; time = 0.0118s; samplesPerSecond = 108544.5
+01/11/2018 08:58:02:  Epoch[33 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14906037 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0060s; samplesPerSecond = 213818.0
+01/11/2018 08:58:02:  Epoch[33 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15649753 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0072s; samplesPerSecond = 177410.6
+01/11/2018 08:58:02:  Epoch[33 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.13757324 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0060s; samplesPerSecond = 213753.7
+01/11/2018 08:58:02:  Epoch[33 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14185958 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0065s; samplesPerSecond = 196693.1
+01/11/2018 08:58:02:  Epoch[33 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16102781 * 1280; EvalClassificationError = 0.08984375 * 1280; time = 0.0060s; samplesPerSecond = 212858.0
+01/11/2018 08:58:02: Finished Epoch[33 of 50]: [Training] CrossEntropyWithSoftmax = 0.15331584 * 10000; EvalClassificationError = 0.07750000 * 10000; totalSamplesSeen = 330000; learningRatePerSample = 0.1; epochTime=0.0561961s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.33'
+
+01/11/2018 08:58:02: Starting Epoch 34: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[34 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.14242564 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0064s; samplesPerSecond = 201283.2
+01/11/2018 08:58:02:  Epoch[34 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.15581409 * 1280; EvalClassificationError = 0.07109375 * 1280; time = 0.0061s; samplesPerSecond = 210730.8
+01/11/2018 08:58:02:  Epoch[34 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15887907 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0062s; samplesPerSecond = 206541.6
+01/11/2018 08:58:02:  Epoch[34 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14696274 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0060s; samplesPerSecond = 214721.9
+01/11/2018 08:58:02:  Epoch[34 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15781937 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0061s; samplesPerSecond = 208441.9
+01/11/2018 08:58:02:  Epoch[34 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15656815 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0060s; samplesPerSecond = 212596.3
+01/11/2018 08:58:02:  Epoch[34 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15388136 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0060s; samplesPerSecond = 214018.2
+01/11/2018 08:58:02: Finished Epoch[34 of 50]: [Training] CrossEntropyWithSoftmax = 0.15178218 * 10000; EvalClassificationError = 0.07640000 * 10000; totalSamplesSeen = 340000; learningRatePerSample = 0.1; epochTime=0.0490767s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.34'
+
+01/11/2018 08:58:02: Starting Epoch 35: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[35 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15963540 * 1280; EvalClassificationError = 0.08437500 * 1280; time = 0.0062s; samplesPerSecond = 205586.2
+01/11/2018 08:58:02:  Epoch[35 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14121661 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0063s; samplesPerSecond = 202361.9
+01/11/2018 08:58:02:  Epoch[35 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14684043 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0061s; samplesPerSecond = 210890.5
+01/11/2018 08:58:02:  Epoch[35 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14852238 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0062s; samplesPerSecond = 205685.3
+01/11/2018 08:58:02:  Epoch[35 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14079437 * 1280; EvalClassificationError = 0.06406250 * 1280; time = 0.0060s; samplesPerSecond = 211727.7
+01/11/2018 08:58:02:  Epoch[35 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14343047 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0061s; samplesPerSecond = 208567.6
+01/11/2018 08:58:02:  Epoch[35 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15912304 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0062s; samplesPerSecond = 207981.3
+01/11/2018 08:58:02: Finished Epoch[35 of 50]: [Training] CrossEntropyWithSoftmax = 0.14920563 * 10000; EvalClassificationError = 0.07370000 * 10000; totalSamplesSeen = 350000; learningRatePerSample = 0.1; epochTime=0.0497441s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.35'
+
+01/11/2018 08:58:02: Starting Epoch 36: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[36 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.14718659 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0065s; samplesPerSecond = 196950.3
+01/11/2018 08:58:02:  Epoch[36 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.17286856 * 1280; EvalClassificationError = 0.08359375 * 1280; time = 0.0060s; samplesPerSecond = 211654.2
+01/11/2018 08:58:02:  Epoch[36 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15483851 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0060s; samplesPerSecond = 212321.3
+01/11/2018 08:58:02:  Epoch[36 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15607777 * 1280; EvalClassificationError = 0.08437500 * 1280; time = 0.0061s; samplesPerSecond = 210550.6
+01/11/2018 08:58:02:  Epoch[36 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15352387 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0060s; samplesPerSecond = 213921.6
+01/11/2018 08:58:02:  Epoch[36 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.13617873 * 1280; EvalClassificationError = 0.06640625 * 1280; time = 0.0061s; samplesPerSecond = 211440.9
+01/11/2018 08:58:02:  Epoch[36 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14273376 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0060s; samplesPerSecond = 212886.3
+01/11/2018 08:58:02: Finished Epoch[36 of 50]: [Training] CrossEntropyWithSoftmax = 0.15350920 * 10000; EvalClassificationError = 0.07830000 * 10000; totalSamplesSeen = 360000; learningRatePerSample = 0.1; epochTime=0.0490358s
+01/11/2018 08:58:02: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.36'
+
+01/11/2018 08:58:02: Starting Epoch 37: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:02: Starting minibatch loop.
+01/11/2018 08:58:02:  Epoch[37 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16884112 * 1280; EvalClassificationError = 0.08515625 * 1280; time = 0.0064s; samplesPerSecond = 200350.6
+01/11/2018 08:58:02:  Epoch[37 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14396670 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0060s; samplesPerSecond = 213832.3
+01/11/2018 08:58:02:  Epoch[37 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14920857 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0071s; samplesPerSecond = 180284.2
+01/11/2018 08:58:02:  Epoch[37 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.12401195 * 1280; EvalClassificationError = 0.05781250 * 1280; time = 0.0060s; samplesPerSecond = 212794.3
+01/11/2018 08:58:02:  Epoch[37 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15502052 * 1280; EvalClassificationError = 0.08593750 * 1280; time = 0.0061s; samplesPerSecond = 211402.5
+01/11/2018 08:58:03:  Epoch[37 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14399314 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0059s; samplesPerSecond = 216681.1
+01/11/2018 08:58:03:  Epoch[37 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16337833 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0060s; samplesPerSecond = 214139.9
+01/11/2018 08:58:03: Finished Epoch[37 of 50]: [Training] CrossEntropyWithSoftmax = 0.14998220 * 10000; EvalClassificationError = 0.07480000 * 10000; totalSamplesSeen = 370000; learningRatePerSample = 0.1; epochTime=0.0497145s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.37'
+
+01/11/2018 08:58:03: Starting Epoch 38: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[38 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16702759 * 1280; EvalClassificationError = 0.08671875 * 1280; time = 0.0062s; samplesPerSecond = 204839.3
+01/11/2018 08:58:03:  Epoch[38 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14558318 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0061s; samplesPerSecond = 208424.9
+01/11/2018 08:58:03:  Epoch[38 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.13988147 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0059s; samplesPerSecond = 215557.2
+01/11/2018 08:58:03:  Epoch[38 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15891962 * 1280; EvalClassificationError = 0.08750000 * 1280; time = 0.0061s; samplesPerSecond = 208959.1
+01/11/2018 08:58:03:  Epoch[38 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.13741221 * 1280; EvalClassificationError = 0.06562500 * 1280; time = 0.0060s; samplesPerSecond = 213875.2
+01/11/2018 08:58:03:  Epoch[38 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15441995 * 1280; EvalClassificationError = 0.08906250 * 1280; time = 0.0060s; samplesPerSecond = 214276.1
+01/11/2018 08:58:03:  Epoch[38 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.13708830 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0123s; samplesPerSecond = 103852.3
+01/11/2018 08:58:03: Finished Epoch[38 of 50]: [Training] CrossEntropyWithSoftmax = 0.14877498 * 10000; EvalClassificationError = 0.07770000 * 10000; totalSamplesSeen = 380000; learningRatePerSample = 0.1; epochTime=0.0551221s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.38'
+
+01/11/2018 08:58:03: Starting Epoch 39: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[39 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.14556807 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0064s; samplesPerSecond = 199011.2
+01/11/2018 08:58:03:  Epoch[39 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.13892974 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0061s; samplesPerSecond = 210425.9
+01/11/2018 08:58:03:  Epoch[39 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14860389 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0061s; samplesPerSecond = 209307.6
+01/11/2018 08:58:03:  Epoch[39 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14665070 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0061s; samplesPerSecond = 209000.1
+01/11/2018 08:58:03:  Epoch[39 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15661945 * 1280; EvalClassificationError = 0.08750000 * 1280; time = 0.0060s; samplesPerSecond = 211678.7
+01/11/2018 08:58:03:  Epoch[39 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.17463212 * 1280; EvalClassificationError = 0.09062500 * 1280; time = 0.0060s; samplesPerSecond = 213775.1
+01/11/2018 08:58:03:  Epoch[39 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.18018923 * 1280; EvalClassificationError = 0.09609375 * 1280; time = 0.0060s; samplesPerSecond = 213557.6
+01/11/2018 08:58:03: Finished Epoch[39 of 50]: [Training] CrossEntropyWithSoftmax = 0.15433470 * 10000; EvalClassificationError = 0.08030000 * 10000; totalSamplesSeen = 390000; learningRatePerSample = 0.1; epochTime=0.0495583s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.39'
+
+01/11/2018 08:58:03: Starting Epoch 40: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[40 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.18012108 * 1280; EvalClassificationError = 0.09140625 * 1280; time = 0.0064s; samplesPerSecond = 199454.6
+01/11/2018 08:58:03:  Epoch[40 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14649881 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0061s; samplesPerSecond = 208329.9
+01/11/2018 08:58:03:  Epoch[40 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15320475 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0060s; samplesPerSecond = 212219.2
+01/11/2018 08:58:03:  Epoch[40 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15182514 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0060s; samplesPerSecond = 214757.9
+01/11/2018 08:58:03:  Epoch[40 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15425653 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0060s; samplesPerSecond = 213251.6
+01/11/2018 08:58:03:  Epoch[40 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15766792 * 1280; EvalClassificationError = 0.08437500 * 1280; time = 0.0061s; samplesPerSecond = 210128.9
+01/11/2018 08:58:03:  Epoch[40 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14060678 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0063s; samplesPerSecond = 203126.2
+01/11/2018 08:58:03: Finished Epoch[40 of 50]: [Training] CrossEntropyWithSoftmax = 0.15285542 * 10000; EvalClassificationError = 0.07730000 * 10000; totalSamplesSeen = 400000; learningRatePerSample = 0.1; epochTime=0.0491945s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.40'
+
+01/11/2018 08:58:03: Starting Epoch 41: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[41 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16204326 * 1280; EvalClassificationError = 0.08046875 * 1280; time = 0.0064s; samplesPerSecond = 200837.9
+01/11/2018 08:58:03:  Epoch[41 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.13063951 * 1280; EvalClassificationError = 0.06406250 * 1280; time = 0.0061s; samplesPerSecond = 210994.8
+01/11/2018 08:58:03:  Epoch[41 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14536316 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0061s; samplesPerSecond = 209211.9
+01/11/2018 08:58:03:  Epoch[41 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14750862 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0062s; samplesPerSecond = 207351.2
+01/11/2018 08:58:03:  Epoch[41 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14682159 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0061s; samplesPerSecond = 210284.2
+01/11/2018 08:58:03:  Epoch[41 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14233489 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0064s; samplesPerSecond = 201549.4
+01/11/2018 08:58:03:  Epoch[41 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15025969 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0061s; samplesPerSecond = 209787.9
+01/11/2018 08:58:03: Finished Epoch[41 of 50]: [Training] CrossEntropyWithSoftmax = 0.14567303 * 10000; EvalClassificationError = 0.07300000 * 10000; totalSamplesSeen = 410000; learningRatePerSample = 0.1; epochTime=0.0496869s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.41'
+
+01/11/2018 08:58:03: Starting Epoch 42: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[42 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.14131975 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0063s; samplesPerSecond = 202936.2
+01/11/2018 08:58:03:  Epoch[42 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14017251 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0061s; samplesPerSecond = 209112.7
+01/11/2018 08:58:03:  Epoch[42 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15156863 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0062s; samplesPerSecond = 207479.0
+01/11/2018 08:58:03:  Epoch[42 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14153347 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0061s; samplesPerSecond = 210260.0
+01/11/2018 08:58:03:  Epoch[42 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14911618 * 1280; EvalClassificationError = 0.06796875 * 1280; time = 0.0061s; samplesPerSecond = 211217.6
+01/11/2018 08:58:03:  Epoch[42 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.15729055 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0060s; samplesPerSecond = 212275.5
+01/11/2018 08:58:03:  Epoch[42 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.17820501 * 1280; EvalClassificationError = 0.09062500 * 1280; time = 0.0062s; samplesPerSecond = 207445.3
+01/11/2018 08:58:03: Finished Epoch[42 of 50]: [Training] CrossEntropyWithSoftmax = 0.15131997 * 10000; EvalClassificationError = 0.07720000 * 10000; totalSamplesSeen = 420000; learningRatePerSample = 0.1; epochTime=0.0493283s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.42'
+
+01/11/2018 08:58:03: Starting Epoch 43: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[43 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16356061 * 1280; EvalClassificationError = 0.08593750 * 1280; time = 0.0063s; samplesPerSecond = 202298.0
+01/11/2018 08:58:03:  Epoch[43 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.12194111 * 1280; EvalClassificationError = 0.06171875 * 1280; time = 0.0060s; samplesPerSecond = 211591.2
+01/11/2018 08:58:03:  Epoch[43 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14642954 * 1280; EvalClassificationError = 0.07031250 * 1280; time = 0.0062s; samplesPerSecond = 208079.3
+01/11/2018 08:58:03:  Epoch[43 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15378962 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0061s; samplesPerSecond = 209252.9
+01/11/2018 08:58:03:  Epoch[43 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15869656 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0060s; samplesPerSecond = 214100.5
+01/11/2018 08:58:03:  Epoch[43 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14140344 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0062s; samplesPerSecond = 204826.2
+01/11/2018 08:58:03:  Epoch[43 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.16585588 * 1280; EvalClassificationError = 0.08515625 * 1280; time = 0.0064s; samplesPerSecond = 200730.8
+01/11/2018 08:58:03: Finished Epoch[43 of 50]: [Training] CrossEntropyWithSoftmax = 0.14952623 * 10000; EvalClassificationError = 0.07730000 * 10000; totalSamplesSeen = 430000; learningRatePerSample = 0.1; epochTime=0.0496303s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.43'
+
+01/11/2018 08:58:03: Starting Epoch 44: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[44 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16138092 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0063s; samplesPerSecond = 201597.0
+01/11/2018 08:58:03:  Epoch[44 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.15588461 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0060s; samplesPerSecond = 214054.0
+01/11/2018 08:58:03:  Epoch[44 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.12850945 * 1280; EvalClassificationError = 0.06328125 * 1280; time = 0.0061s; samplesPerSecond = 211168.9
+01/11/2018 08:58:03:  Epoch[44 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14631443 * 1280; EvalClassificationError = 0.07421875 * 1280; time = 0.0060s; samplesPerSecond = 212257.9
+01/11/2018 08:58:03:  Epoch[44 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.15218453 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0061s; samplesPerSecond = 209832.6
+01/11/2018 08:58:03:  Epoch[44 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.13426723 * 1280; EvalClassificationError = 0.06640625 * 1280; time = 0.0064s; samplesPerSecond = 201422.5
+01/11/2018 08:58:03:  Epoch[44 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.15782404 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0066s; samplesPerSecond = 194665.0
+01/11/2018 08:58:03: Finished Epoch[44 of 50]: [Training] CrossEntropyWithSoftmax = 0.14878915 * 10000; EvalClassificationError = 0.07400000 * 10000; totalSamplesSeen = 440000; learningRatePerSample = 0.1; epochTime=0.0502851s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.44'
+
+01/11/2018 08:58:03: Starting Epoch 45: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[45 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.16446162 * 1280; EvalClassificationError = 0.08906250 * 1280; time = 0.0075s; samplesPerSecond = 170988.1
+01/11/2018 08:58:03:  Epoch[45 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.13921901 * 1280; EvalClassificationError = 0.07265625 * 1280; time = 0.0060s; samplesPerSecond = 214100.5
+01/11/2018 08:58:03:  Epoch[45 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15290625 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0061s; samplesPerSecond = 210008.2
+01/11/2018 08:58:03:  Epoch[45 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.15271430 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0062s; samplesPerSecond = 206888.7
+01/11/2018 08:58:03:  Epoch[45 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14689426 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0060s; samplesPerSecond = 212363.5
+01/11/2018 08:58:03:  Epoch[45 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.13420410 * 1280; EvalClassificationError = 0.06406250 * 1280; time = 0.0060s; samplesPerSecond = 214122.0
+01/11/2018 08:58:03:  Epoch[45 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14893570 * 1280; EvalClassificationError = 0.07968750 * 1280; time = 0.0061s; samplesPerSecond = 208972.8
+01/11/2018 08:58:03: Finished Epoch[45 of 50]: [Training] CrossEntropyWithSoftmax = 0.14720029 * 10000; EvalClassificationError = 0.07620000 * 10000; totalSamplesSeen = 450000; learningRatePerSample = 0.1; epochTime=0.0503698s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.45'
+
+01/11/2018 08:58:03: Starting Epoch 46: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[46 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.12671082 * 1280; EvalClassificationError = 0.05703125 * 1280; time = 0.0069s; samplesPerSecond = 185059.3
+01/11/2018 08:58:03:  Epoch[46 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.16278114 * 1280; EvalClassificationError = 0.08125000 * 1280; time = 0.0065s; samplesPerSecond = 198357.4
+01/11/2018 08:58:03:  Epoch[46 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14169729 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0064s; samplesPerSecond = 200523.2
+01/11/2018 08:58:03:  Epoch[46 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.13762536 * 1280; EvalClassificationError = 0.06796875 * 1280; time = 0.0060s; samplesPerSecond = 211966.2
+01/11/2018 08:58:03:  Epoch[46 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14371409 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0060s; samplesPerSecond = 212751.8
+01/11/2018 08:58:03:  Epoch[46 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14948044 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0061s; samplesPerSecond = 211336.2
+01/11/2018 08:58:03:  Epoch[46 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14947481 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0061s; samplesPerSecond = 211106.2
+01/11/2018 08:58:03: Finished Epoch[46 of 50]: [Training] CrossEntropyWithSoftmax = 0.14464042 * 10000; EvalClassificationError = 0.07170000 * 10000; totalSamplesSeen = 460000; learningRatePerSample = 0.1; epochTime=0.050246s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.46'
+
+01/11/2018 08:58:03: Starting Epoch 47: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[47 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.14711735 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0063s; samplesPerSecond = 202195.7
+01/11/2018 08:58:03:  Epoch[47 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14898081 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0061s; samplesPerSecond = 211200.2
+01/11/2018 08:58:03:  Epoch[47 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.15361421 * 1280; EvalClassificationError = 0.08671875 * 1280; time = 0.0060s; samplesPerSecond = 214887.7
+01/11/2018 08:58:03:  Epoch[47 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.11621261 * 1280; EvalClassificationError = 0.06171875 * 1280; time = 0.0059s; samplesPerSecond = 215709.7
+01/11/2018 08:58:03:  Epoch[47 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.13497615 * 1280; EvalClassificationError = 0.06953125 * 1280; time = 0.0062s; samplesPerSecond = 207643.9
+01/11/2018 08:58:03:  Epoch[47 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14900246 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0059s; samplesPerSecond = 215336.0
+01/11/2018 08:58:03:  Epoch[47 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.13549509 * 1280; EvalClassificationError = 0.06796875 * 1280; time = 0.0062s; samplesPerSecond = 206092.6
+01/11/2018 08:58:03: Finished Epoch[47 of 50]: [Training] CrossEntropyWithSoftmax = 0.14077632 * 10000; EvalClassificationError = 0.07380000 * 10000; totalSamplesSeen = 470000; learningRatePerSample = 0.1; epochTime=0.0500192s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.47'
+
+01/11/2018 08:58:03: Starting Epoch 48: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[48 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.14503465 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0064s; samplesPerSecond = 201134.5
+01/11/2018 08:58:03:  Epoch[48 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.14941282 * 1280; EvalClassificationError = 0.08203125 * 1280; time = 0.0061s; samplesPerSecond = 208228.3
+01/11/2018 08:58:03:  Epoch[48 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14857764 * 1280; EvalClassificationError = 0.07734375 * 1280; time = 0.0059s; samplesPerSecond = 215176.7
+01/11/2018 08:58:03:  Epoch[48 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.13969493 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0062s; samplesPerSecond = 205381.6
+01/11/2018 08:58:03:  Epoch[48 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14006305 * 1280; EvalClassificationError = 0.07187500 * 1280; time = 0.0069s; samplesPerSecond = 186447.6
+01/11/2018 08:58:03:  Epoch[48 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.13965473 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0060s; samplesPerSecond = 213280.0
+01/11/2018 08:58:03:  Epoch[48 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.12673740 * 1280; EvalClassificationError = 0.06796875 * 1280; time = 0.0061s; samplesPerSecond = 210201.3
+01/11/2018 08:58:03: Finished Epoch[48 of 50]: [Training] CrossEntropyWithSoftmax = 0.14152292 * 10000; EvalClassificationError = 0.07300000 * 10000; totalSamplesSeen = 480000; learningRatePerSample = 0.1; epochTime=0.0499448s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.48'
+
+01/11/2018 08:58:03: Starting Epoch 49: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[49 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.15557060 * 1280; EvalClassificationError = 0.08437500 * 1280; time = 0.0063s; samplesPerSecond = 202262.8
+01/11/2018 08:58:03:  Epoch[49 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.13022280 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0060s; samplesPerSecond = 214426.9
+01/11/2018 08:58:03:  Epoch[49 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.14758434 * 1280; EvalClassificationError = 0.07890625 * 1280; time = 0.0072s; samplesPerSecond = 177735.8
+01/11/2018 08:58:03:  Epoch[49 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14358916 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0061s; samplesPerSecond = 210887.0
+01/11/2018 08:58:03:  Epoch[49 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.14146266 * 1280; EvalClassificationError = 0.06406250 * 1280; time = 0.0062s; samplesPerSecond = 206972.4
+01/11/2018 08:58:03:  Epoch[49 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.13917103 * 1280; EvalClassificationError = 0.06015625 * 1280; time = 0.0060s; samplesPerSecond = 214104.1
+01/11/2018 08:58:03:  Epoch[49 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.17072220 * 1280; EvalClassificationError = 0.08750000 * 1280; time = 0.0060s; samplesPerSecond = 211577.2
+01/11/2018 08:58:03: Finished Epoch[49 of 50]: [Training] CrossEntropyWithSoftmax = 0.14609703 * 10000; EvalClassificationError = 0.07400000 * 10000; totalSamplesSeen = 490000; learningRatePerSample = 0.1; epochTime=0.0501206s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.49'
+
+01/11/2018 08:58:03: Starting Epoch 50: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:03: Starting minibatch loop.
+01/11/2018 08:58:03:  Epoch[50 of 50]-Minibatch[   1-  10, 14.29%]: CrossEntropyWithSoftmax = 0.14391767 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0063s; samplesPerSecond = 203462.0
+01/11/2018 08:58:03:  Epoch[50 of 50]-Minibatch[  11-  20, 28.57%]: CrossEntropyWithSoftmax = 0.13435644 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0064s; samplesPerSecond = 200973.5
+01/11/2018 08:58:03:  Epoch[50 of 50]-Minibatch[  21-  30, 42.86%]: CrossEntropyWithSoftmax = 0.13637500 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0060s; samplesPerSecond = 212960.7
+01/11/2018 08:58:03:  Epoch[50 of 50]-Minibatch[  31-  40, 57.14%]: CrossEntropyWithSoftmax = 0.14619503 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0061s; samplesPerSecond = 209458.4
+01/11/2018 08:58:03:  Epoch[50 of 50]-Minibatch[  41-  50, 71.43%]: CrossEntropyWithSoftmax = 0.13345990 * 1280; EvalClassificationError = 0.06640625 * 1280; time = 0.0060s; samplesPerSecond = 213226.7
+01/11/2018 08:58:03:  Epoch[50 of 50]-Minibatch[  51-  60, 85.71%]: CrossEntropyWithSoftmax = 0.14153485 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0060s; samplesPerSecond = 213900.2
+01/11/2018 08:58:03:  Epoch[50 of 50]-Minibatch[  61-  70, 100.00%]: CrossEntropyWithSoftmax = 0.14213562 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0203s; samplesPerSecond = 62985.6
+01/11/2018 08:58:03: Finished Epoch[50 of 50]: [Training] CrossEntropyWithSoftmax = 0.13897399 * 10000; EvalClassificationError = 0.07310000 * 10000; totalSamplesSeen = 500000; learningRatePerSample = 0.1; epochTime=0.0634548s
+01/11/2018 08:58:03: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn'
+
+01/11/2018 08:58:03: Action "train" complete.
+
+
+01/11/2018 08:58:03: ##############################################################################
+01/11/2018 08:58:03: #                                                                            #
+01/11/2018 08:58:03: # Simple_Demo_Output command (write action)                                  #
+01/11/2018 08:58:03: #                                                                            #
+01/11/2018 08:58:03: ##############################################################################
+
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalClassificationError = ClassificationError()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *1]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *1]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *1] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *1] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *1], [2], [2] -> [2 x *1]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *1] -> [50 x *1]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *1], [50 x 1] -> [50 x 1 x *1]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *1] -> [50 x 1 x *1]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *1] -> [2 x 1 x *1]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *1], [2 x 1] -> [2 x 1 x *1]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [2 x *1], [2 x 1 x *1] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *1] -> [2 x 1 x *1]
+Validating --> Prior = Mean (labels) : [2 x *1] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *1], [2] -> [2 x 1 x *1]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 25 matrices, 12 are shared as 3, and 13 are not shared.
+
+Here are the ones that share memory:
+	{ CrossEntropyWithSoftmax : [1]
+	  EvalClassificationError : [1]
+	  PosteriorProb : [2 x 1 x *1] }
+	{ H2 : [50 x 1 x *1]
+	  HLast : [2 x 1 x *1]
+	  MVNormalizedFeatures : [2 x *1]
+	  W0*features+B0 : [50 x 1 x *1]
+	  W1*H1 : [50 x 1 x *1] }
+	{ H1 : [50 x 1 x *1]
+	  W0*features : [50 x *1]
+	  W1*H1+B1 : [50 x 1 x *1]
+	  W2*H1 : [2 x 1 x *1] }
+
+Here are the ones that don't share memory:
+	{B0 : [50 x 1]}
+	{ScaledLogLikelihood : [2 x 1 x *1]}
+	{W2 : [2 x 50]}
+	{InvStdOfFeatures : [2]}
+	{LogOfPrior : [2]}
+	{B2 : [2 x 1]}
+	{Prior : [2]}
+	{W1 : [50 x 50]}
+	{features : [2 x *1]}
+	{labels : [2 x *1]}
+	{B1 : [50 x 1]}
+	{MeanOfFeatures : [2]}
+	{W0 : [50 x 2]}
+
+Minibatch[0]: ActualMBSize = 603
+Written to C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/SimpleOutput*
+Total Samples Evaluated = 603
+
+01/11/2018 08:58:03: Action "write" complete.
+
+01/11/2018 08:58:03: __COMPLETED__
+=== Deleting last epoch data
+==== Re-running from checkpoint
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true makeMode=true
+CNTK 2.3.1+ (HEAD db192c, Jan 10 2018 22:59:43) at 2018/01/11 08:58:04
+
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple  OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  makeMode=true
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Jan 10 2018 22:47:38
+		Last modified date: Wed Jan 10 22:18:32 2018
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		With ASGD: yes
+		Math lib: mkl
+		CUDA version: 9.0.0
+		CUDNN version: 7.0.5
+		Build Branch: HEAD
+		Build SHA1: db192cd3cb9ac688cae719c41e5930a4e3f628ea
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 3072; computeCapability = 5.2; type = "Tesla M60"; total memory = 8124 MB; free memory = 8001 MB
+-------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: cntk.cntk:command=Simple_Demo:Simple_Demo_Output
+configparameters: cntk.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Simple
+configparameters: cntk.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:deviceId=0
+configparameters: cntk.cntk:DeviceNumber=-1
+configparameters: cntk.cntk:forceDeterministicAlgorithms=true
+configparameters: cntk.cntk:makeMode=true
+configparameters: cntk.cntk:modelPath=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn
+configparameters: cntk.cntk:OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu
+configparameters: cntk.cntk:outputNodeNames=ScaledLogLikelihood
+configparameters: cntk.cntk:precision=float
+configparameters: cntk.cntk:RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu
+configparameters: cntk.cntk:Simple_Demo=[
+    action=train
+    SimpleNetworkBuilder=[
+        layerSizes=2:50*2:2
+        trainingCriterion=CrossEntropyWithSoftmax
+        evalCriterion=ClassificationError
+        layerTypes=Sigmoid
+        initValueScale=1.0
+        applyMeanVarNorm=true
+        uniformInit=true
+        needPrior=true
+    ]
+    SGD=[
+        epochSize=0 
+        minibatchSize=128
+        learningRatesPerSample=0.1
+        momentumAsTimeConstant=2500
+        dropoutRate=0.0
+        maxEpochs=50
+        keepCheckPointFiles = true
+    ]
+    reader=[
+        readerType=CNTKTextFormatReader
+        file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/SimpleDataTrain_cntk_text.txt
+        input = [
+            features=[
+dim = 2      
+                format = "dense"
+            ]
+            labels=[
+dim = 2 
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+configparameters: cntk.cntk:Simple_Demo_Output=[
+    action=write
+    reader=[
+        readerType=CNTKTextFormatReader
+        file=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/SimpleDataTest_cntk_text.txt
+        input = [
+            features=[
+dim = 2 
+                format = "dense" 
+            ]
+            labels=[
+dim = 2 
+                format = "dense"
+            ]
+        ]
+    ]
+outputPath=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/SimpleOutput    
+]
+
+configparameters: cntk.cntk:timestamping=true
+configparameters: cntk.cntk:traceLevel=1
+01/11/2018 08:58:04: Commands: Simple_Demo Simple_Demo_Output
+01/11/2018 08:58:04: precision = "float"
+01/11/2018 08:58:04: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+01/11/2018 08:58:04: ##############################################################################
+01/11/2018 08:58:04: #                                                                            #
+01/11/2018 08:58:04: # Simple_Demo command (train action)                                         #
+01/11/2018 08:58:04: #                                                                            #
+01/11/2018 08:58:04: ##############################################################################
+
+01/11/2018 08:58:04: 
+Starting from checkpoint. Loading network from 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn.49'.
+SimpleNetworkBuilder Using GPU 0
+01/11/2018 08:58:04: 
+Model has 25 nodes. Using GPU 0.
+
+01/11/2018 08:58:04: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+01/11/2018 08:58:04: Evaluation criterion: EvalClassificationError = ClassificationError
+
+01/11/2018 08:58:04: Training 2802 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+
+01/11/2018 08:58:04: 	Node 'B0' (LearnableParameter operation) : [50 x 1]
+01/11/2018 08:58:04: 	Node 'B1' (LearnableParameter operation) : [50 x 1]
+01/11/2018 08:58:04: 	Node 'B2' (LearnableParameter operation) : [2 x 1]
+01/11/2018 08:58:04: 	Node 'W0' (LearnableParameter operation) : [50 x 2]
+01/11/2018 08:58:04: 	Node 'W1' (LearnableParameter operation) : [50 x 50]
+01/11/2018 08:58:04: 	Node 'W2' (LearnableParameter operation) : [2 x 50]
+
+01/11/2018 08:58:04: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+01/11/2018 08:58:04: Starting Epoch 50: learning rate per sample = 0.100000  effective momentum = 0.950085  momentum as time constant = 2499.8 samples
+
+01/11/2018 08:58:04: Starting minibatch loop.
+01/11/2018 08:58:04:  Epoch[50 of 50]-Minibatch[   1-  10]: CrossEntropyWithSoftmax = 0.14391767 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.2064s; samplesPerSecond = 6203.0
+01/11/2018 08:58:04:  Epoch[50 of 50]-Minibatch[  11-  20]: CrossEntropyWithSoftmax = 0.13435644 * 1280; EvalClassificationError = 0.07578125 * 1280; time = 0.0063s; samplesPerSecond = 202464.4
+01/11/2018 08:58:04:  Epoch[50 of 50]-Minibatch[  21-  30]: CrossEntropyWithSoftmax = 0.13637500 * 1280; EvalClassificationError = 0.07500000 * 1280; time = 0.0060s; samplesPerSecond = 211938.1
+01/11/2018 08:58:04:  Epoch[50 of 50]-Minibatch[  31-  40]: CrossEntropyWithSoftmax = 0.14619503 * 1280; EvalClassificationError = 0.07656250 * 1280; time = 0.0059s; samplesPerSecond = 215826.1
+01/11/2018 08:58:04:  Epoch[50 of 50]-Minibatch[  41-  50]: CrossEntropyWithSoftmax = 0.13345990 * 1280; EvalClassificationError = 0.06640625 * 1280; time = 0.0060s; samplesPerSecond = 212141.8
+01/11/2018 08:58:04:  Epoch[50 of 50]-Minibatch[  51-  60]: CrossEntropyWithSoftmax = 0.14153485 * 1280; EvalClassificationError = 0.07343750 * 1280; time = 0.0060s; samplesPerSecond = 213013.8
+01/11/2018 08:58:04:  Epoch[50 of 50]-Minibatch[  61-  70]: CrossEntropyWithSoftmax = 0.14213562 * 1280; EvalClassificationError = 0.06875000 * 1280; time = 0.0062s; samplesPerSecond = 205629.1
+01/11/2018 08:58:04: Finished Epoch[50 of 50]: [Training] CrossEntropyWithSoftmax = 0.13897399 * 10000; EvalClassificationError = 0.07310000 * 10000; totalSamplesSeen = 500000; learningRatePerSample = 0.1; epochTime=0.24973s
+01/11/2018 08:58:04: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/models/simple.dnn'
+
+01/11/2018 08:58:04: Action "train" complete.
+
+
+01/11/2018 08:58:04: ##############################################################################
+01/11/2018 08:58:04: #                                                                            #
+01/11/2018 08:58:04: # Simple_Demo_Output command (write action)                                  #
+01/11/2018 08:58:04: #                                                                            #
+01/11/2018 08:58:04: ##############################################################################
+
+
+Post-processing network...
+
+7 roots:
+	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
+	EvalClassificationError = ClassificationError()
+	InvStdOfFeatures = InvStdDev()
+	MeanOfFeatures = Mean()
+	PosteriorProb = Softmax()
+	Prior = Mean()
+	ScaledLogLikelihood = Minus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *2]
+Validating --> W2 = LearnableParameter() :  -> [2 x 50]
+Validating --> W1 = LearnableParameter() :  -> [50 x 50]
+Validating --> W0 = LearnableParameter() :  -> [50 x 2]
+Validating --> features = InputValue() :  -> [2 x *2]
+Validating --> MeanOfFeatures = Mean (features) : [2 x *2] -> [2]
+Validating --> InvStdOfFeatures = InvStdDev (features) : [2 x *2] -> [2]
+Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [2 x *2], [2], [2] -> [2 x *2]
+Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [50 x 2], [2 x *2] -> [50 x *2]
+Validating --> B0 = LearnableParameter() :  -> [50 x 1]
+Validating --> W0*features+B0 = Plus (W0*features, B0) : [50 x *2], [50 x 1] -> [50 x 1 x *2]
+Validating --> H1 = Sigmoid (W0*features+B0) : [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> W1*H1 = Times (W1, H1) : [50 x 50], [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> B1 = LearnableParameter() :  -> [50 x 1]
+Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [50 x 1 x *2], [50 x 1] -> [50 x 1 x *2]
+Validating --> H2 = Sigmoid (W1*H1+B1) : [50 x 1 x *2] -> [50 x 1 x *2]
+Validating --> W2*H1 = Times (W2, H2) : [2 x 50], [50 x 1 x *2] -> [2 x 1 x *2]
+Validating --> B2 = LearnableParameter() :  -> [2 x 1]
+Validating --> HLast = Plus (W2*H1, B2) : [2 x 1 x *2], [2 x 1] -> [2 x 1 x *2]
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [2 x *2], [2 x 1 x *2] -> [1]
+Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [2 x *2], [2 x 1 x *2] -> [1]
+Validating --> PosteriorProb = Softmax (HLast) : [2 x 1 x *2] -> [2 x 1 x *2]
+Validating --> Prior = Mean (labels) : [2 x *2] -> [2]
+Validating --> LogOfPrior = Log (Prior) : [2] -> [2]
+Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [2 x 1 x *2], [2] -> [2 x 1 x *2]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 25 matrices, 12 are shared as 3, and 13 are not shared.
+
+Here are the ones that share memory:
+	{ CrossEntropyWithSoftmax : [1]
+	  EvalClassificationError : [1]
+	  PosteriorProb : [2 x 1 x *2] }
+	{ H2 : [50 x 1 x *2]
+	  HLast : [2 x 1 x *2]
+	  MVNormalizedFeatures : [2 x *2]
+	  W0*features+B0 : [50 x 1 x *2]
+	  W1*H1 : [50 x 1 x *2] }
+	{ H1 : [50 x 1 x *2]
+	  W0*features : [50 x *2]
+	  W1*H1+B1 : [50 x 1 x *2]
+	  W2*H1 : [2 x 1 x *2] }
+
+Here are the ones that don't share memory:
+	{B2 : [2 x 1]}
+	{features : [2 x *2]}
+	{InvStdOfFeatures : [2]}
+	{labels : [2 x *2]}
+	{MeanOfFeatures : [2]}
+	{B0 : [50 x 1]}
+	{B1 : [50 x 1]}
+	{W0 : [50 x 2]}
+	{W1 : [50 x 50]}
+	{Prior : [2]}
+	{LogOfPrior : [2]}
+	{W2 : [2 x 50]}
+	{ScaledLogLikelihood : [2 x 1 x *2]}
+
+Minibatch[0]: ActualMBSize = 603
+Written to C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180111085400.505371\Speech_Simple@release_gpu/SimpleOutput*
+Total Samples Evaluated = 603
+
+01/11/2018 08:58:04: Action "write" complete.
+
+01/11/2018 08:58:04: __COMPLETED__

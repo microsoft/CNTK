@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -8,6 +9,7 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <math_constants.h>
+#include "half.hpp"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -28,6 +30,7 @@ __global__ void kConvolutionForward(int batchSize, const ElemType* __restrict__ 
                                     const ElemType* __restrict__ src, int srcVecSize,
                                     ElemType* dst, int dstVecSize)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= dstVecSize)
         return;
@@ -41,7 +44,7 @@ __global__ void kConvolutionForward(int batchSize, const ElemType* __restrict__ 
         int ivBase = mpRowIwht[row];
         assert(0 <= colBase && colBase < srcVecSize);
 
-        ElemType sum = 0;
+        comp_t sum = 0;
         int i0 = mpRowRun[row];
         int skip = runs[i0++];
         int size = runs[i0++];
@@ -52,7 +55,7 @@ __global__ void kConvolutionForward(int batchSize, const ElemType* __restrict__ 
                 continue;
             int dcol = runs[i0 + i];
             assert(0 <= colBase + dcol && colBase + dcol < srcVecSize);
-            sum += kernel[ivBase + skip + i] * src[colBase + dcol];
+            sum += (comp_t)kernel[ivBase + skip + i] * (comp_t)src[colBase + dcol];
         }
         dst[row] = sum;
 
@@ -68,6 +71,7 @@ __global__ void kConvolutionBackwardData(int batchSize, const ElemType* __restri
                                          const ElemType* __restrict__ srcGrad, int srcVecSize,
                                          ElemType* grad, int dstVecSize)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= srcVecSize)
         return;
@@ -81,7 +85,7 @@ __global__ void kConvolutionBackwardData(int batchSize, const ElemType* __restri
         int ivBase = mpRowIwht[row];
         assert(0 <= colBase && colBase < dstVecSize);
 
-        ElemType g = srcGrad[row];
+        comp_t g = srcGrad[row];
         int i0 = mpRowRun[row];
         int skip = runs[i0++];
         int size = runs[i0++];
@@ -92,7 +96,7 @@ __global__ void kConvolutionBackwardData(int batchSize, const ElemType* __restri
                 continue;
             int dcol = runs[i0 + i];
             assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
-            atomicAdd(&grad[colBase + dcol], g * kernel[ivBase + skip + i]);
+            atomicAdd(&grad[colBase + dcol], (ElemType)((comp_t)g * (comp_t)kernel[ivBase + skip + i]));
         }
 
         srcGrad += blockDim.y * srcVecSize;
@@ -108,6 +112,7 @@ __global__ void kConvolutionBackwardKernel(int batchSize, int inVecSize, int out
                                            const ElemType* __restrict__ srcGrad,
                                            ElemType* kernelGrad)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= outVecSize)
         return;
@@ -121,7 +126,7 @@ __global__ void kConvolutionBackwardKernel(int batchSize, int inVecSize, int out
         int ivBase = mpRowIwht[row];
         assert(0 <= colBase && colBase < inVecSize);
 
-        ElemType g = srcGrad[row];
+        comp_t g = srcGrad[row];
         int i0 = mpRowRun[row];
         int skip = runs[i0++];
         int size = runs[i0++];
@@ -132,7 +137,7 @@ __global__ void kConvolutionBackwardKernel(int batchSize, int inVecSize, int out
                 continue;
             int dcol = runs[i0 + i];
             assert(0 <= colBase + dcol && colBase + dcol < inVecSize);
-            atomicAdd(&kernelGrad[ivBase + skip + i], g * in[colBase + dcol]);
+            atomicAdd(&kernelGrad[ivBase + skip + i], (ElemType)((comp_t)g * (comp_t)in[colBase + dcol]));
         }
 
         in += blockDim.y * inVecSize;
@@ -233,7 +238,7 @@ __device__ double round_(double a)
 // corresponding to the ROI and which pixels in that subset should go into the
 // output location, then takes the max value over that window.
 // src: Images              [W x H x C x N]
-// roiData: ROIs            [4 x numROIs x N], 
+// roiData: ROIs            [4 x numROIs x N],
 // dst: Pooled ROIs         [PW x PH x C x numROIs x N]
 // argmax: max positions    [PW x PH x C x numROIs x N]
 // spatialScale             ratio of input feature map to the original image.
@@ -245,6 +250,7 @@ __global__ void kMaxROIPoolingForward(const int totalIterations,
     const int pooledWidth, const int pooledHeight, const ElemType* src,
     const ElemType* roiData, ElemType* dst, ElemType* argmax, double spatialScale)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     // index loops over all totalRois*c*pooledHeight*pooledWidth output locations.
     for (int index = blockIdx.x * blockDim.x + threadIdx.x;
         index < (totalIterations); index += blockDim.x * gridDim.x)
@@ -269,8 +275,8 @@ __global__ void kMaxROIPoolingForward(const int totalIterations,
         int roiWidth = max(roiEndW - roiStartW + 1, (int)1);
         int roiHeight = max(roiEndH - roiStartH + 1, (int)1);
 
-        ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
-        ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
+        comp_t winH = (comp_t)roiHeight / (comp_t)pooledHeight;
+        comp_t winW = (comp_t)roiWidth / (comp_t)pooledWidth;
 
         // compute window for this output location.
         int hstart = (int)(ph * winH);
@@ -286,7 +292,7 @@ __global__ void kMaxROIPoolingForward(const int totalIterations,
 
         bool isempty = (hend <= hstart) || (wend <= wstart);
         // Define an empty pooling region to be zero
-        ElemType maxval = isempty ? (ElemType)0 : -CUDART_INF_F;
+        comp_t maxval = isempty ? (comp_t)0 : (comp_t)-CUDART_INF_F;
         int maxidx = -1;
 
         int imgIdx = n / numROIs;
@@ -319,6 +325,7 @@ __global__ void kMaxROIPoolingBackward(const int totalIterations,
     const int pooledWidth, const int pooledHeight, const ElemType* pooledGrad,
     const ElemType* roiData, ElemType* grad, const ElemType* argmax, double spatialScale)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     // index loops over all input locations (locations in the original input tensor).
     for (int index = blockIdx.x * blockDim.x + threadIdx.x;
         index < (totalIterations); index += blockDim.x * gridDim.x)
@@ -334,7 +341,7 @@ __global__ void kMaxROIPoolingBackward(const int totalIterations,
         int roiMin = n * numROIs;
         int roiMax = (n + 1) * numROIs;
 
-        ElemType gradient = 0;
+        comp_t gradient = 0;
         for (int roiN = roiMin; roiN < roiMax; roiN++)
         {
             // each ROI is 4 elements: (x, y, w, h)
@@ -355,8 +362,8 @@ __global__ void kMaxROIPoolingBackward(const int totalIterations,
             if (!inROI)
                 continue;
 
-            ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
-            ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
+            comp_t winH = (comp_t)roiHeight / (comp_t)pooledHeight;
+            comp_t winW = (comp_t)roiWidth / (comp_t)pooledWidth;
 
             // what pooled nodes in the output for this ROI could have pooled this input location?
             // we use int here since the computation can yield a negative result
@@ -381,13 +388,13 @@ __global__ void kMaxROIPoolingBackward(const int totalIterations,
                 {
                     if ((int)offsetArgmax[ph * pooledWidth + pw] == (h * width + w))
                     {
-                        gradient += offsetPoolGrad[ph * pooledWidth + pw];
+                        gradient += (comp_t)offsetPoolGrad[ph * pooledWidth + pw];
                     }
                 }
             }
         }
 
-        atomicAdd(&grad[index], gradient);
+        atomicAdd(&grad[index], (ElemType)gradient);
     }
 }
 
@@ -443,6 +450,7 @@ __global__ void kAveragePoolingForward(int batchSize, const int* mpRowCol, const
                                        const ElemType* __restrict__ src, int srcVecSize,
                                        ElemType* dst, int dstVecSize)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     if (row >= dstVecSize)
         return;
@@ -457,14 +465,14 @@ __global__ void kAveragePoolingForward(int batchSize, const int* mpRowCol, const
 
         int i0 = mpRowIndices[row];
         int size = indices[i0++];
-        ElemType sum = 0;
+        comp_t sum = 0;
         for (int i = 0; i < size; i++)
         {
             int dcol = indices[i0 + i];
             assert(0 <= colBase + dcol && colBase + dcol < srcVecSize);
-            sum += src[colBase + dcol];
+            sum += (comp_t)src[colBase + dcol];
         }
-        dst[row] = sum / size;
+        dst[row] = sum / (comp_t)size;
 
         src += blockDim.y * srcVecSize;
         dst += blockDim.y * dstVecSize;

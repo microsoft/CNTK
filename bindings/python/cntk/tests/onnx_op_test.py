@@ -199,7 +199,7 @@ def test_AveragePool(tmpdir):
     x = C.input_variable(img.shape)
     model = C.pooling(x, C.AVG_POOLING, (2,2), (2,2))
 
-    verify_one_input(model, img, tmpdir, 'AveragePool')
+    verify_one_input(model, img, tmpdir, 'AveragePool_1')
 
 #BatchNormalization
 def test_BatchNormalization(tmpdir):
@@ -280,7 +280,7 @@ def test_Concat(tmpdir):
 
     model = C.splice(x, y, axis=1)
 
-    verify_one_input(model, data1, tmpdir, 'Concat__1')
+    verify_one_input(model, data1, tmpdir, 'Concat_1')
 
 # DepthToSpace
 def test_DepthToSpace(tmpdir):
@@ -297,14 +297,37 @@ def test_DepthToSpace(tmpdir):
 
 #Div
 def test_Div(tmpdir):
-    data0 = np.asarray([1., 1., 1., 1.], dtype=np.float32)
-    data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=np.float32)
-    model = C.element_divide(data0, data1)
-    verify_no_input(model, tmpdir, 'Div_0')
+    def run_div_test(shape1, shape2, tmpdir):
+        broadcast = 'no_broadcast'
+        if (shape1 != shape2):
+            broadcast = 'with_broadcast'
 
-    x = C.input_variable(data0.shape)
-    model = C.element_divide(x, data1)
-    verify_one_input(model, data0, tmpdir, 'Div_1')
+        data1 = np.random.rand(*shape1).astype(np.float32)
+        data2 = np.random.rand(*shape2).astype(np.float32)
+
+        x = C.input_variable(shape1)
+        y = C.input_variable(shape2)
+
+        model = C.element_divide(data1, data2)
+        verify_no_input(model, tmpdir, 'Div_' + broadcast + '_d1d2')
+
+        model = C.element_divide(x, data2)
+        verify_one_input(model, data1, tmpdir, 'Div_' + broadcast + '_xd2')
+
+        model = C.element_divide(data1, y)
+        verify_one_input(model, data2, tmpdir, 'Div_' + broadcast + '_d1y')
+
+        model = C.element_divide(x, y)
+        verify_two_input(model, data1, data2, tmpdir, 'Div_' + broadcast + '_xy')
+
+    shape1 = (2, 3, 4, 5)
+    shape2 = shape1
+    # without broadcast
+    run_div_test(shape1, shape2, tmpdir)
+
+    # with broadcast
+    shape2 = (1, 3, 1, 1)
+    run_div_test(shape1, shape2, tmpdir)
 
 #Dropout
 def test_Dropout(tmpdir):
@@ -373,6 +396,16 @@ def test_Gather(tmpdir):
     model = C.gather(y, x)
     verify_one_input(model, c, tmpdir, 'Gather_1')
 
+#Gather
+def test_Gather_With_Axis(tmpdir):
+    data = np.asarray( [[ [111, 112], [121, 122], [131, 132], ],[ [211, 212], [221, 222], [231, 232], ]]).astype('f')
+    indices = np.asarray( [ [0, 1, 1], [1, 1, 1]])
+    x = C.input_variable(np.shape(data))
+    y = C.input_variable(np.shape(indices))
+    axis = 1
+    model = C.gather(data, y, axis)
+    verify_one_input(model, indices, tmpdir, 'Gather_With_Axis_1')
+
 #Greater
 def test_Greater(tmpdir):
     model = C.greater([41., 42., 43.], [42., 42., 42.])
@@ -394,6 +427,22 @@ def test_HardSigmiod(tmpdir):
 
     data = np.random.rand(*shape).astype(np.float32)
     verify_one_input(model, data, tmpdir, 'HardSigmoid_1')
+
+#ImageScaler
+def test_ImageScaler(tmpdir):
+    input_height = 32
+    input_width = 32
+    channels = 3
+    image = np.ones([channels, input_height, input_width]).astype(np.float32)
+    scalar = 1.5
+    bias = [10, 20, 30]
+
+    model = C.image_scaler(image, scalar, bias);
+    verify_no_input(model, tmpdir, 'ImageScaler_0')
+
+    x = C.input_variable(np.shape(image)) 
+    model = C.image_scaler(x, scalar, bias);
+    verify_one_input(model, image, tmpdir, 'ImageScaler_1')
 
 #LeakyRelu
 def test_LeakyRelu(tmpdir):
@@ -523,11 +572,11 @@ def test_Pad(tmpdir):
     verify_one_input(model, data, tmpdir, 'Pad_1')    
 
 #PRelu
-def test_PRelu(tmpdir):
-    data = np.asarray([[-1, -0.5, 0, 1, 2]])
-    alpha = C.constant(value=[[0.5, 0.5, 0.5, 0.5, 0.5]])
-    model = C.param_relu(alpha, data)
-    verify_no_input(model, tmpdir, 'PRelu_0')
+#def test_PRelu(tmpdir):
+#    data = np.asarray([[-1, -0.5, 0, 1, 2]])
+#    alpha = C.constant(value=[[0.5, 0.5, 0.5, 0.5, 0.5]])
+#    model = C.param_relu(alpha, data)
+#    verify_no_input(model, tmpdir, 'PRelu_0')
 
 #Pow
 def test_Pow(tmpdir):
@@ -620,10 +669,17 @@ def test_Sigmoid(tmpdir):
 
 #Slice
 def test_Slice(tmpdir):
-    data = np.asarray([[[1,2,-3], [4, 5, 6]]],dtype=np.float32)
+    data = np.asarray([[1,2,-3], [4, 5, 6]],dtype=np.float32)
     x1 = C.input_variable((2,3))
+
+    model = C.slice(data, 0, 1, 2)
+    verify_no_input(model, tmpdir, 'Slice_0')
+
     model = C.slice(x1, 0, 1, 2)
-    verify_one_input(model, data, tmpdir, 'Slice_0')
+    verify_one_input(model, data, tmpdir, 'Slice_1')
+
+    model = C.slice(x1, [0,1], [1,0], [2,1]);
+    verify_one_input(model, data, tmpdir, 'Slice2_1')
 
 #Softmax
 def test_Softmax(tmpdir):
@@ -688,9 +744,27 @@ def test_Tanh(tmpdir):
 
 #Transpose
 def test_Transpose(tmpdir):
-    a = np.arange(24).reshape(2,3,4).astype('f')
-    model = C.transpose(a, perm=(2, 0, 1))
+    data = np.arange(24).reshape(2,3,4).astype('f')
+    x = C.input_variable(np.shape(data))
+
+    model = C.transpose(data, perm=(2, 0, 1))
     verify_no_input(model, tmpdir, 'Transpose_0')
 
+    model = C.transpose(x, perm=(2, 0, 1))
+    verify_one_input(model, data, tmpdir, 'Transpose_1')
 
+    model = C.transpose(x, perm=(0, 2, 1))
+    verify_one_input(model, data, tmpdir, 'Transpose_1_2')
+
+#Transpose
+def test_TransposeAxes(tmpdir):
+    data = [[[0,1],[2,3],[4,5]]]
+    model = C.swapaxes(data, 1, 2)
+    verify_no_input(model, tmpdir, 'TransposeAxes_0')
+
+    # TODO: there is probably a bug in C.swapaxes which does not allow 
+    # evaluation of model with data
+    #x = C.input_variable(np.shape(data))
+    #model = C.swapaxes(x, 1, 2)
+    #verify_one_input(model, data, tmpdir, 'TransposeAxes_1')
 

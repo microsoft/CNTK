@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x -e -o pipefail
 
-USAGE="Usage: $0 [--py-version [27|34|35|36]] -- <drops-to-test>"
+USAGE="Usage: $0 [--py-version [27|35|36]] -- <drops-to-test>"
 
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
@@ -16,7 +16,7 @@ while [ $# -gt 0 ]; do
           PY_VERSION="$2"
           ;;
         *)
-          echo Invalid or missing value for --py-version option, please specify 27, 34, 35, or 36.
+          echo Invalid or missing value for --py-version option, please specify 27, 35, or 36.
           exit 1
           ;;
       esac

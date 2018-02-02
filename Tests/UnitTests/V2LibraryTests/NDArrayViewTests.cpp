@@ -165,7 +165,7 @@ void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
     size_t numNonZeroValues;
     std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(numMatrixRows, numMatrixCols);
 
-    auto cpuView = MakeSharedObject<NDArrayView>(viewShape, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, DeviceDescriptor::CPUDevice(), true);
+    auto cpuView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), viewShape, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, DeviceDescriptor::CPUDevice(), true);
     NDArrayViewPtr sparseView;
     if (device.Type() == DeviceKind::CPU)
     {
@@ -212,7 +212,7 @@ void TestSparseCSCDataBuffers(size_t numAxes, const DeviceDescriptor& device)
     size_t expectedNumNonZeroValues;
     std::tie(referenceDenseData, expectedColsStarts, expectedRowIndices, expectedNonZeroValues, expectedNumNonZeroValues) = GenerateSequenceInCSC<ElementType>(numMatrixRows, numMatrixCols);
 
-    auto cpuView = MakeSharedObject<NDArrayView>(viewShape, expectedColsStarts.data(), expectedRowIndices.data(), expectedNonZeroValues.data(), expectedNumNonZeroValues, DeviceDescriptor::CPUDevice(), true);
+    auto cpuView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), viewShape, expectedColsStarts.data(), expectedRowIndices.data(), expectedNonZeroValues.data(), expectedNumNonZeroValues, DeviceDescriptor::CPUDevice(), true);
     NDArrayViewPtr sparseView;
     if (device.Type() == DeviceKind::CPU)
     {
@@ -248,7 +248,7 @@ void TestSparseCSCDataBuffers(size_t numAxes, const DeviceDescriptor& device)
         // copy the created one to another one on CPU using dense format, and then compare the data with the expected one.
         // Another limitation here is NDArrayView::DeepClone() does not support the GPUSparseMatrix->CPUSparseMatrix, since Matrix::AssignValuesOf() has not implemented this feature
         // yet. This prevents from using AreEqual(NDArrayViewPtr, NDArrayViewPtr).
-        NDArrayView viewFromOutput(viewShape, outputColsStartsData, outputRowIndicesData, outputNonZeroData, outputNumNonZeroData, device, true);
+        NDArrayView viewFromOutput(AsDataType<ElementType>(), viewShape, outputColsStartsData, outputRowIndicesData, outputNonZeroData, outputNumNonZeroData, device, true);
 
         // Copy it out to a dense matrix on the CPU and verify the data
         std::vector<ElementType> denseBuffer(viewShape.TotalSize());

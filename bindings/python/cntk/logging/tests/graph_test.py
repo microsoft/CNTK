@@ -57,6 +57,7 @@ def _simple_dict():
 
 def test_find_nodes():
     d = _graph_dict()
+    graph_uids = []
 
     for name in ['i1', 'c1', 'p1', 'op1', 'op2', 'past']:
         n = C.logging.graph.find_all_with_name(d['root'], name)
@@ -71,8 +72,15 @@ def test_find_nodes():
         assert n.name == name, name
         assert n != None
 
+        graph_uids.append(n.uid)
+
         n = d['root'].find_by_name(name)
         assert n.name == name, name
+
+        for uid in graph_uids:
+            n2 = C.logging.graph.find_by_uid(d['root'], uid)
+            assert n2.uid == uid, uid
+            assert n2 != None
 
     n = C.logging.graph.find_all_with_name(d['root'], 'op3')
     assert len(n) == 2, 'op3'

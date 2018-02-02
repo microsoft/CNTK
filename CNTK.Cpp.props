@@ -3,19 +3,10 @@
   <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
     <CudaVersion />
-    <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
-    <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
-
-    <NvmlInclude />
-    <NvmlInclude Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
-    <NvmlInclude Condition="'$(CudaVersion)' == '8.0'" />
-
-    <NvmlLibPath />
-    <NvmlLibPath Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
-    <NvmlLibPath Condition="'$(CudaVersion)' == '8.0'" />
+    <CudaVersion Condition="Exists('$(CUDA_PATH_V9_0)') And '$(CudaVersion)' == ''">9.0</CudaVersion>
 
     <NvmlDll>%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml.dll</NvmlDll>
-    <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>
+    <NvmlDll Condition="Exists('c:\local\nvsmi9\NVSMI\nvml.dll')">c:\local\nvsmi9\NVSMI\nvml.dll</NvmlDll>
 
     <HasOpenCv>false</HasOpenCv>
     <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
@@ -65,16 +56,20 @@
 
   <PropertyGroup Condition="!$(IsUWP)">
     <MathLibrary>MKL</MathLibrary>
-    <MathIncludePath>$(MKLML_PATH)\include</MathIncludePath>
+    <MathIncludePath>$(MKL_PATH)\include</MathIncludePath>
     <MathDefine>USE_MKL</MathDefine>
     <!-- Only non-UWP configurations consume PerformanceProfiler -->
     <ReaderLibs>Cntk.PerformanceProfiler-$(CntkComponentVersion).lib;$(ReaderLibs)</ReaderLibs>
-    <MathLibraryName>MKL-ML Library</MathLibraryName>
-    <MathLibraryPath>$(MKLML_PATH)\lib</MathLibraryPath>
+    <MathLibraryName>MKL Library</MathLibraryName>
+    <MathLibraryPath>$(MKL_PATH)\lib</MathLibraryPath>
     <MathLinkLibrary>mklml.lib</MathLinkLibrary>
     <MathDelayLoad>mklml.dll</MathDelayLoad>
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
-    <UnitTestDlls>$(OutDir)mklml.lib;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+    <HasMklDnn>false</HasMklDnn>
+    <HasMklDnn Condition="Exists('$(MKL_PATH)\include\mkldnn.h')">true</HasMklDnn>
+    <MathDefine Condition="$(HasMklDnn)">$(MathDefine);USE_MKLDNN</MathDefine>
+    <MathLinkLibrary Condition="$(HasMklDnn)">$(MathLinkLibrary);mkldnn.lib</MathLinkLibrary>
+    <MathDelayLoad Condition="$(HasMklDnn)">$(MathDelayLoad);mkldnn.dll</MathDelayLoad>
   </PropertyGroup>
   <PropertyGroup Condition="$(UseZip)">
     <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
@@ -109,31 +104,19 @@
     <ProtobufLib Condition="$(DebugBuild)">libprotobufd.lib</ProtobufLib>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(CudaVersion)' == '8.0'">
-    <CudaPath>$(CUDA_PATH_V8_0)</CudaPath>
-    <CudaRuntimeDll>cudart64_80.dll</CudaRuntimeDll>
-    <CudaDlls>cublas64_80.dll;cusparse64_80.dll;curand64_80.dll;$(CudaRuntimeDll)</CudaDlls>
+  <PropertyGroup Condition="'$(CudaVersion)' == '9.0'">
+    <CudaPath>$(CUDA_PATH_V9_0)</CudaPath>
+    <CudaRuntimeDll>cudart64_90.dll</CudaRuntimeDll>
+    <CudaDlls>cublas64_90.dll;cusparse64_90.dll;curand64_90.dll;$(CudaRuntimeDll)</CudaDlls>
 
 <!-- Use NvidiaCompute to define nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
     In debug mode we only include cubin/PTX for 30 and rely on PTX / JIT to generate the required native cubin format
     http://docs.nvidia.com/cuda/pascal-compatibility-guide/index.html#building-applications-with-pascal-support -->
     <NvidiaCompute Condition="$(DebugBuild)">$(CNTK_CUDA_CODEGEN_DEBUG)</NvidiaCompute>
     <NvidiaCompute Condition="$(DebugBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30</NvidiaCompute>
- 
-    <NvidiaCompute Condition="$(ReleaseBuild)">$(CNTK_CUDA_CODEGEN_RELEASE)</NvidiaCompute>
-    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_60,sm_60;compute_61,sm_61</NvidiaCompute>
-  </PropertyGroup>
 
-  <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
-    <CudaPath>$(CUDA_PATH_V7_5)</CudaPath>
-    <CudaRuntimeDll>cudart64_75.dll</CudaRuntimeDll>
-    <CudaDlls>cublas64_75.dll;cusparse64_75.dll;curand64_75.dll;$(CudaRuntimeDll)</CudaDlls>
-
-    <NvidiaCompute Condition="$(DebugBuild)">$(CNTK_CUDA_CODEGEN_DEBUG)</NvidiaCompute>
-    <NvidiaCompute Condition="$(DebugBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30</NvidiaCompute>
- 
     <NvidiaCompute Condition="$(ReleaseBuild)">$(CNTK_CUDA_CODEGEN_RELEASE)</NvidiaCompute>
-    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50</NvidiaCompute>
+    <NvidiaCompute Condition="$(ReleaseBuild) And '$(NvidiaCompute)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70</NvidiaCompute>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -144,11 +127,21 @@
     <CudaMsbuildPath Condition="'$(CudaMsbuildPath)' == ''">$(VCTargetsPath)\BuildCustomizations</CudaMsbuildPath>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(HALIDE_PATH)')">
+    <HalidePath>$(HALIDE_PATH)</HalidePath>
+    <HalideInclude>$(HALIDE_PATH)\include;</HalideInclude>
+    <HalideLibPath>$(HALIDE_PATH)\Release;</HalideLibPath>
+    <HalideLib>halide.lib</HalideLib>
+  </PropertyGroup>
+ 
   <!-- TODO warn if ConfigurationType not (yet) defined -->
 
   <PropertyGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <UseDebugLibraries>$(DebugBuild)</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>$(ReleaseBuild)</WholeProgramOptimization>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
@@ -159,6 +152,7 @@
       <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)"</PreprocessorDefinitions>
       <!-- UWP does not use MPI -->
       <PreprocessorDefinitions Condition="!$(IsUWP)">%(PreprocessorDefinitions);HAS_MPI=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(CudaVersion)' == '9.0'">%(PreprocessorDefinitions);CUDA_NO_HALF;__CUDA_NO_HALF_OPERATORS__</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 

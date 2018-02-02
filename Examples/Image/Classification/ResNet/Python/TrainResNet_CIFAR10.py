@@ -56,7 +56,7 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
 
 # Train and evaluate the network.
 def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs, profiler_dir=None,
-                       model_dir=None, log_dir=None, tensorboard_logdir=None, gen_heartbeat=False):
+                       model_dir=None, log_dir=None, tensorboard_logdir=None, gen_heartbeat=False, fp16=False):
 
     set_computation_network_trace_level(0)
 
@@ -64,19 +64,32 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     input_var = C.input_variable((num_channels, image_height, image_width), name='features')
     label_var = C.input_variable((num_classes))
 
-    # create model, and configure learning parameters
-    if network_name == 'resnet20':
-        z = create_cifar10_model(input_var, 3, num_classes)
-        lr_per_mb = [1.0]*80 + [0.1]*40 + [0.01]
-    elif network_name == 'resnet110':
-        z = create_cifar10_model(input_var, 18, num_classes)
-        lr_per_mb = [0.1]*1 + [1.0]*80 + [0.1]*40 + [0.01]
+    dtype = np.float16 if fp16 else np.float32
+    if fp16:
+        graph_input = C.cast(input_var, dtype=np.float16)
+        graph_label = C.cast(label_var, dtype=np.float16)
     else:
-        raise RuntimeError("Unknown model name!")
+        graph_input = input_var
+        graph_label = label_var
 
-    # loss and metric
-    ce = cross_entropy_with_softmax(z, label_var)
-    pe = classification_error(z, label_var)
+    with C.default_options(dtype=dtype):
+        # create model, and configure learning parameters
+        if network_name == 'resnet20':
+            z = create_cifar10_model(graph_input, 3, num_classes)
+            lr_per_mb = [1.0]*80 + [0.1]*40 + [0.01]
+        elif network_name == 'resnet110':
+            z = create_cifar10_model(graph_input, 18, num_classes)
+            lr_per_mb = [0.1]*1 + [1.0]*80 + [0.1]*40 + [0.01]
+        else:
+            raise RuntimeError("Unknown model name!")
+
+        # loss and metric
+        ce = cross_entropy_with_softmax(z, graph_label)
+        pe = classification_error(z, graph_label)
+
+    if fp16:
+        ce = C.cast(ce, dtype=np.float32)
+        pe = C.cast(pe, dtype=np.float32)
 
     # shared training parameters
     minibatch_size = 128
@@ -168,6 +181,7 @@ if __name__=='__main__':
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
     parser.add_argument('-genheartbeat', '--genheartbeat', help="Turn on heart-beat for philly", action='store_true', default=False)
+    parser.add_argument('-fp16', '--fp16', help="use float16", action='store_true', default=False)
 
     args = vars(parser.parse_args())
     epochs = args['epochs']
@@ -184,4 +198,4 @@ if __name__=='__main__':
     reader_test = create_image_mb_source(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False, total_number_of_samples=C.io.FULL_DATA_SWEEP)
 
     train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs, args['profiler_dir'], model_dir,
-                       args['logdir'], args['tensorboard_logdir'], gen_heartbeat=args['genheartbeat'])
+                       args['logdir'], args['tensorboard_logdir'], gen_heartbeat=args['genheartbeat'], fp16=args['fp16'])

@@ -133,7 +133,7 @@ namespace CNTK
 #endif
 
             if (info.IsEmpty())
-                PrepaireZeroGradients(gradientValues, info);
+                PrepaireZeroGradients(gradientValues);
 
             // sorts gradient buffers according to parameter uid, and perform sparse to dense conversion
             // if !UseSparseGradientAggregationInDataParallelSGD()

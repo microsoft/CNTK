@@ -226,9 +226,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 
 // this is used in V2
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
+template <class ValueType>
+shared_ptr<ComputationNode<ValueType>> ComputationNetworkBuilder<ElemType>::TypedCreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
 {
-    return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, tensorShape));
+    return net.AddNodeToNetWithElemType(New<LearnableParameter<ValueType>>(net.GetDeviceId(), paramName, tensorShape));
 }
 
 // TODO: change these to take an actual object instead of a name for dynamicAxis
@@ -964,5 +965,17 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Batch
 
 template class ComputationNetworkBuilder<float>;
 template class ComputationNetworkBuilder<double>;
+template class ComputationNetworkBuilder<half>;
+
+// V2 allows mixed precision
+template shared_ptr<ComputationNode<float>> ComputationNetworkBuilder<float>::TypedCreateLearnableParameter<float>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<float>::TypedCreateLearnableParameter<double>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<float>::TypedCreateLearnableParameter<half>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<float>> ComputationNetworkBuilder<double>::TypedCreateLearnableParameter<float>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<double>::TypedCreateLearnableParameter<double>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<double>::TypedCreateLearnableParameter<half>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<float>> ComputationNetworkBuilder<half>::TypedCreateLearnableParameter<float>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<half>::TypedCreateLearnableParameter<double>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<half>::TypedCreateLearnableParameter<half>(const std::wstring& paramName, const TensorShape& tensorShape);
 
 }}}
