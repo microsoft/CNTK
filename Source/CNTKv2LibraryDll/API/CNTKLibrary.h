@@ -3213,6 +3213,8 @@ namespace CNTK
                                        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
 
+        CNTK_API virtual void PrintNodeTiming() {}
+
     protected:
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values for each input of the Function.
@@ -5378,6 +5380,11 @@ namespace CNTK
             return m_progressWriters;
         }
 
+        ///
+        /// Prints per-node average timing per-minibatch
+        ///
+        CNTK_API virtual void PrintNodeTiming();
+
         CNTK_API virtual ~Evaluator() {}
 
     private:
@@ -5537,6 +5544,11 @@ namespace CNTK
         /// Writes the summary of training progress and resets the accumulators.
         ///
         CNTK_API void SummarizeTrainingProgress();
+
+        ///
+        /// Prints per-node average timing per-minibatch
+        ///
+        CNTK_API virtual void PrintNodeTiming();
 
     private:
         template <typename T1, typename ...CtorArgTypes>

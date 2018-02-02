@@ -196,4 +196,12 @@ namespace CNTK
         if (m_aggregatedTestEvalCriterionValue)
             m_aggregatedTestEvalCriterionValue->Reset();
     }
+
+    void Evaluator::PrintNodeTiming()
+    {
+        if (m_combinedEvalFunction)
+        {
+            m_combinedEvalFunction->PrintNodeTiming();
+        }
+    }
 }

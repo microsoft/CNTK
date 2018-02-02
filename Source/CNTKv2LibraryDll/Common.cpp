@@ -210,6 +210,16 @@ namespace CNTK
 #endif
         }
 
+        void EnableNodeTiming()
+        {
+            Microsoft::MSR::CNTK::Globals::SetNodeTiming(true);
+        }
+
+        void DisableNodeTimeing()
+        {
+            Microsoft::MSR::CNTK::Globals::SetNodeTiming(false);
+        }
+
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
         {
             bool areDynamicAxesCompatible = (var1.DynamicAxes().size() == var2.DynamicAxes().size());
