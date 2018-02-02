@@ -1562,8 +1562,8 @@ void Matrix<ElemType>::SetValue(const size_t rIdx, const size_t cIdx, ElemType v
 
 // read features
 template <class ElemType>
-void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-    const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer)
+void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* nzOffsets, const CPUSPARSE_INDEX_TYPE* nzIndices, const ElemType* nzValues,
+                                              const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer)
 {
     // Note: The current implementation uses the xPUSparseMatrix as temporary space. This allows for memory sharing between calls. If
     // xPUSparseMatrix is a view, this code will cause an error during runtime stating that the view is not writable nor resizable.
@@ -1574,16 +1574,16 @@ void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCC
     DISPATCH_MATRIX_ON_FLAG(this, this,
         {
             if (!m_CPUSparseMatrix) m_CPUSparseMatrix = MakeSharedMatrixObject<CPUSparseMatrix<ElemType>>(matrixFormatSparseCSC, numRows, numCols, nz);
-            m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
+            m_CPUSparseMatrix->SetMatrixFromCSCFormat(nzOffsets, nzIndices, nzValues, nz, numRows, numCols);
             m_CPUSparseMatrix->AssignColumnSliceToDense(*m_CPUMatrix, 0, numCols);
         },
         {
             if (!m_GPUSparseMatrix) m_GPUSparseMatrix = MakeSharedMatrixObject<GPUSparseMatrix<ElemType>>(numRows, numCols, nz, GetDeviceId(), matrixFormatSparseCSC);
-            m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols);
+            m_GPUSparseMatrix->SetMatrixFromCSCFormat(nzOffsets, nzIndices, nzValues, nz, numRows, numCols);
             m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, numCols);
         },
-        { m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols); },
-        { m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols, false, -1, transferer); });
+        { m_CPUSparseMatrix->SetMatrixFromCSCFormat(nzOffsets, nzIndices, nzValues, nz, numRows, numCols); },
+        { m_GPUSparseMatrix->SetMatrixFromCSCFormat(nzOffsets, nzIndices, nzValues, nz, numRows, numCols, false, -1, transferer); });
 }
 
 ///

@@ -408,9 +408,9 @@ private:
             // load all streams' data
             size_t maxSequenceLength = 0;
             vector<char> buf;
+            vector<SparseIndexType> data; // we build the sequence of word indices here
             for (size_t streamIndex = 0; streamIndex < numStreams; streamIndex++)
             {
-                auto& data = m_data[streamIndex];
                 auto& endOffsets = m_endOffsets[streamIndex];
                 data.clear();
                 endOffsets.clear();
@@ -474,9 +474,12 @@ private:
                 // consistency check
                 if (endOffsets.size() != chunkRef.m_numberOfSequences)
                     LogicError("PlainTextDeserializer: Chunk %d's actual sequence count inconsistent with underlying files.", (int)chunkId);
+                // move the data array into a shared_ptr
+                m_data[streamIndex] = shared_ptr<SparseIndexType>(new SparseIndexType[data.size()], default_delete<SparseIndexType[]>());
+                copy(data.begin(), data.end(), m_data[streamIndex].get());
             }
-            m_onesFloatBuffer .reset(new float [maxSequenceLength], [](float  *p) { delete[] p; } ); // dense data arrays for sparse data; constant 1 across all sequences and streams, hence has length of longest sequence
-            m_onesDoubleBuffer.reset(new double[maxSequenceLength], [](double *p) { delete[] p; } );
+            m_onesFloatBuffer .reset(new float [maxSequenceLength], default_delete<float []>()); // dense data arrays for sparse data; constant 1 across all sequences and streams, hence has length of longest sequence
+            m_onesDoubleBuffer.reset(new double[maxSequenceLength], default_delete<double[]>());
             for (size_t i = 0; i < maxSequenceLength; i++)
                 m_onesDoubleBuffer.get()[i] = m_onesFloatBuffer.get()[i] = 1;
         }
@@ -486,30 +489,31 @@ private:
         class PlainTextSequenceData : public SparseSequenceData
         {
         public:
-            PlainTextSequenceData(const vector<SparseIndexType>& data, size_t beginOffset, size_t numWords, SequenceKey key,
+            PlainTextSequenceData(const shared_ptr<SparseIndexType>& indicesForWholeChunk, size_t beginOffset, size_t numWords, SequenceKey key,
                                   const NDShape& sampleShape,
                                   const shared_ptr<float>& onesFloatBuffer, const shared_ptr<double>& onesDoubleBuffer, DataType elementType) :
-                SparseSequenceData((unsigned int)numWords), m_sampleShape(sampleShape)
+                SparseSequenceData((unsigned int)numWords), m_sampleShape(sampleShape), m_indicesForWholeChunk(indicesForWholeChunk)
             {
                 // BUGBUG (API): SequenceDataBase should accept numberOfSamples as a size_t and check the range
                 m_elementType = elementType;
-                if (elementType == DataType::Float) // data must point to an array of 1.0 values with at least numWords elements
-                    m_dataPtr = static_pointer_cast<void>(onesFloatBuffer);
+                if (elementType == DataType::Float) // indicesForWholeChunk must point to an array of 1.0 values with at least numWords elements
+                    m_ones = static_pointer_cast<void>(onesFloatBuffer);
                 else if (elementType == DataType::Double)
-                    m_dataPtr = onesDoubleBuffer;
+                    m_ones = onesDoubleBuffer;
                 else
                     LogicError("PlainTextDeserializer: Unsupported DataType.");
                 m_key = key;
-                m_indices = const_cast<SparseIndexType*>(data.data() + beginOffset); // BUGBUG (API): This should be a const pointer
-                m_nnzCounts.resize(numWords, 1); // BUGBUG (API): This should be a pointer as well
+                m_indices = indicesForWholeChunk.get() + beginOffset; // BUGBUG (API): This should be a const pointer
+                m_nnzCounts.resize(numWords, 1);                      // BUGBUG (API): This should be a pointer as well
                 m_totalNnzCount = (SparseIndexType)numWords;
             }
             ~PlainTextSequenceData() { }
             virtual const NDShape& /*SparseSequenceData::*/GetSampleShape() override final { return m_sampleShape; } // BUGBUG (API): Shouldn't these be const?
-            virtual const void*    /*SparseSequenceData::*/GetDataBuffer()  override final { return m_dataPtr.get(); }
+            virtual const void*    /*SparseSequenceData::*/GetDataBuffer()  override final { return m_ones.get(); }
         private:
             const NDShape& m_sampleShape;
-            shared_ptr<const void> m_dataPtr; // points to the constant array of ones (float or double)
+            shared_ptr<const void> m_ones;                      // ref-count to the constant array of ones (float or double)
+            shared_ptr<SparseIndexType> m_indicesForWholeChunk; // ref-count of the index data for the whole chunk
         };
 
         ///
@@ -525,8 +529,8 @@ private:
             result.resize(numStreams);
             for (size_t streamIndex = 0; streamIndex < numStreams; streamIndex++)
             {
-                auto& data = m_data[streamIndex];
-                auto& endOffsets = m_endOffsets[streamIndex];
+                let& data = m_data[streamIndex];
+                let& endOffsets = m_endOffsets[streamIndex];
                 let& stream = m_owningDeserializer.m_streams[streamIndex];
 
                 let beginOffset = sequenceIndex == 0 ? 0 : endOffsets[sequenceIndex - 1];
@@ -540,7 +544,7 @@ private:
     private:
         const ChunkRef& m_chunkRef;             // reference to the chunk descriptor that this Chunk represents
         const PlainTextDeserializerImpl& m_owningDeserializer; // reference to the owning PlainTextDeserializer instance
-        vector<vector<SparseIndexType>> m_data; // [streamIndex][n] concatenated data for all sequences for all streams
+        vector<shared_ptr<SparseIndexType>> m_data; // [streamIndex][n] concatenated data for all sequences for all streams
         vector<vector<size_t>> m_endOffsets;    // [streamIndex][lineNo] end offset of line (the begin offset is determined from lineNo-1)
         size_t m_firstSequenceId;               // sequence id of first sequence in this chunk
         shared_ptr<float>  m_onesFloatBuffer;   // dense buffer of ones for use as values for the sparse data; used across all sequences and streams, hence has length of longest sequence
