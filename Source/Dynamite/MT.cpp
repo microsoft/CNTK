@@ -11,6 +11,7 @@
 #include "Models.h"
 #include "Layers.h"
 #include "TimerUtility.h"
+#include "ExceptionWithCallStack.h"
 
 #include "marian.h"
 #include "transformer.h"
@@ -71,7 +72,7 @@ size_t bucketingFactor = 10; // group 10 minibatches together, sort, re-split; f
 string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
-size_t saveEvery = 50;//1900;//4000;
+size_t saveEvery = 4000;
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
@@ -1479,12 +1480,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         }
         catch (const exception& e)
         {
-            fprintf(stderr, "\n\nFAILED\n");
+            fprintf(stderr, "\n\nFAILED\n%s\n", e.what());
             fprintf(stderr, "%5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
                     (int)mbCount, (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
                     (int)(max(maxSamples, maxLabels) * numSeq));
+            fprintf(stderr, "SLEEPING\n"), fflush(stderr);
+            sleep(3600);
             throw;
         }
         } // partial MB loop
@@ -1801,8 +1804,12 @@ int mt_main(int argc, char *argv[])
     catch (exception& e)
     {
         fprintf(stderr, "redirected stderr to %S\n", logPath.c_str());
-        fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
+        fprintf(stderr, "\nEXCEPTIONt:\n%s\n", e.what());
+        let* ecs = dynamic_cast<const Microsoft::MSR::CNTK::IExceptionWithCallStackBase*>(&e);
+        if (ecs)
+            fprintf(stderr, "%s\n", ecs->CallStack());
         fflush(stderr);
+        sleep(3600);
 #ifdef _MSC_VER
         TerminateProcess(OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, TRUE, GetCurrentProcessId()), 0);
 #else
