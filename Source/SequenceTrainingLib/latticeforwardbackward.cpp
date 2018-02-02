@@ -1500,7 +1500,10 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
 
 double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs, string getPathMethodEMBR, double& onebest_wer) const
 {
-
+    double total_posterior_probs = 0;
+    for (size_t i = 0; i < vt_path_posterior_probs.size(); i++)
+        total_posterior_probs += vt_path_posterior_probs[i];
+        
     struct PATHINFO
     {
         size_t count;
@@ -1516,8 +1519,9 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
     
 
     vector<size_t> path_ids;
-    double sum_wer, avg_wer;
-    sum_wer = 0;
+    double avg_wer;
+    // sum_wer = 0;
+    avg_wer = 0;
 
     for (size_t i = 0; i < vt_paths.size(); i++)
     {
@@ -1547,9 +1551,10 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             mp_path_info.insert(pair<string, PATHINFO>(pathidstr, pathinfo));
         }
 
-        sum_wer += vt_path_weights[i];
+        // sum_wer += vt_path_weights[i];
+        avg_wer += (vt_path_weights[i] * vt_path_posterior_probs[i] / total_posterior_probs);
     }
-    avg_wer = sum_wer / vt_paths.size();
+    // avg_wer = sum_wer / vt_paths.size();
     onebest_wer = vt_path_weights[0];
 
     for (size_t i = 0; i < vt_path_weights.size(); i++)
