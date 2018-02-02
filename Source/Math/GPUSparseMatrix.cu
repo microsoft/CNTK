@@ -851,7 +851,7 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             if (keepExistingValues)
             {
                 if (m_sliceViewOffset != 0)
-                    InvalidArgument("Allocate: Cannot keep existing values for a slice.")
+                    InvalidArgument("Allocate: Cannot keep existing values for a slice.");
                 if (NzCount() > numNZElemToReserve || BufferSizeAllocated() > bufferSizeNeeded)
                     LogicError("Allocate: To keep values, m_nz should <= numNZElemToReserve.");
 
@@ -978,15 +978,16 @@ void GPUSparseMatrix<ElemType>::ClearNzCount()
 
 // copy features to GPU
 // TODO: This function should be near-identical to SetMatrixFromCSCFormat(), but SetMatrixFromCSCFormat() has been updated. Merge these.
+//       I believe the existing SetMatrixFromCSCFormat() is already abstract enough to be able to replace this function completely.
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
-                                                       const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
+                                                       const size_t nz, const size_t numRows, const size_t numCols, const bool isOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
 {
     VerifyWritable(__FUNCTION__);
 
     if (h_CSRRow == nullptr || h_Col == nullptr || h_Val == nullptr)
         LogicError("SetMatrixFromCSRFormat: nullptr passed in.");
-    if (!IsOnDevice && nz != h_CSRRow[numRows] - h_CSRRow[0])
+    if (!isOnDevice && nz != h_CSRRow[numRows] - h_CSRRow[0])
         LogicError("SetMatrixFromCSRFormat: wrong nz value passed in.");
 
     SetComputeDeviceId(PrepareDevice(devId));
@@ -994,7 +995,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
     SetFormat(matrixFormatSparseCSR);
     RequireSizeAndAllocate(numRows, numCols, nz, true, false);
 
-    cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
+    cudaMemcpyKind kind = isOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
     // BUGBUG? I suspect Data() here should be Buffer().
     CUDA_CALL(cudaMemcpy(Data_IThinkThisShouldBeBuffer(), h_Val, nz * sizeof(ElemType), kind));
 
@@ -1017,7 +1018,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
         CUDA_CALL(cudaMemcpy(RowLocation(), pRow, RowSize(), kind));
         CUDA_CALL(cudaMemcpy(ColLocation(), pCol, nz * sizeof(GPUSPARSE_INDEX_TYPE), kind));
     }
-    UpdateCachedNzCount(nz, IsOnDevice); // (when coming from CPU, nz was already validated)
+    UpdateCachedNzCount(nz, isOnDevice); // (when coming from CPU, nz was already validated)
 }
 
 // this function will allocate memory while the caller needs to release it
@@ -1066,46 +1067,49 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_
 }
 
 // Set the matrix to the data given by the three arrays, copying the data to the GPU.
-// this version is used from the reader
+// This version is used from the reader.
+// Note: I believe this function would also work for CSR format, as is, and can replace SetMatrixFromCSRFormat().
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(
-    const CPUSPARSE_INDEX_TYPE* h_CSCCol, // [0..numCols-1] starting index into h_Row
-    const CPUSPARSE_INDEX_TYPE* h_Row,    // [0..nz-1] row of value, order matches h_Val
-    const ElemType* h_Val,                // [0..nz-1] values
-    const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/, DataTransferer* transferer /*= nullptr*/)
+    const CPUSPARSE_INDEX_TYPE* nzOffsets, // [0..numCols-1] starting index into nzIndices
+    const CPUSPARSE_INDEX_TYPE* nzIndices, // [0..nz-1] row of value, order matches nzValues
+    const ElemType* nzValues,              // [0..nz-1] values
+    const size_t nz, const size_t numRows, const size_t numCols, const bool isOnDevice /*= false*/, const DEVICEID_TYPE deviceId /*= -1*/, DataTransferer* transferer /*= nullptr*/)
 {
     VerifyWritable(__FUNCTION__);
 
-    if (h_CSCCol == nullptr || h_Row == nullptr || h_Val == nullptr)
-        LogicError("SetMatrixFromCSCFormat: nullptr passed in.");
-    if (!IsOnDevice && nz != h_CSCCol[numCols] - h_CSCCol[0])
+    // allocate
+    SetComputeDeviceId(PrepareDevice(deviceId));
+    SetFormat(matrixFormatSparseCSC);
+    RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
+    let numNzOffsets = SecondaryIndexCount(); // == numCols + 1 for CSC, numRows + 1 for CSR
+
+    // some validation
+    if (!isOnDevice && nz != nzOffsets[numNzOffsets - 1] - nzOffsets[0])
         LogicError("SetMatrixFromCSCFormat: wrong nz value passed in.");
-#if 0 // validate input indices
-    if (!IsOnDevice)
+#if 1 // validate input indices
+    if (!isOnDevice)
     {
-        for (size_t j = 0; j < numCols; j++)
+        for (size_t j = 0; j < numNzOffsets; j++)
         {
-            if (h_CSCCol[j] < 0 || h_CSCCol[j] > nz)
-                LogicError("SetMatrixFromCSCFormat: h_CSCCol[colIndex=%d] beyond nz=%d", (int)j, (int)nz);
-            if (j > 0 && h_CSCCol[j] < h_CSCCol[j - 1])
-                LogicError("SetMatrixFromCSCFormat: h_CSCCol[] not in ascending order, %d, %d", (int)h_CSCCol[j - 1], (int)h_CSCCol[j]);
+            if (nzOffsets[j] < 0 || nzOffsets[j] > nz)
+                LogicError("SetMatrixFromCSCFormat: nzOffsets[colIndex=%d] beyond nz=%d", (int)j, (int)nz);
+            if (j > 0 && nzOffsets[j] < nzOffsets[j - 1])
+                LogicError("SetMatrixFromCSCFormat: nzOffsets[] not in ascending order, %d, %d", (int)nzOffsets[j - 1], (int)nzOffsets[j]);
         }
         for (size_t k = 0; k < nz; k++)
-            if (h_Row[k] < 0 || h_Row[k] >= numRows)
-                LogicError("SetMatrixFromCSCFormat: row index of nz element [%d] out of bounds (%d >= %d)", (int)k, (int)h_Row[k], (int)numRows);
+            if (nzIndices[k] < 0 || nzIndices[k] >= numRows)
+                LogicError("SetMatrixFromCSCFormat: row index of nz element [%d] = %d out of bounds for matrix dims [%d x %d])", (int)k, (int)nzIndices[k], (int)numRows, (int)numCols);
     }
 #endif
 
-    SetComputeDeviceId(PrepareDevice(devId));
-    SetFormat(matrixFormatSparseCSC);
-    RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
 
-    if (transferer && IsOnDevice)
+    if (transferer && isOnDevice)
         RuntimeError("SetMatrixFromCSCFormat: Currently it is not supported to copy data asynchronously from device to device.");
     // m_nz doesn't exist anymore. How are we going to deal with the NzBytes, RowSize, and ColSize? Do it ourselves of course.
 
     // copy the non-zero elements
-    cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
+    cudaMemcpyKind kind = isOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice; // note logic minor glitch: index types are CPU_SPARSE_INDEX, so technically such objects cannot exist on the GPU...
     if (transferer)
     {
         // TODO: All RequireSizeAndAllocate should be async and use a transferer.
@@ -1113,51 +1117,49 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(
         // Here we have to wait for them to finish.
         transferer->RecordComputeStreamSyncPoint();
         transferer->WaitForSyncPointOnAssignStreamAsync();
-        // BUGBUG? I suspect Data() here should be Buffer(), and/or slice view offset should be 0.
-        transferer->CopyCPUToGPUAsync(h_Val, nz, sizeof(ElemType), Data_IThinkThisShouldBeBuffer());
+        transferer->CopyCPUToGPUAsync(nzValues, nz, sizeof(ElemType), Buffer());
     }
     else
-        // BUGBUG? I suspect Data() here should be Buffer(), and/or slice view offset should be 0.
-        CUDA_CALL(cudaMemcpy(Data_IThinkThisShouldBeBuffer(), h_Val, nz * sizeof(ElemType), kind));
+        CUDA_CALL(cudaMemcpy(Buffer(), nzValues, nz * sizeof(ElemType), kind));
 
     // copy the index arrays
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE)) // note: this is true
     {
         if (transferer)
         {
-            transferer->CopyCPUToGPUAsync(h_Row, nz, sizeof(GPUSPARSE_INDEX_TYPE), RowLocation());
-            transferer->CopyCPUToGPUAsync(h_CSCCol, numCols + 1, sizeof(GPUSPARSE_INDEX_TYPE), ColLocation());
+            transferer->CopyCPUToGPUAsync(nzIndices, nz,           sizeof(GPUSPARSE_INDEX_TYPE), MajorIndexLocation());
+            transferer->CopyCPUToGPUAsync(nzOffsets, numNzOffsets, sizeof(GPUSPARSE_INDEX_TYPE), SecondaryIndexLocation());
         }
         else
         {
-            CUDA_CALL(cudaMemcpy(RowLocation(), h_Row, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
-            CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
+            CUDA_CALL(cudaMemcpy(MajorIndexLocation(),     nzIndices, sizeof(GPUSPARSE_INDEX_TYPE) * nz,           kind));
+            CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), nzOffsets, sizeof(GPUSPARSE_INDEX_TYPE) * numNzOffsets, kind));
         }
     }
     else // TODO: is this branch needed, or can it just throw a logic_error?
     {
-        size_t allocSize = sizeof(GPUSPARSE_INDEX_TYPE) * nz + sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1);
-        GPUSPARSE_INDEX_TYPE* pCol = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(allocSize);
-        GPUSPARSE_INDEX_TYPE* pRow = pCol + nz;
+        size_t allocSize = sizeof(GPUSPARSE_INDEX_TYPE) * nz + sizeof(GPUSPARSE_INDEX_TYPE) * numNzOffsets;
+        GPUSPARSE_INDEX_TYPE* tmpNzOffsets = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(allocSize); // (note: index arrays in final storage are not in the same order as in this temp buffer)
+        GPUSPARSE_INDEX_TYPE* tmpNzIndices = tmpNzOffsets + nz;
 
-        ConvertBuffer(pCol, h_CSCCol, (numCols+1));
-        ConvertBuffer(pRow, h_Row, nz);
+        ConvertBuffer(tmpNzOffsets, nzOffsets, numNzOffsets);
+        ConvertBuffer(tmpNzIndices, nzIndices, nz);
 
         if (transferer)
         {
-            transferer->CopyCPUToGPUAsync(pRow, nz, sizeof(GPUSPARSE_INDEX_TYPE), RowLocation());
-            transferer->CopyCPUToGPUAsync(pCol, numCols + 1, sizeof(GPUSPARSE_INDEX_TYPE), ColLocation());
+            transferer->CopyCPUToGPUAsync(tmpNzIndices, nz,           sizeof(GPUSPARSE_INDEX_TYPE), MajorIndexLocation());
+            transferer->CopyCPUToGPUAsync(tmpNzOffsets, numNzOffsets, sizeof(GPUSPARSE_INDEX_TYPE), SecondaryIndexLocation());
         }
         else
         {
-            CUDA_CALL(cudaMemcpy(RowLocation(), pRow, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
-            CUDA_CALL(cudaMemcpy(ColLocation(), pCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
+            CUDA_CALL(cudaMemcpy(MajorIndexLocation(),     tmpNzIndices, sizeof(GPUSPARSE_INDEX_TYPE) * nz,           kind));
+            CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), tmpNzOffsets, sizeof(GPUSPARSE_INDEX_TYPE) * numNzOffsets, kind));
         }
     }
 
-    // TODO: When coming from the CPU, we can check whether the data is one-hot; and pass that to UpdateCachedNZCount() as well.
+    // TODO: When coming from the CPU, we could check whether the data is one-hot; and pass that to UpdateCachedNZCount() as well.
 
-    UpdateCachedNzCount(nz, IsOnDevice && !transferer); // (when coming from CPU, nz was already validated)
+    UpdateCachedNzCount(nz, /*shouldVerify=*/isOnDevice && !transferer); // (when coming from CPU, nz was already validated)
 }
 
 template <class ElemType>
@@ -1182,7 +1184,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
     std::fill(gpuBlockId2Col.begin(), gpuBlockId2Col.end(), SparseIndex_NotAssigned);
     std::fill(gpuCol2BlockId.begin(), gpuCol2BlockId.end(), SparseIndex_NotAssigned);
 
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < numBlocks; ++i)
     {
         gpuBlockId2Col[i] = (GPUSPARSE_INDEX_TYPE)blockIds[i];
