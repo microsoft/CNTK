@@ -780,10 +780,12 @@ public:
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
+        vector<size_t> labelSequencesMap;
         for (size_t i = 0; i < labelSequences.size(); i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
+            labelSequencesMap.push_back(labelSequences[i].seqId);
 
             auto& currentLabelSeq = labelSequences[i];
 
@@ -798,9 +800,9 @@ public:
             this->m_extraUttMap.push_back(labelSequences[i].s);
         }
 
-        this->m_lattices.resize(labelMBLayout->GetNumSequences());
-        size_t nonZeroSeqCount = 0;
-//#pragma omp parallel for TODO: test this in philly and enable if performance is good.
+        this->m_lattices.resize(labelSequencesMap.size());
+
+#pragma omp parallel for
         for (long i = 0; i < labelSequences.size(); i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
@@ -814,8 +816,14 @@ public:
             const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
             latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
-            this->m_lattices[nonZeroSeqCount] = latticePair;
-            nonZeroSeqCount++;
+            for (size_t pos = 0; pos < labelSequencesMap.size();pos++)
+            {
+                if (labelSequencesMap[pos] == labelSequences[i].seqId)
+                {
+                    this->m_lattices[pos] = latticePair;
+                    break;
+                }
+            }
         }
         this->m_boundaries.resize(this->m_uids.size());
         std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
