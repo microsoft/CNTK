@@ -79,7 +79,7 @@ for %%D in (
   Cntk.Deserializers.HTK-%CNTK_COMPONENT_VERSION%.dll
   Cntk.Deserializers.TextFormat-%CNTK_COMPONENT_VERSION%.dll
   Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll  
+  Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
   Cntk.DelayLoadedExtensions-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
@@ -98,9 +98,10 @@ if exist mkldnn.dll (
 )
 
 @REM Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll is optional
-if exist Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll (
- set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll
-)
+if exist Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll for %%D in (
+  Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll
+  Halide.dll
+) do set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
 
 @REM Cntk.Deserializers.Image-%CNTK_COMPONENT_VERSION%.dll (plus dependencies) is optional
 if exist Cntk.Deserializers.Image-%CNTK_COMPONENT_VERSION%.dll for %%D in (
