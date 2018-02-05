@@ -21,11 +21,15 @@ python -m nltk.downloader -d %USERPROFILE%/nltk_data punkt
 ```
 
 ## Run `convert_msmarco.py`
-It should create `train.tsv`, `dev.tsv`, and `test.tsv` and `vocab.pkl`
+It should create `train.tsv`, `dev.tsv`, and `test.tsv`
 
 It does a fair amount of preprocessing therefore converting data to cntk text format reader starts from these files
 
 ## Run `tsv2ctf.py`
 It creates a `vocabs.pkl` and `train.ctf`, `val.ctf`, and `dev.ctf`
 
-The data is ready now. Run train_pm.py to create the cntk model.
+The data is ready now. 
+
+## Run train_pm.py 
+
+It will create the cntk model.
