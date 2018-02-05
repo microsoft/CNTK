@@ -1500,10 +1500,7 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
 
 double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs, string getPathMethodEMBR, double& onebest_wer) const
 {
-    double total_posterior_probs = 0;
-    for (size_t i = 0; i < vt_path_posterior_probs.size(); i++)
-        total_posterior_probs += vt_path_posterior_probs[i];
-        
+   
     struct PATHINFO
     {
         size_t count;
@@ -1552,22 +1549,32 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         }
 
         // sum_wer += vt_path_weights[i];
-        avg_wer += (vt_path_weights[i] * vt_path_posterior_probs[i] / total_posterior_probs);
+        avg_wer += (vt_path_weights[i] * vt_path_posterior_probs[i]);
     }
     // avg_wer = sum_wer / vt_paths.size();
     onebest_wer = vt_path_weights[0];
 
+    size_t count = 0;
+
     for (size_t i = 0; i < vt_path_weights.size(); i++)
     {
         // loss - mean_loss
+        /*  mask the old code, try something new 
+
         vt_path_weights[i] -= avg_wer;
         if(getPathMethodEMBR == "sampling") vt_path_weights[i] /= (vt_paths.size() - 1);
+        else vt_path_weights[i] *= (vt_path_posterior_probs[i]);
+        */
 
-        vt_path_weights[i] *= vt_path_posterior_probs[i];
+        // we only consider the path that is better than one-best
+        if (vt_path_weights[i] < onebest_wer) count++;
     }
+
 
     for (size_t i = 0; i < vt_paths.size(); i++)
     {
+        /*  mask the old code, try something new
+
         for (size_t j = 0; j < vt_paths[i].size(); j++)
         {
             // open add instead of substract, for debug purpose
@@ -1575,6 +1582,18 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             // substraction instead of add, since we want to minimize the loss function, rather than maximize
             vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
         }
+
+        */
+        if (vt_path_weights[i] < onebest_wer)
+        {
+            vt_path_weights[i] -= onebest_wer;
+            vt_path_weights[i] /= count;
+            for (size_t j = 0; j < vt_paths[i].size(); j++)
+            {
+                vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
+            }
+        }
+
     }
     
     set_edge_path.clear();
@@ -2240,7 +2259,6 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         if (getPathMethodEMBR == "sampling")
         {
             EMBRsamplepaths(edgelogbetas, logbetas, numPathsEMBR, enforceValidPathEMBR, vt_paths);
-            path_posterior_probs.resize(vt_paths.size(), 1.0);
         }
         else EMBRnbestpaths(tokenlattice, vt_paths, path_posterior_probs);
 
