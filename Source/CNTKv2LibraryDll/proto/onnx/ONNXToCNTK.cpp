@@ -1380,7 +1380,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "LeakyRelu")
     {
-        float alpha = static_cast<float>(GetNamedAttributeAsFloat(node, "alpha", 0.01F));
+        double alpha = static_cast<double>(GetNamedAttributeAsFloat(node, "alpha", 0.01F));
         FunctionPtr cntkFunction = LeakyReLU(inputs[0], alpha, ToWString(node->Name()));
         return cntkFunction;
     }

@@ -2704,7 +2704,7 @@ namespace CNTK
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"SELU", name);
     }
 
-    FunctionPtr LeakyReLU(const Variable& operand, float alpha, const std::wstring& name)
+    FunctionPtr LeakyReLU(const Variable& operand, double alpha, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
