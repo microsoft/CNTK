@@ -16,14 +16,14 @@ def try_register_native_convolve_function():
     '''
     try:
         C.ops.register_native_user_function(
-                    'NativeBinaryConvolveFunction', 
-                    'Cntk.BinaryConvolution-' + C.__version__.rstrip('+'), 
+                    'NativeBinaryConvolveFunction',
+                    'Cntk.BinaryConvolution-' + C.__version__.rstrip('+'),
                     'CreateBinaryConvolveFunction')
         native_convolve_function_registered = True
     except:
         native_convolve_function_registered = False
-    
-    module = sys.modules[__name__]   
+
+    module = sys.modules[__name__]
     setattr(module, 'native_convolve_function_registered', native_convolve_function_registered)
 
 try_register_native_convolve_function()
