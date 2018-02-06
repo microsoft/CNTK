@@ -736,7 +736,10 @@ public:
 
         LoadConfigsFromFile();
 
+<<<<<<< HEAD
 >>>>>>> 5fd5bf88919483e4ec500d2ec515c9cd846c1142
+=======
+>>>>>>> 49612264ec769ae4f544b548fefe179edceb18bc
         InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
         this->m_fsSmoothingWeight = hSmoothingWeight;
         this->m_frameDropThreshold = frameDropThresh;
@@ -789,14 +792,13 @@ public:
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
-        vector<size_t> labelSequencesMap(labelSequences.size());
-        size_t nonZeroSeqCount = 0;
+        vector<size_t> labelSequencesMap;
         for (size_t i = 0; i < labelSequences.size(); i++)
         {
             
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
-            labelSequencesMap[nonZeroSeqCount++] = labelSequences[i].seqId;
+            labelSequencesMap.push_back(labelSequences[i].seqId);
             auto& currentLabelSeq = labelSequences[i];
 
             // Fill up labels
@@ -810,7 +812,7 @@ public:
             this->m_extraUttMap.push_back(labelSequences[i].s);
         }
 
-        this->m_lattices.resize(labelMBLayout->GetNumSequences());
+        this->m_lattices.resize(labelSequencesMap.size());
 
 #pragma omp parallel for 
         for (long i = 0; i < labelSequences.size(); i++)
@@ -826,8 +828,7 @@ public:
             const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
             latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
-            // Identify the position of the lattice to match the position of the label sequence
-            for (size_t pos = 0; pos < labelSequencesMap.size();i++)
+            for (size_t pos = 0; pos < labelSequencesMap.size();pos++)
             {
                 if (labelSequencesMap[pos] == labelSequences[i].seqId)
                 {
@@ -880,11 +881,7 @@ public:
 
     void LoadConfigsFromFile()
     {
-<<<<<<< HEAD
-        // Workaround for loading a trained model from a different location
-=======
         // Workaround for loading a trained model with Lattice data files a different location
->>>>>>> 5fd5bf88919483e4ec500d2ec515c9cd846c1142
         wifstream file("LatticeNode.config");
         if (file.good())
         {
