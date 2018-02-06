@@ -1555,6 +1555,7 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
     onebest_wer = vt_path_weights[0];
 
     size_t count = 0;
+    double sum_posterior = 0;
 
     for (size_t i = 0; i < vt_path_weights.size(); i++)
     {
@@ -1567,7 +1568,11 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         */
 
         // we only consider the path that is better than one-best
-        if (vt_path_weights[i] < onebest_wer) count++;
+        if (vt_path_weights[i] < onebest_wer)
+        {
+            count++;
+            sum_posterior += vt_path_posterior_probs[i];
+        }
     }
 
 
@@ -1587,7 +1592,13 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         if (vt_path_weights[i] < onebest_wer)
         {
             vt_path_weights[i] -= onebest_wer;
-            vt_path_weights[i] /= count;
+
+            // average
+            // vt_path_weights[i] /= count;
+
+            // weighted average
+            vt_path_weights[i] *= (vt_path_posterior_probs[i]/ sum_posterior);
+
             for (size_t j = 0; j < vt_paths[i].size(); j++)
             {
                 vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
