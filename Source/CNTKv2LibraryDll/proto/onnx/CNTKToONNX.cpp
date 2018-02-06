@@ -958,7 +958,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
         {
             auto alpha = 0.01f;
             if (src->Attributes().Contains(L"alpha"))
-                alpha = (float)src->Attributes()[L"alpha"].Value<float>();
+                alpha = (float)src->Attributes()[L"alpha"].Value<double>();
             node->AddAttribute("alpha", alpha);
         }
         else if (src->OpName() == L"SELU")

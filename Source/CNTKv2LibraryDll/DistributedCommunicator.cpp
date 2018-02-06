@@ -358,10 +358,9 @@ namespace CNTK
             mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
         }
 
-        // BUGBUG: assuming the all values on the same device
         if (m_nccl == nullptr)
         {
-            m_nccl.reset(new NcclComm(AsCNTKImplDeviceId(inputValues[0]->Device()), m_mpi));
+            m_nccl.reset(new NcclComm(DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
         }
 
         // For all values residing on GPU initiate async transfer to CPU buffers if needed

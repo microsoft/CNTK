@@ -10,6 +10,14 @@
 #include "ComputationNetworkBuilder.h" // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
 #include "TensorShape.h"
 
+#ifndef  CNTK_UWP
+#include "PerformanceProfiler.h"
+#ifdef _WIN32
+#define PERFORMANCE_PROFILER_LIB_NAME "Cntk.PerformanceProfiler-"##CNTK_COMPONENT_VERSION##".lib"
+#pragma comment(lib, PERFORMANCE_PROFILER_LIB_NAME)
+#endif
+#endif
+
 #ifndef let
 #define let const auto
 #endif
@@ -767,6 +775,67 @@ template <class ElemType>
             }
         }
     }
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginTiming(bool backward)
+{
+    if (!Globals::ShouldEnableNodeTiming()) return;
+
+    int phase = (backward ? (int)TimingPhase_Backward : (int)TimingPhase_Forward);
+    auto& timing = m_timing[phase];
+    timing.beginTime = std::chrono::system_clock::now();
+    timing.count++;
+#ifndef  CNTK_UWP
+    timing.profilerId = ProfilerTimeBegin();
+#endif
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndTiming(bool backward)
+{
+    if (!Globals::ShouldEnableNodeTiming()) return;
+
+    int phase = (backward ? (int)TimingPhase_Backward : (int)TimingPhase_Forward);
+    auto& timing = m_timing[phase];
+    timing.duration += (std::chrono::system_clock::now() - timing.beginTime);
+
+#ifndef  CNTK_UWP
+    // the order must match enum
+    static const char* postfixes[TimingPhase_Total] =
+    {
+        "Forward",
+        "Backward",
+    };
+
+    if (timing.profilerName.length() != m_nodeName.length() + strlen(postfixes[phase]))
+    {
+        static char name[256];
+        sprintf_s(name, _countof(name), "%S%s", m_nodeName.c_str(), postfixes[phase]);
+        timing.profilerName = name;
+    }
+    ProfilerTimeEnd(timing.profilerId, timing.profilerName.c_str());
+#endif
+}
+
+template<class ElemType>
+void ComputationNode<ElemType>::PrintForwardBackwardTime()
+{
+    if (GetInputs().size() == 0) return;
+
+    auto& forwardCount = m_timing[TimingPhase_Forward].count;
+    auto forwardDuration = m_timing[TimingPhase_Forward].duration.count();
+    auto& backwardCount = m_timing[TimingPhase_Backward].count;
+    auto backwardDuration = m_timing[TimingPhase_Backward].duration.count();
+    fprintf(stderr, "%-30S forward avg %07fs, backward avg %07fs (fwd# %d|bwd# %d)\n",
+        m_nodeName.c_str(),
+        forwardCount == 0 ? 0 : forwardDuration / forwardCount,
+        backwardCount == 0 ? 0 : backwardDuration / backwardCount,
+        forwardCount,
+        backwardCount);
+
+    for (auto& timing : m_timing)
+        timing.Reset();
 }
 
 template <class ElemType>
