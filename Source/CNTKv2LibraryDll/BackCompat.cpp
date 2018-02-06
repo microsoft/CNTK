@@ -671,14 +671,16 @@ namespace CNTK
             // we get back the original Uid and Names for the variables in the V2 Function graph.
             ComputationNetworkPtr computationNetwork;
             std::unordered_map<Variable, ComputationNodeBasePtr> dummyVariableToNodeMap;
-            DataType dataType = rootFunction->Outputs()[0].GetDataType();
+            const std::vector<Variable>& outputs = rootFunction->Outputs();
+            DataType dataType = outputs[0].GetDataType();
+            std::unordered_set<Variable> outputSet(outputs.begin(), outputs.end());
             switch (dataType)
             {
             case DataType::Float:
-                std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<float>(rootFunction, device, {}, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
+                std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<float>(rootFunction, device, outputSet, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
                 break;
             case DataType::Double:
-                std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<double>(rootFunction, device, {}, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
+                std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<double>(rootFunction, device, outputSet, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
 
                 break;
             default:
