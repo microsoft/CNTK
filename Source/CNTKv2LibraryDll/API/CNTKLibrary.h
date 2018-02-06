@@ -4700,7 +4700,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, float alpha, const std::wstring& name = L"");
+    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, double alpha, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise parametric rectified linear Unit operation
