@@ -72,7 +72,7 @@ size_t bucketingFactor = 10; // group 10 minibatches together, sort, re-split; f
 string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
-size_t saveEvery = 4000;
+size_t saveEvery = 10000;
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
@@ -95,7 +95,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTestFile  = L"f:/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
         srcVocabFile = L"f:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         tgtVocabFile = L"f:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
-        bucketingFactor = 10;
+        bucketingFactor = 100; // Marian uses much higher
         insertBOS = false; // Marian model does not expect <s>
     }
     else if (systemId == "chs_enu")
@@ -740,7 +740,7 @@ class SmoothedCriterion
 {
     NDArrayViewPtr smoothedNumer; // loss value is accumulated on the GPU
     double smoothedDenom = 0;
-    const double smoothingTimeConstant = 409600; // e.g. smooth over 100 minibatches
+    const double smoothingTimeConstant = 4096000; // e.g. smooth over 1000 minibatches
 public:
     // 'mbLoss' = sum over 'count' loss values
     void Update(NDArrayViewPtr mbLoss, size_t count)
@@ -813,20 +813,9 @@ namespace marian { namespace models {
     }
 } }
 
-static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, size_t startMbCount)
+Ptr<ExpressionGraph> graph; // TODO: make this a global?
+BinaryFoldingModel CreateModelFunctionMarian()
 {
-    let numWorkers = communicator->Workers().size();
-    let workerId = communicator->CurrentWorker().m_globalRank;
-
-#if 0   // old Dynamite model
-    // dynamic model and criterion function
-    auto model_fn = CreateModelFunction();
-    auto criterion_fn = CreateCriterionFunction(model_fn);
-
-    // run something through to get the parameter matrices shaped --ugh!
-    //model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
-
-#else // Marian model
     auto moptions = Dictionary
     (
         // These are all options given in the log. Not all are used inside the model.
@@ -937,7 +926,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         .push_back(models::decoder()("type", "transformer"))
         .construct();
     // run through once to create all params, so that we can pull them out
-    auto graph = New<ExpressionGraph>();
+    graph = New<ExpressionGraph>();
     auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1);
     mmodel->build(graph, fakeBatch);
     auto mparamsVector = graph->GetAllParameters();
@@ -951,7 +940,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         wstring path = L"f:/data2/fseide/marian-examples/transformer/initvals/" + p.Name();
         let numElem = p.Shape().TotalSize();
         fprintf(stderr, "Loading %d init vals: %S\n", (int)numElem, path.c_str()), fflush(stderr);
-        FILE* f = _wfopen(path.c_str(), L"rw");
+        FILE* f = _wfopen(path.c_str(), L"rb");
         if (f)
         {
             buf.resize(numElem);
@@ -971,7 +960,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #endif
     // TODO: figure out why make_shared does not work here ^^
     //mparams->LogParameters();
-    auto model_fn = BinaryFoldingModel(mparamsVector,
+    return BinaryFoldingModel(mparamsVector,
             [=](const /*batch*/vector<Variable>& sources, const /*batch*/vector<Variable>& targets) -> Variable
     {
         // convert source batch to Marian CorpusBatch
@@ -995,7 +984,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         return nextState->getProbs();
     });
-    auto criterion_fn = BinaryFoldingModel({}, { { L"model", model_fn } },
+}
+
+BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model_fn)
+{
+    return BinaryFoldingModel({}, { { L"model", model_fn } },
         [=](const /*batch*/vector<Variable>& sources, const /*batch*/vector<Variable>& targets) -> Variable
     {
         using namespace keywords;
@@ -1023,11 +1016,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         std::string costType = "ce-sum";// mmodel->opt<string>("cost-type");
         bool inference = false; // TODO
-        float ls = inference ? 0.f : mmodel->opt<float>("label-smoothing");
+        float ls = inference ? 0.f :    0.1f; //mmodel->opt<float>("label-smoothing");// TODO: parameterize this again
 
         auto cost = Cost(probs, trgData, trgMask, costType, ls);
         //fprintf(stderr, "====> cost/target = %.8f\n", cost.Value()->AsScalar<float>() / trgSubBatch->batchWords()), fflush(stderr);
 
+#if 0
         if (mmodel->getOptions()->has("guided-alignment") && !inference) {
             auto alignments = mmodel->getDecoders()[0]->getAlignments();
             ABORT_IF(alignments.empty(), "Model does not seem to support alignments");
@@ -1035,9 +1029,28 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             auto att = concatenate(alignments, axis = 3);
             cost = cost + guidedAlignmentCost(graph, batch, mmodel->getOptions(), att);
         }
+#endif
         cost = Reshape(cost, { 1 }); // Learner.Update() expects a 1-dim vector for some reason
         return cost;
     });
+}
+
+static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, size_t startMbCount)
+{
+    let numWorkers = communicator->Workers().size();
+    let workerId = communicator->CurrentWorker().m_globalRank;
+
+#if 0   // old Dynamite model
+    // dynamic model and criterion function
+    auto model_fn = CreateModelFunction();
+    auto criterion_fn = CreateCriterionFunction(model_fn);
+
+    // run something through to get the parameter matrices shaped --ugh!
+    //model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
+
+#else // Marian model
+    let model_fn = CreateModelFunctionMarian();
+    let criterion_fn = CreateCriterionFunctionMarian(model_fn);
 #endif
     // run something through to get the parameter matrices shaped --ugh!
 #if 0
@@ -1157,7 +1170,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     if (startMbCount > 0)
     {
         let path = IntermediateModelPath(modelPath, startMbCount);
-        fprintf(stderr, "restarting from: %S... ", path.c_str()), fflush(stderr);
+        fprintf(stderr, "restoring from: %S... ", path.c_str()), fflush(stderr);
         Dynamite::RestoreFromCheckpoint(path, model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
         fprintf(stderr, "done\n"), fflush(stderr);
     }
@@ -1670,6 +1683,38 @@ public:
     }
 };
 
+static void DumpModel(const wstring& modelPath, size_t startMbCount)
+{
+    let model_fn = CreateModelFunctionMarian();
+    let criterion_fn = CreateCriterionFunctionMarian(model_fn);
+
+    // for decoding to Marian, dump current values, for back-conversion to Marian
+    let path = IntermediateModelPath(modelPath, startMbCount);
+    fprintf(stderr, "loading model: %S... ", path.c_str()), fflush(stderr);
+    model_fn.ParametersCombined()->Restore(path);
+    fprintf(stderr, "done\n"), fflush(stderr);
+    vector<float> buf;
+    auto mparamsVector = graph->GetAllParameters();
+    for (auto& p : mparamsVector)
+    {
+        p.Value()->LogToFile(p.Name() + L" (CNTK)");
+        // save it to a plain binary file named the same as the parameter
+        wstring dumpPath = path + L".dump/" + p.Name();
+        boost::filesystem::create_directories(boost::filesystem::path(dumpPath).parent_path());
+        let numElem = p.Shape().TotalSize();
+        fprintf(stderr, "Saving %d init vals %S to %S\n", (int)numElem, p.Shape().AsString().c_str(), dumpPath.c_str()), fflush(stderr);
+        FILE* f = _wfopen(dumpPath.c_str(), L"wb");
+        if (f)
+        {
+            p.Value()->CopyDataTo(buf);
+            let res = fwrite(buf.data(), sizeof(*buf.data()), buf.size(), f); res;
+            fclose(f);
+        }
+        else
+            fprintf(stderr, "######### Failed to open-for-write\n"), fflush(stderr);
+    }
+}
+
 int mt_main(int argc, char *argv[])
 {
     Internal::PrintBuiltInfo();
@@ -1797,6 +1842,8 @@ int mt_main(int argc, char *argv[])
             Evaluate(modelPath, fromMbCount, srcDevFile, tgtDevFile, outPath);
         else if (command == L"test")
             Evaluate(modelPath, fromMbCount, srcTestFile, tgtTestFile, outPath);
+        else if (command == L"dump_model")
+            DumpModel(modelPath, fromMbCount);
         else
             InvalidArgument("Unknonw --command %S", command.c_str());
         fprintf(stderr, "redirected stderr to %S\n", logPath.c_str());
