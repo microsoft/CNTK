@@ -96,7 +96,7 @@ def simple_mnist(tensorboard_logdir=None):
         max_samples = num_samples_per_sweep * num_sweeps_to_train_with,
         progress_frequency=num_samples_per_sweep
     ).train()
-    
+
     # Load test data
     path = os.path.normpath(os.path.join(data_dir, "Test-28x28_cntk_text.txt"))
     check_path(path)
@@ -109,6 +109,10 @@ def simple_mnist(tensorboard_logdir=None):
     }
 
     # Test data for trained model
+    C.debugging.start_profiler()
+    C.debugging.enable_profiler()
+    C.debugging.set_node_timing(True)
+
     test_minibatch_size = 1024
     num_samples = 10000
     num_minibatches_to_test = num_samples / test_minibatch_size
@@ -117,6 +121,9 @@ def simple_mnist(tensorboard_logdir=None):
         mb = reader_test.next_minibatch(test_minibatch_size, input_map=input_map)
         eval_error = trainer.test_minibatch(mb)
         test_result = test_result + eval_error
+
+    C.debugging.stop_profiler()
+    trainer.print_node_timing()
 
     # Average of evaluation errors of all test minibatches
     return test_result / num_minibatches_to_test

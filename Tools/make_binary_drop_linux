@@ -116,7 +116,7 @@ cd "$scriptDir/.."
 # Dependency files
 
 # MKL
-declare -a mklFiles=("libmklml_intel.so" "libiomp5.so" "libmkldnn.so.0.12.0")
+declare -a mklFiles=("libmklml_intel.so" "libiomp5.so" "libmkldnn.so.0")
 
 # Open CV
 declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgcodecs.so.3.1")
@@ -125,7 +125,7 @@ declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libo
 declare -a libzipFiles=("libzip.so.4")
 
 # CUDA
-declare -a cudaFiles=("libcudart.so.8.0" "libcublas.so.8.0" "libcurand.so.8.0" "libcusparse.so.8.0")
+declare -a cudaFiles=("libcudart.so.9.0" "libcublas.so.9.0" "libcurand.so.9.0" "libcusparse.so.9.0")
 
 # cuDNN
 # Note: can be only a single file currently, see copy below.
@@ -155,7 +155,7 @@ opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cudnn-6.0/cuda/lib64"
+cudnnPath="/usr/local/cudnn-7.0/cuda/lib64"
 ncclPath="/usr/lib/x86_64-linux-gnu"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"
@@ -276,7 +276,7 @@ if [[ $targetConfiguration != "cpu" ]]; then
 
     # Copy cuDNN
     echo "Copying cuDNN..." >&3
-    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath/libcudnn.so.6
+    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath/libcudnn.so.7
     
     # Copy NCCL
     echo "Copying NCCL..." >&3

@@ -1,21 +1,16 @@
-# CNTK v2.4 Release Notes
+# CNTK Current Iteration
 
-## Highlights of this Release
-- Move to CUDA9, cuDNN 7 and Visual Studio 2017.
-- Removed Python 3.4 support.
-- Support Volta GPU and FP16.
-- Better ONNX support.
-- CPU perf improvement.
-- More OPs.
+## Change profiler details output format to be chrome://tracing
 
-## OPs
-- ``top_k`` operation: in the forward pass it computes the top (largest) k values and corresponding indices along the specified axis. In the backward pass the gradient is scattered to the top k elements (an element not in the top k gets a zero gradient).
-- ``gather`` operation now supports an axis argument
-- ``squeeze`` and ``expand_dims`` operations for easily removing and adding singleton axes
-- ``zeros_like`` and ``ones_like`` operations. In many situations you can just rely on CNTK correctly broadcasting a simple 0 or 1 but sometimes you need the actual tensor.
-
-## ONNX
-- Improved ONNX support in CNTK.
-- Update ONNX to the latest ONNX from https://github.com/onnx/onnx
-- Fixed several bugs.
-
+## Enable per-node timing. Working example [here](../Examples/Image/Classification/MLP/Python/SimpleMNIST.py)
+- per-node timing creates items in profiler details when profiler is enabled.
+- usage in Python:
+```
+import cntk as C
+C.debugging.debug.set_node_timing(True)
+C.debugging.start_profiler() # optional
+C.debugging.enable_profiler() # optional
+#<trainer|evaluator|function> executions
+<trainer|evaluator|function>.print_node_timing()
+C.debugging.stop_profiler()
+```

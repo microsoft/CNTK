@@ -86,6 +86,18 @@ void ComputationNetwork::ClearNetwork()
     m_pMBLayoutOfNetwork->Init(1, 0);
 }
 
+void ComputationNetwork::PrintNodeTiming()
+{
+    for (auto& iter : m_nameToNodeMap)
+    {
+        auto nodePtr = iter.second->As<ComputationNode<float>>();
+        if (nodePtr)
+        {
+            nodePtr->PrintForwardBackwardTime();
+        }
+    }
+}
+
 // -----------------------------------------------------------------------
 // serialization
 // -----------------------------------------------------------------------
