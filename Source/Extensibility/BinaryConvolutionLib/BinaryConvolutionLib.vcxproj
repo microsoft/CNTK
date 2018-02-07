@@ -23,7 +23,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup Condition="exists('$(HalideLibPath)')">
-    <ClCompile Include="BinaryConvolutionLib.cpp"/>
+    <ClCompile Include="BinaryConvolutionLib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BinaryConvolveOp.h" />
@@ -85,6 +85,14 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;$(HalideLib);kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">set _config="$(Configuration)"
+if NOT %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Release\Halide.dll" "$(TargetDir)"
+if %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Debug\Halide.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Copying dependencies</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
     <ClCompile>
@@ -108,6 +116,22 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;$(HalideLib);kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">set _config="$(Configuration)"
+if NOT %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Release\Halide.dll" "$(TargetDir)"
+if %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Debug\Halide.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying dependencies</Message>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">set _config="$(Configuration)"
+if NOT %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Release\Halide.dll" "$(TargetDir)"
+if %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Debug\Halide.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">Copying dependencies</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
@@ -116,10 +140,20 @@
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <PostBuildEvent>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">xcopy /I /D /Y "$(HALIDE_PATH)\Release\Halide.dll" "$(TargetDir)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">set _config="$(Configuration)"
+if NOT %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Release\Halide.dll" "$(TargetDir)"
+if %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Debug\Halide.dll" "$(TargetDir)"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">Copying Dependencies</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">Copying dependencies</Message>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">set _config="$(Configuration)"
+if NOT %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Release\Halide.dll" "$(TargetDir)"
+if %_config:Release=% == "$(Configuration)" xcopy /I /D /Y "$(HALIDE_PATH)\Debug\Halide.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">Copying dependencies</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
