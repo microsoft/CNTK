@@ -340,7 +340,7 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
     for (int f = 0; f < nf + 1; f++)
     {
         scale = (ElemType)1.0 / scale;
-        fwlogscale -= log(scale);
+        fwlogscale -= (double)log(scale);
 
 #ifdef _DEBUG
         sumfwscale.push_back(fwlogscale);
@@ -373,7 +373,7 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
 #ifdef _DEBUG
         //double lfp = -log(absum) + bwlogscale + sumfwscale[f];
         //assert((lfp / logForwardPath < 1.01 && lfp / logForwardPath > 0.99) || (lfp < 1e-3 && lfp > -1e-3 && logForwardPath < 1e-3 && logForwardPath > -1e-3));  // total path scores should remain constant
-        bwlogscale -= log(scale);
+        bwlogscale -= (double)log(scale);
 #endif
 
         Matrix<ElemType>::Scale(absum, column);
@@ -411,5 +411,6 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
 
 template class LatticeFreeMMINode<float>;
 template class LatticeFreeMMINode<double>;
+template class LatticeFreeMMINode<half>;
 
 } } }
