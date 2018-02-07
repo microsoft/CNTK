@@ -471,7 +471,10 @@ public:
         {
             FrameRange fr(Input(0)->GetMBLayout());
             BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+                /* guoye: start */
+                          //  Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+                    Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold, m_MBR);
+            /* guoye: end */
             MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
 
 #ifdef _DEBUG
@@ -507,7 +510,10 @@ public:
 
     static void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
                                        Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-                                       const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+        /* guoye: start */
+                                       //const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
+                                        const Matrix<ElemType>& gammaFromLattice, double hsmoothingWeight, double frameDropThresh, bool MBR)
+        /* guoye: end */
     {
 #if DUMPOUTPUT
         softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -515,8 +521,10 @@ public:
         gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif
-
-        inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
+        /* guoye: start */
+        // inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
+        inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element(), MBR);
+        /* guoye: end */
         inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
@@ -646,6 +654,9 @@ public:
     msra::asr::simplesenonehmm* gethmm() { return &m_hmm; }
 
     void SetSmoothWeight(double fsSmoothingWeight) { m_fsSmoothingWeight = fsSmoothingWeight; }
+    /* guoye : start */
+    void SetMBR(bool MBR) { m_MBR = MBR; }
+    /* guoye : end */
     void SetFrameDropThresh(double frameDropThresh) { m_frameDropThreshold = frameDropThresh; }
     void SetReferenceAlign(const bool doreferencealign) { m_doReferenceAlignment = doreferencealign; }
 
@@ -683,6 +694,9 @@ protected:
     shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
     double m_frameDropThreshold;
     double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
+    /* guoye: start */
+    bool m_MBR;
+    /* guoye: end */
     double m_seqGammarAMF;
     double m_seqGammarLMF;
     double m_seqGammarWP;

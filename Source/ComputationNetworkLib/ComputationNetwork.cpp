@@ -673,6 +673,7 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
             node->SetReferenceAlign(doreferencealign);
             /* guoye: start */
             // node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR);
+            node->SetMBR(sMBR || EMBR);
             node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode);
             /* guoye: end */
         }

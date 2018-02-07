@@ -1552,43 +1552,45 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         avg_wer += (vt_path_weights[i] * vt_path_posterior_probs[i]);
     }
     // avg_wer = sum_wer / vt_paths.size();
-    onebest_wer = vt_path_weights[0];
-
+    if (getPathMethodEMBR == "sampling") onebest_wer = -10000;
+    else onebest_wer = vt_path_weights[0];
+    /*
     size_t count = 0;
     double sum_posterior = 0;
-
+    */
     for (size_t i = 0; i < vt_path_weights.size(); i++)
     {
         // loss - mean_loss
-        /*  mask the old code, try something new 
-
+        
         vt_path_weights[i] -= avg_wer;
         if(getPathMethodEMBR == "sampling") vt_path_weights[i] /= (vt_paths.size() - 1);
         else vt_path_weights[i] *= (vt_path_posterior_probs[i]);
-        */
+        
 
         // we only consider the path that is better than one-best
+        /*
         if (vt_path_weights[i] < onebest_wer)
         {
             count++;
             sum_posterior += vt_path_posterior_probs[i];
         }
+        */
     }
 
 
     for (size_t i = 0; i < vt_paths.size(); i++)
     {
-        /*  mask the old code, try something new
-
+       
         for (size_t j = 0; j < vt_paths[i].size(); j++)
         {
             // open add instead of substract, for debug purpose
             // vt_edge_weights[vt_paths[i][j]] += vt_path_weights[i];
+
             // substraction instead of add, since we want to minimize the loss function, rather than maximize
             vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
         }
 
-        */
+        /*
         if (vt_path_weights[i] < onebest_wer)
         {
             vt_path_weights[i] -= onebest_wer;
@@ -1601,9 +1603,13 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
 
             for (size_t j = 0; j < vt_paths[i].size(); j++)
             {
-                vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
+                // vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
+
+                // do the wrong one
+                vt_edge_weights[vt_paths[i][j]] += vt_path_weights[i];
             }
         }
+        */
 
     }
     
@@ -1619,7 +1625,9 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         }
         set_edge_path.insert(pathedgeidstr);
     }
-    fprintf(stderr, "get_edge_weights: average_WER = %f, one_best WER = %f \n", avg_wer, onebest_wer);
+
+    if (getPathMethodEMBR == "sampling") fprintf(stderr, "get_edge_weights: average_WER = %f\n", avg_wer);
+    else fprintf(stderr, "get_edge_weights: average_WER = %f, one_best WER = %f \n", avg_wer, onebest_wer);
     fprintf(stderr, "get_edge_weights: num_path = %d, num_distinct_edge_path = %d \n", int(vt_paths.size()), int(set_edge_path.size()));
 
     for (mp_itr = mp_path_info.begin(); mp_itr != mp_path_info.end(); mp_itr++)
@@ -2270,10 +2278,12 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         if (getPathMethodEMBR == "sampling")
         {
             EMBRsamplepaths(edgelogbetas, logbetas, numPathsEMBR, enforceValidPathEMBR, vt_paths);
+            path_posterior_probs.resize(vt_paths.size(), (1.0/vt_paths.size()));
         }
         else EMBRnbestpaths(tokenlattice, vt_paths, path_posterior_probs);
 
         
+        // for getPathMethodEMBR=sampling, the onebest_wer does not make any sense, pls. do not  use it
         double onebest_wer;
         double avg_wer = get_edge_weights(wids, vt_paths, edge_weights, path_posterior_probs, getPathMethodEMBR, onebest_wer);
 
@@ -2282,8 +2292,8 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 
         
         // fprintf(stderr, "\n forwardbackward: average WER for an utterance is %f, #words = %d \n", avg_wer, int(wids.size()));
-        if(showWERMode == "average") return avg_wer;
-        else return onebest_wer;
+        if(getPathMethodEMBR == "nbest" && showWERMode == "onebest") return onebest_wer;
+        else return avg_wer;
     }
     
     else
@@ -2295,7 +2305,11 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
             // we first take the sum in log domain to avoid numerical issues
             auto &dengammas = result; // result is denominator gammas
             mmierrorsignal(parallelstate, minlogpp, origlogpps, abcs, softalignstates, logpps, hset, thisedgealignments, dengammas);
-
+            /*
+              for (size_t j = 0; j < (dengammas).cols(); j++)
+                        for (size_t i = 0; i < (dengammas).rows(); i++)
+                            fprintf(stderr, "i = %d, j = %d, dengammas(i, j) = %f, \n", int(i), int(j), float(dengammas(i, j)));
+              */                
 
             return totalfwscore / numframes; // return value is av. posterior
         }

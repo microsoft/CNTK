@@ -3076,6 +3076,11 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_getPathMethodEMBR = configSGD(L"getPathMethodEMBR", "sampling");
     // could be average or onebest
     m_showWERMode = configSGD(L"showWERMode", "average");
+
+    if (m_getPathMethodEMBR == "sampling" && m_showWERMode == "onebest")
+    {
+        RuntimeError("There is no way to show onebest WER in sampling based EMBR");
+    }
     /* guoye： end */
     
     m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);
