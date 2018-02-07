@@ -220,11 +220,7 @@ public:
         ElemType finalValue = (ElemType)(m_savedCriterionValue);
         Value().Resize(1, 1);
         Value().SetValue(finalValue);
-
-#ifdef _DEBUG
-        cout << "value: " << Value().GetValue(0, 0) << endl;
-#endif
-
+		
 #if NANCHECK
         Value().HasNan("LatticeFreeMMI");
 #endif
@@ -387,7 +383,7 @@ public:
         LoadFsa(fstream);
     }
 
-    virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
+   /* virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
     {
         if (printMetadata)
         {
@@ -399,7 +395,7 @@ public:
         }
 
         PrintNodeValuesToFile(printValues, printMetadata, fstream);
-    }
+    }*/
 
 private: 
     struct DataArc{
