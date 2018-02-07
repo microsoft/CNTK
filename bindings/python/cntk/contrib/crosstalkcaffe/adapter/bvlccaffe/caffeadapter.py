@@ -336,6 +336,10 @@ class SetupCaffeParameters(object):
         '''
         SetupCaffeParameters.default(caffe_parameters, inputs_info, cntk_layer_def)
 
+    @staticmethod
+    def sigmoid(caffe_parameters, inputs_info, cntk_layer_def):
+        SetupCaffeParameters.default(caffe_parameters, inputs_info, cntk_layer_def)
+
 NEGLECT_LAYERS = ['Scale', 'Dropout']
 
 

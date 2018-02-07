@@ -390,6 +390,11 @@ class ApiSetup(object):
         sanitize_output = ops.sanitize_input(inputs[0])
         return ops.softmax(sanitize_output, name=cntk_layer.op_name)
 
+    @staticmethod
+    def sigmoid(cntk_layer, inputs):
+        sanitize_output = ops.sanitize_input(inputs[0])
+        return ops.sigmoid(sanitize_output, name=cntk_layer.op_name)
+
 
 class CntkApiInstance(object):
     '''
