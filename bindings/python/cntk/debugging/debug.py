@@ -106,11 +106,11 @@ class _DebugState(object):
 
 def set_checked_mode(enable):
     '''
-     Checked mode enables additional runtime verification such as:
+    Checked mode enables additional runtime verification such as:
         - Tracking NaN occurrences in sequence gaps.
         - Function graph verification after binding of free static axes to actual values at runtime
 
-     Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
+    Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
 
     Args:
         enable (bool): whether to enable checked mode (with performance impact)
@@ -136,6 +136,15 @@ def set_computation_network_trace_level(level):
     '''
     cntk_py.set_computation_network_trace_level(level)
 
+def set_node_timing(enable):
+    '''
+    Node-timing records per-node average execution time per-minibatch.
+    Enabling checked mode incurs a little runtime costs and is meant to be used as a debugging aid.
+
+    Args:
+        enable (bool): whether to enable per-node timing
+    '''
+    cntk_py.enable_node_timing() if enable else cntk_py.disable_node_timing()
 
 class _DebugNode(UserFunction):
     '''

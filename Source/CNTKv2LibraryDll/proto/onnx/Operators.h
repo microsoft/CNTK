@@ -53,13 +53,16 @@ namespace CNTK
                 return _cntkToONNXOpName;
             }
 
+            static std::tuple<int, int> GetElementWiseInputIndices(const std::wstring& opName);
+
             //
             // Because in CNTK block, we can't filtered out the external inputs to the block.
             // We need a way to filter out leaf input from its subgraph.
             //
             static inline bool IsValidInputs(const std::wstring& opName, size_t index)
             {
-                assert(_cntkBlockOPInvalidIndices.find(opName) != _cntkBlockOPInvalidIndices.end());
+                if (_cntkBlockOPInvalidIndices.find(opName) == _cntkBlockOPInvalidIndices.end())
+                    return true;
 
                 auto invalidIndices = _cntkBlockOPInvalidIndices[opName];
                 return invalidIndices.find(index) == invalidIndices.end();
@@ -103,6 +106,7 @@ namespace CNTK
             static const AttributesMapping& FindAttributeMap(const std::wstring& cntkOpName, const std::wstring& cntkAttributeOpName);
 
             static bool SupportBroadcast(const std::wstring& cntkOpName);
+            static bool SupportBroadcastONNXOp(const std::string& onnxOpName);
 
         private:
             static std::unordered_multimap<std::wstring, AttributesMapping> _cntkToONNXOpName;

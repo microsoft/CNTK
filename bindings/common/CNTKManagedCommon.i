@@ -301,6 +301,8 @@ IGNORE_FUNCTION CNTK::Internal::StartProfiler;
 IGNORE_FUNCTION CNTK::Internal::StopProfiler;
 IGNORE_FUNCTION CNTK::Internal::EnableProfiler;
 IGNORE_FUNCTION CNTK::Internal::DisableProfiler;
+IGNORE_FUNCTION CNTK::Internal::EnableNodeTiming;
+IGNORE_FUNCTION CNTK::Internal::DisableNodeTiming;
 IGNORE_FUNCTION CNTK::Internal::AreEquivalent;
 IGNORE_FUNCTION CNTK::Internal::AreEqual;
 IGNORE_FUNCTION CNTK::Internal::PrintBuiltInfo;

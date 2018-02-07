@@ -3213,6 +3213,8 @@ namespace CNTK
                                        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
 
+        CNTK_API virtual void PrintNodeTiming() {}
+
     protected:
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values for each input of the Function.
@@ -4491,6 +4493,11 @@ namespace CNTK
     CNTK_API FunctionPtr ReduceSumSquare(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in image scaler operation on specified image tensor input operand.
+    ///
+    CNTK_API FunctionPtr ImageScaler(const Variable& operand, float scaler, std::vector<float> biases, const std::wstring& name);
+
+    ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name = L"");
@@ -4693,7 +4700,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, double alpha, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise parametric rectified linear Unit operation
@@ -5373,6 +5380,11 @@ namespace CNTK
             return m_progressWriters;
         }
 
+        ///
+        /// Prints per-node average timing per-minibatch
+        ///
+        CNTK_API virtual void PrintNodeTiming();
+
         CNTK_API virtual ~Evaluator() {}
 
     private:
@@ -5532,6 +5544,11 @@ namespace CNTK
         /// Writes the summary of training progress and resets the accumulators.
         ///
         CNTK_API void SummarizeTrainingProgress();
+
+        ///
+        /// Prints per-node average timing per-minibatch
+        ///
+        CNTK_API virtual void PrintNodeTiming();
 
     private:
         template <typename T1, typename ...CtorArgTypes>

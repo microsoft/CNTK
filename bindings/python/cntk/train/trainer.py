@@ -332,3 +332,10 @@ class Trainer(cntk_py.Trainer):
         accumulators.
         '''
         return super(Trainer, self).summarize_test_progress()
+
+    def print_node_timing(self):
+        '''
+        Prints per-node average timing per-minibatch for each primitive function
+        statistics would reset after print
+        '''
+        return super(Trainer, self).print_node_timing()

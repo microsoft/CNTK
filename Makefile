@@ -271,7 +271,7 @@ ORIGINDIR:='$$ORIGIN'
 # Components VERSION info
 ########################################
 
-CNTK_COMPONENT_VERSION := 2.3.1
+CNTK_COMPONENT_VERSION := 2.4
 ifeq ("$(BUILDTYPE)","debug")
 CNTK_COMPONENT_VERSION := $(CNTK_COMPONENT_VERSION)d
 endif

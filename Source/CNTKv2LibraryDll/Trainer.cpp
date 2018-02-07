@@ -337,6 +337,15 @@ namespace CNTK
         m_progressWriters.insert(progressWriters.begin(), progressWriters.end());
     }
 
+    void Trainer::PrintNodeTiming()
+    {
+        if (m_combinedTrainingFunction)
+        {
+            m_combinedTrainingFunction->PrintNodeTiming();
+        }
+    }
+
+
     void Trainer::ExecuteForwardBackward(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, std::unordered_map<Variable, ValuePtr>& parameterGradients)
     {
 #ifndef  CNTK_UWP
