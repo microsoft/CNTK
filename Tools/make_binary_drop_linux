@@ -116,7 +116,7 @@ cd "$scriptDir/.."
 # Dependency files
 
 # MKL
-declare -a mklFiles=("libmklml_intel.so" "libiomp5.so")
+declare -a mklFiles=("libmklml_intel.so" "libiomp5.so" "libmkldnn.so.0.12.0")
 
 # Open CV
 declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgcodecs.so.3.1")
@@ -130,6 +130,9 @@ declare -a cudaFiles=("libcudart.so.8.0" "libcublas.so.8.0" "libcurand.so.8.0" "
 # cuDNN
 # Note: can be only a single file currently, see copy below.
 declare -a cudnnFiles=("libcudnn.so")
+
+# NCCL
+declare -a ncclFiles=("libnccl.so.2.1.2")
 
 # OpenBLAS (Needed by Kaldi)
 declare -a openblasFiles=("libopenblas.so.0")
@@ -147,13 +150,13 @@ declare -a includeFiles=("Eval.h")
 declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h" "CNTKLibraryC.h")
 
 # Set dependency sources paths
-mklmlVersion="mklml_lnx_2018.0.1.20171007"
-mklPath="/usr/local/mklml/$mklmlVersion/lib"
+mklPath="/usr/local/lib"
 opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
 cudnnPath="/usr/local/cudnn-6.0/cuda/lib64"
+ncclPath="/usr/lib/x86_64-linux-gnu"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"
 kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
@@ -274,6 +277,10 @@ if [[ $targetConfiguration != "cpu" ]]; then
     # Copy cuDNN
     echo "Copying cuDNN..." >&3
     CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath/libcudnn.so.6
+    
+    # Copy NCCL
+    echo "Copying NCCL..." >&3
+    CopyFilesFromList $ncclPath ncclFiles[@] $baseDependenciesPath/libnccl.so.2
 
 fi
 

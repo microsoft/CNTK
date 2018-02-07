@@ -39,7 +39,7 @@ class NDArrayView(cntk_py.NDArrayView):
 
     Args:
         shape (tuple): shape of the data
-        data_type (np.float32, np.float64): data type of the data
+        data_type (np.float32, np.float64, np.float16): data type of the data
         device (:class:`~cntk.device.DeviceDescriptor`): device this value
          should be put on
 
@@ -343,7 +343,7 @@ class Value(cntk_py.Value):
                 raise ValueError('could not convert sample data to '
                                     'NumPy array')
 
-        elif sample.dtype in (np.float32, np.float64):
+        elif sample.dtype in (np.float32, np.float64, np.float16):
             if sample.dtype != var.dtype:
                 convert_to_var_dtype = True
 
@@ -351,7 +351,7 @@ class Value(cntk_py.Value):
             convert_to_var_dtype = True
 
         else:
-            raise ValueError('only integer, float32 and float64 are '
+            raise ValueError('only integer, float32, float64 and float16 are '
                              'supported, you gave %s' % sample.dtype)
 
         if convert_to_var_dtype:
@@ -519,7 +519,7 @@ class Value(cntk_py.Value):
             batch (list of lists of integers): batch input data of indices
             sample_shape (int or tuple): number of classes or shape of each
              sample whose trailing axis is one_hot
-            dtype (`np.float32`, `np.float64`, default None): data type
+            dtype (`np.float32`, `np.float64`, `np.float16`, default None): data type
             device (:class:`~cntk.device.DeviceDescriptor`, default None): device
              this value should be put on
 
@@ -561,6 +561,9 @@ class Value(cntk_py.Value):
                 sample_shape, batch, device, False)
         elif dtype == np.float64:
             value = cntk_py.Value.create_one_hot_double(
+                sample_shape, batch, device, False)
+        elif dtype == np.float16:
+            value = cntk_py.Value.create_one_hot_float16(
                 sample_shape, batch, device, False)
         if remove_sequence_axis:  # added an axis that we should strip again now
             shape = (len(batch),) + sample_shape

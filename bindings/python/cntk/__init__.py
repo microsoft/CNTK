@@ -5,6 +5,9 @@
 
 __version__ = '2.3.1+'
 
+import os
+os.environ["PATH"] += os.pathsep + os.path.join(os.path.dirname(__file__), 'libs')
+
 import numpy as np
 
 from . import cntk_py

@@ -46,6 +46,18 @@
     <ClCompile Include="CPUMatrixFloat.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
+    <ClCompile Include="CPUMatrixHalf.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="CPUMatrixTensorHalf.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="CPUMatrixTensorDouble.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="CPUMatrixTensorFloat.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -118,8 +130,14 @@
     <ClInclude Include="CPUMatrixImpl.h">
       <Filter>CPU</Filter>
     </ClInclude>
-    <ClInclude Include="Mkl2017DnnCommon.h">
+    <ClInclude Include="MklDnnCommon.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="CPUMatrixTensorImpl.h">
+      <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="CPUMatrixTensor.h">
+      <Filter>CPU</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

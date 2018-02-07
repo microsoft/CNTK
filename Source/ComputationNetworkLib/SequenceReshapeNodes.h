@@ -312,8 +312,8 @@ class UnpackSequenceNode : public ComputationNodeNonLooping<ElemType>, public Mu
 
 public:
     DeclareConstructorFromConfig(UnpackSequenceNode);
-    UnpackSequenceNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType paddingValue = 0, bool suppressMaskOutput = false)
-        : Base(deviceId, name), MultiOutputNode<ElemType>(suppressMaskOutput ? 1 : 2), m_paddingValue(paddingValue), m_suppressMaskOutput(suppressMaskOutput)
+    UnpackSequenceNode(DEVICEID_TYPE deviceId, const wstring& name, double paddingValue = 0, bool suppressMaskOutput = false)
+        : Base(deviceId, name), MultiOutputNode<ElemType>(suppressMaskOutput ? 1 : 2), m_paddingValue((ElemType)paddingValue), m_suppressMaskOutput(suppressMaskOutput)
     {}
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override

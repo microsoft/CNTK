@@ -472,7 +472,7 @@ namespace CNTK
             const auto& key = s.m_streamName;
             Dictionary stream;
             std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
-            stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast);
+            stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast, L"maxSequenceLength", s.m_maxSequenceLength);
             stream[L"definesMBSize"] = s.m_definesMbSize;
             input[key] = stream;
             htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
@@ -509,6 +509,20 @@ namespace CNTK
         htk.Add(L"type", L"HTKMLFDeserializer", L"input", stream);
         return htk;
     }
+
+    Deserializer LatticeDeserializer(const std::wstring& streamName, const std::wstring& latticeIndexFile)
+    {
+        Deserializer lattice;
+        Dictionary stream;
+        Dictionary labels;
+        if (latticeIndexFile.empty())
+            LogicError("LatticeDeserializer: the lattice index file parameter is empty");
+        labels.Add(L"latticeIndexFile", latticeIndexFile);
+        stream[streamName] = labels;
+        lattice.Add(L"type", L"LatticeDeserializer", L"input", stream);
+        return lattice;
+    }
+
 
     namespace Internal
     {
@@ -574,6 +588,7 @@ namespace CNTK
                     { L"Base64ImageDeserializer",      L"ImageReader" },
                     { L"HTKFeatureDeserializer",       L"HTKDeserializers" },
                     { L"HTKMLFDeserializer",           L"HTKDeserializers" },
+                    { L"LatticeDeserializer",          L"HTKDeserializers" },
                 };
 
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();

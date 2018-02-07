@@ -13,7 +13,7 @@ import numpy as np
 import numbers
 from . import sequence
 from .functions import ModelFormat, CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, sanitize_multi_axis_reduction_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, sanitize_multi_axis_reduction_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation, sanitize_dtype_cntk
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
@@ -84,7 +84,7 @@ def combine(*operands, **kw_name):
 @typemap
 def mean(*operands, **kw_name):
     '''
-     Create a new Function instance that computes element-wise mean of input tensors
+     Create a new Function instance that computes element-wise mean of input tensors.
 
     Example:
         >>> in1 = C.input_variable((4,))
@@ -115,6 +115,41 @@ def mean(*operands, **kw_name):
         else:
             operands_unfold += [o]
     return mean(operands_unfold, name)
+
+@typemap
+def sum(*operands, **kw_name):
+    '''
+     Create a new Function instance that computes element-wise sum of input tensors.
+
+    Example:
+        >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+        >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+        >>> in1 = C.input_variable(np.shape(in1_data))
+        >>> in2 = C.input_variable(np.shape(in2_data))
+        >>> C.sum([in1, in2]).eval({in1: in1_data, in2: in2_data})
+        array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)
+
+    Args:
+        operands (list): list of functions
+        name (str, optional): the name of the sum Function in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    name = (lambda name='': (name))(**kw_name) # Python 2.7 does not allow (*inputs, name='')
+
+    from cntk.cntk_py import sum
+    if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
+    if isinstance(operands, tuple):
+        operands = list(operands)
+    operands_unfold = []
+    for o in operands:
+        if hasattr(o, 'outputs') and len(o.outputs) > 1:
+            operands_unfold += o.outputs
+        else:
+            operands_unfold += [o]
+    return sum(operands_unfold, name)
 
 @typemap
 def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
@@ -1463,6 +1498,28 @@ def softplus(x, steepness=1, name=''):
     f = typemap(softplus)(steepness * xp) / steepness
     return as_block(f, [(xp, x)], 'softplus', name)
 
+@typemap
+def softsign(x, steepness=1, name=''):
+    '''
+    Computes the element-wise softsign of ``x``:
+
+    :math:`sigmoid(x) = {x \over {1+\abs(x)}}`
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.softsign([[-1, 0, 1]]).eval()
+        array([[-0.5,  0. ,  0.5]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import softsign
+    x = sanitize_input(x)
+    return softsign(x, name)
 
 @typemap
 def sigmoid(x, name=''):
@@ -1948,6 +2005,84 @@ def abs(x, name=''):
     x = sanitize_input(x)
     return abs(x, name)
 
+@typemap
+def element_and(x, y, name=''):
+    '''
+    Computes the element-wise logic AND of ``x``.
+
+    Example:
+        >>> C.element_and([1, 1, 0, 0], [1, 0, 1, 0]).eval()
+        array([ 1.,  0.,  0.,  0.], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import element_and
+    x = sanitize_input(x)
+    y = sanitize_input(y)
+    return element_and(x, y, name)
+
+@typemap
+def element_not(x, name=''):
+    '''
+    Computes the element-wise logic NOT of ``x`` and ``y``.
+
+    Example:
+        >>> C.element_not([1, 1, 0, 0]).eval()
+        array([ 0.,  0.,  1.,  1.], dtype=float32)
+
+    Args:
+        x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import element_not
+    x = sanitize_input(x)
+    return element_not(x, name)
+
+@typemap
+def element_or(x, y, name=''):
+    '''
+    Computes the element-wise logic OR of ``x`` and ``y``.
+
+    Example:
+        >>> C.element_or([1, 1, 0, 0], [1, 0, 1, 0]).eval()
+        array([ 1.,  1.,  1.,  0.], dtype=float32)
+
+    Args:
+        x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import element_or
+    x = sanitize_input(x)
+    y = sanitize_input(y)
+    return element_or(x, y, name)
+
+@typemap
+def element_xor(x, y, name=''):
+    '''
+    Computes the element-wise logic XOR of ``x`` and ``y``.
+
+    Example:
+        >>> C.element_xor([1, 1, 0, 0], [1, 0, 1, 0]).eval()
+        array([ 0.,  1.,  1.,  0.], dtype=float32)
+
+    Args:
+        x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import element_xor
+    x = sanitize_input(x)
+    y = sanitize_input(y)
+    return element_xor(x, y, name)
 
 @typemap
 def negate(x, name=''):
@@ -2257,7 +2392,6 @@ def expand_dims(x, axis, name=''):
     x = sanitize_input(x)
     axis = sanitize_axis(axis)
     return expand_dims(x, axis, name)
-
 
 @typemap
 def transpose(x, perm, name=''):
@@ -2576,7 +2710,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     return one_hot_op(x, num_classes, sparse_output, axis, name)
 
 @typemap
-def gather(reference, indices):
+def gather(reference, indices, axis=None, name=''):
     '''
     Retrieves the elements of indices in the tensor reference.
 
@@ -2596,14 +2730,22 @@ def gather(reference, indices):
                 [[ 10.,  11.]]]], dtype=float32)
 
     Args:
-        reference: A tensor
-        indices: An integer tensor of indices
+        reference: A tensor of values
+        indices: A tensor of indices
+        axis: The axis along which the indices refer to. Default (None) means the  first axis.
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import gather_op
-    return gather_op(indices, reference)
+    indices = sanitize_input(indices)
+    reference = sanitize_input(reference)
+    if axis is None:
+        return gather_op(indices, reference, name)
+    else:
+        axis = sanitize_axis(axis)
+        return gather_op(indices, reference, axis, name)
 
 @typemap
 def flatten(x, axis = None, name = ''):
@@ -2917,6 +3059,82 @@ def reduce_prod(x, axis=None, name=''):
     return reduce_prod(x, axis, name)
 
 @typemap
+def reduce_l1(x, axis=None, keepdims = True, name=''):
+    '''
+    Computes the L1 norm of the input tensor's element along the provided axes. 
+    The resulted tensor has the same rank as the input if keepdims equal 1. 
+    If keepdims equal 0, then the resulted tensor have the reduced dimension pruned.
+
+    Example:
+        >>> C.reduce_l1([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], 2, False).eval()
+        array([[  3.,   7.],
+               [ 11.,  15.],
+               [ 19.,  23.]], dtype=float32)
+
+    Args:
+        x: input tensor
+        axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import reduce_l1
+    x = sanitize_input(x)
+    axis = sanitize_multi_axis_reduction_list(axis)
+    return reduce_l1(x, axis, keepdims, name)
+
+@typemap
+def reduce_l2(x, axis=None, keepdims = True, name=''):
+    '''
+    Computes the L2 norm of the input tensor's element along the provided axes. 
+    The resulted tensor has the same rank as the input if keepdims equal 1. 
+    If keepdims equal 0, then the resulted tensor have the reduced dimension pruned.
+
+    Example:
+        >>> C.reduce_l2([[[1,2], [3,4]]], 2).eval()
+        array([[[ 2.236068],
+                [ 5.        ]]], dtype=float32)
+
+    Args:
+        x: input tensor
+        axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import reduce_l2
+    x = sanitize_input(x)
+    axis = sanitize_multi_axis_reduction_list(axis)
+    return reduce_l2(x, axis, keepdims, name)
+
+@typemap
+def reduce_sum_square(x, axis=None, keepdims = True, name=''):
+    '''
+    Computes the sum square of the input tensor's element along the provided axes. 
+    The resulted tensor has the same rank as the input if keepdims equal 1. 
+    If keepdims equal 0, then the resulted tensor have the reduced dimension pruned.
+
+    Example:
+        >>> C.reduce_sum_square([[[1,2], [3,4]]], 2).eval()
+        array([[[  5.],
+                [ 25.]]], dtype=float32)
+
+    Args:
+        x: input tensor
+        axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import reduce_sum_square
+    x = sanitize_input(x)
+    axis = sanitize_multi_axis_reduction_list(axis)
+    return reduce_sum_square(x, axis, keepdims, name)
+
+@typemap
 def argmax(x, axis=None, name=''):
     '''
     Computes the argmax of the input tensor's elements across the specified axis.
@@ -3218,7 +3436,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
@@ -3244,7 +3462,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         needs_gradient (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
@@ -3275,7 +3493,7 @@ def output_variable(shape, dtype, dynamic_axes, needs_gradient=True, name=''):
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type
+        dtype (np.float32 or np.float64 or np.float16): data type
         dynamic_axes (list or tuple): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
 
@@ -3659,3 +3877,20 @@ def space_to_depth(operand, block_size, name=''):
     if not float(block_size).is_integer():
         raise ValueError('block_size must be an integer.')
     return space_to_depth(operand, block_size, name)
+
+@typemap
+def cast(node_input, dtype, name=''):
+    '''
+    cast input to dtype, with the same shape and dynamic axes. This function currently only support forward.
+    
+    Args:
+        node_input: class:`~cntk.input_variable` that needs the dtype conversion
+        dtype: data_type (np.float32, np.float64, np.float16): data type of the converted output
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`    
+    '''
+    from cntk.cntk_py import cast
+    arg_node_input = sanitize_input(node_input, get_data_type(node_input))
+    arg_dtype = sanitize_dtype_cntk(dtype)
+    return cast(arg_node_input, arg_dtype, name)

@@ -1,54 +1,53 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU W3565 @ 3.20GHz
-    Hardware threads: 8
-    Total Memory: 12580436 kB
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz
+    Hardware threads: 6
+    Total Memory: 58719796 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-SlaveTest/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Config/rnn.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu DeviceId=-1 timestamping=true initOnCPUOnly=true command=train:test train=[SGD=[maxEpochs=3]] train=[epochSize=2048] test=[SGD=[maxEpochs=3]] test=[epochSize=2048] train=[reader=[wordclass="$DataDir$/vocab.txt"]] train=[cvreader=[wordclass="$DataDir$/vocab.txt"]] test=[reader=[wordclass="$DataDir$/vocab.txt"]]
-CNTK 2.0.beta6.0+ (HEAD bbb440, Dec 20 2016 05:52:50) on cntk-muc01 at 2016/12/21 00:51:28
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Config/rnn.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Config OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu DeviceId=-1 timestamping=true initOnCPUOnly=true command=train:test train=[SGD=[maxEpochs=3]] train=[epochSize=2048] test=[SGD=[maxEpochs=3]] test=[epochSize=2048] train=[reader=[wordclass="$DataDir$/vocab.txt"]] train=[cvreader=[wordclass="$DataDir$/vocab.txt"]] test=[reader=[wordclass="$DataDir$/vocab.txt"]]
+CNTK 2.3.1+ (HEAD df860b, Jan 11 2018 19:57:21) at 2018/01/12 01:38:42
 
-C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Config/rnn.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu  DeviceId=-1  timestamping=true  initOnCPUOnly=true  command=train:test  train=[SGD=[maxEpochs=3]]  train=[epochSize=2048]  test=[SGD=[maxEpochs=3]]  test=[epochSize=2048]  train=[reader=[wordclass="$DataDir$/vocab.txt"]]  train=[cvreader=[wordclass="$DataDir$/vocab.txt"]]  test=[reader=[wordclass="$DataDir$/vocab.txt"]]
-Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data
-12/21/2016 00:51:28: -------------------------------------------------------------------
-12/21/2016 00:51:28: Build info: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Config/rnn.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data  RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Config  OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu  DeviceId=-1  timestamping=true  initOnCPUOnly=true  command=train:test  train=[SGD=[maxEpochs=3]]  train=[epochSize=2048]  test=[SGD=[maxEpochs=3]]  test=[epochSize=2048]  train=[reader=[wordclass="$DataDir$/vocab.txt"]]  train=[cvreader=[wordclass="$DataDir$/vocab.txt"]]  test=[reader=[wordclass="$DataDir$/vocab.txt"]]
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data
+-------------------------------------------------------------------
+Build info: 
 
-12/21/2016 00:51:28: 		Built time: Dec 20 2016 05:52:50
-12/21/2016 00:51:28: 		Last modified date: Tue Dec 20 03:38:53 2016
-12/21/2016 00:51:28: 		Build type: Release
-12/21/2016 00:51:28: 		Build target: GPU
-12/21/2016 00:51:28: 		With 1bit-SGD: no
-12/21/2016 00:51:28: 		With ASGD: yes
-12/21/2016 00:51:28: 		Math lib: mkl
-12/21/2016 00:51:28: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
-12/21/2016 00:51:28: 		CUB_PATH: c:\src\cub-1.4.1
-12/21/2016 00:51:28: 		CUDNN_PATH: C:\local\cudnn-8.0-windows10-x64-v5.1
-12/21/2016 00:51:28: 		Build Branch: HEAD
-12/21/2016 00:51:28: 		Build SHA1: bbb4406fcb69b190109ec665d8c0a619271f1b24 (modified)
-12/21/2016 00:51:28: 		Built by svcphil on liana-08-w
-12/21/2016 00:51:28: 		Build Path: C:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
-12/21/2016 00:51:28: -------------------------------------------------------------------
-12/21/2016 00:51:29: -------------------------------------------------------------------
-12/21/2016 00:51:29: GPU info:
+		Built time: Jan 11 2018 19:47:28
+		Last modified date: Thu Jan 11 19:34:23 2018
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		With ASGD: yes
+		Math lib: mkl
+		CUDA version: 9.0.0
+		CUDNN version: 7.0.5
+		Build Branch: HEAD
+		Build SHA1: df860b6311a807a8b1b6fea7c378e491da47250a
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
 
-12/21/2016 00:51:29: 		Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB
-12/21/2016 00:51:29: -------------------------------------------------------------------
+		Device[0]: cores = 3072; computeCapability = 5.2; type = "Tesla M60"; total memory = 8124 MB; free memory = 8001 MB
+-------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
 configparameters: rnn.cntk:command=train:test
 configparameters: rnn.cntk:confClassSize=50
-configparameters: rnn.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Config
+configparameters: rnn.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Config
 configparameters: rnn.cntk:confVocabSize=10000
-configparameters: rnn.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data
-configparameters: rnn.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data
+configparameters: rnn.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data
+configparameters: rnn.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data
 configparameters: rnn.cntk:deviceId=-1
 configparameters: rnn.cntk:initOnCPUOnly=true
-configparameters: rnn.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models
-configparameters: rnn.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn
+configparameters: rnn.cntk:ModelDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models
+configparameters: rnn.cntk:modelPath=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn
 configparameters: rnn.cntk:numCPUThreads=1
-configparameters: rnn.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu
+configparameters: rnn.cntk:OutputDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu
 configparameters: rnn.cntk:precision=float
 configparameters: rnn.cntk:RootDir=..
-configparameters: rnn.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu
+configparameters: rnn.cntk:RunDir=C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu
 configparameters: rnn.cntk:test=[
     action = "eval"
 minibatchSize = 8192                
@@ -59,12 +58,12 @@ minibatchSize = 8192
         randomize = "none"
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
-        wfile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sequenceSentence.bin"
+        wordclass = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
+        wfile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/ptb.test.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/ptb.test.txt"
         features = [
             dim = 0
             sectionType = "data"
@@ -72,7 +71,7 @@ cacheBlockSize = 2000000
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt"
+            labelMappingFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -94,7 +93,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
+            labelMappingFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -108,7 +107,7 @@ cacheBlockSize = 2000000
             ]
         ]
     ]
-] [SGD=[maxEpochs=3]] [epochSize=2048] [reader=[wordclass="C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/vocab.txt"]]
+] [SGD=[maxEpochs=3]] [epochSize=2048] [reader=[wordclass="C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/vocab.txt"]]
 
 configparameters: rnn.cntk:testFile=ptb.test.txt
 configparameters: rnn.cntk:timestamping=true
@@ -161,12 +160,12 @@ lookupTableOrder = 1
 randomize = "none"              
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
-        wfile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sequenceSentence.bin"
+        wordclass = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
+        wfile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/ptb.train.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/ptb.train.txt"
         features = [
             dim = 0
             sectionType = "data"
@@ -177,7 +176,7 @@ cacheBlockSize = 2000000
             beginSequence = "</s>"
             endSequence = "</s>"
             labelDim = "10000"
-            labelMappingFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt"
+            labelMappingFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -196,7 +195,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
+            labelMappingFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -215,12 +214,12 @@ cacheBlockSize = 2000000
         randomize = "none"
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
-        wfile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sequenceSentence.valid.bin"
+        wordclass = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
+        wfile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sequenceSentence.valid.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/ptb.valid.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/ptb.valid.txt"
         features = [
             dim = 0
             sectionType = "data"
@@ -228,7 +227,7 @@ cacheBlockSize = 2000000
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
+            labelMappingFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -250,7 +249,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
+            labelMappingFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -264,13 +263,13 @@ cacheBlockSize = 2000000
             ]
         ]
     ]
-] [SGD=[maxEpochs=3]] [epochSize=2048] [reader=[wordclass="C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/vocab.txt"]] [cvreader=[wordclass="C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/vocab.txt"]]
+] [SGD=[maxEpochs=3]] [epochSize=2048] [reader=[wordclass="C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/vocab.txt"]] [cvreader=[wordclass="C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/vocab.txt"]]
 
 configparameters: rnn.cntk:trainFile=ptb.train.txt
 configparameters: rnn.cntk:validFile=ptb.valid.txt
 configparameters: rnn.cntk:write=[
     action = "write"
-    outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Write"
+    outputPath = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Write"
 outputNodeNames = TrainNodeClassBasedCrossEntropy 
     format = [
 sequencePrologue = "log P(W)="    
@@ -284,12 +283,12 @@ minibatchSize = 8192
 randomize = "none"              
 nbruttsineachrecurrentiter = 1  
 cacheBlockSize = 1              
-        wordclass = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
-        wfile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sequenceSentence.bin"
+        wordclass = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
+        wfile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/ptb.test.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/ptb.test.txt"
         features = [
             dim = 0
             sectionType = "data"
@@ -297,7 +296,7 @@ cacheBlockSize = 1
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt"
+            labelMappingFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -319,7 +318,7 @@ cacheBlockSize = 1
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
+            labelMappingFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -337,170 +336,261 @@ cacheBlockSize = 1
 
 configparameters: rnn.cntk:writeWordAndClassInfo=[
     action = "writeWordAndClass"
-    inputFile = "C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/ptb.train.txt"
+    inputFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/ptb.train.txt"
     beginSequence = "</s>"
     endSequence   = "</s>"
-    outputVocabFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
-    outputWord2Cls  = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/word2cls.txt"
-    outputCls2Index = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/cls2idx.txt"
+    outputVocabFile = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/vocab.txt"
+    outputWord2Cls  = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/word2cls.txt"
+    outputCls2Index = "C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/cls2idx.txt"
     vocabSize = "10000"
     nbrClass = "50"
     cutoff = 0
     printValues = true
 ]
 
-12/21/2016 00:51:29: Commands: train test
-12/21/2016 00:51:29: precision = "float"
-12/21/2016 00:51:29: Using 1 CPU threads.
+01/12/2018 01:38:42: Commands: train test
+01/12/2018 01:38:42: precision = "float"
+01/12/2018 01:38:42: Using 1 CPU threads.
 
-12/21/2016 00:51:29: ##############################################################################
-12/21/2016 00:51:29: #                                                                            #
-12/21/2016 00:51:29: # train command (train action)                                               #
-12/21/2016 00:51:29: #                                                                            #
-12/21/2016 00:51:29: ##############################################################################
+01/12/2018 01:38:42: ##############################################################################
+01/12/2018 01:38:42: #                                                                            #
+01/12/2018 01:38:42: # train command (train action)                                               #
+01/12/2018 01:38:42: #                                                                            #
+01/12/2018 01:38:42: ##############################################################################
 
-12/21/2016 00:51:29: WARNING: 'numMiniBatch4LRSearch' is deprecated, please remove it and use 'numSamples4Search' instead.
-12/21/2016 00:51:29: 
+01/12/2018 01:38:42: WARNING: 'numMiniBatch4LRSearch' is deprecated, please remove it and use 'numSamples4Search' instead.
+01/12/2018 01:38:42: 
 Creating virgin network.
 SimpleNetworkBuilder Using CPU
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt
-LMSequenceReader: Input file is 'C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/ptb.train.txt'.
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt
-LMSequenceReader: Input file is 'C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/ptb.valid.txt'.
-12/21/2016 00:51:29: 
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt
+LMSequenceReader: Input file is 'C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/ptb.train.txt'.
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt
+LMSequenceReader: Input file is 'C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/ptb.valid.txt'.
+01/12/2018 01:38:42: 
 Model has 63 nodes. Using CPU.
 
-12/21/2016 00:51:29: Training criterion:   TrainNodeClassBasedCrossEntropy = ClassBasedCrossEntropyWithSoftmax
+01/12/2018 01:38:42: Training criterion:   TrainNodeClassBasedCrossEntropy = ClassBasedCrossEntropyWithSoftmax
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 122 matrices, 26 are shared as 12, and 96 are not shared.
+Gradient Memory Aliasing: 6 are aliased.
+	AutoName24 (gradient) reuses AutoName25 (gradient)
+	AutoName11 (gradient) reuses AutoName12 (gradient)
+	AutoName33 (gradient) reuses AutoName34 (gradient)
 
-	{ AutoName3 : [200 x 1 x *]
-	  WXC0 : [200 x 150] (gradient) }
-	{ AutoName10 : [200 x *]
-	  AutoName23 : [200 x *] (gradient)
-	  bo0 : [200 x 1] (gradient) }
-	{ AutoName32 : [200 x *]
-	  E0 : [150 x 10000] (gradient) }
-	{ AutoName33 : [200 x 1 x *]
-	  WXO0 : [200 x 150] (gradient) }
-	{ AutoName24 : [200 x 1 x *]
-	  WXF0 : [200 x 150] (gradient) }
-	{ AutoName23 : [200 x *]
-	  AutoName32 : [200 x *] (gradient) }
-	{ AutoName11 : [200 x 1 x *]
-	  WXI0 : [200 x 150] (gradient) }
+Memory Sharing: Out of 122 matrices, 66 are shared as 24, and 56 are not shared.
+
+Here are the ones that share memory:
+	{ PosteriorProb : [10000 x 1 x *]
+	  outputs : [10000 x 1 x *] }
 	{ AutoName10 : [200 x *] (gradient)
-	  AutoName17 : [200 x *]
-	  bf0 : [200 x 1] (gradient) }
-	{ AutoName17 : [200 x *] (gradient)
-	  bi0 : [200 x 1] (gradient) }
-	{ AutoName3 : [200 x 1 x *] (gradient)
-	  LookupTable : [150 x *] (gradient) }
-	{ AutoName36 : [200 x 1 x *] (gradient)
+	  AutoName13 : [200 x 1 x *] (gradient)
+	  AutoName23 : [200 x *] (gradient)
+	  AutoName25 : [200 x 1 x *]
+	  AutoName32 : [200 x *]
+	  AutoName32 : [200 x *] (gradient)
 	  ClassPostProb : [50 x 1 x *] }
-	{ AutoName37 : [200 x 1 x *] (gradient)
-	  ClassPostProb : [50 x 1 x *] (gradient) }
+	{ AutoName3 : [200 x 1 x *] (gradient)
+	  AutoName33 : [200 x 1 x *] }
+	{ AutoName12 : [200 x 1 x *]
+	  AutoName30 : [200 x 1 x *] (gradient) }
+	{ AutoName18 : [200 x 1 x *]
+	  AutoName37 : [200 x 1 x *] (gradient) }
+	{ AutoName28 : [200 x 1 x *] (gradient)
+	  AutoName30 : [200 x 1 x *] }
+	{ AutoName24 : [200 x 1 x *]
+	  AutoName8 : [200 x 1 x *] (gradient)
+	  WXC0 : [200 x 150] (gradient) }
+	{ AutoName16 : [200 x 1 x *] (gradient)
+	  AutoName22 : [200 x 1 x *]
+	  bi0 : [200 x 1] (gradient) }
+	{ AutoName17 : [200 x *] (gradient)
+	  AutoName21 : [200 x 1 x *]
+	  bf0 : [200 x 1] (gradient) }
+	{ AutoName21 : [200 x 1 x *] (gradient)
+	  ClassPostProb : [50 x 1 x *] (gradient)
+	  LookupTable : [150 x *] (gradient) }
+	{ AutoName14 : [200 x 1 x *] (gradient)
+	  AutoName9 : [200 x 1 x *] }
+	{ AutoName33 : [200 x 1 x *] (gradient)
+	  AutoName34 : [200 x 1 x *] (gradient)
+	  AutoName8 : [200 x 1 x *] }
+	{ AutoName35 : [200 x 1 x *]
+	  AutoName38 : [200 x 1 x *] (gradient) }
+	{ AutoName15 : [200 x 1 x *] (gradient)
+	  AutoName34 : [200 x 1 x *]
+	  WXO0 : [200 x 150] (gradient) }
+	{ AutoName18 : [200 x 1 x *] (gradient)
+	  AutoName26 : [200 x 1 x *]
+	  bo0 : [200 x 1] (gradient) }
+	{ AutoName16 : [200 x 1 x *]
+	  AutoName20 : [200 x 1 x *] (gradient) }
+	{ AutoName24 : [200 x 1 x *] (gradient)
+	  AutoName25 : [200 x 1 x *] (gradient) }
+	{ AutoName15 : [200 x 1 x *]
+	  AutoName29 : [200 x 1 x *] (gradient) }
+	{ AutoName20 : [200 x 1 x *]
+	  AutoName36 : [200 x 1 x *] (gradient) }
+	{ AutoName10 : [200 x *]
+	  AutoName17 : [200 x *]
+	  AutoName23 : [200 x *]
+	  AutoName5 : [200 x 1 x *] (gradient)
+	  E0 : [150 x 10000] (gradient) }
+	{ AutoName11 : [200 x 1 x *]
+	  AutoName11 : [200 x 1 x *] (gradient)
+	  AutoName12 : [200 x 1 x *] (gradient)
+	  WXI0 : [200 x 150] (gradient) }
+	{ AutoName13 : [200 x 1 x *]
+	  AutoName35 : [200 x 1 x *] (gradient) }
+	{ AutoName31 : [200 x 1 x *]
+	  AutoName4 : [200 x 1 x *] (gradient)
+	  WXF0 : [200 x 150] (gradient) }
+	{ AutoName19 : [200 x 1 x *] (gradient)
+	  AutoName28 : [200 x 1 x *] }
+
+Here are the ones that don't share memory:
+	{WHC0 : [200 x 200]}
+	{AutoName4 : [200 x 1 x *]}
+	{WHI0 : [200 x 200]}
+	{AutoName1 : [200 x 1 x *]}
+	{AutoName5 : [200 x 1 x *]}
+	{bi0 : [200 x 1]}
+	{features : [10000 x *]}
+	{AutoName2 : [200 x 1 x *]}
+	{AutoName3 : [200 x 1 x *]}
+	{WCO0 : [200 x 1]}
+	{WXI0 : [200 x 150]}
+	{WXF0 : [200 x 150]}
+	{E0 : [150 x 10000]}
+	{bf0 : [200 x 1]}
+	{WHO0 : [200 x 200]}
+	{bo0 : [200 x 1]}
+	{WCF0 : [200 x 1]}
+	{WCI0 : [200 x 1]}
+	{WHF0 : [200 x 200]}
+	{WXO0 : [200 x 150]}
+	{WXC0 : [200 x 150]}
+	{bc0 : [200 x 1]}
+	{TrainNodeClassBasedCrossEntropy : [1]}
+	{AutoName6 : [200 x 1 x *]}
+	{WeightForClassPostProb : [50 x 200]}
+	{labels : [4 x *]}
+	{AutoName7 : [200 x 1 x *]}
+	{W2 : [200 x 10000]}
+	{WHI0 : [200 x 200] (gradient)}
+	{bc0 : [200 x 1] (gradient)}
+	{WHF0 : [200 x 200] (gradient)}
+	{W2 : [200 x 10000] (gradient)}
+	{WCO0 : [200 x 1] (gradient)}
+	{TrainNodeClassBasedCrossEntropy : [1] (gradient)}
+	{AutoName31 : [200 x 1 x *] (gradient)}
+	{WCI0 : [200 x 1] (gradient)}
+	{WCF0 : [200 x 1] (gradient)}
+	{WeightForClassPostProb : [50 x 200] (gradient)}
+	{WHC0 : [200 x 200] (gradient)}
+	{WHO0 : [200 x 200] (gradient)}
+	{AutoName7 : [200 x 1 x *] (gradient)}
+	{AutoName26 : [200 x 1 x *] (gradient)}
+	{AutoName19 : [200 x 1 x *]}
+	{AutoName14 : [200 x 1 x *]}
+	{AutoName9 : [200 x 1 x *] (gradient)}
+	{AutoName6 : [200 x 1 x *] (gradient)}
+	{AutoName27 : [200 x 1 x *]}
+	{LookupTable : [150 x *]}
+	{AutoName38 : [200 x 1 x *]}
+	{AutoName27 : [200 x 1 x *] (gradient)}
+	{AutoName22 : [200 x 1 x *] (gradient)}
+	{AutoName2 : [200 x 1 x *] (gradient)}
+	{AutoName29 : [200 x 1 x *]}
+	{AutoName36 : [200 x 1 x *]}
+	{AutoName1 : [200 x 1 x *] (gradient)}
+	{AutoName37 : [200 x 1 x *]}
 
 
-12/21/2016 00:51:29: Training 3791400 parameters in 18 out of 18 parameter tensors and 59 nodes with gradient:
+01/12/2018 01:38:42: Training 3791400 parameters in 18 out of 18 parameter tensors and 59 nodes with gradient:
 
-12/21/2016 00:51:29: 	Node 'E0' (LearnableParameter operation) : [150 x 10000]
-12/21/2016 00:51:29: 	Node 'W2' (LearnableParameter operation) : [200 x 10000]
-12/21/2016 00:51:29: 	Node 'WCF0' (LearnableParameter operation) : [200 x 1]
-12/21/2016 00:51:29: 	Node 'WCI0' (LearnableParameter operation) : [200 x 1]
-12/21/2016 00:51:29: 	Node 'WCO0' (LearnableParameter operation) : [200 x 1]
-12/21/2016 00:51:29: 	Node 'WHC0' (LearnableParameter operation) : [200 x 200]
-12/21/2016 00:51:29: 	Node 'WHF0' (LearnableParameter operation) : [200 x 200]
-12/21/2016 00:51:29: 	Node 'WHI0' (LearnableParameter operation) : [200 x 200]
-12/21/2016 00:51:29: 	Node 'WHO0' (LearnableParameter operation) : [200 x 200]
-12/21/2016 00:51:29: 	Node 'WXC0' (LearnableParameter operation) : [200 x 150]
-12/21/2016 00:51:29: 	Node 'WXF0' (LearnableParameter operation) : [200 x 150]
-12/21/2016 00:51:29: 	Node 'WXI0' (LearnableParameter operation) : [200 x 150]
-12/21/2016 00:51:29: 	Node 'WXO0' (LearnableParameter operation) : [200 x 150]
-12/21/2016 00:51:29: 	Node 'WeightForClassPostProb' (LearnableParameter operation) : [50 x 200]
-12/21/2016 00:51:29: 	Node 'bc0' (LearnableParameter operation) : [200 x 1]
-12/21/2016 00:51:29: 	Node 'bf0' (LearnableParameter operation) : [200 x 1]
-12/21/2016 00:51:29: 	Node 'bi0' (LearnableParameter operation) : [200 x 1]
-12/21/2016 00:51:29: 	Node 'bo0' (LearnableParameter operation) : [200 x 1]
+01/12/2018 01:38:42: 	Node 'E0' (LearnableParameter operation) : [150 x 10000]
+01/12/2018 01:38:42: 	Node 'W2' (LearnableParameter operation) : [200 x 10000]
+01/12/2018 01:38:42: 	Node 'WCF0' (LearnableParameter operation) : [200 x 1]
+01/12/2018 01:38:42: 	Node 'WCI0' (LearnableParameter operation) : [200 x 1]
+01/12/2018 01:38:42: 	Node 'WCO0' (LearnableParameter operation) : [200 x 1]
+01/12/2018 01:38:42: 	Node 'WHC0' (LearnableParameter operation) : [200 x 200]
+01/12/2018 01:38:42: 	Node 'WHF0' (LearnableParameter operation) : [200 x 200]
+01/12/2018 01:38:42: 	Node 'WHI0' (LearnableParameter operation) : [200 x 200]
+01/12/2018 01:38:42: 	Node 'WHO0' (LearnableParameter operation) : [200 x 200]
+01/12/2018 01:38:42: 	Node 'WXC0' (LearnableParameter operation) : [200 x 150]
+01/12/2018 01:38:42: 	Node 'WXF0' (LearnableParameter operation) : [200 x 150]
+01/12/2018 01:38:42: 	Node 'WXI0' (LearnableParameter operation) : [200 x 150]
+01/12/2018 01:38:42: 	Node 'WXO0' (LearnableParameter operation) : [200 x 150]
+01/12/2018 01:38:42: 	Node 'WeightForClassPostProb' (LearnableParameter operation) : [50 x 200]
+01/12/2018 01:38:42: 	Node 'bc0' (LearnableParameter operation) : [200 x 1]
+01/12/2018 01:38:42: 	Node 'bf0' (LearnableParameter operation) : [200 x 1]
+01/12/2018 01:38:42: 	Node 'bi0' (LearnableParameter operation) : [200 x 1]
+01/12/2018 01:38:42: 	Node 'bo0' (LearnableParameter operation) : [200 x 1]
 
-12/21/2016 00:51:29: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+01/12/2018 01:38:42: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-12/21/2016 00:51:30: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+01/12/2018 01:38:42: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-12/21/2016 00:51:30: Starting minibatch loop.
+01/12/2018 01:38:42: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-12/21/2016 00:51:31: Finished Epoch[ 1 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.87818034 * 2061; totalSamplesSeen = 2061; learningRatePerSample = 0.1; epochTime=1.04194s
+01/12/2018 01:38:43: Finished Epoch[ 1 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.87323783 * 2061; totalSamplesSeen = 2061; learningRatePerSample = 0.1; epochTime=0.7104s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-12/21/2016 00:51:37: Final Results: Minibatch[1-704]: TrainNodeClassBasedCrossEntropy = 6.63399237 * 73760; perplexity = 760.51236760
-12/21/2016 00:51:37: Finished Epoch[ 1 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.63399237 * 73760
-12/21/2016 00:51:37: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.1'
+01/12/2018 01:38:47: Final Results: Minibatch[1-704]: TrainNodeClassBasedCrossEntropy = 6.60381050 * 73760; perplexity = 737.90161504
+01/12/2018 01:38:47: Finished Epoch[ 1 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.60381050 * 73760
+01/12/2018 01:38:47: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.1'
 
-12/21/2016 00:51:37: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+01/12/2018 01:38:47: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-12/21/2016 00:51:37: Starting minibatch loop.
+01/12/2018 01:38:47: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-12/21/2016 00:51:38: Finished Epoch[ 2 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.70695007 * 2081; totalSamplesSeen = 4142; learningRatePerSample = 0.1; epochTime=0.740725s
+01/12/2018 01:38:47: Finished Epoch[ 2 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.70405417 * 2081; totalSamplesSeen = 4142; learningRatePerSample = 0.1; epochTime=0.471032s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-12/21/2016 00:51:44: Final Results: Minibatch[1-353]: TrainNodeClassBasedCrossEntropy = 6.51953216 * 73760; perplexity = 678.26099237
-12/21/2016 00:51:44: Finished Epoch[ 2 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.51953216 * 73760
-12/21/2016 00:51:44: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.2'
+01/12/2018 01:38:50: Final Results: Minibatch[1-353]: TrainNodeClassBasedCrossEntropy = 6.51547762 * 73760; perplexity = 675.51652586
+01/12/2018 01:38:50: Finished Epoch[ 2 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.51547762 * 73760
+01/12/2018 01:38:51: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.2'
 
-12/21/2016 00:51:44: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+01/12/2018 01:38:51: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-12/21/2016 00:51:44: Starting minibatch loop.
+01/12/2018 01:38:51: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-12/21/2016 00:51:45: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.60335599 * 2343; totalSamplesSeen = 6485; learningRatePerSample = 0.1; epochTime=0.690402s
+01/12/2018 01:38:51: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.66807503 * 2343; totalSamplesSeen = 6485; learningRatePerSample = 0.1; epochTime=0.423608s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-12/21/2016 00:51:50: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.55399634 * 73760; perplexity = 702.04418248
-12/21/2016 00:51:50: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.55399634 * 73760
-12/21/2016 00:51:50: Loading (rolling back to) previous model with best training-criterion value: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.2.
-12/21/2016 00:51:50: learnRatePerSample reduced to 0.050000001
-12/21/2016 00:51:50: SGD: revoke back to and update checkpoint file for epoch 2
+01/12/2018 01:38:54: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.89434621 * 73760; perplexity = 986.68043105
+01/12/2018 01:38:54: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.89434621 * 73760
+01/12/2018 01:38:54: Loading (rolling back to) previous model with best training-criterion value: C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.2.
+01/12/2018 01:38:55: learnRatePerSample reduced to 0.050000001
+01/12/2018 01:38:55: SGD: revoke back to and update checkpoint file for epoch 2
 
-12/21/2016 00:51:50: Starting Epoch 3: learning rate per sample = 0.050000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+01/12/2018 01:38:55: Starting Epoch 3: learning rate per sample = 0.050000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-12/21/2016 00:51:50: Starting minibatch loop.
+01/12/2018 01:38:55: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-12/21/2016 00:51:51: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.58454872 * 2343; totalSamplesSeen = 6485; learningRatePerSample = 0.050000001; epochTime=0.656943s
+01/12/2018 01:38:55: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.35434756 * 2343; totalSamplesSeen = 6485; learningRatePerSample = 0.050000001; epochTime=0.416452s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-12/21/2016 00:51:56: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.97530001 * 73760; perplexity = 1069.87811959
-12/21/2016 00:51:56: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.97530001 * 73760
-12/21/2016 00:51:56: Loading (rolling back to) previous model with best training-criterion value: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn.2.
-12/21/2016 00:51:57: learnRatePerSample reduced to 0.025
-12/21/2016 00:51:57: SGD: revoke back to and update checkpoint file for epoch 2
+01/12/2018 01:38:58: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.43065822 * 73760; perplexity = 620.58229082
+01/12/2018 01:38:58: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.43065822 * 73760
+01/12/2018 01:38:58: SGD: Saving checkpoint model 'C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn'
 
-12/21/2016 00:51:57: Starting Epoch 3: learning rate per sample = 0.025000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-
-12/21/2016 00:51:57: Starting minibatch loop.
-LMSequenceReader: Reading epoch data... 42068 sequences read.
-12/21/2016 00:51:57: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.31459692 * 2343; totalSamplesSeen = 6485; learningRatePerSample = 0.025; epochTime=0.636467s
-LMSequenceReader: Reading epoch data... 3370 sequences read.
-LMSequenceReader: Reading epoch data... 0 sequences read.
-12/21/2016 00:52:02: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.47008357 * 73760; perplexity = 645.53766920
-12/21/2016 00:52:02: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.47008357 * 73760
-12/21/2016 00:52:03: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/Models/rnn.dnn'
-
-12/21/2016 00:52:03: Action "train" complete.
+01/12/2018 01:38:58: Action "train" complete.
 
 
-12/21/2016 00:52:03: ##############################################################################
-12/21/2016 00:52:03: #                                                                            #
-12/21/2016 00:52:03: # test command (eval action)                                                 #
-12/21/2016 00:52:03: #                                                                            #
-12/21/2016 00:52:03: ##############################################################################
+01/12/2018 01:38:58: ##############################################################################
+01/12/2018 01:38:58: #                                                                            #
+01/12/2018 01:38:58: # test command (eval action)                                                 #
+01/12/2018 01:38:58: #                                                                            #
+01/12/2018 01:38:58: ##############################################################################
 
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161221004215.44492\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt
-LMSequenceReader: Input file is 'C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Examples\SequenceToSequence\PennTreebank\Data/ptb.test.txt'.
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: C:\local\cygwin-2.8.2-x64\tmp\cntk-test-20180112013841.334382\Examples\Text\PennTreebank_RNN@release_cpu/sentenceLabels.out.txt
+LMSequenceReader: Input file is 'C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\SequenceToSequence\PennTreebank\Data/ptb.test.txt'.
 
 Post-processing network...
 
@@ -614,15 +704,79 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 63 matrices, 2 are shared as 1, and 61 are not shared.
+Memory Sharing: Out of 63 matrices, 10 are shared as 4, and 53 are not shared.
 
+Here are the ones that share memory:
 	{ PosteriorProb : [10000 x 1 x *1]
 	  outputs : [10000 x 1 x *1] }
+	{ AutoName37 : [200 x 1 x *1]
+	  ClassPostProb : [50 x 1 x *1] }
+	{ AutoName38 : [200 x 1 x *1]
+	  LookupTable : [150 x *1] }
+	{ AutoName10 : [200 x *1]
+	  AutoName23 : [200 x *1]
+	  AutoName32 : [200 x *1]
+	  AutoName9 : [200 x 1 x *1] }
+
+Here are the ones that don't share memory:
+	{AutoName2 : [200 x 1 x *1]}
+	{AutoName6 : [200 x 1 x *1]}
+	{bc0 : [200 x 1]}
+	{AutoName1 : [200 x 1 x *1]}
+	{bf0 : [200 x 1]}
+	{bi0 : [200 x 1]}
+	{bo0 : [200 x 1]}
+	{E0 : [150 x 10000]}
+	{AutoName7 : [200 x 1 x *1]}
+	{features : [10000 x *1]}
+	{labels : [4 x *1]}
+	{AutoName4 : [200 x 1 x *1]}
+	{AutoName3 : [200 x 1 x *1]}
+	{AutoName5 : [200 x 1 x *1]}
+	{AutoName31 : [200 x 1 x *1]}
+	{AutoName15 : [200 x 1 x *1]}
+	{AutoName19 : [200 x 1 x *1]}
+	{AutoName14 : [200 x 1 x *1]}
+	{AutoName35 : [200 x 1 x *1]}
+	{WCI0 : [200 x 1]}
+	{AutoName25 : [200 x 1 x *1]}
+	{AutoName21 : [200 x 1 x *1]}
+	{AutoName30 : [200 x 1 x *1]}
+	{WXO0 : [200 x 150]}
+	{AutoName20 : [200 x 1 x *1]}
+	{AutoName24 : [200 x 1 x *1]}
+	{AutoName17 : [200 x *1]}
+	{AutoName27 : [200 x 1 x *1]}
+	{AutoName28 : [200 x 1 x *1]}
+	{AutoName34 : [200 x 1 x *1]}
+	{AutoName12 : [200 x 1 x *1]}
+	{AutoName18 : [200 x 1 x *1]}
+	{AutoName16 : [200 x 1 x *1]}
+	{AutoName29 : [200 x 1 x *1]}
+	{WHO0 : [200 x 200]}
+	{WXC0 : [200 x 150]}
+	{AutoName36 : [200 x 1 x *1]}
+	{WeightForClassPostProb : [50 x 200]}
+	{WHC0 : [200 x 200]}
+	{WHF0 : [200 x 200]}
+	{W2 : [200 x 10000]}
+	{WCO0 : [200 x 1]}
+	{WCF0 : [200 x 1]}
+	{WHI0 : [200 x 200]}
+	{WXF0 : [200 x 150]}
+	{AutoName33 : [200 x 1 x *1]}
+	{AutoName11 : [200 x 1 x *1]}
+	{AutoName22 : [200 x 1 x *1]}
+	{WXI0 : [200 x 150]}
+	{AutoName26 : [200 x 1 x *1]}
+	{AutoName8 : [200 x 1 x *1]}
+	{TrainNodeClassBasedCrossEntropy : [1]}
+	{AutoName13 : [200 x 1 x *1]}
 
 LMSequenceReader: Reading epoch data... 3760 sequences read.
-12/21/2016 00:52:04: Minibatch[1-1]: TrainNodeClassBasedCrossEntropy = 6.44042347 * 3456
-12/21/2016 00:52:04: Final Results: Minibatch[1-1]: TrainNodeClassBasedCrossEntropy = 6.44042347 * 3456; perplexity = 626.67212107
+01/12/2018 01:38:59: Minibatch[1-1]: TrainNodeClassBasedCrossEntropy = 6.40715705 * 3456
+01/12/2018 01:38:59: Final Results: Minibatch[1-1]: TrainNodeClassBasedCrossEntropy = 6.40715705 * 3456; perplexity = 606.16792415
 
-12/21/2016 00:52:04: Action "eval" complete.
+01/12/2018 01:38:59: Action "eval" complete.
 
-12/21/2016 00:52:04: __COMPLETED__
+01/12/2018 01:38:59: __COMPLETED__

@@ -44,7 +44,7 @@ namespace CNTK
             m_aggregatedEvaluationFunction = m_evaluationFunction;
             m_testSampleCountVar = m_evaluationFunction->RootFunction()->Inputs()[0];
         }
-
+        
         if(initializeCombined)
             m_combinedEvalFunction = Combine(GetCombinedEvalFunctionArgs());
     }

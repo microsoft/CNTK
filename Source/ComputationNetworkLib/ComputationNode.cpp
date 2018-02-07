@@ -16,7 +16,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-using namespace std;
+    using namespace std;
 
 // -----------------------------------------------------------------------
 // subroutines for evaluation
@@ -85,18 +85,18 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
-        ComputationNodePtr child = Input(i);
-        if (child->m_needsGradient &&
+        ComputationNodeBasePtr child = m_inputs[i];
+        if (child->NeedsGradient() &&
             ((childrenInThisLoop  && child->IsPartOfLoop() == IsPartOfLoop()) ||
              (childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()) ))
         {
             // fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
-            if (!m_needsGradient)
+            if (!NeedsGradient())
                 LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
 #if DUMPOUTPUT
             fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
-            child->LazyZeroGradient(this); // set gradient to 0 if this is the first time
+            SMART_NODE_INVOKE(ComputationNode, child, LazyZeroGradient, this); // set gradient to 0 if this is the first time
 
             // If we propagate from a loop to a node that is outside the loop, we are not efficient.
             // This case is handled by SEQTraversalFlowControlNode::Backprop().
@@ -108,7 +108,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
             }
 
             // before backprop, verify gradient optimization info
-            Input(i)->VerifyGradientOptimization(this);
+            SMART_NODE_INVOKE(ComputationNode, child, VerifyGradientOptimization, this);
 
             // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
             BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
@@ -753,11 +753,14 @@ template <class ElemType>
     {
         for (size_t i = 0; i < m_inputs.size(); i++)
         {
-            ComputationNodePtr child = Input(i);
-            if (child->m_needsGradient)
+            ComputationNodeBasePtr child = m_inputs[i];
+            if (child->NeedsGradient())
             {
-                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-                if (child->Gradient().HasNan("EndBackprop"))
+                SMART_NODE_INVOKE(ComputationNode, child, MaskMissingGradientColumnsToZero, FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+
+                bool hasNan = false;
+                SMART_NODE_INVOKE_WITH_RET(ComputationNode, child, Gradient().HasNan, hasNan, "EndBackprop");
+                if (hasNan)
                 {
                     LogicError("%ls %ls operation unexpectedly produced NaN gradients on its input %ls.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str());
                 }
@@ -1004,7 +1007,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
                     double absSumLocal = 0;
                     for (size_t j = 0; j < jend; j++) // loop over elements
                     {
-                        absSumLocal += abs(seqData[i * istride + j * jstride]);
+                        absSumLocal += (double)abs(seqData[i * istride + j * jstride]);
                     }
                     absSum += absSumLocal;
                 }
@@ -1136,6 +1139,7 @@ atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
 template <> map<size_t, map<size_t, shared_ptr<SingleMatrix>>> ComputationNode<float>::s_constOnes{};
 template <> map<size_t, map<size_t, shared_ptr<DoubleMatrix>>> ComputationNode<double>::s_constOnes{};
+template <> map<size_t, map<size_t, shared_ptr<HalfMatrix>>> ComputationNode<half>::s_constOnes{};
 
 // -----------------------------------------------------------------------
 // instantiate the core class templates
@@ -1143,6 +1147,7 @@ template <> map<size_t, map<size_t, shared_ptr<DoubleMatrix>>> ComputationNode<d
 
 template class ComputationNode<float>;
 template class ComputationNode<double>;
+template class ComputationNode<half>;
 
 }}}
 

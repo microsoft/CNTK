@@ -19,9 +19,9 @@ if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
 if IS_WINDOWS:
     if os.system('cl 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
         print("Compiler was not found in path.\n"
-              "Make sure you installed the C++ tools during Visual Studio 2015 install and \n"
+              "Make sure you installed the C++ tools during Visual Studio 2017 install and \n"
               "run vcvarsall.bat from a DOS command prompt:\n"
-              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall\" amd64\n")
+              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio\\17\\Community\\VC\\Auxiliary\\Build\\vcvarsall\" amd64 -vcvars_ver=14.11\n")
         sys.exit(1)
 
     try:
@@ -159,15 +159,8 @@ cntk_module = Extension(
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
 package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt', 'contrib/deeprl/tests/data/initial_policy_network.dnn'] }
-
-if IS_WINDOWS:
-    # On Windows copy all runtime libs to the base folder of Python
-    kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
-                  package_data = package_data)
-else:
-    # On Linux copy all runtime libs into the cntk/lib folder.
-    package_data['cntk'] += rt_libs
-    kwargs = dict(package_data = package_data)
+package_data['cntk'] += rt_libs
+kwargs = dict(package_data = package_data)
 
 cntk_install_requires = [
     'numpy>=1.11',

@@ -33,7 +33,7 @@ Example:
     >>> tp.is_sparse
     True
 
-    >>> # if the first argument is np.float32 or np.float64, then this sets the dtype
+    >>> # if the first argument is np.float32 or np.float64 or np.float16, then this sets the dtype
     >>> tp = Tensor[np.float32,13,42]
     >>> print(tp.dtype == np.float32)
     True
@@ -53,7 +53,7 @@ Example:
     >>> f.shape
     (500,)
 
-Scalars can be just specified as float, np.float32, or np.float64.
+Scalars can be just specified as float or np.float32 or np.float64 or np.float16.
 
 Example:
     >>> @Function
@@ -155,8 +155,8 @@ def _make_tensor_meta(cls_name, **kwargs):
         def __getitem__(self, shape):
             if not isinstance(shape, tuple):
                 shape = (shape,)
-            # the first shape parameter can be np.float32 or 64, similar to Eigen
-            if len(shape) > 0 and (shape[0] == np.float32 or shape[0] == np.float64):
+            # the first shape parameter can be np.float32 or np.float64 or np.float16, similar to Eigen
+            if len(shape) > 0 and (shape[0] == np.float32 or shape[0] == np.float64 or shape[0] == np.float16):
                 kwargs['dtype'] = shape[0]
                 shape = shape[1:]
             return Variable._Type(shape, **kwargs) # inject it for @Function 

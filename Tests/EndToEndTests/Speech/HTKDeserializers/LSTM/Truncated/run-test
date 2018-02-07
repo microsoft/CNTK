@@ -5,11 +5,7 @@
 OriginalTestDir=../../../LSTM/Truncated
 ConfigDir=$TEST_DIR/../../../LSTM
 
-(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
-if [ $? != 0 ]; then
-  echo Error: Baselines must match original test. Copy from $OriginalTestDir.
-  exit 1
-fi
+checkOriginalBaseline $TEST_DIR $OriginalTestDir
 
 # cntkrun <CNTK config file name> <additional CNTK args>
 cntkrun cntk.cntk 'speechTrain=[reader=[readerType=HTKDeserializers]] speechTrain=[SGD=[momentumAsTimeConstant=0:6074.9]] modelSelector=0' || exit $?

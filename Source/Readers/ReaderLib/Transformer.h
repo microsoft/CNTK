@@ -25,7 +25,7 @@ public:
     virtual StreamInformation Transform(const StreamInformation& inputStream) = 0;
 
     // This method should describe how input sequences is transformed to the output sequence.
-    virtual SequenceDataPtr Transform(SequenceDataPtr inputSequence) = 0;
+    virtual SequenceDataPtr Transform(SequenceDataPtr inputSequence, int indexInBatch=0) = 0;
 
     virtual ~Transformer()
     {

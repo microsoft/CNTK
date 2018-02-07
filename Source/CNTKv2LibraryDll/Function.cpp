@@ -1650,6 +1650,12 @@ namespace CNTK
     FunctionPtr Squeeze(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Squeeze, operand, {}, name);
+
+        // TODO: this code is needed for ONNX converter because ONNX requires squeeze axis. However, unit test failed with this code.
+        // Need further investigation.
+        //auto additionalProperties = Dictionary();
+        //additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(GetSqueezableAxes(operand.Shape()));
+        //return UnaryOp(PrimitiveOpType::Squeeze, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr Squeeze(const Variable& operand, const std::vector<Axis>& axes, const std::wstring& name)
@@ -1723,6 +1729,48 @@ namespace CNTK
     {
         std::vector<Variable> operands = AutoBroadcastSequence(op, leftOperand, rightOperand, autoBroadcast);
         return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+    }
+
+    FunctionPtr ElementAnd(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        auto leftOperandPlaceholder = PlaceholderVariable();
+        auto rightOperandPlaceholder = PlaceholderVariable();
+        auto zero = Constant::Scalar(leftOperand.GetDataType(), 0.0);
+        auto result = Greater(ElementTimes(
+            Greater(leftOperandPlaceholder, zero),
+            Greater(rightOperandPlaceholder, zero)), zero);
+        return AsBlock(std::move(result), { { leftOperandPlaceholder, leftOperand },{ rightOperandPlaceholder, rightOperand } }, L"And", name);
+    }
+
+    FunctionPtr ElementNot(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = Plus(
+            Negate(Greater(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0))),
+            Constant::Scalar(operand.GetDataType(), 1.0));
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Not", name);
+    }
+
+    FunctionPtr ElementOr(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        auto leftOperandPlaceholder = PlaceholderVariable();
+        auto rightOperandPlaceholder = PlaceholderVariable();
+        auto zero = Constant::Scalar(leftOperand.GetDataType(), 0.0);
+        auto result = Greater(Plus(
+            Greater(leftOperandPlaceholder, zero),
+            Greater(rightOperandPlaceholder, zero)), zero);
+        return AsBlock(std::move(result), { { leftOperandPlaceholder, leftOperand },{ rightOperandPlaceholder, rightOperand } }, L"Or", name);
+    }
+
+    FunctionPtr ElementXor(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        auto leftOperandPlaceholder = PlaceholderVariable();
+        auto rightOperandPlaceholder = PlaceholderVariable();
+        auto zero = Constant::Scalar(leftOperand.GetDataType(), 0.0);
+        auto result = NotEqual(
+            Greater(leftOperandPlaceholder, zero),
+            Greater(rightOperandPlaceholder, zero));
+        return AsBlock(std::move(result), { { leftOperandPlaceholder, leftOperand },{ rightOperandPlaceholder, rightOperand } }, L"Xor", name);
     }
 
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
@@ -2050,14 +2098,14 @@ namespace CNTK
 
             FunctionPtr classificationErrorComposite;
             if (axis == Axis(0))
-                classificationErrorComposite = Minus(Constant::Scalar(1.0f), TransposeTimes(labelPlaceholder, Hardmax(predictionPlaceholder)));
+                classificationErrorComposite = Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labelPlaceholder, Hardmax(predictionPlaceholder)));
             else
             {
                 auto axMax = ReduceMax(predictionPlaceholder, axis);
                 auto pred = Equal(predictionPlaceholder, axMax);
                 auto wrongPred = NotEqual(labelPlaceholder, pred);
                 auto axErr = ReduceSum(wrongPred, axis);
-                auto capErr = GreaterEqual(axErr, Constant::Scalar(1.0f));
+                auto capErr = GreaterEqual(axErr, Constant::Scalar(prediction.GetDataType(), 1.0));
                 classificationErrorComposite = ReduceMean(capErr, Axis::AllStaticAxes());
             }
 
@@ -2083,6 +2131,26 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(tokensToIgnore);
 
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameSymListPath] = symListPath;
+        additionalProperties[PrimitiveFunction::AttributeNamePhonePath] = phonePath;
+        additionalProperties[PrimitiveFunction::AttributeNameStateListPath] = stateListPath;
+        additionalProperties[PrimitiveFunction::AttributeNameTransProbPath] = transProbPath;
+        additionalProperties[PrimitiveFunction::AttributeNameHSmoothingWeight] = hSmoothingWeight;
+        additionalProperties[PrimitiveFunction::AttributeNameFrameDropThresh] = frameDropThresh;
+        additionalProperties[PrimitiveFunction::AttributeNameDoReferenceAlign] = doReferenceAlign;
+        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarUsesMBR] = seqGammarUsesMBR;
+        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarAMF] = seqGammarAMF;
+        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarLMF] = seqGammarLMF;
+        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarBMMIFactor] = seqGammarBMMIFactor;
+        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarWordPen] = seqGammarWordPen;
+        std::vector<Variable> operands = { labels, prediction, scaledLogLikelihood, lattice };
+
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::LatticeSequenceWithSoftmax, operands, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
@@ -2125,6 +2193,28 @@ namespace CNTK
     FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Gather, indices, reference, Dictionary(), name);
+    }
+
+    FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const Axis& axis, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+
+        if (!axis.IsStaticAxis())
+            LogicError("Gather operation only supports a single static axis.");
+
+        if (axis.StaticAxisIndex() == -1)
+            return BinaryOp(PrimitiveOpType::Gather, indices, reference, std::move(additionalProperties), name);
+        else
+        {
+            auto indPlaceholder = PlaceholderVariable();
+            auto refPlaceholder = PlaceholderVariable();
+            auto lastAxis = Axis(-1);
+            auto swapped = TransposeAxes(refPlaceholder, lastAxis, axis);
+            auto gatherSwapped = GatherOp(indPlaceholder, swapped);
+            auto result = TransposeAxes(gatherSwapped, lastAxis, axis);
+            return AsBlock(std::move(result), { { refPlaceholder, reference }, { indPlaceholder, indices } }, std::move(additionalProperties), L"GatherOp", name);
+        }
     }
 
     FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name)
@@ -2187,6 +2277,56 @@ namespace CNTK
     FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalProdReductionOpName, axis, name);
+    }
+
+    FunctionPtr ReduceFunctionAsBlock(const Variable& operand, const std::vector<Axis>& axes, bool keepDims,
+        const std::function<FunctionPtr(const Variable&, const std::vector<Axis>& axes)> func, 
+        const std::wstring opName, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+        additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = keepDims;
+        auto operandPlaceholder = PlaceholderVariable(L"operand");
+        auto result = func(operandPlaceholder, axes);
+        if (!keepDims)
+        {
+            // Output shape is not available before replacing operandPlaceholder with operand.
+            // But we need to know the output shape in order to squeeze it. 
+            // Therefore we have to manually calculate the expected shape.
+            NDShape expectedShape = operand.Shape();
+            for (const Axis& ax : axes)
+            {
+                auto axis = NormalizeStaticAxis(const_cast<Axis &>(ax), expectedShape.Rank());
+                if (!axis.IsStaticAxis())
+                    LogicError("ReduceOp: can only reduce on static axes.");
+                auto idx = axis.StaticAxisIndex();
+                expectedShape[idx] = 1;
+            }
+
+            result = Reshape(result, GetSqueezedShape(expectedShape, axes));
+        }
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), opName, name);
+    }
+
+    FunctionPtr ReduceL1(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return ReduceSum(Abs(placeholder), axes); };
+        auto f = ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceL1", name);
+        return f;
+    }
+
+    FunctionPtr ReduceL2(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Sqrt(ReduceSumSquare(placeholder, axes)); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceL2", name);
+    }
+
+    FunctionPtr ReduceSumSquare(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) 
+        { return ReduceSum(ElementTimes(placeholder, placeholder), axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceSumSquare", name);
     }
 
     FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name)
@@ -2435,20 +2575,42 @@ namespace CNTK
         }
 
         std::vector<std::pair<Variable, Variable>> argumentsMap;
-        auto planceholder = PlaceholderVariable();
-        argumentsMap.push_back(std::pair<Variable, Variable>(planceholder, operands[0]));
-        FunctionPtr result = planceholder;
+        auto placeholder = PlaceholderVariable();
+        argumentsMap.push_back(std::pair<Variable, Variable>(placeholder, operands[0]));
+        FunctionPtr result = placeholder;
         for (int i = 1; i < count; i++)
         {
-            planceholder = PlaceholderVariable();
-            argumentsMap.push_back(std::pair<Variable, Variable>(planceholder, operands[i]));
-            result = Plus(result, planceholder);
+            placeholder = PlaceholderVariable();
+            argumentsMap.push_back(std::pair<Variable, Variable>(placeholder, operands[i]));
+            result = Plus(result, placeholder);
         }
 
         Constant divider = Constant::Scalar(operands[0].GetDataType(), static_cast<double>(operands.size()));
         result = ElementDivide(result, divider);
 
         return AsBlock(std::move(result), argumentsMap, L"Mean", name);
+    }
+
+    FunctionPtr Sum(const std::vector<Variable>& operands, const std::wstring& name)
+    {
+        int count = operands.size();
+        if (count == 0)
+        {
+            LogicError("Sum: no operand provided.");
+        }
+
+        std::vector<std::pair<Variable, Variable>> argumentsMap;
+        auto placeholder = PlaceholderVariable();
+        argumentsMap.push_back(std::pair<Variable, Variable>(placeholder, operands[0]));
+        FunctionPtr result = placeholder;
+        for (int i = 1; i < count; i++)
+        {
+            placeholder = PlaceholderVariable();
+            argumentsMap.push_back(std::pair<Variable, Variable>(placeholder, operands[i]));
+            result = Plus(result, placeholder);
+        }
+
+        return AsBlock(std::move(result), argumentsMap, L"Sum", name);
     }
 
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)
@@ -2536,6 +2698,13 @@ namespace CNTK
         auto result = LogAddExp(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
 
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softplus", name);
+    }
+
+    FunctionPtr Softsign(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = ElementDivide(operandPlaceholder, Plus(Abs(operandPlaceholder), Constant::Scalar(operand.GetDataType(), 1.0)));
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softsign", name);
     }
 
     FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name)
@@ -2767,6 +2936,17 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(
             PrimitiveOpType::Crop,
             operands, Dictionary(), name), name);
+    }
+
+    FunctionPtr Cast(const Variable& nodeInput, DataType outputType, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { nodeInput };
+        Dictionary additionalAttributes;
+        additionalAttributes.Add(
+                PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(outputType));
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(
+            PrimitiveOpType::Cast,
+            operands, std::move(additionalAttributes), name), name);
     }
 
     namespace Internal

@@ -30,14 +30,11 @@ namespace CNTK
         virtual void ResetSmoothedGradients() override;
 
     protected:
-        // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
-        // in the base class constructor (in which case they are allocated with the shapes identical to the shapes of
-        // the corresponding parameters) or if the allocation should be deferred to the subclass constructor (which
-        // performs allocation that is specific to the particular learner, see FSAdaGrad and RMSProp).
         LearnerBase(const std::vector<Parameter>& parameters,
             const LearningRateSchedule& learningRateSchedule,
-            AdditionalLearningOptions additionalOptions,
-            bool allocateSmoothGradients = true);
+            AdditionalLearningOptions additionalOptions);
+
+        void AllocateSmoothedGradients(const std::vector<Parameter>& parameters, size_t factor, size_t fp16Factor = 1);
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) = 0;
 
@@ -82,6 +79,8 @@ namespace CNTK
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 
+        bool m_masterParameterUpdated; // whether the master copy of parameters are updated
+
         mutable size_t m_noiseInjectionSeed;
 
         // The following four static protected methods expose private methods of NDArrayView class
@@ -113,7 +112,7 @@ namespace CNTK
 
         // Returns an NDArrayView with the required shape, with the same data type as parameter value
         // and allocated on the same device.
-        static NDArrayViewPtr AllocateNDArrayView(const Parameter& parameter, const NDShape& shape);
+        static NDArrayViewPtr AllocateSmoothedGradientFor(const Parameter& parameter, size_t factor, size_t fp16Factor = 1);
 
         // Retrieves the shape of the matrix corresponding to the parameter value.
         static NDShape GetMatrixShape(const Parameter& parameter);
@@ -142,8 +141,11 @@ namespace CNTK
     public:
         LearnerSGD(const std::vector<Parameter>& parameters,
                    const LearningRateSchedule& learningRateSchedule,
-                   AdditionalLearningOptions additionalOptions,
-                   bool allocateSmoothGradients = false);
+                   AdditionalLearningOptions additionalOptions)
+                   : LearnerBase(parameters, learningRateSchedule, additionalOptions)
+        {
+            AllocateSmoothedGradients(parameters, 0);
+        }
 
     protected:
 
@@ -162,11 +164,13 @@ namespace CNTK
                            const MomentumSchedule& momentumSchedule,
                            bool unitGain,
                            AdditionalLearningOptions additionalOptions,
-                           bool allocateSmoothGradients = true)
-                           : LearnerBase(parameters, learningRateSchedule, additionalOptions, allocateSmoothGradients),
+                           size_t smoothGradientFactor)
+                           : LearnerBase(parameters, learningRateSchedule, additionalOptions),
                            m_momentumSchedule(momentumSchedule), 
                            m_unitGain(unitGain)
-        { }
+        {
+            AllocateSmoothedGradients(parameters, smoothGradientFactor, 2);
+        }
 
         // returns current per-minibatch momentum value.
         virtual double MomentumValueForMB(size_t minibatchSize) const
@@ -177,8 +181,10 @@ namespace CNTK
     protected:
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
-        template <typename ElementType>
+        template <typename ElemType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+
+        void UpdateHalf(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
 
         // returns current per-minibatch momentum value from the provided schedule.
         double MomentumValueForMB(const MomentumSchedule& schedule, size_t minibatchSize) const;
@@ -216,7 +222,7 @@ namespace CNTK
                         const MomentumSchedule& momentumSchedule,
                         bool unitGain,
                         AdditionalLearningOptions additionalOptions)
-                        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions, /*allocateSmoothGradients*/ true)
+                        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions, 1)
         {}
 
     protected:
@@ -224,6 +230,7 @@ namespace CNTK
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+        void UpdateHalf(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
     };
 
     class LearnerAdaGrad : public LearnerBase
@@ -268,7 +275,7 @@ namespace CNTK
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
 
-        template <typename ElementType>
+        template <typename GradType, typename AccumType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount);
 
         virtual Dictionary CreateCheckpoint() override;
@@ -404,14 +411,6 @@ namespace CNTK
         virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd) override;
 
     private:
-        void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)
-        {
-            for (const auto& parameter : parameters)
-            {
-                m_smoothedGradientValues.emplace(parameter, AllocateNDArrayView(parameter, {}));
-            }
-        }
-
         void ValidateInput(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
 
 

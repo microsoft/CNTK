@@ -139,6 +139,41 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAddAndSub, RandomSeedFixture)
     BOOST_CHECK(m3.IsEqualTo(m0));
 }
 
+BOOST_FIXTURE_TEST_CASE(CPUMatrixBatchMatmMul, RandomSeedFixture)
+{
+    DMatrix m0(6, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
+    m0(2, 0) = 5;
+    m0(2, 1) = 6;
+    m0(3, 0) = 7;
+    m0(3, 1) = 8;
+    m0(4, 0) = 9;
+    m0(4, 1) = 10;
+    m0(5, 0) = 11;
+    m0(5, 1) = 12;
+
+    DMatrix m1(2, 2);
+    m1(0, 0) = 10;
+    m1(0, 1) = 20;
+    m1(1, 0) = 30;
+    m1(1, 1) = 40;
+
+    DMatrix m00(3, 2);
+    m00(0, 0) = 220;
+    m00(0, 1) = 360;
+    m00(1, 0) = 300;
+    m00(1, 1) = 480;
+    m00(2, 0) = 380;
+    m00(2, 1) = 600;
+
+    DMatrix m2(3, 2);
+    DMatrix::BatchMatMul(0.0, m0, false, 3, m1, false, 1, m2, true);
+    BOOST_CHECK(m2.IsEqualTo(m00));
+}
+
 BOOST_FIXTURE_TEST_CASE(CPUMatrixMultiplyAndDiv, RandomSeedFixture)
 {
     DMatrix m0(2, 3);

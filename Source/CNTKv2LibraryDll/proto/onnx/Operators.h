@@ -102,6 +102,8 @@ namespace CNTK
 
             static const AttributesMapping& FindAttributeMap(const std::wstring& cntkOpName, const std::wstring& cntkAttributeOpName);
 
+            static bool SupportBroadcast(const std::wstring& cntkOpName);
+
         private:
             static std::unordered_multimap<std::wstring, AttributesMapping> _cntkToONNXOpName;
             static std::unordered_map<std::wstring, std::set<size_t>> _cntkBlockOPInvalidIndices;

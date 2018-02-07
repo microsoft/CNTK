@@ -63,6 +63,7 @@ namespace CNTK
         {PrimitiveOpType::Convolution, L"Convolution"},
         {PrimitiveOpType::SquaredError, L"SquaredError"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
+        {PrimitiveOpType::LatticeSequenceWithSoftmax, L"LatticeSequenceWithSoftmax" },
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
         {PrimitiveOpType::ForwardBackward, L"ForwardBackward" },
@@ -115,6 +116,7 @@ namespace CNTK
         {PrimitiveOpType::TopK, L"TopK"},
         {PrimitiveOpType::ConstantOp, L"ConstantOp"},
         {PrimitiveOpType::Squeeze, L"Squeeze"},
+        {PrimitiveOpType::Cast, L"Cast" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -272,6 +274,18 @@ namespace CNTK
         static const std::wstring AttributeNameTokensToIgnore;
         static const std::wstring AttributeNameDelayConstraint;
         static const std::wstring AttributeNameBlankTokenId;
+        static const std::wstring AttributeNamePhonePath;
+        static const std::wstring AttributeNameSymListPath;
+        static const std::wstring AttributeNameStateListPath;
+        static const std::wstring AttributeNameTransProbPath;
+        static const std::wstring AttributeNameHSmoothingWeight;
+        static const std::wstring AttributeNameFrameDropThresh;
+        static const std::wstring AttributeNameDoReferenceAlign;
+        static const std::wstring AttributeNameSeqGammarUsesMBR;
+        static const std::wstring AttributeNameSeqGammarAMF;
+        static const std::wstring AttributeNameSeqGammarLMF;
+        static const std::wstring AttributeNameSeqGammarBMMIFactor;
+        static const std::wstring AttributeNameSeqGammarWordPen;
         static const std::wstring AttributeNameNumClass;
         static const std::wstring AttributeNameOneHotOutputSparse;
         static const std::wstring AttributeNameOneHotAxis;
@@ -663,7 +677,7 @@ namespace CNTK
                 }
                 else if (leftOperandShape[outputRank + i] == NDShape::InferredDimension || leftOperandShape[outputRank + i] == NDShape::FreeDimension)
                 {
-                    if (rightOperandShape[i] == NDShape::FreeDimension)
+                    if (rightOperandShape[i] == NDShape::FreeDimension && leftOperandShape[outputRank + i] == NDShape::InferredDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
                             Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
                             leftOperand.AsString().c_str(),
@@ -676,7 +690,7 @@ namespace CNTK
                 }
                 else if (rightOperandShape[i] == NDShape::InferredDimension || rightOperandShape[i] == NDShape::FreeDimension)
                 {
-                    if (leftOperandShape[outputRank + i] == NDShape::FreeDimension)
+                    if (leftOperandShape[outputRank + i] == NDShape::FreeDimension && leftOperandShape[outputRank + i] == NDShape::InferredDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
                             Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
                             rightOperand.AsString().c_str(),

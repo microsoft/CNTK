@@ -9,6 +9,7 @@ dependencies:
 - jupyter=1.0.0=py36_3
 - matplotlib=2.0.0=np111py36_0
 - numpy=1.11.2=py36_0
+- opencv=3.1.0=np111py36_1
 - pandas=0.19.1=np111py36_0
 - pandas-datareader=0.2.1=py36_0
 - pandoc=1.15.0.6
@@ -24,6 +25,7 @@ dependencies:
 - six=1.10.0=py36_0
 - wheel=0.29.0=py36_0
 - pip:
+  - easydict==1.6.0
   - gym[atari]==0.8.1
   - keras==2.0.6
   - pydot-ng==1.0.0

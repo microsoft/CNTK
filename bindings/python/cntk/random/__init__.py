@@ -23,7 +23,7 @@ def uniform(shape, dtype=default_override_or(np.float32), low=0.0, high=1.0, see
 
     Args:
         shape (tuple): shape of the output (entries are independent random draws)
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         low (float): lower end of the range of the random numbers
         high (float): upper end of the range of the random numbers
         seed (int): pseudo random number generator seed (default: automatically select a unique seed)
@@ -51,7 +51,7 @@ def normal(shape, dtype=default_override_or(np.float32), mean=0.0, scale=1.0, se
 
     Args:
         shape (tuple): shape of the output (entries are independent random draws)
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         mean (float): mean of the distribution
         scale (float): scale (standard deviation) of the distribution
         seed (int): pseudo random number generator seed (default: automatically select a unique seed)
@@ -64,7 +64,7 @@ def normal(shape, dtype=default_override_or(np.float32), mean=0.0, scale=1.0, se
         >>> z = C.random.normal((2,3), seed=98052)
         >>> z.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
         array([[ 1.803254,  0.995395, -0.631974],
-               [-1.73672 ,  0.005615, -0.340025]], dtype=float32)
+               [-1.736721,  0.005615, -0.340025]], dtype=float32)
     """
     from cntk.cntk_py import normal_random
     shape, dtype = sanitize_random_args(shape, dtype)
@@ -78,7 +78,7 @@ def gumbel(shape, dtype=default_override_or(np.float32), loc=0.0, scale=1.0, see
 
     Args:
         shape (tuple): shape of the output (entries are independent random draws)
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         loc (float): location of the distribution
         scale (float): scale of the distribution
         seed (int): pseudo random number generator seed (default: automatically select a unique seed)
@@ -109,7 +109,7 @@ def bernoulli(shape, dtype=default_override_or(np.float32), mean=0.5, seed=auto_
 
     Args:
         shape (tuple): shape of the output (entries are independent random draws)
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        dtype (np.float32 or np.float64 or np.float16): data type. Default is np.float32.
         mean (float): success probability
         seed (int): pseudo random number generator seed (default: automatically select a unique seed)
         name (str, optional): the name of the Function instance in the network
@@ -176,7 +176,7 @@ def normal_like(x, mean=0.0, scale=1.0, seed=auto_select, name=''):
         >>> x = C.parameter((2,3,4))
         >>> z = C.random.normal_like(x, seed=98052)
         >>> z.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
-        array([[[ 1.803254,  0.995395, -0.631974, -1.73672 ],
+        array([[[ 1.803254,  0.995395, -0.631974, -1.736721],
                 [ 0.005615, -0.340025, -0.011913, -0.236371],
                 [-1.207685, -0.495846,  0.037022, -1.220596]],
         <BLANKLINE>

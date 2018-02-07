@@ -110,6 +110,69 @@ def test_Add(tmpdir):
 
     verify_two_input(model, data1, data2, tmpdir, 'Add_2')
 
+#And
+def test_And(tmpdir):
+    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
+    data2 = np.asarray([1, 0, 1, 0], np.float32)
+
+    model = C.element_and(data1, data2)
+    verify_no_input(model, tmpdir, 'And_0')
+
+    x = C.input_variable(np.shape(data1))
+    y = C.input_variable(np.shape(data2))
+
+    model = C.element_and(x, data2)
+    verify_one_input(model, data1, tmpdir, 'And_1')
+
+    model = C.element_and(x, y)
+    verify_two_input(model, data1, data2, tmpdir, 'And_2')
+
+#Or
+def test_Or(tmpdir):
+    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
+    data2 = np.asarray([1, 0, 1, 0], np.float32)
+
+    model = C.element_or(data1, data2)
+    verify_no_input(model, tmpdir, 'Or_0')
+
+    x = C.input_variable(np.shape(data1))
+    y = C.input_variable(np.shape(data2))
+
+    model = C.element_or(x, data2)
+    verify_one_input(model, data1, tmpdir, 'Or_1')
+
+    model = C.element_or(x, y)
+    verify_two_input(model, data1, data2, tmpdir, 'Or_2')
+
+#Xor
+def test_Xor(tmpdir):
+    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
+    data2 = np.asarray([1, 0, 1, 0], np.float32)
+
+    model = C.element_xor(data1, data2)
+    verify_no_input(model, tmpdir, 'Xor_0')
+
+    x = C.input_variable(np.shape(data1))
+    y = C.input_variable(np.shape(data2))
+
+    model = C.element_xor(x, data2)
+    verify_one_input(model, data1, tmpdir, 'Xor_1')
+
+    model = C.element_xor(x, y)
+    verify_two_input(model, data1, data2, tmpdir, 'Xor_2')
+
+#Not
+def test_Not(tmpdir):
+    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
+
+    model = C.element_not(data1)
+    verify_no_input(model, tmpdir, 'Not_0')
+
+    x = C.input_variable(np.shape(data1))
+
+    model = C.element_not(x)
+    verify_one_input(model, data1, tmpdir, 'Not_1')
+
 #ArgMax
 def test_ArgMax(tmpdir):
     shape = (4, 5)
@@ -301,6 +364,15 @@ def test_Floor(tmpdir):
     model = C.floor(x)
     verify_one_input(model, data, tmpdir, 'Floor_1')
 
+#Gather
+def test_Gather(tmpdir):
+    c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
+    x = C.input_variable((2,1))
+    d = np.arange(12).reshape(6,2).astype('f')
+    y = C.constant(d)
+    model = C.gather(y, x)
+    verify_one_input(model, c, tmpdir, 'Gather_1')
+
 #Greater
 def test_Greater(tmpdir):
     model = C.greater([41., 42., 43.], [42., 42., 42.])
@@ -467,6 +539,25 @@ def test_Reciprocal(tmpdir):
     model = C.reciprocal([-1/3, 1/5, -2, 3])
     verify_no_input(model, tmpdir, 'Reciprocal_0')
 
+def test_ReduceL1(tmpdir):
+    data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=np.float32)
+    model = C.reduce_l1(data, 1)
+    verify_no_input(model, tmpdir, 'ReduceL1_0')
+
+    x = C.input_variable(np.shape(data))
+    model = C.reduce_l1(x, 1)
+    verify_one_input(model, data, tmpdir, 'ReduceL1_1')
+
+def test_ReduceL2(tmpdir):
+    data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=np.float32)
+    model = C.reduce_l2(data, 0)
+    verify_no_input(model, tmpdir, 'ReduceL2_0')
+
+def test_ReduceSumSquare(tmpdir):
+    data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=np.float32)
+    model = C.reduce_sum_square(data, 0)
+    verify_no_input(model, tmpdir, 'ReduceSumSquare_0')
+
 #ReduceLogSum
 def test_ReduceLogSum(tmpdir):
     data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
@@ -543,6 +634,29 @@ def test_Softmax(tmpdir):
 def test_Softplus(tmpdir):
     model = C.softplus([[-1, -0.5, 0, 1, 2]])
     verify_no_input(model, tmpdir, 'Softplus_0')
+
+#Softsign
+def test_Softsign(tmpdir):
+    model = C.softsign([[-1, -0.5, 0, 1, 2]])
+    verify_no_input(model, tmpdir, 'Softsign_0')
+
+#Squeeze
+#def test_Squeeze(tmpdir):
+#    x0 = np.arange(12).reshape((2, 2, 1, 3)).astype('f')
+#    x = C.input_variable((2, 1, 3))
+#    model = C.squeeze(x)
+#    verify_one_input(model, x0, tmpdir, 'Squeeze_0')
+
+#Sum
+def test_Sum(tmpdir):
+    in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+    in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+
+    in1 = C.input_variable(np.shape(in1_data))
+    in2 = C.input_variable(np.shape(in2_data))
+    model = C.sum([in1, in2])
+
+    verify_two_input(model, in1_data, in2_data, tmpdir, 'Sum_2')
 
 # SpaceToDepth
 def test_SpaceToDepth(tmpdir):

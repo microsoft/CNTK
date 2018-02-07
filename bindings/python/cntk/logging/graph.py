@@ -8,7 +8,6 @@ import os
 import sys
 from cntk.variables import Variable
 
-
 def depth_first_search(root, visitor, depth=0):
     '''
     Generic function that walks through the graph starting at ``root`` and
@@ -131,7 +130,6 @@ def find_by_name(node, node_name, depth=0):
         return None
 
     return result[0]
-
 
 def plot(root, filename=None):
     '''

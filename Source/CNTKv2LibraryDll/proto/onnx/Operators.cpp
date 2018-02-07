@@ -140,6 +140,18 @@ namespace ONNX
         { L"ElementDivide", { {
             { L"ElementDivide", "Div" },
         } } },
+        { L"And",{ {
+            { L"And", "And" },
+            } } },
+        { L"Not",{ {
+            { L"Not", "Not" },
+        } } },
+        { L"Or",{ {
+            { L"Or", "Or" },
+        } } },
+        { L"Xor",{ {
+            { L"Xor", "Xor" },
+        } } },
         { L"Negate", { {
             { L"Negate", "Neg" },
         } } },
@@ -148,6 +160,9 @@ namespace ONNX
         } } },
         { L"Mean",{ {
             { L"Mean", "Mean" },
+        } } },
+        { L"Sum",{ {
+            { L"Sum", "Sum" },
         } } },
         { L"Reciprocal", { {
             { L"Reciprocal", "Reciprocal" },
@@ -228,6 +243,9 @@ namespace ONNX
         { L"Softplus",{ {
             { L"Softplus", "Softplus" },
         } } },
+        { L"Softsign",{ {
+            { L"Softsign", "Softsign" },
+        } } },        
         { L"Equal",{ {
             { L"Equal", "Equal" },
             { L"axis ", "axis" },
@@ -285,6 +303,21 @@ namespace ONNX
             { L"axis", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
+        { L"ReduceL1", { {
+            { L"ReduceL1", "ReduceL1" },
+            { L"axis", "axes" },
+            { L"keepdims", "keepdims" },
+        } } },
+        { L"ReduceL2",{ {
+            { L"ReduceL2", "ReduceL2" },
+            { L"axis", "axes" },
+            { L"keepdims", "keepdims" },
+        } } },
+        { L"ReduceSumSquare",{ {
+            { L"ReduceSumSquare", "ReduceSumSquare" },
+            { L"axis", "axes" },
+            { L"keepdims", "keepdims" },
+        } } },
 
         // From tensor
         // { L"", "Cast" },
@@ -317,8 +350,11 @@ namespace ONNX
         } } },
         { L"SpaceToDepth",{ {
             { L"SpaceToDepth", "SpaceToDepth" },
-            } } },
-        // { L"", "Squeeze" },
+        } } },
+        { L"Squeeze",{ {
+            { L"Squeeze", "Squeeze" },
+            { L"axes", "axes" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -339,6 +375,12 @@ namespace ONNX
         return itNodeFn->second;
     }
 
+    bool Operators::SupportBroadcast(const std::wstring& cntkOpName)
+    {
+        return (cntkOpName == L"Plus") || (cntkOpName == L"Minus") ||
+            (cntkOpName == L"ElementTimes") || (cntkOpName == L"ElementDivide") ||
+            (cntkOpName == L"And") || (cntkOpName == L"Or") || (cntkOpName == L"Xor");
+    }
         std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"LeakyReLU",{ 0, 1 } },
             { L"SELU",{ 0, 1, 2 } },
@@ -348,7 +390,13 @@ namespace ONNX
             { L"HardSigmoid",{ 0, 1, 2, 3 } },
             { L"Mean",{ 0 } },
             { L"Softmax",{} },
-            { L"LocalResponseNormalization",{ 0, 1, 2 } }
+            { L"LocalResponseNormalization",{ 0, 1, 2 } },
+            { L"And",{ 0 } },
+            { L"Or",{ 0 } },
+            { L"Xor",{ 0 } },
+            { L"Not",{ 0, 1 } },
+            { L"Softplus",{ 0 } },
+            { L"Softsign",{ 0 } },
         };
 
         std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {

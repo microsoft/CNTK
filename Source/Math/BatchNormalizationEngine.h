@@ -25,22 +25,23 @@ enum class BatchNormEngineKind
 #pragma warning(push)
 #pragma warning(disable : 4251)
 
-template <class ElemType>
+template <class InoutType, class StatType = InoutType>
 class MATH_API BatchNormEngine
 {
 public:
-    using Mat = Matrix<ElemType>;
+    using InoutMat = Matrix<InoutType>;
+    using StatMat = Matrix<StatType>;
 
 public:
     virtual ~BatchNormEngine() {};
 
-    void Forward(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
-                 Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev);
+    void Forward(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
+                 InoutMat& out, double epsilon, StatMat& saveMean, StatMat& saveInvStdDev);
 
-    void Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
-                  Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad);
+    void Backward(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& saveMean, const StatMat& saveInvStdDev,
+                  StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad);
 
-    static std::unique_ptr<BatchNormEngine<ElemType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
+    static std::unique_ptr<BatchNormEngine<InoutType, StatType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                                                              bool spatial, ImageLayoutKind imageLayout,
                                                              BatchNormEngineKind enabledEngines = BatchNormEngineKind::All);
 
@@ -56,11 +57,11 @@ protected:
     virtual void EnsureCompatible() = 0;
 
     // saveMean/saveInvStdDev return the actual mean/stddev used for normalization, except for blendFactor=1, these are unused and untouched
-    virtual void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
-                 Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
+    virtual void ForwardCore(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
+                 InoutMat& out, double epsilon, StatMat& saveMean, StatMat& saveInvStdDev) = 0;
 
-    virtual void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
-                  Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) = 0;
+    virtual void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& saveMean, const StatMat& saveInvStdDev,
+                  StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) = 0;
 
 protected:
     DEVICEID_TYPE m_deviceId;

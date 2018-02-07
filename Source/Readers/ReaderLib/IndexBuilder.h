@@ -37,7 +37,7 @@ public:
     {
         size = static_cast<uint32_t>(value);
         if (size != value)
-            RuntimeError("Sequence size overflows uint32_t type.");
+            RuntimeError("Sequence size overflows uint32_t type: %lu vs %u.", value, size);
         return *this;
     }
 };
