@@ -797,6 +797,8 @@ public:
             const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
             latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
             assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
+            // The size of the vector is small -- the number of sequences in the minibatch. 
+            // Iteration likely will be faster than the overhead with unordered_map
             for (size_t pos = 0; pos < labelSequencesMap.size();pos++)
             {
                 if (labelSequencesMap[pos] == labelSequences[i].seqId)

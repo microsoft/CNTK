@@ -108,10 +108,9 @@ public:
     {
         const auto& sequence = m_descriptor.Sequences()[sequenceIndex];
         
-        if (m_verbosity > 0)
-        {
+        if (m_verbosity == 1)
             fprintf(stderr, "Reading sequence '%s'...\n", KeyOf(sequence).c_str());
-        }
+
         // Deserialize the binary lattice graph and serialize it into a vector
         SequenceDataPtr s = make_shared<LatticeFloatSequenceData>(m_pBuffer->data() + sequence.OffsetInChunk(), sequence.NumberOfSamples(), m_ndShape, m_pBuffer);
 
