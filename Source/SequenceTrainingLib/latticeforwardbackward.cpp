@@ -1559,33 +1559,37 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
     // avg_wer = sum_wer / vt_paths.size();
     if (getPathMethodEMBR == "sampling") onebest_wer = -10000;
     else onebest_wer = vt_path_weights[0];
-    /*
+    
+    /* new algorithm */
     size_t count = 0;
     double sum_posterior = 0;
-    */
+    /* new algorithm */
+
     for (size_t i = 0; i < vt_path_weights.size(); i++)
     {
         // loss - mean_loss
-        
+        /* mask good normal code */
+        /*
         vt_path_weights[i] -= avg_wer;
         if(getPathMethodEMBR == "sampling") vt_path_weights[i] /= (vt_paths.size() - 1);
         else vt_path_weights[i] *= (vt_path_posterior_probs[i]);
-        
+        */
 
+        /* new algorithm */
         // we only consider the path that is better than one-best
-        /*
         if (vt_path_weights[i] < onebest_wer)
         {
             count++;
             sum_posterior += vt_path_posterior_probs[i];
         }
-        */
+        /* new algorithm */
     }
 
 
     for (size_t i = 0; i < vt_paths.size(); i++)
     {
        
+        /*  mask normal good algorithm
         for (size_t j = 0; j < vt_paths[i].size(); j++)
         {
             // open add instead of substract, for debug purpose
@@ -1594,8 +1598,9 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             // substraction instead of add, since we want to minimize the loss function, rather than maximize
             vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
         }
-
-        /*
+        */
+        /* new algorithm */
+        
         if (vt_path_weights[i] < onebest_wer)
         {
             vt_path_weights[i] -= onebest_wer;
@@ -1608,13 +1613,10 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
 
             for (size_t j = 0; j < vt_paths[i].size(); j++)
             {
-                // vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
-
-                // do the wrong one
-                vt_edge_weights[vt_paths[i][j]] += vt_path_weights[i];
+               vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
             }
         }
-        */
+        /* new algorithm */
 
     }
     
