@@ -1549,7 +1549,12 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         }
 
         // sum_wer += vt_path_weights[i];
-        avg_wer += (vt_path_weights[i] * vt_path_posterior_probs[i]);
+        //
+        // this uses weighted avg wer
+        // avg_wer += (vt_path_weights[i] * vt_path_posterior_probs[i]);
+
+        // this use flat wer
+        avg_wer += (vt_path_weights[i] / vt_path_posterior_probs.size());
     }
     // avg_wer = sum_wer / vt_paths.size();
     if (getPathMethodEMBR == "sampling") onebest_wer = -10000;
