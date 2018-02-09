@@ -961,7 +961,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         }
     };
 
-    static void CheckGaps()
+    static void CheckGaps(const char* msg = "")
     {
         size_t totalRecyclable = 0;
         for (let& b : s_recycledMemoryBlocks)
@@ -969,16 +969,22 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             b.Check();
             totalRecyclable += b.size();
         }
+        if (totalRecyclable != s_totalGaps)
+        {
+            fprintf(stderr, "CheckGaps snapshot %s: %.6f MB alloc, %.6f MB in %d recyclable gaps (recovered from gaps: %.6f)\n",
+                    msg, s_totalAllocated*1e-6, s_totalGaps*1e-6, (int)s_recycledMemoryBlocks.size(), totalRecyclable*1e-6);
+            fflush(stderr);
+        }
         fail_if(totalRecyclable != s_totalGaps, "gaps out of sync with stats??");
     }
     static void RecycleMemoryBlock(MemoryBlock&& memoryBlock) // callback from Deleter()
     {
         lock_guard<recursive_mutex> guard(s_mutex);
-        CheckGaps();
+        CheckGaps("RecycleMemoryBlock begin");
         s_totalAllocated -= memoryBlock.size();
         s_totalGaps += memoryBlock.size();
         s_recycledMemoryBlocks.emplace(move(memoryBlock)); // we move this gap into the gap set
-        CheckGaps();
+        CheckGaps("RecycleMemoryBlock after adding back");
         // consolidate rigth away --TODO: currently this is highly inefficient; do it right
         if (s_recycledMemoryBlocks.size() > 1)
         {
@@ -1002,7 +1008,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
                     s_recycledMemoryBlocks.insert(move(s_mergeBuffer[i]));
             }
             s_mergeBuffer.clear(); // release all ref counts
-            CheckGaps();
+            CheckGaps("RecycleMemoryBlock after merging");
         }
     }
     // allocate a new tensor in a large arena
@@ -1036,7 +1042,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     // Instead, we check these when for a reusable object.
     NDArrayViewPtr NewSparse(const NDShape& shape, const DataType& dataType, StorageFormat storageFormat, const DeviceDescriptor& device)
     {
-#if 1
+#if 0
         return MakeSharedObject<NDArrayView>(dataType, storageFormat, shape, device);
 #else
         lock_guard<recursive_mutex> guard(s_mutex);
@@ -1177,7 +1183,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     // dense version
     NDArrayViewPtr NewDense(const NDShape& shape, const DataType& dataType, const DeviceDescriptor& device)
     {
-#if 1
+#if 0
         return MakeSharedObject<NDArrayView>(dataType, StorageFormat::Dense, shape, device);
 #else
 
@@ -1209,11 +1215,11 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         // if found a matching block then bite off a piece from that, and done
         if (iter != s_recycledMemoryBlocks.end())
         {
-            CheckGaps();
+            CheckGaps("NewDense from gap, before");
             auto region = NewDenseFromMemoryBlock(*iter, desiredMemoryBlock.size(), shape, dataType);
             s_recycledMemoryBlocks.erase(iter);
             s_totalGaps -= iter->size(); // and remove this entry from the free set. We temporarily may have had overlapping entries just now.
-            CheckGaps();
+            CheckGaps("NewDense from gap, after");
             return region;
         }
 
@@ -1257,9 +1263,9 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         // convert newly allocated storage into a memoryBlock and allocate from it
         // Note: The new arena will have a ref-count to it through the gap and/or the allocated block.
         auto memoryBlock = MemoryBlock::Create(newArena, dataType, newArena->GetNumElements());
-        CheckGaps();
+        CheckGaps("NewDense in new gap, before");
         auto region = NewDenseFromMemoryBlock(memoryBlock, desiredMemoryBlock.size(), shape, dataType);
-        CheckGaps();
+        CheckGaps("NewDense in new gap, after");
         return region;
 #endif
     }
@@ -1714,30 +1720,15 @@ public: // for call in BatchedForward()  --TODO: clean this up
         return fields.m_value; // return the (now) cached value
     }
     // helper to validate a sparse object
+#if 0
     static const void CheckSparse(const NDArrayViewPtr& view)
     {
         if (view->GetStorageFormat() != StorageFormat::SparseCSC || view->GetDataType() != DataType::Float)
             return;
         if (view->Device() != DeviceDescriptor::CPUDevice())
-            return CheckSparse(view->DeepClone(DeviceDescriptor::CPUDevice()));
-        let& shape = view->Shape();
-        let numRows = shape[0];
-        let numCols = shape.TotalSize() / numRows;
-        fprintf(stderr, "CheckSparse: checking CSC matrix of shape %S in [%d x %d] matrix", shape.AsString().c_str(), (int)numRows, (int)numCols), fflush(stderr);
-        float* nzValues;
-        int* nzIndices;
-        int* nzOffsets;
-        size_t nnz;
-        tie(nzValues, nzOffsets, nzIndices, nnz) = view->SparseCSCDataBuffers<float>();
-        fprintf(stderr, " nnz=%d\n", (int)nnz), fflush(stderr);
-        for (size_t i = 0; i < numCols; i++)
-        {
-            fail_if(nzOffsets[i] > nzOffsets[i+1], "offsets not sorted??");
-            fail_if(nzOffsets[i+1] > nnz, "offset exceesdsd nnz??");
-            for (size_t k = nzOffsets[i]; k < nzOffsets[i+1]; k++)
-                fail_if(nzIndices[k] >= numRows, "row index out of bounds??");
-        }
+            return CheckSparse(view->DeepClone(DeviceDescriptor::CPUDevice())); // DeepClone() has a check function if enabled
     }
+#endif
 private:
     static const NDArrayViewPtr& MTCacheAndGetValue(const Variable& v)
     {
@@ -1758,7 +1749,7 @@ private:
                 GetInputFields(inputs[i]).m_value = m_arena.New(inputs[i].Shape(), inputs[i].GetDataType(), StorageFormat::Dense, inputValues.front()->Device());
             // fetch the m_value from the input
             inputValues[i] = MTCacheAndGetValue(inputs[i]); // (if this is a redirect, then now we must resolve it)
-CheckSparse(inputValues[i]);
+//CheckSparse(inputValues[i]);
         }
         cudaStatsGuardPrepareI.Stop();
         CudaStatsGuard cudaStatsGuardPrepareO(PrimitiveOpType::Log, L"Memoize: MT prep output", 3, inputs.size());
@@ -1794,6 +1785,7 @@ CheckSparse(inputValues[i]);
         // execute it
         //if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
         //    Break;
+#if 0
 static bool trace=false;
 if ((f.m_uniqueIdForDebugging == 116759999 || f.m_uniqueIdForDebugging == 128107999) && f.m_op == PrimitiveOpType::ReduceElements)
     trace=true;
@@ -1807,12 +1799,15 @@ Break;
     outValue->LogToFile(L"### result mem"), fflush(stderr);
 Break;
 }
+#endif
         auto res = PrimitiveFunction::Forward(f.m_op, f.Attributes(), output.IsVolatile(), inputValues, outputShape, move(outValue), m_arena, /*funcForErrMsg=*/f);
+#if 0
 if (trace)
 {
     res->LogToFile(L"### result"), fflush(stderr);
 Break;
 }
+#endif
 #if 0
         if (output.m_dataFields->m_uniqueIdForDebugging == 125515)
         {
@@ -5030,7 +5025,7 @@ public:
             let logAsOp = (f.m_op == PrimitiveOpType::Splice && logSpliceAsGather) ? PrimitiveOpType::Gather : f.m_op; // gather ops are logged as op Gather (CNTK V2 Gather is not used by Dynamite)
             cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, /*category=*/isSparse ? 1 : 0, input.Shape().TotalSize(/*check=*/false), inputDevice);
         }
-
+#if 0
 static bool trace = false;
 if (f.m_uniqueIdForDebugging == 116613 && index == 1000)
  trace = true;
@@ -5044,12 +5039,15 @@ if (trace)
     gradient.view->LogToFile(L"pre target gradient_" + to_wstring(index)), fflush(stderr);
 Break;
 }
+#endif
         PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, op, f.m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, m_memoizer.Arena(), /*funcForErrMsg=*/f);
+#if 0
 if (trace)
 {
     gradient.view->LogToFile(L"target gradient_" + to_wstring(index)), fflush(stderr);
 Break;
 }
+#endif
         m_stats.numBatchedBackpropToCalls++;
 
         EndCudaStats(cudaStatsPtr, inputDevice);
