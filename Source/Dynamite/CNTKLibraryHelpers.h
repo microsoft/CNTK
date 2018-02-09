@@ -326,6 +326,7 @@ namespace Dynamite {
                                      DataType dataType, const DeviceDescriptor& device)
     {
         // ask for a multi-batch, by asking CNTK for a 'numBuckets' larger minibatch
+        // TODO: We have a maximum size of a column index being representatble as a float32.
         auto multiMinibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, numBuckets * minibatchSize, numWorkers, thisWorker, device);
         // check for end of data pass
         if (multiMinibatchData.empty())
@@ -339,7 +340,7 @@ namespace Dynamite {
         for (let& streamName : streamNames)
             valuePtrs.push_back(multiMinibatchData[minibatchSource->StreamInfo(streamName)].data);
 #endif
-        vector<vector<Variable>> multiMinibatchStreams;
+        vector<vector<Variable>> multiMinibatchStreams; // [streamIndex][seqIndex]
         Dynamite::FromCNTKMB(multiMinibatchStreams,  // result goes here
                              valuePtrs,     // Value objects from MinibatchSource, one for each stream
                              /*isSequence[]=*/vector<bool>(streamNames.size(), true), inferenceOnly, dataType, device);
