@@ -193,6 +193,13 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
     NDArrayView::LazilyCreateRNGState(rngState, SentinelValueForAutoSelectRandomSeed, device);
     vector<TensorViewTest> tests =
     {
+#if 0   // BUGBUG: These are currently incorrect.
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  ArgmaxOneHot(argValues[1]), false, 1.0, 1) + NDArrayView::MatrixProduct(false, argValues[0], true,  ArgmaxOneHot(argValues[2]), false, 1.0, 1)), "TransposeTimes_sparse" }, VarExpr(CNTK::TransposeTimes(args[0], ArgmaxOneHotOp(args[1], false)) + CNTK::TransposeTimes(args[0], ArgmaxOneHotOp(args[2], false))),{ { 4, 13 },{ 4, 3, 5 },{ 4, 3, 5 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  ArgmaxOneHot(argValues[1]), false, 1.0, 1) + NDArrayView::MatrixProduct(false, argValues[0], true,  ArgmaxOneHot(argValues[2]), false, 1.0, 1)), "TransposeTimes_sparse" }, VarExpr(CNTK::TransposeTimes(args[0], ArgmaxOneHotOp(args[1], true )) + CNTK::TransposeTimes(args[0], ArgmaxOneHotOp(args[2], true ))),{ { 4, 13 },{ 4, 3, 5 },{ 4, 3, 5 } } },
+        // --> "CreateBatchedInputFor: batchedInput does not have expected last dimension"; got: ..., 5, 2; expected: ..., 10
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  ArgmaxOneHot(argValues[1]), false, 1.0, 1) + NDArrayView::MatrixProduct(false, argValues[0], true,  ArgmaxOneHot(argValues[2]), false, 1.0, 1)), "TransposeTimes_sparse" }, VarExpr(CNTK::TransposeTimes(args[0], ArgmaxOneHotOp(args[1], true )) + CNTK::TransposeTimes(args[0], ArgmaxOneHotOp(args[2], false))),{ { 4, 13 },{ 4, 3, 5 },{ 4, 3, 5 } } },
+        // --> "BackpropToMatrixWeight: batched matrix gradients do not share the matrix??"
+#endif
         // normalization
         { { ValExpr((argValues[0] - argValues[1]) * argValues[2] * argValues[3] + argValues[4]), "NormalizeDenormalize" }, VarExpr(CNTK::NormalizeDenormalize(args[0], args[1], args[2], args[3], args[4])),{ { 13, 42 },{ 1, 42 }, { 1, 42 },{ 1, 42 },{ 1, 42 } } },
         // scalar operations
@@ -227,7 +234,8 @@ size_t DynamiteTest(size_t N, DataType dataType, bool testStackingEnabled, const
         { { ValExpr((argValues, make_shared<NDArrayView>(0.9, dataType, NDShape{}, device))), "BernoulliRandom90%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.9                   ), Axis::AllStaticAxes())),{ { 100, 1000 } } },
         { { ValExpr((argValues, make_shared<NDArrayView>(1.0, dataType, NDShape{}, device))), "BernoulliRandom30%" }, VarExpr(CNTK::ReduceMean(CNTK::BernoulliRandom(rngState, args[0].Shape(), args[0].GetDataType(), /*mean=*/0.3, /*scale=*/1 / 0.3), Axis::AllStaticAxes())),{ { 1000, 100 } } }, // Dropout-like scaling
         // one-hot
-        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, ArgmaxOneHot(argValues[1]), false, 1.0, 1)), "Times_sparse" }, VarExpr(CNTK::Times(args[0], ArgmaxOneHotOp(args[1]))),{ { 13, 4 },{ 4, 3, 5 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], false, ArgmaxOneHot(argValues[1]), false, 1.0, 1)), "Times_sparse" },          VarExpr(CNTK::Times         (args[0], ArgmaxOneHotOp(args[1]))),{ { 13,  4 },{ 4, 3, 5 } } },
+        { { ValExpr(NDArrayView::MatrixProduct(false, argValues[0], true,  ArgmaxOneHot(argValues[1]), false, 1.0, 1)), "TransposeTimes_sparse" }, VarExpr(CNTK::TransposeTimes(args[0], ArgmaxOneHotOp(args[1]))),{ {  4, 13 },{ 4, 3, 5 } } },
         // transpose. Note: Reference must be cloned, because AvSqrErr cannot reduce over >2 non-contiguous dimensions.
         { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 0, 2, 1, 3 })->DeepClone()), "Transpose" }, VarExpr(CNTK::Transpose(args[0], AxisVector({ 0, 2, 1, 3 }))),{ { 13, 42, 4, 2 } } }, // 2-axis permutation (stackable)
         { { ValExpr(argValues[0]->AsTransposed(NDShapePermutation{ 1, 0, 2    })->DeepClone()), "Transpose" }, VarExpr(CNTK::TransposeAxes(args[0], Axis(0), Axis(1))),{ { 13, 42, 5 } } }, // basic transpose (stackable)
