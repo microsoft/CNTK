@@ -80,6 +80,27 @@ size_t minibatchSize = 4096;
 size_t maxBatchSizePerWorker = 2000;// CeilDiv(4096, 6); // this much fits into RAM
 bool insertBOS = true;
 
+// run every pathname through this function
+// It will interpolate expressions of the form ${VAR}.
+wstring Interpolate(const wstring& path)
+{
+    let pos = path.find(L"${");
+    if (pos == wstring::npos)
+        return path;
+    let epos = path.find(L"}", pos + 1);
+    if (pos == wstring::npos)
+        InvalidArgument("Interpolate: ${ not closed in '%S'", path.c_str());
+    let var = path.substr(pos + 2, epos - (pos + 2)); // isolate the variable name
+    fprintf(stderr, "### var = %S\n", var.c_str());
+    let var8 = string(var.begin(), var.end()); // simplistic UTF8 converter
+    let val8p = getenv(var8.c_str());
+    fprintf(stderr, "### val = %s\n", val8p), fflush(stderr);
+    if (!val8p)
+        InvalidArgument("Interpolate: Environment variable '%s' not defined in '%S'", var8.c_str(), path.c_str());
+    let val = wstring(val8p, val8p + strlen(val8p)); // value must be 7-bit ASCII  --TODO: fix this if we ever care
+    return Interpolate(path.substr(0,pos) + val + path.substr(epos + 1));
+}
+
 static void SetConfigurationVariablesFor(string systemId) // set variables; overwrite defaults
 {
     if (systemId == "en_de_bpe") // Marian setup
@@ -87,14 +108,14 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         // cat vocab.ende.yml | sed 's/: [0-9]*$//' | tr -d ^" > vocab.ende.txt && "C:\Program Files\Git\usr\bin\echo.exe" >> ..\data\vocab.ende.txt
         srcVocabSize = 36000;
         tgtVocabSize = 36000;
-        srcTrainFile = L"f:/data2/fseide/marian-examples/transformer/data/corpus.bpe.en";
-        tgtTrainFile = L"f:/data2/fseide/marian-examples/transformer/data/corpus.bpe.de";
-        srcDevFile   = L"f:/data2/fseide/marian-examples/transformer/data/valid.bpe.en";
-        tgtDevFile   = L"f:/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
-        srcTestFile  = L"f:/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
-        tgtTestFile  = L"f:/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
-        srcVocabFile = L"f:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
-        tgtVocabFile = L"f:/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
+        srcTrainFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/corpus.bpe.en";
+        tgtTrainFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/corpus.bpe.de";
+        srcDevFile   = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/valid.bpe.en";
+        tgtDevFile   = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
+        srcTestFile  = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
+        tgtTestFile  = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
+        srcVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
+        tgtVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         bucketingFactor = 100; // Marian uses much higher
         insertBOS = false; // Marian model does not expect <s>
     }
@@ -102,14 +123,14 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
     {
         srcVocabSize = 78440;
         tgtVocabSize = 79439;
-        srcTrainFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt";
-        tgtTrainFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt";
-        srcDevFile   = L"f:/local/data/2017_10_05_21h_46m_39s/val.CHS.txt";
-        tgtDevFile   = L"f:/local/data/2017_10_05_21h_46m_39s/val.ENU.txt";
-        srcTestFile  = L"f:/local/data/2017_10_05_21h_46m_39s/test.CHS.txt";
-        tgtTestFile  = L"f:/local/data/2017_10_05_21h_46m_39s/test.ENU.txt";
-        srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
-        tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
+        srcTrainFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/train.CHS.txt";
+        tgtTrainFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/train.ENU.txt";
+        srcDevFile   = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/val.CHS.txt";
+        tgtDevFile   = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/val.ENU.txt";
+        srcTestFile  = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/test.CHS.txt";
+        tgtTestFile  = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/test.ENU.txt";
+        srcVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
+        tgtVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
         bucketingFactor = 10;
         learningRate *= 10;
     }
@@ -117,14 +138,14 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
     {
         srcVocabSize = 78440;
         tgtVocabSize = 79439;
-        srcTrainFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.CHS.txt";
-        tgtTrainFile = L"f:/local/data/2017_10_05_21h_46m_39s/train.ENU.txt";
-        srcDevFile   = L"f:/local/data/2017_10_05_21h_46m_39s/val.CHS.txt";
-        tgtDevFile   = L"f:/local/data/2017_10_05_21h_46m_39s/val.ENU.txt";
-        srcTestFile  = L"f:/local/data/2017_10_05_21h_46m_39s/test.CHS.txt";
-        tgtTestFile  = L"f:/local/data/2017_10_05_21h_46m_39s/test.ENU.txt";
-        srcVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
-        tgtVocabFile = L"f:/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
+        srcTrainFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/train.CHS.txt";
+        tgtTrainFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/train.ENU.txt";
+        srcDevFile   = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/val.CHS.txt";
+        tgtDevFile   = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/val.ENU.txt";
+        srcTestFile  = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/test.CHS.txt";
+        tgtTestFile  = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/test.ENU.txt";
+        srcVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
+        tgtVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
         // this config uses a much smaller system configuration than the default system
         embeddingDim = 128;
         attentionDim = 128;
@@ -139,28 +160,28 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
     {
         srcVocabSize = 68266;
         tgtVocabSize = 55144;
-        srcTrainFile = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/train.src";
-        tgtTrainFile = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/train.tgt";
-        srcDevFile   = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/valid.src";
-        tgtDevFile   = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/valid.tgt";
-        srcTestFile  = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/test.src";
-        tgtTestFile  = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/test.tgt";
-        srcVocabFile = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/vocab.src";
-        tgtVocabFile = L"f:/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/vocab.tgt";
+        srcTrainFile = L"${PHILLY_DATA_DIR}/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/train.src";
+        tgtTrainFile = L"${PHILLY_DATA_DIR}/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/train.tgt";
+        srcDevFile   = L"${PHILLY_DATA_DIR}/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/valid.src";
+        tgtDevFile   = L"${PHILLY_DATA_DIR}/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/valid.tgt";
+        srcTestFile  = L"${PHILLY_DATA_DIR}/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/test.src";
+        tgtTestFile  = L"${PHILLY_DATA_DIR}/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/test.tgt";
+        srcVocabFile = L"${PHILLY_DATA_DIR}/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/vocab.src";
+        tgtVocabFile = L"${PHILLY_DATA_DIR}/mt-data/mtdrop/mtdrop/babel/Official/WMT17/ProcessedData/vocab.tgt";
     }
     else if (systemId == "rom_enu")
     {
         srcVocabSize = 27579 + 3;
         tgtVocabSize = 21163 + 3;
-        srcTrainFile = L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf"; srcVocabFile = L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab";
-        tgtTrainFile = L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf"; tgtVocabFile = L"f:/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab";
+        srcTrainFile = L"${PHILLY_DATA_DIR}/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.shuf"; srcVocabFile = L"${PHILLY_DATA_DIR}/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.ro.vocab";
+        tgtTrainFile = L"${PHILLY_DATA_DIR}/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.shuf"; tgtVocabFile = L"${PHILLY_DATA_DIR}/hanyh-ws2/shared/forFrank/ROM-ENU-WMT/Data/corpus.bpe.en.vocab";
         // TODO: dev and test paths
     }
     else if (systemId == "karnak_sample")
     {
         // what was the vocab size again here?
-        srcTrainFile = L"d:/work/Karnak/sample-model/data/train.src"; srcVocabFile = L"d:/work/Karnak/sample-model/data/vocab.src";
-        tgtTrainFile = L"d:/work/Karnak/sample-model/data/train.tgt"; tgtVocabFile = L"d:/work/Karnak/sample-model/data/vocab.tgt";
+        srcTrainFile = L"${PHILLY_DATA_DIR}/d:/work/Karnak/sample-model/data/train.src"; srcVocabFile = L"${PHILLY_DATA_DIR}/d:/work/Karnak/sample-model/data/vocab.src";
+        tgtTrainFile = L"${PHILLY_DATA_DIR}/d:/work/Karnak/sample-model/data/train.tgt"; tgtVocabFile = L"${PHILLY_DATA_DIR}/d:/work/Karnak/sample-model/data/vocab.tgt";
         // TODO: dev and test paths
     }
     else
@@ -669,7 +690,7 @@ static const vector<string>& GetAndCacheDictionary(const wstring& vocabFile)
         return iter->second;
     // not in cache: create and read from file
     auto& dict = dicts[vocabFile];
-    auto f = _wifstream(vocabFile);
+    auto f = _wifstream(Interpolate(vocabFile));
     copy(istream_iterator<string>(f), istream_iterator<string>(), back_inserter(dict));
     return dict;
 }
@@ -713,8 +734,8 @@ MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& 
 {
     auto minibatchSourceConfig = MinibatchSourceConfig({ PlainTextDeserializer(
         {
-            PlainTextStreamConfiguration(L"src", srcVocabSize, { srcFile }, { srcVocabFile, insertBOS ? L"<s>" : L"", L"</s>", L"<unk>" }),
-            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { tgtFile }, { tgtVocabFile, insertBOS ? L"<s>" : L"", L"</s>", L"<unk>" })
+            PlainTextStreamConfiguration(L"src", srcVocabSize, { Interpolate(srcFile) }, { Interpolate(srcVocabFile), insertBOS ? L"<s>" : L"", L"</s>", L"<unk>" }),
+            PlainTextStreamConfiguration(L"tgt", tgtVocabSize, { Interpolate(tgtFile) }, { Interpolate(tgtVocabFile), insertBOS ? L"<s>" : L"", L"</s>", L"<unk>" })
         }) },
         /*randomize=*/isTraining);
     minibatchSourceConfig.maxSamples = isTraining ? MinibatchSource::InfinitelyRepeat : MinibatchSource::FullDataSweep;
@@ -937,7 +958,7 @@ BinaryFoldingModel CreateModelFunctionMarian()
     {
         p.Value()->LogToFile(p.Name() + L" (CNTK)");
         // load it from the Marian init file
-        wstring path = L"f:/data2/fseide/marian-examples/transformer/initvals/" + p.Name();
+        wstring path = dataRootDir + L"/data2/fseide/marian-examples/transformer/initvals/" + p.Name();
         let numElem = p.Shape().TotalSize();
         fprintf(stderr, "Loading %d init vals: %S\n", (int)numElem, path.c_str()), fflush(stderr);
         FILE* f = _wfopen(path.c_str(), L"rb");
@@ -1170,8 +1191,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     if (startMbCount > 0)
     {
         let path = IntermediateModelPath(modelPath, startMbCount);
-        fprintf(stderr, "restoring from: %S... ", path.c_str()), fflush(stderr);
-        Dynamite::RestoreFromCheckpoint(path, model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
+        fprintf(stderr, "restoring from: %S... ", Interpolate(path).c_str()), fflush(stderr);
+        Dynamite::RestoreFromCheckpoint(Interpolate(path), model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
         fprintf(stderr, "done\n"), fflush(stderr);
     }
     fflush(stderr);
@@ -1199,8 +1220,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
         {
             let modelPathN = IntermediateModelPath(modelPath, mbCount);
-            fprintf(stderr, "ssaving: %S... ", modelPathN.c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
-            Dynamite::SaveCheckpoint(modelPathN, model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
+            fprintf(stderr, "ssaving: %S... ", Interpolate(modelPathN).c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
+            Dynamite::SaveCheckpoint(Interpolate(modelPathN), model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
             fprintf(stderr, "done%s\n", communicator->CurrentWorker().IsMain() ? "" : " by main worker"), fflush(stderr);
             // test model saving
             //for (auto& param : parameters) // destroy parameters as to prove that we reloaded them correctly.
@@ -1528,10 +1549,10 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount,
     let minibatchSource = CreateMinibatchSource(srcEvalFile, tgtEvalFile, /*isTraining=*/false);
 
     // output file
-    fprintf(stderr, "Evaluate: writing output to %S$$\n", outputHypFile.c_str()), fflush(stderr);
-    unique_ptr<FILE, void(*)(FILE*)> fOut(_wfopen((outputHypFile + L"$$").c_str(), L"w"), [](FILE* f) { fclose(f); });
+    fprintf(stderr, "Evaluate: writing output to %S$$\n", Interpolate(outputHypFile).c_str()), fflush(stderr);
+    unique_ptr<FILE, void(*)(FILE*)> fOut(_wfopen(Interpolate(outputHypFile + L"$$").c_str(), L"w"), [](FILE* f) { fclose(f); });
     if (!fOut)
-        InvalidArgument("Evaluate: Failed to create output file %S", outputHypFile.c_str());
+        InvalidArgument("Evaluate: Failed to create output file %S", Interpolate(outputHypFile).c_str());
 
     size_t totalLabels = 0; // total scored labels (excluding the <s>)
     double totalLoss = 0;   // corresponding total aggregate loss
@@ -1597,10 +1618,10 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount,
         (int)mbCount, totalLoss / totalLabels, exp(totalLoss / totalLabels), (int)totalLabels);
     // finalize output file
     fOut.reset(); // close the file
-    _wunlink(outputHypFile.c_str());
-    if (_wrename((outputHypFile + L"$$").c_str(), outputHypFile.c_str()) != 0)
+    _wunlink(Interpolate(outputHypFile).c_str());
+    if (_wrename((Interpolate(outputHypFile + L"$$")).c_str(), Interpolate(outputHypFile).c_str()) != 0)
         RuntimeError("Evaluate: Failed to rename output file to final name: %s", strerror(errno));
-    fprintf(stderr, "Evaluate: Output created at %S\n", outputHypFile.c_str()), fflush(stderr);
+    fprintf(stderr, "Evaluate: Output created at %S\n", Interpolate(outputHypFile).c_str()), fflush(stderr);
 }
 
 // minimalist command-line eargument parser, requires all arguments in order
@@ -1683,6 +1704,7 @@ public:
     }
 };
 
+// TODO: move this above the arg parser
 static void DumpModel(const wstring& modelPath, size_t startMbCount)
 {
     let model_fn = CreateModelFunctionMarian();
@@ -1690,8 +1712,8 @@ static void DumpModel(const wstring& modelPath, size_t startMbCount)
 
     // for decoding to Marian, dump current values, for back-conversion to Marian
     let path = IntermediateModelPath(modelPath, startMbCount);
-    fprintf(stderr, "loading model: %S... ", path.c_str()), fflush(stderr);
-    model_fn.ParametersCombined()->Restore(path);
+    fprintf(stderr, "loading model: %S... ", Interpolate(path).c_str()), fflush(stderr);
+    model_fn.ParametersCombined()->Restore(Interpolate(path));
     fprintf(stderr, "done\n"), fflush(stderr);
     vector<float> buf;
     auto mparamsVector = graph->GetAllParameters();
@@ -1702,8 +1724,8 @@ static void DumpModel(const wstring& modelPath, size_t startMbCount)
         wstring dumpPath = path + L".dump/" + p.Name();
         boost::filesystem::create_directories(boost::filesystem::path(dumpPath).parent_path());
         let numElem = p.Shape().TotalSize();
-        fprintf(stderr, "Saving %d init vals %S to %S\n", (int)numElem, p.Shape().AsString().c_str(), dumpPath.c_str()), fflush(stderr);
-        FILE* f = _wfopen(dumpPath.c_str(), L"wb");
+        fprintf(stderr, "Saving %d init vals %S to %S\n", (int)numElem, p.Shape().AsString().c_str(), Interpolate(dumpPath).c_str()), fflush(stderr);
+        FILE* f = _wfopen(Interpolate(dumpPath).c_str(), L"wb");
         if (f)
         {
             p.Value()->CopyDataTo(buf);
@@ -1722,11 +1744,12 @@ int mt_main(int argc, char *argv[])
     try
     {
         wstring command;
-        wstring workingDirectory = L"d:/mt/experiments"; // output dir = "$workingDirectory/$experimentId/"
         wstring modelPath;
         size_t fromMbCount = 0;
         size_t firstGpu = 0;
         size_t numBits = 4;
+        wstring modelRootDir = L"${PHILLY_MODEL_DIR}/mt/experiments";
+        wstring logRootDir   = L"${PHILLY_LOG_DIR}/mt/experiments";
         struct SystemSentinel : public string
         {
             wstring ToWString() const { return wstring(begin(), end()); }
@@ -1745,7 +1768,8 @@ int mt_main(int argc, char *argv[])
                 "system", systemId,
                 "id", experimentId,
                 // optional overrides of global stuff
-                "?workingDirectory", workingDirectory,
+                "?logRootDir", logRootDir,
+                "?modelRootDir", modelRootDir,
                 "?modelPath", modelPath,
                 "?minibatchSize", minibatchSize,
                 "?maxBatchSizePerWorker", maxBatchSizePerWorker,
@@ -1767,9 +1791,10 @@ int mt_main(int argc, char *argv[])
         //SetCurrentDataType(DataType::Double);
         //let* pExpId = argv[2];
         //wstring experimentId(pExpId, pExpId + strlen(pExpId)); // (cheap conversion to wchar_t)
-        auto outputDirectory = workingDirectory + L"/" + experimentId + L"_" + wstring(systemId.begin(), systemId.end());
+        auto   logDirectory =   logRootDir + L"/" + experimentId + L"_" + wstring(systemId.begin(), systemId.end());
+        auto modelDirectory = modelRootDir + L"/" + experimentId + L"_" + wstring(systemId.begin(), systemId.end());
         if (modelPath.empty())
-            modelPath = outputDirectory + L"/model.dmf"; // DMF=Dynamite model file
+            modelPath = modelDirectory + L"/model.dmf"; // DMF=Dynamite model file
 
         // set up parallel communicator
         use1BitSgd = numBits != 0;
@@ -1779,7 +1804,7 @@ int mt_main(int argc, char *argv[])
                 QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/numBits)
             /*else*/ :
                 MPICommunicator();
-#if 1 // while we are running with MPI, we always start from start
+        // explicitly set GPU, where first GPU is determined by firstGpu parameter
         let numGpus = DeviceDescriptor::AllDevices().size() - 1;
         let ourRank = communicator->CurrentWorker().m_globalRank;
         if (numGpus > 0)
@@ -1790,18 +1815,17 @@ int mt_main(int argc, char *argv[])
         }
         else
             SetCurrentDevice(DeviceDescriptor::CPUDevice());
-#endif
 
         // open log file. The path depends on the worker rank.
-        // Log path = "$workingDirectory/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
+        // Log path = "$modelRootDir/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
         for (size_t retry = 0; ; retry++)
         {
-            logPath = outputDirectory + L"/" + command +
+            logPath = logDirectory + L"/" + command +
                       (retry == 0 ? L"" : (L"." + to_wstring(retry))) +
                       L".log" +
                       (ourRank == 0 ? L"" : (L"." + to_wstring(ourRank)));
 #if 1
-            FILE* f = _wfopen(logPath.c_str(), L"r");
+            FILE* f = _wfopen(Interpolate(logPath).c_str(), L"r");
             if (!f)
                 break;
             fclose(f);
@@ -1810,26 +1834,26 @@ int mt_main(int argc, char *argv[])
             if (!boost::filesystem::exists(logPath))
                 break;
 #endif
-            fprintf(stderr, "%S already exists, bumping up the retry count\n", logPath.c_str());
+            fprintf(stderr, "%S already exists, bumping up the retry count\n", Interpolate(logPath).c_str());
         }
-        boost::filesystem::create_directories(boost::filesystem::path(logPath).parent_path());
+        boost::filesystem::create_directories(boost::filesystem::path(Interpolate(logPath)).parent_path());
         FILE* outStream =
             /*if*/ (communicator->CurrentWorker().IsMain()) ?
-            _wpopen((L"tee " + logPath).c_str(), L"w")
+                _wpopen((L"tee '" + Interpolate(logPath) + L"'").c_str(), L"w") // BUGBUG: simplistic escaping. Add something like .replace("\\", "\\\\").replace("'", "'\\''")
             /*else*/ :
-            _wfopen(logPath.c_str(), L"wt");
+                _wfopen(Interpolate(logPath).c_str(), L"wt");
         if (!outStream)
-            InvalidArgument("error %d opening log file '%S'", errno, logPath.c_str());
-        fprintf(stderr, "redirecting stderr to %S\n", logPath.c_str());
+            InvalidArgument("error %d opening log file '%S'", errno, Interpolate(logPath).c_str());
+        fprintf(stderr, "redirecting stderr to %S\n", Interpolate(logPath).c_str());
         if (_dup2(_fileno(outStream), _fileno(stderr)) == -1)
-            InvalidArgument("error %d redirecting stderr to '%S'", errno, logPath.c_str());
+            InvalidArgument("error %d redirecting stderr to '%S'", errno, Interpolate(logPath).c_str());
         fprintf(stderr, "command line:");
         for (let* p : Span<char**>(argv, argv + argc))
             fprintf(stderr, " %s", p);
         fprintf(stderr, "\nstarting %S as worker[%d], pid %d\n", command.c_str(), (int)ourRank, (int)getpid()), fflush(stderr); // write something to test
 
         // output file (for evaluation commands)
-        let outPath = outputDirectory + L"/" + command +
+        let outPath = modelDirectory + L"/" + command +
             L"_fromMb_" + to_wstring(fromMbCount) +
             L"_beamWidth_" + to_wstring(beamWidth) +
             L"_maxBeam_" + to_wstring(maxBeam) +
@@ -1846,17 +1870,17 @@ int mt_main(int argc, char *argv[])
             DumpModel(modelPath, fromMbCount);
         else
             InvalidArgument("Unknonw --command %S", command.c_str());
-        fprintf(stderr, "redirected stderr to %S\n", logPath.c_str());
+        fprintf(stderr, "redirected stderr to %S\n", Interpolate(logPath).c_str());
     }
     catch (exception& e)
     {
-        fprintf(stderr, "redirected stderr to %S\n", logPath.c_str());
+        fprintf(stderr, "redirected stderr to %S\n", Interpolate(logPath).c_str());
         fprintf(stderr, "\nEXCEPTIONt:\n%s\n", e.what());
         let* ecs = dynamic_cast<const Microsoft::MSR::CNTK::IExceptionWithCallStackBase*>(&e);
         if (ecs)
             fprintf(stderr, "%s\n", ecs->CallStack());
         fflush(stderr);
-        sleep(3600);
+        //sleep(3600);
 #ifdef _MSC_VER
         TerminateProcess(OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, TRUE, GetCurrentProcessId()), 0);
 #else
