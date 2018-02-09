@@ -389,6 +389,25 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
 // entry points from Matrix.cpp; also map op to a lambda
 // -----------------------------------------------------------------------
 
+// special tensor ops for inference speed
+template <class ElemType>
+bool CPUMatrixSpecialUnaryTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 2>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+
+template <class ElemType>
+bool CPUMatrixSpecialBinaryTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 3>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides);
+
+template <class ElemType>
+bool CPUMatrixSpecialTernaryTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 4>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This maps 'op' to a lambda.
 template <class ElemType>
@@ -403,6 +422,12 @@ void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, CPUMatri
         reductionOp != ElementWiseOperator::opMax    &&
         reductionOp != ElementWiseOperator::opElementwiseProduct)
         InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
+
+#ifdef USE_MKL
+    if (!!(CPUMatrix<ElemType>::GetOptimizationFlags() & CPUMatrix<ElemType>::OPT_EVAL_WITH_MKL) &&
+        CPUMatrixSpecialUnaryTensorOpImpl(beta, a, o, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides))
+        return;
+#endif
 
 // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
 #define CaseUnaryTensorOp(oper)                                                        \
@@ -433,6 +458,12 @@ void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CP
     if (reductionOp != ElementWiseOperator::opSum)
         InvalidArgument("TensorOp (binary): The only permitted binary reduction operation is opSum.");
 
+#ifdef USE_MKL
+    if (!!(CPUMatrix<ElemType>::GetOptimizationFlags() & CPUMatrix<ElemType>::OPT_EVAL_WITH_MKL) &&
+        CPUMatrixSpecialBinaryTensorOpImpl(beta, a, b, o, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides))
+        return;
+#endif
+
 #define CaseBinaryTensorOp(oper)                                                       \
     case ElementWiseOperator::op##oper:                                                \
         return TensorOpWithFn(beta, pointers, alpha, [](const array<ElemType*, 3>& pp) \
@@ -460,6 +491,12 @@ void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CP
 {
     if (reductionOp != ElementWiseOperator::opSum)
         InvalidArgument("TensorOp: The only permitted ternary reduction operation is opSum.");
+
+#ifdef USE_MKL
+    if (!!(CPUMatrix<ElemType>::GetOptimizationFlags() & CPUMatrix<ElemType>::OPT_EVAL_WITH_MKL) &&
+        CPUMatrixSpecialTernaryTensorOpImpl(beta, a, b, c, o, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides))
+        return;
+#endif
 
 #define CaseTernaryTensorOp(oper)                                                      \
     case ElementWiseOperator::op##oper:                                                \

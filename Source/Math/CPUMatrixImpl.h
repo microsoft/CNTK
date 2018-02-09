@@ -2509,9 +2509,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardmaxOf(const CPUMatrix<ElemTy
     if (this != &a)
         RequireSize(a.GetNumRows(), a.GetNumCols());
 
+    bool isInplace = (us.Data() == a.Data());
+
+    if (!isInplace)
+        memset(us.Data(), 0, a.GetNumElements() * sizeof(ElemType));
+
     if (isColWise)
     {
-#pragma omp parallel for
         foreach_column (j, a)
         {
             // we need to extract max
@@ -2526,13 +2530,14 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardmaxOf(const CPUMatrix<ElemTy
                 }
             }
 
-            foreach_row (i, us)
-                us(i, j) = (i == maxI) ? 1.0f : 0.0f;
+            if (isInplace)
+                memset(us.Data() + j * a.GetNumRows(), 0, a.GetNumRows() * sizeof(ElemType));
+
+            us(maxI, j) = 1.0f;
         }
     }
     else
     {
-#pragma omp parallel for
         foreach_row (i, a)
         {
             // we need to extract max
@@ -2547,8 +2552,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardmaxOf(const CPUMatrix<ElemTy
                 }
             }
 
-            foreach_column (j, us)
-                us(i, j) = (j == maxJ) ? 1.0f : 0.0f;
+            if (isInplace)
+            {
+                foreach_column(j, us)
+                    us(i, j) = (j == maxJ) ? 1.0f : 0.0f;
+            }
+            else
+                us(i, maxJ) = 1.0f;
         }
     }
 
@@ -7052,6 +7062,18 @@ void CPUMatrix<ElemType>::SetCompatibleMode()
     //    if (mkl_cbwr_set(MKL_CBWR_COMPATIBLE) != MKL_CBWR_SUCCESS)
     //        RuntimeError("Could not set MKL compatible mode.");
     // #endif
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetOptimizationFlags(int flags)
+{
+    m_optimizationFlags = flags;
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::GetOptimizationFlags()
+{
+    return m_optimizationFlags;
 }
 
 // -----------------------------------------------------------------------

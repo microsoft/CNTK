@@ -205,6 +205,7 @@
     <ClCompile Include="CPUMatrixTensorDouble.cpp" />
     <ClCompile Include="CPUMatrixTensorFloat.cpp" />
     <ClCompile Include="CPUMatrixTensorHalf.cpp" />
+    <ClCompile Include="CPUMatrixTensorSpecial.cpp" />
     <ClCompile Include="CPURNGHandle.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />

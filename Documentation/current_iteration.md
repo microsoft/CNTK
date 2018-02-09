@@ -14,3 +14,7 @@ C.debugging.enable_profiler() # optional
 <trainer|evaluator|function>.print_node_timing()
 C.debugging.stop_profiler()
 ```
+
+## CPU inference performance improvements using MKL
+- Accelerates some common tensor ops in Intel CPU inference for float32, especially for fully connected networks
+- Can be turned on/off by cntk.cntk_py.enable_cpueval_optimization()/cntk.cntk_py.disable_cpueval_optimization()

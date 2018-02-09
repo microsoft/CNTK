@@ -112,6 +112,7 @@ def simple_mnist(tensorboard_logdir=None):
     C.debugging.start_profiler()
     C.debugging.enable_profiler()
     C.debugging.set_node_timing(True)
+    #C.cntk_py.disable_cpueval_optimization() # uncomment this to check CPU eval perf without optimization
 
     test_minibatch_size = 1024
     num_samples = 10000

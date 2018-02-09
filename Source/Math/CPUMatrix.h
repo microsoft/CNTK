@@ -433,6 +433,13 @@ public:
     static int SetNumThreads(int numThreads);
     static int GetMaxNumThreads();
 
+    enum OptimizationFlag
+    {
+        OPT_EVAL_WITH_MKL = 1, // using Intel MKL functions for evaluation performance
+    };
+    static void SetOptimizationFlags(int flags);
+    static int  GetOptimizationFlags();
+
     static void SetCompatibleMode();
 
     // static BLAS functions
@@ -579,6 +586,9 @@ private:
     void Clear();
 
     void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
+
+private:
+    static int m_optimizationFlags;
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;
