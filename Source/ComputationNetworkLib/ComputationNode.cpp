@@ -187,7 +187,12 @@ template<class ElemType>
                 {
                     auto targetIdx = (batchMajor ? ((j * numSequences) + i) : ((i * maxNumTimeSteps) + j));
                     if (j < currentSequenceLength)
-                        scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElemType)targetIdx;
+                    {
+                        auto& scatterIndex = scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx];
+                        scatterIndex = (ElemType)targetIdx;
+                        if (scatterIndex != (ElemType)targetIdx)
+                            InvalidArgument("Unpack: Numeric overflow. Source indices that cannot be represented in floating point are not supported.");
+                    }
                     else
                     {
                         if (gapPadValue)
