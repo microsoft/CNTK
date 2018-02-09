@@ -161,7 +161,7 @@ On Windows:
     Set the environment variable `MKLML_PATH` to the versioned sub directory, e.g. setx MKLML_PATH c:\local\mklml\mklml_win_2018.0.1.20171007
 
 ***2017-10-10.*** Preview: CNTK ONNX Format Support
-Update CNTK to support load and save ONNX format from https://github.com/onnx/onnx, please try it and provide feedback. We only support ONNX OPs. This is a preview, and we expect a breaking change in the future.
+Update CNTK to support loading from and saving to the ONNX format from https://github.com/onnx/onnx. Please try it and provide feedback. We only support ONNX ops. This is a preview, and we expect a breaking change in the future.
 
 * Support loading a model saved in ONNX format.
 * Support saving a model in ONNX format, not all CNTK models are currently supported. Only a subset of CNTK models are supported and no RNN. We will add more in the future.
@@ -183,7 +183,7 @@ z = create_model(x)
 z.save(<path of where to save your ONNX model>, format=C.ModelFormat.ONNX)
 ```
 
-If you want to try ONNX, you can build from master or `pip install` one of the below wheel that matches you Python environment.
+If you want to try ONNX, you can build from master or `pip install` one of the below wheel that matches your Python environment.
 
 For Windows CPU-Only:
 * Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp27-cp27m-win_amd64.whl
