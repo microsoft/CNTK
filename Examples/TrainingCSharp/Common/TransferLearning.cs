@@ -10,7 +10,7 @@ namespace CNTK.CSTrainingExamples
     /// <summary>
     /// This class demonstrates transfer learning use a pretrained ResNet model. 
     /// Refer to https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb
-    /// for tranfer learning in general, and ResNet model, data used for training. 
+    /// for transfer learning in general, and ResNet model, data used for training. 
     /// </summary>
     public class TransferLearning
     {
@@ -30,7 +30,7 @@ namespace CNTK.CSTrainingExamples
 
         /// <summary>
         /// TrainAndEvaluateWithFlowerData shows how to do transfer learning with a MinibatchSource. MinibatchSource is constructed with 
-        /// a map file that contains image file paths and labels. Data loading, image preprocessing, and batch ramdomization are handled 
+        /// a map file that contains image file paths and labels. Data loading, image preprocessing, and batch randomization are handled 
         /// by MinibatchSource.
         /// </summary>
         /// <param name="device">CPU or GPU device to run</param>
@@ -373,7 +373,7 @@ namespace CNTK.CSTrainingExamples
                 if (totalCount > maxCount)
                     break;
 
-                // expected lables are in the minibatch data.
+                // expected labels are in the minibatch data.
                 var labelData = minibatchData[labelStreamInfo].data.GetDenseData<float>(labelOutput);
                 var expectedLabels = labelData.Select(l => l.IndexOf(l.Max())).ToList();
 

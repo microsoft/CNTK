@@ -332,7 +332,8 @@ Manual/.ipynb_checkpoints
 Examples/Text/LightRNN/LightRNN/*.so
 
 # other
-/packages
+packages/
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
 /Local
+.vs/

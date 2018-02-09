@@ -575,7 +575,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         }
 
         /// <summary>
-        /// Creats a list of random numbers
+        /// Creates a list of random numbers
         /// </summary>
         /// <param name="size">The size of the list</param>
         /// <param name="maxValue">The maximum value for the generated values</param>
