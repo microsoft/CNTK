@@ -3,7 +3,7 @@
 ## Latest news
 
 ***2017-10-10.*** Preview: CNTK ONNX Format Support
-Update CNTK to support load and save ONNX format from https://github.com/onnx/onnx, please try it and provide feedback. We only support ONNX OPs. This is a preview and we expect a breaking change in the future.
+Update CNTK to support loading from and saving to the ONNX format from https://github.com/onnx/onnx. Please try it and provide feedback. We only support ONNX ops. This is a preview, and we expect a breaking change in the future.
 
 * Support loading a model saved in ONNX format.
 * Support saving a model in ONNX format, not all CNTK models are currently supported. Only a subset of CNTK models are supported and no RNN. We will add more in the future.
