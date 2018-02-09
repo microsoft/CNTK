@@ -150,7 +150,7 @@ void NoRandomizer::GetNextSequenceDescriptions(size_t numGlobalSamplesToLoad, si
 
 std::map<std::wstring, size_t> NoRandomizer::GetState()
 {
-    return std::map<std::wstring, size_t>({ { g_minibatchSourcePosition , m_globalSamplePosition } });
+    return std::map<std::wstring, size_t>({ { g_minibatchSourcePosition, m_globalSamplePosition },{ g_fullDataSweepSize, m_sweepSizeInSamples } });
 }
 
 Sequences NoRandomizer::GetNextSequences(size_t globalSampleCount, size_t localSampleCount)

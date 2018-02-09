@@ -30,6 +30,8 @@ namespace CNTK
             size_t workerRank,
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override;
 
+        virtual size_t GetCurrentSamplePosition() const override;
+        virtual size_t GetFullDataSweepSize() const override;
         virtual Dictionary GetCheckpointState() const override;
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 

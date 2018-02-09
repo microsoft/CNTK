@@ -24,4 +24,5 @@ namespace CNTK {
     const static char g_eol = '\n';
 
     const static wchar_t* g_minibatchSourcePosition = L"minibatchSourcePosition";
+    const static wchar_t* g_fullDataSweepSize       = L"fullDataSweepSize";
 }

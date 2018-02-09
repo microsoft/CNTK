@@ -6172,6 +6172,18 @@ namespace CNTK
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) = 0;
 
         ///
+        /// Gets the current reader position in samples.
+        /// This is useful for logging the number of samples consumed by a training so far.
+        ///
+        CNTK_API virtual size_t GetCurrentSamplePosition() const = 0;
+
+        ///
+        /// Gets the total number of samples in corpus.
+        /// This is useful for logging the number of samples consumed by a training so far.
+        ///
+        CNTK_API virtual size_t GetFullDataSweepSize() const = 0;
+
+        ///
         /// Destruct this MinibatchSource.
         ///
         virtual ~MinibatchSource() {}

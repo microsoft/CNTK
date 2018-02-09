@@ -98,6 +98,7 @@ public:
 
     // Legacy v1 API
     virtual size_t GetCurrentSamplePosition() override;
+    virtual size_t GetFullDataSweepSize() override;
     void SetCurrentSamplePosition(size_t currentSamplePosition);
 
     const std::map<std::wstring, size_t>& GetState();

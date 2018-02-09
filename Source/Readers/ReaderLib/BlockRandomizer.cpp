@@ -55,7 +55,7 @@ BlockRandomizer::BlockRandomizer(
 
 std::map<std::wstring, size_t> BlockRandomizer::GetState()
 {
-    return std::map<std::wstring, size_t>({ { g_minibatchSourcePosition , m_globalSamplePosition } });
+    return std::map<std::wstring, size_t>({ { g_minibatchSourcePosition, m_globalSamplePosition },{ g_fullDataSweepSize, m_sweepSizeInSamples } });
 }
 
 // Start a new epoch.

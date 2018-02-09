@@ -253,6 +253,12 @@ public:
         NOT_IMPLEMENTED;
     }
 
+    // Gets full size of one data sweep on the global timeline.
+    virtual size_t GetFullDataSweepSize()
+    {
+        NOT_IMPLEMENTED;
+    }
+
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
     {
         if (SupportsDistributedMBRead() || (numSubsets != 1) || (subsetNum != 0))

@@ -76,7 +76,9 @@ size_t saveEvery = 10000;
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
+
 size_t minibatchSize = 4096;
+size_t epochSize = 8192 * 10000; // Frantic epoch
 size_t maxBatchSizePerWorker = 2000;// CeilDiv(4096, 6); // this much fits into RAM
 bool insertBOS = true;
 
@@ -91,10 +93,10 @@ wstring Interpolate(const wstring& path)
     if (pos == wstring::npos)
         InvalidArgument("Interpolate: ${ not closed in '%S'", path.c_str());
     let var = path.substr(pos + 2, epos - (pos + 2)); // isolate the variable name
-    fprintf(stderr, "### var = %S\n", var.c_str());
+    //fprintf(stderr, "### var = %S\n", var.c_str());
     let var8 = string(var.begin(), var.end()); // simplistic UTF8 converter
     let val8p = getenv(var8.c_str());
-    fprintf(stderr, "### val = %s\n", val8p), fflush(stderr);
+    //fprintf(stderr, "### val = %s\n", val8p), fflush(stderr);
     if (!val8p)
         InvalidArgument("Interpolate: Environment variable '%s' not defined in '%S'", var8.c_str(), path.c_str());
     let val = wstring(val8p, val8p + strlen(val8p)); // value must be 7-bit ASCII  --TODO: fix this if we ever care
@@ -1098,7 +1100,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     for (let& p : parameters)
         numParameters += p.Shape().TotalSize();
     fprintf(stderr, "Total number of learnable parameters is %u in %d parameter tensors.\n", (unsigned int)numParameters, (int)parameters.size()), fflush(stderr);
-    let epochSize = 8192 * 10000; // Frantic epoch
 
     let isDebugging = numWorkers == 1;
     // determine how large a batch size we can stomach in a single go
@@ -1214,6 +1215,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     size_t lastUpdateLogTotalLabels = totalLabels; // sample count for updateTimer
     for (mbCount = startMbCount; ; mbCount++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
+        let dataSweepSize = minibatchSource->GetFullDataSweepSize();
+        let currentSourcePosition = minibatchSource->GetCurrentSamplePosition();
+        fprintf(stderr, "### we are at %d/%d = %.2f\n", (int)currentSourcePosition, (int)dataSweepSize, currentSourcePosition/(double)dataSweepSize), fflush(stderr);
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         // checkpoint
         if (mbCount % saveEvery == 0 &&
@@ -1521,7 +1525,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
                     (int)(max(maxSamples, maxLabels) * numSeq));
             fprintf(stderr, "SLEEPING\n"), fflush(stderr);
-            sleep(3600);
             throw;
         }
         } // partial MB loop
@@ -1771,6 +1774,7 @@ int mt_main(int argc, char *argv[])
                 "?logRootDir", logRootDir,
                 "?modelRootDir", modelRootDir,
                 "?modelPath", modelPath,
+                "?epochSize", epochSize,
                 "?minibatchSize", minibatchSize,
                 "?maxBatchSizePerWorker", maxBatchSizePerWorker,
                 "?firstGpu", firstGpu,

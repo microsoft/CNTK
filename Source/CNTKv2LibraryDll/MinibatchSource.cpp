@@ -307,6 +307,16 @@ namespace CNTK
         return m_minibatchData;
     }
 
+    /*virtual*/ size_t CompositeMinibatchSource::GetCurrentSamplePosition() const /*override*/
+    {
+        return m_shim->GetCurrentSamplePosition();
+    }
+
+    /*virtual*/ size_t CompositeMinibatchSource::GetFullDataSweepSize() const /*override*/
+    {
+        return m_shim->GetFullDataSweepSize();
+    }
+
     /*virtual*/ Dictionary CompositeMinibatchSource::GetCheckpointState() const /*override*/
     {
         auto state = m_shim->GetState();

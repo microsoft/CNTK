@@ -471,6 +471,13 @@ size_t ReaderShim<ElemType>::GetCurrentSamplePosition()
 {
     return m_currentState[g_minibatchSourcePosition];
 }
+
+template <class ElemType>
+size_t ReaderShim<ElemType>::GetFullDataSweepSize()
+{
+    return m_currentState[g_fullDataSweepSize];
+}
+
 template <class ElemType>
 const std::map<std::wstring, size_t>& ReaderShim<ElemType>::GetState()
 {
