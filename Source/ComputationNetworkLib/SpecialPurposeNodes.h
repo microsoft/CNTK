@@ -763,6 +763,7 @@ public:
     // -sum(left_i * log(softmax_i(right)))
     virtual void ForwardPropNonLooping()
     {
+        this->m_invalidBatch = false;
         this->m_lattices.clear();
         this->m_uids.clear();
         this->m_boundaries.clear();
@@ -801,33 +802,43 @@ public:
         }
 
         this->m_lattices.resize(labelSequencesMap.size());
-
-#pragma omp parallel for
-        for (long i = 0; i < labelSequences.size(); i++)
-        {
-            if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
-                continue;
-
-            auto& currentLabelSeq = labelSequences[i];
-
-            // Fill up lattice
-            auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
-            std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
-            const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
-            latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
-            assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
-            for (size_t pos = 0; pos < labelSequencesMap.size();pos++)
+        try {
+//#pragma omp parallel for
+            for (long i = 0; i < labelSequences.size(); i++)
             {
-                if (labelSequencesMap[pos] == labelSequences[i].seqId)
+                if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
+                    continue;
+
+                auto& currentLabelSeq = labelSequences[i];
+
+                // Fill up lattice
+                auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
+                std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
+                const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
+                latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
+                assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
+                for (size_t pos = 0; pos < labelSequencesMap.size();pos++)
                 {
-                    this->m_lattices[pos] = latticePair;
-                    break;
+                    if (labelSequencesMap[pos] == labelSequences[i].seqId)
+                    {
+                        this->m_lattices[pos] = latticePair;
+                        break;
+                    }
                 }
             }
         }
-        this->m_boundaries.resize(this->m_uids.size());
-        std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
-        SequenceWithSoftmaxNode<ElemType>::ForwardPropNonLooping();
+        catch (...)
+        {
+            // This is ugly, temp solution that we can live in short term, since SE fails rarely due to numerical instability
+            fprintf(stderr, "WARNING: Failed to parse lattice. Skipping minibatch...\n");
+            this->m_invalidBatch = true;
+        }
+        if (!this->m_invalidBatch)
+        {
+            this->m_boundaries.resize(this->m_uids.size());
+            std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
+            SequenceWithSoftmaxNode<ElemType>::ForwardPropNonLooping();
+        }
     }
 
     virtual void Save(File& fstream) const override

@@ -1427,11 +1427,12 @@ public:
         {
             currentarchiveindex = SIZE_MAX;
             f = NULL; // this closes the file handle
+            fprintf(stderr, "Exception when reading lattice for %ls\n", key.c_str());
             throw;
         }
         // check if number of frames is as expected
         if (expectedframes != SIZE_MAX && L.getnumframes() != expectedframes)
-            LogicError("getlattice: number of frames mismatch between numerator lattice and features");
+            LogicError("getlattice: number of frames mismatch between numerator lattice and features for utterance %ls", key.c_str());
         // remember the latice key for diagnostics messages
         L.key = key;
     };
