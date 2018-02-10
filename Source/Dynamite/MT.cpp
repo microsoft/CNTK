@@ -72,7 +72,7 @@ size_t bucketingFactor = 10; // group 10 minibatches together, sort, re-split; f
 string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
-size_t saveEvery = 10000;
+double saveEvery = 1.0; // save every 1 epochs (fractions are allowed, e.g. 0.01)
 size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
@@ -751,11 +751,17 @@ MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& 
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
 }
 
-static wstring IntermediateModelPath(const wstring& modelPath, size_t currentMbCount) // helper to form the model filename
+// turn relative corpus position into a tag of fixed width, e.g. 1.32 --> @001.32
+static wstring PositionTag(double position)
 {
-    char currentMbCountBuf[20];
-    sprintf(currentMbCountBuf, "%06d", (int)currentMbCount); // append the minibatch index with a fixed width for sorted directory listings
-    return modelPath + L"." + wstring(currentMbCountBuf, currentMbCountBuf + strlen(currentMbCountBuf)); // (simplistic string->wstring converter)
+    char tag[40];
+    sprintf(tag, "@%06.2f", position);  // append the corpus position with a fixed width for sorted directory listings
+    return wstring(tag, tag + strlen(tag)); // (simplistic string->wstring converter)
+}
+
+static wstring IntermediateModelPath(const wstring& modelPath, double from) // helper to form the model filename
+{
+    return modelPath + PositionTag(from);
 };
 
 // helper to smooth a variable over time through a low-pass filter
@@ -1058,7 +1064,7 @@ BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model
     });
 }
 
-static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, size_t startMbCount)
+static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, double startPosition)
 {
     let numWorkers = communicator->Workers().size();
     let workerId = communicator->CurrentWorker().m_globalRank;
@@ -1189,9 +1195,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // TODO: move this to a different place, e.g. the helper header
     //let SaveCheckpoint = [](const wstring& path, const FunctionPtr& compositeFunction,
     //    size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
-    if (startMbCount > 0)
+    if (startPosition > 0)
     {
-        let path = IntermediateModelPath(modelPath, startMbCount);
+        let path = IntermediateModelPath(modelPath, startPosition);
         fprintf(stderr, "restoring from: %S... ", Interpolate(path).c_str()), fflush(stderr);
         Dynamite::RestoreFromCheckpoint(Interpolate(path), model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
         fprintf(stderr, "done\n"), fflush(stderr);
@@ -1207,23 +1213,26 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     };
 
     // MINIBATCH LOOP
-    // BUGBUG: The minibatch loop actually runs over partial worker batches.
-    //         In current code, the meaning of startMbCount is broken. mbCount should refer to full minibatches.
     SmoothedCriterion smoothedLoss;
     updateTimer.Restart();
     subMinibatchTimer.Restart();
     size_t lastUpdateLogTotalLabels = totalLabels; // sample count for updateTimer
-    for (mbCount = startMbCount; ; mbCount++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
+    auto lastSavePosition = minibatchSource->GetCurrentSamplePosition() / (double)minibatchSource->GetFullDataSweepSize();
+    for (mbCount = 0; ; mbCount++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
-        let dataSweepSize = minibatchSource->GetFullDataSweepSize();
-        let currentSourcePosition = minibatchSource->GetCurrentSamplePosition();
-        fprintf(stderr, "### we are at %d/%d = %.2f\n", (int)currentSourcePosition, (int)dataSweepSize, currentSourcePosition/(double)dataSweepSize), fflush(stderr);
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
+        let relPosition = minibatchSource->GetCurrentSamplePosition() / (double)minibatchSource->GetFullDataSweepSize();
         // checkpoint
-        if (mbCount % saveEvery == 0 &&
-            (/*startMbCount == 0 ||*/ mbCount > startMbCount)) // don't overwrite the starting model
+        fprintf(stderr, "### we are at %d/%d = %.2f, %d, %d\n",
+                (int)minibatchSource->GetCurrentSamplePosition(), (int)minibatchSource->GetFullDataSweepSize(), relPosition,
+                (int)(relPosition / saveEvery), (int)(lastSavePosition / saveEvery)), fflush(stderr);
+        fprintf(stderr, "");
+        let crossedCheckpointBoundary = (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery);
+        if (mbCount % bucketingFactor == 0 &&                                             // for now only save at multiples of bucketing
+            (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery) && // crossed a boundary
+            mbCount > 0)                                                                  // don't overwrite the starting model
         {
-            let modelPathN = IntermediateModelPath(modelPath, mbCount);
+            let modelPathN = IntermediateModelPath(modelPath, relPosition);
             fprintf(stderr, "ssaving: %S... ", Interpolate(modelPathN).c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
             Dynamite::SaveCheckpoint(Interpolate(modelPathN), model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
             fprintf(stderr, "done%s\n", communicator->CurrentWorker().IsMain() ? "" : " by main worker"), fflush(stderr);
@@ -1231,6 +1240,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //for (auto& param : parameters) // destroy parameters as to prove that we reloaded them correctly.
             //    param.Value()->SetValue(0.0);
             //model_fn.RestoreParameters(modelPathN);
+            lastSavePosition = relPosition;
         }
 
         // get next minibatch
@@ -1531,7 +1541,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     } // mb loop
 }
 
-static void Evaluate(const wstring& modelPath, size_t modelMbCount,
+static void Evaluate(const wstring& modelPath, double startPosition,
                      const wstring& srcEvalFile, const wstring& tgtEvalFile,
                      const wstring& outputHypFile)
 {
@@ -1543,7 +1553,7 @@ static void Evaluate(const wstring& modelPath, size_t modelMbCount,
     // run something through to get the parameter matrices shaped --ugh!
     model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
 #endif
-    let path = IntermediateModelPath(modelPath, modelMbCount);
+    let path = IntermediateModelPath(modelPath, startPosition);
     fprintf(stderr, "Evaluate: loading model: %S... ", path.c_str()), fflush(stderr);
     model_fn.RestoreParameters(path);
     fprintf(stderr, "done\n"), fflush(stderr);
@@ -1708,13 +1718,13 @@ public:
 };
 
 // TODO: move this above the arg parser
-static void DumpModel(const wstring& modelPath, size_t startMbCount)
+static void DumpModel(const wstring& modelPath, double startPosition)
 {
     let model_fn = CreateModelFunctionMarian();
     let criterion_fn = CreateCriterionFunctionMarian(model_fn);
 
     // for decoding to Marian, dump current values, for back-conversion to Marian
-    let path = IntermediateModelPath(modelPath, startMbCount);
+    let path = IntermediateModelPath(modelPath, startPosition);
     fprintf(stderr, "loading model: %S... ", Interpolate(path).c_str()), fflush(stderr);
     model_fn.ParametersCombined()->Restore(Interpolate(path));
     fprintf(stderr, "done\n"), fflush(stderr);
@@ -1748,7 +1758,7 @@ int mt_main(int argc, char *argv[])
     {
         wstring command;
         wstring modelPath;
-        size_t fromMbCount = 0;
+        double from = 0; // starting position, expressed as a fraction of epochs
         size_t firstGpu = 0;
         size_t numBits = 4;
         wstring modelRootDir = L"${PHILLY_MODEL_DIR}/mt/experiments";
@@ -1785,7 +1795,7 @@ int mt_main(int argc, char *argv[])
                 // decoding parameters
                 "?maxBeam", maxBeam,
                 "?beamWidth", beamWidth,
-                "?fromMb", fromMbCount);
+                "?from", from);
         }
         catch (const exception& e)
         {
@@ -1858,20 +1868,20 @@ int mt_main(int argc, char *argv[])
 
         // output file (for evaluation commands)
         let outPath = modelDirectory + L"/" + command +
-            L"_fromMb_" + to_wstring(fromMbCount) +
+            PositionTag(from) +
             L"_beamWidth_" + to_wstring(beamWidth) +
             L"_maxBeam_" + to_wstring(maxBeam) +
             L".hyp";
 
         // perform the command
         if (command == L"train")
-            Train(communicator, modelPath, fromMbCount);
+            Train(communicator, modelPath, from);
         else if (command == L"validate")
-            Evaluate(modelPath, fromMbCount, srcDevFile, tgtDevFile, outPath);
+            Evaluate(modelPath, from, srcDevFile, tgtDevFile, outPath);
         else if (command == L"test")
-            Evaluate(modelPath, fromMbCount, srcTestFile, tgtTestFile, outPath);
+            Evaluate(modelPath, from, srcTestFile, tgtTestFile, outPath);
         else if (command == L"dump_model")
-            DumpModel(modelPath, fromMbCount);
+            DumpModel(modelPath, from);
         else
             InvalidArgument("Unknonw --command %S", command.c_str());
         fprintf(stderr, "redirected stderr to %S\n", Interpolate(logPath).c_str());
