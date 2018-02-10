@@ -760,7 +760,7 @@ MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& 
 static wstring PositionTag(double position)
 {
     char tag[40];
-    sprintf(tag, "@%0d%%", (int)(100 * position + 0.5));  // append the corpus position with a fixed width for sorted directory listings
+    sprintf(tag, "@%05d%%", (int)(100 * position + 0.5));  // append the corpus position with a fixed width for sorted directory listings
     return wstring(tag, tag + strlen(tag)); // (simplistic string->wstring converter)
 }
 
@@ -1514,7 +1514,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                     RuntimeError("Loss is NaN.");
             }
             else
-                fprintf(stderr, "[partial] * %d", (int)numScoredLabels);
+                fprintf(stderr, "[partial] * %d, ", (int)numScoredLabels);
             if (isFinalPartialBatch)
             {
                 let elapsed = updateTimer.ElapsedSeconds(); // elapsed time between updates
