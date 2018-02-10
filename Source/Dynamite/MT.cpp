@@ -752,11 +752,11 @@ MinibatchSourcePtr CreateMinibatchSource(const wstring& srcFile, const wstring& 
     // BUGBUG (API): no way to specify MinibatchSource::FullDataSweep in a single expression
 }
 
-// turn relative corpus position into a tag of fixed width, e.g. 1.32 --> @001.32
+// turn relative corpus position into a tag of fixed width, e.g. 1.32 --> @00132%
 static wstring PositionTag(double position)
 {
     char tag[40];
-    sprintf(tag, "@%06.2f", position);  // append the corpus position with a fixed width for sorted directory listings
+    sprintf(tag, "@%0d%%", (int)(100 * position + 0.5));  // append the corpus position with a fixed width for sorted directory listings
     return wstring(tag, tag + strlen(tag)); // (simplistic string->wstring converter)
 }
 
@@ -1305,8 +1305,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
 #endif
         if (logThisMb)
-            fprintf(stderr, "%5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
-                    (int)mbCount, (int)partialMbIndex,
+            fprintf(stderr, "%S,%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
+                    PositionTag(relPosition).c_str(), (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
                     (int)(max(maxSamples, maxLabels) * numSeq));
@@ -1496,7 +1496,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // Note: Without logging, there is no GPU-CPU transfer.
         if (logThisMb && communicator->CurrentWorker().IsMain())
         {
-            fprintf(stderr, "%5d.%d:   ", (int)mbCount, (int)partialMbIndex);
+            fprintf(stderr, "%S,%d:   ", PositionTag(relPosition).c_str(), (int)partialMbIndex);
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
