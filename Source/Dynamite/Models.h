@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <fstream>
 #include <stdio.h>
 
 #ifndef let
@@ -35,9 +36,11 @@ static inline int  _wrename(const wchar_t* a, const wchar_t * b) { return rename
 static inline FILE* _wfopen(const wchar_t* a, const wchar_t * b) { return fopen(utf8path(a).c_str(), utf8path(b).c_str()); }
 static inline FILE* _wpopen(const wchar_t* a, const wchar_t * b) { return popen(utf8path(a).c_str(), utf8path(b).c_str()); }
 #define _wifstream(s) ifstream(utf8path((s.c_str())))
+#define _wofstream(s) ofstream(utf8path((s.c_str())))
 #else
 #include <io.h>
 #define _wifstream ifstream
+#define _wofstream ofstream
 #endif
 
 // helper to count API calls

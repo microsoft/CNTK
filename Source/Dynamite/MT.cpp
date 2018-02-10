@@ -1227,15 +1227,23 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 (int)minibatchSource->GetCurrentSamplePosition(), (int)minibatchSource->GetFullDataSweepSize(), relPosition,
                 (int)(relPosition / saveEvery), (int)(lastSavePosition / saveEvery)), fflush(stderr);
         fprintf(stderr, "");
-        let crossedCheckpointBoundary = (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery);
         if (mbCount % bucketingFactor == 0 &&                                             // for now only save at multiples of bucketing
             (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery) && // crossed a boundary
             mbCount > 0)                                                                  // don't overwrite the starting model
         {
             let modelPathN = IntermediateModelPath(modelPath, relPosition);
-            fprintf(stderr, "ssaving: %S... ", Interpolate(modelPathN).c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
+            fprintf(stderr, "\nsaving checkpoint: %S... ", Interpolate(modelPathN).c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
             Dynamite::SaveCheckpoint(Interpolate(modelPathN), model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
-            fprintf(stderr, "done%s\n", communicator->CurrentWorker().IsMain() ? "" : " by main worker"), fflush(stderr);
+            if (communicator->CurrentWorker().IsMain())
+            {
+                fprintf(stderr, "writing tag... "), fflush(stderr);
+                let tagPath = modelPath + L".latest";
+                auto f = _wofstream(Interpolate(tagPath));
+                f << relPosition << std::flush;
+                if (f.bad())
+                    RuntimeError("Failed to save checkpoint latest tag file %S", Interpolate(tagPath).c_str());
+            }
+            fprintf(stderr, "done%s\n\n", communicator->CurrentWorker().IsMain() ? "" : " by main worker"), fflush(stderr);
             // test model saving
             //for (auto& param : parameters) // destroy parameters as to prove that we reloaded them correctly.
             //    param.Value()->SetValue(0.0);
