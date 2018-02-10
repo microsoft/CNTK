@@ -77,6 +77,10 @@ size_t maxBeam = 5;
 double beamWidth = 2.0; // logProb beam width
 int/*bool*/ runProfiling = false;
 
+double learningRateWarmupInEpochs = 0; // linearly ramp up LR up to this many epochs.
+double learningRateDecayAfterEpochs = -1.0;
+double learningRateDecayHalfTimeInEpochs = 4.0; // LR will be halved every 4 epochs
+
 size_t minibatchSize = 4096;
 size_t epochSize = 8192 * 10000; // Frantic epoch
 size_t maxBatchSizePerWorker = 2000;// CeilDiv(4096, 6); // this much fits into RAM
@@ -1147,7 +1151,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     else InvalidArgument("Invalid --learner %s", learnerType.c_str());
     // Marian-compatible options, for testing (we can disable them later if CNTK has replacements that work equally well)
     let globalNormClipping = 0.0;   // set to 0 to disable. For ce-sum, this does not make much sense.
-    let learningRateWarmupInEpochs = 2.0; // linearly ramp up LR up to this many epochs.
     // TODO: move this out
     let CreateDistributedLearner = [](const LearnerPtr& baseLearner, const DistributedCommunicatorPtr& communicator)
     {
@@ -1416,6 +1419,19 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         partTimer.Restart();
         if (isFinalPartialBatch) // if partial batches then skip Update() for all but the last partial batch
         {
+            // LR adjustments
+            double mult1 = 1.0;
+            if (learningRateWarmupInEpochs != 0)
+            {
+                //let totalUpdates = mbCount + 1; // +1 to include the one we just did
+                //let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
+                mult1 *= min(1.0, relPosition / learningRateWarmupInEpochs);
+            }
+            if (learningRateDecayAfterEpochs >= 0 && relPosition >= learningRateDecayAfterEpochs)
+            {
+                mult1 *= pow(2.0, -(relPosition - learningRateDecayAfterEpochs) / learningRateDecayHalfTimeInEpochs);
+            }
+            baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
 #if 0
             // Marian global-gradient-norm clipping  --not used
             if (globalNormClipping != 0) // Marian clips the global gradient vector (all gradient values concatenated)
@@ -1436,15 +1452,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
             learner->Update(gradients, info); // GPU sync happens here, at least in case of parallel training
             totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
-            // Marian-compatible LR warmup (TODO: We should rather do that by #labels)
-            // It is done after the first Update() call to replicate a Marian bug, in that it does not update the LR for the very first MB.
-            if (learningRateWarmupInEpochs != 0)
-            {
-                //let totalUpdates = mbCount + 1; // +1 to include the one we just did
-                //let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
-                let mult1 = min(1.0, relPosition / learningRateWarmupInEpochs);
-                baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
-            }
         }
 
         // --- keep track of loss
@@ -1802,6 +1809,9 @@ int mt_main(int argc, char *argv[])
                 // these are optional to override the system settings
                 "?learner", learnerType,
                 "?learningRate", learningRate,
+                "?learningRateWarmupInEpochs", learningRateWarmupInEpochs,
+                "?learningRateDecayAfterEpochs", learningRateDecayAfterEpochs,
+                "?learningRateDecayHalfTimeInEpochs", learningRateDecayHalfTimeInEpochs,
                 // decoding parameters
                 "?maxBeam", maxBeam,
                 "?beamWidth", beamWidth,
