@@ -1147,7 +1147,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     else InvalidArgument("Invalid --learner %s", learnerType.c_str());
     // Marian-compatible options, for testing (we can disable them later if CNTK has replacements that work equally well)
     let globalNormClipping = 0.0;   // set to 0 to disable. For ce-sum, this does not make much sense.
-    let learningRateWarmupInUpdates = 16000; // linearly ramp up LR up to this many sentences (..?).
+    let learningRateWarmupInEpochs = 2.0; // linearly ramp up LR up to this many epochs.
     // TODO: move this out
     let CreateDistributedLearner = [](const LearnerPtr& baseLearner, const DistributedCommunicatorPtr& communicator)
     {
@@ -1218,16 +1218,15 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     updateTimer.Restart();
     subMinibatchTimer.Restart();
     size_t lastUpdateLogTotalLabels = totalLabels; // sample count for updateTimer
-    auto lastSavePosition = minibatchSource->GetCurrentSamplePosition() / (double)minibatchSource->GetFullDataSweepSize();
+    auto lastSavePosition = minibatchSource->GetCurrentSamplePosition() / (double)epochSize;
     for (mbCount = 0; ; mbCount++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
-        let relPosition = minibatchSource->GetCurrentSamplePosition() / (double)minibatchSource->GetFullDataSweepSize();
+        let relPosition = minibatchSource->GetCurrentSamplePosition() / (double)epochSize;
         // checkpoint
         fprintf(stderr, "### we are at %d/%d = %.2f, %d, %d\n",
-                (int)minibatchSource->GetCurrentSamplePosition(), (int)minibatchSource->GetFullDataSweepSize(), relPosition,
+                (int)minibatchSource->GetCurrentSamplePosition(), (int)epochSize, relPosition,
                 (int)(relPosition / saveEvery), (int)(lastSavePosition / saveEvery)), fflush(stderr);
-        fprintf(stderr, "");
         if (mbCount % bucketingFactor == 0 &&                                             // for now only save at multiples of bucketing
             (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery) && // crossed a boundary
             mbCount > 0)                                                                  // don't overwrite the starting model
@@ -1438,10 +1437,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
             // Marian-compatible LR warmup (TODO: We should rather do that by #labels)
             // It is done after the first Update() call to replicate a Marian bug, in that it does not update the LR for the very first MB.
-            if (learningRateWarmupInUpdates != 0)
+            if (learningRateWarmupInEpochs != 0)
             {
-                let totalUpdates = mbCount + 1; // +1 to include the one we just did
-                let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
+                //let totalUpdates = mbCount + 1; // +1 to include the one we just did
+                //let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
+                let mult1 = min(1.0, relPosition / learningRateWarmupInEpochs);
                 baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
             }
         }
