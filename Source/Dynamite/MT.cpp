@@ -1224,9 +1224,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         let relPosition = minibatchSource->GetCurrentSamplePosition() / (double)epochSize;
         // checkpoint
-        fprintf(stderr, "### we are at %d/%d = %.2f, %d, %d\n",
-                (int)minibatchSource->GetCurrentSamplePosition(), (int)epochSize, relPosition,
-                (int)(relPosition / saveEvery), (int)(lastSavePosition / saveEvery)), fflush(stderr);
+        if (logThisMb)
+            fprintf(stderr, "### we are at %d/%d = %.2f, %d, %d\n",
+                    (int)minibatchSource->GetCurrentSamplePosition(), (int)epochSize, relPosition,
+                    (int)(relPosition / saveEvery), (int)(lastSavePosition / saveEvery)), fflush(stderr);
         if (mbCount % bucketingFactor == 0 &&                                             // for now only save at multiples of bucketing
             (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery) && // crossed a boundary
             mbCount > 0)                                                                  // don't overwrite the starting model
@@ -1500,11 +1501,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
                 fprintf(stderr, "[smoothed] L=%4.2f @ %d, PPL=%8.2f [this] ", smoothedLossVal, (int)totalLabels, exp(smoothedLossVal));
+                let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
+                fprintf(stderr, "L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
+                if (std::isnan(lossPerLabel))
+                    RuntimeError("Loss is NaN.");
             }
             else
-                fprintf(stderr, "[partial] ");
-            let lossPerLabel = isFinalPartialBatch ? mbLoss->AsScalar<double>() / numScoredLabels : 0.0; // avoid GPU sync altogether
-            fprintf(stderr, "L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
+                fprintf(stderr, "[partial] * %d", (int)numScoredLabels);
             if (isFinalPartialBatch)
             {
                 let elapsed = updateTimer.ElapsedSeconds(); // elapsed time between updates
@@ -1524,8 +1527,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                     1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeForwardGpu, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
             if (mbCount < 400 || mbCount % 5 == 0) // flush log
                 fflush(stderr);
-            if (std::isnan(lossPerLabel))
-                throw runtime_error("Loss is NaN.");
         }
         //if (mbCount == 11)
         //{
