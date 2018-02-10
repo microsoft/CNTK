@@ -190,8 +190,8 @@ template<class ElemType>
                     {
                         auto& scatterIndex = scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx];
                         scatterIndex = (ElemType)targetIdx;
-                        if (scatterIndex != (ElemType)targetIdx)
-                            InvalidArgument("Unpack: Numeric overflow. Source indices that cannot be represented in floating point are not supported.");
+                        if ((size_t)scatterIndex != targetIdx)
+                            InvalidArgument("Unpack: Numeric overflow. Source index %d cannot be represented in tensor.", (int)targetIdx);
                     }
                     else
                     {
