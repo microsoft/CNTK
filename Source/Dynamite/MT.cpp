@@ -81,6 +81,7 @@ size_t minibatchSize = 4096;
 size_t epochSize = 8192 * 10000; // Frantic epoch
 size_t maxBatchSizePerWorker = 2000;// CeilDiv(4096, 6); // this much fits into RAM
 bool insertBOS = true;
+int/*bool*/ fromLatest = false;
 
 // run every pathname through this function
 // It will interpolate expressions of the form ${VAR}.
@@ -1241,7 +1242,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 auto f = _wofstream(Interpolate(tagPath));
                 f << relPosition << std::flush;
                 if (f.bad())
-                    RuntimeError("Failed to save checkpoint latest tag file %S", Interpolate(tagPath).c_str());
+                    RuntimeError("Failed to save latest-checkpoint tag file %S", Interpolate(tagPath).c_str());
             }
             fprintf(stderr, "done%s\n\n", communicator->CurrentWorker().IsMain() ? "" : " by main worker"), fflush(stderr);
             // test model saving
@@ -1803,7 +1804,8 @@ int mt_main(int argc, char *argv[])
                 // decoding parameters
                 "?maxBeam", maxBeam,
                 "?beamWidth", beamWidth,
-                "?from", from);
+                "?from", from,
+                "?fromLatest", fromLatest);
         }
         catch (const exception& e)
         {
@@ -1873,6 +1875,23 @@ int mt_main(int argc, char *argv[])
         for (let* p : Span<char**>(argv, argv + argc))
             fprintf(stderr, " %s", p);
         fprintf(stderr, "\nstarting %S as worker[%d], pid %d\n", command.c_str(), (int)ourRank, (int)getpid()), fflush(stderr); // write something to test
+
+        // set 'from' if 'fromLatest' is given and a .latest file is found
+        if (fromLatest)
+        {
+            let tagPath = modelPath + L".latest";
+            fprintf(stderr, "checking for latest-checkpoint tag file %S... ", Interpolate(tagPath).c_str()), fflush(stderr);
+            auto f = _wifstream(Interpolate(tagPath));
+            if (f.good())
+            {
+                f >> from;
+                if (f.bad())
+                    RuntimeError("Malformed latest-checkpoint tag file %S", Interpolate(tagPath).c_str());
+                fprintf(stderr, "latest is %S\n", PositionTag(from).c_str()), fflush(stderr);
+            }
+            else
+                fprintf(stderr, "none present\n"), fflush(stderr);
+        }
 
         // output file (for evaluation commands)
         let outPath = modelDirectory + L"/" + command +
