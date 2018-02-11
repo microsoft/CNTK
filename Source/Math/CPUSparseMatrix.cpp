@@ -21,6 +21,11 @@
 #include <vld.h>
 #endif
 
+namespace std
+{
+    static bool isnan(int) { return false; } // for <int> version of DoScatterColumnsOf()
+};
+
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
 #ifdef USE_MKL
@@ -1877,11 +1882,15 @@ template void CPUSparseMatrix<short>::ScaleAndAdd(short, class Microsoft::MSR::C
 // Support <int>
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);
 template CPUSparseMatrix<int>::CPUSparseMatrix(MatrixFormat);
+template CPUSparseMatrix<int>::CPUSparseMatrix(CPUSparseMatrix<int> const&);
 template CPUSparseMatrix<int>::~CPUSparseMatrix();
+template void CPUSparseMatrix<int>::SetValue(size_t, size_t, int);
+//template void CPUSparseMatrix<int>::SetValue(CPUMatrix<int> const&);
 template void CPUSparseMatrix<int>::SetValue(CPUSparseMatrix<int> const&);
 template void CPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
 template int* CPUSparseMatrix<int>::Data() const;
 template void CPUSparseMatrix<int>::Reset(void);
 template void CPUSparseMatrix<int>::Resize(const size_t, const size_t, const size_t, const bool);
+template CPUMatrix<int> CPUSparseMatrix<int>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
 }}}

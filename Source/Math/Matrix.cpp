@@ -1487,8 +1487,6 @@ static void CopyToVector(const Matrix<ElemType>& source, vector<ElemType>& sourc
     assert(datap == sourceData.data() && datasz == sourceData.size()); // (make sure it used my buffer; a somewhat awkward API)
 }
 
-template<>
-void Matrix<int>::AssignValuesOf(const Matrix<int>&) { NOT_IMPLEMENTED; }
 template<class ElemType, class ElemTypeOther>
 static void DoCastAssignValuesOf(Matrix<ElemType>& target, const Matrix<ElemTypeOther>& source)
 {
@@ -6384,10 +6382,10 @@ void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperato
 template class Matrix<float>;
 template class Matrix<double>;
 
-template Matrix<float >& Matrix<float >::DoScatterColumnsOf<float >(float  beta, const Matrix<float >& idx, const Matrix<float >& a, float  alpha);
-template Matrix<float >& Matrix<float >::DoScatterColumnsOf<int   >(float  beta, const Matrix<int   >& idx, const Matrix<float >& a, float  alpha);
-template Matrix<double>& Matrix<double>::DoScatterColumnsOf<double>(double beta, const Matrix<double>& idx, const Matrix<double>& a, double alpha);
-template Matrix<double>& Matrix<double>::DoScatterColumnsOf<int   >(double beta, const Matrix<int   >& idx, const Matrix<double>& a, double alpha);
+template MATH_API Matrix<float >& Matrix<float >::DoScatterColumnsOf<float >(float  beta, const Matrix<float >& idx, const Matrix<float >& a, float  alpha);
+template MATH_API Matrix<float >& Matrix<float >::DoScatterColumnsOf<int   >(float  beta, const Matrix<int   >& idx, const Matrix<float >& a, float  alpha);
+template MATH_API Matrix<double>& Matrix<double>::DoScatterColumnsOf<double>(double beta, const Matrix<double>& idx, const Matrix<double>& a, double alpha);
+template MATH_API Matrix<double>& Matrix<double>::DoScatterColumnsOf<int   >(double beta, const Matrix<int   >& idx, const Matrix<double>& a, double alpha);
 
 // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
 // Let's explicitly instantiate the methods we need for that purpose

@@ -28,6 +28,11 @@
 #pragma warning(pop)
 #include <boost/random/uniform_real_distribution.hpp>
 
+namespace std
+{
+    static inline bool isnan(int) { return false; } // for <int> version of DoScatterColumnsOf()
+};
+
 #ifdef _WIN32
 #define NOMINMAX
 #include "Windows.h"
@@ -7585,7 +7590,11 @@ template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 template CPUMatrix<int>::CPUMatrix(const size_t numRows, const size_t numCols);
 template CPUMatrix<int>::CPUMatrix(const size_t numRows, const size_t numCols, int* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template CPUMatrix<int>::CPUMatrix();
+template CPUMatrix<int>::CPUMatrix(const CPUMatrix<int>&);
+template CPUMatrix<int>::CPUMatrix(CPUMatrix<int>&&);
+template void CPUMatrix<int>::SetValue(CPUMatrix<int> const&);
 template size_t CPUMatrix<int>::LocateElement(size_t, size_t) const;
+template void CPUMatrix<int>::CopySection(size_t numRows, size_t numCols, int* dst, size_t colStride) const;
 template void CPUMatrix<int>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
 
 }}}

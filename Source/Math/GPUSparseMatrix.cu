@@ -3645,9 +3645,14 @@ template void GPUSparseMatrix<short>::ColumnwiseScaleAndWeightedAdd(short, const
 // Support <int>
 template GPUSparseMatrix<int>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<int>::GPUSparseMatrix(const size_t, const size_t, const size_t, DEVICEID_TYPE, const MatrixFormat);
+template GPUSparseMatrix<int>::GPUSparseMatrix(GPUSparseMatrix<int> const&);
 template GPUSparseMatrix<int>::~GPUSparseMatrix();
 template void GPUSparseMatrix<int>::SetValue(CPUSparseMatrix<int> const&);
+template void GPUSparseMatrix<int>::SetValue(GPUSparseMatrix<int> const&);
+template void GPUSparseMatrix<int>::SetValue(GPUMatrix<int> const&);
+template void GPUSparseMatrix<int>::CopyToDenseMatrix(GPUMatrix<int>&) const;
 template void GPUSparseMatrix<int>::CopyToCPUSparseMatrix(CPUSparseMatrix<int>&) const;
+template void GPUSparseMatrix<int>::AssignColumnSliceToDense(GPUMatrix<int>&, size_t, size_t) const;
 template void GPUSparseMatrix<int>::ChangeDeviceTo(int);
 template void GPUSparseMatrix<int>::Resize(const size_t, const size_t, const size_t, const bool);
 template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
