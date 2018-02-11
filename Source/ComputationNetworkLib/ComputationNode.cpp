@@ -127,11 +127,12 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 }
 
 template<class ElemType>
+template<class ElemType2>
 /*static*/ TensorView<ElemType> ComputationNode<ElemType>::Unpack(const TensorShape& sampleShape,
                                                                   const Matrix<ElemType>& packedData,
                                                                   const MBLayoutPtr& layout,
                                                                   const MatrixPtr& unpackedDataStorage,
-                                                                  const MatrixPtr& tempIndicesStorage,
+                                                                  const typename Matrix<ElemType2>::MatrixPtr& tempIndicesStorage,
                                                                   const Matrix<char>::MatrixPtr& tempMaskStorage,
                                                                   bool batchMajor,
                                                                   const ElemType* gapPadValue)
@@ -169,7 +170,7 @@ template<class ElemType>
         size_t i = 0;
         auto& layoutSequences = layout->GetAllSequences();
         int numLayoutSequences = (int)layoutSequences.size();
-        std::vector<ElemType> scatterIndicesVector(layout->GetNumCols(), -1);
+        std::vector<ElemType2> scatterIndicesVector(layout->GetNumCols(), -1);
         std::vector<char> columnsValidityMask;
         if (gapPadValue)
             columnsValidityMask.resize(numSequences * maxNumTimeSteps, 1);
@@ -189,7 +190,7 @@ template<class ElemType>
                     if (j < currentSequenceLength)
                     {
                         auto& scatterIndex = scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx];
-                        scatterIndex = (ElemType)targetIdx;
+                        scatterIndex = (ElemType2)targetIdx;
                         if ((size_t)scatterIndex != targetIdx)
                             InvalidArgument("Unpack: Numeric overflow. Source index %d cannot be represented in tensor.", (int)targetIdx);
                     }
@@ -206,7 +207,7 @@ template<class ElemType>
 
         auto scatterIdxMatrix = tempIndicesStorage;
         if (!scatterIdxMatrix)
-            scatterIdxMatrix = std::make_shared<Matrix<ElemType>>(1, layout->GetNumCols(), scatterIndicesVector.data(), packedData.GetDeviceId());
+            scatterIdxMatrix = std::make_shared<Matrix<ElemType2>>(1, layout->GetNumCols(), scatterIndicesVector.data(), packedData.GetDeviceId());
         else
             scatterIdxMatrix->SetValue(1, layout->GetNumCols(), packedData.GetDeviceId(), scatterIndicesVector.data());
 
@@ -214,7 +215,7 @@ template<class ElemType>
         if (gapPadValue && (*gapPadValue == 0) && (unpackedData->GetMatrixType() == MatrixType::SPARSE))
             unpackedData->SetValue(*gapPadValue);
 
-        unpackedData->DoScatterColumnsOf(0, *scatterIdxMatrix, packedData, 1);
+        unpackedData->template DoScatterColumnsOf<ElemType2>(0, *scatterIdxMatrix, packedData, 1);
 
         // DoScatterColumnsOf fills the target with 0 before scattering if passed beta == 0. 
         // This we need to mask only if the gapPadValue != 0
@@ -1143,15 +1144,20 @@ template WriteFormattingOptions::WriteFormattingOptions(const ScriptableObjects:
 
 atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
-template <> map<size_t, map<size_t, shared_ptr<SingleMatrix>>> ComputationNode<float>::s_constOnes{};
+template <> map<size_t, map<size_t, shared_ptr<SingleMatrix>>> ComputationNode<float >::s_constOnes{};
 template <> map<size_t, map<size_t, shared_ptr<DoubleMatrix>>> ComputationNode<double>::s_constOnes{};
 
 // -----------------------------------------------------------------------
-// instantiate the core class templates
+// instantiate the core class templates and needed methods
 // -----------------------------------------------------------------------
 
 template class ComputationNode<float>;
 template class ComputationNode<double>;
+
+template /*static*/ TensorView<float > ComputationNode<float >::Unpack<float >(const TensorShape& sampleShape, const Matrix<float >& packedData, const MBLayoutPtr& lout, const MatrixPtr& unpackedDataStorage, const typename Matrix<float >::MatrixPtr& tempIndicesStorage, const Matrix<char>::MatrixPtr& tempMaskStorage, bool batchMajor, const float * gapPadValue);
+template /*static*/ TensorView<float > ComputationNode<float >::Unpack<int   >(const TensorShape& sampleShape, const Matrix<float >& packedData, const MBLayoutPtr& lout, const MatrixPtr& unpackedDataStorage, const typename Matrix<int   >::MatrixPtr& tempIndicesStorage, const Matrix<char>::MatrixPtr& tempMaskStorage, bool batchMajor, const float * gapPadValue);
+template /*static*/ TensorView<double> ComputationNode<double>::Unpack<double>(const TensorShape& sampleShape, const Matrix<double>& packedData, const MBLayoutPtr&ayout, const MatrixPtr& unpackedDataStorage, const typename Matrix<double>::MatrixPtr& tempIndicesStorage, const Matrix<char>::MatrixPtr& tempMaskStorage, bool batchMajor, const double* gapPadValue);
+template /*static*/ TensorView<double> ComputationNode<double>::Unpack<int   >(const TensorShape& sampleShape, const Matrix<double>& packedData, const MBLayoutPtr&ayout, const MatrixPtr& unpackedDataStorage, const typename Matrix<int   >::MatrixPtr& tempIndicesStorage, const Matrix<char>::MatrixPtr& tempMaskStorage, bool batchMajor, const double* gapPadValue);
 
 }}}
 

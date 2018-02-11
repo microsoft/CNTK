@@ -27,6 +27,8 @@
 #include "Convolution.cuh"
 #include "CuDnnRNN.h"
 
+TENSOR_OPS_DECL static inline bool isnan(int) { return false; } // needed in _doScatterColumnsOf()
+
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cusparse.lib")
@@ -1321,8 +1323,8 @@ static void Peek(const GPUMatrix<ElemType>& m, const char* which)
 
 #define ALLOW_ATOMIC_SCATTER // allow to disable this, until we know atomicAdd() works properly here
 
-template <class ElemType>
-__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
+template <class ElemType, class ElemType2> // ElemType2 for the index, which can be float/double or int
+__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType2* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id >= numElements) // note: there are no __syncthread() calls inside
@@ -1355,7 +1357,8 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
 
 // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha)
+template <class ElemType2>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType2>& idx, const GPUMatrix<ElemType>& a, ElemType alpha)
 {
     if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
@@ -1372,8 +1375,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 
 #ifndef ALLOW_ATOMIC_SCATTER // verify that atomicAdd is not needed  --this is not efficient
     {
-        vector<ElemType> buf(idx.GetNumRows() * idx.GetNumCols()); // idx(,)are the column(s) we copy/add into
-        CUDA_CALL(cudaMemcpy(buf.data(), idx.Data(), sizeof(ElemType) * buf.size(), cudaMemcpyDeviceToHost));
+        vector<ElemType2> buf(idx.GetNumRows() * idx.GetNumCols()); // idx(,)are the column(s) we copy/add into
+        CUDA_CALL(cudaMemcpy(buf.data(), idx.Data(), sizeof(*idx.Data()) * buf.size(), cudaMemcpyDeviceToHost));
         vector<bool> writtenTo(GetNumCols(), false); // remember whether an output column is in fact a target
         for (size_t i = 0; i < buf.size(); i++)
         {
@@ -1399,10 +1402,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     CUDA_LONG NN = (CUDA_LONG)(a.GetNumElements()); // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
-    _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
+    _doScatterColumnsOf<ElemType,ElemType2><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
 
     //SyncGuard syncGuard;
-    //_doScatterColumnsOf<ElemType><<<a.GetNumCols(), a.GetNumRows(), 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
+    //_doScatterColumnsOf<ElemType,ElemType2><<<a.GetNumCols(), a.GetNumRows(), 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
 
     return *this;
 }
@@ -5434,6 +5437,11 @@ template class GPUMatrix<double>;
 template class DeviceBoundNumber<float>;
 template class DeviceBoundNumber<double>;
 
+template GPUMatrix<float >& GPUMatrix<float >::DoScatterColumnsOf<float >(float  beta, const GPUMatrix<float >& idx, const GPUMatrix<float >& a, float  alpha);
+template GPUMatrix<float >& GPUMatrix<float >::DoScatterColumnsOf<int   >(float  beta, const GPUMatrix<int   >& idx, const GPUMatrix<float >& a, float  alpha);
+template GPUMatrix<double>& GPUMatrix<double>::DoScatterColumnsOf<double>(double beta, const GPUMatrix<double>& idx, const GPUMatrix<double>& a, double alpha);
+template GPUMatrix<double>& GPUMatrix<double>::DoScatterColumnsOf<int   >(double beta, const GPUMatrix<int   >& idx, const GPUMatrix<double>& a, double alpha);
+
 template <class ElemType>
 cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = {0};
 
@@ -5492,9 +5500,14 @@ template GPUMatrix<short>& GPUMatrix<short>::operator*=(short);
 template DEVICEID_TYPE GPUMatrix<short>::PrepareDevice(DEVICEID_TYPE deviceId) const;
 
 // Support <int>
+template GPUMatrix<int>::GPUMatrix(int deviceId);
+template GPUMatrix<int>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
 template GPUMatrix<int>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, int* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
 template GPUMatrix<int>::~GPUMatrix();
+template int* GPUMatrix<int>::CopyToArray() const;
 template void GPUMatrix<int>::Resize(size_t, size_t, bool);
+template void GPUMatrix<int>::ChangeDeviceTo(DEVICEID_TYPE to_id);
+template void GPUMatrix<int>::SetValue(const size_t numRows, const size_t numCols, int deviceId, int* pArray, size_t matrixFlags, DataTransferer* transferer, IBaseMatrixStorageExternalBufferDeleter* deleter);
 
 template int* TracingGPUMemoryAllocator::Allocate<int>(int, size_t);
 template size_t* TracingGPUMemoryAllocator::Allocate<size_t>(int, size_t);

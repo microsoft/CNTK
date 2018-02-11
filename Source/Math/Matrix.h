@@ -368,7 +368,8 @@ public:
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
 
     Matrix<ElemType>& DoGatherColumnsOf (ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha);
-    Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha);
+    template <class ElemType2> // idx matrix can be <int>
+    Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType2>& idx, const Matrix<ElemType>& a, ElemType alpha);
 
     Matrix<ElemType>& operator+=(const ElemType alpha);
     Matrix<ElemType>  operator+(const ElemType alpha) const;

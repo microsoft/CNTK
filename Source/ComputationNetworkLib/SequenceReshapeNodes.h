@@ -67,7 +67,7 @@ public:
         if (inputIndex == 0)
         {
             ElemType gapPadValue = 0;
-            auto gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), Gradient(), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, Matrix<char>::MatrixPtr(nullptr), /*batchMajor=*/ false, &gapPadValue);
+            auto gradient = ComputationNode<ElemType>::template Unpack<ElemType>(GetSampleLayout(), Gradient(), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, Matrix<char>::MatrixPtr(nullptr), /*batchMajor=*/ false, &gapPadValue);
             auto inputGradient = InputRef(inputIndex).GradientTensorFor(InputRef(inputIndex).GetSampleLayout().GetRank(), FrameRange(InputRef(inputIndex).GetMBLayout()));
 
             if (InputRef(inputIndex).IsGradientInitializedBy(this))
@@ -331,7 +331,7 @@ public:
         // Directly unpack into Value() matrix
         auto valueMatrixNumRows = outputValuePtrRef->GetNumRows();
         auto valueMatrixNumCols = outputValuePtrRef->GetNumCols();
-        auto unpackedInput = ComputationNode<ElemType>::Unpack(InputRef(0).GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), outputValuePtrRef, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ false, &m_paddingValue);
+        auto unpackedInput = ComputationNode<ElemType>::template Unpack<ElemType>(InputRef(0).GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), outputValuePtrRef, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ false, &m_paddingValue);
         if (unpackedInput.GetSOBPtr() != outputValuePtrRef)
             Value().AssignValuesOf(*unpackedInput.GetSOBPtr());
 

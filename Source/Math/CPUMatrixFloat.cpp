@@ -21,4 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // explicit instantiations, due to CPUMatrix being too big and causing VS2015 cl crash.
     template class MATH_API CPUMatrix<float>;
+
+    template CPUMatrix<float>& CPUMatrix<float>::DoScatterColumnsOf<float>(float beta, const CPUMatrix<float>& idx, const CPUMatrix<float>& a, float alpha);
+    template CPUMatrix<float>& CPUMatrix<float>::DoScatterColumnsOf<int  >(float beta, const CPUMatrix<int  >& idx, const CPUMatrix<float>& a, float alpha);
 }}}

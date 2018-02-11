@@ -442,7 +442,8 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType
 
 // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha)
+template <class ElemType2>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType2>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha)
 {
     VerifyWritable(__func__);
 
@@ -1821,6 +1822,11 @@ template MATH_API File& operator>>(File& stream, CPUSparseMatrix<double>& us);
 template class CPUSparseMatrix<float>;
 template class CPUSparseMatrix<double>;
 
+template CPUSparseMatrix<float >& CPUSparseMatrix<float >::DoScatterColumnsOf<float >(float  beta, const CPUMatrix<float >& idx, const CPUSparseMatrix<float >& a, float  alpha);
+template CPUSparseMatrix<float >& CPUSparseMatrix<float >::DoScatterColumnsOf<int   >(float  beta, const CPUMatrix<int   >& idx, const CPUSparseMatrix<float >& a, float  alpha);
+template CPUSparseMatrix<double>& CPUSparseMatrix<double>::DoScatterColumnsOf<double>(double beta, const CPUMatrix<double>& idx, const CPUSparseMatrix<double>& a, double alpha);
+template CPUSparseMatrix<double>& CPUSparseMatrix<double>::DoScatterColumnsOf<int   >(double beta, const CPUMatrix<int   >& idx, const CPUSparseMatrix<double>& a, double alpha);
+
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explciitly instantiate the methods we need for that purpose
 template CPUSparseMatrix<char>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
@@ -1870,8 +1876,12 @@ template void CPUSparseMatrix<short>::ScaleAndAdd(short, class Microsoft::MSR::C
 
 // Support <int>
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);
+template CPUSparseMatrix<int>::CPUSparseMatrix(MatrixFormat);
 template CPUSparseMatrix<int>::~CPUSparseMatrix();
+template void CPUSparseMatrix<int>::SetValue(CPUSparseMatrix<int> const&);
 template void CPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
+template int* CPUSparseMatrix<int>::Data() const;
 template void CPUSparseMatrix<int>::Reset(void);
+template void CPUSparseMatrix<int>::Resize(const size_t, const size_t, const size_t, const bool);
 
 }}}

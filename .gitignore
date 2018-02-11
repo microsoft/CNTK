@@ -348,3 +348,4 @@ Examples/Text/LightRNN/LightRNN/*.so
 /tmp_dynamite_model.cmf.10.ckp-1
 /tmp_dynamite_model.cmf.10-1
 /Examples/Text/ATIS/Data.zip
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/onnx-ml.pb.h

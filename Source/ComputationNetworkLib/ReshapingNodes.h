@@ -456,7 +456,7 @@ public:
                     InvalidArgument("%ls %ls operation does not support broadcasting the left operand to the right operand's dynamic axis, inside a recurrent loop.", NodeName().c_str(), OperationName().c_str());
 
                 ElemType gapPadValue = 0;
-                gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, Matrix<char>::MatrixPtr(nullptr), /*batchMajor=*/ true, &gapPadValue);
+                gradient = ComputationNode<ElemType>::template Unpack<ElemType>(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, Matrix<char>::MatrixPtr(nullptr), /*batchMajor=*/ true, &gapPadValue);
                 inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
             }
 

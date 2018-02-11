@@ -522,7 +522,7 @@ private:
         for (int i = 0; i < NumInputs; i++)
         {
             ElemType gapPadValue = 0;
-            unpackedInput[i] = ComputationNode<ElemType>::Unpack(
+            unpackedInput[i] = ComputationNode<ElemType>::template Unpack<ElemType>(
                 InputRef(i).GetSampleLayout(),
                 InputRef(i).Value(),
                 inputMBLayout,
@@ -563,7 +563,7 @@ private:
         for (int i = 0; i < NumInputs; i++)
         {
             ElemType gapPadValue = 0;
-            unpackedInput[i] = ComputationNode<ElemType>::Unpack(
+            unpackedInput[i] = ComputationNode<ElemType>::template Unpack<ElemType>(
                 InputRef(i).GetSampleLayout(),
                 InputRef(i).Value(),
                 input0MBLayout, // the same for both operands

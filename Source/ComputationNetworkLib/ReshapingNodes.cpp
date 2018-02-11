@@ -123,7 +123,7 @@ template <class ElemType>
     if (ReduceSequenceAxis())
     {
         ElemType gapPadValue = NeutralValue(m_reductionOp);
-        input = ComputationNode<ElemType>::Unpack(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ true, &gapPadValue);
+        input = ComputationNode<ElemType>::template Unpack<ElemType>(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ true, &gapPadValue);
     }
     else
         input = InputRef(0).ValueTensorFor(rank, frInput);

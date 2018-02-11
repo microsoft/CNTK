@@ -678,7 +678,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 
 // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha)
+template <class ElemType2>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType2>& idx, const CPUMatrix<ElemType>& a, ElemType alpha)
 {
     if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
@@ -7505,7 +7506,8 @@ template <class ElemType>
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step)
+template <class ElemType2> // indices can be float/double or int
+void CPUMatrix<ElemType>::ScatterValues(ElemType2* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step)
 {
     if (!indices || !value || !data)
         LogicError("ScatterValues: input data is null.");
@@ -7535,6 +7537,7 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
     }
 }
 
+// TODO: don't the following belong into a CPP file?
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explicitly instantiate the methods we need for that purpose
 template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols);
@@ -7579,8 +7582,10 @@ template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, shor
 template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 
 // Support <int>
+template CPUMatrix<int>::CPUMatrix(const size_t numRows, const size_t numCols);
 template CPUMatrix<int>::CPUMatrix(const size_t numRows, const size_t numCols, int* pArray, const size_t matrixFlags, IBaseMatrixStorageExternalBufferDeleter* deleter);
+template CPUMatrix<int>::CPUMatrix();
+template size_t CPUMatrix<int>::LocateElement(size_t, size_t) const;
 template void CPUMatrix<int>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
 
 }}}
-

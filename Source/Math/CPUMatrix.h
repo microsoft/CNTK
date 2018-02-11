@@ -170,7 +170,8 @@ public:
     CPUMatrix<ElemType>& AssignTransposeOf(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
-    CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
+    template <class ElemType2>
+    CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType2>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
 
     CPUMatrix<ElemType>& operator+=(const ElemType alpha);
     CPUMatrix<ElemType>  operator+(const ElemType alpha) const;
@@ -589,7 +590,8 @@ protected:
 private:
     void Clear();
 
-    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
+    template<class ElemType2>
+    void ScatterValues(ElemType2* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;

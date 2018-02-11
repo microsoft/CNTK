@@ -1250,10 +1250,13 @@ Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matri
 // idx has width of 'a' and contains values w.r.t. 'this'
 // Unlike gather, for scatter, 'this' must have been sized already.
 // Invalid entries (gap columns) are denoted by idx(0,j) == -1.
+// The index matrix can be <ElemType> or <int>.
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha)
+template <class ElemType2>
+Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matrix<ElemType2>& idx, const Matrix<ElemType>& a, ElemType alpha)
 {
-    DecideAndMoveToRightDevice(*this, idx, a); // TODO: only move target if beta != 0
+    DecideAndMoveToRightDevice(*this, a); // TODO: only move target if beta != 0
+    idx._transferToDevice(a.GetDeviceId()); // (idx is smallest, so it follows the other)
 
     if (a.GetMatrixType() != this->GetMatrixType())
         RuntimeError("Matrix::DoScatterColumnsOf: The source and target matrices must have same storage type (SPARSE/DENSE).");
@@ -1265,7 +1268,7 @@ Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matr
         { 
             // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
 
-            Matrix<ElemType> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
+            Matrix<ElemType2> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
 
             CPUSparseMatrix<ElemType> tempA(a.GetFormat(), a.GetNumRows(), a.GetNumCols(), a.m_GPUSparseMatrix->GetNumNZElements());
             a.m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempA);
@@ -6380,6 +6383,11 @@ void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperato
 //template class Matrix<short>;
 template class Matrix<float>;
 template class Matrix<double>;
+
+template Matrix<float >& Matrix<float >::DoScatterColumnsOf<float >(float  beta, const Matrix<float >& idx, const Matrix<float >& a, float  alpha);
+template Matrix<float >& Matrix<float >::DoScatterColumnsOf<int   >(float  beta, const Matrix<int   >& idx, const Matrix<float >& a, float  alpha);
+template Matrix<double>& Matrix<double>::DoScatterColumnsOf<double>(double beta, const Matrix<double>& idx, const Matrix<double>& a, double alpha);
+template Matrix<double>& Matrix<double>::DoScatterColumnsOf<int   >(double beta, const Matrix<int   >& idx, const Matrix<double>& a, double alpha);
 
 // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
 // Let's explicitly instantiate the methods we need for that purpose

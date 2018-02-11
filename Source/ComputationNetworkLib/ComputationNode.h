@@ -1504,11 +1504,12 @@ public:
             MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
 
+    template<class ElemType2>
     static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
-                                       const Matrix<ElemType>& packedData,                                       
+                                       const Matrix<ElemType>& packedData,
                                        const MBLayoutPtr& layout,
                                        const MatrixPtr& unpackedDataStorage,
-                                       const MatrixPtr& tempIndicesStorage,
+                                       const typename Matrix<ElemType2>::MatrixPtr& tempIndicesStorage,
                                        const Matrix<char>::MatrixPtr& tempMaskStorage,
                                        bool batchMajor,
                                        const ElemType* gapPadValue);
@@ -1519,8 +1520,9 @@ public:
                                        bool batchMajor,
                                        const ElemType* gapPadValue)
     {
-        auto nullSharedPtr = MatrixPtr(nullptr);
-        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, Matrix<char>::MatrixPtr(nullptr), batchMajor, gapPadValue);
+        // we control the type of the indices, so use <int> for larger numeric range
+        return Unpack<int>(sampleShape, packedData, layout,
+                           MatrixPtr(nullptr), Matrix<int>::MatrixPtr(nullptr), Matrix<char>::MatrixPtr(nullptr), batchMajor, gapPadValue);
     }
 
     static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
