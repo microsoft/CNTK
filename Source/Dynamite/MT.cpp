@@ -24,6 +24,7 @@ using namespace marian;
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <sstream>
+#include <limits.h> // for HOST_NAME_MAX
 #ifdef _MSC_VER
 #include <Windows.h> // for process killing
 static inline int getpid() { return ::GetCurrentProcessId(); }
@@ -1236,7 +1237,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             mbCount > 0)                                                                  // don't overwrite the starting model
         {
             let modelPathN = IntermediateModelPath(modelPath, relPosition);
-            fprintf(stderr, "\nsaving checkpoint: %S... ", Interpolate(modelPathN).c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
+            fprintf(stderr, "\nSaving checkpoint: %S... ", Interpolate(modelPathN).c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
             Dynamite::SaveCheckpoint(Interpolate(modelPathN), model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
             if (communicator->CurrentWorker().IsMain())
             {
@@ -1262,11 +1263,15 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // The minibatch is then already broken down further into partial batches that fit into GPU RAM.
         partTimer.Restart();
         if (bucketedMinibatchSet.empty() || mbCount % bucketingFactor == 0) // time to get the next bucketedMinibatchSet
+        {
+            fprintf(stderr, "Fetching next set of %d samples * %d buckets. Model has seen %.0f samples so far.\n",
+                    (int)minibatchSize, (int)bucketingFactor, (double)minibatchSource->GetCurrentSamplePosition()), fflush(stderr);
             Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
                                     minibatchSize, bucketingFactor, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
                                     numWorkers, workerId,
                                     /*shuffleSeed=*/mbCount,
                                     /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
+        }
         let timeGetNextMinibatch = partTimer.Elapsed();
         let& minibatchForWorker = bucketedMinibatchSet[mbCount % bucketingFactor]; // [partial][stream][seq]
         // This is a minibatch of approximately uniform length.
@@ -1450,8 +1455,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             }
 #endif
 
+fprintf(stderr, "Distributed Update() at %d...\n", (int)totalLabels), fflush(stderr);
             learner->Update(gradients, info); // GPU sync happens here, at least in case of parallel training
             totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
+fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
         }
 
         // --- keep track of loss
@@ -1551,7 +1558,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
                     (int)(max(maxSamples, maxLabels) * numSeq));
-            fprintf(stderr, "SLEEPING\n"), fflush(stderr);
             throw;
         }
         } // partial MB loop
@@ -1885,7 +1891,13 @@ int mt_main(int argc, char *argv[])
         fprintf(stderr, "command line:");
         for (let* p : Span<char**>(argv, argv + argc))
             fprintf(stderr, " %s", p);
-        fprintf(stderr, "\nstarting %S as worker[%d], pid %d\n", command.c_str(), (int)ourRank, (int)getpid()), fflush(stderr); // write something to test
+#ifdef _WIN32
+        const char* hostname = getenv("COMPUTERNAME");
+#else
+        char hostname[HOST_NAME_MAX] = "?";
+        gethostname(hostname, HOST_NAME_MAX);
+#endif
+        fprintf(stderr, "\nstarting %S as worker[%d] out of %d on %s, pid %d\n", command.c_str(), (int)ourRank, (int)numGpus, hostname, (int)getpid()), fflush(stderr);
 
         // set 'from' if 'fromLatest' is given and a .latest file is found
         if (fromLatest)
