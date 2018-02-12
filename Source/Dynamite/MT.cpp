@@ -69,7 +69,7 @@ size_t decoderRecurrentDim = 1024;
 size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
-size_t bucketingFactor = 10; // group 10 minibatches together, sort, re-split; for more homogenous batch sizes
+size_t maxibatchSize = 30000000; // load this many samples in one go, sort, re-split; for more homogenous batch sizes
 string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
@@ -124,7 +124,6 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTestFile  = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
         srcVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         tgtVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
-        bucketingFactor = 100; // Marian uses much higher
         insertBOS = false; // Marian model does not expect <s>
     }
     else if (systemId == "chs_enu")
@@ -139,7 +138,6 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTestFile  = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/test.ENU.txt";
         srcVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
-        bucketingFactor = 10;
         learningRate *= 10;
     }
     else if (systemId == "chs_enu_small")
@@ -1260,18 +1258,18 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         }
 
         // get next minibatch
-        // We get 10 x the minibatch size, sort it by source length, and then process it in consecutive chunks of 1/10, which form the actual minibatch for training
-        // Each multiple of bucketingFactor, we reload the bucketedMinibatchSet[][][][] array.
+        // We fetch a much larger batch, sort it by source length, and then process it in consecutive chunks, which form the actual minibatch for training
+        // Each time bucketCounter wraps around, we reload the bucketedMinibatchSet[][][][] array.
         // This is already filtered for this worker.
         // The minibatch is then already broken down further into partial batches that fit into GPU RAM.
         partTimer.Restart();
         // ... change to a counter. Maybe another nested loop?
         if (bucketCounter == 0) // time to get the next bucketedMinibatchSet
         {
-            fprintf(stderr, "Fetching next set of %d samples * %d buckets. Model has seen %.0f samples so far.\n",
-                    (int)minibatchSize, (int)bucketingFactor, (double)minibatchSource->GetCurrentSamplePosition()), fflush(stderr);
+            fprintf(stderr, "Fetching next set of %d samples (for bucketed minibatching). Model has seen %.0f samples so far.\n",
+                    (int)maxibatchSize, (double)minibatchSource->GetCurrentSamplePosition()), fflush(stderr);
             Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
-                                    minibatchSize, bucketingFactor, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
+                                    minibatchSize, maxibatchSize, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
                                     numWorkers, workerId,
                                     /*shuffleSeed=*/mbCount,
                                     /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
@@ -1546,13 +1544,6 @@ fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
             if (mbCount < 400 || mbCount % 5 == 0) // flush log
                 fflush(stderr);
         }
-        //if (mbCount == 11)
-        //{
-        //    let numAPICalls = CountAPICalls(0) - numAPICalls00;
-        //    fprintf(stderr, "#API calls in last minibatch = %.1f * %d\n", numAPICalls / (float)bucketingFactor, (int)bucketingFactor), fflush(stderr);
-        //    //if (runProfiling)
-        //        return;
-        //}
         }
         catch (const exception& e)
         {
@@ -1604,7 +1595,7 @@ static void Evaluate(const wstring& modelPath, double startPosition,
     {
         // get next minibatch
         bool gotData = Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
-                                               /*minibatchSize=*/1, /*bucketingFactor=*/1, /*maxBatchSizePerWorker=*/SIZE_MAX, /*hasPadding=*/false,
+                                               /*minibatchSize=*/1, /*maxibatchSize=*/1, /*maxBatchSizePerWorker=*/SIZE_MAX, /*hasPadding=*/false,
                                                /*numWorkers=*/1, /*currentWorker=*/0,
                                                /*shuffleSeed=*/0, /*inferenceOnly=*/true,
                                                CurrentDataType(), CurrentDevice());

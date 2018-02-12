@@ -318,16 +318,16 @@ namespace Dynamite {
     //  - we also consider the effect of padding as needed for Marian
     // We sort by sequence length, longest first, first stream (source) having highest priority.
     // The minibatches get random-shuffled, so that we get a random MB sequence w.r.t. length.
+    // The amount of data to load is specified by maxibatchSize.
     // Returns true unless the end of the data has been reached.
     static inline bool GetSubBatches(vector<vector<vector<vector<Variable>>>>& args, const vector<const wchar_t*>& streamNames, const MinibatchSourcePtr& minibatchSource, 
-                                     size_t minibatchSize, size_t numBuckets, size_t maxBatchSizePerWorker, bool hasPadding,
+                                     size_t minibatchSize, size_t maxibatchSize, size_t maxBatchSizePerWorker, bool hasPadding,
                                      size_t numWorkers, size_t thisWorker,
                                      size_t shuffleSeed, bool inferenceOnly,
                                      DataType dataType, const DeviceDescriptor& device)
     {
         // ask for a multi-batch, by asking CNTK for a 'numBuckets' larger minibatch
-        let requestedNumSamples = numBuckets * minibatchSize;
-        auto multiMinibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, requestedNumSamples, numWorkers, thisWorker, device);
+        auto multiMinibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, maxibatchSize, numWorkers, thisWorker, device);
 
         // convert it to an array of tensors, one for each sequence and stream. First into args[0][0]; later below we will then split it.
         vector<ValuePtr> valuePtrs(Transform(streamNames, [&](const wchar_t* streamName) { return multiMinibatchData[minibatchSource->StreamInfo(streamName)].data; }));
@@ -339,6 +339,7 @@ namespace Dynamite {
             return false;
 
         // break into minibatches of similar size
+        let numBuckets = (maxibatchSize + minibatchSize - 1) / minibatchSize;
         GetSubBatches_CreateMinibatches(args, multiMinibatchStreams, minibatchSize, numBuckets);
 
         // random-shuffle
