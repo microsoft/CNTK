@@ -418,7 +418,7 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
         size_t streamId = m_nameToStreamId[mx.first];
         const auto& stream = minibatch.m_data[streamId];
         if (mx.second.m_matrix.use_count() != 1 || mx.second.m_matrix->GetNumViews() != 1) // if referenced, then someone might still submit, on a different thread, GPU computation that consumes this matrix
-            LogicError("PrefetchMinibatch() called for matrix (ref count %d) or storage (%d) that are referenced externalily",
+            LogicError("PrefetchMinibatch() called for matrix (ref count %d) or storage (%d) that are referenced externally",
                        (int)mx.second.m_matrix.use_count(), (int)mx.second.m_matrix->GetNumViews());
         mx.second.m_mbLayout = stream->m_layout;
         mx.second.m_sampleShape = stream->m_sampleShape;
