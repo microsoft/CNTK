@@ -18,7 +18,7 @@
 #include <ctime>
 #include <iostream> // for cout/cerr
 #include <memory>   // for unique_ptr
-#include <limits.h> // for ULONG_MAX
+#include <limits.h> // for ULONG_MAX and HOST_NAME_MAX
 
 //#include "CPUMatrix.h"
 //#include "CPUSparseMatrix.h"
