@@ -1223,8 +1223,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     subMinibatchTimer.Restart();
     size_t lastUpdateLogTotalLabels = totalLabels; // sample count for updateTimer
     auto lastSavePosition = minibatchSource->GetCurrentSamplePosition() / (double)epochSize;
-    for (mbCount = 0; ; mbCount++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
+    size_t bucketCounter = 0;
+    for (mbCount = 0; ; mbCount++, bucketCounter++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
+        if (bucketCounter == bucketedMinibatchSet.size()) // wrap the bucket counter
+            bucketCounter = 0;
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         let relPosition = minibatchSource->GetCurrentSamplePosition() / (double)epochSize;
         // checkpoint
@@ -1232,7 +1235,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             fprintf(stderr, "### we are at %d/%d = %.2f, %d, %d\n",
                     (int)minibatchSource->GetCurrentSamplePosition(), (int)epochSize, relPosition,
                     (int)(relPosition / saveEvery), (int)(lastSavePosition / saveEvery)), fflush(stderr);
-        if (mbCount % bucketingFactor == 0 &&                                             // for now only save at multiples of bucketing
+        if (bucketCounter == 0 &&                                             // for now only save at multiples of bucketing
             (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery) && // crossed a boundary
             mbCount > 0)                                                                  // don't overwrite the starting model
         {
@@ -1262,7 +1265,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // This is already filtered for this worker.
         // The minibatch is then already broken down further into partial batches that fit into GPU RAM.
         partTimer.Restart();
-        if (bucketedMinibatchSet.empty() || mbCount % bucketingFactor == 0) // time to get the next bucketedMinibatchSet
+        // ... change to a counter. Maybe another nested loop?
+        if (bucketCounter == 0) // time to get the next bucketedMinibatchSet
         {
             fprintf(stderr, "Fetching next set of %d samples * %d buckets. Model has seen %.0f samples so far.\n",
                     (int)minibatchSize, (int)bucketingFactor, (double)minibatchSource->GetCurrentSamplePosition()), fflush(stderr);
@@ -1273,7 +1277,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                                     /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
         }
         let timeGetNextMinibatch = partTimer.Elapsed();
-        let& minibatchForWorker = bucketedMinibatchSet[mbCount % bucketingFactor]; // [partial][stream][seq]
+        let& minibatchForWorker = bucketedMinibatchSet[bucketCounter]; // [partial][stream][seq]
         // This is a minibatch of approximately uniform length.
         let numPartialBatchesPerWorker = minibatchForWorker.size();
         //let partialMinibatchSize = minibatchSize / numPartialBatchesPerWorker; // partial MB size across all workers
@@ -1313,8 +1317,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
 #endif
         if (logThisMb)
-            fprintf(stderr, "%S,%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
-                    PositionTag(relPosition).c_str(), (int)partialMbIndex,
+            fprintf(stderr, "%S,%d,%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
+                    PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
                     (int)(max(maxSamples, maxLabels) * numSeq));
@@ -1510,7 +1514,7 @@ fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
         // Note: Without logging, there is no GPU-CPU transfer.
         if (logThisMb && communicator->CurrentWorker().IsMain())
         {
-            fprintf(stderr, "%S,%d:   ", PositionTag(relPosition).c_str(), (int)partialMbIndex);
+            fprintf(stderr, "%S,%d,%d:   ", PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex);
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
@@ -1553,8 +1557,8 @@ fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
         catch (const exception& e)
         {
             fprintf(stderr, "\n\nFAILED\n%s\n", e.what());
-            fprintf(stderr, "%5d.%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
-                    (int)mbCount, (int)partialMbIndex,
+            fprintf(stderr, "%5d,%d,%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
+                    (int)mbCount, (int)bucketCounter, (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
                     (int)(max(maxSamples, maxLabels) * numSeq));
