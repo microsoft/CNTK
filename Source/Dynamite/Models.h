@@ -274,18 +274,19 @@ void SaveCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
     // learner state
     std::vector<DictionaryValue> learnersState{ learner->CreateCheckpoint() };
 
-    Dictionary aggregatedState;
+    // collect state from all workers if running parallel
     DistributedCommunicatorPtr checkpointCommunicator;
     if (numWorkers > 1    ||true)
         checkpointCommunicator = MPICommunicator();
+
+    Dictionary aggregatedState;
     if (checkpointCommunicator)
     {
         const std::wstring internalWorkerStateKey = L"internal_worker_state"; // these are from Serialization.h
         const std::wstring externalWorkerStateKey = L"external_worker_state";
         Dictionary localState(internalWorkerStateKey, Dictionary(), externalWorkerStateKey, externalState);
 
-        // Collect distrbuted external localState.
-        checkpointCommunicator = MPICommunicator();
+        // Collect distributed external localState.
         checkpointCommunicator->Barrier();
 
         std::vector<DictionaryPtr> remoteState;
@@ -295,7 +296,7 @@ void SaveCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
             aggregatedState[std::to_wstring(w.m_globalRank)] = *remoteState[w.m_globalRank];
     }
 
-    if (!checkpointCommunicator || checkpointCommunicator->CurrentWorker().IsMain())
+    if (checkpointCommunicator->CurrentWorker().IsMain())
     {
         // TODO: reuse from Trainer.cpp:
         const std::wstring versionPropertyName = L"Version";
