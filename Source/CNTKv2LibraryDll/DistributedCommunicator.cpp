@@ -356,10 +356,9 @@ namespace CNTK
             mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
         }
 
-        // BUGBUG: assuming the all values on the same device
         if (m_nccl == nullptr)
         {
-            m_nccl.reset(new NcclComm(AsCNTKImplDeviceId(inputValues[0]->Device()), m_mpi));
+            m_nccl.reset(new NcclComm(DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
         }
 
         // For all values residing on GPU initiate async transfer to CPU buffers if needed
@@ -603,7 +602,7 @@ namespace CNTK
         if (inputValue->Device() == DeviceDescriptor::CPUDevice())
             return false;
 
-        // Donot copy if NCCL is supported or GPUDirect RDMA is used
+        // Do not copy if NCCL is supported or GPUDirect RDMA is used
         if (m_nccl->IsSupported() || m_mpi->UseGpuGdr())
             return false;
 
