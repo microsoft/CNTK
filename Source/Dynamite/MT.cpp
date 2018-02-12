@@ -69,7 +69,7 @@ size_t decoderRecurrentDim = 1024;
 size_t numDecoderResNetProjections = 4;
 size_t decoderProjectionDim = 768;
 size_t topHiddenProjectionDim = 1024;
-size_t maxibatchSize = 30000000; // load this many samples in one go, sort, re-split; for more homogenous batch sizes
+size_t maxibatchSize = 3000000; // load this many samples in one go, sort, re-split; for more homogenous batch sizes. note: 30M is too large
 string learnerType = "adam";
 double learningRate = 0.0003662109375;
 bool use1BitSgd = false;
@@ -1273,6 +1273,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                                     numWorkers, workerId,
                                     /*shuffleSeed=*/mbCount,
                                     /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
+            fprintf(stderr, "Samples were distributed over %d buckets.\n", (int)bucketedMinibatchSet.size()), fflush(stderr);
         }
         let timeGetNextMinibatch = partTimer.Elapsed();
         let& minibatchForWorker = bucketedMinibatchSet[bucketCounter]; // [partial][stream][seq]
@@ -1309,11 +1310,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         //partTimer.Log("GetNextMinibatch", numLabels);
 
         // break it further into sub-minibatches if they don't fit
-#if 1
-        let numPartialWorkerScoredLabels = numLabels; // Marian: data has no <s>, so don't subtract anything. TODO: Get this info from reader or setup.
-#else
-        let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
-#endif
+        let numPartialWorkerScoredLabels = insertBOS ? numLabels - numSeq : numLabels; // <s> is not scored. Discount, except for Marian where data has no <s>
         if (logThisMb)
             fprintf(stderr, "%S,%d,%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
                     PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex,
@@ -1521,6 +1518,26 @@ fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
                 fprintf(stderr, "L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
                 if (std::isnan(lossPerLabel))
                     RuntimeError("Loss is NaN.");
+#if __unix__    // log for Philly status reporting
+                // Philly status reporting is done by writing info to a JSON file.
+                let phillyProgressJson = L"${PHILLY_LOG_DIR}/progress.json";
+                auto f = _wofstream(Interpolate(phillyProgressJson));
+                let nominalEpochs = 100.0;
+                f << "{\n";
+                f << "\"lastErr\" : "           << lossPerLabel                                          << ",\n";
+                f << "\"lastProgress\" : "      << relPosition / max(nominalEpochs, relPosition) * 100.0 << ",\n";
+                f << "\"totEpochs\" : "         << max(nominalEpochs, relPosition)                       << ",\n";
+                f << "\"gMMinErr\" : "          << 0.0                                                   << ",\n";
+                f << "\"gMMaxErr\" : "          << log(tgtVocabSize)                                     << ",\n";
+                f << "\"gFMinErr\" : "          << 0.0                                                   << ",\n";
+                f << "\"gFMaxErr\" : "          << log(tgtVocabSize)                                     << ",\n";
+                f << "\"curCommand\" : "        << "\"train\""                                           << ",\n";
+                f << "\"commands\" : [ "        << "\"train\""          << " ]"                          <<  "\n";
+                f << "}\n" << std::flush;
+                if (f.bad())
+                    RuntimeError("Failed to save Philly progress file %S", Interpolate(phillyProgressJson).c_str());
+                // (note that Philly will ignore this file unless it also finds the logrank.0.log file)
+#endif
             }
             else
                 fprintf(stderr, "[partial] * %d, ", (int)numScoredLabels);
@@ -1875,7 +1892,7 @@ int mt_main(int argc, char *argv[])
         boost::filesystem::create_directories(boost::filesystem::path(Interpolate(logPath)).parent_path());
         FILE* outStream =
             /*if*/ (communicator->CurrentWorker().IsMain()) ?
-                _wpopen((L"tee '" + Interpolate(logPath) + L"'").c_str(), L"w") // BUGBUG: simplistic escaping. Add something like .replace("\\", "\\\\").replace("'", "'\\''")
+                _wofstream(Interpolate(logPath)), _wpopen((L"tee '" + Interpolate(logPath) + L"'").c_str(), L"w") // BUGBUG: simplistic escaping. Add something like .replace("\\", "\\\\").replace("'", "'\\''")
             /*else*/ :
                 _wfopen(Interpolate(logPath).c_str(), L"wt");
         if (!outStream)
@@ -1883,6 +1900,17 @@ int mt_main(int argc, char *argv[])
         fprintf(stderr, "redirecting stderr to %S\n", Interpolate(logPath).c_str());
         if (_dup2(_fileno(outStream), _fileno(stderr)) == -1)
             InvalidArgument("error %d redirecting stderr to '%S'", errno, Interpolate(logPath).c_str());
+
+        // to support Philly logging, we must create a file called logrank.0.log
+#if __unix__
+        if (communicator->CurrentWorker().IsMain())
+        {
+            let logRank0Path = L"${PHILLY_LOG_DIR}/logrank.0.log";
+            boost::filesystem::remove(Interpolate(logRank0Path)); // (will not throw if file does not exist)
+            boost::filesystem::create_symlink(Interpolate(logPath), Interpolate(logRank0Path));
+        }
+#endif
+
         fprintf(stderr, "command line:");
         for (let* p : Span<char**>(argv, argv + argc))
             fprintf(stderr, " %s", p);
