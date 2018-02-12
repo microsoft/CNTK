@@ -326,42 +326,15 @@ namespace Dynamite {
                                      DataType dataType, const DeviceDescriptor& device)
     {
         // ask for a multi-batch, by asking CNTK for a 'numBuckets' larger minibatch
-        // We have a maximum size of a column index being representatble as a float32, so if the ask is too large, we break it down.
-        vector<vector<Variable>> multiMinibatchStreams; // [streamIndex][seqIndex]
-        let endPosition = minibatchSource->GetCurrentSamplePosition() + numBuckets * minibatchSize;
-        //while (endPosition > minibatchSource->GetCurrentSamplePosition())
-        //{
-            let toBeReadSize = endPosition - minibatchSource->GetCurrentSamplePosition();
-            //if (!multiMinibatchStreams.empty() && toBeReadSize < 200) // don't call again due to a tiny round-off error
-            //    break;
-            let requestedMBSize = toBeReadSize;////min(toBeReadSize, (size_t)100000 * numWorkers); // if we hit an index of 16M, float32 will overflow
-            // The threshold is quite small since the range of the overflowing index = seqId * maxLen,
-            // but we don't know maxLen here, and can only be conservative.
-            //fprintf(stderr, "READING %d out of %d\n", (int)requestedMBSize, (int)toBeReadSize), fflush(stderr);
-            auto multiMinibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, requestedMBSize, numWorkers, thisWorker, device);
-            // check for end of data pass
-            //if (multiMinibatchData.empty())
-            //{
-            //    fprintf(stderr, "GetSubBatches: GetNextMinibatch() returned empty for requested size of %d out of %d remaining\n", (int)requestedMBSize, (int)toBeReadSize), fflush(stderr);
-            //    break;
-            //}
+        let requestedNumSamples = numBuckets * minibatchSize;
+        auto multiMinibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, requestedNumSamples, numWorkers, thisWorker, device);
 
-            // convert it to an array of tensors, one for each sequence and stream. First into args[0][0]; later below we will then split it.
-            vector<ValuePtr> valuePtrs(Transform(streamNames, [&](const wchar_t* streamName) { return multiMinibatchData[minibatchSource->StreamInfo(streamName)].data; }));
-            vector<vector<Variable>> multiMinibatchStreamsPartial; // [streamIndex][seqIndex]
-            //fprintf(stderr, "GOT IT\n"), fflush(stderr);
-            Dynamite::FromCNTKMB(multiMinibatchStreamsPartial,  // result goes here
-                                 valuePtrs,     // Value objects from MinibatchSource, one for each stream
-                                 /*isSequence[]=*/vector<bool>(streamNames.size(), true), inferenceOnly, dataType, device);
-            //fprintf(stderr, "LENGTH %d\n", (int)multiMinibatchStreamsPartial[0].size()), fflush(stderr);
-            //if (multiMinibatchStreams.empty())
-                multiMinibatchStreams = move(multiMinibatchStreamsPartial);
-            //else
-            //    for (size_t streamIndex = 0; streamIndex < multiMinibatchStreamsPartial.size(); streamIndex++)
-            //        multiMinibatchStreams[streamIndex].insert(multiMinibatchStreams[streamIndex].end(),
-            //                                                  make_move_iterator(multiMinibatchStreamsPartial[streamIndex].begin()),
-            //                                                  make_move_iterator(multiMinibatchStreamsPartial[streamIndex].end()));
-        //}
+        // convert it to an array of tensors, one for each sequence and stream. First into args[0][0]; later below we will then split it.
+        vector<ValuePtr> valuePtrs(Transform(streamNames, [&](const wchar_t* streamName) { return multiMinibatchData[minibatchSource->StreamInfo(streamName)].data; }));
+        vector<vector<Variable>> multiMinibatchStreams; // [streamIndex][seqIndex]
+        Dynamite::FromCNTKMB(multiMinibatchStreams,     // result goes here
+                             valuePtrs,                 // Value objects from MinibatchSource, one for each stream
+                             /*isSequence[]=*/vector<bool>(streamNames.size(), true), inferenceOnly, dataType, device);
         if (multiMinibatchStreams.empty())
             return false;
 
