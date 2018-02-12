@@ -7595,6 +7595,7 @@ template CPUMatrix<int>::CPUMatrix(CPUMatrix<int>&&);
 template void CPUMatrix<int>::SetValue(CPUMatrix<int> const&);
 template size_t CPUMatrix<int>::LocateElement(size_t, size_t) const;
 template void CPUMatrix<int>::CopySection(size_t numRows, size_t numCols, int* dst, size_t colStride) const;
+template void CPUMatrix<int>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
 template void CPUMatrix<int>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
 
 }}}

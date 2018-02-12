@@ -5506,12 +5506,15 @@ template GPUMatrix<int>::GPUMatrix(const size_t numRows, const size_t numCols, i
 template GPUMatrix<int>::GPUMatrix(const GPUMatrix<int>&);
 template GPUMatrix<int>::~GPUMatrix();
 template void GPUMatrix<int>::SetValue(const int);
+template void GPUMatrix<int>::SetValue(const size_t numRows, const size_t numCols, int deviceId, int* pArray, size_t matrixFlags, DataTransferer* transferer, IBaseMatrixStorageExternalBufferDeleter* deleter);
+template void GPUMatrix<int>::SetValue(GPUMatrix<int> const&);
 template int* GPUMatrix<int>::CopyToArray() const;
 template void GPUMatrix<int>::CopySection(size_t numRows, size_t numCols, int* dst, size_t colStride) const;
-template void GPUMatrix<int>::Resize(size_t, size_t, bool);
 template void GPUMatrix<int>::ChangeDeviceTo(DEVICEID_TYPE to_id);
-template void GPUMatrix<int>::SetValue(const size_t numRows, const size_t numCols, int deviceId, int* pArray, size_t matrixFlags, DataTransferer* transferer, IBaseMatrixStorageExternalBufferDeleter* deleter);
+template void GPUMatrix<int>::Resize(size_t, size_t, bool);
+template void GPUMatrix<int>::RequireSize(size_t, size_t, bool);
 template GPUMatrix<int>& GPUMatrix<int>::operator*=(int);
+template DEVICEID_TYPE GPUMatrix<int>::PrepareDevice(DEVICEID_TYPE deviceId) const;
 
 template int* TracingGPUMemoryAllocator::Allocate<int>(int, size_t);
 template size_t* TracingGPUMemoryAllocator::Allocate<size_t>(int, size_t);
