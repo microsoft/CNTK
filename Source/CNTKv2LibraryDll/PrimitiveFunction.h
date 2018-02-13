@@ -278,6 +278,7 @@ namespace CNTK
         static const std::wstring AttributeNameSymListPath;
         static const std::wstring AttributeNameStateListPath;
         static const std::wstring AttributeNameTransProbPath;
+        static const std::wstring AttributeNameLatticeConfigPath;
         static const std::wstring AttributeNameHSmoothingWeight;
         static const std::wstring AttributeNameFrameDropThresh;
         static const std::wstring AttributeNameDoReferenceAlign;
