@@ -180,8 +180,16 @@ NDShape ONNXToCNTKHelper::FromTypeProto(const onnx::TypeProto& tensorShape)
 NDShape ONNXToCNTKHelper::FromTensorShapeProto(const onnx::TensorShapeProto& tensorShape)
 {
     std::vector<size_t> dimensions;
-    for (int index = 0; index < tensorShape.dim_size(); index++)
-        dimensions.push_back(tensorShape.dim(index).dim_value());
+    for (int i = 0; i < tensorShape.dim_size(); ++i)
+    {
+        auto dim_i = tensorShape.dim(i);
+        if (dim_i.has_dim_value())
+            dimensions.push_back(tensorShape.dim(i).dim_value());
+        else if (dim_i.has_dim_param())
+            dimensions.push_back(NDShape::FreeDimension);
+        else
+            LogicError("ONNX::TensorShapeProto_Dimension must have either dim_value or dim_param specified.");
+    }
 
     // CNTKToONNX ToTensorShape does reverse, need to reverse to restore CNTK shape
     return ReverseShape(dimensions);

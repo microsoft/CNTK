@@ -313,8 +313,11 @@ int CNTKToONNXHelper::ToIndex(const Axis& axis)
 onnx::TypeProto CNTKToONNXHelper::ToTypeProto(const NDShape& shape, bool hasBatchAxis)
 {
     onnx::TypeProto newShape;
-    if (shape.HasUnboundDimension())
-        LogicError("Inferred and FreeDimension aren't currently supported.");
+    if (shape.HasInferredDimension())
+    {
+        LogicError("This model has tensor dimensions marked as InferredDimension. Please evaluate"
+            "the model with test data at least once and try saving it again.");
+    }
 
     if (hasBatchAxis)
         newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(1);
@@ -322,7 +325,14 @@ onnx::TypeProto CNTKToONNXHelper::ToTypeProto(const NDShape& shape, bool hasBatc
     auto dimensions = reverse(shape.Dimensions());
     for (auto dimension : dimensions)
     {
-        newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(dimension);
+        if (dimension == NDShape::FreeDimension)
+        {
+            newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_param("None");
+        }
+        else
+        {
+            newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(dimension);
+        }
     }
 
     return newShape;
