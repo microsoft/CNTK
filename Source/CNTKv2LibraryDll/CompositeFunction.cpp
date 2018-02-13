@@ -1124,6 +1124,7 @@ namespace CNTK
                     auto phonePath = functionConfig[PrimitiveFunction::AttributeNamePhonePath].Value<wstring>();
                     auto stateListPath = functionConfig[PrimitiveFunction::AttributeNameStateListPath].Value<wstring>();
                     auto transProbPath =  functionConfig[PrimitiveFunction::AttributeNameTransProbPath].Value<wstring>();
+                    auto latticeConfigPath = functionConfig[PrimitiveFunction::AttributeNameLatticeConfigPath].Value<wstring>();
                     auto frameDropThresh = functionConfig[PrimitiveFunction::AttributeNameFrameDropThresh].Value<float>();
                     auto doReferenceAlign = functionConfig[PrimitiveFunction::AttributeNameDoReferenceAlign].Value<bool>();
                     auto seqGammarUsesMBR = functionConfig[PrimitiveFunction::AttributeNameSeqGammarUsesMBR].Value<bool>();
@@ -1133,7 +1134,7 @@ namespace CNTK
                     auto seqGammarWordPen = functionConfig[PrimitiveFunction::AttributeNameSeqGammarWordPen].Value<float>();
                     auto hSmoothingWeight = functionConfig[PrimitiveFunction::AttributeNameHSmoothingWeight].Value<float>();
 
-                    computationNodePtr = New<LatticeSequenceWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath,
+                    computationNodePtr = New<LatticeSequenceWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath,
                         hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen);
                     break;
                 }

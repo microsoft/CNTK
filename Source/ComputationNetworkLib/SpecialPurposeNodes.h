@@ -17,6 +17,8 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
+#include <locale>
+#include <codecvt>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -695,16 +697,16 @@ class LatticeSequenceWithSoftmaxNode : public SequenceWithSoftmaxNode<ElemType>,
     }
 
 public:
-    LatticeSequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath,
+    LatticeSequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& latticeConfigPath,
         float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen)
-        : SequenceWithSoftmaxNode<ElemType>(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath)
+        : SequenceWithSoftmaxNode<ElemType>(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath), m_latticeConfigPath(latticeConfigPath)
     {
         if (sizeof(ElemType) != sizeof(float))
             LogicError("LatticeSequenceWithSoftmaxNode currently only supports floats.\n"); // due to the binary reader restrictions 
 
         if (symListPath.size() == 0 || phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
-        
+
         if (doReferenceAlign)
             LogicError("SE training with alignment is currently not supported.\n");
 
@@ -729,7 +731,7 @@ public:
     }
 
     LatticeSequenceWithSoftmaxNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeSequenceWithSoftmaxNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"),
+        : LatticeSequenceWithSoftmaxNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"), configp->Get(L"latticeConfigPath"),
             configp->Get(L"hSmoothingWeight"), configp->Get(L"frameDropThresh"), configp->Get(L"doReferenceAlign"), configp->Get(L"seqGammarUsesMBR"), configp->Get(L"seqGammarAMF"), configp->Get(L"seqGammarLMF"), configp->Get(L"seqGammarBMMIFactor"), configp->Get(L"seqGammarWordPen")
         )
     {
@@ -820,6 +822,7 @@ public:
         fstream << m_phonePath;
         fstream << m_stateListPath;
         fstream << m_transProbPath;
+        fstream << m_latticeConfigPath;
         fstream << this->m_frameDropThreshold;
         fstream << this->m_fsSmoothingWeight;
         fstream << this->m_seqGammarAMF;
@@ -837,6 +840,7 @@ public:
         fstream >> m_phonePath;
         fstream >> m_stateListPath;
         fstream >> m_transProbPath;
+        fstream >> m_latticeConfigPath;
         fstream >> this->m_frameDropThreshold;
         fstream >> this->m_fsSmoothingWeight;
         fstream >> this->m_seqGammarAMF;
@@ -852,8 +856,10 @@ public:
 
     void LoadConfigsFromFile()
     {
-        // Workaround for loading a trained model with Lattice data files a different location
-        wifstream file("LatticeNode.config");
+        // Workaround for loading a trained model from a different location
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        std::string latticeConfigPathStr = converter.to_bytes(m_latticeConfigPath);
+        wifstream file(latticeConfigPathStr.c_str());
         if (file.good())
         {
             wstring str;
@@ -912,6 +918,7 @@ private:
     std::wstring m_phonePath;
     std::wstring m_stateListPath;
     std::wstring m_transProbPath;
+    std::wstring m_latticeConfigPath;
     shared_ptr<Matrix<ElemType>> m_maxIndexes, m_maxValues;
 
     void InitSEParams(const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath) 
