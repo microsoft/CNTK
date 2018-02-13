@@ -265,7 +265,7 @@ static inline TModel<Lambda> Model(const vector<Parameter>& parameters, const ma
 
 // helper to save and restore
 static inline
-void SaveCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
+void SaveCheckpoint(const wstring& path, const FunctionPtr& compositeFunction, size_t totalNumTargetsSeen,
                     size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
 {
     // reader state
@@ -300,6 +300,7 @@ void SaveCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
     {
         // TODO: reuse from Trainer.cpp:
         const std::wstring versionPropertyName = L"Version";
+        const std::wstring totalNumTargetsSeenName = L"totalNumTargetsSeen";
         const std::wstring learnersPropertyName = L"Learners";
         const std::wstring externalStatePropertyName = L"ExternalState";
         const std::wstring distributedStatePropertyName = L"DistributedState";
@@ -307,8 +308,9 @@ void SaveCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
 
         Dictionary state(
             versionPropertyName         , trainerCheckpointVersion,
-            learnersPropertyName        , learnersState,
+            totalNumTargetsSeenName     , totalNumTargetsSeen,
             externalStatePropertyName   , externalState,
+            learnersPropertyName        , learnersState,
             distributedStatePropertyName, aggregatedState);
 
         // TODO: rename must check return code. To fix this, just move this down to the API and use the functions in Trainer.cpp.
@@ -332,7 +334,7 @@ void SaveCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
 }
 
 static inline
-void RestoreFromCheckpoint(const wstring& path, const FunctionPtr& compositeFunction,
+void RestoreFromCheckpoint(const wstring& path, const FunctionPtr& compositeFunction, size_t& totalNumTargetsSeen,
                           size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
 {
     // restarting after crash. Note: not checkpointing the reader yet.
@@ -352,10 +354,12 @@ void RestoreFromCheckpoint(const wstring& path, const FunctionPtr& compositeFunc
 
     // TODO: reuse from Trainer.cpp:
     const std::wstring versionPropertyName = L"Version";
+    const std::wstring totalNumTargetsSeenName = L"totalNumTargetsSeen";
     const std::wstring learnersPropertyName = L"Learners";
     const std::wstring externalStatePropertyName = L"ExternalState";
     const std::wstring distributedStatePropertyName = L"DistributedState";
 
+    totalNumTargetsSeen = checkpoint[totalNumTargetsSeenName].Value<size_t>();
     auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>().front().Value<Dictionary>();
     auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
 

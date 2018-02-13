@@ -1165,7 +1165,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     unordered_map<Parameter, NDArrayViewPtr> parameterNorms; // for in-place weight norm
 
     vector<vector<vector<vector<Variable>>>> bucketedMinibatchSet; // [minibatchIndex, partialIndex, streamIndex, sequenceIndex]
-    size_t totalLabels = 0;
     Microsoft::MSR::CNTK::Timer updateTimer;       // timer between Update() calls end-to-end. Update() is not called for sub-minibatches.
     Microsoft::MSR::CNTK::Timer subMinibatchTimer; // timer between Forward() calls end-to-end. This counts sub-minibatches, but has no Update() except for the last sub-minibatch
     class // helper for timing GPU-side operations
@@ -1198,12 +1197,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // TODO: move this to a different place, e.g. the helper header
     //let SaveCheckpoint = [](const wstring& path, const FunctionPtr& compositeFunction,
     //    size_t numWorkers, const MinibatchSourcePtr& minibatchSource, const DistributedLearnerPtr& learner)
+    size_t totalNumLabelsSeen = 0; // this is the global counter of how many samples we have trained so far
     if (startPosition > 0)
     {
         let path = IntermediateModelPath(modelPath, startPosition);
         fprintf(stderr, "restoring from: %S... ", Interpolate(path).c_str()), fflush(stderr);
-        Dynamite::RestoreFromCheckpoint(Interpolate(path), model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
-        fprintf(stderr, "done\n"), fflush(stderr);
+        Dynamite::RestoreFromCheckpoint(Interpolate(path), model_fn.ParametersCombined(), totalNumLabelsSeen, numWorkers, minibatchSource, learner);
+        fprintf(stderr, "done. Model has seen %.0f samples so far.\n", (double)totalNumLabelsSeen), fflush(stderr);
     }
     fflush(stderr);
     // data structure used for data exchange between workers
@@ -1219,19 +1219,19 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     SmoothedCriterion smoothedLoss;
     updateTimer.Restart();
     subMinibatchTimer.Restart();
-    size_t lastUpdateLogTotalLabels = totalLabels; // sample count for updateTimer
-    auto lastSavePosition = minibatchSource->GetCurrentSamplePosition() / (double)epochSize;
+    size_t lastUpdateLogTotalLabels = totalNumLabelsSeen; // sample count for updateTimer
+    auto lastSavePosition = totalNumLabelsSeen / (double)epochSize;
     size_t bucketCounter = 0;
     for (mbCount = 0; ; mbCount++, bucketCounter++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
         if (bucketCounter == bucketedMinibatchSet.size()) // wrap the bucket counter
             bucketCounter = 0;
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
-        let relPosition = minibatchSource->GetCurrentSamplePosition() / (double)epochSize;
+        let relPosition = totalNumLabelsSeen / (double)epochSize;
         // checkpoint
         if (logThisMb)
             fprintf(stderr, "### we are at %d/%d = %.2f, %d, %d\n",
-                    (int)minibatchSource->GetCurrentSamplePosition(), (int)epochSize, relPosition,
+                    (int)totalNumLabelsSeen, (int)epochSize, relPosition,
                     (int)(relPosition / saveEvery), (int)(lastSavePosition / saveEvery)), fflush(stderr);
         if (bucketCounter == 0 &&                                             // for now only save at multiples of bucketing
             (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery) && // crossed a boundary
@@ -1239,7 +1239,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         {
             let modelPathN = IntermediateModelPath(modelPath, relPosition);
             fprintf(stderr, "\nSaving checkpoint: %S... ", Interpolate(modelPathN).c_str()), fflush(stderr); // indicate time of saving, but only main worker actually saves
-            Dynamite::SaveCheckpoint(Interpolate(modelPathN), model_fn.ParametersCombined(), numWorkers, minibatchSource, learner);
+            Dynamite::SaveCheckpoint(Interpolate(modelPathN), model_fn.ParametersCombined(), totalNumLabelsSeen, numWorkers, minibatchSource, learner);
             if (communicator->CurrentWorker().IsMain())
             {
                 fprintf(stderr, "writing tag... "), fflush(stderr);
@@ -1267,7 +1267,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         if (bucketCounter == 0) // time to get the next bucketedMinibatchSet
         {
             fprintf(stderr, "Fetching next set of %d samples (for bucketed minibatching). Model has seen %.0f samples so far.\n",
-                    (int)maxibatchSize, (double)minibatchSource->GetCurrentSamplePosition()), fflush(stderr);
+                    (int)maxibatchSize, (double)totalNumLabelsSeen), fflush(stderr);
             Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
                                     minibatchSize, maxibatchSize, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
                                     numWorkers, workerId,
@@ -1348,12 +1348,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             let timeDeleteGraph = partTimer.Elapsed();
             let elapsed = updateTimer.ElapsedSeconds(); // [sec]
             fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, d=%.0f ms\n",
-                (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalLabels,
+                (int)mbCount, lossPerLabel, exp(lossPerLabel), smoothedLossVal, exp(smoothedLossVal), (int)totalNumLabelsSeen,
                 numPartialWorkerScoredLabels / elapsed, 1000.0/*ms*/ * elapsed / numPartialWorkerScoredLabels,
                 1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeDeleteGraph);
-            totalLabels;
+            totalNumLabelsSeen;
             updateTimer.Restart(); // BUGBUG: check this w.r.t. partial
-            lastUpdateLogTotalLabels = totalLabels;
+            lastUpdateLogTotalLabels = totalNumLabelsSeen;
             continue;
         }
 #endif
@@ -1454,10 +1454,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             }
 #endif
 
-fprintf(stderr, "Distributed Update() at %d...\n", (int)totalLabels), fflush(stderr);
+fprintf(stderr, "Distributed Update() at %d...\n", (int)totalNumLabelsSeen), fflush(stderr);
             learner->Update(gradients, info); // GPU sync happens here, at least in case of parallel training
-            totalLabels += info.numberOfSamples; // also remember #target labels trained into this model
-fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
+            totalNumLabelsSeen += info.numberOfSamples; // also remember #target labels trained into this model
+fprintf(stderr, "done at %d...\n", (int)totalNumLabelsSeen), fflush(stderr);
         }
 
         // --- keep track of loss
@@ -1513,7 +1513,7 @@ fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
-                fprintf(stderr, "[smoothed] L=%4.2f @ %d, PPL=%8.2f [this] ", smoothedLossVal, (int)totalLabels, exp(smoothedLossVal));
+                fprintf(stderr, "[smoothed] L=%4.2f @ %.0f, PPL=%8.2f [this] ", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
                 let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
                 fprintf(stderr, "L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
                 if (std::isnan(lossPerLabel))
@@ -1523,16 +1523,26 @@ fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
                 let phillyProgressJson = L"${PHILLY_LOG_DIR}/progress.json";
                 auto f = _wofstream(Interpolate(phillyProgressJson));
                 let nominalEpochs = 100.0;
+                let reportedEpochs = max(nominalEpochs, relPosition);
+                let progress = relPosition / reportedEpochs;
+                let progressInPercent = progress * 100.0;
                 f << "{\n";
-                f << "\"lastErr\" : "           << lossPerLabel                                          << ",\n";
-                f << "\"lastProgress\" : "      << relPosition / max(nominalEpochs, relPosition) * 100.0 << ",\n";
-                f << "\"totEpochs\" : "         << max(nominalEpochs, relPosition)                       << ",\n";
-                f << "\"gMMinErr\" : "          << 0.0                                                   << ",\n";
-                f << "\"gMMaxErr\" : "          << log(tgtVocabSize)                                     << ",\n";
-                f << "\"gFMinErr\" : "          << 0.0                                                   << ",\n";
-                f << "\"gFMaxErr\" : "          << log(tgtVocabSize)                                     << ",\n";
-                f << "\"curCommand\" : "        << "\"train\""                                           << ",\n";
-                f << "\"commands\" : [ "        << "\"train\""          << " ]"                          <<  "\n";
+                f << "\"lastErr\" : "           << lossPerLabel                     << ",\n";
+                f << "\"lastProgress\" : "      << progressInPercent                << ",\n";
+                f << "\"progress\" : "          << progressInPercent                << ",\n";
+                f << "\"totEpochs\" : "         << reportedEpochs                   << ",\n";
+                f << "\"gMMinErr\" : "          << 0.0                              << ",\n";
+                f << "\"gMMaxErr\" : "          << log(tgtVocabSize)                << ",\n";
+                f << "\"gFMinErr\" : "          << 0.0                              << ",\n";
+                f << "\"gFMaxErr\" : "          << log(tgtVocabSize)                << ",\n";
+                f << "\"curCommand\" : "        << "\"train\""                      << ",\n";
+                f << "\"commands\" : [ {\n";
+                f << "  \"name\" : "            << "\"train\""                      << ",\n";
+                f << "  \"progress\" : "        << 0.0                              << ",\n";
+                f << "  \"minibatch\" : [[ "    << progress << ", " << lossPerLabel << " ]]\n"; // try to report only the last one
+                f << "  \"finEpochs\" : [[ "    << progress << ", " << lossPerLabel << " ]]\n"; // BUGBUG. Can this be left out entirely?
+                f << "  \"totEpochs\" : "       << reportedEpochs                   << ",\n";
+                f << "} ]\n" << std::flush;
                 f << "}\n" << std::flush;
                 if (f.bad())
                     RuntimeError("Failed to save Philly progress file %S", Interpolate(phillyProgressJson).c_str());
@@ -1545,8 +1555,8 @@ fprintf(stderr, "done at %d...\n", (int)totalLabels), fflush(stderr);
             {
                 let elapsed = updateTimer.ElapsedSeconds(); // elapsed time between updates
                 updateTimer.Restart();                      // restart timer right away so that we get a true end-to-end measurement including everything
-                let numTimedLabels = totalLabels - lastUpdateLogTotalLabels;
-                lastUpdateLogTotalLabels = totalLabels;
+                let numTimedLabels = totalNumLabelsSeen - lastUpdateLogTotalLabels;
+                lastUpdateLogTotalLabels = totalNumLabelsSeen;
                 fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numTimedLabels / elapsed, 1000.0/*ms*/ * elapsed / numTimedLabels);
             }
             else
@@ -1821,6 +1831,7 @@ int mt_main(int argc, char *argv[])
                 "?modelPath", modelPath,
                 "?epochSize", epochSize,
                 "?minibatchSize", minibatchSize,
+                "?maxibatchSize", maxibatchSize,
                 "?maxBatchSizePerWorker", maxBatchSizePerWorker,
                 "?firstGpu", firstGpu,
                 "?numBits", numBits,
