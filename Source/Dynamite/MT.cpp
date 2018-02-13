@@ -1539,9 +1539,9 @@ fprintf(stderr, "done at %d...\n", (int)totalNumLabelsSeen), fflush(stderr);
                 f << "\"commands\" : [ {\n";
                 f << "  \"name\" : "            << "\"train\""                      << ",\n";
                 f << "  \"progress\" : "        << 0.0                              << ",\n";
-                f << "  \"minibatch\" : [[ "    << progress << ", " << lossPerLabel << " ]]\n"; // try to report only the last one
-                f << "  \"finEpochs\" : [[ "    << progress << ", " << lossPerLabel << " ]]\n"; // BUGBUG. Can this be left out entirely?
-                f << "  \"totEpochs\" : "       << reportedEpochs                   << ",\n";
+                f << "  \"minibatch\" : [[ "    << progress << ", " << lossPerLabel << " ]],\n"; // try to report only the last one
+                f << "  \"finEpochs\" : [[ "    << progress << ", " << lossPerLabel << " ]],\n"; // BUGBUG. Can this be left out entirely?
+                f << "  \"totEpochs\" : "       << reportedEpochs                   <<  "\n";
                 f << "} ]\n" << std::flush;
                 f << "}\n" << std::flush;
                 if (f.bad())
@@ -1806,8 +1806,8 @@ int mt_main(int argc, char *argv[])
         double from = 0; // starting position, expressed as a fraction of epochs
         size_t firstGpu = 0;
         size_t numBits = 4;
-        wstring modelRootDir = L"${PHILLY_MODEL_DIR}/mt/experiments";
-        wstring logRootDir   = L"${PHILLY_LOG_DIR}/mt/experiments";
+        wstring modelRootDir = L"${PHILLY_MODEL_DIR}";
+        wstring logRootDir   = L"${PHILLY_LOG_DIR}";
         struct SystemSentinel : public string
         {
             wstring ToWString() const { return wstring(begin(), end()); }
