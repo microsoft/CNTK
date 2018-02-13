@@ -339,7 +339,7 @@ namespace Dynamite {
             return false;
 
         // break into minibatches of similar size
-        let numBuckets = (maxibatchSize + minibatchSize - 1) / minibatchSize;
+        let numBuckets = max((maxibatchSize + minibatchSize - 1) / minibatchSize, (size_t)1);
         GetSubBatches_CreateMinibatches(args, multiMinibatchStreams, minibatchSize, numBuckets);
 
         // random-shuffle
