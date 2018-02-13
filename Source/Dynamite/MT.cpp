@@ -81,6 +81,7 @@ int/*bool*/ runProfiling = false;
 double learningRateWarmupInEpochs = 0; // linearly ramp up LR up to this many epochs.
 double learningRateDecayAfterEpochs = -1.0;
 double learningRateDecayHalfTimeInEpochs = 4.0; // LR will be halved every 4 epochs
+int/*bool*/ scaleMinibatchSizeWithLearningRateDecay = 0; // if true then increase MB size when cutting LR
 
 size_t minibatchSize = 4096;
 size_t epochSize = 8192 * 10000; // Frantic epoch
@@ -1118,9 +1119,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // then we further reduce the local worker's minibatch size by an integer factor, and use local gradient
     // aggregation before model update/data exchange.
     // (We ignore MB size ramp-up here, i.e. we use unnecessarily small MBs for a while.)
-    let workerMinibatchSize = minibatchSize / numWorkers; // worker processes this many samples between model updates
     fprintf(stderr, "Minibatch size = %d, per worker = %d, for each of %d workers\n",
-            (int)minibatchSize, (int)workerMinibatchSize, (int)numWorkers), fflush(stderr);
+            (int)minibatchSize, (int)(minibatchSize / numWorkers), (int)numWorkers), fflush(stderr);
     AdditionalLearningOptions learnerOptions;
     LearnerPtr baseLearner;
     let f = 1.0;
@@ -1222,10 +1222,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     size_t lastUpdateLogTotalLabels = totalNumLabelsSeen; // sample count for updateTimer
     auto lastSavePosition = totalNumLabelsSeen / (double)epochSize;
     size_t bucketCounter = 0;
+    double minibatchSizeScaling = 1.0;  // we increase this once we cut the learning rate
     for (mbCount = 0; ; mbCount++, bucketCounter++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
         if (bucketCounter == bucketedMinibatchSet.size()) // wrap the bucket counter
             bucketCounter = 0;
+
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         let relPosition = totalNumLabelsSeen / (double)epochSize;
         // checkpoint
@@ -1268,18 +1270,18 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         {
             fprintf(stderr, "Fetching next set of %d samples (for bucketed minibatching). Model has seen %.0f samples so far.\n",
                     (int)maxibatchSize, (double)totalNumLabelsSeen), fflush(stderr);
+            let scaledMinibatchSize = (size_t)(minibatchSize * minibatchSizeScaling);
             Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
-                                    minibatchSize, maxibatchSize, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
+                                    scaledMinibatchSize, maxibatchSize, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
                                     numWorkers, workerId,
                                     /*shuffleSeed=*/mbCount,
                                     /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
-            fprintf(stderr, "Samples were distributed over %d buckets.\n", (int)bucketedMinibatchSet.size()), fflush(stderr);
+            fprintf(stderr, "Samples were distributed over %d buckets, target MB size %d.\n", (int)bucketedMinibatchSet.size(), (int)scaledMinibatchSize), fflush(stderr);
         }
         let timeGetNextMinibatch = partTimer.Elapsed();
         let& minibatchForWorker = bucketedMinibatchSet[bucketCounter]; // [partial][stream][seq]
         // This is a minibatch of approximately uniform length.
         let numPartialBatchesPerWorker = minibatchForWorker.size();
-        //let partialMinibatchSize = minibatchSize / numPartialBatchesPerWorker; // partial MB size across all workers
 
         // --- partial minibatch loop
         for (size_t partialMbIndex = 0; partialMbIndex < numPartialBatchesPerWorker; partialMbIndex++)
@@ -1433,8 +1435,15 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             }
             if (learningRateDecayAfterEpochs >= 0 && relPosition >= learningRateDecayAfterEpochs)
             {
-                mult1 *= pow(2.0, -(relPosition - learningRateDecayAfterEpochs) / learningRateDecayHalfTimeInEpochs);
+                let decayWeight =  pow(2.0, -(relPosition - learningRateDecayAfterEpochs) / learningRateDecayHalfTimeInEpochs);
+                mult1 *= decayWeight;
+                if (scaleMinibatchSizeWithLearningRateDecay)
+                    minibatchSizeScaling = 1.0 / decayWeight; // we can use this much larger MB size
             }
+#if 1       // correct for Adam   --TODO: do this inside the Learner
+            // LR should be scaled by sqrt(newMBSize / originalMBSize)
+            mult1 *= sqrt(minibatchSizeScaling);
+#endif
             baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
 #if 0
             // Marian global-gradient-norm clipping  --not used
@@ -1841,6 +1850,7 @@ int mt_main(int argc, char *argv[])
                 "?learningRateWarmupInEpochs", learningRateWarmupInEpochs,
                 "?learningRateDecayAfterEpochs", learningRateDecayAfterEpochs,
                 "?learningRateDecayHalfTimeInEpochs", learningRateDecayHalfTimeInEpochs,
+                "?scaleMinibatchSizeWithLearningRateDecay", scaleMinibatchSizeWithLearningRateDecay,
                 // decoding parameters
                 "?maxBeam", maxBeam,
                 "?beamWidth", beamWidth,
