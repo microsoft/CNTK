@@ -2133,13 +2133,14 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
-    FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring& name)
+    FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& latticeConfigPath, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameSymListPath] = symListPath;
         additionalProperties[PrimitiveFunction::AttributeNamePhonePath] = phonePath;
         additionalProperties[PrimitiveFunction::AttributeNameStateListPath] = stateListPath;
         additionalProperties[PrimitiveFunction::AttributeNameTransProbPath] = transProbPath;
+        additionalProperties[PrimitiveFunction::AttributeNameLatticeConfigPath] = latticeConfigPath;
         additionalProperties[PrimitiveFunction::AttributeNameHSmoothingWeight] = hSmoothingWeight;
         additionalProperties[PrimitiveFunction::AttributeNameFrameDropThresh] = frameDropThresh;
         additionalProperties[PrimitiveFunction::AttributeNameDoReferenceAlign] = doReferenceAlign;

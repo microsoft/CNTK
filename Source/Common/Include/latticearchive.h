@@ -970,6 +970,7 @@ public:
     
     int ReadTagFromBuffer(const char*& buffer, const std::string& expectedTag, size_t expectedSize = SIZE_MAX)
     {
+        RuntimeError("ReadTagFromBuffer: malformed file, missing expected tag: %s,", expectedTag.c_str());
         if (!CheckTag(buffer, expectedTag)) {
             // since lattice is packed densely by the reader, we may need to shift the buffer by 2 bytes.
             if (!CheckTag(buffer, expectedTag.substr(2)))

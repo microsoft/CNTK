@@ -4211,7 +4211,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in operation for sequence with lattice training (typically for speech).
     ///
     CNTK_API FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symbolListPath, 
-        const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transitionProbabilityPath, float smoothingWeight, float frameDropThreshold, bool doReferenceAlign, bool gammarUsesMBR, 
+        const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transitionProbabilityPath, const std::wstring& latticeConfigPath, float smoothingWeight, float frameDropThreshold, bool doReferenceAlign, bool gammarUsesMBR,
         float gammarAMF, float gammarLMF, float gammarBMMIFactor, float gammarWordPenalty, const std::wstring& name = L"");
 
     ///
