@@ -115,6 +115,7 @@ void CPUMatrix<half>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, con
 
 // explicit instantiations, due to CPUMatrix being too big and causing VS2015 cl crash.
 template class MATH_API CPUMatrix<half>;
+template<> int CPUMatrix<half>::m_optimizationFlags = 0;
 
 // instantiate templated methods
 template void CPUMatrix<float>::AdaDelta(CPUMatrix<float>& gradients, CPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon);

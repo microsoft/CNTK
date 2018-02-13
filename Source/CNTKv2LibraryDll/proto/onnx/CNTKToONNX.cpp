@@ -1442,8 +1442,14 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
         int input1Rank = input1Shape->dim_size();
         int input2Rank = input2Shape->dim_size();
         ONNXIR::Node* inputNode2 = FindByName(graph, orderedInputs[1].Name());
-        if (input2Rank < input1Rank && inputNode2 != nullptr && inputNode2->OpType() != "Constant")
+        if (input2Rank < input1Rank && inputNode2 != nullptr && inputNode2->OpType() != "Constant" && input2Rank != 0)
         {
+            // The conditions for inserting a reshape op (the if statement logic above) are:
+            // 1. input2Rank < input1Rank : Broadcast is needed. 
+            // 2. inputNode2->OpType() != "Constant" : Because if it is Constant we create a 
+            //    node for it explicitly in CreateNode() method above.
+            // 3. input2Rank != 0 : That is, the second input is not a scalar. If it is then
+            //    Reshape is not needed.
             ONNXIR::NodeArg inputOutput2Arg(orderedInputs[1].Name() + string("_reshape1"), nullptr);
             inputOutput2Arg.SetShape(*input2Shape);
 

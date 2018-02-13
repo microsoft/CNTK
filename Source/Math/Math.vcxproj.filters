@@ -58,6 +58,9 @@
     <ClCompile Include="CPUMatrixTensorFloat.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
+    <ClCompile Include="CPUMatrixTensorSpecial.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />

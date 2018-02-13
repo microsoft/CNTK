@@ -191,3 +191,6 @@ RUN cd cntksrc/Examples/Image/DataSets/MNIST && \
     cd ../../../..
 
 ENV PATH=/cntk/cntksrc/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/cntksrc/bindings/python LD_LIBRARY_PATH=/cntk/cntksrc/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+
+# Install CNTK as the default backend for Keras
+ENV KERAS_BACKEND=cntk

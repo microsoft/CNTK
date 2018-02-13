@@ -319,6 +319,9 @@ namespace CNTK
         CNTK_API void EnableNodeTiming();
         CNTK_API void DisableNodeTimeing();
 
+        CNTK_API void EnableCPUEvalOptimization();
+        CNTK_API void DisableCPUEvalOptimization();
+
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 

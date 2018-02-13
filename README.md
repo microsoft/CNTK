@@ -85,7 +85,7 @@ Release of Cognitive Toolkit v.2.3.1.
 
 CNTK support for ONNX format is now out of preview mode.
 
-If you want to try ONNX, you can build from master or `pip install` one of the below wheel that matches you Python environment.
+If you want to try ONNX, you can build from master or `pip install` one of the below wheels that matches your Python environment.
 
 For Windows CPU-Only:
 * Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp27-cp27m-win_amd64.whl
