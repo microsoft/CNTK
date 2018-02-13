@@ -4661,9 +4661,11 @@ public:
     // This lazily sets up the gradient for an input variable, and returns it.
     // The physical gradient object is held by the redirect, while the cached gradient object in the input itself may be a view.
     // Returns beta = 0 if gradient was newly created, otherwise 1.
-    // BIG BUGBUG: What this atchitecture does not handle is see-through gradients (e.g. Plus). That must be fixed. It will change quite a bit.
-    NewGradient CacheAndGetGradientView(const Variable& input, StorageFormat format = StorageFormat::Dense)
+    // BIG BUGBUG: What this architecture does not handle is see-through gradients (e.g. Plus). That must be fixed. It will change quite a bit.
+    NewGradient CacheAndGetGradientView(const PrimitiveFunction& f, const Variable& input, StorageFormat format = StorageFormat::Dense)
     {
+        fail_if(f.m_autoBatchState.m_pendingInputs == 0, "CacheAndGetGradientView called for function with no pending gradient??");
+
         auto& inputFields = GetInputFields(input); // describes the input variable, e.g. shape. May be a redirect
 
         double beta = 1.0;
@@ -4705,6 +4707,7 @@ public:
         }
         else // no slice
             ReplaceWithReshapedViewIfNeeded(gradient, inputFields.m_shape);
+        // BUGBUG: Are the operations above consumptions? Do we need to decrement m_pendingInputs on the physical gradient?
         // implant the cached gradient
         inputFields.m_gradient = move(gradient);
         return{ inputFields.m_gradient, beta };
@@ -4806,6 +4809,7 @@ public:
 
         // recursively process f's inputs, and register f as a consumer of all of its inputs
         let& inputs = f.m_inputs;
+        size_t numInputsWithGradients = 0;
         for (size_t i = 0; i < inputs.size(); i++)
         {
             auto& inputGradFields = GetGradientFieldsForBackprop(ResetInputGradient(inputs[i]), /*firstTimes=*/true); // this is where the gradient will be held   --TODO: also cache the reshaped/sliced gradient in input fields
@@ -4817,11 +4821,11 @@ public:
             if (!m_visitorTag.Visited(inputGradFields.m_visitedTag))
                 RPrepareBackwardGraph(inputGradFields);
             // record ourselves as a consumer of the arg
-            //if (inputGradFields.m_uniqueIdForDebugging == 243)
-            //    Break;
             inputGradFields.m_consumers.push_back({ &f, i });
-            m_stats.numBackpropsToInputs++;
+            numInputsWithGradients++;
         }
+        f.m_autoBatchState.m_pendingInputs = numInputsWithGradients; // count how many inputs' gradients will feed on 'f'; once all done, we can release the gradient
+        m_stats.numBackpropsToInputs += numInputsWithGradients;
         // BUGBUG: Why is this count significantly higher (4x) than the number of batched forward ops? Are we missing batched forward ops?
         m_stats.numBackpropsThrough++;
     }
@@ -4929,6 +4933,23 @@ public:
             return false;
     }
 
+    // get the output gradient coming from the top
+    // If this is the last use of this gradient, clear out its pointer in 'f' to free the memory.
+    NDArrayViewPtr ConsumeOutputGradient(PrimitiveFunction& f, size_t howOften = 1)
+    {
+        fail_if(f.m_autoBatchState.m_pendingInputs < howOften, "gradient consumed once too often??");
+        f.m_autoBatchState.m_pendingInputs -= howOften; // note: howOften > 1 in case of BackpropThroughSplice()
+        auto& outputFields = GetOutputFields(f); // result of f lives here; hence also the gradient we back-propagate
+        if (f.m_autoBatchState.m_pendingInputs > 0)
+            return outputFields.m_gradient;
+        else
+        {
+            auto gradient = move(outputFields.m_gradient);
+            fail_if(outputFields.m_gradient, "move() did not move??");
+            return gradient;
+        }
+    }
+
     // back-propagate f's outputs' m_gradient to a specified input
     // This is the standard path for all ops which have no further batching beyond the forward pass.
     // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
@@ -4936,7 +4957,7 @@ public:
     // If the target only has one consumer, pass viewAllowed. This will allow views for trivial gradients such as Plus.
     void BackpropToUnbatched(const AutoBatchConsumer& fi, bool viewAllowed)
     {
-        let& f = *fi.first;
+        auto& f = *fi.first;
         let index = fi.second;
 #ifdef LOG_DETAILS
         Memoizer::LogFunction(f, L"bb ", index);
@@ -4985,11 +5006,11 @@ public:
             auto& inputFields = GetInputFields(input); // immediate input's gradient view
             auto& redirectedInputFields = inputFields.m_redirection.empty() ? inputFields : GetOutputFields(*inputFields.m_redirection.m_function); // physical gradient location
             fail_if(inputFields.m_gradient || redirectedInputFields.m_gradient, "function with viewable gradient unexpectedly already has a gradient??");
-            auto outputGradientValue = outputFields.m_gradient; // incoming gradient from top. Our gradient is going to be a view of this.
+            auto outputGradient = ConsumeOutputGradient(f); // incoming gradient from top. Our gradient is going to be a view of this.
             if (op == PrimitiveOpType::Reshape)
-                outputGradientValue = outputGradientValue->AsShape(inputFields.m_shape); // an explicit Reshape (generated by auto-batch; other ops must have the same shape already) --TODO: do not generate this, use implicit reshape
+                outputGradient = outputGradient->AsShape(inputFields.m_shape); // an explicit Reshape (generated by auto-batch; other ops must have the same shape already) --TODO: do not generate this, use implicit reshape
             // implant the cached gradient into this input
-            inputFields.m_gradient = move(outputGradientValue);
+            inputFields.m_gradient = move(outputGradient);
             // implant it into the redirect
             if (&inputFields != &redirectedInputFields)
             {
@@ -5011,7 +5032,7 @@ public:
             m_stats.numBatchedBackpropToViews++;
             return;
         }
-        let gradient = CacheAndGetGradientView(input, DetermineGradientStorageType(f, index));
+        let gradient = CacheAndGetGradientView(f, input, DetermineGradientStorageType(f, index));
         // BUGBUG: This ^^ should use inputDevice. Currently it uses input[index]'s device. But that input may not exist, once we optimize. The one that always exists is outputGradientValue.
 
         // compute gradients for the desired input
@@ -5040,7 +5061,8 @@ if (trace)
 Break;
 }
 #endif
-        PrimitiveFunction::BackpropTo(outputFields.m_gradient.get()/*incoming*/, index, op, f.m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, m_memoizer.Arena(), /*funcForErrMsg=*/f);
+        auto outputGradient = ConsumeOutputGradient(f); // incoming gradient from top. This call may release the m_gradient pointer.
+        PrimitiveFunction::BackpropTo(outputGradient.get()/*incoming*/, index, op, f.m_attributes, outputFields.m_value.get(), inputValues, gradient.view/*target*/, gradient.beta, m_memoizer.Arena(), /*funcForErrMsg=*/f);
 #if 0
 if (trace)
 {
@@ -5098,23 +5120,29 @@ Break;
 
         // The gradient of Splice is just copying all columns to the respective inputs.
         let& inputs =  f.m_inputs;
-        let numInputs = inputs.size();
-        auto& inputGradients = BorrowBuffer(m_inputValuesBuffer, numInputs);   // target locations to propagate the columns to (GetinputFields(input).m_gradient; no redirect unless it's a view)
+        auto& inputGradients = BorrowBuffer(m_inputValuesBuffer, 0);   // target locations to propagate the columns to (GetinputFields(input).m_gradient; no redirect unless it's a view)
         auto& inputGradientsToZeroOut = BorrowBuffer(m_inputValuesBuffer2, 0); // if we manually must reset gradients to zero, this is the list fo those
         bool allBetasZeroSoFar = true;
+        let numInputs = inputs.size();
         for (size_t i = 0; i < numInputs; i++)
         {
             let& input = inputs[i];
+            if (!input.NeedsGradient())
+                continue;
             // create the gradient memory for this input. This sets both input->m_dataFields and the redirect if any
-            let gradient = CacheAndGetGradientView(input);
-            inputGradients[i] = gradient.view;
+            let gradient = CacheAndGetGradientView(f, input);
+            inputGradients.push_back(gradient.view);
             // handle inconsistent betas
             if (gradient.beta != 0 && allBetasZeroSoFar)
             {
                 // We were running under the assumption that all betas are zero, so we can use beta=0 below.
                 // Now we must run with beta 1, and therefore manually reset all pevious ones.
                 for (size_t i1 = 0; i1 < i; i1++) // these were all beta=0
+                {
+                    if (!inputs[i1].NeedsGradient())
+                        continue;
                     inputGradientsToZeroOut.push_back(GetInputFields(inputs[i1]).m_gradient);
+                }
                 allBetasZeroSoFar = false;
             }
             else if (gradient.beta == 0 && !allBetasZeroSoFar)
@@ -5141,10 +5169,10 @@ Break;
             cudaStatsPtr = BeginCudaStats(logAsOp, nullptr, /*category=dense*/0, outputFields.m_shape.TotalSize(/*check=*/false), outputFields.m_gradient->Device());
         }
 
-        let& outputGradient = outputFields.m_gradient; // this is the incoming batch of gradients
+        auto outputGradient = ConsumeOutputGradient(f, inputGradients.size()); // incoming batch of gradients from top. This call may release the m_gradient pointer.
         NDArrayView::ScatterBatch(outputGradient, inputGradients, (size_t)f.m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>().StaticAxisIndex(), beta);
 
-        EndCudaStats(cudaStatsPtr, outputFields.m_gradient->Device());
+        EndCudaStats(cudaStatsPtr, outputGradient->Device());
 #endif
         m_stats.numBackpropScatters++;
     }
@@ -5211,18 +5239,18 @@ Break;
         {
             let &c = consumers[i];
             fail_if(c.second != 0, "wrong input??");
-            let& f = *c.first;
+            auto& f = *c.first;
             if (i > 0) // sanity checks
             {
                 fail_if(&GetInputFields(f.m_inputs.front()) != &GetInputFields(input0), "batched matrix gradients do not share the matrix??");
                 let outputRank = DetermineTimesOutputRank(f);
                 fail_if(outputRank != outputRank0, "BackpropToMatrixWeight() called on incompatibly-shaped operations?");
             }
-            let& outGrad = GetOutputFields(f).m_gradient;
-            let& right   = GetInputFields(f.m_inputs[1]).m_value;
+            auto outputGradient = ConsumeOutputGradient(f); // incoming gradient from top. This call may release the m_gradient pointer.
+            let& rightValue     = GetInputFields(f.m_inputs[1]).m_value;
             // to be able to batch gradient ops with different map rank, we flatten all to a single map dimension
-            timesOutGrads       [i] = move(FlattenMapAxes(outGrad)); // incoming gradients from top
-            timesDataRightInputs[i] = move(FlattenMapAxes(right  )); // second arguments
+            timesOutGrads       [i] = move(FlattenMapAxes(outputGradient)); // incoming gradients from top
+            timesDataRightInputs[i] = move(FlattenMapAxes(rightValue    )); // second arguments
             let numItems = timesOutGrads[i]->Shape().Dimensions().back();
             fail_if(numItems != timesDataRightInputs[i]->Shape().Dimensions().back(), "batch dimension of two inputs not the same??");
             batchDim += numItems;
@@ -5235,7 +5263,7 @@ Break;
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
         inputValues[0] = nullptr;
         inputValues[1] = rightBatch.get();
-        let gradient = CacheAndGetGradientView(input0, DetermineGradientStorageType(f0, 0));
+        let gradient = CacheAndGetGradientView(f0, input0, DetermineGradientStorageType(f0, 0));
 
         CudaStats* cudaStatsPtr = nullptr;
         if (ShouldLogMemoizeStats())
