@@ -36,6 +36,8 @@
 #   BOOST_PATH= path to Boost installation, so $(BOOST_PATH)/include/boost/test/unit_test.hpp
 #     defaults to /usr/local/boost-1.60.0
 #   PYTHON_SUPPORT=true iff CNTK v2 Python module should be build
+#   PYTHON_WITH_DEPS=1 Adds third party libraries in the python package (e.g. CUDA). Must be equal to 1 or unset
+#   PYTHON_WITH_DEBUG=1 Do not strip libraries for the python package. Must be equal to 1 or unset
 #   SWIG_PATH= path to SWIG (>= 3.0.10)
 #   PYTHON_VERSIONS= list of Python versions to build for
 #     A Python version is identified by "27", "35", or "36".
@@ -1427,11 +1429,23 @@ unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MA
 endif
 
 ifeq ("$(PYTHON_SUPPORT)","true")
+$(info Building Python package)
 
 # Libraries needed for the run-time (i.e., excluding test binaries)
 # TODO MPI doesn't appear explicitly here, hidden by mpic++ usage (but currently, it should be user installed)
 PYTHON_LIBS_LIST := $(LIBS_LIST) $(IMAGEREADER_LIBS_LIST)
 PYTHON_LIBS_EXCLUDE_LIST := m pthread nvidia-ml
+PYTHON_SETUP_PY_ARGS :=
+ifndef PYTHON_WITH_DEPS
+PYTHON_LIBS_EXCLUDE_LIST += cublas cudart curand cusparse cuda cudnn opencv_core opencv_imgproc opencv_imgcodecs mklml_intel mkldnn iomp5 nccl
+else
+$(warning Building Python package WITH dependencies)
+PYTHON_SETUP_PY_ARGS += --with-deps
+endif
+ifdef PYTHON_WITH_DEBUG
+$(warning Building Python packages WITH debug symbols)
+PYTHON_SETUP_PY_ARGS += --with-debug-symbol
+endif
 PYTHON_EXTRA_LIBS_BASENAMES:=$(addsuffix .so,$(addprefix lib,$(filter-out $(PYTHON_LIBS_EXCLUDE_LIST),$(PYTHON_LIBS_LIST))))
 
 # TODO dependencies
@@ -1461,7 +1475,7 @@ python: $(PYTHON_LIBS)
             for ver in $(PYTHON_VERSIONS); \
             do \
                 test -x $${py_paths[$$ver]}; \
-                $${py_paths[$$ver]} setup.py \
+                $${py_paths[$$ver]} setup.py $(PYTHON_SETUP_PY_ARGS) \
                     build_ext --inplace \
                     bdist_wheel \
                         --dist-dir $$PYTHONDIR || exit $$?; \
