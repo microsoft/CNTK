@@ -172,6 +172,7 @@
     <ClInclude Include="marian.h" />
     <ClInclude Include="Models.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
+    <ClInclude Include="spdlog\spdlog.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

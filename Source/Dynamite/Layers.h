@@ -530,8 +530,8 @@ static UnaryModel Activation(const function<Variable(Variable, const wstring&)>/
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)
 {
-    //LOG(z);
-    //LOG(ReduceLogSum(z, axis, L"smLogDenom"));
+    //LOG_VAR(z);
+    //LOG_VAR(ReduceLogSum(z, axis, L"smLogDenom"));
     CountAPICalls(2);
     let Z = barrier(ReduceLogSum(z, axis, name));
     return z - Z;
@@ -540,7 +540,7 @@ static Variable LogSoftmax(const Variable& z, const Axis& axis = Axis::AllStatic
 // built-in Softmax requires temp memory, so we use an explicit expression instead
 static Variable Softmax(const Variable& z, const Axis& axis = Axis::AllStaticAxes(), const std::wstring& name = std::wstring(), const UnaryModel& barrier = Identity)
 {
-    //LOG(LogSoftmax(z, axis));
+    //LOG_VAR(LogSoftmax(z, axis));
     CountAPICalls(1);
     return Exp(LogSoftmax(z, axis, name, barrier), name);
 }

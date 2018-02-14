@@ -79,5 +79,8 @@
     <ClInclude Include="marian-dev\src\models\model_base.h">
       <Filter>Marian On CNTK\Frontend</Filter>
     </ClInclude>
+    <ClInclude Include="spdlog\spdlog.h">
+      <Filter>Marian On CNTK\API</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

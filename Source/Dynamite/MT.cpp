@@ -196,7 +196,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
 }
 
 size_t mbCount = 0; // made a global so that we can trigger debug information on it
-#define DOLOG(var)                  ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2 && !runProfiling) ? (LOG(var),0)                            : 0)
+#define DOLOG(var)                  ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2 && !runProfiling) ? (LOG_VAR(var),0)                            : 0)
 #define DOPRINT(prefix, var, vocab) ((mbCount % 50 == 1 && Dynamite::Batch::CurrentMapIndex() < 2 && !runProfiling) ? PrintSequence((prefix), (var), (vocab)) : string())
 static string PrintSequence(const char* prefix, const Variable& seq, const wstring& vocabFile);
 
@@ -345,13 +345,13 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
         {
             if (token.wordIndex == sentEndId) // if </s> reached then stop. This hypothesis is worse than others that have not ended.
                 continue;
-            //LOG(token.recurrentState.state);
-            //LOG(token.recurrentState.attentionContext);
+            //LOG_VAR(token.recurrentState.state);
+            //LOG_VAR(token.recurrentState.attentionContext);
             // embed it for the next step  --note the isVolatile flag, to make sure BatchNorm runs in eval mode
             let wordIndexVar = Constant({}, CurrentDataType(), /*isVolatile=*/true, (double)token.wordIndex, CurrentDevice(), L"wordIndexVar");
             let word = OneHotOp(wordIndexVar, tgtVocabSize, /*outputSparse=*/true, Axis(0));
             let wordEmbedded = decoderEmbedOutputFunction(word);
-            //LOG(wordEmbedded);
+            //LOG_VAR(wordEmbedded);
             // update the recurrent model
             let newRecurrentState = decoderStepFunction(token.recurrentState, wordEmbedded);
             // stack of output transforms
@@ -359,7 +359,7 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
             // conditional probability log P(word|state)
             let logPVector = LogSoftmax(z);
             //logPVector.Value()->LogToFile(L"logPs", stderr, 1000000);
-            //LOG(logPVector);
+            //LOG_VAR(logPVector);
             // expand it
             let pathLogPVector = logPVector + token.pathLogP;
             backPointers      .push_back(&token           ); // where we came from
@@ -396,15 +396,15 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
             if (logPathProb < maxPathLogP - beamWidth) // probability-beam pruning
                 break;
             // token should survive
-            //LOG(k);
-            //LOG(word);
+            //LOG_VAR(k);
+            //LOG_VAR(word);
             string hist;
             for (let* bp = backPointers[i]; bp; bp = bp->backPointer)
                 hist = dict[bp->wordIndex] + " " + hist;
             fprintf(stderr, "word[%d] %.3f: %d %s | %s\n", (int)i, logPathProb, (int)k, dict[k].c_str(), hist.c_str());
             // new token
             let newPathLogP = pathLogPVectors[i][k];
-            //LOG(newPathLogP);
+            //LOG_VAR(newPathLogP);
             newTokens.emplace_back/*BeamDecoderToken newToken = */(BeamDecoderToken{ backPointers[i], newRecurrentStates[i], k, newPathLogP });
             totalTokens++;
         }
@@ -431,7 +431,7 @@ Variable BeamDecode(const Variable& hEncoderSeq, const InitFunctionType& decoder
         LogicError("BeamDecode: length screwed up??");
     let hyp = OneHotConstant(resultWords);
     //let hyp = Splice(resultWords, Axis::EndStaticAxis());
-    //LOG(hyp);
+    //LOG_VAR(hyp);
     let totalLogP = allTokens.back().front().pathLogP.Value()->AsScalar<double>();
     let logPPerWord = totalLogP / (numWords - 1);
     let ppl = exp(-logPPerWord);
@@ -955,13 +955,14 @@ BinaryFoldingModel CreateModelFunctionMarian()
         L"vocabs",                        Options::VectorOf({ L"model/vocab.ende.yml", L"model/vocab.ende.yml" }),    
         L"workspace",                     10000    
     );
-    auto mmodel = models::encoder_decoder()(New<Options>(moptions))
+    let optionsPtr = New<Options>(moptions);
+    auto mmodel = models::encoder_decoder()(optionsPtr)
         .push_back(models::encoder()("type", "transformer"))
         .push_back(models::decoder()("type", "transformer"))
         .construct();
     // run through once to create all params, so that we can pull them out
     graph = New<ExpressionGraph>();
-    auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1);
+    auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1, optionsPtr);
     mmodel->build(graph, fakeBatch);
     auto mparamsVector = graph->GetAllParameters();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));

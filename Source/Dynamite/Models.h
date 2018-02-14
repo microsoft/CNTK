@@ -91,7 +91,7 @@ static inline void             SetCurrentDataType(DataType dataType)            
 static inline NDArrayViewPtr GetValueAsTensor(const Variable& var) { return var.Value(); }
 static inline NDArrayViewPtr GetValueAsTensor(const FunctionPtr & fun) { return fun->Output().Value(); }
 static inline NDArrayViewPtr GetValueAsTensor(const vector<Variable>& vec) { return (Splice(vec, Axis((int)vec[0].Shape().Rank())))->Output().Value(); }
-#define LOG(var) (GetValueAsTensor(var)->LogToFile(L ## #var, stderr, 10)) // helper to log a value
+#define LOG_VAR(var) (GetValueAsTensor(var)->LogToFile(L ## #var, stderr, 10)) // helper to log a value
 
 static inline FunctionPtr operator*(const Variable& leftOperand, const Variable& rightOperand)
 {

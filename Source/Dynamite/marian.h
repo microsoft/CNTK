@@ -37,10 +37,16 @@ template <typename... Args> __declspec_noreturn static inline void ABORT(const c
 #pragma warning(disable: 4244) // conversion from 'int' to 'float', possible loss of data
 #pragma warning(disable: 4189) // local variable is initialized but not referenced
 
-#define YAML_REGISTER_TYPE(a, b)
+#define YAML_REGISTER_TYPE(a, b) // not supported
+#define PROJECT_VERSION_FULL "v1.0.0+d3fb526"
+
+// needed for common/logging.h which is included by common/shape.h
+#include "spdlog/spdlog.h"
+namespace marian { class Config; }
+void createLoggers(const marian::Config*) { }
+std::shared_ptr<spdlog::logger> stderrLogger(const std::string&, const std::string&, const std::vector<std::string>&, bool quiet) { return spdlog::get(""); }
 
 #include "common/shape.h"
-// Note: more #includes at the end
 
 namespace marian
 {
@@ -56,6 +62,7 @@ namespace marian
     typedef size_t Word;
     typedef std::vector<Word> Words;
     const float NEMATUS_LN_EPS = 1e-5f;
+    typedef std::ofstream OutputFileStream;
 
     // -----------------------------------------------------------------------
     // Shape
@@ -201,11 +208,6 @@ namespace marian
 #pragma pop_macro("DEFINE_KEYWORD")  
     };
 
-    namespace Config
-    {
-        __declspec_selectany size_t seed;
-    };
-
     // helper to allow Options::get()'s return type depend on the template parameter
     template<class T> struct get_return                           { typedef const T& type; };
     template<>        struct get_return<std::string>              { typedef std::string type; };
@@ -232,7 +234,7 @@ namespace marian
             for (const auto& key : other->Keys())
             {
                 if (!Contains(key))
-                    Base::operator[](key) = other->operator[](key);
+                    Base::operator[](key) = other->Base::operator[](key);
             }
         }
         template<typename T>
@@ -242,6 +244,8 @@ namespace marian
         typename get_return<T>::type get(const std::string& key) const;
         template<typename T>
         typename get_return<T>::type get(const std::string& key, const T& deflt) const;
+        const CNTK::DictionaryValue& operator[](const std::string& key) const { return Base::operator[](widen(key)); }
+        const Options& getOptions() { return *this; }
     };
 
     // specializations must be done outside the class declaration
@@ -297,6 +301,19 @@ namespace marian
         const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
         return std::vector<std::string>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return narrow(v.Value<std::wstring>()); }));
     }
+
+    struct Config
+    {
+        static size_t seed;
+        class YamlNode : public Options // fake implementation used in place of YAML::Node
+        {
+            struct ValueRef { template<typename T> void operator=(const T& value) { NOT_IMPLEMENTED; }; }; // dummy assignment operator
+        public:
+            ValueRef operator[](const std::string&) { return ValueRef(); }
+        };
+        static void AddYamlToNpz(const YamlNode&, const std::string&, const std::string&) { NOT_IMPLEMENTED; }
+    };
+    __declspec_selectany size_t Config::seed;
 
     // -----------------------------------------------------------------------
     // data namespace
@@ -408,7 +425,7 @@ namespace marian
             virtual std::vector<Ptr<Batch>> split(size_t n) override { n; CNTK::LogicError("CorpusBatch::split not implemented"); }
             std::vector<float>& getDataWeights() { NOT_IMPLEMENTED; }
             // helper for the initial run
-            static Ptr<CorpusBatch> fakeBatch(const std::vector<size_t>& lengths, size_t batchSize, bool guidedAlignment = false)
+            static Ptr<CorpusBatch> fakeBatch(const std::vector<size_t>& lengths, size_t batchSize, Ptr<Options> options)
             {
                 auto batch = New<CorpusBatch>(std::vector<Ptr<SubBatch>>(CNTK::Transform(lengths, [&](size_t len)
                 {
@@ -420,15 +437,23 @@ namespace marian
                     sb->setWords(sb->mask().size());
                     return sb;
                 })));
-                if (guidedAlignment)
-                    batch->setGuidedAlignment(std::vector<float>(batchSize * lengths.front() * lengths.back(), 0.f));
+                if (options->has("guided-alignment")) {
+                    std::vector<float> alignment(batchSize * lengths.front() * lengths.back(),
+                        0.f);
+                    batch->setGuidedAlignment(alignment);
+                }
                 return batch;
             }
         private:
             std::vector<Ptr<SubBatch>> m_streams; // e.g. { source, target }
             std::vector<float> m_guidedAlignment; // [size() * front().batchWidth() * back().batchWidth()]
         };
-        typedef void Corpus; // dummy typedef
+        // dummy typedefs that are presently not supported
+        struct Corpus {};
+        struct BatchStats
+        {
+            void add(Ptr<data::CorpusBatch>, size_t = 1) { NOT_IMPLEMENTED; }
+        };
 #if 0
         // CNTK only: helper function to embed data in CNTK format
         static inline Expr embedCntk(const Expr& srcEmbeddings, const Ptr<SubBatch>& subBatch)
@@ -474,6 +499,7 @@ namespace marian
 
     namespace inits
     {
+        typedef CNTK::ParameterInitializer ParameterInitializer;
         static CNTK::ParameterInitializer zeros = CNTK::ConstantInitializer(0);
         static CNTK::ParameterInitializer ones = CNTK::ConstantInitializer(1);
         static CNTK::ParameterInitializer glorot_uniform = CNTK::GlorotUniformInitializer(1.0); // TODO: check the scaling
@@ -981,38 +1007,6 @@ namespace marian
     // added for CNTK: same as graph->constant() without the graph
     static inline Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) { return InternalOps::Constant(npShape, init, /*isVolatile=*/false); }
 
-    static inline Expr guidedAlignmentCost(Ptr<ExpressionGraph> graph, Ptr<data::CorpusBatch> batch, Ptr<Options> options, Expr att) // (nearly direct copy)
-    {
-        using namespace keywords;
-
-        int dimBatch = att->shape()[0];
-        int dimSrc = att->shape()[2];
-        int dimTrg = att->shape()[3];
-
-        auto aln = InternalOps::Constant(Shape({ dimBatch, 1, dimSrc, dimTrg }), keywords::init = inits::from_vector(batch->getGuidedAlignment()));
-
-        std::string guidedCostType
-            = options->get<std::string>("guided-alignment-cost");
-
-        Expr alnCost;
-        float eps = 1e-6f;
-        if (guidedCostType == "mse") {
-            alnCost = sum(flatten(square(att - aln))) / (2 * dimBatch);
-        }
-        else if (guidedCostType == "mult") {
-            alnCost = -log(sum(flatten(att * aln)) + eps) / dimBatch;
-        }
-        else if (guidedCostType == "ce") {
-            alnCost = -sum(flatten(aln * log(att + eps))) / dimBatch;
-        }
-        else {
-            ABORT_IF(true, "Unknown alignment cost type");
-        }
-
-        float guidedScalar = options->get<float>("guided-alignment-weight");
-        return guidedScalar * alnCost;
-    }
-
     // -----------------------------------------------------------------------
     // ExpressionGraph
     // -----------------------------------------------------------------------
@@ -1091,6 +1085,10 @@ namespace marian
         {
             root.Backward(m_allGradients);
         }
+        // methods presently not supported
+        void load(const std::string&, bool) { NOT_IMPLEMENTED; }
+        void save(const std::string&) { NOT_IMPLEMENTED; }
+        bool fits() { NOT_IMPLEMENTED; }
         // API addition for Dynamite:
         const std::vector<CNTK::Parameter>& GetAllParameters() const { return m_allParameters; }
     private:
