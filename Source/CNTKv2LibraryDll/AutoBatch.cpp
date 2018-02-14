@@ -2031,6 +2031,9 @@ struct RuntimeStatistics
     size_t numAvoidedBackpropToMatrix = 0;
     size_t numBatchedBackpropToViews = 0; // number of gradients that turned out to be views and were short-circuited
     size_t numBatchedBackpropToCalls = 0; // number of gradients actually computed
+    size_t numGradientsCreated = 0;       // number of gradient objects created
+    size_t numGradientsReferenced = 0;    // number of gradient pointers created
+    size_t numGradientsDereferenced = 0;  // number of gradient pointers released
 };
 
 // ---------------------------------------------------------------------------
@@ -4659,29 +4662,35 @@ public:
 
     // get the gradient view for a function's input, and allocate memory for m_gradient if needed
     // This lazily sets up the gradient for an input variable, and returns it.
+    // Gradients are only ever held in physical function outputs, never in redirects.
     // The physical gradient object is held by the redirect, while the cached gradient object in the input itself may be a view.
     // Returns beta = 0 if gradient was newly created, otherwise 1.
-    // BIG BUGBUG: What this architecture does not handle is see-through gradients (e.g. Plus). That must be fixed. It will change quite a bit.
-    NewGradient CacheAndGetGradientView(const PrimitiveFunction& f, const Variable& input, StorageFormat format = StorageFormat::Dense)
+    NewGradient CacheAndGetGradientView(const Variable& input, StorageFormat format = StorageFormat::Dense)
     {
-        fail_if(f.m_autoBatchState.m_pendingInputs == 0, "CacheAndGetGradientView called for function with no pending gradient??");
-
         auto& inputFields = GetInputFields(input); // describes the input variable, e.g. shape. May be a redirect
 
         double beta = 1.0;
 
         // if cached gradient object exists then return it, & done.
         if (inputFields.m_gradient)
+        {
+            fail_if(IsRedirected(inputFields), "gradient held in redirect??");
             return{ inputFields.m_gradient, beta };
+        }
 
         // no cached gradient
         // if we don't even have a physical one, then create the that one
         auto& gradFields = GetGradientFieldsForBackprop(inputFields); // describes the physical function output. This is where the gradient lives physically.
         if (!gradFields.m_gradient)
         {
+            let fp = gradFields.Owner().get();
+            fail_if(fp && fp->m_autoBatchState.m_pendingInputs == 0, "CacheAndGetGradientView called for function with no pending gradient??");
+
             // create a new one
             // TODO: allocate parameter gradients as separate objects
             gradFields.m_gradient = m_memoizer.Arena().New(gradFields.m_shape, gradFields.m_dataType, format, gradFields.m_value->Device());
+            m_stats.numGradientsCreated++;
+            m_stats.numGradientsReferenced++;
             // BUGBUG: gradFields.m_value may not exist, once we optimize memory. Device should be passed in (borrowing from the incoming gradient from top)
             beta = 0.0; // has not been initialized (random section in arena)
             // if there is no redirect, then writing to the physical one is the same as writing to the cached one. Then we are done.
@@ -4691,7 +4700,7 @@ public:
 
         // we now have a physical one, but no cached view
         // Reminder: cached view = physical value |> Barrier >> Slice >> Reshape
-        // We must do this backwards. 
+        // We must do this backwards.
         let sliceRange = inputFields.m_redirection.m_sliceRange;
         auto gradient = gradFields.m_gradient;
         // slice and reshape if needed
@@ -4709,8 +4718,13 @@ public:
             ReplaceWithReshapedViewIfNeeded(gradient, inputFields.m_shape);
         // BUGBUG: Are the operations above consumptions? Do we need to decrement m_pendingInputs on the physical gradient?
         // implant the cached gradient
+#if 1
+        return{ gradient, beta };
+#else
         inputFields.m_gradient = move(gradient);
+        m_stats.numGradientsReferenced++;
         return{ inputFields.m_gradient, beta };
+#endif
     }
 
     // recursively traverse the tree hanging off a Variable and build the m_consumer fields
@@ -4869,8 +4883,18 @@ public:
         return GetGradientFieldsForBackprop(inputFields, firstTime/*=true*/); // (note: tail recursion)
     }
 
+    // return true if input is redirected to another output
+    // and false if it is a leaf or has a redirect that points to itself
+    static bool IsRedirected(const VariableFields& inputFields)
+    {
+        if (inputFields.m_redirection.empty())
+            return false;
+        auto& gradFields = GetOutputFields(*inputFields.m_redirection.m_function);
+        return &gradFields != &inputFields;
+    }
+
     // helper during initialization: reset m_gradients if it is redirected
-    VariableFields& ResetInputGradient(const InternalVariable& input)
+    static VariableFields& ResetInputGradient(const InternalVariable& input)
     {
         auto& inputFields = GetInputFields(input);
         if (!inputFields.m_redirection.empty())
@@ -4944,8 +4968,10 @@ public:
             return outputFields.m_gradient;
         else
         {
+            fail_if(IsRedirected(outputFields), "output gradient is a redirect??");
             auto gradient = move(outputFields.m_gradient);
             fail_if(outputFields.m_gradient, "move() did not move??");
+            m_stats.numGradientsDereferenced++;
             return gradient;
         }
     }
@@ -5009,19 +5035,27 @@ public:
             auto outputGradient = ConsumeOutputGradient(f); // incoming gradient from top. Our gradient is going to be a view of this.
             if (op == PrimitiveOpType::Reshape)
                 outputGradient = outputGradient->AsShape(inputFields.m_shape); // an explicit Reshape (generated by auto-batch; other ops must have the same shape already) --TODO: do not generate this, use implicit reshape
-            // implant the cached gradient into this input
-            inputFields.m_gradient = move(outputGradient);
-            // implant it into the redirect
-            if (&inputFields != &redirectedInputFields)
+            // implant it
+            if (&inputFields == &redirectedInputFields)
             {
+                // implant the cached gradient into this input
+                inputFields.m_gradient = move(outputGradient);
+                m_stats.numGradientsReferenced++;
+            }
+            else
+            {
+                // implant the cached gradient into this input
+                //inputFields.m_gradient = move(outputGradient);
+                //m_stats.numGradientsReferenced++;
                 // Sanity check: If input is a redirected slice, then necessarily the underlying object (=inputFields.m_redirection.m_function)
                 // must have multiple consumers. Otherwise it would not be part of a batched operation, which is the only way
                 // of creating redirected slices.
                 // An exception is BatchNorm, which uses the batching mechanism even for e.g. a single-sequence batch.
                 fail_if(!inputFields.m_redirection.m_sliceRange.empty() && inputFields.m_redirection.m_function->m_op != PrimitiveOpType::BatchNormalization, "redirected slice with single consumer shouldn't be a redirect in the first place");
-                auto grad = inputFields.m_gradient;
+                auto grad = move(outputGradient);// inputFields.m_gradient;
                 ReplaceWithReshapedViewIfNeeded(grad, redirectedInputFields.m_shape);
                 redirectedInputFields.m_gradient = move(grad); // and the redirected location. If it is the same, then this will do nothing.
+                m_stats.numGradientsReferenced++;
             }
             // Nota bene: This is a little scary. If this condition is not correct: When more gradients get accumulated
             // into this input, then those will get into the output as well, which would be incorrect. There is no good
@@ -5032,7 +5066,7 @@ public:
             m_stats.numBatchedBackpropToViews++;
             return;
         }
-        let gradient = CacheAndGetGradientView(f, input, DetermineGradientStorageType(f, index));
+        let gradient = CacheAndGetGradientView(input, DetermineGradientStorageType(f, index));
         // BUGBUG: This ^^ should use inputDevice. Currently it uses input[index]'s device. But that input may not exist, once we optimize. The one that always exists is outputGradientValue.
 
         // compute gradients for the desired input
@@ -5130,7 +5164,7 @@ Break;
             if (!input.NeedsGradient())
                 continue;
             // create the gradient memory for this input. This sets both input->m_dataFields and the redirect if any
-            let gradient = CacheAndGetGradientView(f, input);
+            let gradient = CacheAndGetGradientView(input);
             inputGradients.push_back(gradient.view);
             // handle inconsistent betas
             if (gradient.beta != 0 && allBetasZeroSoFar)
@@ -5263,7 +5297,7 @@ Break;
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
         inputValues[0] = nullptr;
         inputValues[1] = rightBatch.get();
-        let gradient = CacheAndGetGradientView(f0, input0, DetermineGradientStorageType(f0, 0));
+        let gradient = CacheAndGetGradientView(input0, DetermineGradientStorageType(f0, 0));
 
         CudaStats* cudaStatsPtr = nullptr;
         if (ShouldLogMemoizeStats())
@@ -5583,6 +5617,7 @@ public:
         //    LogicError("BatchedBackward: root must be a scalar, or root gradient must have been implanted already");
         rootGradFields.m_gradient = m_memoizer.Arena().New(root.Shape(), root.GetDataType(), StorageFormat::Dense, root.Value()->Device());
         rootGradFields.m_gradient->SetValue(1.0f);
+        m_stats.numGradientsReferenced++;
         m_visitorTag.Visited(rootGradFields.m_visitedTag); // done with this
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
