@@ -202,17 +202,20 @@ namespace CNTK
         static const size_t SentinelDimValueForUnknownShape = (size_t)-2;
     public:
 
-        ///
-        /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
-        ///
-        static const size_t InferredDimension = (size_t)-1;
+        enum : size_t
+        {
+            ///
+            /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
+            ///
+            InferredDimension = (size_t)-1,
 
-        ///
-        /// A placeholder value to use for an axis whose dimension is unbound and is only determined
-        /// when actual data is bound to the variable. Note that since the actual dimension is bound
-        /// from actual minibatch data, the dimension can vary across different evaluations.
-        ///
-        static const size_t FreeDimension = (size_t)-3;
+            ///
+            /// A placeholder value to use for an axis whose dimension is unbound and is only determined
+            /// when actual data is bound to the variable. Note that since the actual dimension is bound
+            /// from actual minibatch data, the dimension can vary across different evaluations.
+            ///
+            FreeDimension = (size_t)-3,
+        };
 
         ///
         /// A placeholder shape to use to denote an unknown shape
