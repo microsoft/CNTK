@@ -244,6 +244,13 @@ protected:
         return result;
     }
 
+    TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
+    {
+        return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, ceilOutDim,
+            Base::NeedsDynamicValidation(), isFinalValidationPass);
+    }
+
 protected:
     TensorShape m_kernelShape;
     TensorShape m_mapCount;
@@ -280,7 +287,7 @@ protected:                                  \
     using Base::m_transpose;                \
     using Base::m_outputShape;              \
     using Base::m_ceilOutDim;               \
-    using Base::m_poolIncludePad;              \
+    using Base::m_poolIncludePad;           \
     using Base::m_imageLayout;              \
     using Base::m_maxTempMemSizeInSamples;  \
     using Base::m_tempMatrixForward;        \
@@ -493,8 +500,7 @@ public:
                            Input(0)->NodeName().c_str(), (int)mapCount, (int)weightCols);
             }
 
-            outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            outputShape = this->ComputeOutputShape(inputShape, TensorShape(1), /*ceilOutDim*/false, isFinalValidationPass);
             // ConvolveGeometry always uses CHW.
             SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
         }
@@ -505,9 +511,7 @@ public:
             InferReductionDims(inputShape, inputShape);
             if (!m_transpose)
             {
-                outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, false,
-                                                                    this->NeedsDynamicValidation(), isFinalValidationPass);
+                outputShape = this->ComputeOutputShape(inputShape, m_dilation, /*ceilOutDim*/false, isFinalValidationPass);
 
                 if (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0))    // user have explicitly set m_outputShape, we check if it's the same as outputShape
                 {
@@ -529,15 +533,13 @@ public:
                     // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
                     outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                       m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
-                                                                      this->NeedsDynamicValidation(), isFinalValidationPass);
+                                                                      Base::NeedsDynamicValidation(), isFinalValidationPass);
                 }
                 else
                 {
                     // in case the user specifies the output shape, we make sure the input shape can be the result of
                     // convolution from the specified output shape
-                    auto inferredShape = ConvolveGeometry::ComputeOutputShape(m_outputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                              m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false, 
-                                                                              this->NeedsDynamicValidation(), isFinalValidationPass);
+                    auto inferredShape = this->ComputeOutputShape(m_outputShape, TensorShape(1), false, isFinalValidationPass);
                     if (inputShape != inferredShape)
                         InvalidArgument("%ls %ls the shape of the convolution transpose operand %ls is different from "
                             "the result of convoluting the specified output argument using "
@@ -954,8 +956,7 @@ public:
         // infer reduction dimensions if not given
         InferReductionDims(inputShape, TensorShape());
 
-        auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), m_ceilOutDim);
+        auto outDims = this->ComputeOutputShape(inputShape, TensorShape(1), m_ceilOutDim, isFinalValidationPass);
         SetDims(outDims, HasMBLayout());
         if (isFinalValidationPass)
         {
@@ -1078,8 +1079,7 @@ public:
         // Same as in case of deconvolution, node input (inputShape) is really the output of the max pooling
         // and node output (outDims) is pooling input.
         auto outputShape = GetInputSampleLayout(1);
-        auto inferredShape = ConvolveGeometry::ComputeOutputShape(outputShape, m_kernelShape, m_mapCount, m_stride,
-                                                               m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+        auto inferredShape = this->ComputeOutputShape(outputShape, TensorShape(1), false, isFinalValidationPass);
         if (inputShape != inferredShape)
             InvalidArgument("%ls %ls the shape of the unpooling operand %ls is different from "
                             "the result of pooling the poolingInput argument using"

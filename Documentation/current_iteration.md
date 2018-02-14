@@ -21,3 +21,4 @@ C.debugging.stop_profiler()
 
 ## Bug fixes
 - Fixed convergence issue in Tutorial 201B
+- Fixed pooling/unpooling to support free dimension
