@@ -746,8 +746,12 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
         }
 
         if (tokenlattice[e.S].vt_nbest_tokens.size() == 0)
-            RuntimeError("nbestlatticeEMBR: node = %d,  vt_nbest_tokens.size() is 0!", int(e.S));
+        {
+            // it is possible to happen, when you exclude specialwords
+            continue;
 
+            // RuntimeError("nbestlatticeEMBR: node = %d,  vt_nbest_tokens.size() is 0!", int(e.S));
+        }
         prevtokeninfo.prev_edge_index = j;
 
         const double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf; // note: edgeacscores[j] == LOGZERO if edge was pruned
