@@ -61,29 +61,29 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IntDir>$(Platform)\$(Configuration)\DynamiteTest\</IntDir>
-    <IncludePath>%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>marian-dev\src;%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>%BOOST_LIB_PATH%;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <IntDir>$(Platform)\$(Configuration)\DynamiteTest\</IntDir>
-    <IncludePath>%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>marian-dev\src;%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>%BOOST_LIB_PATH%;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">
     <IntDir>$(Platform)\$(Configuration)\DynamiteTest\</IntDir>
-    <IncludePath>%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>marian-dev\src;%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>%BOOST_LIB_PATH%;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
     <IntDir>$(Platform)\$(Configuration)\DynamiteTest\</IntDir>
-    <IncludePath>%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>marian-dev\src;%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>%BOOST_LIB_PATH%;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
     <IntDir>$(Platform)\$(Configuration)\DynamiteTest\</IntDir>
-    <IncludePath>%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>marian-dev\src;%BOOST_INCLUDE_PATH%;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>%BOOST_LIB_PATH%;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -152,7 +152,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="iris.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MT.cpp" />
     <ClCompile Include="Tests.cpp" />
@@ -161,22 +160,18 @@
     <ClInclude Include="CNTKLibraryHelpers.h" />
     <ClInclude Include="constructors.h" />
     <ClInclude Include="encdec.h" />
-    <ClInclude Include="factory.h" />
     <ClInclude Include="generic.h" />
-    <ClInclude Include="helper.h" />
     <ClInclude Include="Layers.h" />
+    <ClInclude Include="marian-dev\src\common\shape.h" />
+    <ClInclude Include="marian-dev\src\layers\factory.h" />
+    <ClInclude Include="marian-dev\src\models\model_factory.h" />
+    <ClInclude Include="marian-dev\src\models\states.h" />
+    <ClInclude Include="marian-dev\src\rnn\types.h" />
     <ClInclude Include="marian.h" />
     <ClInclude Include="Models.h" />
     <ClInclude Include="model_base.h" />
-    <ClInclude Include="model_factory.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
-    <ClInclude Include="shape.h" />
-    <ClInclude Include="states.h" />
     <ClInclude Include="transformer.h" />
-    <ClInclude Include="types.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="iris.data" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

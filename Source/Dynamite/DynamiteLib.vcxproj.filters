@@ -12,14 +12,17 @@
     <Filter Include="Marian">
       <UniqueIdentifier>{f82cd974-3e6a-48c6-a673-98542c7fe613}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Marian\IRIS Example">
-      <UniqueIdentifier>{ebd327fb-f22a-4691-82a8-10deec4919ac}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Marian\Include">
       <UniqueIdentifier>{d5ebe776-85b0-4af5-b9e8-98b569ca1bc3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Marian\Models">
+    <Filter Include="Marian\Backend">
+      <UniqueIdentifier>{8a33c25e-0d4a-4e41-a555-a253cc8787bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Marian\Frontend1">
       <UniqueIdentifier>{dbf88615-10b3-4ecb-8807-fdebc19c5efe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Marian\Frontend">
+      <UniqueIdentifier>{1fb05372-c130-4816-9107-6bfcc6f8dba8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -31,9 +34,6 @@
     </ClCompile>
     <ClCompile Include="Tests.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="iris.cpp">
-      <Filter>Marian\IRIS Example</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -49,46 +49,38 @@
     <ClInclude Include="Models.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="helper.h">
-      <Filter>Marian\IRIS Example</Filter>
-    </ClInclude>
     <ClInclude Include="marian.h">
       <Filter>Marian\Include</Filter>
     </ClInclude>
     <ClInclude Include="transformer.h">
-      <Filter>Marian\Models</Filter>
-    </ClInclude>
-    <ClInclude Include="shape.h">
-      <Filter>Marian\Include</Filter>
+      <Filter>Marian\Frontend1</Filter>
     </ClInclude>
     <ClInclude Include="encdec.h">
-      <Filter>Marian\Models</Filter>
-    </ClInclude>
-    <ClInclude Include="types.h">
-      <Filter>Marian\Models</Filter>
-    </ClInclude>
-    <ClInclude Include="states.h">
-      <Filter>Marian\Models</Filter>
-    </ClInclude>
-    <ClInclude Include="factory.h">
-      <Filter>Marian\Models</Filter>
+      <Filter>Marian\Frontend1</Filter>
     </ClInclude>
     <ClInclude Include="generic.h">
-      <Filter>Marian\Models</Filter>
+      <Filter>Marian\Frontend1</Filter>
     </ClInclude>
     <ClInclude Include="model_base.h">
-      <Filter>Marian\Models</Filter>
+      <Filter>Marian\Frontend1</Filter>
     </ClInclude>
     <ClInclude Include="constructors.h">
-      <Filter>Marian\Models</Filter>
+      <Filter>Marian\Frontend1</Filter>
     </ClInclude>
-    <ClInclude Include="model_factory.h">
-      <Filter>Marian\Models</Filter>
+    <ClInclude Include="marian-dev\src\common\shape.h">
+      <Filter>Marian\Backend</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="iris.data">
-      <Filter>Marian\IRIS Example</Filter>
-    </None>
+    <ClInclude Include="marian-dev\src\rnn\types.h">
+      <Filter>Marian\Frontend</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\models\states.h">
+      <Filter>Marian\Frontend</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\models\model_factory.h">
+      <Filter>Marian\Frontend</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\layers\factory.h">
+      <Filter>Marian\Backend</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

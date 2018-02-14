@@ -37,7 +37,7 @@ template <typename... Args> __declspec_noreturn static inline void ABORT(const c
 #pragma warning(disable: 4244) // conversion from 'int' to 'float', possible loss of data
 #pragma warning(disable: 4189) // local variable is initialized but not referenced
 
-#include "shape.h"
+#include "common/shape.h"
 // Note: more #includes at the end
 
 namespace marian
@@ -1137,12 +1137,9 @@ namespace marian
 
 // we have a few more #includes here, since the original Marian header also
 // pulls in a few convenience classes that require the core declarations
-#include "states.h"
-#include "factory.h"
-#include "generic.h"
+#include "layers/factory.h"
 #include "model_base.h"
-#include "encdec.h"
-#include "constructors.h"
-#include "model_factory.h"
+
+// TODO: delete the following from marian.h proper
 
 #endif // __MARIAN_CNTK

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "marian.h"
 //#include "layers/factory.h"
 //#include "layers/generic.h"
 

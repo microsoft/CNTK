@@ -1,6 +1,11 @@
 #pragma once
 
 #include "marian.h"
+#include "generic.h"
+#include "models/states.h"
+#include "encdec.h"
+#include "constructors.h"
+#include "models/model_factory.h"
 
 namespace marian {
 
