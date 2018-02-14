@@ -519,7 +519,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         */
         ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR,
-                                                  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR, m_enforceValidPathEMBR, m_getPathMethodEMBR, m_showWERMode);
+                                                  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR, m_enforceValidPathEMBR, m_getPathMethodEMBR, m_showWERMode, m_excludeSpecialWords);
         /* guoye: end */
     }
 
@@ -3071,11 +3071,15 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     
     m_numPathsEMBR = configSGD(L"numPathsEMBR", (size_t)100);
     // enforce the path starting with sentence start
-    m_enforceValidPathEMBR = configSGD(L"enforceValidPathEMB", false); 
+    m_enforceValidPathEMBR = configSGD(L"enforceValidPathEMBR", false); 
     //could be sampling or nbest
     m_getPathMethodEMBR = configSGD(L"getPathMethodEMBR", "sampling");
     // could be average or onebest
     m_showWERMode = configSGD(L"showWERMode", "average");
+
+    // don't include path that has special words if true
+    m_excludeSpecialWords = configSGD(L"excludeSpecialWords", false);
+
 
     if (m_getPathMethodEMBR == "sampling" && m_showWERMode == "onebest")
     {

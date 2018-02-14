@@ -797,7 +797,7 @@ private:
         std::vector<double>& logbetas) const;
     
     void EMBRsamplepaths(const std::vector<double> &edgelogbetas,
-        const std::vector<double> &logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR, std::vector< std::vector<size_t> > & vt_paths) const;
+        const std::vector<double> &logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR,  const bool excludeSpecialWords, std::vector< std::vector<size_t> > & vt_paths) const;
 
     void EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<std::vector<size_t>> & vt_paths, std::vector<double>& path_posterior_probs) const;
 
@@ -825,7 +825,7 @@ private:
                                   const float lmf, const float wp, const float amf) const;
 
 
-    double nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &vt_nbesttokens, const size_t numtokens, const bool enforceValidPathEMBR,
+    double nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &vt_nbesttokens, const size_t numtokens, const bool enforceValidPathEMBR,  const bool excludeSpecialWords,
         const float lmf, const float wp, const float amf) const;
     /* guoye: end */
 public:
@@ -1217,6 +1217,7 @@ public:
     double forwardbackward(parallelstate& parallelstate, const class msra::math::ssematrixbase& logLLs, const class msra::asr::simplesenonehmm& hmms,
                            class msra::math::ssematrixbase& result, class msra::math::ssematrixbase& errorsignalbuf,
                            const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, const bool EMBR, const std::string EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const std::string getPathMethodEMBR, const std::string showWERMode,
+                           const bool excludeSpecialWords, 
                             array_ref<size_t> uids, std::vector<size_t> wids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
                            const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float>& transcriptunigrams = std::vector<float>()) const;
     

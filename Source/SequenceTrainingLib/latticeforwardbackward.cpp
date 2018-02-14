@@ -664,7 +664,7 @@ double lattice::forwardbackwardlattice(const std::vector<float> &edgeacscores, p
 
 /* guoye: start */
 
-double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &tokenlattice, const size_t numtokens, const bool enforceValidPathEMBR,
+double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &tokenlattice, const size_t numtokens, const bool enforceValidPathEMBR, const bool excludeSpecialWords, 
     const float lmf, const float wp, const float amf) const
 { // ^^ TODO: remove this
   // --- hand off to parallelized (CUDA) implementation if available
@@ -697,6 +697,19 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
         if (enforceValidPathEMBR)
         {
             if (e.S == 0 && nodes[e.E].wid != 1) continue;
+        }
+        if (excludeSpecialWords)
+        {
+            // 0~4 is: !NULL, <s>, </s>, !sent_start, and !sent_end
+            if (nodes[e.E].wid > 4)
+            {
+                if (is_special_words[e.E]) continue;                
+            }
+            if (nodes[e.S].wid > 4)
+            {
+                if (is_special_words[e.S]) continue;
+            }
+
         }
 
         if (tokenlattice[e.S].mp_score_token_infos.size() != 0)
@@ -1295,7 +1308,7 @@ size_t sample_from_cumulative_prob(const std::vector<double> &cumulative_prob)
 }
 
 void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
-    const std::vector<double> &logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR, std::vector<vector<size_t>> & vt_paths) const
+    const std::vector<double> &logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const bool excludeSpecialWords,  std::vector<vector<size_t>> & vt_paths) const
 {
     // In mp_node_ocp, key is the node id, and value stores the outgoing cumulative locally normalized probability. e.g., if the outgoing probabilities of the node are 0.3 0.1 0.6, the ocp stores: 0.3 0.4 1.0. 
     // This serves as a cache to avoid recomputation if sampling the same node twice
@@ -1334,6 +1347,38 @@ void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
         }
     
     }
+
+    // this is inefficent implementation, we should think of efficient ways to do it later
+    if (excludeSpecialWords)
+    {
+        size_t nidx;
+        for(size_t j = 0; j < vt_node_out_edge_indices.size(); j++)
+        {
+            for (size_t i = 0; i < vt_node_out_edge_indices[j].size(); i++)
+            {
+                // remove the edge
+                // 0~4 is: !NULL, <s>, </s>, !sent_start, and !sent_end
+                nidx = edges[vt_node_out_edge_indices[j][i]].E;
+
+                if (nodes[nidx].wid > 4)
+                {
+                    if (is_special_words[nidx])
+                    {
+                        lattice::erase_node_out_edges(j, i, i);
+                        continue;
+                    }
+                }
+
+                nidx = edges[vt_node_out_edge_indices[j][i]].S;
+
+                if (nodes[nidx].wid > 4)
+                {
+                    if (is_special_words[nidx])  lattice::erase_node_out_edges(j, i, i);
+                }
+            }
+        }
+    }
+
       
 
     while (vt_paths.size() < numPathsEMBR)
@@ -1551,37 +1596,41 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         // sum_wer += vt_path_weights[i];
         //
         // this uses weighted avg wer
-        // avg_wer += (vt_path_weights[i] * vt_path_posterior_probs[i]);
+        avg_wer += (vt_path_weights[i] * vt_path_posterior_probs[i]);
 
         // this use flat wer
-        avg_wer += (vt_path_weights[i] / vt_path_posterior_probs.size());
+        // avg_wer += (vt_path_weights[i] / vt_path_posterior_probs.size());
     }
     // avg_wer = sum_wer / vt_paths.size();
     if (getPathMethodEMBR == "sampling") onebest_wer = -10000;
     else onebest_wer = vt_path_weights[0];
     
     /* new algorithm */
+    /*
     size_t count = 0;
     double sum_posterior = 0;
+    */
     /* new algorithm */
 
     for (size_t i = 0; i < vt_path_weights.size(); i++)
     {
         // loss - mean_loss
-        /* mask good normal code */
-        /*
+        /* good normal code */
+        
         vt_path_weights[i] -= avg_wer;
         if(getPathMethodEMBR == "sampling") vt_path_weights[i] /= (vt_paths.size() - 1);
         else vt_path_weights[i] *= (vt_path_posterior_probs[i]);
-        */
+        
 
         /* new algorithm */
         // we only consider the path that is better than one-best
+        /*
         if (vt_path_weights[i] < onebest_wer)
         {
             count++;
             sum_posterior += vt_path_posterior_probs[i];
         }
+        */
         /* new algorithm */
     }
 
@@ -1589,7 +1638,8 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
     for (size_t i = 0; i < vt_paths.size(); i++)
     {
        
-        /*  mask normal good algorithm
+        /*  normal good algorithm */
+        
         for (size_t j = 0; j < vt_paths[i].size(); j++)
         {
             // open add instead of substract, for debug purpose
@@ -1598,9 +1648,9 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             // substraction instead of add, since we want to minimize the loss function, rather than maximize
             vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
         }
-        */
-        /* new algorithm */
         
+        /* new algorithm */
+        /*
         if (vt_path_weights[i] < onebest_wer)
         {
             vt_path_weights[i] -= onebest_wer;
@@ -1616,6 +1666,7 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
                vt_edge_weights[vt_paths[i][j]] -= vt_path_weights[i];
             }
         }
+        */
         /* new algorithm */
 
     }
@@ -2101,7 +2152,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::ssematrixbase &logLLs, const msra::asr::simplesenonehmm &hset,
                                 msra::math::ssematrixbase &result, msra::math::ssematrixbase &errorsignalbuf,
                                 const float lmf, const float wp, const float amf, const float boostingfactor,
-                                const bool sMBRmode, const bool EMBR, const string  EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const string getPathMethodEMBR, const string showWERMode, array_ref<size_t> uids, vector<size_t> wids, const_array_ref<size_t> bounds,
+                                const bool sMBRmode, const bool EMBR, const string  EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const string getPathMethodEMBR, const string showWERMode, const bool excludeSpecialWords, array_ref<size_t> uids, vector<size_t> wids, const_array_ref<size_t> bounds,
                                 const_array_ref<htkmlfwordsequence::word> transcript, const std::vector<float> &transcriptunigrams) const
                                 
 /* guoye: end*/
@@ -2240,7 +2291,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
             }
             else //nbest
             {                
-                double bestscore = nbestlatticeEMBR(edgeacscores, parallelstate, tokenlattice, numPathsEMBR, enforceValidPathEMBR, lmf, wp, amf);
+                double bestscore = nbestlatticeEMBR(edgeacscores, parallelstate, tokenlattice, numPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, lmf, wp, amf);
                 totalfwscore = bestscore; // to make the code happy, it should be called bestscore, rather than totalfwscore though, will fix later
             }
         }
@@ -2284,7 +2335,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         // fprintf(stderr, "\n forwardbackward: start EMBRsamplepaths \n");
         if (getPathMethodEMBR == "sampling")
         {
-            EMBRsamplepaths(edgelogbetas, logbetas, numPathsEMBR, enforceValidPathEMBR, vt_paths);
+            EMBRsamplepaths(edgelogbetas, logbetas, numPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, vt_paths);
             path_posterior_probs.resize(vt_paths.size(), (1.0/vt_paths.size()));
         }
         else EMBRnbestpaths(tokenlattice, vt_paths, path_posterior_probs);

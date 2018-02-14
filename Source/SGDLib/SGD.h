@@ -330,6 +330,7 @@ protected:
     string m_getPathMethodEMBR;
     size_t m_numPathsEMBR; // number of sampled paths
     string m_showWERMode; // number of sampled paths
+    bool m_excludeSpecialWords; 
     /* guoye： end */
     
     // decide whether should apply regularization into BatchNormalizationNode
