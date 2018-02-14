@@ -4,3 +4,6 @@
 [submodule "Source/Multiverso"]
 	path = Source/Multiverso
 	url = https://github.com/Microsoft/Multiverso
+[submodule "Source/Dynamite/marian-dev"]
+	path = Source/Dynamite/marian-dev
+	url = https://github.com/marian-nmt/marian-dev.git
