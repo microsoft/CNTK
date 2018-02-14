@@ -15,9 +15,6 @@
     <Filter Include="Marian On CNTK\API">
       <UniqueIdentifier>{d5ebe776-85b0-4af5-b9e8-98b569ca1bc3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Marian On CNTK\Frontend1">
-      <UniqueIdentifier>{dbf88615-10b3-4ecb-8807-fdebc19c5efe}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Marian On CNTK\Backend">
       <UniqueIdentifier>{8a33c25e-0d4a-4e41-a555-a253cc8787bc}</UniqueIdentifier>
     </Filter>
@@ -52,15 +49,6 @@
     <ClInclude Include="marian.h">
       <Filter>Marian On CNTK\API</Filter>
     </ClInclude>
-    <ClInclude Include="encdec.h">
-      <Filter>Marian On CNTK\Frontend1</Filter>
-    </ClInclude>
-    <ClInclude Include="generic.h">
-      <Filter>Marian On CNTK\Frontend1</Filter>
-    </ClInclude>
-    <ClInclude Include="constructors.h">
-      <Filter>Marian On CNTK\Frontend1</Filter>
-    </ClInclude>
     <ClInclude Include="marian-dev\src\common\shape.h">
       <Filter>Marian On CNTK\Backend</Filter>
     </ClInclude>
@@ -86,6 +74,9 @@
       <Filter>Marian On CNTK\Frontend</Filter>
     </ClInclude>
     <ClInclude Include="marian-dev\src\rnn\constructors.h">
+      <Filter>Marian On CNTK\Frontend</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\models\model_base.h">
       <Filter>Marian On CNTK\Frontend</Filter>
     </ClInclude>
   </ItemGroup>

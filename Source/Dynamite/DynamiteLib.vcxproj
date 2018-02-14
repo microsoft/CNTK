@@ -158,14 +158,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CNTKLibraryHelpers.h" />
-    <ClInclude Include="constructors.h" />
-    <ClInclude Include="encdec.h" />
-    <ClInclude Include="generic.h" />
     <ClInclude Include="Layers.h" />
     <ClInclude Include="marian-dev\src\common\shape.h" />
     <ClInclude Include="marian-dev\src\layers\factory.h" />
     <ClInclude Include="marian-dev\src\layers\generic.h" />
     <ClInclude Include="marian-dev\src\models\encdec.h" />
+    <ClInclude Include="marian-dev\src\models\model_base.h" />
     <ClInclude Include="marian-dev\src\models\model_factory.h" />
     <ClInclude Include="marian-dev\src\models\states.h" />
     <ClInclude Include="marian-dev\src\models\transformer.h" />

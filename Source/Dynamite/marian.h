@@ -5,7 +5,7 @@
 #ifndef __MARIAN
 #define __MARIAN
 
-#define MOCKUP // we are running on the Marian-On-CntK Unified Platform
+#define CNTK_BACKEND // we are running on the Marian-On-CntK Unified Platform
 
 #include "CNTKLibrary.h"
 #include "Models.h" // for the helper functions
@@ -428,6 +428,7 @@ namespace marian
             std::vector<Ptr<SubBatch>> m_streams; // e.g. { source, target }
             std::vector<float> m_guidedAlignment; // [size() * front().batchWidth() * back().batchWidth()]
         };
+        typedef void Corpus; // dummy typedef
 #if 0
         // CNTK only: helper function to embed data in CNTK format
         static inline Expr embedCntk(const Expr& srcEmbeddings, const Ptr<SubBatch>& subBatch)
