@@ -9,19 +9,19 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Marian">
+    <Filter Include="Marian On CNTK">
       <UniqueIdentifier>{f82cd974-3e6a-48c6-a673-98542c7fe613}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Marian\Include">
+    <Filter Include="Marian On CNTK\API">
       <UniqueIdentifier>{d5ebe776-85b0-4af5-b9e8-98b569ca1bc3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Marian\Backend">
-      <UniqueIdentifier>{8a33c25e-0d4a-4e41-a555-a253cc8787bc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Marian\Frontend1">
+    <Filter Include="Marian On CNTK\Frontend1">
       <UniqueIdentifier>{dbf88615-10b3-4ecb-8807-fdebc19c5efe}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Marian\Frontend">
+    <Filter Include="Marian On CNTK\Backend">
+      <UniqueIdentifier>{8a33c25e-0d4a-4e41-a555-a253cc8787bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Marian On CNTK\Frontend">
       <UniqueIdentifier>{1fb05372-c130-4816-9107-6bfcc6f8dba8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -50,37 +50,43 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="marian.h">
-      <Filter>Marian\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="transformer.h">
-      <Filter>Marian\Frontend1</Filter>
+      <Filter>Marian On CNTK\API</Filter>
     </ClInclude>
     <ClInclude Include="encdec.h">
-      <Filter>Marian\Frontend1</Filter>
+      <Filter>Marian On CNTK\Frontend1</Filter>
     </ClInclude>
     <ClInclude Include="generic.h">
-      <Filter>Marian\Frontend1</Filter>
-    </ClInclude>
-    <ClInclude Include="model_base.h">
-      <Filter>Marian\Frontend1</Filter>
+      <Filter>Marian On CNTK\Frontend1</Filter>
     </ClInclude>
     <ClInclude Include="constructors.h">
-      <Filter>Marian\Frontend1</Filter>
+      <Filter>Marian On CNTK\Frontend1</Filter>
     </ClInclude>
     <ClInclude Include="marian-dev\src\common\shape.h">
-      <Filter>Marian\Backend</Filter>
+      <Filter>Marian On CNTK\Backend</Filter>
     </ClInclude>
     <ClInclude Include="marian-dev\src\rnn\types.h">
-      <Filter>Marian\Frontend</Filter>
+      <Filter>Marian On CNTK\Frontend</Filter>
     </ClInclude>
     <ClInclude Include="marian-dev\src\models\states.h">
-      <Filter>Marian\Frontend</Filter>
+      <Filter>Marian On CNTK\Frontend</Filter>
     </ClInclude>
     <ClInclude Include="marian-dev\src\models\model_factory.h">
-      <Filter>Marian\Frontend</Filter>
+      <Filter>Marian On CNTK\Frontend</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\models\transformer.h">
+      <Filter>Marian On CNTK\Frontend</Filter>
     </ClInclude>
     <ClInclude Include="marian-dev\src\layers\factory.h">
-      <Filter>Marian\Backend</Filter>
+      <Filter>Marian On CNTK\Frontend</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\layers\generic.h">
+      <Filter>Marian On CNTK\Frontend</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\models\encdec.h">
+      <Filter>Marian On CNTK\Frontend</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\rnn\constructors.h">
+      <Filter>Marian On CNTK\Frontend</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

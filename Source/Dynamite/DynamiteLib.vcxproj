@@ -164,14 +164,16 @@
     <ClInclude Include="Layers.h" />
     <ClInclude Include="marian-dev\src\common\shape.h" />
     <ClInclude Include="marian-dev\src\layers\factory.h" />
+    <ClInclude Include="marian-dev\src\layers\generic.h" />
+    <ClInclude Include="marian-dev\src\models\encdec.h" />
     <ClInclude Include="marian-dev\src\models\model_factory.h" />
     <ClInclude Include="marian-dev\src\models\states.h" />
+    <ClInclude Include="marian-dev\src\models\transformer.h" />
+    <ClInclude Include="marian-dev\src\rnn\constructors.h" />
     <ClInclude Include="marian-dev\src\rnn\types.h" />
     <ClInclude Include="marian.h" />
     <ClInclude Include="Models.h" />
-    <ClInclude Include="model_base.h" />
     <ClInclude Include="PlainTextDeseralizer.h" />
-    <ClInclude Include="transformer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 
 #include "marian.h"
@@ -117,3 +118,4 @@ public:
 typedef Accumulator<MLPFactory> mlp;
 }
 }
+#endif

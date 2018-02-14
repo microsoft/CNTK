@@ -14,7 +14,7 @@
 #include "ExceptionWithCallStack.h"
 
 #include "marian.h"
-#include "transformer.h"
+#include "models/transformer.h"
 using namespace marian;
 
 #include <cstdio>

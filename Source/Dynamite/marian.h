@@ -2,8 +2,8 @@
 
 #pragma once
 
-#ifndef __MARIAN_CNTK
-#define __MARIAN_CNTK
+#ifndef __MARIAN
+#define __MARIAN
 
 #define MOCKUP // we are running on the Marian-On-CntK Unified Platform
 
@@ -36,6 +36,8 @@ template <typename... Args> __declspec_noreturn static inline void ABORT(const c
 #pragma warning(disable: 4099) // type name first seen using 'struct' now seen using 'class'
 #pragma warning(disable: 4244) // conversion from 'int' to 'float', possible loss of data
 #pragma warning(disable: 4189) // local variable is initialized but not referenced
+
+#define YAML_REGISTER_TYPE(a, b)
 
 #include "common/shape.h"
 // Note: more #includes at the end
@@ -404,6 +406,7 @@ namespace marian
             const std::vector<float>& getGuidedAlignment() { return m_guidedAlignment; }
             void setGuidedAlignment(const std::vector<float>& aln) { m_guidedAlignment = aln; }
             virtual std::vector<Ptr<Batch>> split(size_t n) override { n; CNTK::LogicError("CorpusBatch::split not implemented"); }
+            std::vector<float>& getDataWeights() { NOT_IMPLEMENTED; }
             // helper for the initial run
             static Ptr<CorpusBatch> fakeBatch(const std::vector<size_t>& lengths, size_t batchSize, bool guidedAlignment = false)
             {
@@ -812,7 +815,17 @@ namespace marian
             return Dynamite::CrossEntropyWithSoftmax(o, CNTK::OneHotOp(y, numClasses, /*outputSparse=*/true, CNTK::Axis(0)), CNTK::Axis(0));
     }
 
-    static inline Expr affine(const Expr& x, const Expr& W, const Expr& b) { return CNTK::Affine(W, x, b); }
+    static inline Expr affine(const Expr& x, const Expr& W, const Expr& b, bool transX = false, bool transW = false, float scalar = 1.0f)
+    {
+        auto res =
+            /*if*/ (transW) ?
+                CNTK::TransposeAffine(W, transX ? Transpose(x) : x, b)
+            /*else*/ :
+                CNTK::Affine(W, transX ? Transpose(x) : x, b);
+        if (scalar != 1.0f)
+            res = res * scalar;
+        return res;
+    }
 
     static inline Expr scalar_product(const Expr& a, Expr b, keywords::axis_k ax = 0) { return CNTK::InnerProduct(a, b, mappers::ToCNTKAxis(a, ax)); }
 
@@ -918,6 +931,7 @@ namespace marian
         return InternalOps::NotImplemented("pooling_with_masking");
     }
 
+#if 0
     // (direct copy, but note that 'indices' and also be oneHot, courtesy of cross_entropy())
     static inline Expr Cost(Expr logits, Expr indices, Expr mask, std::string costType, float smoothing)
     {
@@ -961,6 +975,7 @@ namespace marian
 
         return cost;
     }
+#endif
 
     // added for CNTK: same as graph->constant() without the graph
     static inline Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) { return InternalOps::Constant(npShape, init, /*isVolatile=*/false); }
@@ -1135,11 +1150,4 @@ namespace marian
     }
 }
 
-// we have a few more #includes here, since the original Marian header also
-// pulls in a few convenience classes that require the core declarations
-#include "layers/factory.h"
-#include "model_base.h"
-
-// TODO: delete the following from marian.h proper
-
-#endif // __MARIAN_CNTK
+#endif // __MARIAN

@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 
 //#include "common/definitions.h"
@@ -233,3 +234,4 @@ Expr Cost(Expr logits,
           std::string costType = "cross-entropy",
           float smoothing = 0);
 }
+#endif
