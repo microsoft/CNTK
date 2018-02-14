@@ -1963,7 +1963,10 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
             }
             else
             {
-                cntkConvAutoPadding.push_back(true);
+                // We assume this is the channel dimension and since ONNX does not support
+                // padding (also strides, dilation) for channel dimension, we set this to
+                // false when creating CNTK node. 
+                cntkConvAutoPadding.push_back(false);
             }
         }
 

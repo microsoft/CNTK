@@ -282,6 +282,20 @@ def test_Concat(tmpdir):
 
     verify_one_input(model, data1, tmpdir, 'Concat_1')
 
+def test_ConvTranspose(tmpdir):
+    # Keep the shapes below as they are, because this tests an earlier bug.
+    input_shape = (48, 16, 16) 
+    img = np.reshape(np.arange(np.prod(input_shape), dtype = np.float32), input_shape) 
+
+    x = C.input_variable(input_shape)
+
+    kernel_shape = (48, 32, 3, 3) # For convolution_transpose the shape is (I x O x W x H)
+    kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = np.float32))
+
+    conv_trans_model = C.convolution_transpose(kernel, x, strides=(2, 2), output_shape=(32, 32, 32), auto_padding = [False, True, True])
+
+    verify_one_input(conv_trans_model, img, tmpdir, 'ConvTranspose_0')
+
 # DepthToSpace
 def test_DepthToSpace(tmpdir):
     num_channels = 9

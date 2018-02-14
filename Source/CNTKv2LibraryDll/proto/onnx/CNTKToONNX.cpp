@@ -181,14 +181,12 @@ namespace CNTK
         // Get ONNX 'pads' attribute value based on CNTK node's autoPadding attribute value.
         //
         static std::pair<std::vector<int>, std::vector<int> > GetONNXPadsAttributeFromCNTKNode(
-            const NDShape &inputShape,
             const std::vector<bool>& cntkAutoPadding, const NDShape& kernelShape, bool ceilOutDim);
 
         //
         // Adds attributes 'auto_pad' or 'pads' to saved node (typically convolution or pooling).
         //
-        static void PutAutopadOrPadAttrInNode(ONNXIR::Node* node, const NDShape &inputShape,
-            const std::vector<bool>& autoPadding,
+        static void PutAutopadOrPadAttrInNode(ONNXIR::Node* node, const std::vector<bool>& autoPadding,
             const NDShape& kernelShape, bool ceilOutDim = false);
 
         //
@@ -1291,8 +1289,8 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             auto transpose = (bool)src->Attributes()[L"transpose"].Value<bool>();
 
             //
-            // Remove the channel part for ONNX.
-            //
+            // Remove the channel part for ONNX. This is because ONNX, unlike CNTK, does
+            // not support padding (pads), dilation, or strides for channel dimension.
             kernelShape = kernelShape.SubShape(0, kernelShape.Rank() - 1);
             strides = strides.SubShape(0, strides.Rank() - 1);
             autoPadding.pop_back();
@@ -1303,17 +1301,12 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             node->AddAttribute("dilations", ToINTS(dilations));
             node->AddAttribute("group", (int64_t)1);
 
-            const NDShape &inputShape = src->Inputs()[1].Shape();
-
             if (transpose)
             {
                 auto outputShape = (NDShape)src->Attributes()[L"outputShape"].Value<NDShape>();
                 node->AddAttribute("output_shape", ToINTS(outputShape, src->Inputs()[1].HasBatchAxis()));
-            }
-            else
-            {
-                PutAutopadOrPadAttrInNode(node, inputShape, autoPadding, kernelShape);
-            }
+            }            
+            PutAutopadOrPadAttrInNode(node, autoPadding, kernelShape);
         }
         else if (src->OpName() == L"Pooling")
         {
@@ -1339,8 +1332,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
 
             node->AddAttribute("kernel_shape", ToINTS(kernelShape));
             node->AddAttribute("strides", ToINTS(strides));
-            const NDShape &inputShape = src->Inputs()[0].Shape();
-            PutAutopadOrPadAttrInNode(node, inputShape, autoPadding, kernelShape, ceilOutDim);
+            PutAutopadOrPadAttrInNode(node, autoPadding, kernelShape, ceilOutDim);
         }
         else if (src->OpName() == L"ReduceElements")
         {
@@ -1370,8 +1362,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
 }
 
 void CNTKToONNXHelper::PutAutopadOrPadAttrInNode(ONNXIR::Node* node,
-    const NDShape &inputShape, const std::vector<bool>& autoPadding,
-    const NDShape& kernelShape, bool ceilOutDim)
+    const std::vector<bool>& autoPadding, const NDShape& kernelShape, bool ceilOutDim)
 {
     // Based on the CNTK node choose to put either the auto_pad or pads attribute in the ONNX node.
 
@@ -1381,7 +1372,7 @@ void CNTKToONNXHelper::PutAutopadOrPadAttrInNode(ONNXIR::Node* node,
     bool isExplicitPadValueNeeded = std::find(autoPadding.begin(), autoPadding.end(), false) != autoPadding.end();
     if (isExplicitPadValueNeeded && !ceilOutDim)
     {
-        auto padsValueVectorsForONNX = GetONNXPadsAttributeFromCNTKNode(inputShape, autoPadding, kernelShape, ceilOutDim);
+        auto padsValueVectorsForONNX = GetONNXPadsAttributeFromCNTKNode(autoPadding, kernelShape, ceilOutDim);
         auto lowerPads = ToINTS(padsValueVectorsForONNX.first);
         auto upperPads = ToINTS(padsValueVectorsForONNX.second);
         lowerPads.insert(lowerPads.end(), upperPads.cbegin(), upperPads.cend());
@@ -1526,7 +1517,6 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
 }
 
 std::pair<std::vector<int>, std::vector<int> > CNTKToONNXHelper::GetONNXPadsAttributeFromCNTKNode(
-    const NDShape &inputShape,
     const std::vector<bool>& cntkAutoPadding, const NDShape& kernelShape, bool ceilOutDim)
 {
     // Figure out the value for 'pads' ONNX attribute.
