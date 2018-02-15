@@ -215,8 +215,8 @@ endif
 # Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
 # In debug mode we only include cubin/PTX for 30 and rely on PTX / JIT to generate the required native cubin format
 # see also http://docs.nvidia.com/cuda/pascal-compatibility-guide/index.html#building-applications-with-pascal-support
-#GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
-#GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
+GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
+GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
 GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
 GENCODE_SM52 := -gencode arch=compute_52,code=\"sm_52,compute_52\"
 GENCODE_SM60 := -gencode arch=compute_60,code=\"sm_60,compute_60\"
@@ -1020,7 +1020,6 @@ endif
 # ASGD(multiverso) setup
 ########################################
 
-
 ifeq ("$(CNTK_ENABLE_ASGD)","true")
 
 ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
@@ -1087,6 +1086,9 @@ endif
 ########################################
 # cntk
 ########################################
+
+INCLUDEPATH += $(SOURCEDIR)/Dynamite
+INCLUDEPATH += $(SOURCEDIR)/Dynamite/marian-dev/src
 
 DYNAMITE_SRC =\
 	$(SOURCEDIR)/Dynamite/Main.cpp \

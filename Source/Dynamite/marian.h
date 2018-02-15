@@ -311,6 +311,8 @@ namespace marian
         public:
             ValueRef operator[](const std::string&) { return ValueRef(); }
         };
+        const YamlNode& get() const { NOT_IMPLEMENTED; }
+        YamlNode& get() { NOT_IMPLEMENTED; }
         static void AddYamlToNpz(const YamlNode&, const std::string&, const std::string&) { NOT_IMPLEMENTED; }
     };
     __declspec_selectany size_t Config::seed;
@@ -835,9 +837,9 @@ namespace marian
     {
         auto res =
             /*if*/ (transW) ?
-                CNTK::TransposeAffine(W, transX ? Transpose(x) : x, b)
+                CNTK::TransposeAffine(W, transX ? (Expr)Transpose(x) : x, b)
             /*else*/ :
-                CNTK::Affine(W, transX ? Transpose(x) : x, b);
+                CNTK::Affine(W, transX ? (Expr)Transpose(x) : x, b);
         if (scalar != 1.0f)
             res = res * scalar;
         return res;
