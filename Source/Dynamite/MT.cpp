@@ -1047,7 +1047,7 @@ BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model
         let dimBatch = trgSubBatch->batchSize();
         let dimWords = trgSubBatch->batchWidth();
         let  trgMask = graph->constant({ dimWords, dimBatch, 1 }, init = inits::from_vector(trgSubBatch->mask()));
-        let& trgData = trgSubBatch->oneHot();
+        let& trgData = trgSubBatch->data();
 
         std::string costType = "ce-sum";// mmodel->opt<string>("cost-type");
         bool inference = false; // TODO
