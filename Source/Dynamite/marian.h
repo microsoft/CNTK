@@ -92,6 +92,8 @@ namespace marian
         }
         size_t size() const { return m_viewShape.Rank(); }
         int elements() const { return (int)m_viewShape.TotalSize(); }
+        bool operator==(const ShapeProxy& other) const { return m_viewShape == other.m_viewShape; }
+        bool operator!=(const ShapeProxy& other) const { return m_viewShape != other.m_viewShape; }
     };
 
     // -----------------------------------------------------------------------
@@ -199,13 +201,14 @@ namespace marian
                 const T& operator=(const T& other) { return other; } // just pass on the ref
             };
         };
-#pragma push_macro("DEFINE_KEYWORD")  
+#pragma push_macro("DEFINE_KEYWORD")
 #define DEFINE_KEYWORD(type, name) typedef type name##_k; static Internal::KeywordPassThrough<type> name
         DEFINE_KEYWORD(CNTK::ParameterInitializer, init);
         DEFINE_KEYWORD(int,                        axis);
         DEFINE_KEYWORD(Expr,                       mask);
         DEFINE_KEYWORD(bool,                       fixed);
-#pragma pop_macro("DEFINE_KEYWORD")  
+        DEFINE_KEYWORD(Shape,                      shape);
+#pragma pop_macro("DEFINE_KEYWORD")
     };
 
     // helper to allow Options::get()'s return type depend on the template parameter
@@ -947,51 +950,21 @@ namespace marian
         return InternalOps::NotImplemented("pooling_with_masking");
     }
 
-#if 0
-    // (direct copy, but note that 'indices' and also be oneHot, courtesy of cross_entropy())
-    static inline Expr Cost(Expr logits, Expr indices, Expr mask, std::string costType, float smoothing)
+    namespace rnn // RNN has special ops that must be emulated for now
     {
-        using namespace keywords;
-
-        auto ce = cross_entropy(logits, indices);
-
-        if (smoothing > 0) {
-            // @TODO: add this to CE kernels instead
-            auto ceq = mean(logsoftmax(logits), axis = -1);
-            ce = (1 - smoothing) * ce - smoothing * ceq;
+        static inline Expr gruOps(const std::vector<Expr>& x, bool)
+        {
+            return x.front();
         }
-
-        if (mask)
-            ce = ce * mask;
-
-        Expr cost;
-        // axes:
-        //  - time axis (words): -3
-        //  - batch axis (sentences): -2
-        if (costType == "ce-mean" || costType == "cross-entropy") { // sum over words; average over sentences
-            cost = mean(sum(ce, axis = -3), axis = -2);
+        static inline Expr lstmOpsC(const std::vector<Expr>& x)
+        {
+            return x.front();
         }
-        else if (costType == "ce-mean-words") { // average over target tokens
-            cost =   sum(sum(ce,   axis = -3), axis = -2)
-                   / sum(sum(mask, axis = -3), axis = -2);
+        static inline Expr lstmOpsO(const std::vector<Expr>& x)
+        {
+            return x.front();
         }
-        else if (costType == "ce-sum") { // sum over target tokens
-            cost = sum(sum(ce, axis = -3), axis = -2);
-        }
-        else if (costType == "perplexity") { // ==exp('ce-mean-words')
-            cost = exp(  sum(sum(ce,   axis = -3), axis = -2)
-                       / sum(sum(mask, axis = -3), axis = -2));
-        }
-        else if (costType == "ce-rescore") { // sum over words, keep batch axis
-            cost = -sum(ce, axis = -3);
-        }
-        else {  // same as ce-mean
-            cost = mean(sum(ce, axis = -3), axis = -2);
-        }
-
-        return cost;
-    }
-#endif
+    };
 
     // added for CNTK: same as graph->constant() without the graph
     static inline Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) { return InternalOps::Constant(npShape, init, /*isVolatile=*/false); }
@@ -1014,6 +987,7 @@ namespace marian
         size_t getDevice() { return Dynamite::CurrentDevice().Id(); }
         void setInference(bool inference) { m_inferenceOnly = inference; }
         Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) const { return InternalOps::Constant(npShape, init, /*isVolatile=*/m_inferenceOnly); }
+        Expr zeros(const Shape& npShape) const { return InternalOps::Constant(npShape, inits::zeros, /*isVolatile=*/m_inferenceOnly); }
         // TODO: namespace; lots more
         Expr param(const std::string& name, const Shape& shape, const CNTK::ParameterInitializer& init, bool fixed = false)
         {

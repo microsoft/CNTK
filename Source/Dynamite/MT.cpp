@@ -15,6 +15,7 @@
 
 #include "marian.h"
 #include "models/transformer.h"
+#include "models/s2s.h"
 using namespace marian;
 
 #include <cstdio>
@@ -803,8 +804,8 @@ public:
 namespace marian { namespace models {
     // direct copy from Marian
     Ptr<EncoderBase> EncoderFactory::construct() {
-        //if (options_->get<std::string>("type") == "s2s")
-        //    return New<EncoderS2S>(options_);
+        if (options_->get<std::string>("type") == "s2s")
+            return New<EncoderS2S>(options_);
         //if (options_->get<std::string>("type") == "char-s2s")
         //    return New<CharS2SEncoder>(options_);
         if (options_->get<std::string>("type") == "transformer")
@@ -850,7 +851,7 @@ namespace marian { namespace models {
 Ptr<ExpressionGraph> graph; // TODO: make this a global?
 BinaryFoldingModel CreateModelFunctionMarian()
 {
-    auto moptions = Dictionary
+    let options = New<Options>(Dictionary
     (
         // These are all options given in the log. Not all are used inside the model.
         L"after-batches",                 0,    
@@ -954,16 +955,15 @@ BinaryFoldingModel CreateModelFunctionMarian()
         L"valid-translation-output",      L"data/valid.bpe.en.output",    
         L"vocabs",                        Options::VectorOf({ L"model/vocab.ende.yml", L"model/vocab.ende.yml" }),    
         L"workspace",                     10000    
-    );
-    let optionsPtr = New<Options>(moptions);
-    auto mmodel = models::encoder_decoder()(optionsPtr)
+    ));
+    auto mmodel = models::encoder_decoder()(options)
         .push_back(models::encoder()("type", "transformer"))
         .push_back(models::decoder()("type", "transformer"))
         .construct();
     // run through once to create all params, so that we can pull them out
     graph = New<ExpressionGraph>();
-    auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1, optionsPtr);
-    mmodel->build(graph, fakeBatch);
+    auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1, options);
+    mmodel->build(graph, fakeBatch); // apply model to data. This builds the graph, and here initializes the parameters.
     auto mparamsVector = graph->GetAllParameters();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
 #if 0 // for comparison to Marian, read all initial values from Marian
