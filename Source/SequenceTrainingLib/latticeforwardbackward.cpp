@@ -668,8 +668,7 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
     const float lmf, const float wp, const float amf) const
 { // ^^ TODO: remove this
   // --- hand off to parallelized (CUDA) implementation if available
-    fprintf(stderr, "nbestlatticeEMBR: 1 \n");
-
+    
 
     bool done;
     std::map<double, std::vector<PrevTokenInfo>>::iterator mp_itr;
@@ -689,7 +688,6 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
     tokenlattice[0].vt_nbest_tokens[0].score = 0.0f;
     tokenlattice[0].vt_nbest_tokens[0].prev_edge_index = 0;
     tokenlattice[0].vt_nbest_tokens[0].prev_token_index = 0;
-    fprintf(stderr, "nbestlatticeEMBR: 2 \n");
     // forward pass
     foreach_index(j, edges)
     {
@@ -776,7 +774,6 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
 
         }   
     }
-    fprintf(stderr, "nbestlatticeEMBR: 3 \n");
     // for the last node, which is </s>
     count = 0;
     done = false;
@@ -797,14 +794,22 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
         }
         if (done) break;
     }
-    fprintf(stderr, "nbestlatticeEMBR: 4 \n");
     // free the space.
     tokenlattice[tokenlattice.size() - 1].mp_score_token_infos.clear();
-    fprintf(stderr, "nbestlatticeEMBR: 5 \n");
-    const double bestscore = tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens[0].score;
-    fprintf(stderr, "nbestlatticeEMBR: 6 \n");
+    
+    double bestscore;
+    if (tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens.size() == 0)
+    {
+        if (!excludeSpecialWords)   RuntimeError("nbestlatticeEMBR: no token survive while excludeSpecialWords is false");
+        else bestscore = LOGZERO;
+        
+    }
+    else bestscore = tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens[0].score;
+    
+    
     if (islogzero(bestscore))
     {
+        
         fprintf(stderr, "nbestlatticeEMBR: WARNING: best score is logzero in lattice \n");
         return LOGZERO; // failed, do not use resulting matrix
     }
@@ -2164,7 +2169,6 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 /* guoye: end*/
 {
    
-    fprintf(stderr, "forwardbackward: debug 1\n");
     /* guoye: start  */
     std::vector<NBestToken> tokenlattice;
     tokenlattice.clear();
@@ -2227,7 +2231,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     /* guoye: start */
     // forwardbackwardalign(parallelstate, hset, softalignstates, minlogpp, origlogpps, abcs, matrixheap, sMBRmode /*returnsenoneids*/, edgeacscores, logLLs, thisedgealignments, thisbackpointers, uids, bounds);
 
-    fprintf(stderr, "forwardbackward: debug 2\n");
+    
     // return senone id for EMBR or sMBR, but not for MMI
     forwardbackwardalign(parallelstate, hset, softalignstates, minlogpp, origlogpps, abcs, matrixheap, (sMBRmode || EMBR) /*returnsenoneids*/, edgeacscores, logLLs, thisedgealignments, thisbackpointers, uids, bounds);
 
@@ -2298,9 +2302,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
             }
             else //nbest
             {           
-                fprintf(stderr, "forwardbackward: debug 3\n");
                 double bestscore = nbestlatticeEMBR(edgeacscores, parallelstate, tokenlattice, numPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, lmf, wp, amf);
-                fprintf(stderr, "forwardbackward: debug 4\n");
                 totalfwscore = bestscore; // to make the code happy, it should be called bestscore, rather than totalfwscore though, will fix later
             }
         }
@@ -2349,22 +2351,16 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         }
         else
         {
-            fprintf(stderr, "forwardbackward: debug 5\n");
             EMBRnbestpaths(tokenlattice, vt_paths, path_posterior_probs);
-            fprintf(stderr, "forwardbackward: debug 6\n");
         }
 
         
         // for getPathMethodEMBR=sampling, the onebest_wer does not make any sense, pls. do not  use it
         double onebest_wer;
-        fprintf(stderr, "forwardbackward: debug 7\n");
         double avg_wer = get_edge_weights(wids, vt_paths, edge_weights, path_posterior_probs, getPathMethodEMBR, onebest_wer);
-        fprintf(stderr, "forwardbackward: debug 8\n");
         auto &errorsignal = result;
-        fprintf(stderr, "forwardbackward: debug 9\n");
         EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
-        fprintf(stderr, "forwardbackward: debug 10\n");
-
+    
         
         // fprintf(stderr, "\n forwardbackward: average WER for an utterance is %f, #words = %d \n", avg_wer, int(wids.size()));
         if(getPathMethodEMBR == "nbest" && showWERMode == "onebest") return onebest_wer;
