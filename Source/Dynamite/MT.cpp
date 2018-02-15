@@ -1470,10 +1470,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             }
 #endif
 
-fprintf(stderr, "Distributed Update() at %d...\n", (int)totalNumLabelsSeen), fflush(stderr);
+//fprintf(stderr, "Distributed Update() at %d...\n", (int)totalNumLabelsSeen), fflush(stderr);
             learner->Update(gradients, info); // GPU sync happens here, at least in case of parallel training
             totalNumLabelsSeen += info.numberOfSamples; // also remember #target labels trained into this model
-fprintf(stderr, "done at %d...\n", (int)totalNumLabelsSeen), fflush(stderr);
+//fprintf(stderr, "done at %d...\n", (int)totalNumLabelsSeen), fflush(stderr);
         }
 
         // --- keep track of loss
