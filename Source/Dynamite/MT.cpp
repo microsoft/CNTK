@@ -968,6 +968,7 @@ BinaryFoldingModel CreateModelFunctionMarian()
     graph = New<ExpressionGraph>();
     auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1, options);
     mmodel->build(graph, fakeBatch); // apply model to data. This builds the graph, and here initializes the parameters.
+    // TODO: why does this need the batch at all? Does this really run through, and really initialize the parameters?
     auto mparamsVector = graph->params()->get();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
 #if 0 // for comparison to Marian, read all initial values from Marian
@@ -1207,6 +1208,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     {
         let path = IntermediateModelPath(modelPath, startPosition);
         fprintf(stderr, "restoring from: %S... ", Interpolate(path).c_str()), fflush(stderr);
+        // TODO: The learner should already know totalNumLabelsSeen, and also check-point it. Use that.
         Dynamite::RestoreFromCheckpoint(Interpolate(path), model_fn.ParametersCombined(), totalNumLabelsSeen, numWorkers, minibatchSource, learner);
         fprintf(stderr, "done. Model has seen %.0f samples so far.\n", (double)totalNumLabelsSeen), fflush(stderr);
     }
@@ -1876,6 +1878,8 @@ int mt_main(int argc, char *argv[])
             modelPath = modelDirectory + L"/model.dmf"; // DMF=Dynamite model file
 
         // set up parallel communicator
+        if (numBits == 32)
+            numBits = 0;
         use1BitSgd = numBits != 0;
         fprintf(stderr, "Using %d-bit quantization (0=off)\n", (int)numBits);
         let communicator =

@@ -91,6 +91,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include; $(SolutionDir)ComputationNetworkLib; $(SolutionDir)Source\Readers\ReaderLib; $(SolutionDir)Source\Math; $(SolutionDir)Tests\EndToEndTests\CNTKv2Library\Common;$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll\</AdditionalIncludeDirectories>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">MultiThreadedDebugDLL</RuntimeLibrary>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">Disabled</Optimization>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
@@ -135,7 +136,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MultiThreadedDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">MultiThreaded</RuntimeLibrary>

@@ -983,7 +983,14 @@ namespace marian
         {
             return x.front();
         }
-    };
+    }
+    namespace models // and there is one special op for attention
+    {
+        static inline Expr attOps(Expr x, Expr, Expr)
+        {
+            return x;
+        }
+    }
 
     // added for CNTK: same as graph->constant() without the graph
     static inline Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) { return InternalOps::Constant(npShape, init, /*isVolatile=*/false); }
