@@ -981,6 +981,10 @@ namespace marian
         {
             return x.front();
         }
+        static inline Expr attOps(const Expr& x, const Expr&, const Expr&)
+        {
+            return x;
+        }
     };
 
     // added for CNTK: same as graph->constant() without the graph
