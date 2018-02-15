@@ -668,7 +668,8 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
     const float lmf, const float wp, const float amf) const
 { // ^^ TODO: remove this
   // --- hand off to parallelized (CUDA) implementation if available
-    
+    fprintf(stderr, "nbestlatticeEMBR: 1 \n");
+
 
     bool done;
     std::map<double, std::vector<PrevTokenInfo>>::iterator mp_itr;
@@ -688,7 +689,7 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
     tokenlattice[0].vt_nbest_tokens[0].score = 0.0f;
     tokenlattice[0].vt_nbest_tokens[0].prev_edge_index = 0;
     tokenlattice[0].vt_nbest_tokens[0].prev_token_index = 0;
-
+    fprintf(stderr, "nbestlatticeEMBR: 2 \n");
     // forward pass
     foreach_index(j, edges)
     {
@@ -775,7 +776,7 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
 
         }   
     }
-
+    fprintf(stderr, "nbestlatticeEMBR: 3 \n");
     // for the last node, which is </s>
     count = 0;
     done = false;
@@ -796,11 +797,12 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
         }
         if (done) break;
     }
-
+    fprintf(stderr, "nbestlatticeEMBR: 4 \n");
     // free the space.
     tokenlattice[tokenlattice.size() - 1].mp_score_token_infos.clear();
-
+    fprintf(stderr, "nbestlatticeEMBR: 5 \n");
     const double bestscore = tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens[0].score;
+    fprintf(stderr, "nbestlatticeEMBR: 6 \n");
     if (islogzero(bestscore))
     {
         fprintf(stderr, "nbestlatticeEMBR: WARNING: best score is logzero in lattice \n");
