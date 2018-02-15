@@ -1238,10 +1238,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         let relPosition = totalNumLabelsSeen / (double)epochSize;
         // checkpoint
-        if (logThisMb)
-            fprintf(stderr, "### we are at %d/%d = %.2f, %d, %d\n",
-                    (int)totalNumLabelsSeen, (int)epochSize, relPosition,
-                    (int)(relPosition / saveEvery), (int)(lastSavePosition / saveEvery)), fflush(stderr);
         if (bucketCounter == 0 &&                                             // for now only save at multiples of bucketing
             (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery) && // crossed a boundary
             mbCount > 0)                                                                  // don't overwrite the starting model
@@ -1811,6 +1807,23 @@ static void DumpModel(const wstring& modelPath, double startPosition)
     }
 }
 
+// helper to create a symbolic link, using a relative link if possible
+static void CreateSymLink(wstring targetPath, const wstring& linkPath)
+{
+    // find the link directory
+    let slashPos = linkPath.find_last_of(L"/\\");
+    if (slashPos != wstring::npos && slashPos < targetPath.size())
+    {
+        let linkDir = linkPath.substr(0, slashPos + 1);
+        if (targetPath.substr(0, slashPos + 1) == linkDir)
+            targetPath.erase(0, slashPos + 1);
+    }
+    fprintf(stderr, "%S -> %S\n", targetPath.c_str(), linkPath.c_str()), fflush(stderr);
+    // create the link as a relative one if possible, since the absolute path may differ between Philly process and external access
+    boost::filesystem::remove(linkPath); // (will not throw if file does not exist)
+    boost::filesystem::create_symlink(targetPath, linkPath);
+}
+
 int mt_main(int argc, char *argv[])
 {
     Internal::PrintBuiltInfo();
@@ -1936,8 +1949,7 @@ int mt_main(int argc, char *argv[])
         if (communicator->CurrentWorker().IsMain())
         {
             let logRank0Path = L"${PHILLY_LOG_DIR}/logrank.0.log";
-            boost::filesystem::remove(Interpolate(logRank0Path)); // (will not throw if file does not exist)
-            boost::filesystem::create_symlink(Interpolate(logPath), Interpolate(logRank0Path));
+            CreateSymLink(Interpolate(logPath), Interpolate(logRank0Path));
         }
 #endif
 
