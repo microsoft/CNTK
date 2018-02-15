@@ -1017,6 +1017,7 @@ namespace CNTK
         ///
         CNTK_API NDArrayViewPtr IndexLastAxis(size_t index, bool readOnly = false) const;
 
+    public:
 #if 0
         ///
         /// vector/iteration interface
@@ -1058,6 +1059,14 @@ namespace CNTK
             return Shape().Dimensions().back();
         }
         NDArrayViewPtr operator[](size_t index) const { return IndexLastAxis(index, IsReadOnly()); }
+
+    public: // Marian emulation   --TODO: verify the semantics
+        template <typename ResultType>
+        void get(std::vector<ResultType>& outputBuffer) const { CopyDataTo(outputBuffer); }
+        void set(size_t index, double value)
+        {
+            IndexLastAxis(index)->SetValue(value);
+        }
 
         ///
         /// Creates a new NDArrayView which is an alias of 'this' view but with a new shape.

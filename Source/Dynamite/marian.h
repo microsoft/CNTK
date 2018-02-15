@@ -46,7 +46,9 @@ namespace marian { class Config; }
 void createLoggers(const marian::Config*) { }
 std::shared_ptr<spdlog::logger> stderrLogger(const std::string&, const std::string&, const std::vector<std::string>&, bool quiet) { return spdlog::get(""); }
 
-#include "common/shape.h"
+// these base-type headers can be used as-is
+#include "common/shape.h" // Shape
+#include "data/types.h"   // Word, Words, and related constants
 
 namespace marian
 {
@@ -59,8 +61,6 @@ namespace marian
     template <class T, typename... Args> Ptr<T> New(Args&&... args) { return Ptr<T>(new T(std::forward<Args>(args)...)); }
     template <class T> Ptr<T> New(Ptr<T> p) { return Ptr<T>(p); }
     class ExpressionGraph;
-    typedef size_t Word;
-    typedef std::vector<Word> Words;
     const float NEMATUS_LN_EPS = 1e-5f;
     typedef std::ofstream OutputFileStream;
 
@@ -151,6 +151,7 @@ namespace marian
         void dump() const { Value()->LogToFile(Name()); }
         Ptr<ExpressionGraph> graph() const { return nullptr; } // TODO: We need a placeholder for this. Or maybe only allow one graph?
     };
+    static inline void operator>> (const CNTK::NDArrayViewPtr& val, std::vector<float>& outputBuffer) { val->CopyDataTo(outputBuffer); }
 
     // -----------------------------------------------------------------------
     // helpers for mapping stuff to and from CNTK
@@ -215,6 +216,7 @@ namespace marian
     template<class T> struct get_return                           { typedef const T& type; };
     template<>        struct get_return<std::string>              { typedef std::string type; };
     template<>        struct get_return<std::vector<int>>         { typedef std::vector<int> type; };
+    template<>        struct get_return<std::vector<size_t>>      { typedef std::vector<size_t> type; };
     template<>        struct get_return<std::vector<std::string>> { typedef std::vector<std::string> type; };
 
     class Options : public CNTK::Dictionary
@@ -299,6 +301,12 @@ namespace marian
         return std::vector<int>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return v.Value<int>(); }));
     }
     template<>
+    inline typename get_return<std::vector<size_t>>::type Options::get<std::vector<size_t>>(const std::string& key) const
+    {
+        const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
+        return std::vector<size_t>(CNTK::Transform(intArray, [](const CNTK::DictionaryValue& v) { return v.Value<size_t>(); }));
+    }
+    template<>
     inline typename get_return<std::vector<std::string>>::type Options::get<std::vector<std::string>>(const std::string& key) const
     {
         const auto& intArray = Base::operator[](widen(key)).Value<std::vector<CNTK::DictionaryValue>>(); // stored as an array of DictionaryValues, not ints
@@ -308,11 +316,15 @@ namespace marian
     struct Config
     {
         static size_t seed;
-        class YamlNode : public Options // fake implementation used in place of YAML::Node
+        class YamlNode : public Options // fake implementation used in place of YAML::Node. Operations supported.
         {
-            struct ValueRef { template<typename T> void operator=(const T& value) { NOT_IMPLEMENTED; }; }; // dummy assignment operator
+            struct ValueRef
+            {
+                template<typename T> void operator=(const T& value) { NOT_IMPLEMENTED; }; // dummy assignment operator (needed in load/save functions)
+                ValueRef& operator[](const std::string&) { NOT_IMPLEMENTED; } // dummy index operator (needed in Amun)
+            };
         public:
-            ValueRef operator[](const std::string&) { return ValueRef(); }
+            ValueRef& operator[](const std::string&) { NOT_IMPLEMENTED; }
         };
         static void AddYamlToNpz(const YamlNode&, const std::string&, const std::string&) { NOT_IMPLEMENTED; }
     };
@@ -509,12 +521,17 @@ namespace marian
                     *p++ = (float)v;
                 return CNTK::Dictionary(L"from_vector", std::move(view));
             }
+            struct NumpyObject // only enough interface to get Amun to compile
+            {
+                std::vector<size_t> shape;
+            };
         };
         template<typename T>
         static inline CNTK::ParameterInitializer from_vector(const std::vector<T>&     inputData) { return Internal::CastVectorInitializer(inputData); }
         static inline CNTK::ParameterInitializer from_vector(const std::vector<float>& inputData) { return Internal::WrappedVectorInitializer(inputData); }
         static inline CNTK::ParameterInitializer from_value(float value) { return CNTK::ConstantInitializer(value); }
         static inline CNTK::ParameterInitializer from_word2vec(const std::string& file, int dimVoc, int dimEmb, bool normalize = false) { file, dimVoc, dimEmb, normalize; CNTK::LogicError("from_word2vec: not implemented"); }
+        static inline CNTK::ParameterInitializer from_numpy(const Internal::NumpyObject&) { NOT_IMPLEMENTED; }
     }
 
     // -----------------------------------------------------------------------
@@ -973,10 +990,26 @@ namespace marian
     // ExpressionGraph
     // -----------------------------------------------------------------------
 
+    struct Parameters
+    {
+        std::map<std::string, CNTK::Parameter> m_allParametersMap;
+        std::vector<CNTK::Parameter> m_allParameters;
+        std::map<std::string, Expr> getMap() const
+        {
+            std::map<std::string, Expr> res; // Parameters does not cast to Expr, so we must make a copy here. It's just shared_ptrs.
+            for (let& i : m_allParametersMap)
+                res[i.first] = (Expr)i.second;
+            return res;
+        }
+        // CNTK API:
+        const std::vector<CNTK::Parameter>& get() const { return m_allParameters; }
+    };
+
     class ExpressionGraph
     {
     public:
         ExpressionGraph() {}
+        Ptr<Parameters> params() const { return m_parameters; }
         void clear() { }
         void reserveWorkspaceMB(size_t) { }
         // TODO: what is Marian's device id of the CPU?
@@ -985,6 +1018,11 @@ namespace marian
             Dynamite::SetCurrentDevice(CNTK::DeviceDescriptor::GPUDevice((unsigned int)device));
         }
         size_t getDevice() { return Dynamite::CurrentDevice().Id(); }
+        struct Backend // fake Backend for getBackend()
+        {
+            void setDevice(size_t gpuId) { Dynamite::SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)gpuId)); }
+        };
+        Backend* getBackend() { static Backend s_backend; return &s_backend; }
         void setInference(bool inference) { m_inferenceOnly = inference; }
         Expr constant(const Shape& npShape, const CNTK::ParameterInitializer& init) const { return InternalOps::Constant(npShape, init, /*isVolatile=*/m_inferenceOnly); }
         Expr zeros(const Shape& npShape) const { return InternalOps::Constant(npShape, inits::zeros, /*isVolatile=*/m_inferenceOnly); }
@@ -992,9 +1030,10 @@ namespace marian
         Expr param(const std::string& name, const Shape& shape, const CNTK::ParameterInitializer& init, bool fixed = false)
         {
             fixed; // TODO
+            auto& pp = *params();
             auto viewShape = mappers::ToNDShape(shape); // convert to CNTK's column-major viewShape
-            auto iter = m_allParametersMap.find(name);
-            if (iter == m_allParametersMap.end()) // case 1: create a new parameter
+            auto iter = pp.m_allParametersMap.find(name);
+            if (iter == pp.m_allParametersMap.end()) // case 1: create a new parameter
             {
                 if (init.Contains(L"from_vector")) // our fake 
                 {
@@ -1005,16 +1044,16 @@ namespace marian
                     // copy the supplied CPU buffer, which may be a temporary, to a GPU-side NDArrayView
                     auto initVal = initData.AsShape(viewShape)->DeepClone(Dynamite::CurrentDevice(), /*readOnly=*/false);
                     auto p = CNTK::Parameter(initVal);
-                    m_allParametersMap.insert(std::make_pair(name, p));
-                    m_allParameters.push_back(p);
+                    pp.m_allParametersMap.insert(std::make_pair(name, p));
+                    pp.m_allParameters.push_back(p);
                     m_allGradients[p] = nullptr;
                     return (CNTK::Variable)p;
                 }
                 else
                 {
                     auto p = CNTK::Parameter(viewShape, CNTK::DataType::Float, init, Dynamite::CurrentDevice(), std::wstring(name.begin(), name.end())); // copy it (possibly to a different device)
-                    m_allParametersMap.insert(std::make_pair(name, p));
-                    m_allParameters.push_back(p);
+                    pp.m_allParametersMap.insert(std::make_pair(name, p));
+                    pp.m_allParameters.push_back(p);
                     m_allGradients[p] = nullptr;
                     return (CNTK::Variable)p;
                 }
@@ -1029,10 +1068,11 @@ namespace marian
         }
         Expr get(std::string name) const
         {
+            auto& pp = *params();
             //if (!namespace_.empty())
             //    name = namespace_ + "::" + name;
-            auto iter = m_allParametersMap.find(name);
-            if (iter != m_allParametersMap.end())
+            auto iter = pp.m_allParametersMap.find(name);
+            if (iter != pp.m_allParametersMap.end())
                 return (CNTK::Variable)iter->second;
             else
                 return nullptr;
@@ -1052,11 +1092,9 @@ namespace marian
         void load(const std::string&, bool) { NOT_IMPLEMENTED; }
         void save(const std::string&) { NOT_IMPLEMENTED; }
         bool fits() { NOT_IMPLEMENTED; }
-        // API addition for Dynamite:
-        const std::vector<CNTK::Parameter>& GetAllParameters() const { return m_allParameters; }
+        void setReloaded(bool) { NOT_IMPLEMENTED; }
     private:
-        std::map<std::string, CNTK::Parameter> m_allParametersMap;
-        std::vector<CNTK::Parameter> m_allParameters;
+        Ptr<Parameters> m_parameters = make_shared<Parameters>();
         bool m_inferenceOnly = false;
         friend class OptimizerWrapper;
         std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr> m_allGradients;
@@ -1074,7 +1112,7 @@ namespace marian
             case AlgorithmType::Sgd:
                 m_LazyCreateLearner = [=](const Ptr<ExpressionGraph>& graph)
                 {
-                    return CNTK::SGDLearner(graph->m_allParameters,
+                    return CNTK::SGDLearner(graph->params()->get(),
                                             CNTK::LearningRateSchedule(std::vector<double>{ eta }, CNTK::TrainingParameterSchedule<float>::FullDataSweep, 1)/*,
                                             AdditionalLearningOptions additionalOptions = AdditionalLearningOptions()*/);
                 };
@@ -1082,7 +1120,7 @@ namespace marian
             case AlgorithmType::Adam:
                 m_LazyCreateLearner = [=](const Ptr<ExpressionGraph>& graph)
                 {
-                    return CNTK::AdamLearner(graph->m_allParameters,
+                    return CNTK::AdamLearner(graph->params()->get(),
                                             CNTK::LearningRateSchedule(std::vector<double>{ eta }, CNTK::TrainingParameterSchedule<float>::FullDataSweep, 1),
                                             CNTK::MomentumSchedule(std::vector<double>{ 0.9 }, CNTK::TrainingParameterSchedule<float>::FullDataSweep, 1),
                                             /*unitGain=*/true,
@@ -1110,6 +1148,12 @@ namespace marian
     {
         return New<OptimizerWrapper>(eta, algorithmType);
     }
-}
+} // namespace marian
+
+namespace cnpy // needed for Amun model's load/save functions (currently not supported)
+{
+    static inline std::map<string, marian::inits::Internal::NumpyObject> npz_load(const string&) { NOT_IMPLEMENTED; }
+    static inline void npz_save(const string&, const string&, const float*, unsigned *, unsigned, const std::string&) { NOT_IMPLEMENTED; }
+} // namespace cnpy
 
 #endif // __MARIAN

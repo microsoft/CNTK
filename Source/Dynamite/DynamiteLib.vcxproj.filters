@@ -106,5 +106,20 @@
     <ClInclude Include="marian-dev\src\rnn\rnn.h">
       <Filter>Marian On CNTK\Frontend\rnn</Filter>
     </ClInclude>
+    <ClInclude Include="marian-dev\src\models\char_s2s.h">
+      <Filter>Marian On CNTK\Frontend\models</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\layers\convolution.h">
+      <Filter>Marian On CNTK\Frontend\layers</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\models\hardatt.h">
+      <Filter>Marian On CNTK\Frontend\models</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\models\amun.h">
+      <Filter>Marian On CNTK\Frontend\models</Filter>
+    </ClInclude>
+    <ClInclude Include="marian-dev\src\models\nematus.h">
+      <Filter>Marian On CNTK\Frontend\models</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

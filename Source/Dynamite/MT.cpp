@@ -16,6 +16,10 @@
 #include "marian.h"
 #include "models/transformer.h"
 #include "models/s2s.h"
+// #include "models/char_s2s.h" // Convolution is too irregular to get to work
+#include "models/hardatt.h"
+#include "models/amun.h"
+#include "models/nematus.h"
 using namespace marian;
 
 #include <cstdio>
@@ -806,7 +810,7 @@ namespace marian { namespace models {
     Ptr<EncoderBase> EncoderFactory::construct() {
         if (options_->get<std::string>("type") == "s2s")
             return New<EncoderS2S>(options_);
-        //if (options_->get<std::string>("type") == "char-s2s")
+        //if (options_->get<std::string>("type") == "char-s2s") // Convoluton too irregular to support
         //    return New<CharS2SEncoder>(options_);
         if (options_->get<std::string>("type") == "transformer")
             return New<EncoderTransformer>(options_);
@@ -815,14 +819,14 @@ namespace marian { namespace models {
     }
 
     Ptr<DecoderBase> DecoderFactory::construct() {
-        //if (options_->get<std::string>("type") == "s2s")
-        //    return New<DecoderS2S>(options_);
+        if (options_->get<std::string>("type") == "s2s")
+            return New<DecoderS2S>(options_);
         if (options_->get<std::string>("type") == "transformer")
             return New<DecoderTransformer>(options_);
-        //if (options_->get<std::string>("type") == "hard-att")
-        //    return New<DecoderHardAtt>(options_);
-        //if (options_->get<std::string>("type") == "hard-soft-att")
-        //    return New<DecoderHardAtt>(options_);
+        if (options_->get<std::string>("type") == "hard-att")
+            return New<DecoderHardAtt>(options_);
+        if (options_->get<std::string>("type") == "hard-soft-att")
+            return New<DecoderHardAtt>(options_);
 
         ABORT("Unknown decoder type");
     }
@@ -830,11 +834,11 @@ namespace marian { namespace models {
     Ptr<EncoderDecoder> EncoderDecoderFactory::construct() {
         Ptr<EncoderDecoder> encdec;
 
-        //if (options_->get<std::string>("type") == "amun")
-        //    encdec = New<Amun>(options_);
-        //if (options_->get<std::string>("type") == "nematus")
-        //    encdec = New<Nematus>(options_);
-        //
+        if (options_->get<std::string>("type") == "amun")
+            encdec = New<Amun>(options_);
+        if (options_->get<std::string>("type") == "nematus")
+            encdec = New<Nematus>(options_);
+
         if (!encdec)
             encdec = New<EncoderDecoder>(options_);
 
@@ -964,7 +968,7 @@ BinaryFoldingModel CreateModelFunctionMarian()
     graph = New<ExpressionGraph>();
     auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1, options);
     mmodel->build(graph, fakeBatch); // apply model to data. This builds the graph, and here initializes the parameters.
-    auto mparamsVector = graph->GetAllParameters();
+    auto mparamsVector = graph->params()->get();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
 #if 0 // for comparison to Marian, read all initial values from Marian
     vector<float> buf;
@@ -1784,7 +1788,7 @@ static void DumpModel(const wstring& modelPath, double startPosition)
     model_fn.ParametersCombined()->Restore(Interpolate(path));
     fprintf(stderr, "done\n"), fflush(stderr);
     vector<float> buf;
-    auto mparamsVector = graph->GetAllParameters();
+    auto mparamsVector = graph->params()->get();
     for (auto& p : mparamsVector)
     {
         p.Value()->LogToFile(p.Name() + L" (CNTK)");
