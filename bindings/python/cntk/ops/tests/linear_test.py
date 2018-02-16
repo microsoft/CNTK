@@ -462,3 +462,52 @@ def test_auto_broadcast_reconcile_issue():
     # check does the reconcile_dynamic_axes call trigger the auto broadcast
     assert len(inputs) == 2
     assert inputs[0].name == 'y' and inputs[1].name == 'x'
+
+MEAN_VARIANCE_NORMALIZATION_DATA = [
+    (np.array([[[0., 2],     # Input tensor
+                [4., 6.]],
+               [[0., 4],
+                [8., 12.]]]),
+     False,                   # use_stats_across_channels
+     False,                   # do_variance_scaling
+     np.array([[[-3., -1.],   # Output tensor
+                [1., 3.]],
+               [[-6., -2],
+                [2., 6.]]])
+     ),
+    (np.array([[[0., 2],     # Input tensor
+                [4., 6.]],
+               [[0., 4],
+                [8., 12.]]]),
+     False,                   # use_stats_across_channels
+     True,                   # do_variance_scaling
+     np.array([[[-1.34163487, -0.44721162],
+                [ 0.44721162,  1.34163487]],
+               [[-1.34163785, -0.44721264],
+                [ 0.44721264,  1.34163785]]])
+     ),
+    (np.array([[[0., 2],     # Input tensor
+                [4., 6.]],
+               [[8., 10],
+                [12., 14.]]]),
+     True,                   # use_stats_across_channels
+     True,                   # do_variance_scaling
+     np.array([[[-1.52752209, -1.0910871],
+                [-0.6546523,  -0.21821743]],
+               [[ 0.21821743,  0.6546523],
+                [ 1.0910871,  1.52752209]]])
+     ),
+]
+
+@pytest.mark.parametrize("input_operand, use_stats_across_channels, do_variance_scaling, output_ref", MEAN_VARIANCE_NORMALIZATION_DATA)
+def test_op_mean_variance_normalization(input_operand, use_stats_across_channels, do_variance_scaling, output_ref, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+    input_ref = AA(input_operand, dtype=dt_precision)
+    a = C.input_variable(shape=input_ref.shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+    norm_op = C.mean_variance_normalization(a, use_stats_across_channels=use_stats_across_channels, do_variance_scaling=do_variance_scaling)
+    output_test = norm_op.eval({a:input_ref}, device=cntk_device(device_id))
+
+    assert np.allclose(output_test, output_ref, atol=1e-4)

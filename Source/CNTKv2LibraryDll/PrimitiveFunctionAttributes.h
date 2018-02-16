@@ -115,4 +115,6 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomAttributes = L"customAttributes";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumItems = L"numItems";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameFillValue = L"fillValue";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameUseStatsAcrossChannels = L"useStatsAcrossChannels";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDoVarianceScaling = L"doVarianceScaling";
 }

@@ -1752,6 +1752,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             return ImageScaler(inputs[0], scale, bias, ToWString(node->Name()));
         }
     }
+    else if (onnxOpName == "MeanVarianceNormalization")
+    {
+        size_t acrossChannels = GetNamedAttributeAsInt64(node, "across_channels", 0);
+        size_t normalizeVariance = GetNamedAttributeAsInt64(node, "normalize_variance", 1);
+        return MeanVarianceNormalization(inputs[0], !!acrossChannels, !!normalizeVariance, ToWString(node->Name()));
+    }
     else
     {
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());

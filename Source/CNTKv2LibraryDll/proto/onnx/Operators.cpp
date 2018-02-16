@@ -70,7 +70,7 @@ namespace ONNX
             { L"epsilon", "epsilon" },
             // { L"", "momentum" },
         } } },
-        // from ONNX experiament, added to test Caffe models
+        // from ONNX experiment, added to test Caffe models
         // TODO: set key as BatchNormalization instead of BatchNormalizationCaffe
         { L"BatchNormalizationCaffe",{ {
             { L"BatchNormalization", "SpatialBN" },
@@ -78,7 +78,13 @@ namespace ONNX
             // { L"", "is_test" },
             { L"epsilon", "epsilon" },
             // { L"", "momentum" },
-            } } },
+        } } },
+        { L"LayerNormalization",{ {
+            { L"LayerNormalization", "LayerNormalization" },
+            { L"initial_scale", "initial_scale" },
+            { L"initial_bias", "initial_bias" },
+            { L"epsilon", "epsilon" },
+        } } },
         { L"LocalResponseNormalization",{ {
             { L"LocalResponseNormalization", "LRN" },
             { L"size", "size" },
@@ -359,6 +365,11 @@ namespace ONNX
         { L"ImageScaler",{ {
             { L"ImageScaler", "ImageScaler" },
             } } },
+        { L"MeanVarianceNormalization",{ {
+            { L"MeanVarianceNormalization", "MeanVarianceNormalization" },
+            { L"useStatsAcrossChannels", "across_channels" },
+            { L"doVarianceScaling", "normalize_variance" },
+            } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -442,6 +453,7 @@ namespace ONNX
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
             { L"PReLU",{ 1, 0 } },
+            { L"LayerNormalization",{ 1, 2, 0 } },
         };
 
         //

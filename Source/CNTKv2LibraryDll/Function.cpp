@@ -2340,7 +2340,7 @@ namespace CNTK
 
         size_t channels = operand.Shape()[2];
         if (channels != biases.size())
-            LogicError("ImageScaler: number of biase (%d) does not equal channels of the image (%d)", (int)biases.size(), (int)(channels));
+            LogicError("ImageScaler: number of biases (%d) does not equal channels of the image (%d)", (int)biases.size(), (int)(channels));
 
         auto additionalProperties = Dictionary();
         additionalProperties[L"Scaler"] = scale;
@@ -2373,6 +2373,32 @@ namespace CNTK
         auto meanPlaceholder = PlaceholderVariable(L"mean");
         auto invStdDevPlaceholder = PlaceholderVariable(L"invStdDev");
         return AsBlock(std::move(ElementTimes(Minus(operandPlaceholder, meanPlaceholder), invStdDevPlaceholder)), { { operandPlaceholder, operand },{ meanPlaceholder, mean },{ invStdDevPlaceholder, invStdDev } }, L"PerDimMeanVarianceNormalize", name);
+    }
+
+    FunctionPtr MeanVarianceNormalization(const Variable& operand, const bool useStatsAcrossChannels, const bool doVarianceScaling, const std::wstring& name)
+    {
+        Dictionary additionalAttributes;
+        additionalAttributes[PrimitiveFunction::AttributeNameUseStatsAcrossChannels] = useStatsAcrossChannels;
+        additionalAttributes[PrimitiveFunction::AttributeNameDoVarianceScaling] = doVarianceScaling;
+
+        auto operandPlaceholder = PlaceholderVariable(L"operand");
+        size_t operandRank = operand.Shape().Rank();
+        if (operandRank < 2 && !useStatsAcrossChannels)
+            InvalidArgument("When rank of the operand is < 2, useStatsAcrossChannels must be set to false, because there is no channel dimension.");
+        auto numAxesToReduce = useStatsAcrossChannels ? operandRank : operandRank - 1; // Assuming last dim to be the channel dim.
+        std::vector<Axis> axesToReduce(numAxesToReduce);
+        for (size_t i = 0; i < numAxesToReduce; ++i)
+            axesToReduce[i] = Axis(i);
+        FunctionPtr operandMeanRemoved = Minus(operandPlaceholder, ReduceMean(operandPlaceholder, axesToReduce));
+        if (!doVarianceScaling)
+        {
+            return AsBlock(std::move(operandMeanRemoved), { { operandPlaceholder, operand } }, std::move(additionalAttributes), L"MeanVarianceNormalization", name);
+        }
+        else
+        {
+            return AsBlock(std::move(ElementDivide(operandMeanRemoved, Sqrt(ReduceMean(Square(operandMeanRemoved), axesToReduce)))),
+                { { operandPlaceholder, operand } }, std::move(additionalAttributes), L"MeanVarianceNormalization", name);
+        }
     }
 
     FunctionPtr Convolution(const Variable& convolutionMap,

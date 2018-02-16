@@ -1276,6 +1276,13 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             node->AddAttribute("scale", scale);
             node->AddAttribute("bias", biases);
         }
+        else if (src->OpName() == L"MeanVarianceNormalization")
+        {
+            auto useStatsAcrossChannels = (int64_t)(src->Attributes()[L"useStatsAcrossChannels"].Value<bool>());
+            auto doVarianceScaling = (int64_t)(src->Attributes()[L"doVarianceScaling"].Value<bool>());
+            node->AddAttribute(attributesMap[L"useStatsAcrossChannels"], useStatsAcrossChannels);
+            node->AddAttribute(attributesMap[L"doVarianceScaling"], doVarianceScaling);
+        }
     }
     else
     {
@@ -1468,6 +1475,7 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
         }
     }
     else
+    {
         //
         // CNTK Times OP is way more flexible for ONNX, so depend on the inputs and output shape,
         // we will need to insert some reshapes.
@@ -1505,8 +1513,37 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
             else
                 node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
         }
+        else if (src->OpName() == L"LayerNormalization")
+        {
+            // Special handling of LayerNormalization to use MeanVarianceNormalization (and not reduce* ops).
+
+            // This assumes that the orderedInputs are in the order:
+            // [0]: tensor operand, [1]: scale constant, [2]: bias constant.
+            // Also assumes that tensor operand is index [2] in src->Inputs(). 
+            auto input0 = orderedInputs[0];
+            onnx::TypeProto input0ArgType = ToTypeProto(src->Inputs()[2].Shape(), src->Inputs()[2].HasBatchAxis());
+            UpdateONNXType(src->Inputs()[2].GetDataType(), input0ArgType);
+            ONNXIR::NodeArg mvnTensorOutputArg(nodeName + string("_mvn_output0"), &input0ArgType);
+            ONNXIR::Node* mvnNode = graph->AddNode(nodeName + string("_MVN"), "MeanVarianceNormalization",
+                "", { input0 }, { mvnTensorOutputArg });
+            mvnNode->AddAttribute("across_channels", static_cast<int64_t>(1));
+            mvnNode->AddAttribute("normalize_variance", static_cast<int64_t>(1));
+
+            auto input1 = orderedInputs[1];
+            ONNXIR::NodeArg mulTensorOutputArg(nodeName + string("_mul_output0"), &input0ArgType);
+            ONNXIR::Node* mulNode = graph->AddNode(nodeName + string("_mul"), "Mul",
+                "", { mvnTensorOutputArg, input1 }, { mulTensorOutputArg });
+            mulNode->AddAttribute("broadcast", static_cast<int64_t>(1));
+
+            auto input2 = orderedInputs[2];
+            ONNXIR::NodeArg addTensorOutputArg(nodeName + string("_add_output0"), &input0ArgType);
+            node = graph->AddNode(nodeName + string("_add"), "Add",
+                "", { mulTensorOutputArg, input2 }, { addTensorOutputArg });
+            node->AddAttribute("broadcast", static_cast<int64_t>(1));
+        }
         else
             node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
+    }
 
     //
     // Copy and validate attributes.
