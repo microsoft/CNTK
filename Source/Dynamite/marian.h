@@ -973,22 +973,19 @@ namespace marian
     {
         static inline Expr gruOps(const std::vector<Expr>& x, bool)
         {
-            return x.front();
+            x;
+            return InternalOps::NotImplemented("gruOps");
         }
-        static inline Expr lstmOpsC(const std::vector<Expr>& x)
-        {
-            return x.front();
-        }
+        static inline Expr lstmOpsC(const std::vector<Expr>& x) { return InternalOps::NotImplemented((x, __FUNCTION__)); }
         static inline Expr lstmOpsO(const std::vector<Expr>& x)
         {
-            return x.front();
+            x;
+            return InternalOps::NotImplemented("lstmOpsO");
         }
-    }
-    namespace models // and there is one special op for attention
-    {
         static inline Expr attOps(Expr x, Expr, Expr)
         {
-            return x;
+            x;
+            return InternalOps::NotImplemented("attOps");
         }
     }
 
