@@ -1019,7 +1019,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     static const size_t numStorageFormats = 3; // we index the arrays below by [(size_t)storageFormat]
     static array<vector<unique_ptr<MatrixBase>>, numStorageFormats> s_recycledSparseArenass; // TODO: we can simplify this further, just use one
     static set<MemoryBlock> s_recycledMemoryBlocks; // free set
-    static const NDShapeDimension defaultDenseArenaSize = 256*1024*1024;//000000; // we allocate in this chunk size (dense only)
+    static const NDShapeDimension defaultDenseArenaSize = 2*256*1024*1024;//000000; // we allocate in this chunk size (dense only)
 
     static size_t s_totalAllocated; // diagnostics
     static size_t s_totalGaps;
