@@ -1896,7 +1896,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
 }
 
 template <class ElemType>
-bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
+bool HTKMLFReader<ElemType>:: (size_t i)
 {
     if (m_noData)
     {

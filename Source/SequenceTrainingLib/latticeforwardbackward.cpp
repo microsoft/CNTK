@@ -2323,7 +2323,8 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     if (islogzero(totalfwscore))
     {
         fprintf(stderr, "forwardbackward: WARNING: line 1917, totalforwardscore is zero: (%d nodes/%d edges), totalfwscore = %f, totalfwscore1= %f \n", (int) nodes.size(), (int) edges.size(), totalfwscore, totalfwscore1);
-        return LOGZERO; // failed, do not use resulting matrix
+        if(!EMBR || !excludeSpecialWords)
+            return LOGZERO; // failed, do not use resulting matrix
     }
 
     // PHASE 3: compute final state-level posteriors (MMI mode)
@@ -2342,22 +2343,34 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         std::vector<double> edge_weights(edges.size(), 0.0);
         std::vector<double> path_posterior_probs;
 
-        // Do path sampling
-        // fprintf(stderr, "\n forwardbackward: start EMBRsamplepaths \n");
-        if (getPathMethodEMBR == "sampling")
-        {
-            EMBRsamplepaths(edgelogbetas, logbetas, numPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, vt_paths);
-            path_posterior_probs.resize(vt_paths.size(), (1.0/vt_paths.size()));
-        }
-        else
-        {
-            EMBRnbestpaths(tokenlattice, vt_paths, path_posterior_probs);
-        }
+        double onebest_wer = 0.0;
+        double avg_wer = 0.0;
 
         
+        
         // for getPathMethodEMBR=sampling, the onebest_wer does not make any sense, pls. do not  use it
-        double onebest_wer;
-        double avg_wer = get_edge_weights(wids, vt_paths, edge_weights, path_posterior_probs, getPathMethodEMBR, onebest_wer);
+        
+        
+        // ToDO: if it is logzero(totalfwscore), the criterion shown in the training log is not totally correct: for this problematic utterance, the wer is counted as 0. Problematic in the sense that: we set excludeSpecialWords is true, and found no token survive
+
+        if (!islogzero(totalfwscore))
+        {
+            // Do path sampling
+            // fprintf(stderr, "\n forwardbackward: start EMBRsamplepaths \n");
+            if (getPathMethodEMBR == "sampling")
+            {
+                EMBRsamplepaths(edgelogbetas, logbetas, numPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, vt_paths);
+                path_posterior_probs.resize(vt_paths.size(), (1.0 / vt_paths.size()));
+            }
+            else
+            {
+                EMBRnbestpaths(tokenlattice, vt_paths, path_posterior_probs);
+            }
+
+            avg_wer = get_edge_weights(wids, vt_paths, edge_weights, path_posterior_probs, getPathMethodEMBR, onebest_wer);
+        }
+
+
         auto &errorsignal = result;
         EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
     
