@@ -458,7 +458,7 @@ class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, publ
 public:
     DeclareConstructorFromConfigWithNumInputs(SequenceWithSoftmaxNode);
     SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_gammaCalcInitialized(false)
+        : Base(deviceId, name), m_gammaCalcInitialized(false), m_invalidBatch(false)
     {
     }
 
@@ -473,11 +473,18 @@ public:
         }
         else if (inputIndex == 1)
         {
-            FrameRange fr(Input(0)->GetMBLayout());
-            BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
-            MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
-
+            if (m_invalidBatch)
+            {
+                Input(inputIndex)->Gradient().SetValue(0.0f);
+                Value().SetValue(1.0f);
+            }
+            else
+            {
+                FrameRange fr(Input(0)->GetMBLayout());
+                BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+                    Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+                MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+            }
 #ifdef _DEBUG
             Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
 #endif
@@ -657,6 +664,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
+    bool m_invalidBatch;
     double m_frameDropThreshold;
     double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
     double m_seqGammarAMF;
@@ -751,6 +759,7 @@ public:
         this->m_uids.clear();
         this->m_boundaries.clear();
         this->m_extraUttMap.clear();
+        this->m_invalidBatch = false;
 
         if (InputRef(3).ValuePtrRef()->GetDeviceId() != CPUDEVICE)
             LogicError("Due to their size, lattices should be allocated on CPU memory");
@@ -784,35 +793,45 @@ public:
         }
 
         this->m_lattices.resize(labelSequencesMap.size());
-
+        try {
 #pragma omp parallel for 
-        for (long i = 0; i < labelSequences.size(); i++)
-        {
-            if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
-                continue;
-
-            auto& currentLabelSeq = labelSequences[i];
-
-            // Fill up lattice
-            auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
-            std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
-            const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
-            latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
-            assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
-            // The size of the vector is small -- the number of sequences in the minibatch. 
-            // Iteration likely will be faster than the overhead with unordered_map
-            for (size_t pos = 0; pos < labelSequencesMap.size();pos++)
+            for (long i = 0; i < labelSequences.size(); i++)
             {
-                if (labelSequencesMap[pos] == labelSequences[i].seqId)
+                if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
+                    continue;
+
+                auto& currentLabelSeq = labelSequences[i];
+
+                // Fill up lattice
+                auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
+                std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
+                const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
+                latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
+                assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
+                // The size of the vector is small -- the number of sequences in the minibatch. 
+                // Iteration likely will be faster than the overhead with unordered_map
+                for (size_t pos = 0; pos < labelSequencesMap.size();pos++)
                 {
-                    this->m_lattices[pos] = latticePair;
-                    break;
+                    if (labelSequencesMap[pos] == labelSequences[i].seqId)
+                    {
+                        this->m_lattices[pos] = latticePair;
+                        break;
+                    }
                 }
             }
         }
-        this->m_boundaries.resize(this->m_uids.size());
-        std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
-        SequenceWithSoftmaxNode<ElemType>::ForwardPropNonLooping();
+        catch (...)
+        {
+            fprintf(stderr, "WARNING: Failed to parse lattice. Skipping minibatch...\n");
+            this->m_invalidBatch = true;
+        }
+
+        if (!this->m_invalidBatch)
+        {
+            this->m_boundaries.resize(this->m_uids.size());
+            std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
+            SequenceWithSoftmaxNode<ElemType>::ForwardPropNonLooping();
+        }
     }
 
     virtual void Save(File& fstream) const override
