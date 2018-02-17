@@ -1469,6 +1469,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 //fprintf(stderr, "Distributed Update() at %d...\n", (int)totalNumLabelsSeen), fflush(stderr);
             learner->Update(gradients, info); // GPU sync happens here, at least in case of parallel training
             totalNumLabelsSeen += info.numberOfSamples; // also remember #target labels trained into this model
+            // TODO: move to use TotalNumberOfSamplesSeen() entirely once confirmed that it is identical
             let xx = learner->TotalNumberOfSamplesSeen();
             if (xx != totalNumLabelsSeen)
                 fprintf(stderr, "wrong sample count, %.0f != %.0f\n", (double)xx, (double)totalNumLabelsSeen), fflush(stderr);
