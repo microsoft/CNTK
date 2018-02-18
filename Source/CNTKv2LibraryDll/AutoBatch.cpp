@@ -955,6 +955,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         {}
         virtual void Delete(void*) override // called when the BaseMatrixStorage instance is destructed
         {
+            lock_guard<recursive_mutex> guard(s_mutex);
             NDArrayViewArena::/*m_arena.*/RecycleMemoryBlock(move(m_memoryBlock));
             delete this; // this will deref the underlying arena, so that eventually it can be freed
             // TODO: merge the matrix and the Deleter into a single object that is MakeShared controlled
@@ -963,6 +964,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
 
     static void CheckGaps(const char* msg = "")
     {
+        // must be called under lock s_mutex
         size_t totalRecyclable = 0;
         for (let& b : s_recycledMemoryBlocks)
         {
@@ -979,13 +981,13 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     }
     static void RecycleMemoryBlock(MemoryBlock&& memoryBlock) // callback from Deleter()
     {
-        lock_guard<recursive_mutex> guard(s_mutex);
+        // must be called under lock s_mutex
         CheckGaps("RecycleMemoryBlock begin");
         s_totalAllocated -= memoryBlock.size();
         s_totalGaps += memoryBlock.size();
         s_recycledMemoryBlocks.emplace(move(memoryBlock)); // we move this gap into the gap set
         CheckGaps("RecycleMemoryBlock after adding back");
-        // consolidate rigth away --TODO: currently this is highly inefficient; do it right
+        // consolidate right away --TODO: currently this is highly inefficient; do it right
         if (s_recycledMemoryBlocks.size() > 1)
         {
             // consolidate by sorting by address, then merging
@@ -1130,6 +1132,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     // This is needed so that we can control releasing of the block in case of multiple views taken into it.
     MatrixBasePtr WrapStorageRangeAsMatrix(MemoryBlock&& memoryBlock, DataType dataType)
     {
+        // must be called under lock s_mutex
         memoryBlock.Check();
         let* data = memoryBlock.data();
         let deviceId = memoryBlock.m_sob->GetDeviceId();
@@ -1148,6 +1151,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     // helper for NewDense()
     static void DebugSnapShot()
     {
+        // must be called under lock s_mutex
         size_t totalRecyclable = 0;
         size_t maxRecyclable = 0;
         for (let& b : s_recycledMemoryBlocks)
@@ -1165,6 +1169,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     // subroutine for NewDense(): allocate memory from a given memory block
     NDArrayViewPtr NewDenseFromMemoryBlock(const MemoryBlock& memoryBlock, size_t sizeInBytes, const NDShape& shape, const DataType& dataType)
     {
+        // must be called under lock s_mutex
         // for unused bytes, we create a new recycled memory block
         let unusedBytes = memoryBlock.size() - sizeInBytes;
         //if (unusedBytes > 0)
@@ -1217,8 +1222,8 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         {
             CheckGaps("NewDense from gap, before");
             auto region = NewDenseFromMemoryBlock(*iter, desiredMemoryBlock.size(), shape, dataType);
-            s_recycledMemoryBlocks.erase(iter);
-            s_totalGaps -= iter->size(); // and remove this entry from the free set. We temporarily may have had overlapping entries just now.
+            s_totalGaps -= iter->size();
+            s_recycledMemoryBlocks.erase(iter); // remove from free set. We temporarily may have had overlapping entries just now.
             CheckGaps("NewDense from gap, after");
             return region;
         }
