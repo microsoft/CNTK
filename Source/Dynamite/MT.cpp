@@ -94,6 +94,9 @@ size_t maxBatchSizePerWorker = 2000;// CeilDiv(4096, 6); // this much fits into 
 bool insertBOS = true;
 int/*bool*/ fromLatest = false;
 
+bool tieSoftmaxWithTgtEmbeddings = false; // target embedding matrix = (softmax layer weights)^T
+bool tieSrcAndTgtEmbeddings = false;      // source and target share the embedding (must have the same vocab, obviously)
+
 // run every pathname through this function
 // It will interpolate expressions of the form ${VAR}.
 wstring Interpolate(const wstring& path)
@@ -131,6 +134,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         srcVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         tgtVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         insertBOS = false; // Marian model does not expect <s>
+        tieSoftmaxWithTgtEmbeddings = tieSrcAndTgtEmbeddings = true;      // share both embeddings, also share with output layer
     }
     else if (systemId == "chs_enu")
     {
@@ -144,7 +148,9 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTestFile  = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/test.ENU.txt";
         srcVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
-        learningRate *= 10;
+        insertBOS = false; // Marian model does not expect <s>
+        tieSoftmaxWithTgtEmbeddings = true; // target embedding matrix = (softmax layer weights)^T
+        tieSrcAndTgtEmbeddings = false;     // source and target cannot share the embedding, since different vocab
     }
     else if (systemId == "chs_enu_small")
     {
@@ -875,7 +881,7 @@ BinaryFoldingModel CreateModelFunctionMarian()
         L"devices",                       Options::VectorOf({ 0, 1, 2, 3 }),    
         L"dim-emb",                       512,    
         L"dim-rnn",                       1024,    
-        L"dim-vocabs",                    Options::VectorOf({ 36000, 36000 }),    // changed from 0,0
+        L"dim-vocabs",                    Options::VectorOf({ (int)srcVocabSize, (int)tgtVocabSize }),    // changed from 0,0
         L"disp-freq",                     500,    
         L"dropout-rnn",                   0.0f,    
         L"dropout-src",                   0.0f,    
@@ -935,10 +941,10 @@ BinaryFoldingModel CreateModelFunctionMarian()
         L"skip",                          false,    
         L"sync-sgd",                      true,    
         L"tempdir",                       L"/tmp",    
-        L"tied-embeddings",               false,    
-        L"tied-embeddings-all",           true,    
-        L"tied-embeddings-src",           false,    
-        L"train-sets",                    Options::VectorOf({ L"data/corpus.bpe.en", L"data/corpus.bpe.de" }),    
+        L"tied-embeddings",               tieSoftmaxWithTgtEmbeddings, // tie target embeddings with softmax weights
+        L"tied-embeddings-src",           tieSrcAndTgtEmbeddings,      // embeddings tied across source and target (must have same vocab)
+        L"tied-embeddings-all",           tieSrcAndTgtEmbeddings && tieSoftmaxWithTgtEmbeddings, // embeddings tied across source, target, and softmax
+        L"train-sets",                    Options::VectorOf({ L"XXdata/corpus.bpe.en", L"XXdata/corpus.bpe.de" }),    
         L"transformer-dim-ffn",           2048,    
         L"transformer-dropout",           0.1f,    
         L"transformer-dropout-attention", 0.0f,    
@@ -955,9 +961,9 @@ BinaryFoldingModel CreateModelFunctionMarian()
         L"valid-metrics",                 Options::VectorOf({ L"cross-entropy", L"perplexity", L"translation" }),    
         L"valid-mini-batch",              64,    
         L"valid-script-path",             L"./scripts/validate.sh",    
-        L"valid-sets",                    Options::VectorOf({ L"data/valid.bpe.en", L"data/valid.bpe.de" }),    
+        L"valid-sets",                    Options::VectorOf({ L"XXdata/valid.bpe.en", L"XXdata/valid.bpe.de" }),    
         L"valid-translation-output",      L"data/valid.bpe.en.output",    
-        L"vocabs",                        Options::VectorOf({ L"model/vocab.ende.yml", L"model/vocab.ende.yml" }),    
+        L"vocabs",                        Options::VectorOf({ L"XXmodel/vocab.ende.yml", L"XXmodel/vocab.ende.yml" }),    
         L"workspace",                     10000    
     ));
     auto mmodel = models::encoder_decoder()(options)
@@ -1110,7 +1116,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         srcTrainFile = srcDevFile, tgtTrainFile = tgtDevFile;
     let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/true);
 
-    model_fn.LogParameters();
+    //model_fn.LogParameters();
 
     let parameters = model_fn.Parameters();
     size_t numParameters = 0;
@@ -1260,6 +1266,34 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             //    param.Value()->SetValue(0.0);
             //model_fn.RestoreParameters(modelPathN);
             lastSavePosition = relPosition;
+        }
+
+        // adjustments or LR and minibatch size
+        {
+            double mult1 = 1.0;
+            if (learningRateWarmupInEpochs != 0)
+            {
+                //let totalUpdates = mbCount + 1; // +1 to include the one we just did
+                //let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
+                mult1 *= min(1.0, relPosition / learningRateWarmupInEpochs);
+            }
+            if (learningRateDecayAfterEpochs >= 0 && relPosition >= learningRateDecayAfterEpochs)
+            {
+                let decayWeight =  pow(2.0, -(relPosition - learningRateDecayAfterEpochs) / learningRateDecayHalfTimeInEpochs);
+                mult1 *= decayWeight;
+                if (scaleMinibatchSizeWithLearningRateDecay)
+                {
+                    minibatchSizeScaling = 1.0 / decayWeight; // we can use this much larger MB size
+                    let maxScaledMinibatchSize = 300000.0;    // don't scale to more than this
+                    minibatchSizeScaling = min(minibatchSizeScaling, maxScaledMinibatchSize / minibatchSize);
+                    // BUGBUG: This is too late. We need this information when we read the minibatch.
+                }
+            }
+#if 1       // correct for Adam   --TODO: do this inside the Learner
+            // LR should be scaled by sqrt(newMBSize / originalMBSize)
+            mult1 *= sqrt(minibatchSizeScaling);
+#endif
+            baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
         }
 
         // get next minibatch
@@ -1428,26 +1462,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         partTimer.Restart();
         if (isFinalPartialBatch) // if partial batches then skip Update() for all but the last partial batch
         {
-            // LR adjustments
-            double mult1 = 1.0;
-            if (learningRateWarmupInEpochs != 0)
-            {
-                //let totalUpdates = mbCount + 1; // +1 to include the one we just did
-                //let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
-                mult1 *= min(1.0, relPosition / learningRateWarmupInEpochs);
-            }
-            if (learningRateDecayAfterEpochs >= 0 && relPosition >= learningRateDecayAfterEpochs)
-            {
-                let decayWeight =  pow(2.0, -(relPosition - learningRateDecayAfterEpochs) / learningRateDecayHalfTimeInEpochs);
-                mult1 *= decayWeight;
-                if (scaleMinibatchSizeWithLearningRateDecay)
-                    minibatchSizeScaling = 1.0 / decayWeight; // we can use this much larger MB size
-            }
-#if 1       // correct for Adam   --TODO: do this inside the Learner
-            // LR should be scaled by sqrt(newMBSize / originalMBSize)
-            mult1 *= sqrt(minibatchSizeScaling);
-#endif
-            baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
 #if 0
             // Marian global-gradient-norm clipping  --not used
             if (globalNormClipping != 0) // Marian clips the global gradient vector (all gradient values concatenated)
@@ -1529,9 +1543,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
-                fprintf(stderr, "[smoothed] L=%4.2f @ %.0f, PPL=%8.2f [this] ", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
+                fprintf(stderr, "[smoothed] L=%4.2f at %.0f, PPL=%8.2f ", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
                 let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
-                fprintf(stderr, "L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
+#if 1
+                fprintf(stderr, "mbs=%d, lr=%.6f, ", (int)(minibatchSize * minibatchSizeScaling, baseLearner->LearningRate());
+#else
+                fprintf(stderr, "[this] L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
+#endif
                 if (std::isnan(lossPerLabel))
                     RuntimeError("Loss is NaN.");
 #if __unix__    // log for Philly status reporting
@@ -1898,23 +1916,13 @@ int mt_main(int argc, char *argv[])
         if (numBits == 32)
             numBits = 0;
         use1BitSgd = numBits != 0;
-        fprintf(stderr, "Using %d-bit quantization (0=off)\n", (int)numBits);
         let communicator =
             /*if*/use1BitSgd ?
                 QuantizedMPICommunicator(/*zeroThresholdFor1Bit=*/true, /*useQuantizationForSelfStripe=*/true, /*numQuantizationBits=*/numBits)
             /*else*/ :
                 MPICommunicator();
-        // explicitly set GPU, where first GPU is determined by firstGpu parameter
-        let numGpus = DeviceDescriptor::AllDevices().size() - 1;
+        let numWorkers = communicator->Workers().size();
         let ourRank = communicator->CurrentWorker().m_globalRank;
-        if (numGpus > 0)
-        {
-            let ourGpu = (ourRank + firstGpu) % numGpus;
-            fprintf(stderr, "Worker %d using GPU %d\n", (int)ourRank, (int)ourGpu);
-            SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)ourGpu));
-        }
-        else
-            SetCurrentDevice(DeviceDescriptor::CPUDevice());
 
         // open log file. The path depends on the worker rank.
         // Log path = "$modelRootDir/$experimentId.log.$ourRank" where $ourRank is missing for rank 0
@@ -1937,14 +1945,19 @@ int mt_main(int argc, char *argv[])
             fprintf(stderr, "%S already exists, bumping up the retry count\n", Interpolate(logPath).c_str());
         }
         boost::filesystem::create_directories(boost::filesystem::path(Interpolate(logPath)).parent_path());
+#if __unix__
+        let teeCmd = L"tee --output-error=exit"; // force catching NFS write errors
+#else
+        let teeCmd = L"tee";
+#endif
         FILE* outStream =
             /*if*/ (communicator->CurrentWorker().IsMain()) ?
-                _wofstream(Interpolate(logPath)), _wpopen((L"tee '" + Interpolate(logPath) + L"'").c_str(), L"w") // BUGBUG: simplistic escaping. Add something like .replace("\\", "\\\\").replace("'", "'\\''")
+                _wofstream(Interpolate(logPath)), _wpopen((teeCmd + (L" '" + Interpolate(logPath) + L"'")).c_str(), L"w") // BUGBUG: simplistic escaping. Add something like .replace("\\", "\\\\").replace("'", "'\\''")
             /*else*/ :
                 _wfopen(Interpolate(logPath).c_str(), L"wt");
         if (!outStream)
             InvalidArgument("error %d opening log file '%S'", errno, Interpolate(logPath).c_str());
-        fprintf(stderr, "redirecting stderr to %S\n", Interpolate(logPath).c_str());
+        fprintf(stderr, "Redirecting stderr to %S\n", Interpolate(logPath).c_str());
         if (_dup2(_fileno(outStream), _fileno(stderr)) == -1)
             InvalidArgument("error %d redirecting stderr to '%S'", errno, Interpolate(logPath).c_str());
 
@@ -1957,22 +1970,40 @@ int mt_main(int argc, char *argv[])
         }
 #endif
 
-        fprintf(stderr, "command line:");
+        fprintf(stderr, "Command line:");
         for (let* p : Span<char**>(argv, argv + argc))
             fprintf(stderr, " %s", p);
+
 #ifdef _WIN32
         const char* hostname = getenv("COMPUTERNAME");
 #else
         char hostname[HOST_NAME_MAX] = "?";
         gethostname(hostname, HOST_NAME_MAX);
 #endif
-        fprintf(stderr, "\nstarting %S as worker[%d] out of %d on %s, pid %d\n", command.c_str(), (int)ourRank, (int)numGpus, hostname, (int)getpid()), fflush(stderr);
+        fprintf(stderr, "\n\nStarting '%S' as worker[%d] out of %d, on host %s with pid %d\n",
+                command.c_str(), (int)ourRank, (int)numWorkers, hostname, (int)getpid()), fflush(stderr);
+
+        // explicitly set GPU, where first GPU is determined by firstGpu parameter
+        let numGpus = DeviceDescriptor::AllDevices().size() - 1;
+        if (numGpus > 0)
+        {
+            let ourGpu = (ourRank + firstGpu) % numGpus;
+            SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)ourGpu));
+            fprintf(stderr, "Using GPU[%d] (%S) out of %d.\n",
+                    (int)ourGpu, CurrentDevice().AsString().c_str(), (int)numGpus), fflush(stderr);
+        }
+        else // (TODO: add a flag to allow CPU; for now, there is no point)
+            RuntimeError("No GPUs were found or reported on this computer.");
+            //SetCurrentDevice(DeviceDescriptor::CPUDevice());
+
+        if (numWorkers > 1)
+            fprintf(stderr, "Using %d-bit quantization (0=off).\n", (int)numBits), fflush(stderr);
 
         // set 'from' if 'fromLatest' is given and a .latest file is found
         if (fromLatest)
         {
             let tagPath = modelPath + L".latest";
-            fprintf(stderr, "checking for latest-checkpoint tag file %S... ", Interpolate(tagPath).c_str()), fflush(stderr);
+            fprintf(stderr, "Checking for latest-checkpoint tag file %S... ", Interpolate(tagPath).c_str()), fflush(stderr);
             auto f = _wifstream(Interpolate(tagPath));
             if (f.good())
             {
@@ -2003,7 +2034,7 @@ int mt_main(int argc, char *argv[])
             DumpModel(modelPath, from);
         else
             InvalidArgument("Unknonw --command %S", command.c_str());
-        fprintf(stderr, "redirected stderr to %S\n", Interpolate(logPath).c_str());
+        fprintf(stderr, "Redirected stderr to %S\n", Interpolate(logPath).c_str());
     }
     catch (exception& e)
     {
