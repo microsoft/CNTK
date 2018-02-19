@@ -16,6 +16,8 @@ Now we are ready to download and setup UCF11 dataset by running the following Py
 
 After running the script, you will see two output files in the current folder: train_map.csv and test_map.csv. The total amount of disk space required is around `1`GB. You may now proceed to the [`GettingStarted`](../../GettingStarted) folder to play with this dataset.
 
+On Linux and OSX you may get an `OSerror` about the number of open files being exceeded. This has to do with the default soft open file limit of 1024 on many systems (e.g. Ubuntu). To raise the soft limit for open files issue `ulimit -Sn 10000` to raise the limit to 10000 for the duration of the session.
+
 If you already have download the dataset locally, you can simply run the following script to generate train_map.csv and test_map.csv.
 
 `split_ucf11.py -i <unzipped location of the dataset> -o <UCF11 folder>`
