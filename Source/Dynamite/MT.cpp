@@ -30,6 +30,8 @@ using namespace marian;
 #include <boost/filesystem.hpp>
 #include <sstream>
 #include <limits.h> // for HOST_NAME_MAX
+#include <chrono>
+#include <time.h>
 #ifdef _MSC_VER
 #include <Windows.h> // for process killing
 static inline int getpid() { return ::GetCurrentProcessId(); }
@@ -1081,6 +1083,15 @@ BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model
     });
 }
 
+// form a timestamp for prepending to log lines
+static string TimeStamp()
+{
+    let now = chrono::system_clock::to_time_t(chrono::system_clock::now());
+    char buf[100];
+    strftime (buf, sizeof(buf), "[%Y-%m-%d %H:%M:%S]", localtime(&now)); // e.g. [2018-01-24 12:58:52]
+    return buf;
+}
+
 static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, double startPosition)
 {
     let numWorkers = communicator->Workers().size();
@@ -1351,8 +1362,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // break it further into sub-minibatches if they don't fit
         let numPartialWorkerScoredLabels = insertBOS ? numLabels - numSeq : numLabels; // <s> is not scored. Discount, except for Marian where data has no <s>
         if (logThisMb)
-            fprintf(stderr, "%S,%d,%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
-                    PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex,
+            fprintf(stderr, "%s %S,%d,%d: #seq: %d, #words: %d -> %d, max len %d -> %d, lr=%.8f * %.8f, partial mbs=%d, padded=%d\n",
+                    TimeStamp().c_str(), PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex,
                     (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels,
                     lr0, baseLearner->LearningRate() / lr0, (int)numPartialWorkerScoredLabels,
                     (int)(max(maxSamples, maxLabels) * numSeq));
@@ -1539,11 +1550,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // Note: Without logging, there is no GPU-CPU transfer.
         if (logThisMb && communicator->CurrentWorker().IsMain())
         {
-            fprintf(stderr, "%S,%d,%d:   ", PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex);
+            fprintf(stderr, "%s %S,%d,%d:   ", TimeStamp().c_str(), PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex);
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
-                fprintf(stderr, "[smoothed] L=%4.2f at %.0f, PPL=%8.2f", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
+                fprintf(stderr, "[smoothed] L=%4.2f after %.0f (%.2f%%), PPL=%8.2f", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal), relPosition);
                 let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
 #if 1
                 fprintf(stderr, ", mbs=%d, lr=%.9f, ", (int)(minibatchSize * minibatchSizeScaling), baseLearner->LearningRate());
