@@ -1543,12 +1543,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
-                fprintf(stderr, "[smoothed] L=%4.2f at %.0f, PPL=%8.2f ", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
+                fprintf(stderr, "[smoothed] L=%4.2f at %.0f, PPL=%8.2f", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
                 let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
 #if 1
-                fprintf(stderr, "mbs=%d, lr=%.6f, ", (int)(minibatchSize * minibatchSizeScaling), baseLearner->LearningRate());
+                fprintf(stderr, ", mbs=%d, lr=%.9f, ", (int)(minibatchSize * minibatchSizeScaling), baseLearner->LearningRate());
 #else
-                fprintf(stderr, "[this] L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
+                fprintf(stderr, " [this] L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
 #endif
                 if (std::isnan(lossPerLabel))
                     RuntimeError("Loss is NaN.");
@@ -1591,14 +1591,14 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 updateTimer.Restart();                      // restart timer right away so that we get a true end-to-end measurement including everything
                 let numTimedLabels = totalNumLabelsSeen - lastUpdateLogTotalLabels;
                 lastUpdateLogTotalLabels = totalNumLabelsSeen;
-                fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numTimedLabels / elapsed, 1000.0/*ms*/ * elapsed / numTimedLabels);
+                fprintf(stderr, "%.1f w/s, ", numTimedLabels / elapsed);
             }
             else
             {
                 let elapsed = subMinibatchTimer.ElapsedSeconds(); // elapsed time between forward/backwards for a sub-minibatch
                 subMinibatchTimer.Restart();                      // restart timer right away so that we get a true end-to-end measurement including everything
                 let numTimedLabels = numPartialWorkerScoredLabels;
-                fprintf(stderr, "%.1f w/s, %.1f ms/w, ", numTimedLabels / elapsed, 1000.0/*ms*/ * elapsed / numTimedLabels);
+                fprintf(stderr, "%.1f w/s, ", numTimedLabels / elapsed);
             }
             fprintf(stderr, "m=%.0f, g=%.0f, f=%.0f+%.0f, b=%.0f, u=%.0f, d=%.0f ms\n",
                     1000.0 * timeGetNextMinibatch, 1000.0 * timeBuildGraph, 1000.0 * timeForward, 1000.0 * timeForwardGpu, 1000.0 * timeBackward, 1000.0 * timePerUpdate, 1000.0 * timeDeleteGraph);
