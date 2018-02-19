@@ -249,9 +249,9 @@ namespace Dynamite {
 
     // break a minibatch into partial minibatches, each filling maxBatchSizePerWorker tokens
     // partialMinibatches[1][numStreams][numSeq] -> partialMinibatches[numPartial][numStreams][numSeq]
-    // Each partial has at least 'granularity' entries, to avoid empty partial sub-minibatches.
+    // Each partial has at least 'numWorkers' entries, to avoid empty partial sub-minibatches.
     static inline void GetSubBatches_CreatePartialMinibatches(vector<vector<vector<Variable>>>& partialMinibatches, // [numPartial][numStreams][numSeq]
-                                                              size_t maxBatchSizePerWorker, bool hasPadding, size_t granularity)
+                                                              size_t maxBatchSizePerWorker, bool hasPadding, size_t numWorkers)
     {
         auto minibatch = move(partialMinibatches[0]); // [streamIndex][seqIndex] pull out the data
         let numStreams = minibatch.size();
@@ -259,30 +259,39 @@ namespace Dynamite {
 
         vector<pair<size_t, size_t>> ranges; // sequence index ranges for partial minibatches
         size_t end = 0; // running index into sequences
+        vector<size_t> currentTokensPerWorker, maxLenPerWorker;
         while (end < numSeq)
         {
-            // find the end where we consume no more than desiredLabels
-            size_t currentTokens = 0;
-            size_t maxLen = 0;
+            // find the end where we consume no more than desired
+            currentTokensPerWorker.assign(numWorkers, 0);
+            maxLenPerWorker.assign(numWorkers, 0);
+            // in case of numWorkers > 1, we rnforce that begin is a multiple of numWorkers
             let begin = end;
-            for (; end < numSeq; end++)
+            if (begin % numWorkers != 0)
+                LogicError("begin not a multiple of numWorkers?");
+            bool hitMax = false; // gets set once a worker's partition exceeds the max
+            for (; end < numSeq; end++) // note: code not nice. Single loop over sequences and worker partitions.
             {
+                size_t rank = end % numWorkers;
+                auto& currentTokens = currentTokensPerWorker[rank];
+                auto& maxLen = maxLenPerWorker[rank];
                 size_t newTokens; // number of tokens in this chunk incorporating this sequence
                 if (hasPadding)
                 {
                     for (let& streamData : minibatch)
-                        if (maxLen < streamData[end].size())
+                        if (maxLen < streamData[end].size()) // keep track of max. We use max over all streams, to be conservative.
                             maxLen = streamData[end].size();
-                    newTokens = maxLen * (end +1 - begin);
+                    newTokens = maxLen * ((end - begin) / numWorkers + 1);
                 }
                 else
                     newTokens = currentTokens + minibatch.back()[end].size();
-                if (end - begin >= granularity && newTokens > maxBatchSizePerWorker)
+                hitMax |= newTokens > maxBatchSizePerWorker;
+                if (end - begin >= numWorkers && hitMax)
                     break;
                 currentTokens = newTokens;
             }
             if (end < numSeq)
-                end = end / granularity * granularity; // make it a multiple of this, for splitting across workers
+                end = end / numWorkers * numWorkers; // make it a multiple of this, for splitting across workers
             if (begin == end)
                 LogicError("GetSubBatches_CreatePartialMinibatches: empty range??");
             //fprintf(stderr, "range[%d] = [%d,%d)\n", (int)ranges.size(), (int)begin, (int)end), fflush(stderr);
@@ -290,10 +299,10 @@ namespace Dynamite {
             //fprintf(stderr, "[%d:%d, %d -> %d]\n", (int)begin, (int)end, (int)maxLen, (int)currentTokens);
         }
 
-        // enforce granularity requirement on last range
+        // enforce numWorkers requirement on last range
         if (ranges.size() == 0)
             LogicError("GetSubBatches_CreatePartialMinibatches: ranges[] empty??");
-        if (ranges.back().second - ranges.back().first < granularity) // last range too small: merge into previous
+        if (ranges.back().second - ranges.back().first < numWorkers) // last range too small: merge into previous
         {
             if (ranges.back().second != numSeq)
                 LogicError("GetSubBatches_CreatePartialMinibatches: ranges.back() not covering last sequence??");
@@ -391,7 +400,7 @@ namespace Dynamite {
         // in case a minibatch is too large, break it into sub-minibatches
         for (auto& partialBatchSet : args)
             GetSubBatches_CreatePartialMinibatches(partialBatchSet,
-                                    maxBatchSizePerWorker * (splitDataOverWorkersOurselves ? numWorkers : 1),
+                                    maxBatchSizePerWorker,
                                     hasPadding, /*granularity=*/splitDataOverWorkersOurselves ? numWorkers : 1);
 
         // if we split data ourselves, this is the point
