@@ -312,6 +312,23 @@ namespace Dynamite {
         }
     }
 
+    // sub-sample a set of sequences for a specific one of several workers
+    // sequences[numSeq] --> sequences[numSeq / numWorkers]
+    static inline void GetSubBatches_StridedSubSample(vector<Variable>& sequences, size_t numWorkers, size_t thisWorker)
+    {
+        if (numWorkers == 1)
+            return;
+        let numSeq = sequences.size();
+        size_t j = 0;
+        for (size_t i = thisWorker; i < numSeq; i += numWorkers)
+        {
+            if (j != i)
+                sequences[j] = move(sequences[i]);
+            j++;
+        }
+        sequences.resize(j); // rest gets dropped
+    }
+
     // helper to get a set of minibatches at once so that we can sort and group them for better batching efficiency
     //  - sorting helps auto-batching by reducing the need to rebatch
     //  - grouping into sequences of similar length helps batching parallelism (fewer low-parallelism tails)
@@ -320,14 +337,19 @@ namespace Dynamite {
     // The minibatches get random-shuffled, so that we get a random MB sequence w.r.t. length.
     // The amount of data to load is specified by maxibatchSize.
     // Returns true unless the end of the data has been reached.
-    static inline bool GetSubBatches(vector<vector<vector<vector<Variable>>>>& args, const vector<const wchar_t*>& streamNames, const MinibatchSourcePtr& minibatchSource, 
+    static inline bool GetSubBatches(vector<vector<vector<vector<Variable>>>>& args, // [minibatchIndex, partialIndex, streamIndex, sequenceIndex]
+                                     const vector<const wchar_t*>& streamNames, const MinibatchSourcePtr& minibatchSource, 
                                      size_t minibatchSize, size_t maxibatchSize, size_t maxBatchSizePerWorker, bool hasPadding,
                                      size_t numWorkers, size_t thisWorker,
                                      size_t shuffleSeed, bool inferenceOnly,
                                      DataType dataType, const DeviceDescriptor& device)
     {
+        bool splitDataOverWorkersOurselves = true; // true: do it ourselves, don't leave it to the reader
         // ask for a multi-batch, by asking CNTK for a 'numBuckets' larger minibatch
-        auto multiMinibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, maxibatchSize, numWorkers, thisWorker, device);
+        auto multiMinibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, maxibatchSize,
+                            splitDataOverWorkersOurselves ? 1 : numWorkers,
+                            splitDataOverWorkersOurselves ? 0 : thisWorker,
+                            device);
 
         // convert it to an array of tensors, one for each sequence and stream. First into args[0][0]; later below we will then split it.
         vector<ValuePtr> valuePtrs(Transform(streamNames, [&](const wchar_t* streamName) { return multiMinibatchData[minibatchSource->StreamInfo(streamName)].data; }));
@@ -350,7 +372,16 @@ namespace Dynamite {
 
         // in case a minibatch is too large, break it into sub-minibatches
         for (auto& partialBatchSet : args)
-            GetSubBatches_CreatePartialMinibatches(partialBatchSet, maxBatchSizePerWorker, hasPadding);
+            GetSubBatches_CreatePartialMinibatches(partialBatchSet,
+                                    maxBatchSizePerWorker * (splitDataOverWorkersOurselves ? numWorkers : 1),
+                                    hasPadding);
+
+        // if we split data ourselves, this is the point
+        if (splitDataOverWorkersOurselves)
+            for (auto& partialBatchSet : args)
+                for (auto& partialBatch : partialBatchSet)
+                    for (auto& streamData : partialBatch)
+                        GetSubBatches_StridedSubSample(streamData, numWorkers, thisWorker);
 
         return true; // true means success, we got data. False means end of data.
     }
