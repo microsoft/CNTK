@@ -791,7 +791,7 @@ class SmoothedCriterion
     mutable vector<float> fetchBuf; // (float since that's what it most likely is; avoids an extra malloc)
 public:
     // 'mbLoss' = sum over 'count' loss/metric tuples
-    void Update(NDArrayViewPtr mbLoss, size_t count)
+    void Update(const NDArrayViewPtr& mbLoss, size_t count)
     {
         // first time we allocate the accumulator to match device etc. of the loss value
         if (!smoothedNumer)
@@ -1250,6 +1250,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     auto lastSavePosition = totalNumLabelsSeen / (double)epochSize;
     size_t bucketCounter = 0;
     double minibatchSizeScaling = 1.0;  // we increase this once we cut the learning rate
+    NDArrayViewPtr mbLossAndMetric; // temp for passing loss/metric around at one point
     for (mbCount = 0; ; mbCount++, bucketCounter++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
         if (bucketCounter == bucketedMinibatchSet.size()) // wrap the bucket counter
@@ -1508,7 +1509,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // --- keep track of loss
         // This is done after Update() to give access to the aggregate loss across all workers.
-        let mbLossAndMetric = isFinalPartialBatch ? info.trainingLossValue : partialWorkerLossAndMetric;
+        mbLossAndMetric = isFinalPartialBatch ? NDArrayView::GatherBatch({ info.trainingLossValue, info.evalCriterionValue }, 0, mbLossAndMetric) : partialWorkerLossAndMetric;
         let numScoredLabels = isFinalPartialBatch ? info.numberOfSamples   : numPartialWorkerScoredLabels;
         if (isFinalPartialBatch) // TODO: only needed on the main thread which logs
             smoothedLoss.Update(mbLossAndMetric, numScoredLabels); // keep track of smoothed loss
