@@ -1546,7 +1546,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 fprintf(stderr, "[smoothed] L=%4.2f at %.0f, PPL=%8.2f ", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
                 let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
 #if 1
-                fprintf(stderr, "mbs=%d, lr=%.6f, ", (int)(minibatchSize * minibatchSizeScaling, baseLearner->LearningRate());
+                fprintf(stderr, "mbs=%d, lr=%.6f, ", (int)(minibatchSize * minibatchSizeScaling), baseLearner->LearningRate());
 #else
                 fprintf(stderr, "[this] L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
 #endif
