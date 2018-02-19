@@ -1238,10 +1238,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     MinibatchInfo info
     {
         /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/0,
-        // TODO: We do not respond correctly if we only have one loss without metric. Got no time now.
-        make_shared<NDArrayView>(0, CurrentDataType(), NDShape{ 2 }, CurrentDevice(), /*readOnly=*/false),
-        make_shared<NDArrayView>(0, CurrentDataType(), NDShape{ 2 }, CurrentDevice(), /*readOnly=*/false)
-        // TODO: ^^ the above should be NDShape{}
+        make_shared<NDArrayView>(0, CurrentDataType(), NDShape{}, CurrentDevice(), /*readOnly=*/false),
+        make_shared<NDArrayView>(0, CurrentDataType(), NDShape{}, CurrentDevice(), /*readOnly=*/false)
     };
 
     // MINIBATCH LOOP
