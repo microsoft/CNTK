@@ -34,7 +34,7 @@ using namespace std;
 
 //#define LOG_DETAILS     // if defined, log all forward and backward operations
 //#define LOG_STATS         // if defined, log high-level statistics (#operations)
-#define DETAILED_STATS    // if defined, print detailed statistics (counts of function calls and operations)
+//#define DETAILED_STATS    // if defined, print detailed statistics (counts of function calls and operations)
 //#define LOG_GPU         // if defined, profile the GPU (warning: this will disturb the CPU measurements)
 #define NUM_MBS_TO_LOG 4
 
