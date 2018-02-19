@@ -1268,6 +1268,34 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             lastSavePosition = relPosition;
         }
 
+        // adjustments or LR and minibatch size
+        {
+            double mult1 = 1.0;
+            if (learningRateWarmupInEpochs != 0)
+            {
+                //let totalUpdates = mbCount + 1; // +1 to include the one we just did
+                //let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
+                mult1 *= min(1.0, relPosition / learningRateWarmupInEpochs);
+            }
+            if (learningRateDecayAfterEpochs >= 0 && relPosition >= learningRateDecayAfterEpochs)
+            {
+                let decayWeight =  pow(2.0, -(relPosition - learningRateDecayAfterEpochs) / learningRateDecayHalfTimeInEpochs);
+                mult1 *= decayWeight;
+                if (scaleMinibatchSizeWithLearningRateDecay)
+                {
+                    minibatchSizeScaling = 1.0 / decayWeight; // we can use this much larger MB size
+                    let maxScaledMinibatchSize = 300000.0;    // don't scale to more than this
+                    minibatchSizeScaling = min(minibatchSizeScaling, maxScaledMinibatchSize / minibatchSize);
+                    // BUGBUG: This is too late. We need this information when we read the minibatch.
+                }
+            }
+#if 1       // correct for Adam   --TODO: do this inside the Learner
+            // LR should be scaled by sqrt(newMBSize / originalMBSize)
+            mult1 *= sqrt(minibatchSizeScaling);
+#endif
+            baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
+        }
+
         // get next minibatch
         // We fetch a much larger batch, sort it by source length, and then process it in consecutive chunks, which form the actual minibatch for training
         // Each time bucketCounter wraps around, we reload the bucketedMinibatchSet[][][][] array.
@@ -1434,30 +1462,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         partTimer.Restart();
         if (isFinalPartialBatch) // if partial batches then skip Update() for all but the last partial batch
         {
-            // LR adjustments
-            double mult1 = 1.0;
-            if (learningRateWarmupInEpochs != 0)
-            {
-                //let totalUpdates = mbCount + 1; // +1 to include the one we just did
-                //let mult1 = min(1.f, totalUpdates / (float)learningRateWarmupInUpdates);
-                mult1 *= min(1.0, relPosition / learningRateWarmupInEpochs);
-            }
-            if (learningRateDecayAfterEpochs >= 0 && relPosition >= learningRateDecayAfterEpochs)
-            {
-                let decayWeight =  pow(2.0, -(relPosition - learningRateDecayAfterEpochs) / learningRateDecayHalfTimeInEpochs);
-                mult1 *= decayWeight;
-                if (scaleMinibatchSizeWithLearningRateDecay)
-                {
-                    minibatchSizeScaling = 1.0 / decayWeight; // we can use this much larger MB size
-                    let maxScaledMinibatchSize = 300000.0;    // don't scale to more than this
-                    minibatchSizeScaling = min(minibatchSizeScaling, maxScaledMinibatchSize / minibatchSize);
-                }
-            }
-#if 1       // correct for Adam   --TODO: do this inside the Learner
-            // LR should be scaled by sqrt(newMBSize / originalMBSize)
-            mult1 *= sqrt(minibatchSizeScaling);
-#endif
-            baseLearner->SetLearningRateSchedule(LRSchedule(mult1));
 #if 0
             // Marian global-gradient-norm clipping  --not used
             if (globalNormClipping != 0) // Marian clips the global gradient vector (all gradient values concatenated)
@@ -1539,9 +1543,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             if (isFinalPartialBatch)
             {
                 let smoothedLossVal = smoothedLoss.RunningAverage();
-                fprintf(stderr, "[smoothed] L=%4.2f @ %.0f, PPL=%8.2f [this] ", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
+                fprintf(stderr, "[smoothed] L=%4.2f at %.0f, PPL=%8.2f ", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal));
                 let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
-                fprintf(stderr, "L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
+#if 1
+                fprintf(stderr, "mbs=%d, lr=%.6f, ", (int)(minibatchSize * minibatchSizeScaling, baseLearner->LearningRate());
+#else
+                fprintf(stderr, "[this] L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
+#endif
                 if (std::isnan(lossPerLabel))
                     RuntimeError("Loss is NaN.");
 #if __unix__    // log for Philly status reporting
