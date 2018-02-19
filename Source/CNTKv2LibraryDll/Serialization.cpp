@@ -615,10 +615,11 @@ namespace CNTK
 
         // Protobufs have a hard limit on the maximum message size(INT_MAX = 2GBs). 
         // Check if we fit into a single protobuf message.
+        bool success;
         if (FitsIntoProtobuf())
         {
             CopyNDArrayViewDataToProtos();
-            m_proto->SerializeToCodedStream(&output);
+            success = m_proto->SerializeToCodedStream(&output);
         }
         else
         {
@@ -627,9 +628,13 @@ namespace CNTK
             // Prefix the metadata protobuf with a magic number and its bytes size.
             output.WriteLittleEndian32(MAGIC_NUMBER);
             output.WriteLittleEndian32(m_proto->ByteSize());
-            m_proto->SerializeToCodedStream(&output);
+            success = m_proto->SerializeToCodedStream(&output);
             WriteNDArrayViewData(output);
         }
+        if (!success)
+            RuntimeError("Serializer::Write() failed in SerializeToCodedStream(), HadError=%d", (int)output.HadError());
+        if (output.HadError())
+            RuntimeError("Serializer::Write() detected HadError() == true");
     }
 
     std::ostream& Serializer::Write(std::ostream& stream)
