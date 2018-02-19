@@ -788,8 +788,9 @@ class SmoothedCriterion
     NDArrayViewPtr smoothedNumer; // loss value is accumulated on the GPU
     double smoothedDenom = 0;
     const double smoothingTimeConstant = 4096000; // e.g. smooth over 1000 minibatches
+    mutable vector<float> fetchBuf; // (float since that's what it most likely is; avoids an extra malloc)
 public:
-    // 'mbLoss' = sum over 'count' loss values
+    // 'mbLoss' = sum over 'count' loss/metric tuples
     void Update(NDArrayViewPtr mbLoss, size_t count)
     {
         // first time we allocate the accumulator to match device etc. of the loss value
@@ -807,9 +808,12 @@ public:
         NDArrayView::NumericOperation({ mbLoss }, alpha, L"Copy", smoothedNumer, beta);
         // TODO: when we have to rebuild GPUTensor, then change return val for invalid ops from 0 to NaN
     }
-    double RunningAverage() const
+    pair<double,double> RunningAverage() const
     {
-        return smoothedNumer->AsScalar<double>() / smoothedDenom;
+        smoothedNumer->CopyDataTo(fetchBuf);
+        double loss   = fetchBuf.front();
+        double metric = fetchBuf.back();
+        return{ loss / smoothedDenom, metric / smoothedDenom };
     }
 };
 
@@ -1066,7 +1070,8 @@ BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model
         bool inference = false; // TODO
         float ls = inference ? 0.f :    0.1f; //mmodel->opt<float>("label-smoothing");// TODO: parameterize this again
 
-        auto cost = Cost(probs, trgData, trgMask, costType, ls);
+        auto cost   = Cost(probs, trgData, trgMask, costType, ls);
+        auto metric = Cost(probs, trgData, trgMask, costType); // metric is the same except no label smoothing. Auto-batch will compute CE only once.
         //fprintf(stderr, "====> cost/target = %.8f\n", cost.Value()->AsScalar<float>() / trgSubBatch->batchWords()), fflush(stderr);
 
 #if 0
@@ -1078,8 +1083,7 @@ BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model
             cost = cost + guidedAlignmentCost(graph, batch, mmodel->getOptions(), att);
         }
 #endif
-        cost = Reshape(cost, { 1 }); // Learner.Update() expects a 1-dim vector for some reason
-        return cost;
+        return CNTK::Splice({ CNTK::Reshape(cost, {}), CNTK::Reshape(metric, {}) }, Axis(0)); // return (cost, metric) as 2-dim vector
     });
 }
 
@@ -1234,8 +1238,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     MinibatchInfo info
     {
         /*atEndOfData=*/false, /*sweepEnd=*/false, /*numberOfSamples=*/0,
-        make_shared<NDArrayView>(0, CurrentDataType(), NDShape{ 1 }, CurrentDevice(), /*readOnly=*/false),
-        make_shared<NDArrayView>(0, CurrentDataType(), NDShape{ 1 }, CurrentDevice(), /*readOnly=*/false)
+        // TODO: We do not respond correctly if we only have one loss without metric. Got no time now.
+        make_shared<NDArrayView>(0, CurrentDataType(), NDShape{ 2 }, CurrentDevice(), /*readOnly=*/false),
+        make_shared<NDArrayView>(0, CurrentDataType(), NDShape{ 2 }, CurrentDevice(), /*readOnly=*/false)
         // TODO: ^^ the above should be NDShape{}
     };
 
@@ -1384,7 +1389,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         let numAPICalls0 = CountAPICalls(0);
         partTimer.Restart();
         // BUGBUG: In extreme cases, we can have 0 sentences. HANDLE THAT! Then we can use more GPUs.
-        auto partialWorkerLossVar = criterion_fn(partialMinibatch[0], partialMinibatch[1]);
+        auto partialWorkerLossAndMetricVar = criterion_fn(partialMinibatch[0], partialMinibatch[1]);
         let timeBuildGraph = partTimer.Elapsed();
         let numAPICalls = CountAPICalls(0) - numAPICalls0;
         numAPICalls;
@@ -1392,9 +1397,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 #if 0
         if (runProfiling)
         {
-            double lossPerLabel = partialWorkerLossVar.Value()->AsScalar<float>() / numPartialWorkerScoredLabels, smoothedLossVal = 0;
+            double lossPerLabel = partialWorkerLossAndMetricVar[0].Value()->AsScalar<float>() / numPartialWorkerScoredLabels, smoothedLossVal = 0;
             partTimer.Restart();
-            partialWorkerLossVar = Variable(); // this destructs the entire graph
+            partialWorkerLossAndMetricVar = Variable(); // this destructs the entire graph
             let timeDeleteGraph = partTimer.Elapsed();
             let elapsed = updateTimer.ElapsedSeconds(); // [sec]
             fprintf(stderr, "%d: >> loss = %.7f; PPL = %.3f << smLoss = %.7f, smPPL = %.2f, seenLabels=%d, %.1f w/s, %.1f ms/w, m=%.0f, g=%.0f, d=%.0f ms\n",
@@ -1413,7 +1418,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         try { // catch bad_alloc for more detailed logging
         //if (logThisMb)
         //    fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
-        let partialWorkerLoss = partialWorkerLossVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
+        let partialWorkerLossAndMetric = partialWorkerLossAndMetricVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
         let timeForward = partTimer.Elapsed();
         partTimer.Restart();
         let timeForwardGpu = partTimer.Elapsed(); // note: enable the #if above to see the remaining GPU time
@@ -1433,21 +1438,23 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // implement local gradient aggregation if the desired MB size does not fit into local GPU RAM
         // partial batches except for first are aggregated into the existing gradient memory, without model update
         // --- backward
+        let partialWorkerLossVar = partialWorkerLossAndMetricVar[0]; // we backprop only through the loss, not the metric
         partialWorkerLossVar.Backward(gradients, /*beta=*/isFirstPartialBatch ? 0 : 1);
         let timeBackward = partTimer.Elapsed();
 
         // --- update
+        size_t metricIndex = partialWorkerLossAndMetric->Shape().TotalSize() > 1 ? 1 : 0; // separate metric if we have one
         if (isFirstPartialBatch)
         {
             info.numberOfSamples = numPartialWorkerScoredLabels;
-            info.trainingLossValue ->CopyFrom(*partialWorkerLoss);
-            info.evalCriterionValue->CopyFrom(*partialWorkerLoss);
+            info.trainingLossValue ->CopyFrom(*partialWorkerLossAndMetric->IndexLastAxis(0));
+            info.evalCriterionValue->CopyFrom(*partialWorkerLossAndMetric->IndexLastAxis(metricIndex));
         }
         else // statistics is aggregated over multiple partial batches
         {
             info.numberOfSamples += numPartialWorkerScoredLabels;
-            info.trainingLossValue  += partialWorkerLoss; // note: these are GPU objects
-            info.evalCriterionValue += partialWorkerLoss;
+            info.trainingLossValue  += partialWorkerLossAndMetric->IndexLastAxis(0); // note: these are GPU objects
+            info.evalCriterionValue += partialWorkerLossAndMetric->IndexLastAxis(metricIndex);
         }
 #if 0       // log the gradients
         //for (let& p : parameters) if (p.Name() == L"project1.W")
@@ -1503,10 +1510,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // --- keep track of loss
         // This is done after Update() to give access to the aggregate loss across all workers.
-        let mbLoss          = isFinalPartialBatch ? info.trainingLossValue : partialWorkerLoss;
+        let mbLossAndMetric = isFinalPartialBatch ? info.trainingLossValue : partialWorkerLossAndMetric;
         let numScoredLabels = isFinalPartialBatch ? info.numberOfSamples   : numPartialWorkerScoredLabels;
         if (isFinalPartialBatch) // TODO: only needed on the main thread which logs
-            smoothedLoss.Update(mbLoss, numScoredLabels); // keep track of smoothed loss
+            smoothedLoss.Update(mbLossAndMetric, numScoredLabels); // keep track of smoothed loss
         // TODO: if Update() is distributed, then the resulting NDArrayView should be allowed to be on the CPU (in case of no NCCL)
         let timePerUpdate = partTimer.Elapsed();
 
@@ -1543,7 +1550,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // clean up
         partTimer.Restart();
-        partialWorkerLossVar = Variable(); // this destructs the entire graph. It will also return m_value and m_gradient to the arena. TODO: does that cause GPU syncs?
+        partialWorkerLossAndMetricVar = Variable(); // this destructs the entire graph. It will also return m_value and m_gradient to the arena. TODO: does that cause GPU syncs?
         let timeDeleteGraph = partTimer.Elapsed();
 
         // log progress
@@ -1553,15 +1560,16 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             fprintf(stderr, "%s %S,%d,%d:   ", TimeStamp().c_str(), PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex);
             if (isFinalPartialBatch)
             {
-                let smoothedLossVal = smoothedLoss.RunningAverage();
-                fprintf(stderr, "[smoothed] L=%4.2f after %.0f (%.2f%%), PPL=%8.2f", smoothedLossVal, (double)totalNumLabelsSeen, exp(smoothedLossVal), relPosition);
-                let lossPerLabel = mbLoss->AsScalar<double>() / numScoredLabels;
+                double smoothedLossVal, smoothedMetricVal; tie
+                (smoothedLossVal, smoothedMetricVal) = smoothedLoss.RunningAverage();
+                fprintf(stderr, "[smoothed] ce=%4.2f, L=%4.2f after %.0f (%.2f%%), PPL=%8.2f", smoothedMetricVal, smoothedLossVal, (double)totalNumLabelsSeen, relPosition, exp(smoothedMetricVal));
 #if 1
                 fprintf(stderr, ", mbs=%d, lr=%.9f, ", (int)(minibatchSize * minibatchSizeScaling), baseLearner->LearningRate());
 #else
+                let lossPerLabel = mbLossAndMetric[0]->AsScalar<double>() / numScoredLabels;
                 fprintf(stderr, " [this] L=%9.7f * %d, PPL=%6.3f, ", lossPerLabel, (int)numScoredLabels, exp(lossPerLabel));
 #endif
-                if (std::isnan(lossPerLabel))
+                if (std::isnan(smoothedLossVal))
                     RuntimeError("Loss is NaN.");
 #if __unix__    // log for Philly status reporting
                 // Philly status reporting is done by writing info to a JSON file.
@@ -1572,21 +1580,21 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 let progress = relPosition / reportedEpochs;
                 let progressInPercent = progress * 100.0;
                 f << "{\n";
-                f << "\"lastErr\" : "           << lossPerLabel                     << ",\n";
-                f << "\"lastProgress\" : "      << progressInPercent                << ",\n";
-                f << "\"progress\" : "          << progressInPercent                << ",\n";
-                f << "\"totEpochs\" : "         << reportedEpochs                   << ",\n";
-                f << "\"gMMinErr\" : "          << 0.0                              << ",\n";
-                f << "\"gMMaxErr\" : "          << log(tgtVocabSize)                << ",\n";
-                f << "\"gFMinErr\" : "          << 0.0                              << ",\n";
-                f << "\"gFMaxErr\" : "          << log(tgtVocabSize)                << ",\n";
-                f << "\"curCommand\" : "        << "\"train\""                      << ",\n";
+                f << "\"lastErr\" : "           << smoothedLossVal                     << ",\n";
+                f << "\"lastProgress\" : "      << progressInPercent                   << ",\n";
+                f << "\"progress\" : "          << progressInPercent                   << ",\n";
+                f << "\"totEpochs\" : "         << reportedEpochs                      << ",\n";
+                f << "\"gMMinErr\" : "          << 0.0                                 << ",\n";
+                f << "\"gMMaxErr\" : "          << log(tgtVocabSize)                   << ",\n";
+                f << "\"gFMinErr\" : "          << 0.0                                 << ",\n";
+                f << "\"gFMaxErr\" : "          << log(tgtVocabSize)                   << ",\n";
+                f << "\"curCommand\" : "        << "\"train\""                         << ",\n";
                 f << "\"commands\" : [ {\n";
-                f << "  \"name\" : "            << "\"train\""                      << ",\n";
-                f << "  \"progress\" : "        << 0.0                              << ",\n";
-                f << "  \"minibatch\" : [[ "    << progress << ", " << lossPerLabel << " ]],\n"; // try to report only the last one
-                f << "  \"finEpochs\" : [[ "    << progress << ", " << lossPerLabel << " ]],\n"; // BUGBUG. Can this be left out entirely?
-                f << "  \"totEpochs\" : "       << reportedEpochs                   <<  "\n";
+                f << "  \"name\" : "            << "\"train\""                         << ",\n";
+                f << "  \"progress\" : "        << 0.0                                 << ",\n";
+                f << "  \"minibatch\" : [[ "    << progress << ", " << smoothedLossVal << " ]],\n"; // try to report only the last one
+                f << "  \"finEpochs\" : [[ "    << progress << ", " << smoothedLossVal << " ]],\n"; // BUGBUG. Can this be left out entirely?
+                f << "  \"totEpochs\" : "       << reportedEpochs                      <<  "\n";
                 f << "} ]\n" << std::flush;
                 f << "}\n" << std::flush;
                 if (f.bad())
@@ -1708,7 +1716,7 @@ static void Evaluate(const wstring& modelPath, double startPosition,
         fprintf(stderr, "%5d: #seq: %d, #words: %d -> %d, max len %d -> %d\n", (int)mbCount,
                 (int)numSeq, (int)numSamples, (int)numLabels, (int)maxSamples, (int)maxLabels);
         // decode all sequences
-        auto mbLoss = criterion_fn(partialMinibatch[0], partialMinibatch[1]).Value()->AsScalar<double>();
+        auto mbLoss = criterion_fn(partialMinibatch[0], partialMinibatch[1])[0].Value()->AsScalar<double>();
         let numPartialWorkerScoredLabels = numLabels - numSeq; // the <s> is not scored; that's one per sequence. Do not count for averages.
         let lossPerLabel = mbLoss / numPartialWorkerScoredLabels; // note: this does the GPU sync, so better do that only every N
         totalLabels += numPartialWorkerScoredLabels;

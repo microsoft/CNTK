@@ -304,10 +304,12 @@ namespace Dynamite {
             LogicError("GetSubBatches_CreatePartialMinibatches: ranges[] empty??");
         if (ranges.back().second - ranges.back().first < numWorkers) // last range too small: merge into previous
         {
-            if (ranges.back().second != numSeq)
-                LogicError("GetSubBatches_CreatePartialMinibatches: ranges.back() not covering last sequence??");
+            // merging is not reliable; trying to just drop them
+            //if (ranges.back().second != numSeq)
+            //    LogicError("GetSubBatches_CreatePartialMinibatches: ranges.back() not covering last sequence??");
+            fprintf(stderr, "GetSubBatches_CreatePartialMinibatches: dropped last tiny range of %d entries\n", (int)(ranges.back().second - ranges.back().first)), fflush(stderr);
             ranges.pop_back();
-            ranges.back().second = numSeq;
+            //ranges.back().second = numSeq;
         }
 
         // if nothing to break then avoid any reallocation
