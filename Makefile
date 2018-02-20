@@ -1496,6 +1496,10 @@ java: $(JAVA_LIBS)
 	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(JAVA_SO_NAME)
 	mkdir -p $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
 	echo $(JAVA_SO_NAME:$(LIBDIR)/%=%) > $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_LOAD_MANIFEST
+	for so in libopen-pal.so.13 libopen-rte.so.12 libmpi.so.12 libmpi_cxx.so.1; do \
+	    cp -p $(MPI_PATH)/lib/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
+	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
+	done
 	for so in libiomp5.so libmklml_intel.so; do \
 	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
