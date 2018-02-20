@@ -1552,6 +1552,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         partialWorkerLossAndMetricVar = Variable(); // this destructs the entire graph. It will also return m_value and m_gradient to the arena. TODO: does that cause GPU syncs?
         let timeDeleteGraph = partTimer.Elapsed();
 
+        let memoryUsage = InternalVariable::GetMemoryUsage();
+        fprintf(stderr, "Memory usage: maxUSed=%.6f, used=%.6f, unused=%.6f\n",
+                (double)memoryUsage.maxUsed, (double)memoryUsage.used, (double)memoryUsage.unused);
+
         // log progress
         // Note: Without logging, there is no GPU-CPU transfer.
         if (logThisMb && communicator->CurrentWorker().IsMain())

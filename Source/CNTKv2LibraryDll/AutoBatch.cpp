@@ -1290,7 +1290,7 @@ public:
             return NewDense(shape, dataType, device);
     }
 
-    static CNTK_API InternalVariable::MemoryUsage GetMemoryUsage(bool reset)
+    static InternalVariable::MemoryUsage GetMemoryUsage(bool reset)
     {
         lock_guard<recursive_mutex> guard(s_mutex);
         auto res = s_memoryUsage;
@@ -6152,7 +6152,7 @@ size_t Variable::size() const
 }
 
 // miscellaneous
-static CNTK_API InternalVariable::MemoryUsage GetMemoryUsage(bool reset = true)
+/*static*/ InternalVariable::MemoryUsage InternalVariable::GetMemoryUsage(bool reset /*= true*/)
 {
     return NDArrayViewArena::GetMemoryUsage(reset);
 }
