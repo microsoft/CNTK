@@ -3,10 +3,14 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.4+'
-
 import os
 os.environ["PATH"] += os.pathsep + os.path.join(os.path.dirname(__file__), 'libs')
+
+# Read version information
+version_file = open(os.path.join(os.path.dirname(__file__), 'VERSION'), 'r')
+__version__ = version_file.read()
+version_file.close()
+del version_file
 
 import numpy as np
 
