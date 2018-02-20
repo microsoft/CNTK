@@ -876,7 +876,6 @@ public:
 
 // ---------------------------------------------------------------------------
 // NDArrayViewArena -- helper class that implements efficient arena allocation for NDArrayView objects
-// BUGBUGBUGBUG: This class is a prototype hack, full of subtle bugs. Redo it.
 // ---------------------------------------------------------------------------
 
 class NDArrayViewArena : public NDArrayView::IAllocator
@@ -971,20 +970,20 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             b.Check();
             totalRecyclable += b.size();
         }
-        if (totalRecyclable != s_totalGaps)
+        if (totalRecyclable != s_memoryUsage.unused)
         {
             fprintf(stderr, "CheckGaps snapshot %s: %.6f MB alloc, %.6f MB in %d recyclable gaps (recovered from gaps: %.6f)\n",
-                    msg, s_totalAllocated*1e-6, s_totalGaps*1e-6, (int)s_recycledMemoryBlocks.size(), totalRecyclable*1e-6);
+                    msg, s_memoryUsage.used*1e-6, s_memoryUsage.unused*1e-6, (int)s_recycledMemoryBlocks.size(), totalRecyclable*1e-6);
             fflush(stderr);
         }
-        fail_if(totalRecyclable != s_totalGaps, "gaps out of sync with stats??");
+        fail_if(totalRecyclable != s_memoryUsage.unused, "gaps out of sync with stats??");
     }
     static void RecycleMemoryBlock(MemoryBlock&& memoryBlock) // callback from Deleter()
     {
         // must be called under lock s_mutex
         CheckGaps("RecycleMemoryBlock begin");
-        s_totalAllocated -= memoryBlock.size();
-        s_totalGaps += memoryBlock.size();
+        s_memoryUsage.used   -= memoryBlock.size();
+        s_memoryUsage.unused += memoryBlock.size();
         s_recycledMemoryBlocks.emplace(move(memoryBlock)); // we move this gap into the gap set
         CheckGaps("RecycleMemoryBlock after adding back");
         // consolidate right away --TODO: currently this is highly inefficient; do it right
@@ -1023,8 +1022,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
     static set<MemoryBlock> s_recycledMemoryBlocks; // free set
     static const NDShapeDimension defaultDenseArenaSize = 2*256*1024*1024;//000000; // we allocate in this chunk size (dense only)
 
-    static size_t s_totalAllocated; // diagnostics
-    static size_t s_totalGaps;
+    static InternalVariable::MemoryUsage s_memoryUsage;
     static vector<MemoryBlock> s_mergeBuffer;
 
     static bool IsMatrixOfDataType(const MatrixBase& matrix, DataType dataType) // helper for checking the DataType of the MatrixBase object
@@ -1161,9 +1159,9 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             maxRecyclable = max(maxRecyclable, b.size());
         }
         fprintf(stderr, "NDArrayView snapshot: %f MB alloc, %f MB in %d recyclable gaps (max %f)\n",
-                s_totalAllocated*1e-6, s_totalGaps*1e-6, (int)s_recycledMemoryBlocks.size(), maxRecyclable*1e-6);
+                s_memoryUsage.used*1e-6, s_memoryUsage.unused*1e-6, (int)s_recycledMemoryBlocks.size(), maxRecyclable*1e-6);
         fflush(stderr);
-        fail_if(totalRecyclable != s_totalGaps, "s_totalGaps out of sync with gap list??");
+        fail_if(totalRecyclable != s_memoryUsage.unused, "s_memoryUsage.unused out of sync with gap list??");
     };
 
     // subroutine for NewDense(): allocate memory from a given memory block
@@ -1177,9 +1175,11 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         if (unusedBytes > 0)
         {
             s_recycledMemoryBlocks.emplace(memoryBlock.m_sob, memoryBlock.data() + sizeInBytes, unusedBytes);
-            s_totalGaps += unusedBytes;
+            s_memoryUsage.unused += unusedBytes;
         }
-        s_totalAllocated += sizeInBytes;
+        s_memoryUsage.used += sizeInBytes;
+        if (s_memoryUsage.maxUsed < s_memoryUsage.used) // keep track of peak usage
+            s_memoryUsage.maxUsed = s_memoryUsage.used;
         let matrixViewPtr = WrapStorageRangeAsMatrix(MemoryBlock(memoryBlock.m_sob, memoryBlock.data(), sizeInBytes), dataType);
         //fprintf(stderr, "reused %d bytes\n", (int)sizeInBytes);
         return MakeSharedObject<NDArrayView>(dataType, shape, /*begin*/0, /*end*/shape.TotalSize(), matrixViewPtr); // TODO: change to a version without range, and move the matrixViewPtr
@@ -1205,7 +1205,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
             s_currentArenaDataType = dataType;
             s_currentArenaDevice = device;
             s_recycledMemoryBlocks.clear(); // this will free the arena if no reference anymore
-            s_totalGaps = 0;
+            s_memoryUsage.unused = 0;
         }
 
         static size_t debugCounter = 0;
@@ -1222,7 +1222,7 @@ class NDArrayViewArena : public NDArrayView::IAllocator
         {
             CheckGaps("NewDense from gap, before");
             auto region = NewDenseFromMemoryBlock(*iter, desiredMemoryBlock.size(), shape, dataType);
-            s_totalGaps -= iter->size();
+            s_memoryUsage.unused -= iter->size();
             s_recycledMemoryBlocks.erase(iter); // remove from free set. We temporarily may have had overlapping entries just now.
             CheckGaps("NewDense from gap, after");
             return region;
@@ -1289,6 +1289,15 @@ public:
         else
             return NewDense(shape, dataType, device);
     }
+
+    static CNTK_API InternalVariable::MemoryUsage GetMemoryUsage(bool reset)
+    {
+        lock_guard<recursive_mutex> guard(s_mutex);
+        auto res = s_memoryUsage;
+        if (reset)
+            s_memoryUsage.maxUsed = 0;
+        return res;
+    }
 };
 
 /*static*/ recursive_mutex                    NDArrayViewArena::s_mutex;
@@ -1296,8 +1305,7 @@ public:
 /*static*/ DeviceDescriptor                   NDArrayViewArena::s_currentArenaDevice = DeviceDescriptor::CPUDevice();
 /*static*/ set<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_recycledMemoryBlocks;
 /*static*/ array<vector<unique_ptr<MatrixBase>>, NDArrayViewArena::numStorageFormats> NDArrayViewArena::s_recycledSparseArenass;
-/*static*/ size_t NDArrayViewArena::s_totalAllocated = 0;
-/*static*/ size_t NDArrayViewArena::s_totalGaps = 0;
+/*static*/ InternalVariable::MemoryUsage NDArrayViewArena::s_memoryUsage = { 0 };
 /*static*/ vector<NDArrayViewArena::MemoryBlock> NDArrayViewArena::s_mergeBuffer;
 
 // ===========================================================================
@@ -6141,6 +6149,12 @@ size_t Variable::size() const
     if (shape.IsUnknown()) // BUGBUG: FreeDimension
         InvalidArgument("size: Variable has no known size yet.");
     return shape.Dimensions().back();
+}
+
+// miscellaneous
+static CNTK_API InternalVariable::MemoryUsage GetMemoryUsage(bool reset = true)
+{
+    return NDArrayViewArena::GetMemoryUsage(reset);
 }
 
 } // namespace CNTK

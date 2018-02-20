@@ -2338,6 +2338,17 @@ namespace CNTK
         CNTK_API void Backward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients, double beta = 0.0) const;
 
         ///
+        /// Get Dynamite memory usage (current used, current arena allocation)
+        ///
+        struct MemoryUsage
+        {
+            size_t used;    // number of bytes actively allocated
+            size_t maxUsed; // max number of bytes actively allocated since last reset
+            size_t unused;  // total unallocated bytes of arena
+        };
+        static CNTK_API MemoryUsage GetMemoryUsage(bool reset = true);
+
+        ///
         /// Test whether a variable is non-empty.
         /// Use this to test for a default-constructed variable to denote "None".
         ///
