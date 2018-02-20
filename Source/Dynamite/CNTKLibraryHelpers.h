@@ -257,6 +257,9 @@ namespace Dynamite {
         let numStreams = minibatch.size();
         let numSeq = minibatch[0].size();
 
+        //if (numSeq == 155)
+        //    fflush(stderr);
+
         vector<pair<size_t, size_t>> ranges; // sequence index ranges for partial minibatches
         size_t end = 0; // running index into sequences
         vector<size_t> currentTokensPerWorker, maxLenPerWorker;
@@ -305,6 +308,7 @@ namespace Dynamite {
         if (ranges.back().second - ranges.back().first < numWorkers) // last range too small: merge into previous
         {
             // merging is not reliable; trying to just drop them
+            // There is one example case where just adding one more explodes the MB.
             //if (ranges.back().second != numSeq)
             //    LogicError("GetSubBatches_CreatePartialMinibatches: ranges.back() not covering last sequence??");
             fprintf(stderr, "GetSubBatches_CreatePartialMinibatches: dropped last tiny range of %d entries\n", (int)(ranges.back().second - ranges.back().first)), fflush(stderr);
@@ -313,7 +317,7 @@ namespace Dynamite {
         }
 
         // if nothing to break then avoid any reallocation
-        if (ranges.size() == 1)
+        if (ranges.size() == 1 && ranges.back().second == numSeq)
         {
             partialMinibatches[0] = move(minibatch); // put it right back as it was
             return;
@@ -356,6 +360,14 @@ namespace Dynamite {
         if (j == 0)
             LogicError("GetSubBatches_StridedSubSample: strided sub sample is empty, despite all the efforts??");
         sequences.resize(j); // rest gets dropped
+#if 0
+        size_t maxLen = 0;
+        for (let& seq : sequences)
+            maxLen = max(maxLen, seq.size());
+        fprintf(stderr, "### %d = %d * %d\n", (int)(maxLen * sequences.size()), (int)maxLen, (int)sequences.size()), fflush(stderr);
+        if (maxLen * sequences.size() > 3500)
+            fprintf(stderr, "##################\n"), fflush(stderr);
+#endif
     }
 
     // helper to get a set of minibatches at once so that we can sort and group them for better batching efficiency
@@ -373,6 +385,7 @@ namespace Dynamite {
                                      size_t shuffleSeed, bool inferenceOnly,
                                      DataType dataType, const DeviceDescriptor& device)
     {
+//numWorkers = 4;
         bool splitDataOverWorkersOurselves = true; // true: do it ourselves, don't leave it to the reader
         // ask for a multi-batch, by asking CNTK for a 'numBuckets' larger minibatch
         auto multiMinibatchData = minibatchSource->GetNextMinibatch(/*minibatchSizeInSequences=*/ (size_t)0, maxibatchSize,
@@ -406,11 +419,18 @@ namespace Dynamite {
                                     hasPadding, /*granularity=*/splitDataOverWorkersOurselves ? numWorkers : 1);
 
         // if we split data ourselves, this is the point
-        if (splitDataOverWorkersOurselves)
+        if (numWorkers > 1 && splitDataOverWorkersOurselves)
             for (auto& partialBatchSet : args)
                 for (auto& partialBatch : partialBatchSet)
                     for (auto& streamData : partialBatch)
-                        GetSubBatches_StridedSubSample(streamData, numWorkers, thisWorker);
+                    //{
+                    //    for (size_t i = 0; i < numWorkers; i++)
+                    //    {
+                    //        auto d = streamData;
+                    //        GetSubBatches_StridedSubSample(d, numWorkers, i);
+                    //    }
+                    //}
+                    GetSubBatches_StridedSubSample(streamData, numWorkers, thisWorker);
 
         return true; // true means success, we got data. False means end of data.
     }
