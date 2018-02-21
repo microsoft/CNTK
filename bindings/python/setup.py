@@ -82,6 +82,11 @@ else:
   rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
                                                         '*' + libname_rt_ext))]
 
+# copy CNTK_VERSION_BANNER to VERSION file
+version_file = open(os.path.join(os.path.dirname(__file__), "cntk", "VERSION"), 'w')
+version_file.write(os.environ['CNTK_VERSION_BANNER'])
+version_file.close()
+
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set
 if os.path.exists(PROJ_LIB_PATH):
@@ -122,7 +127,7 @@ else:
     ]
     extra_link_args = []
 
-    # Expecting the dependent libs (libcntklibrary-2.4.so, etc.) inside
+    # Expecting the dependent libs (libcntklibrary-[CNTK_COMPONENT_VERSION].so, etc.) inside
     # site-packages/cntk/libs.
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
     os.environ["CXX"] = "mpic++"
@@ -158,7 +163,7 @@ cntk_module = Extension(
 # Do not include examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
-package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt', 'contrib/deeprl/tests/data/initial_policy_network.dnn'] }
+package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt', 'contrib/deeprl/tests/data/initial_policy_network.dnn', 'VERSION'] }
 package_data['cntk'] += rt_libs
 kwargs = dict(package_data = package_data)
 
@@ -171,7 +176,7 @@ if IS_PY2:
     cntk_install_requires.append('enum34>=1.1.6')
 
 setup(name="cntk",
-      version="2.4",
+      version=os.environ['CNTK_VERSION'],
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

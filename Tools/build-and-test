@@ -14,6 +14,7 @@ RUN=1
 CLEAN_AFTER=0
 CLEAN_BEFORE=0
 RANDOM_OUTPUT=0
+BUILD_VERSION=
 CODE_COVERAGE=no
 FLAVORS="debug:release"
 TARGETS="cpu:gpu"
@@ -40,6 +41,7 @@ case $key in
     echo "  -cc|--code-coverage - build with support for code coverage (gcov)"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
     echo "  -cba|--clean-build-after - clean up the enlistment binaries after build"
+    echo "  -bv|--build-version <build_version> - build using given version assuming public availablity (default hard-coded in configure file)"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
     echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
     echo "  -x|--extra-configure-options <options> - extra options to pass to configure"
@@ -67,6 +69,10 @@ case $key in
     -cba|--clean-build-after)
     CLEAN_AFTER=1
     BUILD=1
+    ;;
+    -bv|--build-version)
+    BUILD_VERSION="${2,,}"
+    shift # past argument
     ;;
     -f|--flavors)
     FLAVORS="${2,,}"
@@ -249,7 +255,7 @@ if [[ $BUILD == 1 ]]; then
                         OneBitSGDOPT=yes
                     fi
                 fi
-                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT $EXTRA_CONFIGURE_OPTIONS
+                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT --with-build-version=$BUILD_VERSION $EXTRA_CONFIGURE_OPTIONS
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi
