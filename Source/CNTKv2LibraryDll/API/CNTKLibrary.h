@@ -4113,6 +4113,11 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr OnesLike(const Variable& operand, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of a eye-like operation. This produces ones with the shape and dynamic axes specified by the operand.
+    ///
+    CNTK_API FunctionPtr EyeLike(const Variable& operand, const std::wstring& name = L"");
+
 
     ///
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.

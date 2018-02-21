@@ -1688,6 +1688,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr EyeLike(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::EyeLikeOp, operand, {}, name);
+    }
+
     std::vector<Variable> AutoBroadcastSequence(PrimitiveOpType op, const Variable& left, const Variable& right, bool autoBroadcast)
     {
         auto left_axis = left.DynamicAxes();

@@ -149,3 +149,24 @@ def test_ones_like(operand, device_id, precision):
     from .. import ones_like
     _test_unary_op(precision, device_id, ones_like, operand,
                    expected_forward, expected_backward)
+
+Matrices = [
+    ([[2.1, 3.1], [4.7, 4.1]])
+]
+
+
+@pytest.mark.parametrize("operand", Matrices)
+def test_eye_like(operand, device_id, precision):
+    def np_eye_like(matrix):
+        np.eye(matrix.shape[0], matrix.shape[1], dtype=np.float32)
+    operand = AA(operand)
+    expected = np_eye_like(operand)
+
+    expected_forward = [expected]
+    expected_backward = {
+        'arg': [np.zeros_like(expected)],
+    }
+
+    from .. import eye_like
+    _test_unary_op(precision, device_id, eye_like, operand,
+                   expected_forward, expected_backward)

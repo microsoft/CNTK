@@ -2184,6 +2184,34 @@ def zeros_like(x, name=''):
 
 
 @typemap
+def eye_like(x, name=''):
+    '''
+    Creates a tensor with diagonal set to 1s and with the same shape and dynamic axes as ``x``:
+
+    Example:
+        >>> x0 = np.arange(24).reshape((2, 3, 4)).astype('f')
+        >>> x = C.input_variable((3, 4))
+        >>> C.eye_like(x).eval({x: x0})
+        array([[[ 1.,  0.,  0.,  0.],
+                [ 0.,  1.,  0.,  0.],
+                [ 0.,  0.,  1.,  0.]],
+        <BLANKLINE>
+               [[ 1.,  0.,  0.,  0.],
+                [ 0.,  1.,  0.,  0.],
+                [ 0.,  0.,  1.,  0.]]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import eye_like
+    x = sanitize_input(x)
+    return eye_like(x, name)
+
+
+@typemap
 def element_select(flag, value_if_true, value_if_false, name=''):
     '''
     return either ``value_if_true`` or ``value_if_false`` based on the value of ``flag``.

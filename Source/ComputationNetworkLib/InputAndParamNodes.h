@@ -787,4 +787,51 @@ private:
 template class ConstantNode<float>;
 template class ConstantNode<double>;
 
+// -----------------------------------------------------------------------
+// DiagonalLikeNode
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class EyeLikeNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ConstantOp"; }
+public:
+    DeclareConstructorFromConfigWithNumInputs(EyeLikeNode);
+    EyeLikeNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+       
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /* inputIndex */, const FrameRange& /* t */) override
+    {
+        // EyeLikeNode is constant; nothing to backpropagate
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        //TODO: 1) check whether this is a matrix; 2) use sparse matrix value? 
+        auto result = ValueFor(fr);
+        result.SetDiagonalValue(ElemType(1.0));
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+};
+
+template class EyeLikeNode<float>;
+template class EyeLikeNode<double>;
 }}}

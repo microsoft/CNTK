@@ -956,6 +956,11 @@ namespace CNTK
                     computationNodePtr = New<ConstantNode<ElementType>>(network->GetDeviceId(), internalNodeName, fillValue);
                     break;
                 }
+                case PrimitiveOpType::EyeLikeOp:
+                {
+                    computationNodePtr = New<EyeLikeNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::ROIPooling:
                 {
                     PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
