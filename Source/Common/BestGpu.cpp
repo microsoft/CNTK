@@ -63,6 +63,7 @@ struct ProcessorData
     cudaDeviceProp deviceProp;
     bool mlAppsFound;
     int deviceId; // the deviceId (cuda side) for this processor
+    char deviceUUID[NVML_DEVICE_UUID_BUFFER_SIZE];
 };
 
 enum BestGpuFlags
@@ -637,7 +638,7 @@ GpuData GetGpuData(DEVICEID_TYPE deviceId)
     if (it != gpusData.end())
         return *it;
 
-    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0, 0);
+    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0, 0, "");
 }
 
 // populate a vector with data (id, major/minor version, cuda cores, name and memory) for each gpu device in the machine
@@ -661,7 +662,7 @@ std::vector<GpuData> GetAllGpusData()
 
         size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); // From bytes to MBytes
         size_t freeMemory = pd->memory.free / (1024 * 1024); // From bytes to MBytes
-        GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory, freeMemory);
+        GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory, freeMemory, string(pd->deviceUUID));
         data.push_back(gpuData);
     }
 
@@ -710,6 +711,11 @@ void BestGpu::QueryNvmlData()
 
         if (curPd == NULL)
             continue;
+
+        // get device UUID to determine if device is unique in NCCL
+        result = nvmlDeviceGetUUID(device, curPd->deviceUUID, _countof(curPd->deviceUUID));
+        if (NVML_SUCCESS != result)
+            return;
 
         // Get the memory usage, will only work for TCC drivers
         result = nvmlDeviceGetMemoryInfo(device, &memory);

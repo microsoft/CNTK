@@ -34,47 +34,30 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
 {
     cudaDeviceSynchronize();
     size_t numRanks = mpi->NumNodesInUse();
-    std::vector<int> allDevs(numRanks);
+
     std::vector<std::array<char, MPI_MAX_PROCESSOR_NAME>> allHosts(numRanks);
     std::array<char, MPI_MAX_PROCESSOR_NAME> procName {};
     int nameLen;
     MPI_Get_processor_name(procName.data(), &nameLen);
-    mpi->Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT);
+
+    std::vector<std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE>> allUuids(numRanks);
+    std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE> uuidName {};
+    auto& uuid = GetGpuData(deviceId).uuid;
+    memcpy(uuidName.data, uuid.c_str(), uuid.length());
+
+    mpi->Allgather(uuidName.data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR, allUuids.data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR);
     mpi->Allgather(procName.data(), MPI_MAX_PROCESSOR_NAME, MPI_CHAR, allHosts[0].data(), MPI_MAX_PROCESSOR_NAME, MPI_CHAR);
 
     for (size_t r = 0; r < numRanks; r++)
     {
-        if (allDevs[r] == CPUDEVICE)
+        if (strlen(allUuids[r].data) == 0)
         {
             fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
             return;
         }
-    }
-
-    // get device UUID, as deviceId might be the same if containers are from the same host
-	// while each deviceId corresponds to different device
-    nvmlDevice_t nvmlDevice;
-    if (NVML_SUCCESS != nvmlDeviceGetHandleByIndex(deviceId, &nvmlDevice))
-    {
-        fprintf(stderr, "NcclComm: disabled, nvmlDeviceGetHandleByIndex failed\n");
-        return;
-    }
-
-    std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE> devUUID {};
-    if (NVML_SUCCESS != nvmlDeviceGetUUID(nvmlDevice, devUUID.data(), NVML_DEVICE_UUID_BUFFER_SIZE))
-    {
-        fprintf(stderr, "NcclComm: disabled, nvmlDeviceGetUUID failed\n");
-        return;
-    }
-
-    std::vector<std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE>> allUUIDs(numRanks);
-    mpi->Allgather(devUUID.data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR, allUUIDs[0].data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR);
-
-    for (size_t r = 0; r < numRanks; r++)
-    {
         for (size_t s = 0; s < r; s++)
         {
-            if (allHosts[r] == allHosts[s] && allUUIDs[r] == allUUIDs[s])
+            if (allHosts[r] == allHosts[s] && allUuids[r] == allUuids[s])
             {
                 fprintf(stderr, "NcclComm: disabled, same device used by more than one rank\n");
                 return;
