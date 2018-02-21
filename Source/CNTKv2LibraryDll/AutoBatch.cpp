@@ -1629,6 +1629,12 @@ class InternalVariable::Memoizer
         ConcurrentQueue<WorkItem> m_queue;
         volatile bool m_hasException;     // set by MTDoWork() in case of exception
         exception_ptr m_exception;        // if any  --TODO: does this need to be volatile?
+        void MTSetException()
+        {
+            // newly caught exception: save it
+            m_exception = current_exception();
+            m_hasException = true; // not sure if exception_ptr can be assigned atomically, so use this as a guard
+        }
         // callback. Process one work item in each call.
         bool MTDoWork() noexcept override
         {
@@ -1645,11 +1651,18 @@ class InternalVariable::Memoizer
                     // only now remove it, so that consumer sees it disappear only after it has been done
                     return !m_queue.Empty();
                 }
+                catch (exception& e)
+                {
+                    fprintf(stderr, "\nMTDoWork: background thread caught exception:\n%s\n", e.what());
+                    let* ecs = dynamic_cast<const Microsoft::MSR::CNTK::IExceptionWithCallStackBase*>(&e);
+                    if (ecs)
+                        fprintf(stderr, "%s\n", ecs->CallStack());
+                    fflush(stderr);
+                    MTSetException();
+                }
                 catch (...)
                 {
-                    // newly caught exception: save it
-                    m_exception = current_exception();
-                    m_hasException = true; // not sure if exception_ptr can be assigned atomically, so use this as a guard
+                    MTSetException();
                 }
             }
             // an exception has been caught, or was already present
@@ -4621,7 +4634,9 @@ public:
         m_memoizer.End();
         // now all m_values that were submitted for are filled in
         // the final m_value may be a reshape, which the bg thread would not have filled in yet, as those are done lazily. Do it now if needed.
+fprintf(stderr, "MTCacheAndGetCalue from top\n"), fflush(stderr);
         Memoizer::MTCacheAndGetValue(fields); // (note: this is a view op that costs nearly nothing) --TODO: It may make a copy in the future, if the result is not memory-contiguous.
+fprintf(stderr, "MTCacheAndGetCalue from top out\n"), fflush(stderr);
 
         cudaStatsGuardCalc.Stop(); // this measures the bg thread; specifically, how much longer it needs after the fg thread has submitted the last item
 
