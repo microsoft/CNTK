@@ -9,6 +9,7 @@
 #include "GPUMatrix.h"
 #include <nccl.h>
 #include <cuda_runtime.h>
+#include <nvml.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -48,9 +49,32 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
             fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
             return;
         }
+    }
+
+    // get device UUID, as deviceId might be the same if containers are from the same host
+	// while each deviceId corresponds to different device
+    nvmlDevice_t nvmlDevice;
+    if (NVML_SUCCESS != nvmlDeviceGetHandleByIndex(deviceId, &nvmlDevice))
+    {
+        fprintf(stderr, "NcclComm: disabled, nvmlDeviceGetHandleByIndex failed\n");
+        return;
+    }
+
+    std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE> devUUID {};
+    if (NVML_SUCCESS != nvmlDeviceGetUUID(nvmlDevice, devUUID.data(), NVML_DEVICE_UUID_BUFFER_SIZE))
+    {
+        fprintf(stderr, "NcclComm: disabled, nvmlDeviceGetUUID failed\n");
+        return;
+    }
+
+    std::vector<std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE>> allUUIDs(numRanks);
+    mpi->Allgather(devUUID.data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR, allUUIDs[0].data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR);
+
+    for (size_t r = 0; r < numRanks; r++)
+    {
         for (size_t s = 0; s < r; s++)
         {
-            if (allHosts[r] == allHosts[s] && allDevs[r] == allDevs[s])
+            if (allHosts[r] == allHosts[s] && allUUIDs[r] == allUUIDs[s])
             {
                 fprintf(stderr, "NcclComm: disabled, same device used by more than one rank\n");
                 return;
