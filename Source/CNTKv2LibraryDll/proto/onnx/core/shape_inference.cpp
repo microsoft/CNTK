@@ -1,3 +1,4 @@
+#include "graph.h"
 #include "shape_inference.h"
 
 namespace ONNXIR

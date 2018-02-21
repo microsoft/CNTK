@@ -232,7 +232,9 @@ public:
 public:
     void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, ElemType unitGainFactor);
     ElemType Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier);
-    void AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp);
+
+    template<typename AccumType>
+    void AdaDelta(CPUMatrix<AccumType>& c, CPUMatrix<AccumType>& functionValues, AccumType learningRate, AccumType rho, AccumType epsilon, int* timestamps, int currentTimestamp);
 
 public:
     CPUSparseMatrix<ElemType>& InplaceTruncateTop(const ElemType threshold);

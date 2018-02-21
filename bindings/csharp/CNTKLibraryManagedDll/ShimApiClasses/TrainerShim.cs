@@ -38,7 +38,7 @@ namespace CNTK
         public bool TrainMinibatch(IDictionary<Variable, MinibatchData> arguments, DeviceDescriptor computeDevice)
         {
             UnorderedMapVariableMinibatchData vectorData = Helper.AsUnorderedMapVariableMinibatchData(arguments);
-            return TrainMinibatch(vectorData, computeDevice);
+            return _TrainMinibatch(vectorData, computeDevice);
         }
 
         /// <summary>
@@ -47,10 +47,25 @@ namespace CNTK
         /// <param name="arguments">minibatch data as variable value pairs</param>
         /// <param name="computeDevice">device</param>
         /// <returns></returns>
+        [System.Obsolete("TrainMinibatch() without isSweepEndInarguments will be deprecated soon. Please TrainMinibatch() with isSweepEndInarguments.", false)]
+        public bool TrainMinibatch(IDictionary<Variable, Value> arguments, DeviceDescriptor computeDevice)
+        {
+            UnorderedMapVariableValuePtr mapData = Helper.AsUnorderedMapVariableValue(arguments);
+            bool isSweepEndInarguments = false;
+            return _TrainMinibatch(mapData, isSweepEndInarguments, computeDevice);
+        }
+
+        /// <summary>
+        /// train with a minibatch data
+        /// </summary>
+        /// <param name="arguments">minibatch data as variable value pairs</param>
+        /// <param name="isSweepEndInarguments">indicates whether the current minibatch data is the end of one sweep</param>
+        /// <param name="computeDevice">device</param>
+        /// <returns></returns>
         public bool TrainMinibatch(IDictionary<Variable, Value> arguments, bool isSweepEndInarguments, DeviceDescriptor computeDevice)
         {
             UnorderedMapVariableValuePtr mapData = Helper.AsUnorderedMapVariableValue(arguments);
-            return TrainMinibatch(mapData, isSweepEndInarguments, computeDevice);
+            return _TrainMinibatch(mapData, isSweepEndInarguments, computeDevice);
         }
     }
 }

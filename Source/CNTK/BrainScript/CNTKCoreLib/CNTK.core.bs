@@ -241,7 +241,7 @@ DelayLayer {T=1, defaultHiddenActivation=0} =
 BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
                          initialScale = 1,
                          normalizationTimeConstant = 5000, blendTimeConstant = 0,
-                         epsilon = 0.00001, useCntkEngine = false} =
+                         epsilon = 0.00001, useCntkEngine = false, disableRegularization = false} =
 {
     #normShape   = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
     normShape   = (0:1)  # TODO: Update this once we support broadcasting-style parameters.
@@ -250,7 +250,7 @@ BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to r
     runMean     = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
     runVariance = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0}
     runCount    = ParameterTensor {(1),       initValue = 0, learningRateMultiplier = 0}
-    apply (x)   = BatchNormalization (x, scale, bias, runMean, runVariance, runCount=runCount, spatial=(spatialRank > 0), normalizationTimeConstant=normalizationTimeConstant, blendTimeConstant=blendTimeConstant, epsilon=epsilon, useCntkEngine=useCntkEngine)
+    apply (x)   = BatchNormalization (x, scale, bias, runMean, runVariance, runCount=runCount, spatial=(spatialRank > 0), normalizationTimeConstant=normalizationTimeConstant, blendTimeConstant=blendTimeConstant, epsilon=epsilon, useCntkEngine=useCntkEngine, disableRegularization=disableRegularization)
 }.apply
 
 # LayerNormalizationLayer -- create a layer-normalization layer
@@ -591,8 +591,10 @@ RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + nu
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 RowStack(inputs, axis=1, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
 EditDistanceError(leftInput, rightInput, subPen=1.0, delPen=1.0, insPen=1.0, squashInputs=false, tokensToIgnore=[||], tag='') = new ComputationNode [ operation = 'EditDistanceError' ; inputs = _AsNodes (leftInput : rightInput) /*plus the function args*/ ]
+LatticeSequenceWithSoftmax(labels, evaluation, scaledLogLikelihood, lattice, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath = "LatticeNode.config", hSmoothingWeight = 0.95, frameDropThresh = 1e-10, doReferenceAlign = false, seqGammarUsesMBR = false, seqGammarAMF = 14.0, seqGammarLMF = 14.0, seqGammarBMMIFactor = 0.0, seqGammarWordPen = 0.0, tag='') = new ComputationNode [ operation = 'LatticeSequenceWithSoftmax' ; inputs = _AsNodes (labels : evaluation : scaledLogLikelihood : lattice) /*plus the function args*/ ]
 ForwardBackward(graph, features, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'ForwardBackward' ; inputs = _AsNodes (graph : features) /*plus the function args*/ ]
 LabelsToGraph(labels, tag='') = new ComputationNode [ operation = 'LabelsToGraph' ; inputs = _AsNodes (labels) /*plus the function args*/ ]
+StopGradient(input, tag='') = new ComputationNode [ operation = 'StopGradient' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
     if axis < 0 then [ # time axis: specify -1
         beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, input)) else                 BS.Loop.IsLastN  (-beginIndex, input)
@@ -636,7 +638,7 @@ Acos(x, tag='') = new ComputationNode [ operation = 'Acos' ; inputs = _AsNodes (
 Asin(x, tag='') = new ComputationNode [ operation = 'Asin' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 Asinh(x, tag='') = new ComputationNode [ operation = 'Asinh' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 Atanh(x, tag='') = new ComputationNode [ operation = 'Atanh' ; inputs = _AsNodes (x) /*plus the function args*/ ]
-BatchNormalization(input, scale, bias, runMean, runVariance, runCount=None, spatial=false, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode
+BatchNormalization(input, scale, bias, runMean, runVariance, runCount=None, spatial=false, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, disableRegularization = false, imageLayout='CHW', tag='') = new ComputationNode
 {
     operation = 'BatchNormalization'
     inputs =
@@ -682,17 +684,12 @@ Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = '
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = _AsNodes (cond : indexSequence : sourceData) /*plus the function args*/ ]
 Sin(z, tag='') = new ComputationNode [ operation = 'Sin' ; inputs = _AsNodes (z) /*plus the function args*/ ]
 Sinh(x, tag='') = new ComputationNode [ operation = 'Sinh' ; inputs = _AsNodes (x) /*plus the function args*/ ]
-Softmax (z, axis=0, tag='') =  # TODO: replace this with more efficient version below once we have ReduceLogSum
+Softmax (z, axis=0, tag='') = 
     if axis == 0 then new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
     else
     [
-        numerator = Softmax (z)  # do a first Softmax to bring it into harmless numeric range
-        denominator = ReduceSum (axis=axis1, numerator) ; axis1 = axis # reduce along axis
-        P = numerator .* Reciprocal (denominator)         # normalize numerator by the sum along the given axis
-
-        # TODO: This is not efficient. Once we have ReduceLogSum, it will be this:
-        #Z = ReduceLogSum (axis=axis0, z) # reduce along axis
-        #P = Exp (z - Z)
+        Z = ReduceLogSum (z, axis=axis) # reduce along axis
+        P = Exp (z - Z)
     ].P
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
 Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _AsNodes (z) /*plus the function args*/ ]

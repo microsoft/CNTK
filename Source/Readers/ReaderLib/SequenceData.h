@@ -79,4 +79,20 @@ namespace CNTK {
         DISABLE_COPY_AND_MOVE(DenseSequenceWithBuffer);
     };
 
+    class InvalidSequenceData : public SequenceDataBase
+    {
+    public:
+        static SequenceDataPtr Instance()
+        {
+            static SequenceDataPtr invalid = std::make_shared<InvalidSequenceData>();
+            return invalid;
+        }
+
+        InvalidSequenceData() : SequenceDataBase(0, false) {}
+        virtual ~InvalidSequenceData() {}
+
+        virtual const NDShape& GetSampleShape() { NOT_IMPLEMENTED; }
+        virtual const void* GetDataBuffer() { NOT_IMPLEMENTED; }
+    };
+
 }

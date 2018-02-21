@@ -4,7 +4,6 @@ tags:
     # In BVT, run Release GPU
     - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release') 
     # In Nightly, additionally run Debug GPU
-    # Note: Batch normalization training on CPU is not yet implemented.
     - nightly-e (build_sku == 'gpu') and (device == 'gpu')
     - weekly-e (build_sku == 'gpu') and (device == 'gpu')
 

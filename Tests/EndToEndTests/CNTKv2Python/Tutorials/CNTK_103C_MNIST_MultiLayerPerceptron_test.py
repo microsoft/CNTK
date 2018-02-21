@@ -16,7 +16,7 @@ def test_cntk_103c_mnist_multilayerperceptron_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedEvalErrorByDeviceId = { -1: 1.67, 0: 1.71 }
+expectedEvalErrorByDeviceId = { -1: 1.72, 0: 1.81 }
 
 def test_cntk_103c_mnist_multilayerperceptron_evalCorrect(nb, device_id):
     testCell = [cell for cell in nb.cells

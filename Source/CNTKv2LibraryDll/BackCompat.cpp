@@ -255,7 +255,14 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(MinusNode))
                     opType = PrimitiveOpType::Minus;
                 else if (node->OperationName() == OperationNameOf(ElementTimesNode))
+                {
                     opType = PrimitiveOpType::ElementTimes;
+                }
+                // legacy support for DiagTimesNode
+                else if (node->OperationName() == OperationNameOf(DiagTimesNode))
+                {
+                    opType = PrimitiveOpType::ElementTimes;
+                }
                 else if (node->OperationName() == OperationNameOf(EqualNode))
                     opType = PrimitiveOpType::Equal;
                 else if (node->OperationName() == OperationNameOf(NotEqualNode))
@@ -445,6 +452,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDisableRegularization] = batchNormalizationNode->DisableRegularization();
 
                     opType = PrimitiveOpType::BatchNormalization;
                 }
@@ -489,6 +497,14 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(edNode->TokensToIgnore());
 
                     opType = PrimitiveOpType::EditDistanceError;
+                }
+                else if (node->OperationName() == OperationNameOf(StopGradientNode))
+                {
+                    opType = PrimitiveOpType::StopGradient;
+                }
+                else if (node->OperationName() == OperationNameOf(LatticeSequenceWithSoftmaxNode))
+                {
+                    opType = PrimitiveOpType::LatticeSequenceWithSoftmax;
                 }
                 else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
                 {

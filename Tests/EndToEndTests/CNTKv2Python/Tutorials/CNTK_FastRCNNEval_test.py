@@ -16,22 +16,20 @@ sys.path.append(abs_path)
 
 from nb_helper import get_output_stream_from_cell
 
-# For now the test only supported on linux with python 3.4
-@pytest.mark.skipif(not (sys.version_info.major == 3 and sys.version_info.minor == 4),
-                    reason="requires python 3.4")
-@pytest.mark.skipif(sys.platform == 'win32',
-                    reason="does not currently run on windows")
+python_35_or_36 = pytest.mark.skipif(not (sys.version_info[:2] == (3,5) or
+                                          sys.version_info[:2] == (3,6)), reason="requires python 3.5 or 3.6")
+linux_only = pytest.mark.skipif(sys.platform == 'win32', reason="it runs currently only in linux")
+
+@python_35_or_36
+@linux_only
 def test_cntk_fastrcnn_eval_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
 
     assert errors == []
 
-# For now the test only supported on linux with python 3.4
-@pytest.mark.skipif(not (sys.version_info.major == 3 and sys.version_info.minor == 4),
-                    reason="requires python 3.4")
-@pytest.mark.skipif(sys.platform == 'win32',
-                    reason="does not currently run on windows")
+@python_35_or_36
+@linux_only
 def test_cntk_fastrcnn_eval_evalCorrect(nb):
     # Make sure that the number of detections is more than 0
     detectionCells = [cell for cell in nb.cells

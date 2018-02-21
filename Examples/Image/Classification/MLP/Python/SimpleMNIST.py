@@ -12,7 +12,7 @@ import cntk as C
 from cntk.train import Trainer, minibatch_size_schedule 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk.device import cpu, try_set_default_device
-from cntk.learners import adadelta, learning_rate_schedule, UnitType
+from cntk.learners import adadelta, learning_parameter_schedule_per_sample
 from cntk.ops import relu, element_times, constant
 from cntk.layers import Dense, Sequential, For
 from cntk.losses import cross_entropy_with_softmax
@@ -85,7 +85,7 @@ def simple_mnist(tensorboard_logdir=None):
         progress_writers.append(TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z))
 
     # Instantiate the trainer object to drive the model training
-    lr = learning_rate_schedule(1, UnitType.sample)
+    lr = learning_parameter_schedule_per_sample(1)
     trainer = Trainer(z, (ce, pe), adadelta(z.parameters, lr), progress_writers)
 
     training_session(
@@ -96,7 +96,7 @@ def simple_mnist(tensorboard_logdir=None):
         max_samples = num_samples_per_sweep * num_sweeps_to_train_with,
         progress_frequency=num_samples_per_sweep
     ).train()
-    
+
     # Load test data
     path = os.path.normpath(os.path.join(data_dir, "Test-28x28_cntk_text.txt"))
     check_path(path)
@@ -109,6 +109,11 @@ def simple_mnist(tensorboard_logdir=None):
     }
 
     # Test data for trained model
+    C.debugging.start_profiler()
+    C.debugging.enable_profiler()
+    C.debugging.set_node_timing(True)
+    #C.cntk_py.disable_cpueval_optimization() # uncomment this to check CPU eval perf without optimization
+
     test_minibatch_size = 1024
     num_samples = 10000
     num_minibatches_to_test = num_samples / test_minibatch_size
@@ -117,6 +122,9 @@ def simple_mnist(tensorboard_logdir=None):
         mb = reader_test.next_minibatch(test_minibatch_size, input_map=input_map)
         eval_error = trainer.test_minibatch(mb)
         test_result = test_result + eval_error
+
+    C.debugging.stop_profiler()
+    trainer.print_node_timing()
 
     # Average of evaluation errors of all test minibatches
     return test_result / num_minibatches_to_test

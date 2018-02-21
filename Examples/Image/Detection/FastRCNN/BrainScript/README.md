@@ -31,26 +31,26 @@ After running the script, the toy dataset will be installed under the `Examples/
 
 ### Setup
 
-Currently, CNTK only supports `Python 3.4`. We recommend to install anaconda python (http://continuum.io/downloads) and create a python 3.4 environment using: 
+Currently, CNTK supports `Python 3.5` and `Python 3.6`. We recommend to install anaconda python (http://continuum.io/downloads) and create a python 3.5 environment using: 
 ```
-conda create --name cntk python=3.4.3 numpy scipy
+conda create --name cntk python=3.5.2 numpy scipy
 activate cntk
 ```
-To run the code in this example, you need to install a few additional packages. Under Python 3.4 (64bit version assumed), go to the FastRCNN folder and run:
+To run the code in this example, you need to install a few additional packages. Under Python 3.5 (64bit version assumed), go to the FastRCNN folder and run:
 ```
 pip install -r requirements.txt
 ```
 You will further need Scikit-Image and OpenCV to run these examples. You can download the corresponding wheel packages and install them manually. For Windows users, visit http://www.lfd.uci.edu/~gohlke/pythonlibs/, and download:
 
-    scikit_image-0.12.3-cp34-cp34m-win_amd64.whl  
-    opencv_python-3.1.0-cp34-cp34m-win_amd64.whl
+    scikit_image-0.12.3-cp35-cp35m-win_amd64.whl  
+    opencv_python-3.1.0-cp35-cp35m-win_amd64.whl
 
 Once you download the respective wheel binaries, install them with:
 
-`pip install your_download_folder/scikit_image-0.12.3-cp34-cp34m-win_amd64.whl`  
-`pip install your_download_folder/opencv_python-3.1.0-cp34-cp34m-win_amd64.whl`
+`pip install your_download_folder/scikit_image-0.12.3-cp35-cp35m-win_amd64.whl`  
+`pip install your_download_folder/opencv_python-3.1.0-cp35-cp35m-win_amd64.whl`
 
-This example code assumes you are using 64bit version of Python 3.4, as the Fast R-CNN DLL files under [utils_win64](./fastRCNN/utils3_win64) are prebuilt for this version. If your task requires the use of a different Python version, please recompile these DLL files yourself in the correct environment. 
+This example code assumes you are using 64bit version of Python 3.5 or 3.6, as the Fast R-CNN DLL files under [utils](./fastRCNN/utils) are prebuilt for this version. If your task requires the use of a different Python version, please recompile these DLL files yourself in the correct environment. 
 
 The folder where cntk.exe resides needs to be in your PATH environment variable.
 
@@ -103,6 +103,18 @@ Now you can start a full training of Fast R-CNN on the grocery data by running:
 This python code will start training Fast R-CNN using the [fastrcnn.cntk](./fastrcnn.cntk) configuration file (in BrainScript).
 
 If you carefully examine the [fastrcnn.cntk](./fastrcnn.cntk) file, you would notice we load the pre-trained AlexNet model, clone the network up to the `conv5_y` layer and freeze all bottom layer parameters, and then added pooling and dense layers on the top with trainable parameters. The training will run for 17 epochs, and reaching training error around `1.05%`. The script will also write the network output for the entire train and test dataset.
+
+### Running Fast R-CNN distributed training
+
+In case of distributed training, set `distributed_flg` to `True` in [PARAMETERS.py](./PARAMETERS.py).
+It will cause `python A2_RunWithPyModel.py` for distributed learning with multi-GPU environment.
+Note: This example requires a multi-GPU machine to distribute.
+
+Simple aggregation with a 2-GPU machine:
+`mpiexec -n 2 python A2_RunWithPyModel.py`
+
+Please check 2 parameters `num_quantization_bits`, `warm_up` in [PARAMETERS.py](./PARAMETERS.py) for distributed learning.
+Here is a [quick reference](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#2-configuring-parallel-training-in-cntk-in-python) for distributed learning with python.
 
 ### Evaluate trained model
 

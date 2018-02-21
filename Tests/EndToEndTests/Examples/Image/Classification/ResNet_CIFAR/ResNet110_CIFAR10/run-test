@@ -2,7 +2,4 @@
 
 . $TEST_DIR/../run-test-common
 
-# increase stack limit 
-ulimit -s 65536
-
 cntkrun ResNet110_CIFAR10.cntk "forceDeterministicAlgorithms=true traceLevel=0 stderr=- TrainConvNet=[SGD=[epochSize=512,minibatchSize=32,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=0.128]]"

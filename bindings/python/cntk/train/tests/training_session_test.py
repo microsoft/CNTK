@@ -97,7 +97,7 @@ def mb_source(tmpdir, fileprefix, max_samples=FULL_DATA_SWEEP, ctf=ctf_data, str
 
 
 def create_sample_model(device, writer=None,
-                        lr_per_sample=C.learning_rate_schedule([0.3, 0.2, 0.1, 0.0], C.UnitType.sample)):
+                        lr_per_sample=C.learning_parameter_schedule_per_sample([0.3, 0.2, 0.1, 0.0])):
     in1 = sequence.input_variable(shape=(input_dim,))
     labels = sequence.input_variable(shape=(input_dim,))
     p = parameter(shape=(input_dim,), init=10, device=device)
@@ -428,7 +428,7 @@ def test_session_progress_print_on_sweep_unit(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter()
     #set to a higher learning rate as we don't need to have converge but just to go through all the samples
-    t, feature, label = create_sample_model(device, writer, lr_per_sample=C.learning_rate_schedule(0.3, C.UnitType.sample))
+    t, feature, label = create_sample_model(device, writer, lr_per_sample=C.learning_parameter_schedule_per_sample(0.3))
     mbs = mb_source(tmpdir, "training",
                     #max_samples=INFINITELY_REPEAT,
                     max_sweeps = 4)

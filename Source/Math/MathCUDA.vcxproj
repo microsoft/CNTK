@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -120,9 +120,11 @@ xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClInclude Include="CuDnnCommon.h" />
     <ClInclude Include="CuDnnFactories.h" />
     <ClInclude Include="CuDnnRNN.h" />
+    <ClInclude Include="fpgeneric.h" />
     <ClInclude Include="GPUDataTransferer.h" />
     <ClInclude Include="GPURNGHandle.h" />
     <ClInclude Include="GPUTensor.h" />
+    <ClInclude Include="half.hpp" />
     <ClInclude Include="latticefunctionskernels.h" />
     <ClInclude Include="Convolution.cuh" />
     <ClInclude Include="TensorOps.h" />

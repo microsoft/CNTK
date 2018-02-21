@@ -230,6 +230,91 @@ def test_op_negate(operand, device_id, precision):
     _test_unary_op(precision, device_id, '-', operand,
                    expected_forward, expected_backward)
 
+
+BATCH_TIMES_PAIRS = [(np.reshape(np.arange(8), (2, 2, 2)), np.reshape(np.arange(8), (2, 2, 2)))]
+@pytest.mark.parametrize("left_operand, right_operand", BATCH_TIMES_PAIRS)
+def test_op_batch_times(left_operand, right_operand, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+
+    aa = AA(left_operand, dtype=dt_precision)
+    bb = AA(right_operand, dtype=dt_precision)
+    
+    k, m, n = aa.shape[0], aa.shape[1], bb.shape[2]
+    expected_forward = np.zeros((k, m, n))
+    for x in range(k):
+        expected_forward[x] = np.matmul(aa[x], bb[x])
+
+    left_backward = np.zeros_like(aa)
+    for x in range(k):
+        left_backward[x, ...] = bb[x].sum(axis=-1)
+
+    right_backward = np.zeros_like(bb)
+    for x in range(k):
+        transpose_axes = list(np.roll(np.arange(len(bb.shape[1:])), -1))
+        sum_axes = tuple(np.arange(0, len(aa.shape) - len(bb.shape) + 1))
+        right_backward[x, ...] = np.transpose(
+            AA([aa[x].sum(axis=sum_axes)]), axes=transpose_axes)
+
+    expected_backward = {
+        'left_arg':  left_backward,
+        'right_arg': right_backward
+    }
+
+    from cntk import times
+
+    _test_binary_op(precision, device_id, times,
+                    left_operand, right_operand, expected_forward, expected_backward, batch_size_greater_than_one=True)
+
+
+@pytest.mark.parametrize("left_operand, right_operand", BATCH_TIMES_PAIRS)
+def test_op_batch_times_with_inferred_axis(left_operand, right_operand, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+    a = AA(left_operand, dtype=dt_precision)
+    b = AA(right_operand, dtype=dt_precision)
+        
+    input1 = C.input_variable((2,2))
+    input2 = C.input_variable((C.InferredDimension,2))
+    z = C.times(input1, input2)
+    actual_forward = z.eval({input1: a, input2: b}, device=cntk_device(device_id))
+
+    expected_forward = np.ones((a.shape[0], a.shape[1], b.shape[2]))
+    k = a.shape[0]
+    for x in range(k):
+        expected_forward[x, ...] = a[x].dot(b[x])
+
+    assert np.allclose(actual_forward, expected_forward)
+
+
+@pytest.mark.parametrize("left_operand, right_operand", BATCH_TIMES_PAIRS)
+def test_op_batch_times_grad_with_beta_equals_to_one(left_operand, right_operand, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+    a = AA(left_operand, dtype=dt_precision)
+    b = AA(right_operand, dtype=dt_precision)
+    
+    root_gradient = np.ones_like(a)
+    
+    input1 = C.input_variable((2,2), needs_gradient=True)
+    input2 = C.input_variable((2,2), needs_gradient=True)
+    z = input1 + input2 + C.times(input1, input2)
+    state, actual_forward = z.forward({input1: a, input2: b}, [z.output], {z.output}, cntk_device(device_id))
+    actual_backwards = z.backward(state, {z.output: root_gradient}, [input1, input2])
+    
+    k = a.shape[0]
+    left_backward = np.ones_like(a)
+    for x in range(k):
+        left_backward[x, ...] += b[x].sum(axis=-1)
+    right_backward = np.ones_like(b)
+    for x in range(k):
+        transpose_axes = list(np.roll(np.arange(len(b.shape[1:])), -1))
+        sum_axes = tuple(np.arange(0, len(a.shape) - len(b.shape) + 1))
+        right_backward[x, ...] += np.transpose(
+            AA([a[x].sum(axis=sum_axes)]), axes=transpose_axes)
+
+    assert np.allclose(actual_backwards[input1], left_backward)
+    assert np.allclose(actual_backwards[input2], right_backward)
+
+
+
 # transpose_times currently only supports right operands of rank 1 or 2
 TRANSPOSE_TIMES_PAIRS = [
     ([[30.]], [[10.]]),
@@ -368,3 +453,61 @@ def test_sequence_auto_broadcast():
     result = f.eval({x:np.asarray([[1, 2, 3],[4, 5, 6]], dtype=np.float32),
                      y:np.asarray([[1, 2, 3]], dtype=np.float32)})
     assert np.array_equal(result[0], np.asarray([[1., 4., 9.],[4., 10., 18.]], dtype=np.float32))
+
+def test_auto_broadcast_reconcile_issue():
+    x = C.sequence.input((3,), name='x')
+    y = C.input((3,), name='y')
+    y2 = C.reconcile_dynamic_axes(y, x)
+    inputs = y2.owner.inputs
+    # check does the reconcile_dynamic_axes call trigger the auto broadcast
+    assert len(inputs) == 2
+    assert inputs[0].name == 'y' and inputs[1].name == 'x'
+
+MEAN_VARIANCE_NORMALIZATION_DATA = [
+    (np.array([[[0., 2],     # Input tensor
+                [4., 6.]],
+               [[0., 4],
+                [8., 12.]]]),
+     False,                   # use_stats_across_channels
+     False,                   # do_variance_scaling
+     np.array([[[-3., -1.],   # Output tensor
+                [1., 3.]],
+               [[-6., -2],
+                [2., 6.]]])
+     ),
+    (np.array([[[0., 2],     # Input tensor
+                [4., 6.]],
+               [[0., 4],
+                [8., 12.]]]),
+     False,                   # use_stats_across_channels
+     True,                   # do_variance_scaling
+     np.array([[[-1.34163487, -0.44721162],
+                [ 0.44721162,  1.34163487]],
+               [[-1.34163785, -0.44721264],
+                [ 0.44721264,  1.34163785]]])
+     ),
+    (np.array([[[0., 2],     # Input tensor
+                [4., 6.]],
+               [[8., 10],
+                [12., 14.]]]),
+     True,                   # use_stats_across_channels
+     True,                   # do_variance_scaling
+     np.array([[[-1.52752209, -1.0910871],
+                [-0.6546523,  -0.21821743]],
+               [[ 0.21821743,  0.6546523],
+                [ 1.0910871,  1.52752209]]])
+     ),
+]
+
+@pytest.mark.parametrize("input_operand, use_stats_across_channels, do_variance_scaling, output_ref", MEAN_VARIANCE_NORMALIZATION_DATA)
+def test_op_mean_variance_normalization(input_operand, use_stats_across_channels, do_variance_scaling, output_ref, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+    input_ref = AA(input_operand, dtype=dt_precision)
+    a = C.input_variable(shape=input_ref.shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+    norm_op = C.mean_variance_normalization(a, use_stats_across_channels=use_stats_across_channels, do_variance_scaling=do_variance_scaling)
+    output_test = norm_op.eval({a:input_ref}, device=cntk_device(device_id))
+
+    assert np.allclose(output_test, output_ref, atol=1e-4)

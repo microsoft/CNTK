@@ -140,7 +140,7 @@ namespace CNTKLibraryCSEvalExamples
                     bmp = new Bitmap(Bitmap.FromFile(imageList[sampleIndex]));
                     resized = bmp.Resize(imageWidth, imageHeight, true);
                     resizedCHW = resized.ParallelExtractCHW();
-                    // Aadd this sample to the data buffer.
+                    // Add this sample to the data buffer.
                     seqData.AddRange(resizedCHW);
                 }
 
@@ -301,14 +301,14 @@ namespace CNTKLibraryCSEvalExamples
             {
                 Console.WriteLine("\n===== Load model from memory buffer =====");
 
-                // For demo purpose, we first read the the model into memory
+                // For demo purpose, we first read the model into memory
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
                 string modelFilePath = "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 var modelBuffer = File.ReadAllBytes(modelFilePath);
 
-                // Load model from memroy buffer
+                // Load model from memory buffer
                 Function modelFunc = Function.Load(modelBuffer, device);
                 
                 // Get shape data for the input variable
@@ -358,7 +358,7 @@ namespace CNTKLibraryCSEvalExamples
         /// <summary>
         /// The example shows
         /// - how to evaluate model using asynchronous task. This is useful when offloading is needed to achieve better responsiveness.
-        /// The asynchronous evaluation is implemented as an extension method in CNTKExtensions.cs, which provides an asynchrounous facade for the synchronous Evaluation().
+        /// The asynchronous evaluation is implemented as an extension method in CNTKExtensions.cs, which provides an asynchronous facade for the synchronous Evaluation().
         /// </summary>
         /// <param name="device">Specify on which device to run the evaluation.</param>
         public static async Task EvaluationSingleImageAsync(DeviceDescriptor device)
@@ -421,7 +421,7 @@ namespace CNTKLibraryCSEvalExamples
         }
 
         /// <summary>
-        /// Print out the evalaution results.
+        /// Print out the evaluation results.
         /// </summary>
         /// <typeparam name="T">The data value type</typeparam>
         /// <param name="sampleSize">The size of each sample.</param>

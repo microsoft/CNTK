@@ -71,17 +71,27 @@ for %%D in (
   Cntk.Deserializers.HTK-%CNTK_COMPONENT_VERSION%.dll
   Cntk.Deserializers.TextFormat-%CNTK_COMPONENT_VERSION%.dll
   Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.BinaryConvolutionExample-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll  
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
-  mkl_cntk_p.dll
+  mklml.dll
 ) do (
   if defined CNTK_LIBRARIES (
     set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
   ) else (
     set CNTK_LIBRARIES=%CNTK_LIB_PATH%\%%D
   )
+)
+
+@REM mkldnn.dll is optional
+if exist mkldnn.dll (
+ set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\mkldnn.dll
+)
+
+@REM Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll is optional
+if exist Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll (
+ set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll
 )
 
 @REM Cntk.Deserializers.Image-%CNTK_COMPONENT_VERSION%.dll (plus dependencies) is optional

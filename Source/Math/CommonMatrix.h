@@ -51,6 +51,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 MATH_API void SetMathLibTraceLevel(int traceLevel);
 MATH_API int GetMathLibTraceLevel();
 
+inline bool IsGpu(DEVICEID_TYPE deviceId)
+{
+    return deviceId > CPUDEVICE;
+}
+
 class MATH_API TracingGPUMemoryAllocator
 {
 private:

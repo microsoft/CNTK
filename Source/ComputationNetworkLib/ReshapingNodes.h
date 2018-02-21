@@ -878,8 +878,8 @@ public:
     
 
 public:
-    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<size_t> head, std::vector<size_t> foot, PaddingType mode = PaddingType::CONSTANTPAD, ElemType constantValue = 0)
-        : Base(deviceId, name), m_head(head), m_foot(foot), m_mode(mode), m_constant_value(constantValue)
+    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<size_t> head, std::vector<size_t> foot, PaddingType mode = PaddingType::CONSTANTPAD, double constantValue = 0)
+        : Base(deviceId, name), m_head(head), m_foot(foot), m_mode(mode), m_constant_value((ElemType)constantValue)
     {
     }
 

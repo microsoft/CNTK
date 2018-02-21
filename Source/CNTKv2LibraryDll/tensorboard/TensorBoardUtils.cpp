@@ -11,6 +11,7 @@
 #pragma warning(pop)
 
 #include "Utils.h"
+#include "Basics.h"
 
 namespace CNTK 
 {
@@ -264,27 +265,20 @@ namespace CNTK
 
     #ifndef CNTK_UWP
 
-        // Ensure OpenCV's imgproc library appears as direct dependency at link
-        // time so rpath will apply (Linux). // TODO find a better way
-        void _dummyRefForOpenCVImgProc()
+        void WriteImageToBuffer(void* matrix, DataType dtype, int height, int width, int depth, std::vector<unsigned char>& buffer)
         {
-            cvThreshHist(0, 0.0);
-        }
+            typedef void(*EncodeImageAsPNG)(void* matrix, DataType dtype, int height, int width, int depth, std::vector<unsigned char>& buffer);
+            static EncodeImageAsPNG encodeImageAsPNG = nullptr;
 
-        void WriteImageToBuffer(void* matrix, int height, int weight, int dataType, std::vector<uchar>& buffer)
-        {
-            assert(matrix != nullptr);
-            assert(&buffer != nullptr);
-            vector<int> parameters = vector<int>(2);
-            parameters[0] = CV_IMWRITE_PNG_COMPRESSION;
-            parameters[1] = 3;//default(3)  0-9
-            cv::Mat source = cv::Mat(height, weight, dataType, matrix);
-
-            if (!imencode(".png", source, buffer, parameters)) {
-                fprintf(stderr, "TensorBoardFileWriter: PNG encoding failed. ");
-                return;
+            if (encodeImageAsPNG == nullptr)
+            {
+                Microsoft::MSR::CNTK::Plugin plugin;
+                encodeImageAsPNG = (EncodeImageAsPNG)plugin.Load(L"ImageWriter", "EncodeImageAsPNG");
             }
+
+            encodeImageAsPNG(matrix, dtype, height, width, depth, buffer);
         }
+
     #endif // !CNTK_UWP
     }
 }

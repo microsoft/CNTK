@@ -35,6 +35,12 @@ namespace ONNX
             { L"strides", "strides" },
             { L"autoPadding", "pads" },
         } } },
+        { L"ROIPooling",{ {
+            { L"ROIPooling",  "MaxRoiPool" },
+            // { L"poolingType",  "" }, // always Max
+            { L"roiOutputShape", "pooled_shape" },
+            { L"spatialScale", "spatial_scale" },
+            } } },
         { L"Convolution", { {
             { L"Convolution", "Conv" },
             { L"kernelShape", "kernel_shape" },
@@ -64,7 +70,7 @@ namespace ONNX
             { L"epsilon", "epsilon" },
             // { L"", "momentum" },
         } } },
-        // from ONNX experiament, added to test Caffe models
+        // from ONNX experiment, added to test Caffe models
         // TODO: set key as BatchNormalization instead of BatchNormalizationCaffe
         { L"BatchNormalizationCaffe",{ {
             { L"BatchNormalization", "SpatialBN" },
@@ -72,10 +78,16 @@ namespace ONNX
             // { L"", "is_test" },
             { L"epsilon", "epsilon" },
             // { L"", "momentum" },
-            } } },
+        } } },
+        { L"LayerNormalization",{ {
+            { L"LayerNormalization", "LayerNormalization" },
+            { L"initial_scale", "initial_scale" },
+            { L"initial_bias", "initial_bias" },
+            { L"epsilon", "epsilon" },
+        } } },
         { L"LocalResponseNormalization",{ {
             { L"LocalResponseNormalization", "LRN" },
-            { L"depthRadius", "size" },
+            { L"size", "size" },
             { L"bias", "bias" },
             { L"alpha", "alpha" },
             { L"beta", "beta" },
@@ -85,32 +97,36 @@ namespace ONNX
             { L"dropoutRate", "ratio" },
             // { L"", "is_test" },
         } } },
+        { L"Reshape",{ {
+            { L"Reshape", "Reshape" },
+            { L"shape", "shape" },
+            } } },
         { L"Flatten",{ {
             { L"Flatten", "Flatten" },
+            { L"axis", "axis" },
         } } },
-
         // From Generator
-        { L"UniformRandom", { {
+        { L"RandomDistribution", { {
             { L"UniformRandom", "RandomUniform" },
             // { L"", "low" },
             // { L"", "high" },
             { L"rngSeed", "seed" },
             { L"newShape", "shape" },
         } } },
-        { L"NormalRandom", { {
+        { L"RandomDistribution", { {
             { L"NormalRandom", "RandomNormal" },
             // { L"", "mean" },
             // { L"", "scale" },
             { L"rngSeed", "seed" },
             { L"newShape", "shape" },
         } } },
-        { L"UniformRandomLike", { {
+        { L"RandomDistribution", { {
             { L"UniformRandomLike", "RandomUniformLike" },
             // { L"", "low" },
             // { L"", "high" },
             { L"rngSeed", "seed" },
         } } },
-        { L"NormalRandomLike", { {
+        { L"RandomDistribution", { {
             { L"NormalRandomLike", "RandomNormalLike" },
             // { L"", "mean" },
             // { L"", "scale" },
@@ -130,11 +146,29 @@ namespace ONNX
         { L"ElementDivide", { {
             { L"ElementDivide", "Div" },
         } } },
+        { L"And",{ {
+            { L"And", "And" },
+            } } },
+        { L"Not",{ {
+            { L"Not", "Not" },
+        } } },
+        { L"Or",{ {
+            { L"Or", "Or" },
+        } } },
+        { L"Xor",{ {
+            { L"Xor", "Xor" },
+        } } },
         { L"Negate", { {
             { L"Negate", "Neg" },
         } } },
         { L"Abs", { {
             { L"Abs", "Abs" },
+        } } },
+        { L"Mean",{ {
+            { L"Mean", "Mean" },
+        } } },
+        { L"Sum",{ {
+            { L"Sum", "Sum" },
         } } },
         { L"Reciprocal", { {
             { L"Reciprocal", "Reciprocal" },
@@ -144,6 +178,9 @@ namespace ONNX
         } } },
         { L"Ceil", { {
             { L"Ceil", "Ceil" },
+        } } },
+        { L"Clip",{ {
+            { L"Clip", "Clip" },
         } } },
         { L"Sqrt", { {
             { L"Sqrt", "Sqrt" },
@@ -178,7 +215,7 @@ namespace ONNX
             // { L"", "exponent" },
         } } },
         { L"Times", { {
-            { L"Times", "Dot" },
+            { L"Times", "MatMul" },
         } } },
         { L"PReLU", { {
             { L"PReLU", "PRelu" },
@@ -189,63 +226,107 @@ namespace ONNX
         { L"ElementMax", { {
             { L"ElementMax", "Max" },
         } } },
-        { L"ElementMax", { {
-            { L"ElementMax", "Min" },
+        { L"ElementMin", { {
+            { L"ElementMin", "Min" },
         } } },
-        // { L"", "Sum" },
+        { L"HardSigmoid",{ {
+            { L"HardSigmoid", "HardSigmoid" },
+            { L"alpha", "alpha" },
+            { L"beta", "beta" },
+        } } },
+        { L"Hardmax",{ {
+            { L"Hardmax", "Hardmax" },
+            { L"axis", "axis" },
+        } } },
         { L"Softmax", { {
             { L"Softmax", "Softmax" },
             { L"axis", "axis" },
         } } },
+        { L"LogSoftmax",{ {
+            { L"LogSoftmax", "LogSoftmax" },
+            { L"axis", "axis" },
+        } } },
+        { L"Softplus",{ {
+            { L"Softplus", "Softplus" },
+        } } },
+        { L"Softsign",{ {
+            { L"Softsign", "Softsign" },
+        } } },        
+        { L"Equal",{ {
+            { L"Equal", "Equal" },
+            { L"axis ", "axis" },
+            { L"broadcast", "broadcast" },
+        } } },
+        { L"Greater",{ {
+            { L"Greater", "Greater" },
+            { L"axis ", "axis" },
+            { L"broadcast", "broadcast" },
+            } } },
+        { L"Less",{ { 
+            { L"Less", "Less" }, 
+            { L"axis ", "axis" }, 
+            { L"broadcast", "broadcast" }, 
+        } } },
 
         // From reduction
-        { L"ReduceMax", { {
-            { L"ReduceMax", "ReduceMax" },
+        { L"ReduceElements", { {
+            { L"Max", "ReduceMax" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceMin", { {
-            { L"ReduceMin", "ReduceMin" },
+        { L"ReduceElements", { {
+            { L"Min", "ReduceMin" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceSum", { {
-            { L"ReduceSum", "ReduceSum" },
+        { L"ReduceElements", { {
+            { L"Sum", "ReduceSum" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceMean", { {
-            { L"ReduceMean", "ReduceMean" },
+        { L"ReduceElements", { {
+            { L"Mean", "ReduceMean" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceProd", { {
-            { L"ReduceProd", "ReduceProd" },
+        { L"ReduceElements", { {
+            { L"Prod", "ReduceProd" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"ReduceLogSum", { {
-            { L"ReduceLogSum", "ReduceLogSumExp" },
+        { L"ReduceElements", { {
+            { L"LogSum", "ReduceLogSumExp" },
             { L"axisVec", "axes" },
             { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"Argmax", { {
+        { L"ReduceElements", { {
             { L"Argmax", "ArgMax" },
             { L"axis", "axes" },
-            // { L"", "keepdims" },
+            { L"reductionKeepDimensions", "keepdims" },
         } } },
-        { L"Argmin", { {
+        { L"ReduceElements", { {
             { L"Argmin", "ArgMin" },
             { L"axis", "axes" },
-            // { L"", "keepdims" },
+            { L"reductionKeepDimensions", "keepdims" },
+        } } },
+        { L"ReduceL1", { {
+            { L"ReduceL1", "ReduceL1" },
+            { L"axis", "axes" },
+            { L"keepdims", "keepdims" },
+        } } },
+        { L"ReduceL2",{ {
+            { L"ReduceL2", "ReduceL2" },
+            { L"axis", "axes" },
+            { L"keepdims", "keepdims" },
+        } } },
+        { L"ReduceSumSquare",{ {
+            { L"ReduceSumSquare", "ReduceSumSquare" },
+            { L"axis", "axes" },
+            { L"keepdims", "keepdims" },
         } } },
 
         // From tensor
         // { L"", "Cast" },
-        { L"Reshape", { {
-            { L"Reshape", "Reshape" },
-            { L"newShape", "shape" },
-        } } },
         { L"Splice", { {
             { L"Splice", "Concat" },
             { L"axis", "axis" },
@@ -253,45 +334,137 @@ namespace ONNX
         // { L"", "Split" },
         { L"Slice", { {
             { L"Slice", "Slice" },
+            { L"axes", "axes" },
             { L"beginIndexVec", "starts" },
             { L"endIndexVec", "ends" },
         } } },
-        { L"Transpose", { {
-            { L"Transpose", "Transpose" },
+        { L"TransposeAxes", { {
+            { L"TransposeAxes", "Transpose" },
             { L"axisVec", "perm" },
         } } },
-        { L"GatherOp", { {
-            { L"GatherOp", "Gather" },
+        { L"Pad",{ {
+            { L"Pad", "Pad" },
+            { L"mode", "mode" },
+            { L"pattern", "pads" },
+            { L"constant_value", "value"},
+            } } },
+        { L"Gather", { {
+            { L"Gather", "Gather" },
+            { L"axis", "axis" },
         } } },
-        // { L"", "Squeeze" },
+        { L"DepthToSpace",{ {
+            { L"DepthToSpace", "DepthToSpace" },
+        } } },
+        { L"SpaceToDepth",{ {
+            { L"SpaceToDepth", "SpaceToDepth" },
+        } } },
+        { L"Squeeze",{ {
+            { L"Squeeze", "Squeeze" },
+            { L"axes", "axes" },
+        } } },
+        { L"ImageScaler",{ {
+            { L"ImageScaler", "ImageScaler" },
+            } } },
+        { L"MeanVarianceNormalization",{ {
+            { L"MeanVarianceNormalization", "MeanVarianceNormalization" },
+            { L"useStatsAcrossChannels", "across_channels" },
+            { L"doVarianceScaling", "normalize_variance" },
+            } } },
     };
 
-    std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
-        { L"LeakyReLU", { 0, 1 } },
-        { L"SELU", { 0, 1, 2 } },
-        { L"PReLU", { 0 } },
-        { L"ElementMax", {} },
-        { L"ElementMin", {} },
-        { L"Softmax", {} },
-        { L"LocalResponseNormalization", { 0, 1, 2 } }
-    };
+    // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
+    // return a map from cntk attribute name to onnx attribute name. 
+    const AttributesMapping& Operators::FindAttributeMap(const std::wstring &cntkOpName, const std::wstring& cntkAttributeOpName)
+    {
+        std::unordered_multimap<std::wstring, AttributesMapping>::iterator itNodeFn =
+            std::find_if(_cntkToONNXOpName.begin(), _cntkToONNXOpName.end(),
+                [cntkOpName, cntkAttributeOpName](std::unordered_multimap<std::wstring, AttributesMapping>::value_type nodeFn)
+        {return nodeFn.first == cntkOpName && nodeFn.second.map.find(cntkAttributeOpName) != nodeFn.second.map.end(); });
 
-    std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {
-        { L"Convolution", { 1, 0 } },
-        { L"ConvolutionTranspose", { 1, 0 } },
-        { L"BatchNormalization", { 0, 1, 2, 3, 4, -1 } },
-        { L"Times", { 1, 0 } },
-    };
+        if (itNodeFn == _cntkToONNXOpName.end())
+        {
+            LogicError("Cannot map to ONNX op from CNTK ReduceElements operation: %s / %s",
+                ToString(cntkOpName).c_str(), ToString(cntkAttributeOpName).c_str());
+        }
 
-    //
-    // CNTK Layer API needs to be treated specially.
-    //
-    std::set<std::wstring> Operators::_cntkLayerOPName = {
-        { L"Convolution" },
-        { L"ConvolutionTranspose" },
-        { L"BatchNormalization" },
-        { L"Dropout" },
-    };
+        return itNodeFn->second;
+    }
 
-}
+    std::tuple<int, int> Operators::GetElementWiseInputIndices(const std::wstring& opName)
+    {
+        if (!SupportBroadcast(opName))
+        {
+            LogicError("Calling GitElementWiseInputIndices with invalid op: %s", ToString(opName).c_str());
+        }
+
+        int index0 = 0;
+        while (!IsValidInputs(opName, index0))
+        {
+            index0++;
+        }
+
+        int index1 = index0 + 1;
+        while (!IsValidInputs(opName, index1))
+        {
+            index1++;
+        }
+
+        return make_tuple(index0, index1);
+    }
+    bool Operators::SupportBroadcast(const std::wstring& cntkOpName)
+    {
+        return (cntkOpName == L"Plus") || (cntkOpName == L"Minus") ||
+            (cntkOpName == L"ElementTimes") || (cntkOpName == L"ElementDivide") ||
+            (cntkOpName == L"And") || (cntkOpName == L"Or") || (cntkOpName == L"Xor");
+    }
+
+    bool Operators::SupportBroadcastONNXOp(const std::string& onnxOpName)
+    {
+        return (onnxOpName == "Add") || (onnxOpName == "Sub") ||
+            (onnxOpName == "Mul") || (onnxOpName == "Div") ||
+            (onnxOpName == "And") || (onnxOpName == "Or") || (onnxOpName == "Xor");
+    }
+
+
+        std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
+            { L"Clip",{ 1, 2 } },
+            { L"LeakyReLU",{ 0, 1 } },
+            { L"SELU",{ 0, 1, 2 } },
+            { L"PReLU",{ 0 } },
+            { L"ElementMax",{} },
+            { L"ElementMin",{} },
+            { L"HardSigmoid",{ 0, 1, 2, 3 } },
+            { L"Mean",{ 0 } },
+            { L"Softmax",{} },
+            { L"LocalResponseNormalization",{ 0, 1, 2 } },
+            { L"And",{ 0 } },
+            { L"Or",{ 0 } },
+            { L"Xor",{ 0 } },
+            { L"Not",{ 0, 1 } },
+            { L"Softplus",{ 0 } },
+            { L"Softsign",{ 0 } },
+            { L"ImageScaler",{ 0, 1, 2, 3 } },
+        };
+
+        std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {
+            { L"Convolution",{ 1, 0 } },
+            { L"ConvolutionTranspose",{ 1, 0 } },
+            { L"BatchNormalization",{ 0, 1, 2, 3, 4, -1 } },
+            { L"Times",{ 1, 0 } },
+            { L"Gather",{ 1, 0 } },
+            { L"PReLU",{ 1, 0 } },
+            { L"LayerNormalization",{ 1, 2, 0 } },
+        };
+
+        //
+        // CNTK Layer API needs to be treated specially.
+        //
+        std::set<std::wstring> Operators::_cntkLayerOPName = {
+            { L"Convolution" },
+            { L"ConvolutionTranspose" },
+            { L"BatchNormalization" },
+            { L"Dropout" },
+        };
+
+    }
 }

@@ -246,3 +246,13 @@ def test_nce_backward_indices(classes, xdim, batch, expected_value, device_id, p
         gb[np.nonzero(zb.eval({vb: v[b]}).ravel())] += 1
     for i in range(classes):
         assert gb[i] == expected_count[i] or (i in indices and gb[i] == trials)
+
+def test_weighted_binary_cross_entropy_with_reduced_sequences():
+    pytest.skip("Skip this test until the cudaFree crash on exit is fixed for Windows")
+
+    a = C.sequence.input_variable((), sequence_axis=C.Axis("a"))
+    b = C.sequence.input_variable((), sequence_axis=C.Axis("b"))
+    w = C.sequence.input_variable((), sequence_axis=C.Axis("w"))
+    cd = C.weighted_binary_cross_entropy(C.sequence.first(a), C.sequence.first(b), C.sequence.first(w))
+    data = np.random.random((4,)).astype(np.float32)
+    cd.eval({a:data, b:data, w:data})

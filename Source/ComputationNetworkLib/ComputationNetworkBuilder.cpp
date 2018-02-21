@@ -59,6 +59,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(DummyCriterionNode))                   return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DynamicAxisNode))                      return New<DynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EditDistanceErrorNode))                return New<EditDistanceErrorNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(StopGradientNode))                     return New<StopGradientNode <ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ElementTimesNode))                     return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EnvironmentInputNode))                 return New<EnvironmentInputNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EpochAccumulatorNode))                 return New<EpochAccumulatorNode<ElemType>>(forward<_Types>(_Args)...);
@@ -110,6 +111,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))              return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LatticeSequenceWithSoftmaxNode))       return New<LatticeSequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef COMING_SOON
     else if (nodeType == OperationNameOf(SequenceDecoderNode))                  return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
@@ -224,9 +226,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 
 // this is used in V2
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
+template <class ValueType>
+shared_ptr<ComputationNode<ValueType>> ComputationNetworkBuilder<ElemType>::TypedCreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
 {
-    return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, tensorShape));
+    return net.AddNodeToNetWithElemType(New<LearnableParameter<ValueType>>(net.GetDeviceId(), paramName, tensorShape));
 }
 
 // TODO: change these to take an actual object instead of a name for dynamicAxis
@@ -443,6 +446,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::EditD
 }
 
 template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::StopGradient(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<StopGradientNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean,
                                                                                                       const ComputationNodePtr InvStdDev, const std::wstring nodeName)
 {
@@ -504,6 +513,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, loglikelihood });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeSequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const ComputationNodePtr lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& latticeConfigPath, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<LatticeSequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath, hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen), { label, prediction, loglikelihood, lattice });
 }
 
 template <class ElemType>
@@ -942,13 +957,25 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Batch
                                                                                               const ComputationNodePtr scale, const ComputationNodePtr bias,
                                                                                               const ComputationNodePtr runMean, const ComputationNodePtr runVariance, const ComputationNodePtr runCount,
                                                                                               bool spatial, double normalizationTimeConstant, double blendTimeConstant, double epsilon, bool useCntkEngine,
-                                                                                              ImageLayoutKind imageLayoutKind,
+                                                                                              bool disableRegularization, ImageLayoutKind imageLayoutKind,
                                                                                               const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runVariance, runCount });
+    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, disableRegularization, imageLayoutKind), { input, scale, bias, runMean, runVariance, runCount });
 }
 
 template class ComputationNetworkBuilder<float>;
 template class ComputationNetworkBuilder<double>;
+template class ComputationNetworkBuilder<half>;
+
+// V2 allows mixed precision
+template shared_ptr<ComputationNode<float>> ComputationNetworkBuilder<float>::TypedCreateLearnableParameter<float>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<float>::TypedCreateLearnableParameter<double>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<float>::TypedCreateLearnableParameter<half>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<float>> ComputationNetworkBuilder<double>::TypedCreateLearnableParameter<float>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<double>::TypedCreateLearnableParameter<double>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<double>::TypedCreateLearnableParameter<half>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<float>> ComputationNetworkBuilder<half>::TypedCreateLearnableParameter<float>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<half>::TypedCreateLearnableParameter<double>(const std::wstring& paramName, const TensorShape& tensorShape);
+template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<half>::TypedCreateLearnableParameter<half>(const std::wstring& paramName, const TensorShape& tensorShape);
 
 }}}

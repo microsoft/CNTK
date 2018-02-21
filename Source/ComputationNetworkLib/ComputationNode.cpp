@@ -10,13 +10,21 @@
 #include "ComputationNetworkBuilder.h" // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
 #include "TensorShape.h"
 
+#ifndef  CNTK_UWP
+#include "PerformanceProfiler.h"
+#ifdef _WIN32
+#define PERFORMANCE_PROFILER_LIB_NAME "Cntk.PerformanceProfiler-"##CNTK_COMPONENT_VERSION##".lib"
+#pragma comment(lib, PERFORMANCE_PROFILER_LIB_NAME)
+#endif
+#endif
+
 #ifndef let
 #define let const auto
 #endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-using namespace std;
+    using namespace std;
 
 // -----------------------------------------------------------------------
 // subroutines for evaluation
@@ -48,11 +56,7 @@ void ComputationNode<ElemType>::LazyZeroGradient(const ComputationNodeBase* grad
         gradientInitializedBy->ImplementsGradientOptimization(this) != ParentGradientOptimization::None &&
         1 == std::count_if(inputs.begin(), inputs.end(), [this](ComputationNodeBasePtr p) { return &*p == this; }))
     {
-        // don't need update size as parent already set it to the right size when reusing
-        if (!ParentGradientReused())
-        {
-            UpdateDataSize(Gradient());
-        }
+        UpdateDataSize(Gradient(), ParentGradientReused());
         m_gradientInitializedBy = gradientInitializedBy;
     }
     else
@@ -89,18 +93,18 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
-        ComputationNodePtr child = Input(i);
-        if (child->m_needsGradient &&
+        ComputationNodeBasePtr child = m_inputs[i];
+        if (child->NeedsGradient() &&
             ((childrenInThisLoop  && child->IsPartOfLoop() == IsPartOfLoop()) ||
              (childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()) ))
         {
             // fprintf(stderr, "Backprop: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
-            if (!m_needsGradient)
+            if (!NeedsGradient())
                 LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
 #if DUMPOUTPUT
             fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
-            child->LazyZeroGradient(this); // set gradient to 0 if this is the first time
+            SMART_NODE_INVOKE(ComputationNode, child, LazyZeroGradient, this); // set gradient to 0 if this is the first time
 
             // If we propagate from a loop to a node that is outside the loop, we are not efficient.
             // This case is handled by SEQTraversalFlowControlNode::Backprop().
@@ -112,7 +116,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
             }
 
             // before backprop, verify gradient optimization info
-            Input(i)->VerifyGradientOptimization(this);
+            SMART_NODE_INVOKE(ComputationNode, child, VerifyGradientOptimization, this);
 
             // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
             BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
@@ -757,17 +761,81 @@ template <class ElemType>
     {
         for (size_t i = 0; i < m_inputs.size(); i++)
         {
-            ComputationNodePtr child = Input(i);
-            if (child->m_needsGradient)
+            ComputationNodeBasePtr child = m_inputs[i];
+            if (child->NeedsGradient())
             {
-                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-                if (child->Gradient().HasNan("EndBackprop"))
+                SMART_NODE_INVOKE(ComputationNode, child, MaskMissingGradientColumnsToZero, FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+
+                bool hasNan = false;
+                SMART_NODE_INVOKE_WITH_RET(ComputationNode, child, Gradient().HasNan, hasNan, "EndBackprop");
+                if (hasNan)
                 {
                     LogicError("%ls %ls operation unexpectedly produced NaN gradients on its input %ls.", NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str());
                 }
             }
         }
     }
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginTiming(bool backward)
+{
+    if (!Globals::ShouldEnableNodeTiming()) return;
+
+    int phase = (backward ? (int)TimingPhase_Backward : (int)TimingPhase_Forward);
+    auto& timing = m_timing[phase];
+    timing.beginTime = std::chrono::system_clock::now();
+    timing.count++;
+#ifndef  CNTK_UWP
+    timing.profilerId = ProfilerTimeBegin();
+#endif
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndTiming(bool backward)
+{
+    if (!Globals::ShouldEnableNodeTiming()) return;
+
+    int phase = (backward ? (int)TimingPhase_Backward : (int)TimingPhase_Forward);
+    auto& timing = m_timing[phase];
+    timing.duration += (std::chrono::system_clock::now() - timing.beginTime);
+
+#ifndef  CNTK_UWP
+    // the order must match enum
+    static const char* postfixes[TimingPhase_Total] =
+    {
+        "Forward",
+        "Backward",
+    };
+
+    if (timing.profilerName.length() != m_nodeName.length() + strlen(postfixes[phase]))
+    {
+        static char name[256];
+        sprintf_s(name, _countof(name), "%S%s", m_nodeName.c_str(), postfixes[phase]);
+        timing.profilerName = name;
+    }
+    ProfilerTimeEnd(timing.profilerId, timing.profilerName.c_str());
+#endif
+}
+
+template<class ElemType>
+void ComputationNode<ElemType>::PrintForwardBackwardTime()
+{
+    if (GetInputs().size() == 0) return;
+
+    auto& forwardCount = m_timing[TimingPhase_Forward].count;
+    auto forwardDuration = m_timing[TimingPhase_Forward].duration.count();
+    auto& backwardCount = m_timing[TimingPhase_Backward].count;
+    auto backwardDuration = m_timing[TimingPhase_Backward].duration.count();
+    fprintf(stderr, "%-30S forward avg %07fs, backward avg %07fs (fwd# %d|bwd# %d)\n",
+        m_nodeName.c_str(),
+        forwardCount == 0 ? 0 : forwardDuration / forwardCount,
+        backwardCount == 0 ? 0 : backwardDuration / backwardCount,
+        forwardCount,
+        backwardCount);
+
+    for (auto& timing : m_timing)
+        timing.Reset();
 }
 
 template <class ElemType>
@@ -1008,7 +1076,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
                     double absSumLocal = 0;
                     for (size_t j = 0; j < jend; j++) // loop over elements
                     {
-                        absSumLocal += abs(seqData[i * istride + j * jstride]);
+                        absSumLocal += (double)abs(seqData[i * istride + j * jstride]);
                     }
                     absSum += absSumLocal;
                 }
@@ -1140,6 +1208,7 @@ atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
 template <> map<size_t, map<size_t, shared_ptr<SingleMatrix>>> ComputationNode<float>::s_constOnes{};
 template <> map<size_t, map<size_t, shared_ptr<DoubleMatrix>>> ComputationNode<double>::s_constOnes{};
+template <> map<size_t, map<size_t, shared_ptr<HalfMatrix>>> ComputationNode<half>::s_constOnes{};
 
 // -----------------------------------------------------------------------
 // instantiate the core class templates
@@ -1147,6 +1216,7 @@ template <> map<size_t, map<size_t, shared_ptr<DoubleMatrix>>> ComputationNode<d
 
 template class ComputationNode<float>;
 template class ComputationNode<double>;
+template class ComputationNode<half>;
 
 }}}
 

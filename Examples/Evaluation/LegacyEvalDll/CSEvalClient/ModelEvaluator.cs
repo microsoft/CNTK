@@ -54,7 +54,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private Dictionary<string, List<float>> m_inputs;
 
         /// <summary>
-        /// Indicates if the object is diposed
+        /// Indicates if the object is disposed
         /// </summary>
         private static bool Disposed
         {

@@ -86,7 +86,7 @@ namespace CNTK.CSTrainingExamples
                     break;
                 totalCount += (int)minibatchData[featureStreamInfo].numberOfSamples;
 
-                // expected lables are in the minibatch data.
+                // expected labels are in the minibatch data.
                 var labelData = minibatchData[labelStreamInfo].data.GetDenseData<float>(labelOutput);
                 var expectedLabels = labelData.Select(l => l.IndexOf(l.Max())).ToList();
 

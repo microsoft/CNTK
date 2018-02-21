@@ -10,12 +10,12 @@ import os, sys
 import argparse
 import easydict # pip install easydict
 import cntk
-from cntk import Trainer, UnitType, load_model, Axis, input_variable, parameter, times, combine, \
+from cntk import Trainer, load_model, Axis, input_variable, parameter, times, combine, \
     softmax, roipooling, plus, element_times, CloneMethod, alias, Communicator, reduce_sum
 from cntk.core import Value
 from cntk.initializer import normal
 from cntk.layers import placeholder, Constant, Sequential
-from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_schedule
+from cntk.learners import momentum_sgd, learning_parameter_schedule_per_sample, momentum_schedule
 from cntk.logging import log_number_of_parameters, ProgressPrinter
 from cntk.logging.graph import find_by_name, plot
 from cntk.losses import cross_entropy_with_softmax
@@ -295,11 +295,11 @@ def train_fast_rcnn(cfg):
         biases = [p for p in params if '.b' in p.name or 'b' == p.name]
         others = [p for p in params if not p in biases]
         bias_lr_mult = cfg["CNTK"].BIAS_LR_MULT
-        lr_schedule = learning_rate_schedule(lr_per_sample_scaled, unit=UnitType.sample)
+        lr_schedule = learning_parameter_schedule_per_sample(lr_per_sample_scaled)
         learner = momentum_sgd(others, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight, unit_gain=False, use_mean_gradient=True)
 
         bias_lr_per_sample = [v * bias_lr_mult for v in cfg["CNTK"].LR_PER_SAMPLE]
-        bias_lr_schedule = learning_rate_schedule(bias_lr_per_sample, unit=UnitType.sample)
+        bias_lr_schedule = learning_parameter_schedule_per_sample(bias_lr_per_sample)
         bias_learner = momentum_sgd(biases, bias_lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight, unit_gain=False, use_mean_gradient=True)
         trainer = Trainer(None, (loss, pred_error), [learner, bias_learner])
 

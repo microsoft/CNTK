@@ -87,6 +87,8 @@ public:
 
     DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
 
+    void PrintNodeTiming();
+
 protected:
     void ConstructFromRoots(DEVICEID_TYPE deviceId, std::deque<ComputationNodeBasePtr>&& roots, const map<ComputationNodeBasePtr, ComputationNodeBasePtr>& replacements);
     void ProcessSpecialNodes(const ScriptableObjects::IConfigRecord& config, std::deque<ComputationNodeBasePtr>& roots);
@@ -1309,10 +1311,12 @@ typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 template <typename ElemType> static inline const wchar_t* ElemTypeName();
 template <> /*static*/ inline const wchar_t* ElemTypeName<float>()  { return L"float"; }
 template <> /*static*/ inline const wchar_t* ElemTypeName<double>() { return L"double"; }
+template <> /*static*/ inline const wchar_t* ElemTypeName<half>() { return L"half"; }
 
 // The following emits the class and enables the BaseMatrix<double> to be available (used by EvalDll)
 // The corresponding Matrix<float> is emitted in the SetDeviceId function above.
 template class Matrix<double>;
+template class Matrix<half>;
 
 // TODOs:
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)

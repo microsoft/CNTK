@@ -107,6 +107,7 @@ struct ProfilerState
     unsigned long long      customEventBufferBytes;      // Number of bytes allocated for the custom event buffer
     unsigned long long      customEventOffset;           // Offset to current place in buffer
     unique_ptr<char[]>      customEventBuffer;           // Pointer to custom event buffer
+    long long               startClock;
 };
 
 
@@ -184,6 +185,11 @@ void PERF_PROFILER_API ProfilerEnable(bool enable)
         return;
 
     g_profilerState->enabled = enable;
+
+    if (enable)
+    {
+        g_profilerState->startClock = Clock::GetTimeStamp();
+    }
 }
 
 
@@ -363,7 +369,7 @@ void PERF_PROFILER_API ProfilerClose()
     ProfilerGenerateReport(fileName, timeInfo);
 
     // Generate detailed event file
-    fileName = g_profilerState->profilerDir + L"/" + std::wstring(timeStr) + L"_detail_" + g_profilerState->logSuffix + L".csv";
+    fileName = g_profilerState->profilerDir + L"/" + std::wstring(timeStr) + L"_detail_" + g_profilerState->logSuffix + L".json";
     ProfilerGenerateDetailFile(fileName);
 
     g_profilerState.reset();
@@ -386,6 +392,17 @@ unsigned int GetThreadId()
 #endif
 }
 
+//
+// Get current process id
+//
+unsigned int GetProcessId()
+{
+#ifdef _WIN32
+    return (unsigned int)GetCurrentProcessId();
+#else
+    return (unsigned int)syscall(SYS_getpid);
+#endif
+}
 
 //
 // Generate summary report.
@@ -524,7 +541,7 @@ void FormatBytesStr(char* str, size_t strLen, long long bytes)
 
 
 //
-// Generate detail event file.
+// Generate detail event file in chrome://tracing format (https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.yr703knxre9f)
 //
 void ProfilerGenerateDetailFile(const std::wstring& fileName)
 {
@@ -534,10 +551,12 @@ void ProfilerGenerateDetailFile(const std::wstring& fileName)
         RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", fileName.c_str());
     }
 
-    fprintfOrDie(f, "EventDescription,ThreadId,BeginTimeStamp(ms),EndTimeStamp(ms)\n");
+    fprintfOrDie(f, "[\n");
 
     char* eventPtr = g_profilerState->customEventBuffer.get();
 
+    bool firstRecord = true;
+    unsigned int pid = GetProcessId();
     while (eventPtr < (g_profilerState->customEventBuffer.get() + g_profilerState->customEventOffset))
     {
         char* descriptionStr = eventPtr;
@@ -546,10 +565,22 @@ void ProfilerGenerateDetailFile(const std::wstring& fileName)
         CustomEventRecord* eventRecord = (CustomEventRecord*)eventPtr;
         eventPtr += sizeof(CustomEventRecord);
 
-        fprintfOrDie(f, "\"%s\",%u,%.8f,%.8f\n", descriptionStr, eventRecord->threadId, 
-            1000.0 * TicksToSeconds(eventRecord->beginClock),
-            1000.0 * TicksToSeconds(eventRecord->endClock));
+        fprintfOrDie(f, "%s  {\"pid\":%u, \"tid\":%u, \"name\":\"%s\", \"cat\":\"PERF\", \"ph\":\"B\", \"ts\":%llu}",
+            firstRecord ? "" : ",\n",
+            pid,
+            eventRecord->threadId,
+            descriptionStr,
+            (unsigned long long)(1000000.0 * TicksToSeconds(eventRecord->beginClock - g_profilerState->startClock)));
+
+        firstRecord = false;
+        fprintfOrDie(f, ",\n  {\"pid\":%u, \"tid\":%u, \"name\":\"%s\", \"cat\":\"PERF\", \"ph\":\"E\", \"ts\":%llu}",
+            pid,
+            eventRecord->threadId,
+            descriptionStr,
+            (unsigned long long)(1000000.0 * TicksToSeconds(eventRecord->endClock - g_profilerState->startClock)));
     }
+
+    fprintfOrDie(f, "\n]\n");
 
     fclose(f);
 }

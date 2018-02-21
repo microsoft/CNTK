@@ -100,7 +100,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         // Bundling deserializers together.
         // Option whether we need to check data between different deserializers.
         bool cleanse = config(L"checkData", true);
-        deserializer = std::make_shared<Bundler>(config, deserializer, m_deserializers, cleanse);
+        deserializer = std::make_shared<Bundler>(config, m_corpus, deserializer, m_deserializers, cleanse);
     }
 
     int verbosity = config(L"verbosity", 0);
@@ -174,7 +174,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     // In case when there are transforms, applying them to the data.
     m_sequenceEnumerator = m_transforms.empty()
         ? m_sequenceEnumerator
-        : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator);
+        : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator, multiThreadedDeserialization);
 
     // TODO: Output stream descriptions - this should come from the network so that we can check 
     // that input matches what the network expects (including tensor shape, etc.).

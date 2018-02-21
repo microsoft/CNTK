@@ -9,6 +9,7 @@ import sys
 import argparse
 import zipfile
 import math
+import cntk
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
@@ -46,8 +47,8 @@ def train_cifar_resnet_for_eval(test_device, output_dir):
         print('train cifar_resnet only on GPU device. Use pre-trained models.')
     else:
         print('training cifar_resnet on GPU device...')
-        reader_train = TrainResNet_CIFAR10.create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True)
-        reader_test  = TrainResNet_CIFAR10.create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
+        reader_train = TrainResNet_CIFAR10.create_image_mb_source(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True, total_number_of_samples=1 * 50000)
+        reader_test  = TrainResNet_CIFAR10.create_image_mb_source(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
         TrainResNet_CIFAR10.train_and_evaluate(reader_train, reader_test, 'resnet20', epoch_size=512, max_epochs=1, profiler_dir=None, model_dir=output_dir)
 
     return base_path
@@ -76,8 +77,8 @@ def LanguageUnderstanding_train(reader, model, max_epochs):
     minibatch_size = 70
 
     learner = fsadagrad(criterion.parameters,
-                        lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
+                        lr         = learning_parameter_schedule_per_sample([0.003]*2+[0.0015]*12+[0.0003], epoch_size=epoch_size),
+                        momentum   = momentum_schedule(0.9, minibatch_size),
                         gradient_clipping_threshold_per_sample = 15,
                         gradient_clipping_with_truncation = True)
 

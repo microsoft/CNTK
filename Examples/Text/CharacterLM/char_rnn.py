@@ -9,7 +9,7 @@ import numpy as np
 import os
 import sys
 from cntk import Trainer, Axis
-from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.learners import momentum_sgd, momentum_schedule_per_sample, learning_parameter_schedule_per_sample
 from cntk.ops import sequence
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -157,11 +157,11 @@ def train_lm(training_file, epochs, max_num_minibatches):
     errs = classification_error(z, label_sequence)
 
     # Instantiate the trainer object to drive the model training
-    lr_per_sample = learning_rate_schedule(0.001, UnitType.sample)
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
+    lr_per_sample = learning_parameter_schedule_per_sample(0.001)
+    momentum_schedule = momentum_schedule_per_sample(0.9990913221888589)
     clipping_threshold_per_sample = 5.0
     gradient_clipping_with_truncation = True
-    learner = momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+    learner = momentum_sgd(z.parameters, lr_per_sample, momentum_schedule,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     progress_printer = ProgressPrinter(freq=100, tag='Training')

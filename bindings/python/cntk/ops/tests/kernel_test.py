@@ -154,6 +154,45 @@ def test_spatial_convolution(input_size, conv_size, result, device_id, precision
 
     unittest_helper(input_op, forward_input, expected_forward,
                     None, device_id=device_id, precision=precision)
+                    
+REDUCED_OUTPUT_CONVOLUTION_DATA = [
+    ([4,2,3], #input_size
+     [3,2,3], # convolution size
+     [[[55], [145], [235]],
+      [[145],[451], [757]],
+      [[235],[757], [1279]],
+      [[325],[1063],[1801]]])  # result
+]
+# this test handles 1D/2D convolution
+@pytest.mark.parametrize("input_size, conv_size, result", REDUCED_OUTPUT_CONVOLUTION_DATA)
+def test_reduced_output_convolution(input_size, conv_size, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(total_size, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+
+    # do the same for convolution kernel
+    total_size = np.prod(conv_size)
+    y = np.arange(total_size, dtype=dt)
+    conv_map = constant(value=y.reshape(conv_size), device=dev)
+
+    from cntk import convolution
+    input_op = convolution(conv_map, a, auto_padding=[False])
+
+    forward_input = {a: input_operand}
+    expected_forward = AA(result)
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                    None, device_id=device_id, precision=precision)
 
 POOLING_GEOMETRY_DATA = [
     ([1, 1, 6, 6], # input_size
@@ -747,6 +786,7 @@ def test_conv_free_static_axes(warmup_input_size, free_dimension_increment, filt
                 name='a_test')
 
     from cntk import convolution
+
     conv_op_without_free_dim = convolution(conv_map, a_ref, auto_padding=[False] + [True]*len(filter_size))
     conv_op_with_free_dim = convolution(conv_map, a_test, auto_padding=[False] + [True]*len(filter_size))
 
@@ -769,9 +809,9 @@ FREE_STATIC_AXES_WITH_DYNAMIC_AXIS_CONVOLUTION_DATA = [
      [2, 10]      # Half-open range for random selection of of batch-sizes (for reference and warmup)
      ),        
 ]
-# This test point exercises convolution with multiple free static axes and batch (dynamic) axis), and ensures that the result is the same as with fixed axes.
+# This test point exercises convolution/pooling/unpooling with multiple free static axes and batch (dynamic) axis), and ensures that the result is the same as with fixed axes.
 @pytest.mark.parametrize("warmup_input_size, free_dimension_increment, filter_size, num_output_channels, batch_size_range", FREE_STATIC_AXES_WITH_DYNAMIC_AXIS_CONVOLUTION_DATA)
-def test_conv_free_static_and_dynamic_axes(warmup_input_size, free_dimension_increment, filter_size, num_output_channels, batch_size_range, device_id, precision):
+def test_conv_pooling_free_static_and_dynamic_axes(warmup_input_size, free_dimension_increment, filter_size, num_output_channels, batch_size_range, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
@@ -797,19 +837,28 @@ def test_conv_free_static_and_dynamic_axes(warmup_input_size, free_dimension_inc
                 needs_gradient=False,
                 sequence_axis=C.Axis.new_unique_dynamic_axis('c'))
 
-    from cntk import convolution
-    conv_op_without_free_dim = convolution(conv_map, a_ref, auto_padding=[False] + [True]*len(filter_size))
-    conv_op_with_free_dim = convolution(conv_map, a_test, auto_padding=[False] + [True]*len(filter_size))
-    
-    input_img_ref = np.random.random((ref_batchsize,) + reference_input_size).astype(dt)
-    output_ref = conv_op_without_free_dim.eval({a_ref: input_img_ref}, device=dev)
+    from cntk import convolution, pooling, unpooling
 
-    input_img_warmup = np.random.random((warmup_batchsize,) + tuple(warmup_input_size)).astype(dt)
-    _ = conv_op_with_free_dim.eval({a_test: input_img_warmup}, device=dev)
-        
-    output_test = conv_op_with_free_dim.eval({a_test: input_img_ref}, device=dev)
+    def pooling_unpooling(x):
+        y = pooling(x, C.AVG_POOLING, (2,2), (2,2), auto_padding=[True])
+        return unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2), auto_padding=[True])
 
-    assert np.allclose(output_test, output_ref, atol = 1e-4)
+    conv_ops = [ [convolution(conv_map, a_ref, auto_padding=[False] + [True]*len(filter_size)),
+                  convolution(conv_map, a_test, auto_padding=[False] + [True]*len(filter_size))],
+                 [pooling_unpooling(a_ref),
+                  pooling_unpooling(a_test)] ]
+
+    for op_pair in conv_ops:
+        conv_op_without_free_dim, conv_op_with_free_dim = op_pair
+        input_img_ref = np.random.random((ref_batchsize,) + reference_input_size).astype(dt)
+        output_ref = conv_op_without_free_dim.eval({a_ref: input_img_ref}, device=dev)
+
+        input_img_warmup = np.random.random((warmup_batchsize,) + tuple(warmup_input_size)).astype(dt)
+        _ = conv_op_with_free_dim.eval({a_test: input_img_warmup}, device=dev)
+
+        output_test = conv_op_with_free_dim.eval({a_test: input_img_ref}, device=dev)
+
+        assert np.allclose(output_test, output_ref, atol = 1e-4)
 
 DILATED_CONVOLUTION_DATA = [
     # Dilation without passing.
@@ -892,30 +941,32 @@ def test_conv_free_static_with_sequence_unpack(num_features, sequence_len, filte
 
 GROUP_CONVOLUTION_DATA = [
     # 2D Convolution.
-    (2,         # groups
-     8,         # num_output_channels
-     4,         # num_input_channels
-     [30, 40],   # input_tensor_size (not including input channels)
-     [3, 3],    # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
-     2          # batch_size
+    (4,          # groups
+     112,        # num_output_channels
+     24,         # num_input_channels
+     [30, 40],   # input_tensor_size (not including channels)
+     [3, 3],     # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
+     6,          # kernel_channels: kC, number of input channels in kernel
+     2           # batch_size
      ),
     # 3D Convolution.
-    (3,              # groups
-     6,              # num_output_channels
-     9,              # num_input_channels
-     [15, 25, 30],   # input_tensor_size (not including input channels)
+    (2,              # groups
+     10,             # num_output_channels
+     6,              # num_input_channels
+     [15, 25, 30],   # input_tensor_size (not including channels)
      [3, 5, 7],      # filter_size: kernel size for convolution. Length defines 2D or 3D convolution.
+     3,              # kernel_channels: kC, number of input channels in kernel
      2               # batch_size
      )
 ]
 # This test point exercises group convolution, and tests against grouping simulated explicitly using convolution without grouping.
-@pytest.mark.parametrize("groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, batch_size", GROUP_CONVOLUTION_DATA)
-def test_group_conv(groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, batch_size, device_id, precision):
+@pytest.mark.parametrize("groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, kernel_channels, batch_size", GROUP_CONVOLUTION_DATA)
+def test_group_conv(groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, kernel_channels, batch_size, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
     # Generate result from CNTK API
-    conv_size = tuple([num_output_channels, num_input_channels]+filter_size)
+    conv_size = tuple([num_output_channels, kernel_channels]+filter_size)
     total_size = np.prod(conv_size)
     y = np.arange(total_size, dtype=dt).reshape(conv_size)
     conv_map = C.constant(value=y, device=dev)
@@ -933,8 +984,7 @@ def test_group_conv(groups, num_output_channels, num_input_channels, input_tenso
     # output for testing the CNTK implementation against.     
     num_out_channels_per_group = int(num_output_channels / groups)
     num_in_channels_per_group = int(num_input_channels / groups)
-    sub_kernels_init = [y[i * num_out_channels_per_group:(i+1) * num_out_channels_per_group, 
-                                 i * num_in_channels_per_group:(i+1) * num_in_channels_per_group, ...] for i in range(0, groups)]
+    sub_kernels_init = [y[i * num_out_channels_per_group:(i+1) * num_out_channels_per_group, ...] for i in range(0, groups)]
     sub_kernels = [C.ops.constant(value=np.ascontiguousarray(sub_kernels_init[i]), device=dev)
                           for i in range(0, groups)]
 

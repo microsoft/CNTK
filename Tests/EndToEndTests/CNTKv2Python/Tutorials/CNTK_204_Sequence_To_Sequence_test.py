@@ -16,7 +16,7 @@ def test_cntk_204_sequence_to_sequence_noErrors(nb):
     print(errors)
     assert errors == []
 
-expectedEvalError = 50
+expectedEvalError = 54
 
 def test_cntk_204_sequence_to_sequence_trainerror(nb):
     testCell = [cell for cell in nb.cells

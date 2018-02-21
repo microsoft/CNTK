@@ -34,7 +34,7 @@ while true; do
           PY_VERSION="$2"
           ;;
         *)
-          die "Invalid value for --py-version option, please specify 27, 34, 35, or 36."
+          die "Invalid value for --py-version option, please specify 27, 35, or 36."
           ;;
       esac
       shift 2
@@ -107,7 +107,7 @@ TARGET_CONFIGURATION="${BASH_REMATCH[1]}"
 
 # Anaconda download / install dependencies
 # [coreutils for sha{1,256}sum]
-PACKAGES="bzip2 wget ca-certificates coreutils"
+PACKAGES="bzip2 wget ca-certificates coreutils cmake zlib1g-dev"
 
 # CNTK run-time dependencies (OpenMPI)
 if [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*14\.04 ]]; then

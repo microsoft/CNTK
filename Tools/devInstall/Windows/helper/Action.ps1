@@ -415,7 +415,7 @@ if /I "%CMDCMDLINE%" neq ""%COMSPEC%" " (
     exit /b 0
 )
 set PATH=$cntkRootDir\cntk;%PATH%
-"$AnacondaBasePath\Scripts\activate" "$AnacondaBasePath\envs\cntk-py34"
+"$AnacondaBasePath\Scripts\activate" "$AnacondaBasePath\envs\cntk-py35"
 "@
 
     add-content -Path $filename -Encoding Ascii -Value $batchScript
@@ -478,7 +478,7 @@ function SetRegistryKeyNameData(
     }
 }
 
-function CreateBuildProtobufBatch(
+function CreateBuildSimpleBatch(
     [Parameter(Mandatory = $true)][hashtable] $table
 )
 {

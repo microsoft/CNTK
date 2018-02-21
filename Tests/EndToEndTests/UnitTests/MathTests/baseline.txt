@@ -1,9 +1,9 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
-    Hardware threads: 24
-    Total Memory: 264106968 kB
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz
+    Hardware threads: 12
+    Total Memory: 57700428 kB
 -------------------------------------------------------------------
-Running 155 test cases...
+Running 232 test cases...
 ===== Tensor test 'elementwise addition'
  [512 x 256] [512 x 256] -> [512 x 256] 	// GPU
     [512 x 256] [512 x 256] -> [512 x 256] 	// CPU
@@ -161,6 +161,170 @@ Running 155 test cases...
 -903.1638183594	
 ...
 MultiplyAndAdd Directly:  0.000044 seconds
+MultiplyAndAdd With ColumnSlice:  0.022985 seconds
+MultiplyAndAdd With ColumnSlice&:  0.023324 seconds
+MultiplyAndAdd With AssignColumnSlice:  0.023628 seconds
+AssignSigmoidOf With ColumnSlice:  0.024805 seconds
+AssignSigmoidOf With AssignColumnSlice:  0.134910 seconds
+testRnnForwardPropSRP:  0.015607 seconds
+TestOldRnnForwardPropSRP:  0.142985 seconds
+===== Tensor test 'elementwise addition'
+ [512 x 256] [512 x 256] -> [512 x 256] 	// GPU
+    [512 x 256] [512 x 256] -> [512 x 256] 	// CPU
+   
+###### GPU result (131072, 1) [0:7, 0:9] ######
+
+-0.2939453125	
+0.3642578125	
+-0.5078125000	
+1.7285156250	
+-0.9008789062	
+0.1518554688	
+-0.5244140625	
+0.9677734375	
+...
+
+###### CPU result (131072, 1) [0:7, 0:9] ######
+
+-0.2939453125	
+0.3642578125	
+-0.5078125000	
+1.7285156250	
+-0.9008789062	
+0.1518554688	
+-0.5244140625	
+0.9677734375	
+...
+===== Tensor test 'addition wth simple broadcasting'
+ [3 x 2] [3 x 1] -> [3 x 2] 	// GPU
+    [3 x 2] [3 x 1] -> [3 x 2] 	// CPU
+   
+###### GPU result (6, 1) [0:7, 0:9] ######
+
+-0.2939453125	
+0.3642578125	
+-0.5078125000	
+0.7373046875	
+-1.6298828125	
+-1.6914062500	
+
+###### CPU result (6, 1) [0:7, 0:9] ######
+
+-0.2939453125	
+0.3642578125	
+-0.5078125000	
+0.7373046875	
+-1.6298828125	
+-1.6914062500	
+===== Tensor test 'bias addition (broadcasting)'
+ [28 x 28 x 128 x 32] [1 x 1 x 128] -> [28 x 28 x 128 x 32] 	// GPU
+    [28 x 28 x 128 x 32] [1 x 1 x 128] -> [28 x 28 x 128 x 32] 	// CPU
+   
+###### GPU result (3211264, 1) [0:7, 0:9] ######
+
+-0.2939453125	
+0.8662109375	
+0.3125000000	
+0.7373046875	
+-1.1279296875	
+-0.8715820312	
+-0.5234375000	
+0.8701171875	
+...
+
+###### CPU result (3211264, 1) [0:7, 0:9] ######
+
+-0.2939453125	
+0.8662109375	
+0.3125000000	
+0.7373046875	
+-1.1279296875	
+-0.8715820312	
+-0.5234375000	
+0.8701171875	
+...
+===== Tensor test 'bias addition (broadcasting)'
+ [256 x 256 x 64 x 32] [1 x 1 x 64] -> [256 x 256 x 64 x 32] 	// GPU
+    [256 x 256 x 64 x 32] [1 x 1 x 64] -> [256 x 256 x 64 x 32] 	// CPU
+   
+###### GPU result (134217728, 1) [0:7, 0:9] ######
+
+-0.2939453125	
+0.8662109375	
+0.3125000000	
+0.7373046875	
+-1.1279296875	
+-0.8715820312	
+-0.5234375000	
+0.8701171875	
+...
+
+###### CPU result (134217728, 1) [0:7, 0:9] ######
+
+-0.2939453125	
+0.8662109375	
+0.3125000000	
+0.7373046875	
+-1.1279296875	
+-0.8715820312	
+-0.5234375000	
+0.8701171875	
+...
+===== Tensor test 'bias gradient (reduction)'
+ [2048 x 1024] -> [2048] 	// GPU
+    [2048 x 1024] -> [2048] 	// CPU
+   
+###### GPU result (2048, 1) [0:7, 0:9] ######
+
+1.2978515625	
+20.1875000000	
+31.9375000000	
+13.5156250000	
+3.1250000000	
+-14.3515625000	
+-4.3359375000	
+-15.4687500000	
+...
+
+###### CPU result (2048, 1) [0:7, 0:9] ######
+
+1.2978515625	
+20.1875000000	
+31.9218750000	
+13.5156250000	
+3.1250000000	
+-14.3437500000	
+-4.3359375000	
+-15.4687500000	
+...
+===== Tensor test 'bias gradient (reduction)'
+ [256 x 256 x 64 x 32] -> [1 x 1 x 64] 	// GPU
+    [256 x 256 x 64 x 32] -> [1 x 1 x 64] 	// CPU
+   
+###### GPU result (64, 1) [0:7, 0:9] ######
+
+351.0000000000	
+-124.7500000000	
+221.5000000000	
+-120.1875000000	
+1640.0000000000	
+-266.5000000000	
+371.5000000000	
+-903.0000000000	
+...
+
+###### CPU result (64, 1) [0:7, 0:9] ######
+
+350.7500000000	
+-124.7500000000	
+221.2500000000	
+-120.3750000000	
+1640.0000000000	
+-266.0000000000	
+371.2500000000	
+-902.5000000000	
+...
+MultiplyAndAdd Directly:  34.620188 seconds
 MultiplyAndAdd With ColumnSlice:  0.006462 seconds
 MultiplyAndAdd With ColumnSlice&:  0.006471 seconds
 MultiplyAndAdd With AssignColumnSlice:  0.006301 seconds
@@ -170,22 +334,22 @@ testRnnForwardPropSRP:  0.003358 seconds
 TestOldRnnForwardPropSRP:  0.030918 seconds
 
 Test module "MathTests" has passed with:
-  156 test cases out of 156 passed
-  13210481 assertions out of 13210481 passed
+  232 test cases out of 232 passed
+  19546252 assertions out of 19546252 passed
 
   Test suite "BatchNormalizationSuite" has passed with:
     2 test cases out of 2 passed
-    4824 assertions out of 4824 passed
+    5376 assertions out of 5376 passed
 
     Test case "BatchNormalizationSuite/BatchNormalizationForward" has passed with:
-      3015 assertions out of 3015 passed
+      3360 assertions out of 3360 passed
 
     Test case "BatchNormalizationSuite/BatchNormalizationBackward" has passed with:
-      1809 assertions out of 1809 passed
+      2016 assertions out of 2016 passed
 
   Test suite "ConvolutionSuite" has passed with:
     6 test cases out of 6 passed
-    7955 assertions out of 7955 passed
+    8395 assertions out of 8395 passed
 
     Test case "ConvolutionSuite/ConvolutionForward" has passed with:
       1515 assertions out of 1515 passed
@@ -200,14 +364,33 @@ Test module "MathTests" has passed with:
       1320 assertions out of 1320 passed
 
     Test case "ConvolutionSuite/PoolingBackward" has passed with:
-      1320 assertions out of 1320 passed
+      1760 assertions out of 1760 passed
 
     Test case "ConvolutionSuite/MaxUnpooling" has passed with:
       770 assertions out of 770 passed
 
+  Test suite "Half_ConvolutionSuite" has passed with:
+    5 test cases out of 5 passed
+    5807 assertions out of 5807 passed
+
+    Test case "Half_ConvolutionSuite/ConvolutionForward" has passed with:
+      909 assertions out of 909 passed
+
+    Test case "Half_ConvolutionSuite/ConvolutionBackwardData" has passed with:
+      909 assertions out of 909 passed
+
+    Test case "Half_ConvolutionSuite/ConvolutionBackwardKernel" has passed with:
+      909 assertions out of 909 passed
+
+    Test case "Half_ConvolutionSuite/PoolingForward" has passed with:
+      1320 assertions out of 1320 passed
+
+    Test case "Half_ConvolutionSuite/PoolingBackward" has passed with:
+      1760 assertions out of 1760 passed
+
   Test suite "CPUMatrixSuite" has passed with:
-    36 test cases out of 36 passed
-    5248732 assertions out of 5248732 passed
+    40 test cases out of 40 passed
+    5248763 assertions out of 5248763 passed
 
     Test case "CPUMatrixSuite/CPUMatrixConstructorNoFlags" has passed with:
       8 assertions out of 8 passed
@@ -221,11 +404,14 @@ Test module "MathTests" has passed with:
     Test case "CPUMatrixSuite/CPUMatrixAddAndSub" has passed with:
       13 assertions out of 13 passed
 
+    Test case "CPUMatrixSuite/CPUMatrixBatchMatmMul" has passed with:
+      1 assertion out of 1 passed
+
     Test case "CPUMatrixSuite/CPUMatrixMultiplyAndDiv" has passed with:
       9 assertions out of 9 passed
 
     Test case "CPUMatrixSuite/CPUMatrixElementOperations" has passed with:
-      21 assertions out of 21 passed
+      27 assertions out of 27 passed
 
     Test case "CPUMatrixSuite/CPUMatrixNorms" has passed with:
       12 assertions out of 12 passed
@@ -266,17 +452,17 @@ Test module "MathTests" has passed with:
     Test case "CPUMatrixSuite/CPUMatrixAdam" has passed with:
       4 assertions out of 4 passed
 
-    Test case "CPUMatrixSuite/CPUMatrixAdamEpsilon" has passed with:
+    Test case "CPUMatrixSuite/CPUMatrixAdamVarEpsilon" has passed with:
       4 assertions out of 4 passed
 
     Test case "CPUMatrixSuite/CPUMatrixOneHot" has passed with:
-      3 assertions out of 3 passed
+      9 assertions out of 9 passed
+
+    Test case "CPUMatrixSuite/CPUMatrixScatterToIndices" has passed with:
+      1 assertion out of 1 passed
 
     Test case "CPUMatrixSuite/CPUMatrixGatherFromTarget" has passed with:
       3 assertions out of 3 passed
-
-    Test case "CPUMatrixSuite/CPUMatrixScatterToIndices" has passed with:
-      1 assertions out of 1 passed
 
     Test case "CPUMatrixSuite/CPUSparseMatrixColumnSlice" has passed with:
       1 assertion out of 1 passed
@@ -291,7 +477,7 @@ Test module "MathTests" has passed with:
       50 assertions out of 50 passed
 
     Test case "CPUMatrixSuite/CPUSparseMatrixOneHot" has passed with:
-      5 assertions out of 5 passed
+      15 assertions out of 15 passed
 
     Test case "CPUMatrixSuite/MatrixMultiplyTest" has passed with:
       1484 assertions out of 1484 passed
@@ -371,12 +557,43 @@ Test module "MathTests" has passed with:
 
     Test case "MathTensorTests/OldRnnForwardProp" has passed
 
+  Test suite "Half_MathTensorTests" has passed with:
+    9 test cases out of 9 passed
+    6 assertions out of 6 passed
+
+    Test case "Half_MathTensorTests/ElementwiseAddition" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MathTensorTests/AdditionWithSimpleBroadcasting" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MathTensorTests/BiasAddition" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MathTensorTests/BiasAddition2" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MathTensorTests/BiasGradient" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MathTensorTests/BiasGradient2" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MathTensorTests/ColumnSliceMultAndAdd" has passed
+
+    Test case "Half_MathTensorTests/RnnForwardProp" has passed
+
+    Test case "Half_MathTensorTests/OldRnnForwardProp" has passed
+
   Test suite "GPUMatrixSuite" has passed with:
-    59 test cases out of 59 passed
-    1263774 assertions out of 1263774 passed
+    64 test cases out of 64 passed
+    1263796 assertions out of 1263796 passed
 
     Test case "GPUMatrixSuite/GPUBlasMultiplyAndWeightedAdd" has passed with:
       1 assertion out of 1 passed
+
+    Test case "GPUMatrixSuite/GPUBlasBatchMatMul" has passed with:
+      2 assertions out of 2 passed
 
     Test case "GPUMatrixSuite/GPUBlasScale" has passed with:
       1 assertion out of 1 passed
@@ -443,17 +660,17 @@ Test module "MathTests" has passed with:
     Test case "GPUMatrixSuite/GPUMatrixAdam" has passed with:
       4 assertions out of 4 passed
 
-    Test case "GPUMatrixSuite/GPUMatrixAdamEpsilon" has passed with:
+    Test case "GPUMatrixSuite/GPUMatrixAdamVarEpsilon" has passed with:
       4 assertions out of 4 passed
 
     Test case "GPUMatrixSuite/GPUMatrixOneHot" has passed with:
-      3 assertions out of 3 passed
+      9 assertions out of 9 passed
+
+    Test case "GPUMatrixSuite/GPUMatrixScatterToIndices" has passed with:
+      1 assertion out of 1 passed
 
     Test case "GPUMatrixSuite/GPUMatrixGatherFromTarget" has passed with:
       3 assertions out of 3 passed
-    
-	Test case "CPUMatrixSuite/CPUMatrixScatterToIndices" has passed with:
-      1 assertions out of 1 passed
 
     Test case "GPUMatrixSuite/GPUSparseMatrixConstructorsAndInitializers" has passed with:
       10 assertions out of 10 passed
@@ -658,9 +875,102 @@ Test module "MathTests" has passed with:
 
     Test case "MatrixUnitTests/MatrixFSAdagradUpdate_WithAndWithout_UnitGain" has passed
 
+  Test suite "Half_MatrixUnitTests" has passed with:
+    30 test cases out of 30 passed
+    6244840 assertions out of 6244840 passed
+
+    Test case "Half_MatrixUnitTests/MatrixConstructors" has passed with:
+      10 assertions out of 10 passed
+
+    Test case "Half_MatrixUnitTests/MatrixMoveTest1" has passed with:
+      8 assertions out of 8 passed
+
+    Test case "Half_MatrixUnitTests/MatrixMoveTest2" has passed with:
+      11 assertions out of 11 passed
+
+    Test case "Half_MatrixUnitTests/MatrixDeepCopy" has passed with:
+      17 assertions out of 17 passed
+
+    Test case "Half_MatrixUnitTests/MatrixInitZero" has passed with:
+      386 assertions out of 386 passed
+
+    Test case "Half_MatrixUnitTests/MatrixInitEye" has passed with:
+      3138 assertions out of 3138 passed
+
+    Test case "Half_MatrixUnitTests/MatrixInitOnes" has passed with:
+      674 assertions out of 674 passed
+
+    Test case "Half_MatrixUnitTests/MatrixInitGaussianRand" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "Half_MatrixUnitTests/MatrixInitRandomUniform" has passed with:
+      87002 assertions out of 87002 passed
+
+    Test case "Half_MatrixUnitTests/MatrixInitRandomUniformSeed" has passed with:
+      878592 assertions out of 878592 passed
+
+    Test case "Half_MatrixUnitTests/MatrixSetValueMethods" has passed with:
+      846 assertions out of 846 passed
+
+    Test case "Half_MatrixUnitTests/MatrixTransposeTest" has passed with:
+      1476 assertions out of 1476 passed
+
+    Test case "Half_MatrixUnitTests/MatrixMultiAndDiv" has passed with:
+      12 assertions out of 12 passed
+
+    Test case "Half_MatrixUnitTests/MatrixTranspose" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "Half_MatrixUnitTests/MatrixAddAndSub" has passed with:
+      11 assertions out of 11 passed
+
+    Test case "Half_MatrixUnitTests/MatrixElementOps" has passed with:
+      18 assertions out of 18 passed
+
+    Test case "Half_MatrixUnitTests/MatrixColumnElementMultiply" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MatrixUnitTests/MatrixAssignXOf" has passed with:
+      5272568 assertions out of 5272568 passed
+
+    Test case "Half_MatrixUnitTests/MatrixSumOfElements" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "Half_MatrixUnitTests/MatrixColumnSlice" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "Half_MatrixUnitTests/MatrixKhatriRaoProduct" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MatrixUnitTests/MatrixAddColumnReshapeProductOf" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "Half_MatrixUnitTests/MatrixCopy" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "Half_MatrixUnitTests/MatrixHasElement" has passed with:
+      12 assertions out of 12 passed
+
+    Test case "Half_MatrixUnitTests/MatrixAssignNumOfDiff" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MatrixUnitTests/MatrixScale" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_MatrixUnitTests/MatrixSGDUpdate" has passed with:
+      7 assertions out of 7 passed
+
+    Test case "Half_MatrixUnitTests/MatrixMomentumSGDUpdate_WithAndWithout_UnitGain" has passed with:
+      16 assertions out of 16 passed
+
+    Test case "Half_MatrixUnitTests/MatrixNesterovAcceleratedMomentumSGDUpdate_WithAndWithout_UnitGain" has passed with:
+      16 assertions out of 16 passed
+
+    Test case "Half_MatrixUnitTests/MatrixFSAdagradUpdate_WithAndWithout_UnitGain" has passed
+
   Test suite "MatrixLearnerSuite" has passed with:
     3 test cases out of 3 passed
-    6 assertions out of 6 passed
+    8 assertions out of 8 passed
 
     Test case "MatrixLearnerSuite/FSAdagradSparse" has passed with:
       2 assertions out of 2 passed
@@ -669,4 +979,94 @@ Test module "MathTests" has passed with:
       2 assertions out of 2 passed
 
     Test case "MatrixLearnerSuite/AdaDeltaSparse" has passed with:
+      4 assertions out of 4 passed
+
+  Test suite "Half_GPUMatrixSuite" has passed with:
+    29 test cases out of 29 passed
+    84564 assertions out of 84564 passed
+
+    Test case "Half_GPUMatrixSuite/GPUBlasMultiplyAndWeightedAdd" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_GPUMatrixSuite/GPUBlasScale" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_GPUMatrixSuite/GPUBlasInnerProduct" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "Half_GPUMatrixSuite/MatrixCopyAssignAcrossDevices" has passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixConstructorNoFlag" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixConstructorFlagNormal" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixIdentityAndZero" has passed with:
+      7200 assertions out of 7200 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixElementWiseOperations" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixInplaceOperations" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixAddAndSub" has passed with:
+      13 assertions out of 13 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixNorms" has passed with:
+      14 assertions out of 14 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixRandomUniform" has passed with:
+      76800 assertions out of 76800 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixColumnSlice" has passed with:
       2 assertions out of 2 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixRowSlice" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixKhatriRaoProduct" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixAddColumnReshapeProductOf" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixInnerProduct" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixAssignRepeatOf" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixRowElementOperations" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixColumnElementOperations" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixCurandSeedingHalf" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixAdam" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixAdamVarEpsilon" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixOneHot" has passed with:
+      9 assertions out of 9 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixGatherFromTarget" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "Half_GPUMatrixSuite/MatrixDataSynchronization_DefaultBehaviorTestForConstructors" has passed with:
+      15 assertions out of 15 passed
+
+    Test case "Half_GPUMatrixSuite/MatrixDataSynchronization_AccessPatternAndTransferTest" has passed with:
+      459 assertions out of 459 passed
+
+    Test case "Half_GPUMatrixSuite/MatrixDataSynchronization_GravitatingTowardsPreferredDevice" has passed with:
+      7 assertions out of 7 passed
+
+    Test case "Half_GPUMatrixSuite/GPUMatrixFileWriteRead" has passed with:
+      1 assertion out of 1 passed

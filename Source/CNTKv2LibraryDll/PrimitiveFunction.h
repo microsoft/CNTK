@@ -63,6 +63,7 @@ namespace CNTK
         {PrimitiveOpType::Convolution, L"Convolution"},
         {PrimitiveOpType::SquaredError, L"SquaredError"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
+        {PrimitiveOpType::LatticeSequenceWithSoftmax, L"LatticeSequenceWithSoftmax" },
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
         {PrimitiveOpType::ForwardBackward, L"ForwardBackward" },
@@ -112,6 +113,10 @@ namespace CNTK
         {PrimitiveOpType::ToBatch, L"ToBatchAxis"},
         {PrimitiveOpType::Pad, L"Pad"},
         {PrimitiveOpType::Crop, L"Crop"},
+        {PrimitiveOpType::TopK, L"TopK"},
+        {PrimitiveOpType::ConstantOp, L"ConstantOp"},
+        {PrimitiveOpType::Squeeze, L"Squeeze"},
+        {PrimitiveOpType::Cast, L"Cast" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -244,6 +249,7 @@ namespace CNTK
         static const std::wstring AttributeNameBlendTimeConstant;
         static const std::wstring AttributeNameEpsilon;
         static const std::wstring AttributeNameUseCuDNNEngine;
+        static const std::wstring AttributeNameDisableRegularization;
         static const std::wstring AttributeNameNewDataType;
         static const std::wstring AttributeNameNewDynamicAxes;
         static const std::wstring AttributeNameNewSequenceAxisLengthScalingFactor;
@@ -268,6 +274,19 @@ namespace CNTK
         static const std::wstring AttributeNameTokensToIgnore;
         static const std::wstring AttributeNameDelayConstraint;
         static const std::wstring AttributeNameBlankTokenId;
+        static const std::wstring AttributeNamePhonePath;
+        static const std::wstring AttributeNameSymListPath;
+        static const std::wstring AttributeNameStateListPath;
+        static const std::wstring AttributeNameTransProbPath;
+        static const std::wstring AttributeNameLatticeConfigPath;
+        static const std::wstring AttributeNameHSmoothingWeight;
+        static const std::wstring AttributeNameFrameDropThresh;
+        static const std::wstring AttributeNameDoReferenceAlign;
+        static const std::wstring AttributeNameSeqGammarUsesMBR;
+        static const std::wstring AttributeNameSeqGammarAMF;
+        static const std::wstring AttributeNameSeqGammarLMF;
+        static const std::wstring AttributeNameSeqGammarBMMIFactor;
+        static const std::wstring AttributeNameSeqGammarWordPen;
         static const std::wstring AttributeNameNumClass;
         static const std::wstring AttributeNameOneHotOutputSparse;
         static const std::wstring AttributeNameOneHotAxis;
@@ -289,7 +308,12 @@ namespace CNTK
         static const std::wstring AttributeNameKernelShape;
         static const std::wstring AttributeNameBias;
         static const std::wstring AttributeNameDepthRadius;
+        static const std::wstring AttributeNameBlockSize;
         static const std::wstring AttributeNameCustomAttributes;
+        static const std::wstring AttributeNameNumItems;
+        static const std::wstring AttributeNameFillValue;
+        static const std::wstring AttributeNameUseStatsAcrossChannels;
+        static const std::wstring AttributeNameDoVarianceScaling;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -636,14 +660,7 @@ namespace CNTK
                     numReductionAxes++;
                 }
             }
-            if ((inferInputRankToMap >= 0) && (leftOperandShape[leftOperandShape.Rank() - 1] == NDShape::FreeDimension)) // if given, we pad if needed
-            {
-                while ((numReductionAxes + (size_t)inferInputRankToMap) < rightOperand.Shape().Rank())
-                {
-                    leftOperandShape = leftOperandShape.AppendShape({ NDShape::FreeDimension });
-                    numReductionAxes++;
-                }
-            }
+
             for (size_t i = 0; i < numReductionAxes; ++i)
             {
                 if ((leftOperandShape[outputRank + i] != NDShape::InferredDimension
@@ -663,7 +680,7 @@ namespace CNTK
                 }
                 else if (leftOperandShape[outputRank + i] == NDShape::InferredDimension || leftOperandShape[outputRank + i] == NDShape::FreeDimension)
                 {
-                    if (leftOperandShape[outputRank + i] == NDShape::InferredDimension && rightOperandShape[i] == NDShape::FreeDimension)
+                    if (rightOperandShape[i] == NDShape::FreeDimension && leftOperandShape[outputRank + i] == NDShape::InferredDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
                             Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
                             leftOperand.AsString().c_str(),
@@ -676,7 +693,7 @@ namespace CNTK
                 }
                 else if (rightOperandShape[i] == NDShape::InferredDimension || rightOperandShape[i] == NDShape::FreeDimension)
                 {
-                    if (rightOperandShape[i] == NDShape::InferredDimension && leftOperandShape[outputRank + i] == NDShape::FreeDimension)
+                    if (leftOperandShape[outputRank + i] == NDShape::FreeDimension && leftOperandShape[outputRank + i] == NDShape::InferredDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
                             Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
                             rightOperand.AsString().c_str(),
@@ -810,7 +827,9 @@ namespace CNTK
         // Version 16: Add to_batch/unpack_batch.
         // Version 17: Add Pad.
         // Version 18: Add Crop node.
-        static const size_t s_serializationVersion = 18;
+        // Version 19: Add TopK
+        // Version 20: Add squeeze, expand dims, zeros like, ones like
+        static const size_t s_serializationVersion = 20;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

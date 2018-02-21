@@ -39,8 +39,8 @@ def test_htk_deserializers():
     errs = C.classification_error    (z, labels)
 
     learner = C.fsadagrad(z.parameters,
-                          lr=C.learning_rate_schedule(lr, C.UnitType.sample, epoch_size),
-                          momentum=C.momentum_as_time_constant_schedule(1000),
+                          lr=C.learning_parameter_schedule_per_sample(lr, epoch_size=epoch_size),
+                          momentum=C.momentum_schedule_per_sample(0.9990913221888589),
                           gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
     progress_printer = C.logging.ProgressPrinter(freq=0)
     trainer = C.Trainer(z, (ce, errs), learner, progress_printer)

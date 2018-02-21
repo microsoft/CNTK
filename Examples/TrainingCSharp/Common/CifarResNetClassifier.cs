@@ -19,7 +19,7 @@ namespace CNTK.CSTrainingExamples
         public static string CifarDataFolder = "../../Examples/Image/DataSets/CIFAR-10";
 
         /// <summary>
-        /// number of epoches for training. 
+        /// number of epochs for training. 
         /// </summary>
         public static uint MaxEpochs = 1;
 
@@ -187,7 +187,7 @@ namespace CNTK.CSTrainingExamples
         /// https://arxiv.org/abs/1512.03385
         /// </summary>
         /// <param name="input">input variable for image data</param>
-        /// <param name="numOutputClasses">number of outout classes</param>
+        /// <param name="numOutputClasses">number of output classes</param>
         /// <param name="device">CPU or GPU device to run</param>
         /// <param name="outputName">name of the classifier</param>
         /// <returns></returns>

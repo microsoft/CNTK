@@ -5,7 +5,7 @@
 
 import numpy as np
 import cntk as C
-from cntk import sgd, Trainer, learning_rate_schedule, parameter, \
+from cntk import sgd, Trainer, learning_parameter_schedule, parameter, \
                  times, cross_entropy_with_softmax, \
                  classification_error, UnitType, combine
 from cntk.debugging.debug import debug_model, _DebugNode
@@ -32,7 +32,7 @@ def _train_backcompatible_test(z, loss, eval_error,
 
     input_dim = 2
 
-    lr_schedule = learning_rate_schedule(0.5, UnitType.minibatch)
+    lr_schedule = learning_parameter_schedule(0.5)
 
     learner = sgd(z.parameters, lr_schedule)
     trainer = Trainer(z, (loss, eval_error), [learner])
