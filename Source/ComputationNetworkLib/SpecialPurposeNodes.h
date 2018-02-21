@@ -458,7 +458,7 @@ class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, publ
 public:
     DeclareConstructorFromConfigWithNumInputs(SequenceWithSoftmaxNode);
     SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_gammaCalcInitialized(false), m_invalidBatch(false)
+        : Base(deviceId, name), m_gammaCalcInitialized(false), m_invalidMinibatch(false)
     {
     }
 
@@ -473,7 +473,7 @@ public:
         }
         else if (inputIndex == 1)
         {
-            if (m_invalidBatch)
+            if (m_invalidMinibatch)
             {
                 Input(inputIndex)->Gradient().SetValue(0.0f);
                 Value().SetValue(1.0f);
@@ -664,7 +664,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
-    bool m_invalidBatch;
+    bool m_invalidMinibatch; // for single minibatch
     double m_frameDropThreshold;
     double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
     double m_seqGammarAMF;
@@ -759,7 +759,7 @@ public:
         this->m_uids.clear();
         this->m_boundaries.clear();
         this->m_extraUttMap.clear();
-        this->m_invalidBatch = false;
+        this->m_invalidMinibatch = false;
 
         if (InputRef(3).ValuePtrRef()->GetDeviceId() != CPUDEVICE)
             LogicError("Due to their size, lattices should be allocated on CPU memory");
@@ -823,10 +823,10 @@ public:
         catch (...)
         {
             fprintf(stderr, "WARNING: Failed to parse lattice. Skipping minibatch...\n");
-            this->m_invalidBatch = true;
+            this->m_invalidMinibatch = true;
         }
 
-        if (!this->m_invalidBatch)
+        if (!this->m_invalidMinibatch)
         {
             this->m_boundaries.resize(this->m_uids.size());
             std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
