@@ -4,6 +4,7 @@
 //
 
 #include "NcclComm.h"
+#include "nvml.h"
 
 #ifdef USE_NCCL
 #include "GPUMatrix.h"
@@ -33,6 +34,46 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
 {
     cudaDeviceSynchronize();
     size_t numRanks = mpi->NumNodesInUse();
+#if 1 // version that goes by GPU id rather than (hostname, id)
+    auto nvmlRes = nvmlInit();
+    if (nvmlRes != NVML_SUCCESS)
+    {
+        fprintf(stderr, "NcclComm: disabled, since failed to initialize NVML library (error code %d)\n", (int)nvmlRes);
+        return;
+    }
+    std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE> thisDeviceUUID { 'C', 'P', 'U', 0 };
+    if (deviceId != CPUDEVICE)
+    {
+        nvmlDevice_t thisDevice;
+        nvmlRes = nvmlDeviceGetHandleByIndex(deviceId, &thisDevice);
+        if (nvmlRes != NVML_SUCCESS)
+            RuntimeError("NcclComm failed to obtain nvmlDevice handle (error code %d)", (int)nvmlRes);
+        nvmlRes = nvmlDeviceGetUUID(thisDevice, thisDeviceUUID.data(), thisDeviceUUID.size());
+        if (nvmlRes != NVML_SUCCESS)
+            RuntimeError("NcclComm failed to obtain nvmlDevice UUID (error code %d)", (int)nvmlRes);
+    }
+    fprintf(stderr, "GPU UUID = %s\n", thisDeviceUUID.data()), fflush(stderr);
+    std::vector<std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE>> allDeviceUUIDs(numRanks);
+    mpi->Allgather(thisDeviceUUID.data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR, allDeviceUUIDs[0].data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR);
+
+    for (size_t r = 0; r < numRanks; r++)
+    {
+        if (strcmp(allDeviceUUIDs[r].data(), "CPU") == 0)
+        {
+            fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
+            return;
+        }
+        for (size_t s = 0; s < r; s++)
+        {
+            if (strcmp(allDeviceUUIDs[r].data(), allDeviceUUIDs[s].data()) == 0)
+            {
+                fprintf(stderr, "NcclComm: disabled, same device %s used by more than one rank\n", allDeviceUUIDs[r].data());
+                return;
+            }
+        }
+    }
+    nvmlShutdown(); // counter-part to nvmlInit(). This is internally ref-counted, will only shutdown upon last matching call to this.
+#else
     std::vector<int> allDevs(numRanks);
     std::vector<std::array<char, MPI_MAX_PROCESSOR_NAME>> allHosts(numRanks);
     std::array<char, MPI_MAX_PROCESSOR_NAME> procName {};
@@ -57,6 +98,7 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
             }
         }
     }
+#endif
 
     ncclUniqueId ncclId;
     ncclResult_t res;
