@@ -305,6 +305,7 @@ namespace Dynamite {
         // enforce numWorkers requirement on last range
         if (ranges.size() == 0)
             LogicError("GetSubBatches_CreatePartialMinibatches: ranges[] empty??");
+#if 0   // no, we *do* create too-small partial batches that will lead to empty per-worker batches
         if (ranges.back().second - ranges.back().first < numWorkers) // last range too small: merge into previous
         {
             // merging is not reliable; trying to just drop them
@@ -315,6 +316,7 @@ namespace Dynamite {
             ranges.pop_back();
             //ranges.back().second = numSeq;
         }
+#endif
 
         // if nothing to break then avoid any reallocation
         if (ranges.size() == 1 && ranges.back().second == numSeq)
@@ -357,9 +359,11 @@ namespace Dynamite {
                 sequences[j] = move(sequences[i]);
             j++;
         }
-        if (j == 0)
-            LogicError("GetSubBatches_StridedSubSample: strided sub sample is empty, despite all the efforts??");
+        //if (j == 0)
+        //    LogicError("GetSubBatches_StridedSubSample: strided sub sample is empty, despite all the efforts??");
         sequences.resize(j); // rest gets dropped
+        if (sequences.size() == 0)
+            fprintf(stderr, "GetSubBatches_StridedSubSample: a per-worker partial batch is empty"), fflush(stderr);
 #if 0
         size_t maxLen = 0;
         for (let& seq : sequences)
@@ -419,18 +423,34 @@ namespace Dynamite {
                                     hasPadding, /*granularity=*/splitDataOverWorkersOurselves ? numWorkers : 1);
 
         // if we split data ourselves, this is the point
+        // This may create empty partial batches. In that case, we drop them. Will lose a bit of load-balancing.
         if (numWorkers > 1 && splitDataOverWorkersOurselves)
-            for (auto& partialBatchSet : args)
-                for (auto& partialBatch : partialBatchSet)
-                    for (auto& streamData : partialBatch)
-                    //{
-                    //    for (size_t i = 0; i < numWorkers; i++)
-                    //    {
-                    //        auto d = streamData;
-                    //        GetSubBatches_StridedSubSample(d, numWorkers, i);
-                    //    }
-                    //}
-                    GetSubBatches_StridedSubSample(streamData, numWorkers, thisWorker);
+            for (auto& minibatchPartials : args) // each minibatch consists of 1 or more partial batches
+            {
+                size_t j = 0;
+                for (size_t i = 0; i < minibatchPartials.size(); i++) // sub-sample partial batch. May come out empty.
+                {
+                    let numSeqBefore = minibatchPartials[i].front().size();
+                    for (auto& streamData : minibatchPartials[i])
+                        GetSubBatches_StridedSubSample(streamData, numWorkers, thisWorker);
+                    // if empty then remove it
+                    if (minibatchPartials[i].front().size() == 0)
+                    {
+                        fprintf(stderr, "GetSubBatches: partial minibatch %d became empty after per-worker sub-sampling\n", (int)numSeqBefore), fflush(stderr);
+                        continue;
+                    }
+                    if (i != j)
+                        minibatchPartials[j] = move(minibatchPartials[i]);
+                    j++;
+                }
+                if (j < minibatchPartials.size())
+                {
+                    fprintf(stderr, "GetSubBatches: minibatch reduced from %d to %d partials due to per-worker sub-sampling producing empty partials.\n", (int)minibatchPartials.size(), (int)j), fflush(stderr);
+                    minibatchPartials.resize(j);
+                }
+                if (minibatchPartials.empty())
+                    InvalidArgument("GetSubBatches: Minibatch empty after per-worked sub-sampling. Happens if MB contains fewer sequences than there are workers.");
+            }
 
         return true; // true means success, we got data. False means end of data.
     }
