@@ -363,7 +363,7 @@ namespace Dynamite {
         //    LogicError("GetSubBatches_StridedSubSample: strided sub sample is empty, despite all the efforts??");
         sequences.resize(j); // rest gets dropped
         if (sequences.size() == 0)
-            fprintf(stderr, "GetSubBatches_StridedSubSample: a per-worker partial batch is empty"), fflush(stderr);
+            fprintf(stderr, "GetSubBatches_StridedSubSample: a per-worker partial batch is empty\n");
 #if 0
         size_t maxLen = 0;
         for (let& seq : sequences)
