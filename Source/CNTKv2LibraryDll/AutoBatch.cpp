@@ -4634,9 +4634,9 @@ public:
         m_memoizer.End();
         // now all m_values that were submitted for are filled in
         // the final m_value may be a reshape, which the bg thread would not have filled in yet, as those are done lazily. Do it now if needed.
-fprintf(stderr, "MTCacheAndGetCalue from top\n"), fflush(stderr);
+//fprintf(stderr, "MTCacheAndGetCalue from top\n"), fflush(stderr);
         Memoizer::MTCacheAndGetValue(fields); // (note: this is a view op that costs nearly nothing) --TODO: It may make a copy in the future, if the result is not memory-contiguous.
-fprintf(stderr, "MTCacheAndGetCalue from top out\n"), fflush(stderr);
+//fprintf(stderr, "MTCacheAndGetCalue from top out\n"), fflush(stderr);
 
         cudaStatsGuardCalc.Stop(); // this measures the bg thread; specifically, how much longer it needs after the fg thread has submitted the last item
 
