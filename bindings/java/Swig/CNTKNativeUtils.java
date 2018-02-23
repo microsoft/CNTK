@@ -59,7 +59,7 @@ public class CNTKNativeUtils {
                     System.load(tempDir.getAbsolutePath() + File.separator + libName);
                 }
             }
-            catch (IOException ee){
+            catch (IOException | UnsatisfiedLinkError ee){
                 // If loading the NATIVE_LOAD_MANIFEST failed, try loading the libraries
                 // in the order provided by the NATIVE_MANIFEST
                 for (String libName: nativeList){
