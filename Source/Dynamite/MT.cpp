@@ -926,7 +926,7 @@ BinaryFoldingModel CreateModelFunctionMarian()
         L"max-length",                    100,    
         L"max-length-crop",               false,    
         L"maxi-batch",                    1000,    
-        L"maxi-batch-sort",               L"trg",    
+        L"maxi-batch-sort",               L"trg",
         L"mini-batch",                    64,    
         L"mini-batch-fit",                true,    
         L"mini-batch-words",              0,    
@@ -1071,6 +1071,7 @@ BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model
         float ls = inference ? 0.f :    0.1f; //mmodel->opt<float>("label-smoothing");// TODO: parameterize this again
 
         auto cost   = Cost(probs, trgData, trgMask, costType, ls);
+#if 1
         auto metric = Cost(probs, trgData, trgMask, costType); // metric is the same except no label smoothing. Auto-batch will compute CE only once.
         //fprintf(stderr, "====> cost/target = %.8f\n", cost.Value()->AsScalar<float>() / trgSubBatch->batchWords()), fflush(stderr);
 
@@ -1083,7 +1084,12 @@ BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model
             cost = cost + guidedAlignmentCost(graph, batch, mmodel->getOptions(), att);
         }
 #endif
-        return CNTK::Splice({ CNTK::Reshape(cost, {}), CNTK::Reshape(metric, {}) }, Axis(0)); // return (cost, metric) as 2-dim vector
+        return CNTK::Splice({ cost, metric }, Axis(0)); // return (cost, metric) as 2 dimensions
+        // BUGBUG: This fails vv with "MTCacheAndGetValue: Variable unexpectedly has no value yet"
+        //return CNTK::Splice({ CNTK::Reshape(cost, {}), CNTK::Reshape(metric, {}) }, Axis(0)); // return (cost, metric) as 2-dim vector
+#else
+        return Reshape(cost, { 1 });
+#endif
     });
 }
 
@@ -1094,6 +1100,12 @@ static string TimeStamp()
     char buf[100];
     strftime (buf, sizeof(buf), "[%Y-%m-%d %H:%M:%S]", localtime(&now)); // e.g. [2018-01-24 12:58:52]
     return buf;
+}
+
+// returns true if this job runs under the MS-internal Philly cluster, to light up some of its specific features
+static bool IsPhillyJob()
+{
+    return getenv("PHILLY_JOB_ID") != nullptr;
 }
 
 static void Train(const DistributedCommunicatorPtr& communicator, const wstring& modelPath, double startPosition)
@@ -1389,6 +1401,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         partTimer.Restart();
         // BUGBUG: In extreme cases, we can have 0 sentences. HANDLE THAT! Then we can use more GPUs.
         auto partialWorkerLossAndMetricVar = criterion_fn(partialMinibatch[0], partialMinibatch[1]);
+        // BUGBUG: This has a strange shape with extra dims [2, ...]
         let timeBuildGraph = partTimer.Elapsed();
         let numAPICalls = CountAPICalls(0) - numAPICalls0;
         numAPICalls;
@@ -1417,7 +1430,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         try { // catch bad_alloc for more detailed logging
         //if (logThisMb)
         //    fprintf(stderr, "%5d:   ", (int)mbCount); // prefix for the log
-        let partialWorkerLossAndMetric = partialWorkerLossAndMetricVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
+        // BUGBUG: had to move this after Backward due to spurious error.
+        //auto partialWorkerLossAndMetric = partialWorkerLossAndMetricVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
+        //// BUGBUG: ^^ this has exra dims. Get rid of them:
+        //partialWorkerLossAndMetric = partialWorkerLossAndMetric->AsShape({ partialWorkerLossAndMetric->Shape()[0] });
         let timeForward = partTimer.Elapsed();
         partTimer.Restart();
         let timeForwardGpu = partTimer.Elapsed(); // note: enable the #if above to see the remaining GPU time
@@ -1437,12 +1453,19 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // implement local gradient aggregation if the desired MB size does not fit into local GPU RAM
         // partial batches except for first are aggregated into the existing gradient memory, without model update
         // --- backward
-        let partialWorkerLossVar = partialWorkerLossAndMetricVar[0]; // we backprop only through the loss, not the metric
+        let partialWorkerLossVar = Slice(partialWorkerLossAndMetricVar, Axis(0), 0, 1)->Output(); // we backprop only through the loss, not the metric
+        // BUGBUG: It has a strange shape.
+        //let partialWorkerLossVar = partialWorkerLossAndMetricVar[0]; // we backprop only through the loss, not the metric
         partialWorkerLossVar.Backward(gradients, /*beta=*/isFirstPartialBatch ? 0 : 1);
         let timeBackward = partTimer.Elapsed();
 
+        // BUGBUG: needed to move this here to avoid spurious error (hopefully)
+        auto partialWorkerLossAndMetric = partialWorkerLossAndMetricVar.Value(); // trigger computation. Note: This is GPU submission only, not waiting for GPU completion.
+        // BUGBUG: ^^ this has exra dims. Get rid of them:
+        partialWorkerLossAndMetric = partialWorkerLossAndMetric->AsShape({ partialWorkerLossAndMetric->Shape()[0] });
+
         // --- update
-        size_t metricIndex = partialWorkerLossAndMetric->Shape().TotalSize() > 1 ? 1 : 0; // separate metric if we have one
+        size_t metricIndex = partialWorkerLossAndMetric->Shape()[0] > 1 ? 1 : 0; // separate metric if we have one
         if (isFirstPartialBatch)
         {
             info.numberOfSamples = numPartialWorkerScoredLabels;
@@ -1509,7 +1532,11 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
 
         // --- keep track of loss
         // This is done after Update() to give access to the aggregate loss across all workers.
-        mbLossAndMetric = isFinalPartialBatch ? NDArrayView::GatherBatch({ info.trainingLossValue, info.evalCriterionValue }, 0, mbLossAndMetric) : partialWorkerLossAndMetric;
+        mbLossAndMetric =
+            /*if*/ (isFinalPartialBatch) ? 
+                (partialWorkerLossAndMetric->Shape()[0] == 1 ? info.trainingLossValue : NDArrayView::GatherBatch({ info.trainingLossValue, info.evalCriterionValue }, 0, mbLossAndMetric))
+            /*else*/ :
+                partialWorkerLossAndMetric;
         let numScoredLabels = isFinalPartialBatch ? info.numberOfSamples   : numPartialWorkerScoredLabels;
         if (isFinalPartialBatch) // TODO: only needed on the main thread which logs
             smoothedLoss.Update(mbLossAndMetric, numScoredLabels); // keep track of smoothed loss
@@ -1552,20 +1579,21 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         partialWorkerLossAndMetricVar = Variable(); // this destructs the entire graph. It will also return m_value and m_gradient to the arena. TODO: does that cause GPU syncs?
         let timeDeleteGraph = partTimer.Elapsed();
 
-        let memoryUsage = InternalVariable::GetMemoryUsage();
-        fprintf(stderr, "Memory usage: maxUSed=%.6f, used=%.6f, unused=%.6f\n",
-                (double)memoryUsage.maxUsed, (double)memoryUsage.used, (double)memoryUsage.unused);
-
         // log progress
         // Note: Without logging, there is no GPU-CPU transfer.
         if (logThisMb && communicator->CurrentWorker().IsMain())
         {
-            fprintf(stderr, "%s %S,%d,%d:   ", TimeStamp().c_str(), PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex);
+            let memoryUsage = InternalVariable::GetMemoryUsage();
+            fprintf(stderr, "Memory usage: max used=%.6f, pool total=%.6f (used=%.6f + unused=%.6f)\n",
+                    memoryUsage.maxUsed*1e-6, ( memoryUsage.used +  memoryUsage.unused) * 1e-6, memoryUsage.used*1e-6, memoryUsage.unused*1e-6);
+
+            fprintf(stderr, "%s ", TimeStamp().c_str());
+            //fprintf(stderr, "%S,%d,%d:   ", PositionTag(relPosition).c_str(), (int)bucketCounter, (int)partialMbIndex);
             if (isFinalPartialBatch)
             {
                 double smoothedLossVal, smoothedMetricVal; tie
                 (smoothedLossVal, smoothedMetricVal) = smoothedLoss.RunningAverage();
-                fprintf(stderr, "[smoothed] ce=%4.2f, L=%4.2f after %.0f (%.2f%%), PPL=%8.2f", smoothedMetricVal, smoothedLossVal, (double)totalNumLabelsSeen, relPosition, exp(smoothedMetricVal));
+                fprintf(stderr, "ce=%4.2f, L=%4.2f after %.0f (%.2f ep), PPL=%8.2f", smoothedMetricVal, smoothedLossVal, (double)totalNumLabelsSeen, relPosition, exp(smoothedMetricVal));
 #if 1
                 fprintf(stderr, ", mbs=%d, lr=%.9f, ", (int)(minibatchSize * minibatchSizeScaling), baseLearner->LearningRate());
 #else
@@ -1575,7 +1603,9 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 if (std::isnan(smoothedLossVal))
                     RuntimeError("Loss is NaN.");
 #if __unix__    // log for Philly status reporting
+#if 0
                 // Philly status reporting is done by writing info to a JSON file.
+                // This version does not work; it does not plot the loss progression in the web view.
                 let phillyProgressJson = L"${PHILLY_LOG_DIR}/progress.json";
                 auto f = _wofstream(Interpolate(phillyProgressJson));
                 let nominalEpochs = 100.0;
@@ -1603,6 +1633,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                 if (f.bad())
                     RuntimeError("Failed to save Philly progress file %S", Interpolate(phillyProgressJson).c_str());
                 // (note that Philly will ignore this file unless it also finds the logrank.0.log file)
+#else           // old-style CNTK logging
+                if (IsPhillyJob())
+                    printf("PROGRESS: %.2f%%\nerror: %.7f\n", relPosition, smoothedMetricVal), fflush(stdout);
+#endif
 #endif
             }
             else
@@ -1967,14 +2001,12 @@ int mt_main(int argc, char *argv[])
             fprintf(stderr, "%S already exists, bumping up the retry count\n", Interpolate(logPath).c_str());
         }
         boost::filesystem::create_directories(boost::filesystem::path(Interpolate(logPath)).parent_path());
-#if __unix__
-        let teeCmd = L"tee --output-error=exit"; // force catching NFS write errors
-#else
-        let teeCmd = L"tee";
-#endif
+        let teeCmd = getenv("DYNAMITE_TEE_CMD"); // e.g. "tee --output-error=exit"
+        if (teeCmd) // TODO: maybe not make this configurable; instead trigger on PHILLY_JOB_ID
+            fprintf(stderr, "Using this command to tee to log: %s\n", teeCmd);
         FILE* outStream =
-            /*if*/ (communicator->CurrentWorker().IsMain()) ?
-                _wofstream(Interpolate(logPath)), _wpopen((teeCmd + (L" '" + Interpolate(logPath) + L"'")).c_str(), L"w") // BUGBUG: simplistic escaping. Add something like .replace("\\", "\\\\").replace("'", "'\\''")
+            /*if*/ (teeCmd && communicator->CurrentWorker().IsMain()) ?
+                _wofstream(Interpolate(logPath)), _wpopen((wstring(teeCmd, teeCmd+strlen(teeCmd)) + (L" '" + Interpolate(logPath) + L"'")).c_str(), L"w") // BUGBUG: simplistic escaping. Add something like .replace("\\", "\\\\").replace("'", "'\\''")
             /*else*/ :
                 _wfopen(Interpolate(logPath).c_str(), L"wt");
         if (!outStream)
@@ -1983,14 +2015,12 @@ int mt_main(int argc, char *argv[])
         if (_dup2(_fileno(outStream), _fileno(stderr)) == -1)
             InvalidArgument("error %d redirecting stderr to '%S'", errno, Interpolate(logPath).c_str());
 
-        // to support Philly logging, we must create a file called logrank.0.log
-#if __unix__
-        if (communicator->CurrentWorker().IsMain())
+        // Philly cluster expects the log file in a specific location. We create a softlink to it.
+        if (IsPhillyJob() && communicator->CurrentWorker().IsMain())
         {
             let logRank0Path = L"${PHILLY_LOG_DIR}/logrank.0.log";
             CreateSymLink(Interpolate(logPath), Interpolate(logRank0Path));
         }
-#endif
 
         fprintf(stderr, "Command line:");
         for (let* p : Span<char**>(argv, argv + argc))
