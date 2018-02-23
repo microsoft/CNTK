@@ -50,6 +50,27 @@ def normal(scale, output_rank=SentinelValueForInferParamInitRank, filter_rank=Se
 
     return cntk_py.normal_initializer(scale, output_rank, filter_rank, seed)
 
+def truncated_normal(stdev, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
+    '''
+    Truncated normal initializer. The resulting values are drawn from
+    a truncated normal distribution and are always within two
+    standard deviations from the mean (which is 0).
+
+    Args:
+        stdev (float): standard deviation
+        output_rank (int): output rank
+        filter_rank (int): filter rank
+        seed (int): random seed
+
+    Returns:
+        initializer for :class:`~cntk.variables.Parameter`
+        initialized to truncated Gaussian distribution between `2*stdev[-1, 1]`
+    '''
+    if seed is None:
+        seed = SentinelValueForAutoSelectRandomSeed
+
+    return cntk_py.truncated_normal_initializer(stdev, output_rank, filter_rank, seed)
+
 def xavier(scale=DefaultParamInitScale, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
     '''
     Xavier initializer
@@ -184,21 +205,3 @@ def initializer_with_rank(initializer, output_rank=None, filter_rank=None):
     return cntk_py.random_initializer_with_rank(initializer, output_rank, filter_rank)
 
 
-def truncated_normal(stdev, seed=None):
-    '''
-    Truncated normal initializer. The resulting values are drawn from
-    a truncated normal distribution and are always within two
-    standard deviations from the mean (which is 0).
-
-    Args:
-        stdev (float): standard deviation
-        seed (int): random seed
-
-    Returns:
-        initializer for :class:`~cntk.variables.Parameter`
-        initialized to truncated Gaussian distribution between `2*stdev[-1, 1]`
-    '''
-    if seed is None:
-        seed = SentinelValueForAutoSelectRandomSeed
-
-    return cntk_py.truncated_normal_initializer(stdev, seed)

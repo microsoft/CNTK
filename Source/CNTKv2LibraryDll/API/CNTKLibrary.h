@@ -2208,6 +2208,7 @@ private:
     CNTK_API ParameterInitializer ConstantInitializer(double value = 0.0);
     CNTK_API ParameterInitializer UniformInitializer(double scale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer NormalInitializer(double scale, int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer TruncatedNormalInitializer(double scale = DefaultParamInitScale, int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer XavierInitializer(double scale = DefaultParamInitScale, int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer GlorotUniformInitializer(double scale = DefaultParamInitScale, int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer GlorotNormalInitializer(double scale = DefaultParamInitScale, int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
@@ -2215,7 +2216,6 @@ private:
     CNTK_API ParameterInitializer HeNormalInitializer(double scale = DefaultParamInitScale, int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer BilinearInitializer(size_t kernelWidth, size_t kernelHeight);
     CNTK_API ParameterInitializer RandomInitializerWithRank(const ParameterInitializer& initializer, int outputRank, int filterRank);
-    CNTK_API ParameterInitializer TruncatedNormalInitializer(double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
 
     ///
     /// Denotes Parameter inputs of a Function.

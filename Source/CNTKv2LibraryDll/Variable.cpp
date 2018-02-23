@@ -321,6 +321,11 @@ namespace CNTK
         return CreateInitializer(Microsoft::MSR::CNTK::NormalInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
+    ParameterInitializer TruncatedNormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
+    {
+        return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, outputRank, filterRank, seed);
+    }
+
     ParameterInitializer XavierInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
         return CreateInitializer(Microsoft::MSR::CNTK::XavierInitializerTypeName, scale, outputRank, filterRank, seed);
@@ -380,11 +385,6 @@ namespace CNTK
         }
 
         return newInitializerWithRanks;
-    }
-
-    ParameterInitializer TruncatedNormalInitializer(double scale, unsigned long seed)
-    {
-        return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, seed);
     }
 
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
