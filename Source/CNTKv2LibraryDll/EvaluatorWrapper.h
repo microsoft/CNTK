@@ -9,6 +9,7 @@
 #include <boost/noncopyable.hpp>
 #include <memory>
 #include <vector>
+#include <functional>
 
 #include "CNTKLibrary.h"
 #include "CNTKLibraryC.h"
