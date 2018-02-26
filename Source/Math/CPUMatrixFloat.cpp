@@ -21,4 +21,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // explicit instantiations, due to CPUMatrix being too big and causing VS2015 cl crash.
     template class MATH_API CPUMatrix<float>;
+    template<> int CPUMatrix<float>::m_optimizationFlags = CPUMatrix<float>::OPT_EVAL_WITH_MKL; // enable eval MKL optimization by default
 }}}

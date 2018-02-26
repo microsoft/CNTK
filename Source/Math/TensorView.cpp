@@ -407,5 +407,6 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
 
 template class TensorView<float>;
 template class TensorView<double>;
+template class TensorView<half>;
 
 }}}

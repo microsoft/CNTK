@@ -18,6 +18,7 @@
 #include <memory>
 #include <atomic>
 #include "Quantizers.h"
+#include "half.hpp"
 #ifndef CPUONLY
 #define ANAMEFORLIB "Cntk.Math.Cuda-" ## CNTK_COMPONENT_VERSION ## ".lib"
 #pragma comment(lib, ANAMEFORLIB) // built by MathCUDA project
@@ -169,7 +170,7 @@ MatrixBase::~MatrixBase() { }
 //            { GPU code },
 //            ...
 
-// Initialize members 
+// Initialize members
 template <class ElemType>
 void Matrix<ElemType>::Init(DEVICEID_TYPE deviceId)
 {
@@ -1074,7 +1075,7 @@ Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matri
         { m_CPUMatrix->DoGatherColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
         { m_GPUMatrix->DoGatherColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
         { m_CPUSparseMatrix->DoGatherColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha); },
-        { 
+        {
             // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
 
             Matrix<ElemType> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
@@ -1108,7 +1109,7 @@ Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matr
         { m_CPUMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
         { m_GPUMatrix->DoScatterColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
         { m_CPUSparseMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha); },
-        { 
+        {
             // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
 
             Matrix<ElemType> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
@@ -1173,6 +1174,11 @@ template <>
 /*static*/ double Matrix<double>::MakeNan(size_t /*payload*/)
 {
     return nan("");
+}
+template <>
+/*static*/ half Matrix<half>::MakeNan(size_t /*payload*/)
+{
+    return half(nanf(""));
 }
 template <>
 /*static*/ char Matrix<char>::MakeNan(size_t)
@@ -1266,7 +1272,7 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
 
     // TODO: do we need all these 'this->'?
     DISPATCH_MATRIX_ON_FLAG(this, this,
-        { 
+        {
             // Set CPUMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
                 { m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix); },
@@ -1274,7 +1280,7 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
                 { deepCopyFrom.m_CPUSparseMatrix->AssignColumnSliceToDense(*m_CPUMatrix, 0, deepCopyFrom.GetNumCols()); },
                 { CPUSparseMatrix<ElemType> tempCPUSparseMatrix(deepCopyFrom.GetFormat(), deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.m_GPUSparseMatrix->GetNumNZElements()); deepCopyFrom.m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempCPUSparseMatrix); tempCPUSparseMatrix.AssignColumnSliceToDense(*m_CPUMatrix, 0, deepCopyFrom.GetNumCols()); });
         },
-        { 
+        {
             // Set GPUMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
                 { m_GPUMatrix->SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), this->GetDeviceId(), deepCopyFrom.m_CPUMatrix->Data()); },
@@ -1286,7 +1292,7 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
                 },//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { deepCopyFrom.m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, deepCopyFrom.GetNumCols()); });
         },
-        { 
+        {
             // Set CPUSparseMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
                 { auto matrixType = GetMatrixType(); auto matrixFormat = GetFormat(); *this = deepCopyFrom.DeepClone(); SwitchToMatrixType(matrixType, matrixFormat, true); },
@@ -1294,7 +1300,7 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
                 { m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a CPUSparseMatrix is not yet implemented."); });//{ m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         },
-        { 
+        {
             // Set GPUSparseMatrix from:
             DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, nullptr,
                 { Matrix<ElemType> tempCPUSparseMatrix(deepCopyFrom.DeepClone()); tempCPUSparseMatrix.SwitchToMatrixType(GetMatrixType(), GetFormat(), true); m_GPUSparseMatrix->SetValue(*tempCPUSparseMatrix.m_CPUSparseMatrix); },
@@ -1309,6 +1315,7 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
 // If this is ever used for something that needs performance, it should not be too hard (but labor) to implement this efficiently.
 static void DoCastAssignValuesOf(Matrix<float>&  target, const Matrix<float>&  other) { target.AssignValuesOf(other); }
 static void DoCastAssignValuesOf(Matrix<double>& target, const Matrix<double>& other) { target.AssignValuesOf(other); }
+static void DoCastAssignValuesOf(Matrix<half>& target, const Matrix<half>& other) { target.AssignValuesOf(other); }
 template<class ElemType>
 static void CopyToVector(const Matrix<ElemType>& source, vector<ElemType>& sourceData)
 {
@@ -1359,16 +1366,39 @@ template <class ElemType>
 void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ // allows for mixed assignment with conversion
 {
     const Matrix<float> * otherf = dynamic_cast<const Matrix<float>*>(&other);
-    if (otherf)
-        return DoCastAssignValuesOf(*this, *otherf);
     const Matrix<double> * otherd = dynamic_cast<const Matrix<double>*>(&other);
-    if (otherd)
-        return DoCastAssignValuesOf(*this, *otherd);
-    LogicError("CastAssignValuesOf: Only accepts float and double matrices.");
+    const Matrix<half> * otherh = dynamic_cast<const Matrix<half>*>(&other);
+    if (!otherf && !otherd && !otherh)
+        LogicError("CastAssignValuesOf: Only accepts float, double and half matrices.");
+
+    DISPATCH_MATRIX_ON_FLAG(
+        this,
+        this,
+        {
+            if (otherf) DoCastAssignValuesOf(*this, *otherf);
+            if (otherd) DoCastAssignValuesOf(*this, *otherd);
+            if (otherh) DoCastAssignValuesOf(*this, *otherh);
+        },
+        {
+            if (otherf) m_GPUMatrix->template CastAssignValuesOf<float>(otherf->m_GPUMatrix.get());
+            if (otherd) m_GPUMatrix->template CastAssignValuesOf<double>(otherd->m_GPUMatrix.get());
+            if (otherh) m_GPUMatrix->template CastAssignValuesOf<half>(otherh->m_GPUMatrix.get());
+        },
+        {
+            if (otherf) DoCastAssignValuesOf(*this, *otherf);
+            if (otherd) DoCastAssignValuesOf(*this, *otherd);
+            if (otherh) DoCastAssignValuesOf(*this, *otherh);
+        },
+        {
+            if (otherf) m_GPUSparseMatrix->template DeepCast<float>(*otherf->m_GPUSparseMatrix);
+            if (otherd) m_GPUSparseMatrix->template DeepCast<double>(*otherd->m_GPUSparseMatrix);
+            if (otherh) m_GPUSparseMatrix->template DeepCast<half>(*otherh->m_GPUSparseMatrix);
+        });
 }
 
 template<>
 void Matrix<int>::SetValue(const size_t, const size_t, int, int*, const size_t, DataTransferer*) { NOT_IMPLEMENTED; }
+
 template <class ElemType>
 void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags, DataTransferer* transferer)
 {
@@ -1620,7 +1650,7 @@ void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemT
                             NOT_IMPLEMENTED);
 }
 
-// Vanilla SGD update. 
+// Vanilla SGD update.
 // Modifies "this" parameter matrix, on which this method is invoked.
 template <class ElemType>
 void Matrix<ElemType>::SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRatePerSample)
@@ -1628,11 +1658,11 @@ void Matrix<ElemType>::SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRate
     DecideAndMoveToRightDevice(gradients, *this);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
-    { 
+    {
         // w_t = w_{t-1} - learnRatePerSample * g_{t-1},
         ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
     },
-    { 
+    {
         // BUGBUG: cannot call ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this) here,
         // it produces different results from the scale and add below.
         // g'_{t-1} = learnRatePerSample * g_{t-1}
@@ -1640,13 +1670,13 @@ void Matrix<ElemType>::SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRate
         Scale(ElemType(learnRatePerSample), gradients);
         *this -= gradients;
     },
-    { 
+    {
         ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
     },
-    { 
+    {
         ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
     });
-    
+
 }
 
 // SGD update with momentum.
@@ -1661,7 +1691,7 @@ void Matrix<ElemType>::MomentumSGDUpdate(Matrix<ElemType>& gradients,
     DecideAndMoveToRightDevice(smoothedGradients, gradients, *this);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
-        { 
+        {
             // Classic momentum (unitGainFactor == 1.0):
             // 1) sg_t = momentum * sg_{t-1} + learnRatePerSample * g_{t-1}
             // Unit-gain momentum (unitGainFactor == 1.0 - momentum):
@@ -1670,11 +1700,11 @@ void Matrix<ElemType>::MomentumSGDUpdate(Matrix<ElemType>& gradients,
             ScaleAndAdd(unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
             *this -= smoothedGradients;
         },
-        { 
+        {
             ScaleAndAdd(unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
             *this -= smoothedGradients;
         },
-        { 
+        {
             // The sparse update is slightly different from the dense implementation above:
             // Classic momentum (unitGainFactor == 1.0):
             // 1) sg_t = momentum * sg_{t-1} + g_{t-1}
@@ -1688,7 +1718,7 @@ void Matrix<ElemType>::MomentumSGDUpdate(Matrix<ElemType>& gradients,
             }
             ScaleAndAdd(-learnRatePerSample, gradients, *this);
         },
-        { 
+        {
             if (momentum != 0)
             {
                 gradients.m_GPUSparseMatrix->NormalGrad(*smoothedGradients.m_GPUMatrix, momentum, unitGainFactor);
@@ -1728,7 +1758,7 @@ void Matrix<ElemType>::NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gr
         { /* CPU sparse */
             if (momentum != 0)
             {
-                // Identical to the above, except that as a side effect "NormalGrad" modifies 
+                // Identical to the above, except that as a side effect "NormalGrad" modifies
                 // gradient values in place, so that gradientCache is needed to store the original values.
                 Matrix<ElemType> gradientCache(gradients.GetDeviceId());
                 gradientCache.AssignValuesOf(gradients);
@@ -1775,24 +1805,24 @@ void Matrix<ElemType>::FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemT
                                        const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor)
 {
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-        { 
-            m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, 
-                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, 
+        {
+            m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
+                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
                                    (ElemType)targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainFactor);
-            SetDataLocation(CPU); 
+            SetDataLocation(CPU);
         },
         {
-            m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, 
-                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, 
+            m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
+                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
                                    (ElemType)targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainFactor);
-            SetDataLocation(GPU); 
+            SetDataLocation(GPU);
         },
         { NOT_IMPLEMENTED; },
         {
-            gradients.m_GPUSparseMatrix->FSAdagrad(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
+            gradients.m_GPUSparseMatrix->FSAdagrad(*m_GPUMatrix, *functionValues.m_GPUMatrix,
                                                    (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
                                                    (ElemType)targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainFactor);
-            SetDataLocation(GPU); 
+            SetDataLocation(GPU);
         });
 
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
@@ -1823,8 +1853,8 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
         SetDataLocation(GPU);
     },
     { NOT_IMPLEMENTED; },
-    { gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
-        (ElemType)learnRatePerSample, (ElemType)meanMomentum, 
+    { gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix,
+        (ElemType)learnRatePerSample, (ElemType)meanMomentum,
         (ElemType)varMomentum, biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
         SetDataLocation(GPU); });
 
@@ -1852,7 +1882,8 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
+template <typename GradType>
+void Matrix<ElemType>::AdaDeltaUpdate(Matrix<GradType>& gradients,
     Matrix<ElemType>& functionValues,
     ElemType learningRate, ElemType rho, ElemType epsilon,
     int* timestamps, int currentTimestamp)
@@ -2320,7 +2351,7 @@ Matrix<ElemType>& Matrix<ElemType>::operator-=(const Matrix<ElemType>& a)
     DecideAndMoveToRightDevice(*this, a);
 
     DISPATCH_MATRIX_ON_FLAG(this,
-                            this, 
+                            this,
                             *m_CPUMatrix -= *a.m_CPUMatrix,
                             *m_GPUMatrix -= *a.m_GPUMatrix,
                             NOT_IMPLEMENTED,
@@ -3432,16 +3463,8 @@ Matrix<ElemType>& Matrix<ElemType>::InplaceTruncateBottom(const ElemType thresho
     if (IsEmpty())
         LogicError("InplaceTruncateBottom: Matrix is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
-    {
-        if (!isfinite((float) threshold))
-            return *this;
-    }
-    else
-    {
-        if (!isfinite(threshold))
-            return *this;
-    }
+    if (!isfinite(threshold))
+        return *this;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -3460,21 +3483,10 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateBottomOf(const Matrix<ElemType
     if (a.IsEmpty())
         LogicError("AssignTruncateBottomOf: Matrix a is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
+    if (!isfinite(threshold))
     {
-        if (!isfinite((float) threshold))
-        {
-            this->SetValue(a);
-            return *this;
-        }
-    }
-    else
-    {
-        if (!isfinite(threshold))
-        {
-            this->SetValue(a);
-            return *this;
-        }
+        this->SetValue(a);
+        return *this;
     }
 
     DecideAndMoveToRightDevice(a, *this);
@@ -3497,16 +3509,8 @@ Matrix<ElemType>& Matrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
     if (IsEmpty())
         LogicError("InplaceTruncateTop: Matrix is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
-    {
-        if (!isfinite((float) threshold))
-            return *this;
-    }
-    else
-    {
-        if (!isfinite(threshold))
-            return *this;
-    }
+    if (!isfinite(threshold))
+        return *this;
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
@@ -3524,21 +3528,10 @@ Matrix<ElemType>& Matrix<ElemType>::AssignTruncateTopOf(const Matrix<ElemType>& 
     if (a.IsEmpty())
         LogicError("AssignTruncateTopOf: Matrix a is empty.");
 
-    if (sizeof(ElemType) == sizeof(float))
+    if (!isfinite(threshold))
     {
-        if (!isfinite((float) threshold))
-        {
-            this->SetValue(a);
-            return *this;
-        }
-    }
-    else
-    {
-        if (!isfinite(threshold))
-        {
-            this->SetValue(a);
-            return *this;
-        }
+        this->SetValue(a);
+        return *this;
     }
 
     DecideAndMoveToRightDevice(a, *this);
@@ -3603,7 +3596,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vect
     {
         SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
     }
-    
+
     DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
         this,
         m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
@@ -3611,7 +3604,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vect
         m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
         m_GPUSparseMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis)
         );
-    
+
     return *this;
 }
 
@@ -3635,7 +3628,7 @@ Matrix<ElemType>& Matrix<ElemType>::ScatterToIndices(const Matrix<ElemType>& val
 {
     if (indices.IsEmpty() || values.IsEmpty())
         LogicError("ScatterAccordingIndices: input matrix is empty.");
-    
+
     DISPATCH_MATRIX_ON_FLAG(&values,
                             this,
                             m_CPUMatrix->ScatterToIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, row_elements),
@@ -4828,7 +4821,7 @@ void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Mat
 
 template <class ElemType>
 void Matrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                           const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output, 
+                                           const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output,
                                            Matrix<ElemType>& argmax, double spatialScale) const
 {
     DecideAndMoveToRightDevice(*this, output);
@@ -4843,7 +4836,7 @@ void Matrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t n
 
 template <class ElemType>
 void Matrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                             const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, 
+                                             const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad,
                                              Matrix<ElemType>& argmax, double spatialScale) const
 {
     DecideAndMoveToRightDevice(*this, grad);
@@ -4918,9 +4911,10 @@ void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, 
-                                                 Matrix<ElemType>& runMean, Matrix<ElemType>& runVariance, Matrix<ElemType>& out, double epsilon,
-                                                 Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const
+template <class StatType>
+void Matrix<ElemType>::BatchNormalizationForward(const Matrix<StatType>& scale, const Matrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                                 Matrix<StatType>& runMean, Matrix<StatType>& runVariance, Matrix<ElemType>& out, double epsilon,
+                                                 Matrix<StatType>& saveMean, Matrix<StatType>& saveInvStdDev) const
 {
     DecideAndMoveToRightDevice(*this, out);
 
@@ -4938,9 +4932,10 @@ void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, 
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, double blendFactor,
-                                                  const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
-                                                  Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const
+template <class StatType>
+void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<StatType>& scale, double blendFactor,
+                                                  const Matrix<StatType>& saveMean, const Matrix<StatType>& saveInvStdDev,
+                                                  Matrix<StatType>& scaleGrad, Matrix<StatType>& biasGrad) const
 {
     DecideAndMoveToRightDevice(*this, grad);
 
@@ -5626,6 +5621,26 @@ void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<Elem
 }
 
 template <class ElemType>
+void Matrix<ElemType>::BatchMatMul(ElemType beta, const Matrix<ElemType>& a, const bool transposeA, const int m, const Matrix<ElemType>& b, const bool transposeB, const int n, Matrix<ElemType>& c, const bool isColWise)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("BatchMatMul: one of the input matrix is empty.");
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (a.GetMatrixType() != DENSE || b.GetMatrixType() != DENSE) // only support a & b being dense
+        NOT_IMPLEMENTED;
+
+    c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+        &a,
+        CPUMatrix<ElemType>::BatchMatMul(beta, *a.m_CPUMatrix, transposeA, m, *b.m_CPUMatrix, transposeB, n, *c.m_CPUMatrix, isColWise),
+        GPUMatrix<ElemType>::BatchMatMul(beta, *a.m_GPUMatrix, transposeA, m, *b.m_GPUMatrix, transposeB, n, *c.m_GPUMatrix, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 ElemType Matrix<ElemType>::InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
 {
     if (a.IsEmpty() || b.IsEmpty())
@@ -5832,7 +5847,7 @@ ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
     diff = y - x;
     if (diff < MINLOGEXP)
     {
-        return (ElemType)((x < LSMALL) ? LZERO : x);
+        return (ElemType)((x < LSMALL) ? (ElemType)LZERO : x);
     }
     else
     {
@@ -6101,9 +6116,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
 
 // Calculate CTC score
 // prob (input): the posterior output from the network
-// alpha, beta (output): alpha and beta for forward-backward calculation. 
-// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
-// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// alpha, beta (output): alpha and beta for forward-backward calculation.
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance
 // totalScore (output): total CTC score
 // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
 // uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
@@ -6229,6 +6244,20 @@ void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperato
 //template class Matrix<short>;
 template class Matrix<float>;
 template class Matrix<double>;
+template class Matrix<half>;
+
+// instantiate some templated methods
+template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<float>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
+template MATH_API void Matrix<double>::AdaDeltaUpdate(Matrix<double>& gradients, Matrix<double>& functionvalues, double learningRatePerSample, double rho, double epsilon, int* timestamps, int currentTimestamp);
+template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<half>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
+
+template MATH_API void Matrix<float>::BatchNormalizationForward(const Matrix<float>& scale, const Matrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<float>& runMean, Matrix<float>& runVariance, Matrix<float>& out, double epsilon, Matrix<float>& saveMean, Matrix<float>& saveInvStdDev) const;
+template MATH_API void Matrix<double>::BatchNormalizationForward(const Matrix<double>& scale, const Matrix<double>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<double>& runMean, Matrix<double>& runVariance, Matrix<double>& out, double epsilon, Matrix<double>& saveMean, Matrix<double>& saveInvStdDev) const;
+template MATH_API void Matrix<half>::BatchNormalizationForward(const Matrix<float>& scale, const Matrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<float>& runMean, Matrix<float>& runVariance, Matrix<half>& out, double epsilon, Matrix<float>& saveMean, Matrix<float>& saveInvStdDev) const;
+
+template MATH_API void Matrix<float>::BatchNormalizationBackward(const Matrix<float>& in, Matrix<float>& grad, const Matrix<float>& scale, double blendFactor, const Matrix<float>& saveMean, const Matrix<float>& saveInvStdDev, Matrix<float>& scaleGrad, Matrix<float>& biasGrad) const;
+template MATH_API void Matrix<double>::BatchNormalizationBackward(const Matrix<double>& in, Matrix<double>& grad, const Matrix<double>& scale, double blendFactor, const Matrix<double>& saveMean, const Matrix<double>& saveInvStdDev, Matrix<double>& scaleGrad, Matrix<double>& biasGrad) const;
+template MATH_API void Matrix<half>::BatchNormalizationBackward(const Matrix<half>& in, Matrix<half>& grad, const Matrix<float>& scale, double blendFactor, const Matrix<float>& saveMean, const Matrix<float>& saveInvStdDev, Matrix<float>& scaleGrad, Matrix<float>& biasGrad) const;
 
 // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
 // Let's explicitly instantiate the methods we need for that purpose

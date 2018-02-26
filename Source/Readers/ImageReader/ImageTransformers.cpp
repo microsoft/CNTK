@@ -22,14 +22,14 @@ namespace CNTK {
 using namespace Microsoft::MSR::CNTK;
 
 // Transforms a single sequence as open cv dense image. Called once per sequence.
-SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
+SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence, int indexInBatch)
 {
     auto inputSequence = dynamic_cast<ImageSequenceData*>(sequence.get());
     if (inputSequence == nullptr)
         RuntimeError("Unexpected sequence provided");
 
     auto result = std::make_shared<ImageSequenceData>();
-    Apply(inputSequence->m_copyIndex, inputSequence->m_image);
+    Apply(inputSequence->m_copyIndex, inputSequence->m_image, indexInBatch);
 
     result->m_image = inputSequence->m_image;
     result->m_numberOfSamples = inputSequence->m_numberOfSamples;
@@ -125,10 +125,10 @@ StreamInformation CropTransformer::Transform(const StreamInformation& inputStrea
     return m_outputStream;
 }
 
-void CropTransformer::Apply(uint8_t copyId, cv::Mat &mat)
+void CropTransformer::Apply(uint8_t copyId, cv::Mat &mat, int indexInBatch)
 {
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); }); 
+    auto rng = m_rngs.at_or_create(indexInBatch, [seed](int offset) { return std::make_unique<std::mt19937>(seed + offset); });
     int viewIndex = m_cropType == CropType::MultiView10 ? (int)(copyId % ImageDeserializerBase::NumMultiViewCopies) : 0;
 
     switch (m_cropType)
@@ -157,7 +157,7 @@ void CropTransformer::Apply(uint8_t copyId, cv::Mat &mat)
         cv::flip(mat, mat, 1);
     }
 
-    m_rngs.push(std::move(rng));
+    m_rngs.assignTo(indexInBatch, std::move(rng));
 }
 
 CropTransformer::RatioJitterType
@@ -368,7 +368,7 @@ StreamInformation ScaleTransformer::Transform(const StreamInformation& inputStre
     return m_outputStream;
 }
 
-void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
+void ScaleTransformer::Apply(uint8_t, cv::Mat &mat, int /* indexInBatch */)
 {
     if (m_scaleMode == ScaleMode::Fill)
     { // warp the image to the given target size
@@ -448,7 +448,7 @@ MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransfor
     }
 }
 
-void MeanTransformer::Apply(uint8_t, cv::Mat &mat)
+void MeanTransformer::Apply(uint8_t, cv::Mat &mat, int /* indexInBatch */)
 {
     assert(m_meanImg.size() == cv::Size(0, 0) ||
            (m_meanImg.size() == mat.size() &&
@@ -493,7 +493,7 @@ StreamInformation TransposeTransformer::Transform(const StreamInformation& input
 }
 
 // Transformation of the sequence.
-SequenceDataPtr TransposeTransformer::Transform(SequenceDataPtr sequence)
+SequenceDataPtr TransposeTransformer::Transform(SequenceDataPtr sequence, int indexInBatch)
 {
     auto inputSequence = dynamic_cast<ImageSequenceData*>(sequence.get());
     if (inputSequence == nullptr)
@@ -507,19 +507,19 @@ SequenceDataPtr TransposeTransformer::Transform(SequenceDataPtr sequence)
     {
     case DataType::Double:
         if (m_precision == DataType::Float)
-            return m_floatTransform.Apply<double>(inputSequence);
+            return m_floatTransform.Apply<double>(inputSequence, indexInBatch);
         if (m_precision == DataType::Double)
-            return m_doubleTransform.Apply<double>(inputSequence);
+            return m_doubleTransform.Apply<double>(inputSequence, indexInBatch);
     case DataType::Float:
         if (m_precision == DataType::Double)
-            return m_doubleTransform.Apply<float>(inputSequence);
+            return m_doubleTransform.Apply<float>(inputSequence, indexInBatch);
         if (m_precision == DataType::Float)
-            return m_floatTransform.Apply<float>(inputSequence);
+            return m_floatTransform.Apply<float>(inputSequence, indexInBatch);
     case DataType::UChar:
         if (m_precision == DataType::Double)
-            return m_doubleTransform.Apply<unsigned char>(inputSequence);
+            return m_doubleTransform.Apply<unsigned char>(inputSequence, indexInBatch);
         if (m_precision == DataType::Float)
-            return m_floatTransform.Apply<unsigned char>(inputSequence);
+            return m_floatTransform.Apply<unsigned char>(inputSequence, indexInBatch);
     default:
         RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
     }
@@ -528,7 +528,7 @@ SequenceDataPtr TransposeTransformer::Transform(SequenceDataPtr sequence)
 
 template <class TElementTo>
 template<class TElementFrom>
-SequenceDataPtr TransposeTransformer::TypedTranspose<TElementTo>::Apply(ImageSequenceData* inputSequence)
+SequenceDataPtr TransposeTransformer::TypedTranspose<TElementTo>::Apply(ImageSequenceData* inputSequence, int /* indexInBatch */)
 {
     auto shape = m_parent->m_inputStream.m_sampleLayout;
     if (shape.IsUnknown()) // Taking the shape from the sequence.
@@ -624,7 +624,7 @@ void IntensityTransformer::StartEpoch(const EpochConfiguration &config)
     ImageTransformerBase::StartEpoch(config);
 }
 
-void IntensityTransformer::Apply(uint8_t, cv::Mat &mat)
+void IntensityTransformer::Apply(uint8_t, cv::Mat &mat, int indexInBatch)
 {
     if (m_eigVal.empty() || m_eigVec.empty() || m_stdDev == 0.0)
         return;
@@ -635,18 +635,18 @@ void IntensityTransformer::Apply(uint8_t, cv::Mat &mat)
         mat.convertTo(mat, type);
 
     if (mat.type() == CV_64FC(mat.channels()))
-        Apply<double>(mat);
+        Apply<double>(mat, indexInBatch);
     else if (mat.type() == CV_32FC(mat.channels()))
-        Apply<float>(mat);
+        Apply<float>(mat, indexInBatch);
     else
         RuntimeError("Unsupported type");
 }
 
 template <typename ElemType>
-void IntensityTransformer::Apply(cv::Mat &mat)
+void IntensityTransformer::Apply(cv::Mat &mat, int indexInBatch)
 {
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); } );
+    auto rng = m_rngs.at_or_create(indexInBatch, [seed](int offset) { return std::make_unique<std::mt19937>(seed + offset); });
 
     // Using single precision as EigVal and EigVec matrices are single precision.
     boost::random::normal_distribution<float> d(0, (float)m_stdDev);
@@ -655,7 +655,7 @@ void IntensityTransformer::Apply(cv::Mat &mat)
     alphas.at<float>(0) = d(*rng) * m_eigVal.at<float>(0);
     alphas.at<float>(1) = d(*rng) * m_eigVal.at<float>(1);
     alphas.at<float>(2) = d(*rng) * m_eigVal.at<float>(2);
-    m_rngs.push(std::move(rng));
+    m_rngs.assignTo(indexInBatch, std::move(rng));
 
     assert(m_eigVec.rows == 3 && m_eigVec.cols == 3);
 
@@ -697,7 +697,7 @@ void ColorTransformer::StartEpoch(const EpochConfiguration &config)
     ImageTransformerBase::StartEpoch(config);
 }
 
-void ColorTransformer::Apply(uint8_t, cv::Mat &mat)
+void ColorTransformer::Apply(uint8_t, cv::Mat &mat, int indexInBatch)
 {
     if (m_brightnessRadius == 0.0 && m_contrastRadius == 0.0 && m_saturationRadius == 0.0)
         return;
@@ -706,18 +706,18 @@ void ColorTransformer::Apply(uint8_t, cv::Mat &mat)
     ConvertToFloatingPointIfRequired(mat);
 
     if (mat.type() == CV_64FC(mat.channels()))
-        Apply<double>(mat);
+        Apply<double>(mat, indexInBatch);
     else if (mat.type() == CV_32FC(mat.channels()))
-        Apply<float>(mat);
+        Apply<float>(mat, indexInBatch);
     else
         RuntimeError("Unsupported type");
 }
 
 template <typename ElemType>
-void ColorTransformer::Apply(cv::Mat &mat)
+void ColorTransformer::Apply(cv::Mat &mat, int indexInBatch)
 {
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+    auto rng = m_rngs.at_or_create(indexInBatch, [seed](int offset) { return std::make_unique<std::mt19937>(seed + offset); });
 
     if (m_brightnessRadius > 0 || m_contrastRadius > 0)
     {
@@ -775,7 +775,7 @@ void ColorTransformer::Apply(cv::Mat &mat)
         m_hsvTemp.push(std::move(hsv));
     }
 
-    m_rngs.push(std::move(rng));
+    m_rngs.assignTo(indexInBatch, std::move(rng));
 }
 
 CastTransformer::CastTransformer(const ConfigParameters& config) : TransformBase(config), m_floatTransform(this), m_doubleTransform(this)
@@ -789,7 +789,7 @@ StreamInformation CastTransformer::Transform(const StreamInformation& inputStrea
     return m_outputStream;
 }
 
-SequenceDataPtr CastTransformer::Transform(SequenceDataPtr sequence)
+SequenceDataPtr CastTransformer::Transform(SequenceDataPtr sequence, int /* indexInBatch */)
 {
     if (m_inputStream.m_elementType == m_precision || sequence->m_elementType == m_precision)
     {

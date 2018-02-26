@@ -8,6 +8,7 @@
 import numpy as np
 import cntk as C
 import pytest
+import sys
 
 from cntk.io import MinibatchSource, CTFDeserializer, CBFDeserializer, \
     StreamDefs, StreamDef, \
@@ -1423,3 +1424,38 @@ def test_index_caching(tmpdir):
         timeWithCache += (end - start)
 
     assert timeWithCache < timeWithoutCache
+
+def test_composite_source_synced_transforms(tmpdir):
+    from PIL import Image
+
+    np.random.seed(1)
+    tmpmap = str(tmpdir/'sync_test.map')
+    with open(tmpmap, 'w') as f:
+        for i in range(10):
+            data = np.random.randint(0, 2**8, (224,224,3))
+            image = Image.fromarray(data.astype('uint8'), "RGB")
+            tmpjpg = str(tmpdir/('%d.jpg'%i))
+            image.save(tmpjpg)
+            f.write("%s\t0\n"%tmpjpg)
+
+    def create_reader(map_file1, map_file2):
+        transforms = [xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio'), xforms.scale(width=224, height=224, channels=3, interpolations='linear')]
+        source1 = C.io.ImageDeserializer(map_file1, C.io.StreamDefs(
+            source_image = C.io.StreamDef(field='image', transforms=transforms)))
+        source2 = C.io.ImageDeserializer(map_file2, C.io.StreamDefs(
+            target_image = C.io.StreamDef(field='image', transforms=transforms)))
+        return C.io.MinibatchSource([source1, source2], max_samples=sys.maxsize, randomize=True, multithreaded_deserializer=False)
+
+    x = C.input_variable((3,224,224))
+    y = C.input_variable((3,224,224))
+    loss = C.squared_error(x, y)
+    reader = create_reader(tmpmap, tmpmap)
+    minibatch_size = 2
+    input_map={
+        x: reader.streams.source_image,
+        y: reader.streams.target_image
+    }
+    
+    for i in range(30):
+        data=reader.next_minibatch(minibatch_size, input_map=input_map)
+        assert np.allclose(loss.eval(data), np.zeros(minibatch_size))

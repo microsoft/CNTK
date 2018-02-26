@@ -91,6 +91,7 @@ public:
 
 template class PlusNode<float>;
 template class PlusNode<double>;
+template class PlusNode<half>;
 
 // -----------------------------------------------------------------------
 // LogPlusNode (summand1, summand2)
@@ -165,6 +166,7 @@ public:
 
 template class LogPlusNode<float>;
 template class LogPlusNode<double>;
+template class LogPlusNode<half>;
 
 
 // -----------------------------------------------------------------------
@@ -225,6 +227,7 @@ public:
 
 template class PowNode<float>;
 template class PowNode<double>;
+template class PowNode<half>;
 
 
 // -----------------------------------------------------------------------
@@ -287,6 +290,7 @@ public:
 
 template class MinusNode<float>;
 template class MinusNode<double>;
+template class MinusNode<half>;
 
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
@@ -360,6 +364,7 @@ public:
 
 template class ElementTimesNode<float>;
 template class ElementTimesNode<double>;
+template class ElementTimesNode<half>;
 
 // -----------------------------------------------------------------------
 // TimesNodeBase (A, B, outputRank=1)
@@ -437,6 +442,19 @@ protected:
             return input->DataTensorFor(data, rank, fr);
         auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
         return TensorView<ElemType>(data, tensorShape);
+    }
+
+    static std::pair<size_t, size_t> CalcOutputMatrixSize(const size_t leftRank , const size_t rightRank, const TensorShape& outShape)
+    {
+        size_t outRank = outShape.GetRank();
+        size_t m = 1;
+        size_t n = 1;
+        size_t firstReducedDim = leftRank - (leftRank + rightRank - outRank) / 2;
+        for (size_t i = 0; i < firstReducedDim; i++)
+            m *= outShape.GetDim(i);
+        for (size_t i = firstReducedDim; i < outRank; i++)
+            n *= outShape.GetDim(i);
+        return std::make_pair(m, n);
     }
 
 private:
@@ -593,7 +611,7 @@ private:
                 Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
                 inputValueSlice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
                 Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? 0 : beta, inputGradientSlice);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? (ElemType)0 : beta, inputGradientSlice);
             }
 
             if (unpacked[inputIndex])
@@ -611,7 +629,7 @@ private:
                 Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
                 inputValueSlice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
                 Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? 0 : beta, inputGradientSlice);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? (ElemType)0 : beta, inputGradientSlice);
             }
             
             if (unpacked[inputIndex])
@@ -660,6 +678,16 @@ public:
                 {
                     ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, true/*allowBroadcast*/);
                 }
+                return;
+            }
+
+            if (fr.IsBatchMatmul(inputMBLayout) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()) && !hasSparse)
+            {
+                auto mn = CalcOutputMatrixSize(InputRef(0).GetSampleLayout().GetRank(), InputRef(1).GetSampleLayout().GetRank(), GetSampleLayout());
+                Matrix<ElemType> value = ValueFor(fr);
+                Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
+                Matrix<ElemType> input1 = InputRef(1).ValueFor(fr);
+                Matrix<ElemType>::BatchMatMul(ElemType(0.0), input0, m_transpose, mn.first, input1, false, mn.second, value, true);
                 return;
             }
 
@@ -725,6 +753,45 @@ public:
                 }
                 return;
             }
+
+            ElemType beta = Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType)0.0 : (ElemType)1.0;
+            if (inputIndex == 0)
+            {
+                if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()) && !hasSparse)
+                {
+                    Matrix<ElemType> outputGradient = GradientFor(fr);
+                    Matrix<ElemType> input1 = InputRef(1).ValueFor(fr);
+                    Matrix<ElemType> input0Gradient = InputRef(0).GradientFor(fr);
+                    if (!m_transpose)
+                    {
+                        auto mn = CalcOutputMatrixSize(GetSampleLayout().GetRank(), InputRef(1).GetSampleLayout().GetRank(), InputRef(0).GetSampleLayout());
+                        Matrix<ElemType>::BatchMatMul(beta, outputGradient, false, mn.first, input1, true, mn.second, input0Gradient, true);
+                    }
+                    else
+                    {
+                        auto mn = CalcOutputMatrixSize(InputRef(1).GetSampleLayout().GetRank(), GetSampleLayout().GetRank(), InputRef(0).GetSampleLayout());
+                        Matrix<ElemType>::BatchMatMul(beta, input1, false, mn.first, outputGradient, true, mn.second, input0Gradient, true);
+                    }
+                    return;
+                }
+            }
+            else if (inputIndex == 1)
+            {
+                if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()) && !hasSparse)
+                {
+                    auto mn = CalcOutputMatrixSize(InputRef(0).GetSampleLayout().GetRank(), GetSampleLayout().GetRank(), InputRef(1).GetSampleLayout());
+                    Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
+                    Matrix<ElemType> input1Gradient = InputRef(1).GradientFor(fr);
+                    Matrix<ElemType> outputGradient = GradientFor(fr);
+
+                    Matrix<ElemType>::BatchMatMul(beta, input0, !m_transpose, mn.first, outputGradient, false, mn.second, input1Gradient, true);
+                    return;
+                }
+            }
+
+            // note this is not performant, warn user about the slow path being used
+            if (Base::HasEnvironmentPtr() && Base::Environment().traceLevel > 0)
+                std::call_once(m_unrollWarningOnceFlag, [this] { fprintf(stderr, "WARNING: %ls %ls operation: being unrolled in backprop, execution may be slow\n", NodeName().c_str(), OperationName().c_str()); });
 
             auto timeRange     = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();
@@ -1051,6 +1118,7 @@ public:
 
 template class TimesNode<float>;
 template class TimesNode<double>;
+template class TimesNode<half>;
 
 // -----------------------------------------------------------------------
 // TransposeTimesNode (A', B)
@@ -1080,6 +1148,7 @@ public:
 
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
+template class TransposeTimesNode<half>;
 
 // Fixed-point matrix product. This scales inputs to 16bit signed integers by Symmetric quantizers, performs
 // integer multiplication using SSE/AVX2, and transforms the results back.
@@ -1170,6 +1239,7 @@ public:
 
 template class QuantizedTimesNode<float>;
 template class QuantizedTimesNode<double>;
+template class QuantizedTimesNode<half>;
 
 // -----------------------------------------------------------------------
 // SumElementsNode (input)
@@ -1405,6 +1475,7 @@ private:
 
 template class TransposeDimensionsNode<float>;
 template class TransposeDimensionsNode<double>;
+template class TransposeDimensionsNode<half>;
 
 // -----------------------------------------------------------------------
 // CosDistanceNode (left, right)
@@ -1525,6 +1596,7 @@ private:
 
 template class CosDistanceNode<float>;
 template class CosDistanceNode<double>;
+template class CosDistanceNode<half>;
 
 // -----------------------------------------------------------------------
 // KhatriRaoProductNode (left, right)
@@ -1851,6 +1923,7 @@ private:
 
 template class CosDistanceWithNegativeSamplesNode<float>;
 template class CosDistanceWithNegativeSamplesNode<double>;
+template class CosDistanceWithNegativeSamplesNode<half>;
 
 template <class ElemType>
 void UpdateRunningAverage(ComputationNode<ElemType>& newInput, TensorView<ElemType>& runningAverage,
@@ -1930,4 +2003,48 @@ protected:
     size_t m_numSamples;
 };
 
+// -----------------------------------------------------------------------
+// CastNode converts data types from InputType to ElemType
+// -----------------------------------------------------------------------
+template <class ElemType, class InputType>
+class CastNode : public UnaryElementWiseNode<ElemType>
+{
+    typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Cast"; }
+
+public:
+    CastNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto result = ValueFor(fr);
+        auto input = static_cast<ComputationNode<InputType>&>(*m_inputs[0].get()).ValueFor(fr);
+        result.CastAssignValuesOf(input);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    {
+        auto grad = GradientFor(fr);
+        auto inputGrad = static_cast<ComputationNode<InputType>&>(*m_inputs[0].get()).GradientFor(fr);
+        inputGrad.CastAssignValuesOf(grad);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+};
+
+template class CastNode<half, float>;
+template class CastNode<half, double>;
+template class CastNode<float, half>;
+template class CastNode<float, double>;
+template class CastNode<double, half>;
+template class CastNode<double, float>;
 }}}

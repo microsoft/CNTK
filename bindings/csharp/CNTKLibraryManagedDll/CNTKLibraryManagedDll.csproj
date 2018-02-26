@@ -81,6 +81,7 @@
     <Compile Include="SwigProxyClasses\DictionaryValue.cs" />
     <Compile Include="SwigProxyClasses\DictionaryVector.cs" />
     <Compile Include="SwigProxyClasses\Evaluator.cs" />
+    <Compile Include="SwigProxyClasses\float16.cs" />
     <Compile Include="SwigProxyClasses\HTKFeatureConfiguration.cs" />
     <Compile Include="SwigProxyClasses\HTKFeatureConfigurationVector.cs" />
     <Compile Include="SwigProxyClasses\IntVector.cs" />
@@ -108,6 +109,7 @@
     <Compile Include="SwigProxyClasses\StreamConfigurationVector.cs" />
     <Compile Include="SwigProxyClasses\StreamInformation.cs" />
     <Compile Include="SwigProxyClasses\StringVector.cs" />
+    <Compile Include="SwigProxyClasses\SWIGTYPE_p_void.cs" />
     <Compile Include="SwigProxyClasses\Trainer.cs" />
     <Compile Include="SwigProxyClasses\TrainingParameterScheduleDouble.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapParameterNDArrayViewPtr.cs" />

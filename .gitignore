@@ -224,6 +224,7 @@ bindings/python/cntk/cntk_py.py
 bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
 bindings/python/cntk/cntk_py_wrap.h
+bindings/python/cntk/VERSION
 bindings/python/dist/
 bindings/python/doc/cntk.*.rst
 bindings/python/doc/cntk.rst
@@ -332,7 +333,8 @@ Manual/.ipynb_checkpoints
 Examples/Text/LightRNN/LightRNN/*.so
 
 # other
-/packages
+packages/
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
 /Local
+.vs/

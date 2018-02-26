@@ -65,6 +65,7 @@ Makefile text
 *.asax text
 
 *.h text
+*.hpp text
 *.cpp text
 *.cc text
 *.cu text

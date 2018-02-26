@@ -801,7 +801,6 @@ struct htkmlfentry
     unsigned int firstframe; // range [firstframe,firstframe+numframes)
     unsigned int numframes;
     msra::dbn::CLASSIDTYPE classid;  // numeric state id
-    msra::dbn::HMMIDTYPE phonestart; // numeric phone start  time
 
 private:
     // verify and save data
@@ -842,8 +841,7 @@ private:
 
 public:
     // parse format with original HTK state align MLF format and state list
-    void parsewithstatelist(const vector<char*>& toks, const unordered_map<std::string, size_t>& statelisthash, const double htkTimeToFrame,
-                            std::unordered_map<std::string, size_t>& hmmnamehash)
+    void parsewithstatelist(const vector<char*>& toks, const unordered_map<std::string, size_t>& statelisthash, const double htkTimeToFrame)
     {
         size_t ts, te;
         parseframerange(toks, ts, te, htkTimeToFrame);
@@ -852,23 +850,6 @@ public:
             RuntimeError("htkmlfentry: state %s not found in statelist", toks[2]);
         const size_t uid = iter->second; // get state index
         setdata(ts, te, uid);
-        // phone boundary
-        if (hmmnamehash.size() > 0)
-        {
-            if (toks.size() > 4)
-            {
-                auto hmmiter = hmmnamehash.find(toks[4]);
-                if (hmmiter == hmmnamehash.end())
-                    RuntimeError("htkmlfentry: hmm %s not found in hmmlist", toks[4]);
-                phonestart = (msra::dbn::HMMIDTYPE)(hmmiter->second + 1);
-
-                // check for numeric overflow
-                if ((hmmiter->second + 1) != phonestart)
-                    RuntimeError("htkmlfentry: not enough bits for one of the values");
-            }
-            else
-                phonestart = 0;
-        }
     }
 
     // ... note: this will be too simplistic for parsing more complex MLF formats. Fix when needed.
@@ -890,7 +871,6 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
     wstring curpath;                                 // for error messages
     unordered_map<std::string, size_t> statelistmap; // for state <=> index
     map<wstring, WORDSEQUENCE> wordsequences;        // [key] word sequences (if we are building word entries as well, for MMI)
-    std::unordered_map<std::string, size_t> symmap;
 
     void strtok(char* s, const char* delim, vector<char*>& toks)
     {
@@ -971,7 +951,7 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
             if (statelistmap.size() == 0)
                 entries[i - s].parse(toks, htkTimeToFrame);
             else
-                entries[i - s].parsewithstatelist(toks, statelistmap, htkTimeToFrame, symmap);
+                entries[i - s].parsewithstatelist(toks, statelistmap, htkTimeToFrame);
             // if we also read word entries, do it here
             if (wordmap)
             {
@@ -1050,18 +1030,6 @@ public:
         }
     }; // to satisfy a template, never used... :(
 
-    // constructor reads multiple MLF files
-    htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath = L"", const double htkTimeToFrame = 100000.0)
-    {
-        // read state list
-        if (stateListPath != L"")
-            readstatelist(stateListPath);
-
-        // read MLF(s) --note: there can be multiple, so this is a loop
-        foreach_index (i, paths)
-            read(paths[i], restricttokeys, (nullmap * /*to satisfy C++ template resolution*/) NULL, (map<string, size_t>*) NULL, htkTimeToFrame);
-    }
-
     // alternate constructor that optionally also reads word alignments (for MMI training); triggered by providing a 'wordmap'
     // (We cannot use an optional arg in the constructor above because it interferes with the template resolution.)
     template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
@@ -1072,18 +1040,6 @@ public:
             readstatelist(stateListPath);
 
         // read MLF(s) --note: there can be multiple, so this is a loop
-        foreach_index (i, paths)
-            read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
-    }
-
-    // phone boundary
-    template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
-    htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const WORDSYMBOLTABLE* wordmap, const UNITSYMBOLTABLE* unitmap,
-                 const double htkTimeToFrame, const msra::asr::simplesenonehmm& hset)
-    {
-        if (stateListPath != L"")
-            readstatelist(stateListPath);
-        symmap = hset.symmap;
         foreach_index (i, paths)
             read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
     }

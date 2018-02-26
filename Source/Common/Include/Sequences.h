@@ -176,16 +176,19 @@ struct MBLayout
 
 public:
     // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
-    void Init(size_t numParallelSequences, size_t numTimeSteps)
+    void Init(size_t numParallelSequences, size_t numTimeSteps, bool deepInit = true)
     {
         // remember the dimensions
         m_numParallelSequences = numParallelSequences;
         m_numTimeSteps = numTimeSteps;
-        m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps);
-        m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps);
-        m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
-        m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
-        m_timeStepHasGap.assign(m_numTimeSteps, false);
+        if (deepInit) 
+        {
+            m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps);
+            m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps);
+            m_distanceToNearestStart.assign(m_numTimeSteps, PTRDIFF_MAX);
+            m_distanceToNearestEnd.assign(m_numTimeSteps, PTRDIFF_MAX);
+            m_timeStepHasGap.assign(m_numTimeSteps, false);
+        }
         m_columnsValidityMask.Resize(0, 0); // invalidate
         // reset state
         m_numFramesDeclared = 0;
@@ -367,7 +370,7 @@ public:
     }
 
     // version that passes a SequenceInfo record directly
-    void AddSequence(const SequenceInfo &seqDesc)
+    void AddSequence(const SequenceInfo &seqDesc, bool initDistances = true)
     {
         const auto beginTime = seqDesc.tBegin;
         const auto endTime = seqDesc.tEnd;
@@ -390,26 +393,32 @@ public:
         if (seqId == GAP_SEQUENCE_ID)
         {
             m_numGapFrames += (e - b);
-            for (size_t t = b; t < e; t++)
+            if (initDistances) 
             {
-                m_timeStepHasGap[t] = true;
-                m_distanceToStart(s, t) = -1; // start flags also encode gaps
+                for (size_t t = b; t < e; t++)
+                {
+                    m_timeStepHasGap[t] = true;
+                    m_distanceToStart(s, t) = -1; // start flags also encode gaps
+                }
             }
         }
         else
-            for (size_t t = b; t < e; t++)
+            if (initDistances) 
             {
-                // update the nearest sentence boundaries, minimum over all parallel sequences
-                // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
-                ptrdiff_t distanceToStart = (ptrdiff_t) t - beginTime;
-                ptrdiff_t distanceToEnd = (ptrdiff_t)(endTime - 1 - t);
-                m_distanceToStart(s, t) = (float) distanceToStart;
-                m_distanceToEnd(s, t) = (float) distanceToEnd;
-                // and the aggregate
-                if (m_distanceToNearestStart[t] > distanceToStart)
-                    m_distanceToNearestStart[t] = distanceToStart;
-                if (m_distanceToNearestEnd[t] > distanceToEnd)
-                    m_distanceToNearestEnd[t] = distanceToEnd;
+                for (size_t t = b; t < e; t++)
+                {
+                    // update the nearest sentence boundaries, minimum over all parallel sequences
+                    // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
+                    ptrdiff_t distanceToStart = (ptrdiff_t)t - beginTime;
+                    ptrdiff_t distanceToEnd = (ptrdiff_t)(endTime - 1 - t);
+                    m_distanceToStart(s, t) = (float)distanceToStart;
+                    m_distanceToEnd(s, t) = (float)distanceToEnd;
+                    // and the aggregate
+                    if (m_distanceToNearestStart[t] > distanceToStart)
+                        m_distanceToNearestStart[t] = distanceToStart;
+                    if (m_distanceToNearestEnd[t] > distanceToEnd)
+                        m_distanceToNearestEnd[t] = distanceToEnd;
+                }
             }
     }
 
@@ -779,6 +788,15 @@ public:
         else return
             (pMBLayout->GetNumTimeSteps()         == 1 || (!IsAllFrames() && m_timeRange == 1)) &&
             (pMBLayout->GetNumParallelSequences() == 1 || seqIndex != SIZE_MAX);
+    }
+
+    bool IsBatchMatmul(const shared_ptr<MBLayout> &pMBLayout) const
+    {
+        if (!pMBLayout)
+            return false;
+        else
+            return (pMBLayout->GetNumTimeSteps() > 1 && (IsAllFrames() || m_timeRange > 1)) ||
+            (pMBLayout->GetNumParallelSequences() > 1);
     }
 
     // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1

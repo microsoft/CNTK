@@ -10,9 +10,8 @@ Single bit binarization essentially just takes the sign of each value, packs tho
 
 | File | Description |
 |:---------|:------------|
-|[BinaryConvolveOp.h](./BinaryConvolutionLib/BinaryConvolveOp.h)          |This file contains the fast C++ binary convolution implementation in form of a CNTK native user-defined Function. It calls into a Halide function (`halide_convolve`) to perform the actual computations.
-|[halide_convolve.cpp](./BinaryConvolutionLib/halide/halide_convolve.cpp) |The Halide definition of binarization and convolution kernels. Allows achieving good speedup with very little effort (as opposed to months of development efforts required for hand-optimized implementations); see http://halide-lang.org/
-[halide_convolve.lib](./BinaryConvolutionLib/halide/halide_convolve.lib), [halide_convolve_nofeatures.lib](./BinaryConvolutionLib/halide/halide_convolve_nofeatures.lib), |[halide_convolve.a](./BinaryConvolutionLib/halide/halide_convolve.a), [halide_convolve_nofeatures.a](./BinaryConvolutionLib/halide/halide_convolve_nofeatures.a)  |The pre-built Halide libraries that are used in the C++ binary convolution user-defined CNTK Function; there are 2 variants available viz. `halide_convolve_nofeatures.a` (`.lib` for Windows) which does not use SSE/AVX instructions and can be used on any x64 CPU and `halide_convolve.a` (`.lib` on Windows) that uses SSE/AVX instructions and runs much faster, but needs a compatible modern CPU. By default, the BinaryConvolutionLib is built to use the non-SSE/AVX versions of the Halide code; switch to using the SSE/AVX versions (by changing the linked library in BinaryConvolutionLib.vcxproj or the Makefile) which has significantly better performance, by virtue of utilizing the data-parallel vector instructions on the CPU. If you use the SSE/AVX version of the library on a CPU that does not have AVX support, you will get a runtime "Illegal instruction" error.
+|[BinaryConvolveOp.h](../../../Source/Extensibility/BinaryConvolutionLib/BinaryConvolveOp.h)          |This file contains the fast C++ binary convolution implementation in form of a CNTK native user-defined Function. It calls into a Halide class (`HalideBinaryConvolve`) to perform the actual computations.
+|[halide_binary_convolve.h](../../../Source/Extensibility/BinaryConvolutionLib/halide_binary_convolve.h) |The Halide definition of binarization and convolution kernels. Allows achieving good speedup with very little effort (as opposed to months of development efforts required for hand-optimized implementations); see http://halide-lang.org/
 |[custom_convolution_ops.py](./custom_convolution_ops.py)                 |Python definitions of CNTK user-defined functions that emulate binarization. The purpose of these is not speedup but to allow for binary networks to be trained in a very simple way. They also serve as good examples of how to define CNTK custom user-defined functions purely in python. 
 |[binary_convnet.py](./binary_convnet.py)                   |A driver script which defines a binary convolution network, trains it on the CIFAR10 dataset, and finally evaluates the model  using the optimized C++ binary convolution user-defined CNTK Function.
 
@@ -27,15 +26,7 @@ CIFAR-10 dataset is not included in the CNTK distribution but can be easily down
 To run this code, invoke [binary_convnet.py](./binary_convnet.py), which creates a binary convolution network, and trains. Then, the code replaces the Python binary convolutions in the model with the native C++ binary convolution Functions, and evaluates the model on the CIFAR test-set.
 
 ## Editing the Halide Function
-If you're interested in tweaking the binarization kernels defined in [halide_convolve.cpp](./BinaryConvolutionLib/halide/halide_convolve.cpp)
-, setup Halide by following the instructions at https://github.com/halide/Halide/ and then build a new library with your changes, by simply running:
-
-```
-g++ -std=c++11 -I <Halide_Dir>/include/halide_convolve.cpp <Halide_Dir>/lib/libHalide.a -o halide_convolve -ldl -lpthread -ltinfo -lz
-./halide_convolve
-```
-
-Note that halide_convolve is currently set up to target the platform it's built on, but you can change it to target other things, even small ARM devices like the Raspberry Pi!
+If you're interested in tweaking the binarization kernels defined in [halide_binary_convolve.h](../../../Source/Extensibility/BinaryConvolutionLib/halide_binary_convolve.h), you can simply change the code and build BinaryConvolution sub project to replace the libraries in your path.
 
 ## Defining your Own binary convolution model
 Exploring other models with binarization is fairly easy using the functions provided. Simply define a model along the lines of `create_binary_convolution_model` in [binary_convnet.py](./binary_convnet.py)

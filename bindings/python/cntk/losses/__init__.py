@@ -15,7 +15,10 @@ from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
 from cntk.internal.utils import get_data_type
 from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as auto_select
+from cntk import times, softmax, reshape
+import cntk as C
 from ..axis import Axis
+import math
 
 
 @typemap
@@ -349,3 +352,203 @@ def nce_loss(weights, biases, inputs, labels, noise_distribution, num_samples=32
     noise_distribution = sanitize_input(noise_distribution, dtype)
     return nce_loss(weights, biases, inputs, labels, noise_distribution,
                     num_samples, allow_duplicates, seed, name)
+
+@typemap
+def lattice_sequence_with_softmax(label, prediction, loglikelihood, lattice, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath="LatticeNode.config", 
+                                  hSmoothingWeight = 0.95, frameDropThresh = 1e-10, doReferenceAlign = False, seqGammarUsesMBR = False, 
+                                  seqGammarAMF = 14.0, seqGammarLMF = 14.0, seqGammarBMMIFactor = 0.0, seqGammarWordPen = 0.0, name=''):
+    from cntk.cntk_py import lattice_sequence_with_softmax
+    dtype = get_data_type(label, prediction, loglikelihood, lattice)
+    label = sanitize_input(label, dtype)
+    prediction = sanitize_input(prediction, dtype)
+    loglikelihood = sanitize_input(loglikelihood, dtype)
+    lattice = sanitize_input(lattice, dtype)
+    return lattice_sequence_with_softmax(label, prediction, loglikelihood, lattice, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath, hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen, name)
+
+@typemap
+def hierarchical_softmax_layer(input_var, num_output_classes, target_class, target_output_in_class, batch_size, w1, b1, w2s, b2s):
+    '''
+    A two layers hierarchical softmax function:
+
+    Example:
+        >>> input_dim = 2
+        >>> num_output_classes = 4
+        >>> minibatch_size = 3
+        >>> n_classes = int(math.ceil(math.sqrt(num_output_classes)))
+        >>> n_outputs_per_class = n_classes
+
+        >>> w1 = C.parameter(shape=(input_dim, n_classes), init=C.glorot_normal(seed=1), name='w1')
+        >>> b1 = C.parameter(shape=(n_classes), init=C.glorot_normal(seed=2), name='b1')
+        >>> w2s = C.parameter(shape=(n_classes, input_dim, n_outputs_per_class), init=C.glorot_normal(seed=3), name='w2s')
+        >>> b2s = C.parameter(shape=(n_classes, n_outputs_per_class), init=C.glorot_normal(seed=4), name='b2s')
+
+        # neural network structure for hierarchical softmax
+        >>> h_input = C.input_variable(input_dim)
+        >>> h_target_class = C.input_variable([1])
+        >>> h_target_output_in_class = C.input_variable([1])
+        >>> h_z, class_probs, all_probs = hierarchical_softmax_layer(h_input, num_output_classes, h_target_class, h_target_output_in_class, minibatch_size, w1, b1, w2s, b2s)
+
+        >>> a = np.reshape(np.arange(minibatch_size * input_dim, dtype = np.float32), (minibatch_size, input_dim))
+        >>> labels = np.reshape(np.arange(minibatch_size, dtype = np.float32), (minibatch_size, 1)) % num_output_classes
+        >>> target_labels = labels // n_outputs_per_class
+        >>> target_output_in_labels = labels % n_outputs_per_class
+        >>> h_z.eval({h_input: a, h_target_class: target_labels, h_target_output_in_class: target_output_in_labels})
+        array([[ 0.031305],
+               [ 0.003239],
+               [ 0.990064]], dtype=float32)
+
+    Args:
+        input_var: class:`~cntk.ops.functions.Function` that outputs a tensor with batch axis
+        num_output_classes: int
+        target_class: class:`~cntk.ops.functions.Function` that outputs a tensor with batch axis
+        target_output_in_class: class:`~cntk.ops.functions.Function` that outputs a tensor with batch axis
+        batch_size: int
+        w1: C.parameter
+        b1: C.parameter
+        w2s: C.parameter
+        b2s: C.parameter
+    Returns:
+        output_prob: class:`~cntk.ops.functions.Function`
+        class_probs: class:`~cntk.ops.functions.Function`
+        all_probs: a list of class:`~cntk.ops.functions.Function`
+    '''
+    input_dim = input_var.shape[0]
+
+    n_classes = int(math.ceil(math.sqrt(num_output_classes)))
+    n_outputs_per_class = n_classes
+
+    class_probs = C.softmax(b1 + C.times(input_var, w1))
+
+    w2_temp = C.gather(w2s, target_class)
+    w2 = reshape(w2_temp, (input_dim, n_outputs_per_class))
+    w2 = C.sequence.broadcast_as(w2, input_var)
+    b2 = reshape(C.gather(b2s, target_class), (n_outputs_per_class))
+    b2 = C.sequence.broadcast_as(b2, input_var)
+
+    times_result = times(input_var, w2)
+    probs_in_class = softmax(b2 + times_result)
+    probs_in_class = C.sequence.broadcast_as(probs_in_class, target_output_in_class)
+    target_output_in_class = C.one_hot(target_output_in_class, n_outputs_per_class, False)
+    probs_in_class = C.sequence.broadcast_as(probs_in_class, target_output_in_class)
+    prob_in_class = C.times_transpose(probs_in_class, target_output_in_class)
+    target_class = C.one_hot(target_class, n_classes, False)
+    class_probs = C.sequence.broadcast_as(class_probs, target_class)
+    class_prob = C.times_transpose(class_probs, target_class)
+
+    output_prob = C.element_times(class_prob, prob_in_class)
+
+    # this is for calculating all the outputs' probabilities
+    all_probs = []
+    for i in range(n_classes):
+        ci = C.constant(i)
+        w2a = C.reshape(C.gather(w2s, ci), (input_dim, n_outputs_per_class))
+        w2a = C.sequence.broadcast_as(w2a, input_var)
+        b2a = C.reshape(C.gather(b2s, ci), (n_outputs_per_class))
+        b2a = C.sequence.broadcast_as(b2a, input_var)
+
+        probs_in_classa = C.softmax(b2a + times(input_var, w2a))
+        cia = C.constant(i, shape=[batch_size, 1])
+        cia = C.to_batch(cia)
+        cia = C.one_hot(cia, n_outputs_per_class, False)
+        cia = C.sequence.broadcast_as(cia, class_probs)
+        class_proba = C.times_transpose(class_probs, cia)
+        class_proba = C.sequence.broadcast_as(class_proba, probs_in_classa)
+
+        output_proba = C.element_times(class_proba, probs_in_classa)
+        all_probs.append(output_proba)
+
+    return output_prob, class_probs, all_probs
+
+@typemap
+def hierarchical_softmax_layer_for_sequence(input_var, num_output_classes, target_class, target_output_in_class, batch_size, w1, b1, w2s, b2s):
+    '''
+    A two layers hierarchical softmax function with sequence axis input:
+
+    Example:
+        >>> input_dim = 2
+        >>> num_output_classes = 4
+        >>> minibatch_size = 3
+        >>> seq_size = 5
+        >>> n_classes = int(math.ceil(math.sqrt(num_output_classes)))
+        >>> n_outputs_per_class = n_classes
+
+        >>> w1 = C.parameter(shape=(input_dim, n_classes), init=C.glorot_normal(seed=2), name='w1')
+        >>> b1 = C.parameter(shape=(n_classes), init=C.glorot_normal(seed=3), name='b1')
+        >>> w2s = C.parameter(shape=(n_classes, input_dim, n_outputs_per_class), init=C.glorot_normal(seed=4), name='w2s')
+        >>> b2s = C.parameter(shape=(n_classes, n_outputs_per_class), init=C.glorot_normal(seed=5), name='b2s')
+
+        # neural network structure for hierarchical softmax
+        >>> h_input = C.sequence.input_variable(input_dim)
+        >>> h_target_class = C.sequence.input_variable([1])
+        >>> h_target_output_in_class = C.sequence.input_variable([1])
+        >>> h_z, class_probs, all_probs = hierarchical_softmax_layer_for_sequence(h_input, num_output_classes, h_target_class, h_target_output_in_class, minibatch_size, w1, b1, w2s, b2s)
+
+        >>> a = np.reshape(np.arange(seq_size * minibatch_size * input_dim, dtype = np.float32), (seq_size, minibatch_size, input_dim))
+        >>> labels = np.reshape(np.arange(seq_size * minibatch_size, dtype = np.float32), (seq_size, minibatch_size, 1)) % num_output_classes
+        >>> target_labels = labels // n_outputs_per_class
+        >>> target_output_in_labels = labels % n_outputs_per_class
+        >>> h_z.eval({h_input: a, h_target_class: target_labels, h_target_output_in_class: target_output_in_labels})[1]
+        array([[ 0.000859],
+               [ 0.      ],
+               [ 0.      ]], dtype=float32)
+
+    Args:
+        input_var: class:`~cntk.ops.functions.Function` that outputs a tensor with sequence axis and batch axis
+        num_output_classes: int
+        target_class: class:`~cntk.ops.functions.Function` that outputs a tensor with sequence axis and batch axis
+        target_output_in_class: class:`~cntk.ops.functions.Function` that outputs a tensor with sequence axis and batch axis
+        batch_size: int
+        w1: C.parameter
+        b1: C.parameter
+        w2s: C.parameter
+        b2s: C.parameter
+    Returns:
+        output_prob: class:`~cntk.ops.functions.Function`
+        class_probs: class:`~cntk.ops.functions.Function`
+        all_probs: a list of class:`~cntk.ops.functions.Function`
+    '''
+    input_dim = input_var.shape[0]
+
+    n_classes = int(math.ceil(math.sqrt(num_output_classes)))
+    n_outputs_per_class = n_classes
+
+    class_probs = C.softmax(b1 + C.times(input_var, w1))
+
+    w2_temp = C.gather(w2s, target_class)
+    w2 = reshape(w2_temp, (input_dim, n_outputs_per_class))
+    w2 = C.sequence.broadcast_as(w2, input_var)
+    b2 = reshape(C.gather(b2s, target_class), (n_outputs_per_class))
+    b2 = C.sequence.broadcast_as(b2, input_var)
+
+    times_result = times(input_var, w2)
+    probs_in_class = softmax(b2 + times_result)
+    probs_in_class = C.sequence.broadcast_as(probs_in_class, target_output_in_class)
+    target_output_in_class = C.one_hot(target_output_in_class, n_outputs_per_class, False)
+    probs_in_class = C.sequence.broadcast_as(probs_in_class, target_output_in_class)
+    prob_in_class = C.times_transpose(probs_in_class, target_output_in_class)
+    target_class = C.one_hot(target_class, n_classes, False)
+    class_probs = C.sequence.broadcast_as(class_probs, target_class)
+    class_prob = C.times_transpose(class_probs, target_class)
+
+    output_prob = C.element_times(class_prob, prob_in_class)
+
+    # this is for calculating all the outputs' probabilities
+    all_probs = []
+    for i in range(n_classes):
+        ci = C.constant(i)
+        w2a = C.reshape(C.gather(w2s, ci), (input_dim, n_outputs_per_class))
+        w2a = C.sequence.broadcast_as(w2a, input_var)
+        b2a = C.reshape(C.gather(b2s, ci), (n_outputs_per_class))
+        b2a = C.sequence.broadcast_as(b2a, input_var)
+
+        probs_in_classa = C.softmax(b2a + times(input_var, w2a))
+        cia = C.constant(i, shape=[1])
+        cia = C.reconcile_dynamic_axes(cia, class_probs)
+        cia = C.one_hot(cia, n_outputs_per_class, False)
+        class_proba = C.times_transpose(class_probs, cia)
+        class_proba = C.sequence.broadcast_as(class_proba, probs_in_classa)
+
+        output_proba = C.element_times(class_proba, probs_in_classa)
+        all_probs.append(output_proba)
+
+    return output_prob, class_probs, all_probs

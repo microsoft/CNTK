@@ -26,8 +26,8 @@ struct Transformation
 class TransformController : public SequenceEnumerator
 {
 public:
-    TransformController(const std::vector<Transformation>& transformations, SequenceEnumeratorPtr sequenceProvider)
-        : m_sequenceProvider(sequenceProvider)
+    TransformController(const std::vector<Transformation>& transformations, SequenceEnumeratorPtr sequenceProvider, bool multiThreadedDeserialization=true)
+        : m_sequenceProvider(sequenceProvider), m_multiThreadedDeserialization(multiThreadedDeserialization)
     {
         // Applying transformations to stream descriptions,
         // i.e. a transformation can change a stream from dense to sparse.
@@ -82,20 +82,28 @@ public:
             return sequences;
         }
 
-        ExceptionCapture capture;
-#pragma omp parallel for schedule(dynamic)
-        for (int j = 0; j < sequences.m_data.front().size(); ++j)
+        if (m_multiThreadedDeserialization)
         {
-            capture.SafeRun([this, &sequences](int sequenceId)
+            ExceptionCapture capture;
+#pragma omp parallel for schedule(dynamic)
+            for (int j = 0; j < sequences.m_data.front().size(); ++j)
             {
-                for (auto& t : m_transformations)
+                capture.SafeRun([this, &sequences](int sequenceId)
                 {
-                    sequences.m_data[t.second][sequenceId] = t.first.m_transformer->Transform(sequences.m_data[t.second][sequenceId]);
-                }
-            }, j);
+                    for (auto& t : m_transformations)
+                    {
+                        sequences.m_data[t.second][sequenceId] = t.first.m_transformer->Transform(sequences.m_data[t.second][sequenceId], sequenceId);
+                    }
+                }, j);
+            }
+            capture.RethrowIfHappened();
         }
-
-        capture.RethrowIfHappened();
+        else
+        {
+            for (int j = 0; j < sequences.m_data.front().size(); ++j)
+                for (auto& t : m_transformations)
+                    sequences.m_data[t.second][j] = t.first.m_transformer->Transform(sequences.m_data[t.second][j], j);
+        }
         return sequences;
     }
 
@@ -122,6 +130,7 @@ private:
     SequenceEnumeratorPtr m_sequenceProvider;
     std::vector<StreamInformation> m_outputStreams;
     std::vector<std::pair<Transformation, size_t>> m_transformations;
+    bool m_multiThreadedDeserialization;
 };
 
 }

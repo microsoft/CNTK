@@ -77,19 +77,22 @@ def _test_unary_op(precision, device_id, op_func,
 
 
 def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
-                    expected_forward, expected_backward_all, wrap_batch_seq=True, op_param_dict={}):
+                    expected_forward, expected_backward_all, wrap_batch_seq=True, op_param_dict={}, batch_size_greater_than_one=False):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
     left_value = AA(left_operand, dtype=dt)
     right_value = AA(right_operand, dtype=dt)
+    
+    left_operand_shape = left_value.shape[1:] if batch_size_greater_than_one else left_value.shape
+    right_operand_shape = right_value.shape[1:] if batch_size_greater_than_one else right_value.shape
 
-    a = C.input_variable(shape=left_value.shape,
+    a = C.input_variable(shape=left_operand_shape,
               dtype=sanitize_dtype_cntk(precision),
               needs_gradient=True,
               name='a')
 
-    b = C.input_variable(shape=right_value.shape,
+    b = C.input_variable(shape=right_operand_shape,
               dtype=sanitize_dtype_cntk(precision),
               needs_gradient=True,
               name='b')
@@ -107,7 +110,7 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
         input_op_input = op_func(a, b, **op_param_dict)
 
     # create batch by wrapping the data point into a batch of one sample
-    if wrap_batch_seq:
+    if wrap_batch_seq and not batch_size_greater_than_one:
         left_value.shape = (1,) + left_value.shape
         right_value.shape = (1,) + right_value.shape
 
@@ -117,18 +120,19 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
     unittest_helper(input_op_input,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)
+    
+    if not batch_size_greater_than_one:
+        forward_input = {a: left_value}
+        expected_backward = {a: expected_backward_all['left_arg'], }
+        unittest_helper(input_op_constant,
+                        forward_input, expected_forward, expected_backward,
+                        device_id=device_id, precision=precision)
 
-    forward_input = {a: left_value}
-    expected_backward = {a: expected_backward_all['left_arg'], }
-    unittest_helper(input_op_constant,
-                    forward_input, expected_forward, expected_backward,
-                    device_id=device_id, precision=precision)
-
-    forward_input = {b: right_value}
-    expected_backward = {b: expected_backward_all['right_arg'], }
-    unittest_helper(constant_op_input,
-                    forward_input, expected_forward, expected_backward,
-                    device_id=device_id, precision=precision)
+        forward_input = {b: right_value}
+        expected_backward = {b: expected_backward_all['right_arg'], }
+        unittest_helper(constant_op_input,
+                        forward_input, expected_forward, expected_backward,
+                        device_id=device_id, precision=precision)
 
 
 def unittest_helper(root_node,

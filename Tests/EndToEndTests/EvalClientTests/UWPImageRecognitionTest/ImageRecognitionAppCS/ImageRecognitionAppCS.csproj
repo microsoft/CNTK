@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug_UWP</Configuration>
@@ -11,7 +11,7 @@
     <AssemblyName>ImageRecognitionAppCS</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
-    <TargetPlatformVersion>10.0.14393.0</TargetPlatformVersion>
+    <TargetPlatformVersion>10.0.16299.0</TargetPlatformVersion>
     <TargetPlatformMinVersion>10.0.10586.0</TargetPlatformMinVersion>
     <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
     <FileAlignment>512</FileAlignment>
@@ -46,7 +46,6 @@
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
     <Content Include="Assets\imagenet1000_clsid.txt" />
-    <None Include="project.json" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.xaml.cs">
@@ -65,8 +64,10 @@
     <Content Include="ImageRecognitionAppCS_TemporaryKey.pfx" />
   </ItemGroup>
   <PropertyGroup>
-    <CNTKBinSuffix />
-    <CNTKBinSuffix Condition="$(Configuration.StartsWith('Debug'))">d</CNTKBinSuffix>
+    <CntkVersion>2.4</CntkVersion>
+    <CntkVersion Condition=" '$(BUILD_CNTK_VERSION)' != '' ">$(BUILD_CNTK_VERSION)</CntkVersion>
+    <CntkComponentVersion>$(CntkVersion)</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">$(CntkComponentVersion)d</CntkComponentVersion>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="Properties\Default.rd.xml" />
@@ -77,10 +78,10 @@
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
-    <Content Include="$(CNTKRoot)\$(Platform)\$(Configuration)\Cntk.Core_app-2.3.1$(CNTKBinSuffix).dll">
+    <Content Include="$(CNTKRoot)\$(Platform)\$(Configuration)\Cntk.Core_app-$(CntkComponentVersion).dll">
       <DeploymentContent>true</DeploymentContent>
     </Content>
-    <Content Include="$(CNTKRoot)\$(Platform)\$(Configuration)\Cntk.Math_app-2.3.1$(CNTKBinSuffix).dll">
+    <Content Include="$(CNTKRoot)\$(Platform)\$(Configuration)\Cntk.Math_app-$(CntkComponentVersion).dll">
       <DeploymentContent>true</DeploymentContent>
     </Content>
     <Content Include="$(CNTKRoot)\$(Platform)\$(Configuration)\libopenblas.dll">
@@ -102,6 +103,11 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(CNTKRoot)$(Platform)\$(Configuration)\ImageRecognizerLib.winmd</HintPath>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
+      <Version>5.2.2</Version>
+    </PackageReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>

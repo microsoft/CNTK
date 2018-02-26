@@ -75,7 +75,7 @@ namespace CNTKImageProcessing
         /// </summary>
         /// <param name="image">The image to resize</param>
         /// <param name="width">New width in pixels</param>
-        /// <param name="height">New height in pixesl</param>
+        /// <param name="height">New height in pixels</param>
         /// <param name="useHighQuality">Resize quality</param>
         /// <returns>The resized image</returns>
         public static Bitmap Resize(this Bitmap image, int width, int height, bool useHighQuality)

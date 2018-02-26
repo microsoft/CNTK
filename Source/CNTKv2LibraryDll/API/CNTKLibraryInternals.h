@@ -41,6 +41,8 @@
 
 // Forward declarations
 namespace Microsoft { namespace MSR { namespace CNTK {
+    struct MatrixBase;
+
     template <typename ElemType>
     class Matrix;
 
@@ -313,6 +315,12 @@ namespace CNTK
         CNTK_API void EnableProfiler();
         CNTK_API void DisableProfiler();
         CNTK_API void StopProfiler();
+
+        CNTK_API void EnableNodeTiming();
+        CNTK_API void DisableNodeTimeing();
+
+        CNTK_API void EnableCPUEvalOptimization();
+        CNTK_API void DisableCPUEvalOptimization();
 
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);

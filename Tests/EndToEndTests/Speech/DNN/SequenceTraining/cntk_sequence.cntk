@@ -140,9 +140,9 @@ sequenceTrain = [
     reader = [
         readerType = "HTKMLFReader"
         readMethod = "blockRandomize"
-      
+        useMersenneTwisterRand=true      
         frameMode = false
-        nbruttsineachrecurrentiter = 2
+        nbruttsineachrecurrentiter = 1
       
         miniBatchMode = "partial"
         randomize = "auto"

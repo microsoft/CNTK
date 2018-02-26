@@ -59,7 +59,9 @@
 #define CNTK_MODEL_VERSION_27 27 // Slice: support stride_multiplier, and to_batch / unpack_bach axis ops;
                                  // Reduction: Add reduction over multiple axes
 #define CNTK_MODEL_VERSION_28 28 // Padding op
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_28
+#define CNTK_MODEL_VERSION_29 29 // Expose StopGradient in BS
+#define CNTK_MODEL_VERSION_30 30 // LatticeWithSequenceSoftmax node
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_30
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -99,6 +101,9 @@ struct /*interface*/ IComputationNode
     virtual void BeginForwardProp() = 0;             // called beforefirst iteration step of ForwardProp()
     virtual void ForwardProp(const FrameRange&) = 0; // forward prop for one minibatch
     virtual void EndForwardProp() = 0;               // called after last iteration step of ForwardProp()
+
+    virtual void BeginTiming(bool backward) = 0;      // called before Forward/Backward for node timing
+    virtual void EndTiming(bool backward) = 0;        // called after Foward/Backward for node timing   
 
     virtual void PostForwardAndBackProp() {} // Optional: Post forward and backprop prop for one minibatch, this will be called in a second 
                                              //           looping on the graph, after the backward pass finish. Or after forward pass in inference
@@ -785,6 +790,9 @@ public:
 #endif
     }
 
+    virtual void /*IComputationNode::*/ BeginTiming(bool) override {}
+    virtual void /*IComputationNode::*/ EndTiming(bool) override {}
+
     // check whether a node is out of date w.r.t. its children, for lazy evaluation
     // If this returns true, node must be evaluated to update m_value.
     // This is virtual because it is overridden by traversal nodes, which would check all their nodes' inputs.
@@ -1373,7 +1381,7 @@ public:
         m_inputs.resize(inputs.size());
         for (size_t i = 0; i < m_inputs.size(); i++)
             if (inputs[i])
-                m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
+                m_inputs[i] = inputs[i]; // remove DownCast check here to allow CastNode to pass
             else
                 m_inputs[i] = nullptr; // during network creation, nullptrs are possible
 
@@ -1384,6 +1392,8 @@ public:
             transformerNode->SetNumberOfInputs(m_inputs.size());
         }
     }
+
+    void PrintForwardBackwardTime();
 
 protected:
 
@@ -1426,6 +1436,19 @@ protected:
         if (inputIndex >= m_inputs.size())
             LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int) inputIndex, NodeName().c_str(), OperationName().c_str());
         return DownCast(m_inputs[inputIndex]);
+    }
+
+    template<typename InputType>
+    inline shared_ptr<ComputationNode<InputType>> TypedInput(const size_t inputIndex) const
+    {
+        if (inputIndex >= m_inputs.size())
+            LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int)inputIndex, NodeName().c_str(), OperationName().c_str());
+
+        shared_ptr<ComputationNode<InputType>> node = dynamic_pointer_cast<ComputationNode<InputType>>(m_inputs[inputIndex]);
+        if (!node)
+            InvalidArgument("an TypedInput of mismatching precision was passed");
+
+        return node;
     }
 
     // Fast downcast without runtime type check of dynamic_pointer_cast.
@@ -1761,6 +1784,10 @@ public:
 
     virtual void /*IComputationNode::*/ EndBackprop() override;
 
+    virtual void /*IComputationNode::*/ BeginTiming(bool) override;
+
+    virtual void /*IComputationNode::*/ EndTiming(bool) override;
+
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
     void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
@@ -1927,24 +1954,36 @@ protected:
     // if the matrix's size will scale with minibatch size, set mbScale = true 
     // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
     // this is currently a workaround for workspace memory for convolutions
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
+    template<typename ValueType>
+    void TypedRequestMatrixFromPool(shared_ptr<Matrix<ValueType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
     {
         if (matrixPtr == nullptr)
         {
             if (aliasing)
-                matrixPool.RequestAliasedAllocate<ElemType>(m_deviceId, this, &matrixPtr, matrixSize, mbScale);
+                matrixPool.RequestAliasedAllocate<ValueType>(m_deviceId, this, &matrixPtr, matrixSize, mbScale);
             else
-                matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
+                matrixPool.RequestAllocate<ValueType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
         }
     }
 
-    void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
+    template<typename ValueType>
+    void TypedReleaseMatrixToPool(shared_ptr<Matrix<ValueType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing=false)
     {
         assert(matrixPtr != nullptr);
         if (aliasing)
-            matrixPool.RequestAliasedRelease<ElemType>(this);
+            matrixPool.RequestAliasedRelease<ValueType>(this);
         else
-            matrixPool.RequestRelease<ElemType>(&matrixPtr);
+            matrixPool.RequestRelease<ValueType>(&matrixPtr);
+    }
+
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize = 0, bool mbScale = false, bool isWorkSpace = false, bool aliasing = false)
+    {
+        TypedRequestMatrixFromPool<ElemType>(matrixPtr, matrixPool, matrixSize, mbScale, isWorkSpace, aliasing);
+    }
+
+    void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, bool aliasing = false)
+    {
+        TypedReleaseMatrixToPool<ElemType>(matrixPtr, matrixPool, aliasing);
     }
 
 public:
@@ -2112,7 +2151,7 @@ public:
             s_constOnes[rows].find(cols) == s_constOnes[rows].end()) // not found
         {
             shared_ptr<Matrix<ElemType>> matrix = make_shared<Matrix<ElemType>>(rows, cols, (DEVICEID_TYPE) deviceId);
-            matrix->SetValue(1);
+            matrix->SetValue((ElemType)1);
             s_constOnes[rows][cols] = matrix;
         }
 
@@ -2133,6 +2172,28 @@ protected:
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
 
     MatrixType m_preferredGradientMatrixType = UNDETERMINED;
+
+    enum TimingPhase
+    {
+        TimingPhase_Forward = 0,
+        TimingPhase_Backward,
+        TimingPhase_Total
+    };
+
+    struct Timing
+    {
+        std::chrono::system_clock::time_point beginTime;
+        int count = 0;
+        std::chrono::duration<float> duration = std::chrono::duration<float>(0);
+        long long profilerId;
+        std::string profilerName;
+
+        void Reset()
+        {
+            duration = std::chrono::duration<float>(0);
+            count = 0;
+        }
+    } m_timing[TimingPhase_Total];
 };
 
 // convenience wrapper for ComputationNode::New()
@@ -2514,4 +2575,26 @@ public:
 
 #pragma endregion base computation class
 
+#define SMART_NODE_INVOKE(nodeClass, node, func, ...)                           \
+    do {                                                                        \
+        if (dynamic_pointer_cast<nodeClass<float>>(node))                       \
+            dynamic_pointer_cast<nodeClass<float>>(node)->func(__VA_ARGS__);    \
+        else if (dynamic_pointer_cast<nodeClass<double>>(node))                 \
+            dynamic_pointer_cast<nodeClass<double>>(node)->func(__VA_ARGS__);   \
+        else if (dynamic_pointer_cast<nodeClass<half>>(node))                   \
+            dynamic_pointer_cast<nodeClass<half>>(node)->func(__VA_ARGS__);     \
+        else                                                                    \
+            LogicError("Unknown nodeClass type");                               \
+    } while(0)
+
+#define SMART_NODE_INVOKE_WITH_RET(nodeClass, node, func, ret, ...)                 \
+    do {                                                                            \
+        if (dynamic_pointer_cast<nodeClass<float>>(node))                           \
+            ret = dynamic_pointer_cast<nodeClass<float>>(node)->func(__VA_ARGS__);  \
+        else if (dynamic_pointer_cast<nodeClass<double>>(node))                     \
+            ret = dynamic_pointer_cast<nodeClass<double>>(node)->func(__VA_ARGS__); \
+        else if (dynamic_pointer_cast<nodeClass<half>>(node))                       \
+            ret = dynamic_pointer_cast<nodeClass<half>>(node)->func(__VA_ARGS__);   \
+        else LogicError("Unknown ComputationNode type");                            \
+    } while(0)
 }}}

@@ -15,6 +15,10 @@ REM overridden at msbuild invocation.
 set p_OutDir=%~1
 set p_DebugBuild=%~2
 set p_GpuBuild=%~3
+set p_CNTK_VERSION=%~4
+shift
+set p_CNTK_VERSION_BANNER=%~4
+shift
 set p_CNTK_COMPONENT_VERSION=%~4
 set p_SWIG_PATH=%~5
 set p_CNTK_PY_VERSIONS=%~6
@@ -56,6 +60,8 @@ set CNTK_LIB_PATH=%p_OutDir%
 
 set DIST_DIR=%p_OutDir%\Python
 set PATH=%p_SWIG_PATH%;%PATH%
+set CNTK_VERSION=%p_CNTK_VERSION%
+set CNTK_VERSION_BANNER=%p_CNTK_VERSION_BANNER%
 set CNTK_COMPONENT_VERSION=%p_CNTK_COMPONENT_VERSION%
 set MSSdk=1
 set DISTUTILS_USE_SDK=1
@@ -71,8 +77,7 @@ for %%D in (
   Cntk.Deserializers.HTK-%CNTK_COMPONENT_VERSION%.dll
   Cntk.Deserializers.TextFormat-%CNTK_COMPONENT_VERSION%.dll
   Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.BinaryConvolutionExample-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll  
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
   Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
@@ -83,6 +88,16 @@ for %%D in (
   ) else (
     set CNTK_LIBRARIES=%CNTK_LIB_PATH%\%%D
   )
+)
+
+@REM mkldnn.dll is optional
+if exist mkldnn.dll (
+ set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\mkldnn.dll
+)
+
+@REM Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll is optional
+if exist Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll (
+ set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\Cntk.BinaryConvolution-%CNTK_COMPONENT_VERSION%.dll
 )
 
 @REM Cntk.Deserializers.Image-%CNTK_COMPONENT_VERSION%.dll (plus dependencies) is optional

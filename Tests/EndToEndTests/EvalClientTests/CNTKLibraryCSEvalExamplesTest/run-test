@@ -9,7 +9,7 @@ set -x
 # TODO: have a better way to configure how run test only on a single python version
 PythonVer=$(python -c "import sys; sys.stdout.write(str(sys.version_info[0])); sys.stdout.flush()")
 if [ "$PythonVer" == "3" ]; then
-  echo Skip this test for Python 3.4/3.5. Run this test only on Python 2.7 to save test time.
+  echo Skip this test for Python 3.5/3.6. Run this test only on Python 2.7 to save test time.
   # Simulate test completes.
   set +x
   echo Evaluation completes

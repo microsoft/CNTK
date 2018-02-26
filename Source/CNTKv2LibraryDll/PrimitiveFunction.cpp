@@ -53,8 +53,14 @@ namespace CNTK
                 }
                 else
                 {
+                    // batch normalization on FP16 requires 32-bit scale/bias/mean/variance, so specialize that case
+                    bool batchNormSpecialCase =
+                        (op == PrimitiveOpType::BatchNormalization) &&
+                        (outputDataType == DataType::Float16) &&
+                        (inputDataType == DataType::Float);
+
                     // The DataType of all operands should match except for Constants where we allow coercion
-                    if ((inputDataType != DataType::Unknown) && (inputDataType != outputDataType) && !input.IsConstant())
+                    if ((inputDataType != DataType::Unknown) && (inputDataType != outputDataType) && !input.IsConstant() && !batchNormSpecialCase)
                         InvalidArgument("Primitive op '%S' passed operands '%S' with different DataTypes '%s' and '%s'.",
                                         PrimitiveOpTypeName(op).c_str(), NamedListString(inputs).c_str(), DataTypeName(outputDataType), DataTypeName(inputDataType));
                 }
@@ -70,7 +76,18 @@ namespace CNTK
             for (auto& input : inputs)
             {
                 if ((input.GetDataType() == DataType::Unknown) && (input.IsConstant() || input.IsParameter()))
-                    input.m_dataFields->m_dataType = outputDataType;
+                {
+                    // batch normalization on FP16 requires 32-bit scale/bias/mean/variance, so specialize that case
+                    if ((op == PrimitiveOpType::BatchNormalization) &&
+                        (outputDataType == DataType::Float16))
+                    {
+                        input.m_dataFields->m_dataType = DataType::Float;
+                    }
+                    else
+                    {
+                        input.m_dataFields->m_dataType = outputDataType;
+                    }
+                }
             }
         }
 
@@ -110,6 +127,7 @@ namespace CNTK
             (op == PrimitiveOpType::ReduceElements &&  anyOfAxesInReduction([](const Axis& axis) { return axis == Axis::AllAxes(); })) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
+            (op == PrimitiveOpType::LatticeSequenceWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::ForwardBackward) ||
@@ -234,6 +252,10 @@ namespace CNTK
         else
         {
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
+
+            if (m_op == PrimitiveOpType::Cast)
+                outputDataType = static_cast<DataType>(m_attributes[PrimitiveFunction::AttributeNameNewDataType].Value<int>());
+
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
 
@@ -332,6 +354,7 @@ namespace CNTK
                         case PrimitiveOpType::ELU:
                         case PrimitiveOpType::StableSigmoid:
                         case PrimitiveOpType::ConstantOp:
+                        case PrimitiveOpType::Cast:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
@@ -808,6 +831,7 @@ namespace CNTK
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::SquaredError:
                         case PrimitiveOpType::EditDistanceError:
+                        case PrimitiveOpType::LatticeSequenceWithSoftmax:
                         case PrimitiveOpType::ClassificationError:
                         case PrimitiveOpType::NDCG:
                         {

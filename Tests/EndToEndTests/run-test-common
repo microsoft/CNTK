@@ -140,5 +140,20 @@ cntkmpirun()
   return $?
 }
 
+#Function to check/copy original baselines
+# checkOriginalBaseline <original baseline relative dir> <target dir>
+checkOriginalBaseline()
+{
+  TargetPath=$1
+  OriginRelativePath=$2
+  
+  (cd $TargetPath/$OriginRelativePath && md5sum baseline*) | (cd $TargetPath && md5sum --status -c -)
+  if [ $? != 0 ]; then
+    echo Error: Baselines must match original test. Copy from $OriginalTestDir.
+    exit 1
+    #cp $TargetPath/$OriginRelativePath/baseline* $TargetPath
+  fi
+}
+
 # place printHardwareInfo here, so that all tests print it
 printHardwareInfo

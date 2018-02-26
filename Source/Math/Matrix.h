@@ -20,6 +20,7 @@
 #include <array>
 #include <initializer_list>
 #include "QuantizedOperations.h"
+#include "half.hpp"
 
 // Forward declarations
 namespace CNTK
@@ -54,7 +55,7 @@ template <class ElemType> class CPUSparseMatrix;
 template <class ElemType> class DeviceBoundNumber;
 
 // <ElemType>-agnostic base class
-struct /*interface*/ MATH_API MatrixBase
+struct /*interface*/ MATH_API MatrixBase : public std::enable_shared_from_this<MatrixBase>
 {
     virtual int GetDeviceId() const = 0;
     virtual MatrixType GetMatrixType() const = 0;
@@ -88,7 +89,7 @@ private:
     mutable size_t m_numTimesDeviceChanged;
     mutable size_t m_numTimesMatrixTypeChanged;
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
- 
+
     // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
     void _transferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
     // Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
@@ -218,7 +219,9 @@ public:
 
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier, const bool initialized);
 
-    void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp);
+    template<typename GradType>
+    void AdaDeltaUpdate(Matrix<GradType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp);
+
     void AdaDeltaFlushState(size_t stride, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true, bool keepValue = false); // by default we only reallocate if need to grow
@@ -572,11 +575,14 @@ public:
     void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output, const bool poolIncludePad) const;
     void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const;
 
-    void BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
-                                   Matrix<ElemType>& runMean, Matrix<ElemType>& runVariance, Matrix<ElemType>& out, double epsilon,
-                                   Matrix<ElemType>& saveMean, Matrix<ElemType>& saveInvStdDev) const;
-    void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, double blendFactor, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
-                                    Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const;
+    template<class StatType>
+    void BatchNormalizationForward(const Matrix<StatType>& scale, const Matrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                   Matrix<StatType>& runMean, Matrix<StatType>& runVariance, Matrix<ElemType>& out, double epsilon,
+                                   Matrix<StatType>& saveMean, Matrix<StatType>& saveInvStdDev) const;
+
+    template<class StatType>
+    void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<StatType>& scale, double blendFactor, const Matrix<StatType>& saveMean, const Matrix<StatType>& saveInvStdDev,
+                                    Matrix<StatType>& scaleGrad, Matrix<StatType>& biasGrad) const;
 
     void RNNForward(const Matrix<ElemType>& inputX, const Matrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
     void RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
@@ -621,6 +627,7 @@ public:
     static void InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     static void ElementWisePower(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
+    static void BatchMatMul(ElemType beta, const Matrix<ElemType>& a, const bool transposeA, const int m, const Matrix<ElemType>& b, const bool transposeB, const int n, Matrix<ElemType>& c, const bool isColWise);
 
     static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
     static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
@@ -697,5 +704,6 @@ File& operator<<(File& stream, const Matrix<ElemType>& M)
 
 typedef Matrix<float> SingleMatrix;
 typedef Matrix<double> DoubleMatrix;
+typedef Matrix<half> HalfMatrix;
 
 }}}

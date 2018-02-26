@@ -28,11 +28,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SetShareNodeValueMatrices(bool enable) { m_enableShareNodeValueMatrices = enable; }
         static bool ShouldEnableShareNodeValueMatrices() { return m_enableShareNodeValueMatrices; }
 
+        static void SetNodeTiming(bool enable) { m_enableNodeTiming = enable; }
+        static bool ShouldEnableNodeTiming() { return m_enableNodeTiming; }
     private:
         static std::atomic<bool> m_forceDeterministicAlgorithms;
         // The global flag to enable matrices values in forward and backward prop
         static std::atomic<bool> m_enableShareNodeValueMatrices;
         static std::atomic<bool> m_forceConstantRandomSeed;
         static std::atomic<bool> m_optimizeGradientAccumulation;
+        static std::atomic<bool> m_enableNodeTiming;
     };
 }}}

@@ -37,11 +37,11 @@
 
   .PARAMETER PyVersion
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
- Supported values for this parameter are 27, 34, 35, or 36. The default values is 35 (for a CNTK Python 35 environment).
+ Supported values for this parameter are 27, 35, or 36. The default values is 35 (for a CNTK Python 35 environment).
 
   .PARAMETER PyEnvironmentName
  This optional parameter allows to specify the name of the environment that will be created during the installation process.
- By default the environment will be named cntkdev-py<PyVersion>, where PyVersion is being replaced by the content of the <PyVersion>
+ By default the environment will be named cntk-py<PyVersion>, where PyVersion is being replaced by the content of the <PyVersion>
  parameter to this script. If this parameter is specified by you, no version substitution in the environment will be performed. 
 
   .PARAMETER NoPythonEnvironment
@@ -71,7 +71,7 @@ Param(
     [Parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
     [Parameter(Mandatory=$false)] [string] $AnacondaBasePath,
     [Parameter(Mandatory=$false)] [switch] $NoConfirm,
-    [Parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "34", "35", "36")] [string] $PyVersion = "35",
+    [Parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "35", "36")] [string] $PyVersion = "35",
     [Parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [string] $PyEnvironmentName = "",
     [Parameter(Mandatory=$true, ParameterSetName = "PythonNoEnvironment")] [switch] $NoPythonEnvironment)
     
@@ -134,22 +134,22 @@ Function main
 
         $operation = @();
         $operation += OpScanProgram
-        $operation += OpCheckVS15Update3
+        $operation += OpCheckVS2017
 
-        $operation += OpCheckCuda8
-        $operation += OpNVidiaCudnn6080 -cache $localCache -targetFolder $localDir
-        $operation += OpNvidiaCub141 -cache $localCache -targetFolder $localDir
+        $operation += OpCheckCuda9
+        $operation += OpNVidiaCudnn7090 -cache $localCache -targetFolder $localDir
+        $operation += OpNvidiaCub174 -cache $localCache -targetFolder $localDir
 
         $operation += OpCMake362 -cache $localCache
         $operation += OpMSMPI70 -cache $localCache
         $operation += OpMSMPI70SDK -cache $localCache
         $operation += OpBoost160VS15 -cache $localCache -targetFolder $localDir
-        $operation += OpMKLML011 -cache $localCache -targetFolder $localDir
+        $operation += OpMKLDNN012 -cache $localCache -targetFolder $localDir
         $operation += OpSwig3010 -cache $localCache -targetFolder $localDir
-        $operation += OpProtoBuf310VS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
-        $operation += OpProtoBuf310VS15Prebuild -cache $localCache -targetFolder $localDir
-        $operation += OpZlibVS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
-        $operation += OpZlibVS15Prebuild -cache $localCache -targetFolder $localDir
+        $operation += OpProtoBuf310VS17 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
+        $operation += OpProtoBuf310VS17Prebuild -cache $localCache -targetFolder $localDir
+        $operation += OpZlibVS17 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
+        $operation += OpZlibVS17Prebuild -cache $localCache -targetFolder $localDir
         $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
         $operation += OpAnaconda3411 -cache $localCache -AnacondaBasePath $AnacondaBasePath
         if (-not $NoPythonEnvironment) {

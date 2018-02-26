@@ -210,6 +210,31 @@ namespace CNTK
 #endif
         }
 
+        void EnableNodeTiming()
+        {
+            Microsoft::MSR::CNTK::Globals::SetNodeTiming(true);
+        }
+
+        void DisableNodeTimeing()
+        {
+            Microsoft::MSR::CNTK::Globals::SetNodeTiming(false);
+        }
+
+        void EnableCPUEvalOptimization()
+        {
+            // optimization is only for float
+            int flags = Microsoft::MSR::CNTK::CPUMatrix<float>::GetOptimizationFlags();
+            flags |= Microsoft::MSR::CNTK::CPUMatrix<float>::OPT_EVAL_WITH_MKL;
+            Microsoft::MSR::CNTK::CPUMatrix<float>::SetOptimizationFlags(Microsoft::MSR::CNTK::CPUMatrix<float>::OPT_EVAL_WITH_MKL);
+        }
+
+        void DisableCPUEvalOptimization()
+        {
+            int flags = Microsoft::MSR::CNTK::CPUMatrix<float>::GetOptimizationFlags();
+            flags &= ~Microsoft::MSR::CNTK::CPUMatrix<float>::OPT_EVAL_WITH_MKL;
+            Microsoft::MSR::CNTK::CPUMatrix<float>::SetOptimizationFlags(flags);
+        }
+
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
         {
             bool areDynamicAxesCompatible = (var1.DynamicAxes().size() == var2.DynamicAxes().size());
@@ -966,7 +991,7 @@ namespace CNTK
 #endif
 #ifdef _CUDA_PATH_
             int cudaVersion = 0;
-            if (cudaDriverGetVersion(&cudaVersion) == cudaSuccess)
+            if (cudaRuntimeGetVersion(&cudaVersion) == cudaSuccess)
             {
                 int major = 0, minor = 0, patchLevel = 0;
                 ExtractCUDAVersion(cudaVersion, major, minor, patchLevel);

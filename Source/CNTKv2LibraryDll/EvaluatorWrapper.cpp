@@ -28,7 +28,7 @@ namespace CNTK
         CNTKEvaluatorWrapper(Function::Load(modelFilePath, device), device)
     {}
 
-    CNTKEvaluatorWrapper::CNTKEvaluatorWrapper(const wchar_t* modelFilePath, const wchar_t* device) :
+    CNTKEvaluatorWrapper::CNTKEvaluatorWrapper(const wchar_t* modelFilePath, const CNTK_DeviceDescriptor* device) :
         CNTKEvaluatorWrapper(modelFilePath, GetDeviceDescriptor(device))
     {}
 
@@ -85,7 +85,7 @@ namespace CNTK
                 auto buffer = *outputValues[i];
                 auto shape = ToNDShape(buffer.shape);
                 NDShape maskShape = shape.SubShape(var->second.Shape().Rank(), shape.Rank());
-                auto data = make_shared<NDArrayView>(DataType::Float, shape, buffer.data, shape.TotalSize() * sizeof(float), m_device);
+                auto data = make_shared<NDArrayView>(DataType::Float, shape, buffer.data, shape.TotalSize() * sizeof(float), DeviceDescriptor::CPUDevice());
                 value = make_shared<Value>(data, make_shared<NDMask>(maskShape));
             }
             preparedOutputs[var->second] = value;
@@ -122,7 +122,13 @@ namespace CNTK
                 v.shape = FromNDShape(value->Shape());
                 auto size = value->Shape().TotalSize();
                 v.data = new float[size];
-                std::copy(value->Data()->DataBuffer<float>(), value->Data()->DataBuffer<float>() + size, v.data);
+                auto data = value->Data();
+                if (value->Device().Type() == DeviceKind::GPU)
+                {
+                    data = std::make_shared<NDArrayView>(DataType::Float, data->Shape(), DeviceDescriptor::CPUDevice());
+                    data->CopyFrom(*(value->Data()));
+                }
+                std::copy(data->DataBuffer<float>(), data->DataBuffer<float>() + size, v.data);
                 result.get()[i] = v;
                 valCleaner.release();
             }

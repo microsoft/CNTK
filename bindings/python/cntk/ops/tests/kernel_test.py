@@ -786,6 +786,7 @@ def test_conv_free_static_axes(warmup_input_size, free_dimension_increment, filt
                 name='a_test')
 
     from cntk import convolution
+
     conv_op_without_free_dim = convolution(conv_map, a_ref, auto_padding=[False] + [True]*len(filter_size))
     conv_op_with_free_dim = convolution(conv_map, a_test, auto_padding=[False] + [True]*len(filter_size))
 
@@ -808,9 +809,9 @@ FREE_STATIC_AXES_WITH_DYNAMIC_AXIS_CONVOLUTION_DATA = [
      [2, 10]      # Half-open range for random selection of of batch-sizes (for reference and warmup)
      ),        
 ]
-# This test point exercises convolution with multiple free static axes and batch (dynamic) axis), and ensures that the result is the same as with fixed axes.
+# This test point exercises convolution/pooling/unpooling with multiple free static axes and batch (dynamic) axis), and ensures that the result is the same as with fixed axes.
 @pytest.mark.parametrize("warmup_input_size, free_dimension_increment, filter_size, num_output_channels, batch_size_range", FREE_STATIC_AXES_WITH_DYNAMIC_AXIS_CONVOLUTION_DATA)
-def test_conv_free_static_and_dynamic_axes(warmup_input_size, free_dimension_increment, filter_size, num_output_channels, batch_size_range, device_id, precision):
+def test_conv_pooling_free_static_and_dynamic_axes(warmup_input_size, free_dimension_increment, filter_size, num_output_channels, batch_size_range, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
@@ -836,19 +837,28 @@ def test_conv_free_static_and_dynamic_axes(warmup_input_size, free_dimension_inc
                 needs_gradient=False,
                 sequence_axis=C.Axis.new_unique_dynamic_axis('c'))
 
-    from cntk import convolution
-    conv_op_without_free_dim = convolution(conv_map, a_ref, auto_padding=[False] + [True]*len(filter_size))
-    conv_op_with_free_dim = convolution(conv_map, a_test, auto_padding=[False] + [True]*len(filter_size))
-    
-    input_img_ref = np.random.random((ref_batchsize,) + reference_input_size).astype(dt)
-    output_ref = conv_op_without_free_dim.eval({a_ref: input_img_ref}, device=dev)
+    from cntk import convolution, pooling, unpooling
 
-    input_img_warmup = np.random.random((warmup_batchsize,) + tuple(warmup_input_size)).astype(dt)
-    _ = conv_op_with_free_dim.eval({a_test: input_img_warmup}, device=dev)
-        
-    output_test = conv_op_with_free_dim.eval({a_test: input_img_ref}, device=dev)
+    def pooling_unpooling(x):
+        y = pooling(x, C.AVG_POOLING, (2,2), (2,2), auto_padding=[True])
+        return unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2), auto_padding=[True])
 
-    assert np.allclose(output_test, output_ref, atol = 1e-4)
+    conv_ops = [ [convolution(conv_map, a_ref, auto_padding=[False] + [True]*len(filter_size)),
+                  convolution(conv_map, a_test, auto_padding=[False] + [True]*len(filter_size))],
+                 [pooling_unpooling(a_ref),
+                  pooling_unpooling(a_test)] ]
+
+    for op_pair in conv_ops:
+        conv_op_without_free_dim, conv_op_with_free_dim = op_pair
+        input_img_ref = np.random.random((ref_batchsize,) + reference_input_size).astype(dt)
+        output_ref = conv_op_without_free_dim.eval({a_ref: input_img_ref}, device=dev)
+
+        input_img_warmup = np.random.random((warmup_batchsize,) + tuple(warmup_input_size)).astype(dt)
+        _ = conv_op_with_free_dim.eval({a_test: input_img_warmup}, device=dev)
+
+        output_test = conv_op_with_free_dim.eval({a_test: input_img_ref}, device=dev)
+
+        assert np.allclose(output_test, output_ref, atol = 1e-4)
 
 DILATED_CONVOLUTION_DATA = [
     # Dilation without passing.

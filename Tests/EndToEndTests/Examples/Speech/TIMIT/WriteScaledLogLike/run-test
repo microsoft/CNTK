@@ -26,24 +26,12 @@ if [ $ExitCode == 0 ]; then
   # Compare the output files
   OutputDir=$DataDir/scaledloglike
 
-  # TODO need to watch this for a while. If this turns out to be
-  # non-deterministic we need to disable this / find a different output
-  # validation.
   if [ "$OS" == "Windows_NT" ]; then
       ExpectedOutputFile=$TEST_DIR/expected_output_md5sum.windows.txt
       echo MD5 check disabled on Windows.
   else
       ExpectedOutputFile=$TEST_DIR/expected_output_md5sum.linux.txt
-
-      cd $OutputDir && md5sum --quiet -c $ExpectedOutputFile
-      ExitCode=$?
-      if [ $ExitCode == 0 ]; then
-        echo MD5 check succeeded.
-      else
-        # Using explicit path to find to disambiguate from find.exe on Windows
-        /usr/bin/find $OutputDir -type f -print0 | xargs -0 md5sum
-        echo Error: Output files are different. More info above.
-      fi
+      echo MD5 check disabled on Linux.
   fi
 fi
 

@@ -16,7 +16,7 @@ def test_load_save_constant(tmpdir):
     expected = [[[[5,15]]]]
     assert np.allclose(result, expected)
 
-    filename = os.path.join(str(tmpdir), R'c_plus_c.onnx')
+    filename = os.path.join(str(tmpdir), R'constant.onnx')
     root_node.save(filename, format=C.ModelFormat.ONNX)
 
     loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
@@ -186,7 +186,10 @@ def test_batch_norm_model(tmpdir):
         return model(input)
 
     feature_scale = 1.0 / 256.0
-    input_var_norm = C.element_times(feature_scale, input_var)
+
+    #TODO: ONNX only do right hand-side broadcast. This test fails 
+    # if input_var, feature_scale is swapped. 
+    input_var_norm = C.element_times(input_var, feature_scale)
     
     # apply model to input
     z = create_basic_model_with_batch_normalization(input_var_norm, out_dims=10)
@@ -354,4 +357,38 @@ def test_resnet_model(tmpdir):
     loaded_node.save(filename2, format=C.ModelFormat.ONNX)
 
     filename3 = os.path.join(str(tmpdir), R'resnet_model2.cntkmodel')
+    loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
+    
+def test_conv_with_freedim_model(tmpdir):    
+    img_shape = (3, 32, 32)
+    img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
+
+    x = C.input_variable((3, C.FreeDimension, C.FreeDimension))
+
+    conv_size1 = (32, 3, 5, 5)
+    conv_map1 = C.constant(value=np.arange(np.prod(conv_size1), dtype=np.float32).reshape(conv_size1))
+    conv_op1 = C.convolution(conv_map1, x, auto_padding=(False, True, True))
+    relu_op1 = C.relu(conv_op1)
+    maxpool_op1 = C.pooling(relu_op1, C.MAX_POOLING, (2, 2), (2, 2))
+
+    conv_size2 = (64, 32, 3, 3)
+    conv_map2 = C.constant(value=np.arange(np.prod(conv_size2), dtype=np.float32).reshape(conv_size2))
+    conv_op2 = C.convolution(conv_map2, maxpool_op1, auto_padding=(False, True, True))
+    relu_op2 = C.relu(conv_op2)
+    root_node = C.pooling(relu_op2, C.MAX_POOLING, (2, 2), (2, 2))
+
+    filename = os.path.join(str(tmpdir), R'conv_with_freedim.onnx')
+    root_node.save(filename, format=C.ModelFormat.ONNX)
+
+    loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    assert root_node.shape == loaded_node.shape
+
+    x_ = loaded_node.arguments[0]
+    assert np.allclose(loaded_node.eval({x_:img}), root_node.eval({x:img}))
+
+    # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
+    filename2 = os.path.join(str(tmpdir), R'conv_with_freedim2.onnx')
+    loaded_node.save(filename2, format=C.ModelFormat.ONNX)
+
+    filename3 = os.path.join(str(tmpdir), R'conv_with_freedim2.cntkmodel')
     loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)

@@ -13,11 +13,9 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Detection"))
 
-win35_linux34 = pytest.mark.skipif(not ((sys.platform == 'win32' and sys.version_info[:2] == (3,5)) or
-                                        (sys.platform != 'win32' and sys.version_info[:2] == (3,4))),
-                                   reason="it runs currently only in windows-py35 and linux-py34 due to precompiled cython modules")
+from test_decorators import run_if_win35_linux35_linux36
 
-@win35_linux34
+@run_if_win35_linux35_linux36
 def test_proposal_layer():
     from utils.rpn.proposal_layer import ProposalLayer as CntkProposalLayer
     from utils.caffe_layers.proposal_layer import ProposalLayer as CaffeProposalLayer
@@ -74,7 +72,7 @@ def test_proposal_layer():
     assert np.allclose(cntk_proposals, caffe_proposals, rtol=0.0, atol=0.0)
     print("Verified ProposalLayer")
 
-@win35_linux34
+@run_if_win35_linux35_linux36
 def test_proposal_target_layer():
     from utils.rpn.proposal_target_layer import ProposalTargetLayer as CntkProposalTargetLayer
     from utils.caffe_layers.proposal_target_layer import ProposalTargetLayer as CaffeProposalTargetLayer
@@ -166,7 +164,7 @@ def test_proposal_target_layer():
     assert np.allclose(cntk_bbox_inside_weights, caffe_bbox_inside_weights, rtol=0.0, atol=0.0)
     print("Verified ProposalTargetLayer")
 
-@win35_linux34
+@run_if_win35_linux35_linux36
 def test_anchor_target_layer():
     from utils.rpn.anchor_target_layer import AnchorTargetLayer as CntkAnchorTargetLayer
     from utils.caffe_layers.anchor_target_layer import AnchorTargetLayer as CaffeAnchorTargetLayer

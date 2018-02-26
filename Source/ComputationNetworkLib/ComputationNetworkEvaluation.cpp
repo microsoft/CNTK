@@ -111,7 +111,7 @@ ComputationNodeBasePtr ComputationNetwork::GetNestedNetwork(const ComputationNod
 // concurrent computation in bulk CUDA launches.
 // -----------------------------------------------------------------------
 
-template<class ElemType> static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient);
+static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient);
 
 ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(const std::vector<shared_ptr<SEQTraversalFlowControlNode>>& recurrentInfo, const std::list<ComputationNodeBasePtr>& allNodes /*must be in eval order*/)
 {
@@ -145,14 +145,16 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     if (node->IsOutOfDateWrtInputs())
     {
         node->BeginForwardProp();
+        node->BeginTiming(false /*backward*/);
         node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+        node->EndTiming(false /*backward*/);
         node->EndForwardProp();
 
         node->BumpEvalTimeStamp();
 
         // Extreme Tracing, part 1/4
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
-            DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
+            DumpNode(node, /*dumpGradient=*/false);
     }
 }
 
@@ -183,12 +185,14 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         auto& node = *pnode;
 
         node->BeginBackprop();
+        node->BeginTiming(true /*backward*/);
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
+        node->EndTiming(true /*backward*/);
         node->EndBackprop();
 
         // Extreme Tracing, part 2/4
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode() && node->NeedsGradient())
-            DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
+            DumpNode(node, /*dumpGradient=*/true);
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) /*override*/
@@ -207,24 +211,34 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
 }
 
-// helper for logging. Returns false if it was not able to dynamic-cast nodep to ComputationNode<ElemType>
-template<class ElemType>
-static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
+template<typename ElemType>
+bool TypedDumpNode(shared_ptr<ComputationNode<ElemType>> node, bool dumpGradient)
 {
-    let node = dynamic_pointer_cast<ComputationNode<ElemType>>(nodep);
     if (!node)
         return false;
     let dataPtr = dumpGradient ? node->GradientPtr() : node->ValuePtr();
     if (!dataPtr)
         return true; // e.g. SEQ sentinel node
 
-    bool concise = !(nodep->Environment().IsLogLevelNodeTrace());
+    bool concise = !(node->Environment().IsLogLevelNodeTrace());
 
     fprintf(stderr, "Dump --> %s%s\n", node->FormatOperationPrototype("").c_str(), dumpGradient ? " Grad" : "");
     node->WriteMinibatchWithFormatting(stderr, FrameRange(), SIZE_MAX, SIZE_MAX, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
-                                       ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
-                                       "%13.10f"/*valueFormatString*/, dumpGradient, concise);
+        ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+        "%13.10f"/*valueFormatString*/, dumpGradient, concise);
     return true;
+}
+
+// helper for logging. Returns false if it was not able to dump
+static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
+{
+    let nodef = dynamic_pointer_cast<ComputationNode<float>>(nodep);
+    if (nodef) return TypedDumpNode<float>(nodef, dumpGradient);
+    let noded = dynamic_pointer_cast<ComputationNode<double>>(nodep);
+    if (noded) return TypedDumpNode<double>(noded, dumpGradient);
+    let nodeh = dynamic_pointer_cast<ComputationNode<half>>(nodep);
+    if (nodeh) return TypedDumpNode<half>(nodeh, dumpGradient);
+    return false;
 }
 
 // -----------------------------------------------------------------------
@@ -270,7 +284,9 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
     {
         for (auto& node : m_nestedNodes)
         {
+            node->BeginTiming(false /*backward*/);
             node->ForwardProp(t);
+            node->EndTiming(false /*backward*/);
             node->BumpEvalTimeStamp();
         }
     }
@@ -280,7 +296,7 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
     {
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
         {
-            DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
+            DumpNode(node, /*dumpGradient=*/false);
         }
     }
 }
@@ -310,7 +326,9 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
         for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
         {
             auto& node2 = *nodeIter2;
+            node2->BeginTiming(true /*backward*/);
             node2->Backprop(t, true /*childrenInThisLoop*/, false /*childrenInOuterLoop*/);
+            node2->EndTiming(true /*backward*/);
             // The above flags tell Backprop() to skip back-propagation from inside a node into
             // a node that is outside the loop, which is done later in EndBackprop() in PAR mode.
         }
@@ -321,7 +339,7 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
     {
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode() && node->NeedsGradient())
         {
-            DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
+            DumpNode(node, /*dumpGradient=*/true);
         }
     }
 }

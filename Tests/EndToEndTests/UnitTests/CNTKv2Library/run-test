@@ -26,6 +26,7 @@ cp -R $TEST_DIR/../../Simple2d/Data/SimpleDataT*_cntk_text.txt $TestDataDir || e
 cp -R $TEST_DIR/../../../../Examples/Speech/AN4/Data/* $TestDataDir || exit $?
 cp -R $TEST_DIR/../../../UnitTests/V2LibraryTests/data/* $TestDataDir || exit $?
 cp -R $TEST_DIR/../../../UnitTests/ReaderTests/Data/CNTKBinaryReader/Simple_dense.bin $TestDataDir || exit $?
+cp -R $TEST_DIR/../../../UnitTests/ReaderTests/Data/CNTKBinaryReader/Simple_jagged_sequence.bin $TestDataDir || exit $?
 
 # Train model that is used by LoadLegacyModel tests.
 # Setup predefined variables $DataDir, $ConfigDir, and $OutputDir that are required by cntkrun

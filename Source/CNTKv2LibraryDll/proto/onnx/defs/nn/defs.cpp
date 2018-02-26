@@ -428,6 +428,18 @@ namespace ONNXIR {
         .Attr("normalize_variance", "If false, normalize the mean only. Default is true.",
             AttrType::AttributeProto_AttributeType_INT, int64_t(1));
 
+    // Manually added on 2/14/2018.
+    REGISTER_OPERATOR_SCHEMA(MeanVarianceNormalization)
+        .Description("Perform mean variance normalization.")
+        .Input("input", "Input tensor of any shape", "T")
+        .Output("output", "Output tensor of same shape and type as input X.", "T")
+        .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" }, "Constrain input and output "
+            "types to float tensors.")
+        .Attr("across_channels", "If true, mean and variance are computed across channels. "
+            "Default is false.", AttrType::AttributeProto_AttributeType_INT, int64_t(0))
+        .Attr("normalize_variance", "If false, normalize the mean only. Default is true.",
+            AttrType::AttributeProto_AttributeType_INT, int64_t(1));
+
     REGISTER_OPERATOR_SCHEMA(LpNormalization)
         .Description("Given a matrix, apply Lp-normalization along the provided axis. "
             "For RS4 default of p = 2 and it will perform L2 normalization. Divide each "

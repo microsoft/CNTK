@@ -91,3 +91,10 @@ class Evaluator(cntk_py.Evaluator):
         accumulators.
         '''
         return super(Evaluator, self).summarize_test_progress()
+
+    def print_node_timing(self):
+        '''
+        Prints per-node average timing per-minibatch for each primitive function
+        statistics would reset after print
+        '''
+        return super(Evaluator, self).print_node_timing()

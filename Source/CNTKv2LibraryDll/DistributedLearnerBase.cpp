@@ -36,7 +36,7 @@ namespace CNTK
         m_sampleCount = checkpoint[L"totalNumberOfSamplesSeen"].Value<size_t>();
     }
 
-    void DistributedLearnerBase::PrepaireZeroGradients(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& info)
+    void DistributedLearnerBase::PrepaireZeroGradients(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues)
     {
         // Need to initialize gradients to 0 in case when it is an empty minibatch.
         for (auto& g : gradientValues)
@@ -44,10 +44,6 @@ namespace CNTK
             auto weights = g.first.Value();
             g.second = MakeSharedObject<NDArrayView>(0, weights->GetDataType(), weights->Shape(), weights->Device());
         }
-
-        auto dataType = gradientValues.begin()->first.GetDataType();
-        info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::UseDefaultDevice());
-        info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::UseDefaultDevice());
     }
 
     void DistributedLearnerBase::ConvertToOrdered(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, std::vector<std::pair<Parameter, NDArrayViewPtr>>& result, std::unordered_map<Parameter, NDArrayViewPtr>* convertedGradientValues)
