@@ -46,7 +46,21 @@ def convert(root_func, filter, converter):
 
     # replace all Function instances under root_func that pass the specified 'filter'
     functions_to_convert = C.logging.graph.depth_first_search(root_func, filter, depth = 0)
-    for function_to_convert in functions_to_convert:
+    for i in range(len(functions_to_convert)):
+        # The graph could be modified already by this function, so we need to rescan to the new set.
+        functions_to_convert1 = C.logging.graph.depth_first_search(root_func, filter, depth = 0)
+        # We are using a filter passed in by the caller. So once a function is converted, we may not
+        # get the same number of functions again, so we need to use correct index depending on the new size.
+        index = 0
+        if len(functions_to_convert) > len(functions_to_convert1):
+            assert(len(functions_to_convert) - len(functions_to_convert1) == i) # Only one conversion at a time.
+            # index = 0 will work for this case, we are picking the first function from the new list.
+        elif len(functions_to_convert) == len(functions_to_convert1):
+            index = i # here we pick the current index of the for loop.
+        else:
+            raise RuntimeError("The conversion adds another possible conversion(s). Stopping infinite conversions.")
+
+        function_to_convert = functions_to_convert1[index]
         converted = converter(function_to_convert)
 
         if not function_to_convert.output in root_func.outputs:            
