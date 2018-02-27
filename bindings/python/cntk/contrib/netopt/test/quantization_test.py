@@ -19,15 +19,9 @@ def _create_convolution_model():
         # The first two layers has bias=False to test, the conversion
         # work with and without bias in the Convolution.
         h = C.layers.Convolution2D(filter_shape=(5,5),
-<<<<<<< HEAD
                                    num_filters=64,
                                    strides=(2,2),
-                                   pad=True, bias=False, name='first_convo')(h)        
-=======
-                                           num_filters=64,
-                                           strides=(2,2),
-                                           pad=True, bias=False, name='first_convo')(h)
->>>>>>> Remove unnecessary spaces
+                                   pad=True, bias=False, name='first_convo')(h)
 
         h = C.layers.Convolution2D(filter_shape=(5,5),
                                    num_filters=64,
@@ -40,7 +34,6 @@ def _create_convolution_model():
                                    pad=True, name='thrid_convo')(h)
 
         h = C.layers.Convolution2D(filter_shape=(5,5),
-<<<<<<< HEAD
                                    num_filters=64,
                                    strides=(1,1),
                                    pad=True, name='fourth_convo')(h)
@@ -61,19 +54,19 @@ def _create_convolution_model_with_skip_level_links():
                                    strides=(2,2),
                                    pad=True, bias=False, name='first_convo')(h)
 
-        a = BatchNormalization(map_rank=1, 
-                               normalization_time_constant=4096, 
-                               use_cntk_engine=True, init_scale=1, 
+        a = BatchNormalization(map_rank=1,
+                               normalization_time_constant=4096,
+                               use_cntk_engine=True, init_scale=1,
                                disable_regularization=True)(a)
-        
+
         b = C.layers.Convolution2D(filter_shape=(5,5),
                                    num_filters=64,
                                    strides=(2,2),
                                    pad=True, bias=False, name='second_convo')(h)
 
-        b = BatchNormalization(map_rank=1, 
-                               normalization_time_constant=4096, 
-                               use_cntk_engine=True, init_scale=1, 
+        b = BatchNormalization(map_rank=1,
+                               normalization_time_constant=4096,
+                               use_cntk_engine=True, init_scale=1,
                                disable_regularization=True)(b)
 
         h = a + b
@@ -83,9 +76,9 @@ def _create_convolution_model_with_skip_level_links():
                                    strides=(1,1),
                                    pad=True, name='thrid_convo')(h)
 
-        h = BatchNormalization(map_rank=1, 
-                               normalization_time_constant=4096, 
-                               use_cntk_engine=True, init_scale=1, 
+        h = BatchNormalization(map_rank=1,
+                               normalization_time_constant=4096,
+                               use_cntk_engine=True, init_scale=1,
                                disable_regularization=True)(h)
 
         h = C.layers.Convolution2D(filter_shape=(5,5),
@@ -93,24 +86,15 @@ def _create_convolution_model_with_skip_level_links():
                                    strides=(1,1),
                                    pad=True, name='fourth_convo')(h)
 
-        h = BatchNormalization(map_rank=1, 
-                               normalization_time_constant=4096, 
-                               use_cntk_engine=True, init_scale=1, 
+        h = BatchNormalization(map_rank=1,
+                               normalization_time_constant=4096,
+                               use_cntk_engine=True, init_scale=1,
                                disable_regularization=True)(h)
-=======
-                                           num_filters=64,
-                                           strides=(1,1),
-                                           pad=True, name='fourth_convo')(h)
->>>>>>> Remove unnecessary spaces
 
         r = C.layers.Dense(num_classes, activation=None, name='classify')(h)
     return r
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> Remove unnecessary spaces
 # Exclude the first convolution layer.
 def _filter(convolution_block):
     if convolution_block.name and convolution_block.name != 'first_convo':
@@ -136,12 +120,7 @@ def test_binarization():
     assert(all(b.op_name != 'first_convo' for b in blocks))
 
 
-<<<<<<< HEAD
-def test_native_convolution(tmpdir):  
-=======
 def test_native_convolution(tmpdir):
-
->>>>>>> Remove unnecessary spaces
     # this test needs native binary convolution library built with halide.
     if not C.contrib.netopt.native_convolve_function_registered:
         pytest.skip()
