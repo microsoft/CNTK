@@ -95,7 +95,10 @@ readarray -t versionInfo < "$CNTK_VERSION_PATH" ||
   die "Malformed version information in version file, ${versionInfo[0]}."
 
 DASHED_VERSION="${BASH_REMATCH[1]}"
+
+# WHL package name for RC builds is of format *-2.5rc0-* but DASHED_VERSION is "2-5-rc0-*"
 DOTTED_VERSION="${DASHED_VERSION//-/.}"
+DOTTED_VERSION="${DOTTED_VERSION/\.rc/rc}"
 
 [[ ${versionInfo[2]} =~ ^(GPU|CPU-Only|GPU-1bit-SGD)$ ]] ||
   die "Malformed target configuration file, ${versionInfo[2]}."
