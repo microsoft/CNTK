@@ -2,9 +2,17 @@
 
 | **Windows** | **Linux** |
 |-------------|---------------|
-| ![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/126/badge) | ![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/127/badge) |
+| [![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/126/badge)](https://cntk.ai/nightly-windows.html) | [![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/127/badge)](https://cntk.ai/nightly-linux.html) |
 
 ## Latest news
+
+***2018-02-28.*** CNTK supports nightly build
+
+If you prefer to use latest CNTK bits from master, use one of the CNTK nightly package.
+* [Nightly packages for Windows](https://cntk.ai/nightly-windows.html)
+* [Nightly packages for Linux](https://cntk.ai/nightly-linux.html)
+
+Alternatively, you can also click corresponding build badge to land to nightly build page.
 
 ***2018-01-31.* CNTK 2.4**
 
