@@ -233,6 +233,11 @@ The Microsoft Cognitive Toolkit (https://cntk.ai), is a unified deep-learning to
     * Windows [Script-driven](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-with-script-on-windows) / [Manual](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-windows)
     * Linux [Manual](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-linux)
 
+### Nightly packages
+If you prefer to use latest CNTK bits from master, use one of the CNTK nightly package.
+* [Nightly packages for Windows](https://cntk.ai/nightly-windows.html)
+* [Nightly packages for Linux](https://cntk.ai/nightly-linux.html)
+
 ## Learning CNTK
 
 You may learn more about CNTK with the following resources:
