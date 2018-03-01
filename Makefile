@@ -1040,30 +1040,30 @@ endif
 endif
 
 ########################################
-# ImageWriter plugin
+# DelayLoadedExtensions plugin
 ########################################
 
 ifdef OPENCV_PATH
-IMAGEWRITER_LIBS_LIST := opencv_core opencv_imgproc opencv_imgcodecs
-IMAGEWRITER_LIBS:= $(addprefix -l,$(IMAGEWRITER_LIBS_LIST))
+DELAY_LOADED_EXTENSIONS_LIBS_LIST := opencv_core opencv_imgproc opencv_imgcodecs
+DELAY_LOADED_EXTENSIONS_LIBS:= $(addprefix -l,$(DELAY_LOADED_EXTENSIONS_LIBS_LIST))
 
-IMAGEWRITER_SRC =\
-  $(SOURCEDIR)/ImageWriterDll/ImageWriter.cpp \
+DELAY_LOADED_EXTENSIONS_SRC =\
+  $(SOURCEDIR)/DelayLoadedExtensionsDll/ImageWriter.cpp \
 
-IMAGEWRITER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEWRITER_SRC))
+DELAY_LOADED_EXTENSIONS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(DELAY_LOADED_EXTENSIONS_SRC))
 
-IMAGEWRITER:=$(LIBDIR)/Cntk.ImageWriter-$(CNTK_COMPONENT_VERSION).so
-ALL_LIBS += $(IMAGEWRITER)
-PYTHON_LIBS += $(IMAGEWRITER)
-JAVA_LOAD_DEPS += $(IMAGEWRITER_LIBS)
-SRC+=$(IMAGEWRITER_SRC)
+DELAY_LOADED_EXTENSIONS:=$(LIBDIR)/Cntk.DelayLoadedExtensions-$(CNTK_COMPONENT_VERSION).so
+ALL_LIBS += $(DELAY_LOADED_EXTENSIONS)
+PYTHON_LIBS += $(DELAY_LOADED_EXTENSIONS)
+JAVA_LOAD_DEPS += $(DELAY_LOADED_EXTENSIONS_LIBS)
+SRC+=$(DELAY_LOADED_EXTENSIONS_SRC)
 
 INCLUDEPATH += $(OPENCV_PATH)/include
 LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
-$(IMAGEWRITER): $(IMAGEWRITER_OBJ)
+$(DELAY_LOADED_EXTENSIONS): $(DELAY_LOADED_EXTENSIONS_OBJ)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(IMAGEWRITER_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(DELAY_LOADED_EXTENSIONS_LIBS)
 endif
 
 ########################################

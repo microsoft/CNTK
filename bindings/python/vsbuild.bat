@@ -79,7 +79,7 @@ for %%D in (
   Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
   Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll  
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.DelayLoadedExtensions-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
   mklml.dll
 ) do (

@@ -25,8 +25,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2ECE5AEB-F471-4A1D-9BAD-963D5C8A8A1D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ImageWriterDll</RootNamespace>
-    <ProjectName>ImageWriterDll</ProjectName>
+    <RootNamespace>DelayLoadedExtensionsDll</RootNamespace>
+    <ProjectName>DelayLoadedExtensionsDll</ProjectName>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -50,11 +50,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>Cntk.ImageWriter-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.DelayLoadedExtensions-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>Cntk.ImageWriter-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.DelayLoadedExtensions-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
