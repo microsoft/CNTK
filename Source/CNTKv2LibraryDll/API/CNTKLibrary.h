@@ -264,6 +264,14 @@ namespace CNTK
         bool IsUnknown() const { return (*this == NDShape::Unknown()); }
 
         ///
+        /// Returns a boolean indicating if 'this' shape is scalar
+        ///
+        bool IsScalar() const
+        {
+            return (Rank() == 0) || (Rank() == 1 && m_shapeDims[0] == 1);
+        }
+
+        ///
         /// Returns the rank of 'this' shape.
         ///
         size_t Rank() const { return m_shapeDims.size(); }
