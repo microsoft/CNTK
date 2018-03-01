@@ -868,9 +868,16 @@ public:
         fstream >> this->m_seqGammarbMMIFactor;
         fstream >> this->m_seqGammarUsesMBR;
         fstream >> this->m_doReferenceAlignment;
-        LoadConfigsFromFile();
-        InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
-        this->SetGammarCalculationParam(this->m_seqGammarAMF, this->m_seqGammarLMF, this->m_seqGammarWP, this->m_seqGammarbMMIFactor, this->m_seqGammarUsesMBR);
+        try
+        {
+            LoadConfigsFromFile();
+            InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
+            this->SetGammarCalculationParam(this->m_seqGammarAMF, this->m_seqGammarLMF, this->m_seqGammarWP, this->m_seqGammarbMMIFactor, this->m_seqGammarUsesMBR);
+        }
+        catch (...)
+        {
+            fprintf(stderr, "WARNING: Failed to open one or more of the files.");
+        }
     }
 
     void LoadConfigsFromFile()
