@@ -586,3 +586,37 @@ def test_sequence_unpack_without_primary_output(device_id, precision):
 
     actual = bvm.eval({x: x1})
     assert np.allclose(actual, expected)
+
+def test_sequence_step_function_scalar_shape_inferrence():
+    hidden_dim = 3
+    in_dim = 5
+    x = C.sequence.input_variable((in_dim,))
+    r = C.sequence.input_variable((1,)) # value of 0/1. 0 means reset
+    merged_x = C.splice(x, r) # Recurrence only takes 1 input, so concatenate the two
+    cell = C.layers.LSTM(hidden_dim) # (dh, dc, x) -> (h, c)
+    y = C.layers.Recurrence(cell)(x)
+
+    @C.Function
+    def lstm_with_reset(dh, dc, xr):
+        xx = xr[0:-1]
+        rr = xr[-1]
+        return cell(rr * dh, rr * dc, xx)
+
+    yr = C.layers.Recurrence(lstm_with_reset)(merged_x)
+
+    seq_len = [2,3,5]
+    total_len = np.sum(seq_len)
+    accum_seq_len = np.cumsum(seq_len)
+
+    x_total_data = np.random.rand(1, total_len, in_dim).astype(np.float32)
+    x_data = [np.squeeze(v) for v in np.split(x_total_data, accum_seq_len[0:-1], axis=1)]
+
+    r_data = np.ones(accum_seq_len[-1])
+    for i in np.nditer(accum_seq_len[0:-1]):
+        r_data[i] = 0
+    r_data = np.reshape(r_data, (-1,1)).astype(np.float32)
+
+    v1 = y.eval(x_data)
+    v2 = yr.eval({x:x_total_data, r:r_data})
+
+    assert np.allclose(np.concatenate(v1), v2[0])
