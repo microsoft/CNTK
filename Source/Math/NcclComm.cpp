@@ -65,7 +65,10 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     {
         res = ncclGetUniqueId(&ncclId);
         if (res != ncclSuccess)
-            RuntimeError("NcclComm failed to obtain ncclUniqueId: %s", ncclGetErrorString(res));
+        {
+            fprintf(stderr, "NcclComm failed to obtain ncclUniqueId: %s\n", ncclGetErrorString(res));
+            return;
+        }
     }
 
     mpi->Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0);
@@ -73,7 +76,12 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     PrepareDevice(deviceId);
     res = ncclCommInitRank(&m_ncclComm, numRanks, ncclId, mpi->CurrentNodeRank());
     if (res != ncclSuccess)
-        RuntimeError("NcclComm failed to initialize: %s. Set the ENV \"NCCL_DEBUG=INFO\" for more information.", ncclGetErrorString(res));
+    {
+        fprintf(stderr, "NcclComm failed to initialize: %s. Set the ENV \"NCCL_DEBUG=INFO\" for more information.\n", ncclGetErrorString(res));
+        if (m_ncclComm != nullptr)
+            ncclCommDestroy(m_ncclComm);
+        return;
+    }
 
     cudaStreamCreateWithFlags(&m_stream, cudaStreamDefault)
         || "cudaStreamCreateWithFlags failed";
