@@ -278,6 +278,7 @@ namespace CNTK
         static const std::wstring AttributeNameSymListPath;
         static const std::wstring AttributeNameStateListPath;
         static const std::wstring AttributeNameTransProbPath;
+        static const std::wstring AttributeNameLatticeConfigPath;
         static const std::wstring AttributeNameHSmoothingWeight;
         static const std::wstring AttributeNameFrameDropThresh;
         static const std::wstring AttributeNameDoReferenceAlign;
@@ -311,6 +312,8 @@ namespace CNTK
         static const std::wstring AttributeNameCustomAttributes;
         static const std::wstring AttributeNameNumItems;
         static const std::wstring AttributeNameFillValue;
+        static const std::wstring AttributeNameUseStatsAcrossChannels;
+        static const std::wstring AttributeNameDoVarianceScaling;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

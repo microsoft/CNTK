@@ -640,6 +640,8 @@ namespace CNTK
             return m_learners;
         }
 
+        const LearnerPtr& GetMetricAggregatingLearner() const;
+
         std::unordered_set<Parameter> GetParameters() const
         {
             std::unordered_set<Parameter> result;
@@ -664,6 +666,7 @@ namespace CNTK
 
         std::vector<LearnerPtr> m_learners;
         bool m_isDistributed;
+        LearnerPtr m_metricAggregatingLearner;
     };
 
     class Utils

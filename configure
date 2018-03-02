@@ -18,6 +18,13 @@ enable_python=
 
 enable_java=
 
+# cntk build version
+# Modify both of the following during major release
+default_build_version="2.4"
+default_build_public="no"
+build_version=$default_build_version
+build_public=$default_build_public
+
 # NCCL communication library
 have_nccl=no
 nccl_path=
@@ -406,6 +413,7 @@ function show_help ()
     echo "  --with-swig[=directory] $(show_default $(find_swig))"
     echo "  --with-mpi[=directory] $(show_default $(find_mpi))"
     echo "  --with-halide[=directory] $(show_default $(find_halide))"
+    echo "  --with-build-version=[version] $default_build_version"
 
     echo "Libraries search path:"
     for head in $(default_paths)
@@ -948,6 +956,13 @@ do
                 fi
             fi
             ;;
+        --with-build-version*)
+            if test "x$optarg" != "x"
+            then
+                build_version=$optarg
+                build_public="yes"
+            fi
+            ;;
         *)
             echo Invalid option $key
             show_help
@@ -1180,6 +1195,8 @@ config=$build_top/Config.make
 echo Generating $config
 echo "#Configuration file for cntk" > $config
 echo BUILDTYPE=$buildtype >> $config
+echo BUILD_VERSION=$build_version >> $config
+echo BUILD_PUBLIC=$build_public >> $config
 echo MATHLIB=$mathlib >> $config
 case $mathlib in
     mkl)

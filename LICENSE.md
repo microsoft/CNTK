@@ -1,4 +1,4 @@
-# Microsoft Computational Network Toolkit (CNTK)
+# Microsoft Cognitive Toolkit (CNTK)
 
 Copyright (c) Microsoft Corporation
 

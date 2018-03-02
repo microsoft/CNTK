@@ -25,6 +25,28 @@ public:
         m_deserializers(deserializer)
     { }
 
+    virtual ~BinaryDataChunk()
+    {
+        // There might be outstanding sequences sharing the memory from this chunk
+        // in that case, create a new chunk and let outstanding sequences ref it
+        std::shared_ptr<uint8_t> holdingBuffer;
+        for (auto& seqs : m_data)
+        {
+            for (auto& s : seqs)
+            {
+                if (!s.unique())
+                {
+                    // create holding chunk if not already have one
+                    if (!holdingBuffer)
+                    {
+                        holdingBuffer.reset((uint8_t*)m_buffer.release());
+                    }
+                    s->m_holdingBuffer = holdingBuffer;
+                }
+            }
+        }
+    }
+
     // Gets a sequence using its index inside the chunk.
     void GetSequence(size_t sequenceIdx, std::vector<SequenceDataPtr>& result) override
     {

@@ -180,8 +180,16 @@ NDShape ONNXToCNTKHelper::FromTypeProto(const onnx::TypeProto& tensorShape)
 NDShape ONNXToCNTKHelper::FromTensorShapeProto(const onnx::TensorShapeProto& tensorShape)
 {
     std::vector<size_t> dimensions;
-    for (int index = 0; index < tensorShape.dim_size(); index++)
-        dimensions.push_back(tensorShape.dim(index).dim_value());
+    for (int i = 0; i < tensorShape.dim_size(); ++i)
+    {
+        auto dim_i = tensorShape.dim(i);
+        if (dim_i.has_dim_value())
+            dimensions.push_back(tensorShape.dim(i).dim_value());
+        else if (dim_i.has_dim_param())
+            dimensions.push_back(NDShape::FreeDimension);
+        else
+            LogicError("ONNX::TensorShapeProto_Dimension must have either dim_value or dim_param specified.");
+    }
 
     // CNTKToONNX ToTensorShape does reverse, need to reverse to restore CNTK shape
     return ReverseShape(dimensions);
@@ -1744,6 +1752,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             return ImageScaler(inputs[0], scale, bias, ToWString(node->Name()));
         }
     }
+    else if (onnxOpName == "MeanVarianceNormalization")
+    {
+        size_t acrossChannels = GetNamedAttributeAsInt64(node, "across_channels", 0);
+        size_t normalizeVariance = GetNamedAttributeAsInt64(node, "normalize_variance", 1);
+        return MeanVarianceNormalization(inputs[0], !!acrossChannels, !!normalizeVariance, ToWString(node->Name()));
+    }
     else
     {
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());
@@ -1955,7 +1969,10 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
             }
             else
             {
-                cntkConvAutoPadding.push_back(true);
+                // We assume this is the channel dimension and since ONNX does not support
+                // padding (also strides, dilation) for channel dimension, we set this to
+                // false when creating CNTK node. 
+                cntkConvAutoPadding.push_back(false);
             }
         }
 

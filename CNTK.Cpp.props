@@ -66,8 +66,10 @@
     <MathDelayLoad>mklml.dll</MathDelayLoad>
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
     <HasMklDnn>false</HasMklDnn>
+    <!-- disable MKL-DNN until we pick up the fix for AMD cache size https://github.com/intel/mkl-dnn/commit/ccfbf83ab489b42f7452b6701498b07c28cdb502
     <HasMklDnn Condition="Exists('$(MKL_PATH)\include\mkldnn.h')">true</HasMklDnn>
     <MathDefine Condition="$(HasMklDnn)">$(MathDefine);USE_MKLDNN</MathDefine>
+    -->
     <MathLinkLibrary Condition="$(HasMklDnn)">$(MathLinkLibrary);mkldnn.lib</MathLinkLibrary>
     <MathDelayLoad Condition="$(HasMklDnn)">$(MathDelayLoad);mkldnn.dll</MathDelayLoad>
   </PropertyGroup>
@@ -149,7 +151,7 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CNTK_VERSION="$(CntkVersion)";CNTK_VERSION_BANNER="$(CntkVersionBanner)";CNTK_COMPONENT_VERSION="$(CntkComponentVersion)"</PreprocessorDefinitions>
       <!-- UWP does not use MPI -->
       <PreprocessorDefinitions Condition="!$(IsUWP)">%(PreprocessorDefinitions);HAS_MPI=1</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(CudaVersion)' == '9.0'">%(PreprocessorDefinitions);CUDA_NO_HALF;__CUDA_NO_HALF_OPERATORS__</PreprocessorDefinitions>

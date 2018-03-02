@@ -81,6 +81,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSymListPath = L"SymListPath";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameStateListPath = L"StateListPath";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTransProbPath = L"TransProbPath";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameLatticeConfigPath = L"LatticeConfigPath";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameHSmoothingWeight = L"HSmoothingWeight";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameFrameDropThresh = L"FrameDropThresh";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDoReferenceAlign = L"DoReferenceAlign";
@@ -114,4 +115,6 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomAttributes = L"customAttributes";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumItems = L"numItems";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameFillValue = L"fillValue";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameUseStatsAcrossChannels = L"useStatsAcrossChannels";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDoVarianceScaling = L"doVarianceScaling";
 }

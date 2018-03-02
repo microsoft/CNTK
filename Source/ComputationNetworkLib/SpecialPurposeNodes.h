@@ -17,6 +17,8 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
+#include <locale>
+#include <codecvt>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -456,7 +458,7 @@ class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, publ
 public:
     DeclareConstructorFromConfigWithNumInputs(SequenceWithSoftmaxNode);
     SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_gammaCalcInitialized(false)
+        : Base(deviceId, name), m_gammaCalcInitialized(false), m_invalidMinibatch(false)
     {
     }
 
@@ -471,11 +473,18 @@ public:
         }
         else if (inputIndex == 1)
         {
-            FrameRange fr(Input(0)->GetMBLayout());
-            BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
-                            Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
-            MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
-
+            if (m_invalidMinibatch)
+            {
+                Input(inputIndex)->Gradient().SetValue(0.0f);
+                Value().SetValue(1.0f);
+            }
+            else
+            {
+                FrameRange fr(Input(0)->GetMBLayout());
+                BackpropToRight(*m_softmaxOfRight, Input(0)->Value(), Input(inputIndex)->Gradient(),
+                    Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
+                MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
+            }
 #ifdef _DEBUG
             Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
 #endif
@@ -655,6 +664,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
+    bool m_invalidMinibatch; // for single minibatch
     double m_frameDropThreshold;
     double m_fsSmoothingWeight; // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
     double m_seqGammarAMF;
@@ -695,17 +705,22 @@ class LatticeSequenceWithSoftmaxNode : public SequenceWithSoftmaxNode<ElemType>,
     }
 
 public:
-    LatticeSequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath,
+    LatticeSequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& latticeConfigPath,
         float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen)
-        : SequenceWithSoftmaxNode<ElemType>(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath)
+        : SequenceWithSoftmaxNode<ElemType>(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath), m_latticeConfigPath(latticeConfigPath)
     {
         if (sizeof(ElemType) != sizeof(float))
             LogicError("LatticeSequenceWithSoftmaxNode currently only supports floats.\n"); // due to the binary reader restrictions 
 
         if (symListPath.size() == 0 || phonePath.size() == 0 || stateListPath.size() == 0 || transProbPath.size() == 0)
             LogicError("Ensure that symListPath, phonePath, stateListPath and transProbPath parameters are specified.\n");
-        
-        InitSEParams(symListPath, phonePath, stateListPath, transProbPath);
+
+        if (doReferenceAlign)
+            LogicError("SE training with alignment is currently not supported.\n");
+
+        LoadConfigsFromFile();
+
+        InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
         this->m_fsSmoothingWeight = hSmoothingWeight;
         this->m_frameDropThreshold = frameDropThresh;
         this->m_doReferenceAlignment = doReferenceAlign;
@@ -724,7 +739,7 @@ public:
     }
 
     LatticeSequenceWithSoftmaxNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeSequenceWithSoftmaxNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"),
+        : LatticeSequenceWithSoftmaxNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"), configp->Get(L"latticeConfigPath"),
             configp->Get(L"hSmoothingWeight"), configp->Get(L"frameDropThresh"), configp->Get(L"doReferenceAlign"), configp->Get(L"seqGammarUsesMBR"), configp->Get(L"seqGammarAMF"), configp->Get(L"seqGammarLMF"), configp->Get(L"seqGammarBMMIFactor"), configp->Get(L"seqGammarWordPen")
         )
     {
@@ -744,6 +759,7 @@ public:
         this->m_uids.clear();
         this->m_boundaries.clear();
         this->m_extraUttMap.clear();
+        this->m_invalidMinibatch = false;
 
         if (InputRef(3).ValuePtrRef()->GetDeviceId() != CPUDEVICE)
             LogicError("Due to their size, lattices should be allocated on CPU memory");
@@ -757,11 +773,12 @@ public:
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
+        vector<size_t> labelSequencesMap;
         for (size_t i = 0; i < labelSequences.size(); i++)
         {
             if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
-
+            labelSequencesMap.push_back(labelSequences[i].seqId);
             auto& currentLabelSeq = labelSequences[i];
 
             // Fill up labels
@@ -775,28 +792,46 @@ public:
             this->m_extraUttMap.push_back(labelSequences[i].s);
         }
 
-        this->m_lattices.resize(labelMBLayout->GetNumSequences());
-        size_t nonZeroSeqCount = 0;
-//#pragma omp parallel for TODO: test this in philly and enable if performance is good.
-        for (long i = 0; i < labelSequences.size(); i++)
-        {
-            if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
-                continue;
+        this->m_lattices.resize(labelSequencesMap.size());
+        try {
+#pragma omp parallel for 
+            for (long i = 0; i < labelSequences.size(); i++)
+            {
+                if (labelSequences[i].seqId == GAP_SEQUENCE_ID)
+                    continue;
 
-            auto& currentLabelSeq = labelSequences[i];
+                auto& currentLabelSeq = labelSequences[i];
 
-            // Fill up lattice
-            auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
-            std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
-            const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
-            latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
-            assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
-            this->m_lattices[nonZeroSeqCount] = latticePair;
-            nonZeroSeqCount++;
+                // Fill up lattice
+                auto& currentLatticeSeq = latticeMBLayout->FindSequence(currentLabelSeq.seqId);
+                std::shared_ptr<msra::dbn::latticepair> latticePair(new msra::dbn::latticepair);
+                const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
+                latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
+                assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
+                // The size of the vector is small -- the number of sequences in the minibatch. 
+                // Iteration likely will be faster than the overhead with unordered_map
+                for (size_t pos = 0; pos < labelSequencesMap.size();pos++)
+                {
+                    if (labelSequencesMap[pos] == labelSequences[i].seqId)
+                    {
+                        this->m_lattices[pos] = latticePair;
+                        break;
+                    }
+                }
+            }
         }
-        this->m_boundaries.resize(this->m_uids.size());
-        std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
-        SequenceWithSoftmaxNode<ElemType>::ForwardPropNonLooping();
+        catch (...)
+        {
+            fprintf(stderr, "WARNING: Failed to parse lattice. Skipping minibatch...\n");
+            this->m_invalidMinibatch = true;
+        }
+
+        if (!this->m_invalidMinibatch)
+        {
+            this->m_boundaries.resize(this->m_uids.size());
+            std::fill(this->m_boundaries.begin(), this->m_boundaries.end(), 0);
+            SequenceWithSoftmaxNode<ElemType>::ForwardPropNonLooping();
+        }
     }
 
     virtual void Save(File& fstream) const override
@@ -806,6 +841,7 @@ public:
         fstream << m_phonePath;
         fstream << m_stateListPath;
         fstream << m_transProbPath;
+        fstream << m_latticeConfigPath;
         fstream << this->m_frameDropThreshold;
         fstream << this->m_fsSmoothingWeight;
         fstream << this->m_seqGammarAMF;
@@ -823,6 +859,7 @@ public:
         fstream >> m_phonePath;
         fstream >> m_stateListPath;
         fstream >> m_transProbPath;
+        fstream >> m_latticeConfigPath;
         fstream >> this->m_frameDropThreshold;
         fstream >> this->m_fsSmoothingWeight;
         fstream >> this->m_seqGammarAMF;
@@ -831,8 +868,29 @@ public:
         fstream >> this->m_seqGammarbMMIFactor;
         fstream >> this->m_seqGammarUsesMBR;
         fstream >> this->m_doReferenceAlignment;
+        LoadConfigsFromFile();
         InitSEParams(m_symListPath, m_phonePath, m_stateListPath, m_transProbPath);
         this->SetGammarCalculationParam(this->m_seqGammarAMF, this->m_seqGammarLMF, this->m_seqGammarWP, this->m_seqGammarbMMIFactor, this->m_seqGammarUsesMBR);
+    }
+
+    void LoadConfigsFromFile()
+    {
+        // Workaround for loading a trained model from a different location
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        std::string latticeConfigPathStr = converter.to_bytes(m_latticeConfigPath);
+        wifstream file(latticeConfigPathStr.c_str());
+        if (file.good())
+        {
+            wstring str;
+            getline(file, str);
+            m_symListPath = str;
+            getline(file, str);
+            m_phonePath = str;
+            getline(file, str);
+            m_stateListPath = str;
+            getline(file, str);
+            m_transProbPath = str;
+        }
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -879,6 +937,7 @@ private:
     std::wstring m_phonePath;
     std::wstring m_stateListPath;
     std::wstring m_transProbPath;
+    std::wstring m_latticeConfigPath;
     shared_ptr<Matrix<ElemType>> m_maxIndexes, m_maxValues;
 
     void InitSEParams(const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath) 

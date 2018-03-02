@@ -282,6 +282,20 @@ def test_Concat(tmpdir):
 
     verify_one_input(model, data1, tmpdir, 'Concat_1')
 
+def test_ConvTranspose(tmpdir):
+    # Keep the shapes below as they are, because this tests an earlier bug.
+    input_shape = (48, 16, 16) 
+    img = np.reshape(np.arange(np.prod(input_shape), dtype = np.float32), input_shape) 
+
+    x = C.input_variable(input_shape)
+
+    kernel_shape = (48, 32, 3, 3) # For convolution_transpose the shape is (I x O x W x H)
+    kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = np.float32))
+
+    conv_trans_model = C.convolution_transpose(kernel, x, strides=(2, 2), output_shape=(32, 32, 32), auto_padding = [False, True, True])
+
+    verify_one_input(conv_trans_model, img, tmpdir, 'ConvTranspose_0')
+
 # DepthToSpace
 def test_DepthToSpace(tmpdir):
     num_channels = 9
@@ -444,6 +458,15 @@ def test_ImageScaler(tmpdir):
     model = C.image_scaler(x, scalar, bias);
     verify_one_input(model, image, tmpdir, 'ImageScaler_1')
 
+#LayerNormalization
+def test_LayerNormalization(tmpdir):
+    test_shapes = [(3, 5, 7), (10, ), (20, 31)]
+    for shape in test_shapes:
+        data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
+        input_operand = C.input_variable(shape=shape)        
+        model0 = model0 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
+        verify_one_input(model0, data, tmpdir, 'Pad_0')
+
 #LeakyRelu
 def test_LeakyRelu(tmpdir):
     data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=np.float32)
@@ -538,6 +561,22 @@ def test_Mean(tmpdir):
 
     verify_two_input(model, in1_data, in2_data, tmpdir, 'Mean_2')
     
+#MeanVarianceNormalization
+def test_MeanVarianceNormalization(tmpdir):
+    shape = (3, 5, 7)
+    data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
+
+    input_operand = C.input_variable(shape=shape)
+
+    model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
+    verify_one_input(model0, data, tmpdir, 'Pad_0')
+
+    model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
+    verify_one_input(model1, data, tmpdir, 'Pad_1')
+
+    model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
+    verify_one_input(model2, data, tmpdir, 'Pad_2')
+
 #Min
 def test_Min(tmpdir):
     data0 = np.asarray([1., 1., 1., 1.], dtype=np.float32)
@@ -569,7 +608,7 @@ def test_Pad(tmpdir):
     x = C.input_variable(shape)
     model = C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.REFLECT_PAD)
 
-    verify_one_input(model, data, tmpdir, 'Pad_1')    
+    verify_one_input(model, data, tmpdir, 'Pad_1')
 
 #PRelu
 #def test_PRelu(tmpdir):

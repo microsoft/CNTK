@@ -202,17 +202,20 @@ namespace CNTK
         static const size_t SentinelDimValueForUnknownShape = (size_t)-2;
     public:
 
-        ///
-        /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
-        ///
-        static const size_t InferredDimension = (size_t)-1;
+        enum : size_t
+        {
+            ///
+            /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
+            ///
+            InferredDimension = (size_t)-1,
 
-        ///
-        /// A placeholder value to use for an axis whose dimension is unbound and is only determined
-        /// when actual data is bound to the variable. Note that since the actual dimension is bound
-        /// from actual minibatch data, the dimension can vary across different evaluations.
-        ///
-        static const size_t FreeDimension = (size_t)-3;
+            ///
+            /// A placeholder value to use for an axis whose dimension is unbound and is only determined
+            /// when actual data is bound to the variable. Note that since the actual dimension is bound
+            /// from actual minibatch data, the dimension can vary across different evaluations.
+            ///
+            FreeDimension = (size_t)-3,
+        };
 
         ///
         /// A placeholder shape to use to denote an unknown shape
@@ -4297,7 +4300,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in operation for sequence with lattice training (typically for speech).
     ///
     CNTK_API FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symbolListPath, 
-        const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transitionProbabilityPath, float smoothingWeight, float frameDropThreshold, bool doReferenceAlign, bool gammarUsesMBR, 
+        const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transitionProbabilityPath, const std::wstring& configFilePath, float smoothingWeight, float frameDropThreshold, bool doReferenceAlign, bool gammarUsesMBR,
         float gammarAMF, float gammarLMF, float gammarBMMIFactor, float gammarWordPenalty, const std::wstring& name = L"");
 
     ///
@@ -4501,6 +4504,11 @@ namespace CNTK
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name = L"");
+
+    ///
+    /// Mean-variance normalization of the specified input operand.
+    ///
+    CNTK_API FunctionPtr MeanVarianceNormalization(const Variable& operand, const bool useStatsAcrossChannels = false, const bool doVarianceScaling = true, const std::wstring& name = L"");
 
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
@@ -5289,13 +5297,30 @@ namespace CNTK
         {
         }
 
+        //
+        // Sets as the metric aggregator learner for the trainer in the case of
+        // multiple distributed learner training scenarios. The trainer will use 
+        // the DoAggregateMetricsIfNeeded method of this learner to perform 
+        // metric aggregation.
+        // 
+        void SetAsMetricAggregator()
+        {
+            m_metricAggregator = true;
+        }
+
+        bool IsMetricAggregator()
+        {
+            return m_metricAggregator;
+        }
+
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),
                       LearningRateSchedule(0)),
               m_learner(learner),
               m_communicator(communicator),
-              m_distributeAfterSamples(distributeAfterSamples)
+              m_distributeAfterSamples(distributeAfterSamples),
+              m_metricAggregator(false)
         {
             if (!m_learner)
                 InvalidArgument("Learner passed to a Distributed learner ctor must not be null.");
@@ -5307,6 +5332,7 @@ namespace CNTK
         const LearnerPtr m_learner;
         const DistributedCommunicatorPtr m_communicator;
         const size_t m_distributeAfterSamples;
+        bool m_metricAggregator;
 
         // Disallow copy and move construction and assignment
         DistributedLearner(const DistributedLearner&) = delete; DistributedLearner& operator=(const DistributedLearner&) = delete; DistributedLearner& operator=(DistributedLearner&&) = delete; DistributedLearner(DistributedLearner&&) = delete;

@@ -57,6 +57,10 @@ namespace CNTK {
                                                    /// to correlated the data between different streams).
     };
 
+    //forward declaration for Chunk/ChunkPtr
+    class Chunk;
+    typedef std::shared_ptr<Chunk> ChunkPtr;
+
     ///
     /// Defines sequence data and its layout.
     /// Currently CNTK supports dense and sparse sequences (csc).
@@ -84,6 +88,7 @@ namespace CNTK {
         DataType m_elementType;   /// Sequence element type.
         bool m_isValid;           /// Flag indicating if sequence is valid.
         SequenceKey m_key;        /// Sequence key.
+        std::shared_ptr<uint8_t> m_holdingBuffer; /// Hold reference to data buffer when sequence shares memory with it
     };
     typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
@@ -157,7 +162,6 @@ namespace CNTK {
     protected:
         Chunk() = default;
     };
-    typedef std::shared_ptr<Chunk> ChunkPtr;
 
     ///
     /// Meta information of a chunk.

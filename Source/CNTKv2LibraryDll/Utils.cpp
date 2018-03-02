@@ -1055,6 +1055,7 @@ namespace CNTK
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),
         m_isDistributed(false),
+        m_metricAggregatingLearner(nullptr),
         DoAggregateMetricsIfNeededLambda(nullptr)
     {
         if (learners.empty())
@@ -1068,10 +1069,24 @@ namespace CNTK
             {
                 m_isDistributed = true;
 
-                // When only 1 distributed learner is present, enable the lambda. This is used to correctly report loss and eval in BMUF learner case.
-                // Todo : Reconsider this design of working with only 1 distributed learner.
+                // If this is the only learner, set it as the MetricAggregator
+                // so that the user does not need to explicitly mark it.
                 if (m_learners.size() == 1)
                 {
+                    distLearner->SetAsMetricAggregator();
+                }
+                else
+                {
+                    if (dynamic_pointer_cast<QuantizedDistributedCommunicator>(distLearner->GetCommunicator()) != nullptr)
+                    {
+                        InvalidArgument("Learners with QuantizedDistributedCommunicator is not supported in a multiple learner distributed training scenarios.");
+                    }
+                }
+
+                // Use only one of the learners marked as MetricAggregator to aggregate loss and eval.
+                if (distLearner->IsMetricAggregator())
+                {
+                    m_metricAggregatingLearner = learner;
                     DoAggregateMetricsIfNeededLambda = std::bind(&DistributedLearner::DoAggregateMetricsIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
                 }
             }
@@ -1085,6 +1100,11 @@ namespace CNTK
             }
         }
 
+        if (!m_metricAggregatingLearner)
+        {
+            m_metricAggregatingLearner = m_learners.front();
+        }
+
         if (m_isDistributed)
             CheckDistributedLearners();
     }
@@ -1096,6 +1116,18 @@ namespace CNTK
             if (dynamic_pointer_cast<DistributedLearner>(learner) == nullptr)
                 InvalidArgument("Cannot use a non-distributed learner for some parameters together with a distributed learner for other parameters, in a single Trainer.");
         }
+
+        size_t distributeAfter = dynamic_pointer_cast<DistributedLearner>(m_learners.front())->ParallelizationAfter();
+        for (const auto& learner : m_learners)
+        {
+            if (distributeAfter != dynamic_pointer_cast<DistributedLearner>(learner)->ParallelizationAfter())
+                InvalidArgument("All distributed learners need to have the same DistributeAfterSamples limit.");
+        }
+    }
+
+    const LearnerPtr& Learners::GetMetricAggregatingLearner() const
+    {
+        return m_metricAggregatingLearner;
     }
 
     void Learners::GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients)
@@ -1128,31 +1160,43 @@ namespace CNTK
         std::vector<MinibatchInfo> mbInfoPerLearner;
         mbInfoPerLearner.resize(m_learners.size());
 
+        MinibatchInfo tmpMinibatchInfo{
+            minibatch.atEndOfData,
+            minibatch.atEndOfSweep,
+            minibatch.numberOfSamples,
+            minibatch.trainingLossValue->DeepClone(),
+            minibatch.evalCriterionValue->DeepClone() };
+
+        bool metricAggregatorUpdated = false;
         bool anyUpdatesPerformed = false;
         for (size_t i = 0; i < m_learners.size(); i++)
         {
             auto l  = m_learners[i];
-            mbInfoPerLearner[i] = minibatch;
-
             auto learner = dynamic_pointer_cast<DistributedLearner>(l);
             assert(learner != nullptr); // Already checked in the constructor.
+
+            if (learner->IsMetricAggregator())
+            {
+                mbInfoPerLearner[i] = minibatch;
+                metricAggregatorUpdated = true;
+            }
+            else
+            {
+                mbInfoPerLearner[i] = tmpMinibatchInfo;
+            }
 
             std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
             GetLearnerGradients(learner, gradientValues, learnerGradients);
             anyUpdatesPerformed |= learner->Update(learnerGradients, mbInfoPerLearner[i]);
         }
+        if (!metricAggregatorUpdated)
+            RuntimeError("Update failed: Metric aggregation did not happen, none of the learners was marked as metric aggregator.");
 
-        minibatch = mbInfoPerLearner.front();
-
-        // Checking that progress on the global timeline performed equally.
-        // This will currently prohibit usage of BlockMomentum with Simple/1Bit,
-        // but 1Bit and Simple can be used together.
-        for (size_t i = 1; i < mbInfoPerLearner.size(); i++)
+        // In a single trainer, the number of samples should be same for each learner. 
+        // We use the learner marked as MetricAggregator to set the number of samples. 
+        for (size_t i = 0; i < m_learners.size(); i++)
         {
-            auto mbInfo = mbInfoPerLearner[i];
-            if (minibatch.numberOfSamples != mbInfo.numberOfSamples)
-                RuntimeError("Combining distributed learners with different methods"
-                    " for aggregation minibatch sample count is currently not supported");
+            mbInfoPerLearner[i].numberOfSamples = minibatch.numberOfSamples;
         }
         return anyUpdatesPerformed;
     }
