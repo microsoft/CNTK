@@ -5297,13 +5297,30 @@ namespace CNTK
         {
         }
 
+        //
+        // Sets as the metric aggregator learner for the trainer in the case of
+        // multiple distributed learner training scenarios. The trainer will use 
+        // the DoAggregateMetricsIfNeeded method of this learner to perform 
+        // metric aggregation.
+        // 
+        void SetAsMetricAggregator()
+        {
+            m_metricAggregator = true;
+        }
+
+        bool IsMetricAggregator()
+        {
+            return m_metricAggregator;
+        }
+
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),
                       LearningRateSchedule(0)),
               m_learner(learner),
               m_communicator(communicator),
-              m_distributeAfterSamples(distributeAfterSamples)
+              m_distributeAfterSamples(distributeAfterSamples),
+              m_metricAggregator(false)
         {
             if (!m_learner)
                 InvalidArgument("Learner passed to a Distributed learner ctor must not be null.");
@@ -5315,6 +5332,7 @@ namespace CNTK
         const LearnerPtr m_learner;
         const DistributedCommunicatorPtr m_communicator;
         const size_t m_distributeAfterSamples;
+        bool m_metricAggregator;
 
         // Disallow copy and move construction and assignment
         DistributedLearner(const DistributedLearner&) = delete; DistributedLearner& operator=(const DistributedLearner&) = delete; DistributedLearner& operator=(DistributedLearner&&) = delete; DistributedLearner(DistributedLearner&&) = delete;
