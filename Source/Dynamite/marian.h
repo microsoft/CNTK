@@ -53,7 +53,7 @@ std::shared_ptr<spdlog::logger> stderrLogger(const std::string&, const std::stri
 namespace marian
 {
     // -----------------------------------------------------------------------
-    // basic types (Ptr, New, stuff, constants)
+    // basic types (Ptr, New, stuff, constants), and small types
     // -----------------------------------------------------------------------
 
     template<typename T>
@@ -63,6 +63,8 @@ namespace marian
     class ExpressionGraph;
     const float NEMATUS_LN_EPS = 1e-5f;
     typedef std::ofstream OutputFileStream;
+    enum class DeviceType { gpu = 0, cpu = 1 };
+    struct DeviceId { size_t no; DeviceType type; DeviceId() : no(0), type(DeviceType::gpu) {} DeviceId(size_t no, DeviceType type) : no(no), type(type) {} };
 
     // -----------------------------------------------------------------------
     // Shape
@@ -149,6 +151,7 @@ namespace marian
         float scalar() const { return val()->AsScalar<float>(); }
         ShapeProxy shape() const { return Shape(); }
         void dump() const { Value()->LogToFile(Name()); }
+        void debug(const std::string&) const { } // not implemented; do nothing for now. We could use the Profiling mechanism
         Ptr<ExpressionGraph> graph() const { return nullptr; } // TODO: We need a placeholder for this. Or maybe only allow one graph?
     };
     static inline void operator>> (const CNTK::NDArrayViewPtr& val, std::vector<float>& outputBuffer) { val->CopyDataTo(outputBuffer); }
@@ -1018,12 +1021,15 @@ namespace marian
         Ptr<Parameters> params() const { return m_parameters; }
         void clear() { }
         void reserveWorkspaceMB(size_t) { }
-        // TODO: what is Marian's device id of the CPU?
-        void setDevice(size_t device = 0)
+        void setDevice(DeviceId deviceId = DeviceId())
         {
-            Dynamite::SetCurrentDevice(CNTK::DeviceDescriptor::GPUDevice((unsigned int)device));
+            Dynamite::SetCurrentDevice(deviceId.type ==  DeviceType::gpu ? CNTK::DeviceDescriptor::GPUDevice((unsigned int)deviceId.no) : CNTK::DeviceDescriptor::CPUDevice());
         }
-        size_t getDevice() { return Dynamite::CurrentDevice().Id(); }
+        DeviceId getDevice()
+        {
+            let& currentDynamiteDevice = Dynamite::CurrentDevice();
+            return DeviceId(currentDynamiteDevice.Id(), currentDynamiteDevice.Type() == CNTK::DeviceKind::GPU ? DeviceType::gpu : DeviceType::cpu);
+        }
         struct Backend // fake Backend for getBackend()
         {
             void setDevice(size_t gpuId) { Dynamite::SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)gpuId)); }
