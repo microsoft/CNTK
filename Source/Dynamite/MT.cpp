@@ -125,6 +125,7 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
     if (systemId == "en_de_bpe") // Marian setup
     {
         // cat vocab.ende.yml | sed 's/: [0-9]*$//' | tr -d ^" > vocab.ende.txt && "C:\Program Files\Git\usr\bin\echo.exe" >> ..\data\vocab.ende.txt
+        // BUGBUG: These vocabs contain a few \x and \u expressions, which get transformed incorrectly ()
         srcVocabSize = 36000;
         tgtVocabSize = 36000;
         srcTrainFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/corpus.bpe.en";
@@ -135,7 +136,6 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTestFile  = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
         srcVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         tgtVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
-        insertBOS = false; // Marian model does not expect <s>
         tieSoftmaxWithTgtEmbeddings = tieSrcAndTgtEmbeddings = true;      // share both embeddings, also share with output layer
     }
     else if (systemId == "chs_enu")
@@ -150,7 +150,6 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtTestFile  = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/test.ENU.txt";
         srcVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.source.vocab";
         tgtVocabFile = L"${PHILLY_DATA_DIR}/local/data/2017_10_05_21h_46m_39s/CHS.ENU.generalnn.target_input.vocab";
-        insertBOS = false; // Marian model does not expect <s>
         tieSoftmaxWithTgtEmbeddings = true; // target embedding matrix = (softmax layer weights)^T
         tieSrcAndTgtEmbeddings = false;     // source and target cannot share the embedding, since different vocab
     }
@@ -978,6 +977,7 @@ BinaryFoldingModel CreateModelFunctionMarian()
         .construct();
     // run through once to create all params, so that we can pull them out
     graph = New<ExpressionGraph>();
+    // TODO: Can we just use the mechanism in Train() instead? Our own fake batch?
     auto fakeBatch = data::CorpusBatch::fakeBatch(std::vector<size_t>{ /*srcLen=*/3, /*tgtLen*/4 }, /*batchSize=*/1, options);
     mmodel->build(graph, fakeBatch); // apply model to data. This builds the graph, and here initializes the parameters.
     // TODO: why does this need the batch at all? Does this really run through, and really initialize the parameters?
@@ -1114,6 +1114,8 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     let workerId = communicator->CurrentWorker().m_globalRank;
 
 #if 0   // old Dynamite model
+    insertBOS = true; // we expect data to contain <s>
+
     // dynamic model and criterion function
     auto model_fn = CreateModelFunction();
     auto criterion_fn = CreateCriterionFunction(model_fn);
@@ -1122,6 +1124,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     //model_fn(Constant({ srcVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()), Constant({ tgtVocabSize, (size_t)1 }, CurrentDataType(), 0.0, CurrentDevice()));
 
 #else // Marian model
+    insertBOS = false; // Marian model does not expect <s>  --TODO: should this be a parameter to CreateMinibatchSource()?
     let model_fn = CreateModelFunctionMarian();
     let criterion_fn = CreateCriterionFunctionMarian(model_fn);
 #endif
@@ -1149,7 +1152,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     size_t numParameters = 0;
     for (let& p : parameters)
         numParameters += p.Shape().TotalSize();
-    fprintf(stderr, "Total number of learnable parameters is %u in %d parameter tensors.\n", (unsigned int)numParameters, (int)parameters.size()), fflush(stderr);
+    fprintf(stderr, "Total number of learnable parameters is %.f in %d parameter tensors.\n", (double)numParameters, (int)parameters.size()), fflush(stderr);
 
     let isDebugging = numWorkers == 1;
     // determine how large a batch size we can stomach in a single go
@@ -1265,11 +1268,12 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     NDArrayViewPtr mbLossAndMetric; // temp for passing loss/metric around at one point
     for (mbCount = 0; ; mbCount++, bucketCounter++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
-        if (bucketCounter == bucketedMinibatchSet.size()) // wrap the bucket counter
-            bucketCounter = 0;
-
         let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         let relPosition = totalNumLabelsSeen / (double)epochSize;
+
+        if (bucketCounter == bucketedMinibatchSet.size()) // wrap around the bucket counter
+            bucketCounter = 0;
+
         // checkpoint
         if (bucketCounter == 0 &&                                             // for now only save at multiples of bucketing
             (size_t)(relPosition / saveEvery) > (size_t)(lastSavePosition / saveEvery) && // crossed a boundary
@@ -1313,7 +1317,6 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                     minibatchSizeScaling = 1.0 / decayWeight; // we can use this much larger MB size
                     let maxScaledMinibatchSize = 300000.0;    // don't scale to more than this
                     minibatchSizeScaling = min(minibatchSizeScaling, maxScaledMinibatchSize / minibatchSize);
-                    // BUGBUG: This is too late. We need this information when we read the minibatch.
                 }
             }
 #if 1       // correct for Adam   --TODO: do this inside the Learner
@@ -2041,8 +2044,12 @@ int mt_main(int argc, char *argv[])
         {
             let ourGpu = (ourRank + firstGpu) % numGpus;
             SetCurrentDevice(DeviceDescriptor::GPUDevice((unsigned int)ourGpu));
-            fprintf(stderr, "Using GPU[%d] (%S) out of %d.\n",
+            fprintf(stderr, "Using GPU[%d] (%S) out of %d.",
                     (int)ourGpu, CurrentDevice().AsString().c_str(), (int)numGpus), fflush(stderr);
+            if (let* clb = getenv("CUDA_LAUNCH_BLOCKING"))
+                fprintf(stderr, " CUDA_LAUNCH_BLOCKING=%s", clb);
+            fprintf(stderr, "\n"), fflush(stderr);
+            // TODO: This log message really belongs into GPU initialization.
         }
         else // (TODO: add a flag to allow CPU; for now, there is no point)
             RuntimeError("No GPUs were found or reported on this computer.");
