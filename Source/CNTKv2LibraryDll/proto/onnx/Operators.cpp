@@ -444,6 +444,7 @@ namespace ONNX
             { L"Softplus",{ 0 } },
             { L"Softsign",{ 0 } },
             { L"ImageScaler",{ 0, 1, 2, 3 } },
+            { L"MeanVarianceNormalization",{ 0 } },
         };
 
         std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {
@@ -453,7 +454,6 @@ namespace ONNX
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
             { L"PReLU",{ 1, 0 } },
-            { L"LayerNormalization",{ 1, 2, 0 } },
         };
 
         //

@@ -460,12 +460,26 @@ def test_ImageScaler(tmpdir):
 
 #LayerNormalization
 def test_LayerNormalization(tmpdir):
+    # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when 
+    # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back 
+    # from ONNX, CNTK always uses the default eposilon value (0.00001). That's why test below has the default epsilon 
+    # value. It is not expected to pass with any other epsilon value until something changes.
     test_shapes = [(3, 5, 7), (10, ), (20, 31)]
     for shape in test_shapes:
         data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
         input_operand = C.input_variable(shape=shape)        
-        model0 = model0 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
-        verify_one_input(model0, data, tmpdir, 'Pad_0')
+        model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
+        verify_one_input(model0, data, tmpdir, 'LayerNorm_0')
+
+    # This test point tests especially with epsilon = 0, because that creates a graph with 
+    # different number of ops. However, we don't expect the numbers to match in round trip
+    # because we only support default epislon (0.00001) when loading from ONNX. Therefore,
+    # this is just a load/save test.
+    model1 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
+    filename = os.path.join(str(tmpdir), R'LayerNorm_1.onnx')
+    model1.save(filename, format=C.ModelFormat.ONNX)
+    loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    assert model1.shape == loaded_model.shape
 
 #LeakyRelu
 def test_LeakyRelu(tmpdir):
@@ -569,13 +583,20 @@ def test_MeanVarianceNormalization(tmpdir):
     input_operand = C.input_variable(shape=shape)
 
     model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
-    verify_one_input(model0, data, tmpdir, 'Pad_0')
+    verify_one_input(model0, data, tmpdir, 'MVN_0')
 
     model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
-    verify_one_input(model1, data, tmpdir, 'Pad_1')
+    verify_one_input(model1, data, tmpdir, 'MVN_1')
 
     model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
-    verify_one_input(model2, data, tmpdir, 'Pad_2')
+    verify_one_input(model2, data, tmpdir, 'MVN_2')
+
+    # The test below tests the round trip with epsilon. We loose always the epsilon value when exporting to ONNX
+    # (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back from ONNX, CNTK
+    # always uses the default eposilon value (0.00001). That's why test below has the default epsilon value. It is 
+    # not expected to pass with any other epsilon value until something changes.
+    model3 = C.mean_variance_normalization(input_operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True) 
+    verify_one_input(model3, data, tmpdir, 'MVN_3')
 
 #Min
 def test_Min(tmpdir):
