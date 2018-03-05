@@ -59,6 +59,9 @@ def verify_one_input(model, data, tmpdir, name):
     o0 = model.eval({model.arguments[0]:data})
     o1 = loaded_model.eval({loaded_model.arguments[0]:data})
 
+    if (type(o0) is list):
+        o0 = o0[0]
+
     assert np.allclose(o0, o1)
 
     validation_filename = os.path.join(str(tmpdir), name + R'_validation.onnx')
@@ -514,6 +517,61 @@ def test_LRN(tmpdir):
     x_r = C.input_variable(shape=img_shape, dtype=np.float32)
     model = C.local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
     verify_one_input(model, img, tmpdir, 'LRN_1')
+
+#LSTM
+from cntk.layers import * 
+from itertools import product
+
+def CreateLSTMModel(activation, 
+                    peepholes, 
+                    self_stabilization, 
+                    cell_dim, 
+                    initial_state):  
+    return Sequential([ 
+        Recurrence(LSTM(cell_dim, 
+                        use_peepholes = peepholes, 
+                        activation = activation,    
+                        enable_self_stabilization = self_stabilization),    
+                   initial_state = initial_state)
+                            ])
+
+# lstm attributes
+use_peepholes_options = [False]
+enable_self_stabilization_options = [False]
+activation_options = [C.tanh]
+
+#Recurrence attributes
+initial_state_options = [0]
+
+input_dim = 2
+cell_dim = 3
+batch_size = 1
+sequence_len = 5
+
+def MakeLSTMNameFromConfig(use_peepholes, enable_self_stabilization, initial_state, activtion):
+    model_name = 'LSTM.' + activtion.__name__
+    if (use_peepholes):    
+        model_name += '.peephole'
+    if(enable_self_stabilization):        
+        model_name += '.stabilize'
+    if (initial_state != 0):
+        model_name += '.initial'
+    return model_name 
+
+def test_LSTM(tmpdir):
+    for config in list(product(use_peepholes_options, enable_self_stabilization_options, 
+                               initial_state_options, activation_options)):
+        model_filename = MakeLSTMNameFromConfig(*config)
+        use_peepholes, enable_self_stabilization, initial_state, activation =  config
+    
+        x = C.input_variable(input_dim, dynamic_axes=[Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+        LSTMmodel = CreateLSTMModel(peepholes = use_peepholes,   
+                                    activation = activation,
+                                    initial_state = initial_state,
+                                    cell_dim = cell_dim,
+                                    self_stabilization = enable_self_stabilization)(x)
+        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+        verify_one_input(LSTMmodel, data, tmpdir, model_filename)
 
 #MatMul
 def test_MatMul(tmpdir):
