@@ -1694,15 +1694,17 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
         }
         set_edge_path.insert(pathedgeidstr);
     }
-
+    /*
     if (getPathMethodEMBR == "sampling") fprintf(stderr, "get_edge_weights: average_WER = %f\n", avg_wer);
     else fprintf(stderr, "get_edge_weights: average_WER = %f, one_best WER = %f \n", avg_wer, onebest_wer);
     fprintf(stderr, "get_edge_weights: num_path = %d, num_distinct_edge_path = %d \n", int(vt_paths.size()), int(set_edge_path.size()));
-
+    */
+    /*
     for (mp_itr = mp_path_info.begin(); mp_itr != mp_path_info.end(); mp_itr++)
     {
         fprintf(stderr, "get_edge_weights: count = %d, WER = %f, pathidstr = %s \n", int(mp_itr->second.count), mp_itr->second.WER, (char*)(mp_itr->second.WER, mp_itr->first.c_str()));
     }
+    */
     return avg_wer;
 }
 
@@ -2258,7 +2260,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     double totalfwscore = 0; // TODO: name no longer precise in sMBRmode
     double logEframescorrecttotal = LOGZERO;
     double totalbwscore = 0;
-    double totalfwscore1 = 0;
+    // double totalfwscore1 = 0;
 
     bool returnEframescorrect = sMBRmode;
     if (softalignlattice)
@@ -2268,19 +2270,21 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         {
             //compute Beta only, 
             //fprintf(stderr, "\nforwardbackward: start backwardlatticeEMBR \n");
-            std::vector<double> logbetasdebug;
+            // std::vector<double> logbetasdebug;
             // guoye: mask for debug purpose
             // totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetas, lmf, wp, amf);
 
             if (getPathMethodEMBR == "sampling")
             {
-                totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetasdebug, lmf, wp, amf);
+                totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetas, lmf, wp, amf);
+                // totalbwscore = backwardlatticeEMBR(edgeacscores, parallelstate, edgelogbetas, logbetasdebug, lmf, wp, amf);
 
                 totalfwscore = totalbwscore; // to make the existing code happy
 
                 // fprintf(stderr, "\nforwardbackward: totalbwscore = %f \n", totalbwscore);
-                totalfwscore1 = forwardbackwardlattice(edgeacscores, parallelstate, logpps, logalphas, logbetas, lmf, wp, amf, boostingfactor, returnEframescorrect, (const_array_ref<size_t> &) uids, thisedgealignments, logEframescorrect, Eframescorrectbuf, logEframescorrecttotal);
+                // totalfwscore1 = forwardbackwardlattice(edgeacscores, parallelstate, logpps, logalphas, logbetas, lmf, wp, amf, boostingfactor, returnEframescorrect, (const_array_ref<size_t> &) uids, thisedgealignments, logEframescorrect, Eframescorrectbuf, logEframescorrecttotal);
                 // fprintf(stderr, "\nforwardbackward: totalfwscore1 = %f \n", totalfwscore1);
+                /*
                 if (abs(totalfwscore1 - totalfwscore) > 1e-6)
                 {
                     fprintf(stderr, "\nforwardbackward: Error, totalfwscore1 = %f is not equal to totalfwsscore = %f \n", totalfwscore1, totalfwscore);
@@ -2299,6 +2303,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
                         exit(-1);
                     }
                 }
+                */
             }
             else //nbest
             {           
@@ -2322,7 +2327,8 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 #endif
     if (islogzero(totalfwscore))
     {
-        fprintf(stderr, "forwardbackward: WARNING: line 1917, totalforwardscore is zero: (%d nodes/%d edges), totalfwscore = %f, totalfwscore1= %f \n", (int) nodes.size(), (int) edges.size(), totalfwscore, totalfwscore1);
+       //  fprintf(stderr, "forwardbackward: WARNING: line 1917, totalforwardscore is zero: (%d nodes/%d edges), totalfwscore = %f, totalfwscore1= %f \n", (int) nodes.size(), (int) edges.size(), totalfwscore, totalfwscore1);
+        fprintf(stderr, "forwardbackward: WARNING: line 1917, totalforwardscore is zero: (%d nodes/%d edges), totalfwscore = %f \n", (int)nodes.size(), (int)edges.size(), totalfwscore);
         if(!EMBR || !excludeSpecialWords)
             return LOGZERO; // failed, do not use resulting matrix
     }
