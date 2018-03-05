@@ -1,9 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
-//
-// Licensed under custom Microsoft Research License Terms for
-// 1-bit Stochastic Gradient Descent.
-// See LICENSE.md file in the project root for full license information.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
 #pragma once
