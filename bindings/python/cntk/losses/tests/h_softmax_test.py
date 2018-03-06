@@ -10,7 +10,6 @@ Unit tests for the hierarchical softmax class.
 
 import numpy as np
 import cntk as C
-from math import sqrt, ceil
 from _cntk_py import set_fixed_random_seed
 
 def test_h_softmax():

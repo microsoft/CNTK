@@ -18,8 +18,6 @@ from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as auto_sele
 from cntk import times, softmax, parameter
 import cntk as C
 from ..axis import Axis
-import math
-
 
 @typemap
 def cosine_distance(x, y, name=''):
@@ -396,7 +394,7 @@ def hierarchical_softmax_layer(input_var, label_index, label_dim, label_classes=
     b2s = parameter(shape=(label_classes, n_outputs_per_class,), init=C.glorot_normal(), name='hsoftmax_b2s')
 
     class_probs = softmax(b1 + times(input_var, w1))
-    
+
     # TODO: fix the bug in backprop for sparse, and use sparse embedding to accelerate
     target_class_one_hot = C.one_hot(target_class, num_classes=label_classes, sparse_output=False)
     w2 = C.reshape(C.times(target_class_one_hot, w2s, output_rank=2), [input_dim, -1])
