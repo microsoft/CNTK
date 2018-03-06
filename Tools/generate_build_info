@@ -10,7 +10,6 @@
 # which will contain the following information to be displayed at runtime:
 #   BUILDTYPE       (release/debug)
 #   BUILDTYPE       (GPU/CPU-only)
-#   WITH_1BITSGD    (whether 1bit-SGD support was enabled)
 #   MATHLIB         (MKL)
 #   CUDA_PATH       (if exists, i.e., for GPU builds)
 #   CUB_PATH        (if exists, i.e., for GPU builds)
@@ -56,13 +55,12 @@ makebuildinfo()
     local GIT_BRANCH=$5
     local CUDA_PATH=$6
     local CUB_PATH=$7
-    local WITH_1BITSGD=$8
-    local WITH_ASGD=$9
-    local BUILDER=$10
-    local BUILDMACHINE=${11}
-    local BUILDPATH=${12}
-    local MPI_NAME=${13}
-    local MPI_VERSION=${14}
+    local WITH_ASGD=$8
+    local BUILDER=$9
+    local BUILDMACHINE=${10}
+    local BUILDPATH=${11}
+    local MPI_NAME=${12}
+    local MPI_VERSION=${13}
     (
         printf "#ifndef _BUILDINFO_H\n"
         printf "#define _BUILDINFO_H\n"
@@ -83,11 +81,6 @@ makebuildinfo()
             printf "#define _CUDNN_PATH_ \"%s\"\n"  $CUDNN_PATH
         fi
         printf "#define _BUILDTYPE_ \"%s\"\n" "$BUILDTYPE"
-        if [ ! -z "$WITH_1BITSGD" ]; then
-            printf "#define _WITH_1BITSGD_ \"yes\"\n"
-        else
-            printf "#define _WITH_1BITSGD_ \"no\"\n"
-        fi
         if [ ! -z "$WITH_ASGD" ]; then 
             printf "#define _WITH_ASGD_ \"yes\"\n"
         else
@@ -175,7 +168,6 @@ makebuildinfo \
     "$GIT_BRANCH" \
     "$CUDAPATH" \
     "$CUBPATH" \
-    "$CNTK_ENABLE_1BitSGD" \
     "$CNTK_ENABLE_ASGD" \
     "$BUILDER" \
     "$BUILDMACHINE" \

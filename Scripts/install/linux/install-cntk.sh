@@ -100,7 +100,7 @@ DASHED_VERSION="${BASH_REMATCH[1]}"
 DOTTED_VERSION="${DASHED_VERSION//-/.}"
 DOTTED_VERSION="${DOTTED_VERSION/\.rc/rc}"
 
-[[ ${versionInfo[2]} =~ ^(GPU|CPU-Only|GPU-1bit-SGD)$ ]] ||
+[[ ${versionInfo[2]} =~ ^(GPU|CPU-Only)$ ]] ||
   die "Malformed target configuration file, ${versionInfo[2]}."
 
 TARGET_CONFIGURATION="${BASH_REMATCH[1]}"

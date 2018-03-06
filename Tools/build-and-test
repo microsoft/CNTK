@@ -143,11 +143,6 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
         exit 1
     fi
 
-    if [[ "${TARGETS,,}" =~ "1bitsgd" && "${TARGETS,,}" =~ "gpu" ]]; then
-        echo "============ Cannot specify both GPU and 1bit-SGD as targets, please choose one ============"
-        exit 1
-    fi
-
 elif [[ $OSTYPE == "linux-gnu" ]]; then
     DEBUG_DIR=build/$TARGET/debug
     RELEASE_DIR=build/$TARGET/release
@@ -230,32 +225,24 @@ if [[ $BUILD == 1 ]]; then
             fi
 
             if [[ $OS == "Windows_NT" ]]; then
-                OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=
                 if [[ $TARGET == "cpu" ]]; then
                     CONFIGURATION=${FLAVOR}_CpuOnly
                 else
                     CONFIGURATION=${FLAVOR}
-                    if [[ $TARGET == "1bitsgd" ]]; then
-                        OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=true
-                    fi
                 fi
 
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     msbuild.exe /nologo /verbosity:m /property:Configuration=$CONFIGURATION /t:Clean 1>&6 2>&7 || exit $?
                 fi
-                msbuild.exe /nologo /verbosity:m /m /property:Configuration=$CONFIGURATION $OneBitSGDOPT 1>&6 2>&7 || exit $?
+                msbuild.exe /nologo /verbosity:m /m /property:Configuration=$CONFIGURATION 1>&6 2>&7 || exit $?
             else
-                OneBitSGDOPT=no
                 BUILD_DIR=build/$TARGET/$FLAVOR
                 if [[ $TARGET == "cpu" ]]; then
                     CUDAOPT=no
                 else
                     CUDAOPT=yes
-                    if [[ $TARGET == "1bitsgd" ]]; then
-                        OneBitSGDOPT=yes
-                    fi
                 fi
-                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT --with-build-version=$BUILD_VERSION $EXTRA_CONFIGURE_OPTIONS
+                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --with-build-version=$BUILD_VERSION $EXTRA_CONFIGURE_OPTIONS
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi

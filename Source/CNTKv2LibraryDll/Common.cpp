@@ -980,9 +980,6 @@ namespace CNTK
 #ifdef _BUILDTARGET_
             LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
 #endif
-#ifdef _WITH_1BITSGD_
-            LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
-#endif
 #ifdef _WITH_ASGD_
             LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
 #endif

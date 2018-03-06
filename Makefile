@@ -1070,18 +1070,9 @@ endif
 # 1bit SGD setup
 ########################################
 
-ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
-
-ifeq (,$(wildcard Source/1BitSGD/*.h))
-  $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://docs.microsoft.com/en-us/cognitive-toolkit/Enabling-1bit-SGD for instructions)
-endif
-
-  INCLUDEPATH += $(SOURCEDIR)/1BitSGD
-
-  COMMON_FLAGS += -DCNTK_PARALLEL_TRAINING_SUPPORT
-  # temporarily adding to 1bit, need to work with others to fix it
-endif
-
+INCLUDEPATH += $(SOURCEDIR)/1BitSGD
+COMMON_FLAGS += -DCNTK_PARALLEL_TRAINING_SUPPORT
+# temporarily adding to 1bit, need to work with others to fix it
 
 ########################################
 # ASGD(multiverso) setup

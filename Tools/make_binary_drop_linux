@@ -63,9 +63,6 @@ case $targetConfiguration in
     gpu)
         publicTargetConfiguration=GPU
         ;;
-    1bitsgd)
-        publicTargetConfiguration=GPU-1bit-SGD
-        ;;
     '')
         echo Must specify --target-configuration option.
         exit 1

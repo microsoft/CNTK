@@ -21,7 +21,7 @@ script_under_test = os.path.join(example_dir, "Sequence2Sequence_Distributed.py"
 
 mpiexec_params = [ "-n", "2"]
 
-def test_sequence_to_sequence_distributed_1bitsgd(device_id):
+def test_sequence_to_sequence_distributed_gpu(device_id):
     params = [ "-e", "2",
                "-datadir", cmudict_dataset_directory(),
                "-q", "1",

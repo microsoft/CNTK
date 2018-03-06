@@ -15,7 +15,6 @@ Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\End
 12/15/2016 08:47:18: 		Last modified date: Wed Dec 14 12:53:20 2016
 12/15/2016 08:47:18: 		Build type: Release
 12/15/2016 08:47:18: 		Build target: GPU
-12/15/2016 08:47:18: 		With 1bit-SGD: no
 12/15/2016 08:47:18: 		With ASGD: yes
 12/15/2016 08:47:18: 		Math lib: mkl
 12/15/2016 08:47:18: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0

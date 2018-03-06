@@ -112,9 +112,6 @@ mathlib=
 have_mpi=yes
 default_use_mpi=$have_mpi
 
-default_use_1bitsgd=no
-enable_1bitsgd=$default_use_1bitsgd
-
 default_use_code_coverage=no
 enable_code_coverage=$default_use_code_coverage
 
@@ -381,7 +378,6 @@ function show_help ()
     echo "  -h|--help this help"
     echo "  --with-build-top=directory build directory $(show_default $build_top)"
     echo "  --add directory add directory to library search path"
-    echo "  --1bitsgd[=(yes|no)] use 1Bit SGD $(show_default ${default_use_1bitsgd})"
     echo "  --asgd[=(yes|no)] use ASGD powered by Multiverso $(show_default $(default_use_asgd))"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --python[=(yes|no)] with Python bindings $(show_default $(default_use_python))"
@@ -449,16 +445,6 @@ do
                 shift ; optarg=$1
             fi
             default_path_list="$optarg $default_path_list"
-            ;;
-        --1bitsgd*)
-            if test x$optarg = xyes || test x$optarg = xno
-            then
-                enable_1bitsgd=$optarg
-            else
-                echo "Invalid value for --1bitsgd $optarg"
-                show_help
-                exit
-            fi
             ;;
 
         --with-code-coverage*)
@@ -1260,9 +1246,6 @@ if test x$opencv_path != x ; then
 fi
 if test x$libzip_path != x ; then
     echo LIBZIP_PATH=$libzip_path >> $config
-fi
-if test $enable_1bitsgd = yes ; then
-    echo CNTK_ENABLE_1BitSGD=true >> $config
 fi
 if test $enable_code_coverage = yes ; then
     echo CNTK_CODE_COVERAGE=true >> $config

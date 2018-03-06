@@ -15,7 +15,6 @@ Changed current directory to /home/ubuntu/workspace/Examples/SequenceToSequence/
 01/10/2018 02:57:01: 		Last modified date: Tue Jan  9 17:30:38 2018
 01/10/2018 02:57:01: 		Build type: release
 01/10/2018 02:57:01: 		Build target: GPU
-01/10/2018 02:57:01: 		With 1bit-SGD: no
 01/10/2018 02:57:01: 		With ASGD: yes
 01/10/2018 02:57:01: 		Math lib: mkl
 01/10/2018 02:57:01: 		CUDA version: 9.0.0

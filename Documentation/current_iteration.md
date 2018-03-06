@@ -19,6 +19,10 @@ C.debugging.stop_profiler()
 - Accelerates some common tensor ops in Intel CPU inference for float32, especially for fully connected networks
 - Can be turned on/off by cntk.cntk_py.enable_cpueval_optimization()/cntk.cntk_py.disable_cpueval_optimization()
 
+## 1BitSGD incorporated into CNTK
+- 1BitSGD source code is now available with CNTK license (MIT license) under Source/1BitSGD/
+- 1bitsgd build target was merged into existing gpu target
+
 ## Bug fixes
 - Fixed convergence issue in Tutorial 201B
 - Fixed pooling/unpooling to support free dimension

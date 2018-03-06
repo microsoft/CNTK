@@ -5,7 +5,7 @@
 [CmdletBinding()]
 param(
     [parameter(Mandatory=$true)][string]$targetConfig,           # the config created (CPU, GPU, ...)
-    [parameter(Mandatory=$true)][string]$targetConfigSuffix,     # the config suffix (CPU-Only, GPU, GPU-1bit-SGD ...)
+    [parameter(Mandatory=$true)][string]$targetConfigSuffix,     # the config suffix (CPU-Only, GPU ...)
     [parameter(Mandatory=$true)][string]$releaseTag,             # the tag of the release (2-0-beta11-0)
     [parameter(Mandatory=$true)][string]$commit,
     [parameter(Mandatory=$true)][string]$outputFileName,         # the generated zip file name
