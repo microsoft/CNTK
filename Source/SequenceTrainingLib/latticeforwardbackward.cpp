@@ -1490,7 +1490,7 @@ void lattice::EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<
         path_posterior_probs[i] = exp(tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens[i].score - log_nbest_posterior_prob);
     }
 
-    fprintf(stderr, "EMBRnbestpaths:  path_posterior_probs.size() = %d, log_nbest_posterior_prob = %f\n", int(path_posterior_probs.size()), log_nbest_posterior_prob);
+    // fprintf(stderr, "EMBRnbestpaths:  path_posterior_probs.size() = %d, log_nbest_posterior_prob = %f\n", int(path_posterior_probs.size()), log_nbest_posterior_prob);
 
     std::vector<size_t> path; // stores the edges in the path
     vt_paths.clear();
