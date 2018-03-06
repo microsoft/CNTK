@@ -370,6 +370,9 @@ namespace ONNX
             { L"useStatsAcrossChannels", "across_channels" },
             { L"doVarianceScaling", "normalize_variance" },
             } } },
+        { L"Embedding",{ {
+            { L"Embedding", "Gather" },
+            } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -425,7 +428,15 @@ namespace ONNX
             (onnxOpName == "And") || (onnxOpName == "Or") || (onnxOpName == "Xor");
     }
 
+    bool Operators::IsLoopOp(const std::string &opName)
+    {
+        return opName == "PastValue" || opName == "FutureValue";
+    }
 
+    bool Operators::IsRNNOp(const std::string &opName)
+    {
+        return opName == "LSTM" || opName == "GRU" || opName == "RNN";
+    }
         std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"Clip",{ 1, 2 } },
             { L"LeakyReLU",{ 0, 1 } },

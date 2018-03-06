@@ -1975,6 +1975,13 @@ namespace CNTK
                 [](const Axis& axis) { return (axis == Axis::DefaultBatchAxis()); });
         }
 
+        bool HasSequenceAxis() const {
+            return (DynamicAxes().size() - (HasBatchAxis() ? 1 : 0)) > 0;
+        }
+
+        bool IsInitialized() const {
+            return m_dataFields != nullptr;
+        }
         ///
         /// Returns the name of 'this' variable
         ///

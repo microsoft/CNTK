@@ -531,7 +531,8 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/model.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/RNNHelper.cpp \
+    $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/ONNXToCNTK.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/ONNX.cpp \
 

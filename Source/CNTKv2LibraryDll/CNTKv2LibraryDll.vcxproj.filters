@@ -108,6 +108,9 @@
     <ClCompile Include="proto\onnx\protobuf\onnx-ml.pb.cc.VS_wrapper.cpp">
       <Filter>proto\onnx\protobuf</Filter>
     </ClCompile>
+    <ClCompile Include="proto\onnx\RNNHelper.cpp">
+      <Filter>proto\onnx</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -189,6 +192,9 @@
     <ClInclude Include="EvaluatorWrapper.h" />
     <ClInclude Include="API\CNTKLibraryC.h">
       <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\RNNHelper.h">
+      <Filter>proto\onnx</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
