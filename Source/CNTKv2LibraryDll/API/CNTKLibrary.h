@@ -264,6 +264,14 @@ namespace CNTK
         bool IsUnknown() const { return (*this == NDShape::Unknown()); }
 
         ///
+        /// Returns a boolean indicating if 'this' shape is scalar
+        ///
+        bool IsScalar() const
+        {
+            return (Rank() == 0) || (Rank() == 1 && m_shapeDims[0] == 1);
+        }
+
+        ///
         /// Returns the rank of 'this' shape.
         ///
         size_t Rank() const { return m_shapeDims.size(); }
@@ -4506,11 +4514,6 @@ namespace CNTK
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name = L"");
 
     ///
-    /// Mean-variance normalization of the specified input operand.
-    ///
-    CNTK_API FunctionPtr MeanVarianceNormalization(const Variable& operand, const bool useStatsAcrossChannels = false, const bool doVarianceScaling = true, const std::wstring& name = L"");
-
-    ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
     inline FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"")
@@ -4521,6 +4524,16 @@ namespace CNTK
         return PerDimMeanVarianceNormalize(operand, meanVar, invStdDevVar, name);
     }
 
+    ///
+    /// Mean-variance normalization of the specified input operand.
+    ///
+    CNTK_API FunctionPtr MeanVarianceNormalization(const Variable& operand, double epsilon, const bool useStatsAcrossChannels = false, const bool doVarianceScaling = true, const std::wstring& name = L"");
+
+    inline FunctionPtr MeanVarianceNormalization(const Variable& operand, const bool useStatsAcrossChannels = false, const bool doVarianceScaling = true, const std::wstring& name = L"")
+    {
+        double defaultEpsilon = 0.00001;
+        return MeanVarianceNormalization(operand, defaultEpsilon, useStatsAcrossChannels, doVarianceScaling, name);
+    }
     ///
     /// Convolution
     ///

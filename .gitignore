@@ -255,6 +255,7 @@ bindings/java/**/*.class
 bindings/java/Swig/com/
 bindings/java/**/target
 bindings/java/**/*.jar
+bindings/java/Swig/*.asc
 
 # Java Eval Tests
 Tests/EndToEndTests/EvalClientTests/JavaEvalTest/.idea

@@ -765,6 +765,18 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                     LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
             }
 
+            // Special case handling of LayerNormalization layer because it changes
+            // ops dynamically based on value of inputs. If more such cases ops are seen, 
+            // this should be abstracted out from here. 
+            if (ToString(src->OpName()) == "LayerNormalization")
+            {
+                // If non-zero epsilon was specified, a fourth input is included 
+                // which must be ignored because we cannot export epsilon to ONNX.
+                // See LayerNormalization branch in AddNode() below.
+                if (src->Inputs().size() == 4 && inputIndex == 0 && input.IsConstant())
+                    continue;
+            }
+
             if (FilterInput(src, input, inputIndex))
                 continue;
 
@@ -1280,6 +1292,9 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
         {
             auto useStatsAcrossChannels = (int64_t)(src->Attributes()[L"useStatsAcrossChannels"].Value<bool>());
             auto doVarianceScaling = (int64_t)(src->Attributes()[L"doVarianceScaling"].Value<bool>());
+            // REVIEW: MeanVarianceNormalization attribute 'epsilon' is not exported to ONNX because
+            // ONNX MeanVarianceNormalization does not have a corresponding attribute. This should be
+            // added if and when the attribute is added to MeanVarianceNormalization node's ONNX spec.
             node->AddAttribute(attributesMap[L"useStatsAcrossChannels"], useStatsAcrossChannels);
             node->AddAttribute(attributesMap[L"doVarianceScaling"], doVarianceScaling);
         }
@@ -1515,27 +1530,32 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
         }
         else if (src->OpName() == L"LayerNormalization")
         {
-            // Special handling of LayerNormalization to use MeanVarianceNormalization (and not reduce* ops).
+            // Special handling of LayerNormalization to use MeanVarianceNormalization (and not reduce_mean op).
+            auto numInputs = src->Inputs().size();
+            if (numInputs != 3 && numInputs != 4)
+                LogicError("Number of inputs to LayerNormalization is must be either 3 or 4.");
 
-            // This assumes that the orderedInputs are in the order:
-            // [0]: tensor operand, [1]: scale constant, [2]: bias constant.
-            // Also assumes that tensor operand is index [2] in src->Inputs(). 
-            auto input0 = orderedInputs[0];
-            onnx::TypeProto input0ArgType = ToTypeProto(src->Inputs()[2].Shape(), src->Inputs()[2].HasBatchAxis());
-            UpdateONNXType(src->Inputs()[2].GetDataType(), input0ArgType);
+            const size_t operandIndexInCntkInputs = (numInputs == 3) ? 2 : 3; // This changes depending on whether non-zero epsilon was specified.
+            const size_t operandIndexInOnnxInputs = 2; // ONNX input indices don't change because we have already filtered epsilon input from ONNX inputs in CreateNode() above.
+            const size_t scaleIndexInOnnxInputs = 0;
+            const size_t biasIndexInOnnxInputs = 1;
+
+            auto input0 = inputs[operandIndexInOnnxInputs];
+            onnx::TypeProto input0ArgType = ToTypeProto(src->Inputs()[operandIndexInCntkInputs].Shape(), src->Inputs()[operandIndexInCntkInputs].HasBatchAxis());
+            UpdateONNXType(src->Inputs()[operandIndexInCntkInputs].GetDataType(), input0ArgType);
             ONNXIR::NodeArg mvnTensorOutputArg(nodeName + string("_mvn_output0"), &input0ArgType);
             ONNXIR::Node* mvnNode = graph->AddNode(nodeName + string("_MVN"), "MeanVarianceNormalization",
                 "", { input0 }, { mvnTensorOutputArg });
             mvnNode->AddAttribute("across_channels", static_cast<int64_t>(1));
             mvnNode->AddAttribute("normalize_variance", static_cast<int64_t>(1));
 
-            auto input1 = orderedInputs[1];
+            auto input1 = inputs[scaleIndexInOnnxInputs];
             ONNXIR::NodeArg mulTensorOutputArg(nodeName + string("_mul_output0"), &input0ArgType);
             ONNXIR::Node* mulNode = graph->AddNode(nodeName + string("_mul"), "Mul",
                 "", { mvnTensorOutputArg, input1 }, { mulTensorOutputArg });
             mulNode->AddAttribute("broadcast", static_cast<int64_t>(1));
 
-            auto input2 = orderedInputs[2];
+            auto input2 = inputs[biasIndexInOnnxInputs];
             ONNXIR::NodeArg addTensorOutputArg(nodeName + string("_add_output0"), &input0ArgType);
             node = graph->AddNode(nodeName + string("_add"), "Add",
                 "", { mulTensorOutputArg, input2 }, { addTensorOutputArg });

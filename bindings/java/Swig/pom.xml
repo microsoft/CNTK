@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.microsoft.cntk</groupId>
+    <artifactId>cntk</artifactId>
+    <version>2.4</version>
+    <packaging>jar</packaging>
+
+    <name>Microsoft Cognitive Toolkit</name>
+    <description>An open source deep-learning toolkit</description>
+    <url>https://github.com/Microsoft/CNTK</url>
+
+    <licenses>
+        <license>
+            <name>Microsoft Computational Network Toolkit</name>
+            <url>https://github.com/Microsoft/CNTK/blob/master/LICENSE.md</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Manik Jindal</name>
+            <email>manikj@microsoft.com</email>
+            <organization>Microsoft</organization>
+            <organizationUrl>microsoft.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Ratan Rai Sur</name>
+            <email>ratsur@microsoft.com</email>
+            <organization>Microsoft</organization>
+            <organizationUrl>microsoft.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Mark Hamilton</name>
+            <email>marhamil@microsoft.com</email>
+            <organization>Microsoft</organization>
+            <organizationUrl>microsoft.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/Microsoft/CNTK.git</connection>
+        <developerConnection>scm:git:ssh://github.com/Microsoft/CNTK.git</developerConnection>
+        <url>http://github.com/Microsoft/CNTK/tree/master</url>
+    </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

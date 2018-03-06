@@ -1754,6 +1754,9 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "MeanVarianceNormalization")
     {
+        // REVIEW: ONNX MeanVarianceNormalization spec does not have an 'epsilon' attribute.
+        // But corresponding CNTK node does. We construct the CNTK node with default value of epsilon 
+        // when loading the ONNX MeanVarianceNormalization node in CNTK.
         size_t acrossChannels = GetNamedAttributeAsInt64(node, "across_channels", 0);
         size_t normalizeVariance = GetNamedAttributeAsInt64(node, "normalize_variance", 1);
         return MeanVarianceNormalization(inputs[0], !!acrossChannels, !!normalizeVariance, ToWString(node->Name()));
