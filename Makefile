@@ -1428,6 +1428,7 @@ $(info Building Python package)
 PYTHON_LIBS_LIST := $(LIBS_LIST) $(IMAGEREADER_LIBS_LIST)
 PYTHON_LIBS_EXCLUDE_LIST := m pthread nvidia-ml
 PYTHON_SETUP_PY_ARGS :=
+PYTHON_PROJECT_NAME:=cntk
 ifndef PYTHON_WITH_DEPS
 PYTHON_LIBS_EXCLUDE_LIST += cublas cudart curand cusparse cuda cudnn opencv_core opencv_imgproc opencv_imgcodecs mklml_intel mkldnn iomp5 nccl
 else
@@ -1438,6 +1439,10 @@ ifdef PYTHON_WITH_DEBUG
 $(warning Building Python packages WITH debug symbols)
 PYTHON_SETUP_PY_ARGS += --with-debug-symbol
 endif
+ifeq ("$(DEVICE)","gpu")
+PYTHON_PROJECT_NAME:=cntk-gpu
+endif
+PYTHON_SETUP_PY_ARGS += --project-name $(PYTHON_PROJECT_NAME)
 PYTHON_EXTRA_LIBS_BASENAMES:=$(addsuffix .so,$(addprefix lib,$(filter-out $(PYTHON_LIBS_EXCLUDE_LIST),$(PYTHON_LIBS_LIST))))
 
 # TODO dependencies
