@@ -28,7 +28,9 @@
 #include <iterator>
 
 #include "../Matrix.h"
+#ifdef USE_MKLDNN
 #include "mkldnn.hpp"
+
 #include "mkldnn_base-inl.h"
 
 
@@ -171,4 +173,5 @@ template class MKLDNNData<float>;
 template class MKLDNNData<double>;
 
 }}}
+#endif
 #endif  // CNTK_OPERATOR_MKL_DNN_MKLDNN_MEMORY_INL_H_

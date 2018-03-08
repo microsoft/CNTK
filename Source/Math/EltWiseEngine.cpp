@@ -6,8 +6,9 @@
 #include "stdafx.h"
 #include "EltWiseEngine.h"
 #pragma warning(disable: 4661)  
+#ifdef USE_MKLDNN
 #include "./mkldnn/mkldnn_relu-inl.h"
-
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -118,6 +119,12 @@ std::unique_ptr<UnaryEltWiseEngine<ElemType>> UnaryEltWiseEngine<ElemType>::Crea
 
       return std::make_unique<MklDnnUnaryEltWiseEngine<ElemType>>(deviceId, inOutT, imageLayout);
     }
+#else
+      UNUSED(enabledEngines);
+      UNUSED(imageLayout);
+      UNUSED(kind);
+      UNUSED(deviceId);
+      UNUSED(inOutT);
 #endif
     if (GetMathLibTraceLevel() > 0)
       fprintf(stderr, "Could not find appropriate Rectified Linear engine.");

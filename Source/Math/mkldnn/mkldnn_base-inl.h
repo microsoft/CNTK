@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <iterator>
+#ifdef USE_MKLDNN
 #include "mkldnn.hpp"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -127,4 +128,5 @@ class MKLDNNPrimitive {
 };
 
 }}}
+#endif
 #endif  // CNTK_OPERATOR_MKL_DNN_MKLDNN_BASE_INL_H_

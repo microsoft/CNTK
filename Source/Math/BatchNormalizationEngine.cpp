@@ -8,7 +8,9 @@
 #include "CuDnnFactories.h"
 #include "MklDnnCommon.h"
 #pragma warning(disable: 4661)  
+#ifdef USE_MKLDNN
 #include "./mkldnn/mkldnn_batch_norm-inl.h"
+#endif
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class InoutType, class StatType>

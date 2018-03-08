@@ -9,10 +9,14 @@
 #include "CuDnnFactories.h"
 #include "MklDnnCommon.h"
 #pragma warning(disable: 4661)  
-
+#ifdef USE_MKLDNN
 #include "./mkldnn/mkldnn_convolution-inl.h"
 #include "./mkldnn/mkldnn_pooling-inl.h"
+#endif
 namespace Microsoft { namespace MSR { namespace CNTK {
+#ifndef USE_MKLDNN
+extern void GetSizesAndStrides(int dimension, const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount = 0);
+#endif
 void GetSizesAndStrides(int dimension, const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount)
 {
     sizes = shape.GetDims();
@@ -1312,6 +1316,9 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
 
       return std::make_unique<MklDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad, hasBias, relu);
     }
+#else
+    UNUSED(relu);
+    UNUSED(hasBias);
 #endif
     if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
     {

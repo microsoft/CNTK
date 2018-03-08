@@ -6,8 +6,9 @@
 #include "stdafx.h"
 #include "TimesEngine.h"
 #pragma warning(disable: 4661)  
+#ifdef USE_MKLDNN
 #include "./mkldnn/mkldnn_fully_connected-inl.h"
-
+#endif
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
@@ -137,6 +138,11 @@ std::unique_ptr<TimesEngine<ElemType>> TimesEngine<ElemType>::Create(DEVICEID_TY
 
     return std::make_unique<MklDnnTimesEngine<ElemType>>(deviceId, dimA, dimB);
   }
+#else
+    UNUSED(deviceId);
+    UNUSED(dimA);
+    UNUSED(dimB);
+    UNUSED(enabledEngines);
 #endif
   if (GetMathLibTraceLevel() > 0)
     fprintf(stderr, "Could not use MKLDNN Inner Product engine.");

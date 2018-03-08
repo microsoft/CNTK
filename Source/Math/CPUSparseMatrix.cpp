@@ -751,8 +751,8 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         {
             // The initialization of the following buffer is done by new []().
             auto* pArray      = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numNZElemToReserve);
-            auto* unCompIndex = BaseMatrixStorage<ElemType>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(numNZElemToReserve);
-            auto* compIndex   = BaseMatrixStorage<ElemType>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(newCompIndexSize);
+            auto* unCompIndex = BaseMatrixStorage<CPUSPARSE_INDEX_TYPE>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(numNZElemToReserve);
+            auto* compIndex   = BaseMatrixStorage<CPUSPARSE_INDEX_TYPE>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(newCompIndexSize);
 
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Allocate: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
@@ -777,7 +777,7 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
         {
             ElemType* blockVal = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numNZElemToReserve);
-            size_t* blockIds = BaseMatrixStorage<ElemType>::template NewCPUArray<size_t>(newCompIndexSize);
+            size_t* blockIds = BaseMatrixStorage<size_t>::template NewCPUArray<size_t>(newCompIndexSize);
 
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
