@@ -123,7 +123,19 @@ std::unique_ptr<UnaryEltWiseEngine<ElemType>> UnaryEltWiseEngine<ElemType>::Crea
   }
   return nullptr;
 }
+template <>
+std::unique_ptr<UnaryEltWiseEngine<half>> UnaryEltWiseEngine<half>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
+    ImageLayoutKind imageLayout, UnaryEltWiseKind kind,
+    EltWiseEngineKind enabledEngines)
+{
+    UNUSED(deviceId);
+    UNUSED(inOutT);
+    UNUSED(imageLayout);
+    UNUSED(kind);
+    UNUSED(enabledEngines);
+    return nullptr;
+}
 template class UnaryEltWiseEngine<float>;
 template class UnaryEltWiseEngine<double>;
-
+template class UnaryEltWiseEngine<half>;
 }}}
