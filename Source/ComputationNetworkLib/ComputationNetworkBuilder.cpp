@@ -26,7 +26,9 @@
 #include "RecurrentNodes.h"
 #include "SpecialPurposeNodes.h"
 #include "TrainingNodes.h"
-
+#ifdef USE_MKLDNN
+#include "EltWiseNodes.h"
+#endif
 #include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -107,7 +109,11 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(RandomSampleInclusionFrequencyNode))   return New<RandomSampleInclusionFrequencyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReconcileDynamicAxisNode))             return New<ReconcileDynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReciprocalNode))                       return New<ReciprocalNode<ElemType>>(forward<_Types>(_Args)...);
+#ifdef USE_MKLDNN
+    else if (nodeType == OperationNameOf(RectifiedLinearNodeV2))                  return New<RectifiedLinearNodeV2<ElemType>>(forward<_Types>(_Args)...);
+#else
     else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
+#endif
     else if (nodeType == OperationNameOf(ReduceElementsNode))                   return New<ReduceElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
@@ -658,7 +664,14 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Negat
 {
     return net.AddNodeToNetAndAttachInputs(New<NegateNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
+#ifdef USE_MKLDNN
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RectifiedLinearV2(const ComputationNodePtr a, const std::wstring nodeName)
+{
+  return net.AddNodeToNetAndAttachInputs(New<RectifiedLinearNodeV2<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
 
+#endif
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName)
 {

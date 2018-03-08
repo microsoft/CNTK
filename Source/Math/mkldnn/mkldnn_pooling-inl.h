@@ -298,8 +298,6 @@ public:
   }
 
   virtual void Backward(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) {
-    UNUSED(in);
-    UNUSED(out);
     Dtype* srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
     Dtype* grad_ptr = mkl_experimental_direct_get(grad);
     if (!init_mkldnn_) {

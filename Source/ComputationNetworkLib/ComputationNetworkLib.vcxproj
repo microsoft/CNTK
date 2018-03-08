@@ -121,6 +121,7 @@
     <ClInclude Include="ConvolutionalNodes.h" />
     <ClInclude Include="DeprecatedNodes.h" />
     <ClInclude Include="PreComputeNodes.h" />
+    <ClInclude Include="EltWiseNodes.h" />
     <ClInclude Include="RNNNodes.h" />
     <ClInclude Include="SequenceReshapeNodes.h" />
     <ClInclude Include="SpecialPurposeNodes.h" />

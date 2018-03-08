@@ -38,9 +38,7 @@ MKLDNNMemoryDescriptorBase<Dtype>::MKLDNNMemoryDescriptorBase(
         std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd
         , std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd)
                                     : name("MKLDNNMemoryDescriptorBase"),
-                                    _prv_memory(NULL), _internal_ptr(NULL), _internal_size(0) {
-    _usr_memory_pd_not_null = false;
-    _prv_memory_pd_not_null = false;
+                     _prv_memory(NULL), _usr_memory_pd(NULL), _prv_memory_pd(NULL) {
     set_usr_memory_pd(usr_memory_pd);
     set_prv_memory_pd(prv_memory_pd);
 }
@@ -57,7 +55,17 @@ void MKLDNNMemoryDescriptorBase<Dtype>::check_usr_with_prv_descriptors() {
 }
 
 
-
+template <typename Dtype>
+bool MKLDNNMemoryDescriptorBase<Dtype>::get_usr_desc(usr_desc_dims_t usr_desc_dims, int& ndims)
+{
+  if (_usr_memory_pd == nullptr)
+    return false;
+  ndims = _usr_memory_pd->desc().data.ndims;
+  for (int32_t dim = 0; dim < ndims; ++dim) {
+    usr_desc_dims[dim] = _usr_memory_pd->desc().data.dims[dim];
+  }
+  return true;
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Implementation of MKLDNNMemoryDescriptor
@@ -160,6 +168,8 @@ std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv
         else {
             std::shared_ptr<MKLDNNData<Dtype> > blob_prv_mkldnn_mem_descr
                 = get_mkldnn_prv_descriptor<Dtype>(blob);
+            mkldnn::memory::desc blob_prv_mem_desc = blob_prv_mkldnn_mem_descr->prv_memory_pd()->desc();
+            mkldnn::memory::desc this_prv_mem_desc = this->prv_memory_pd()->desc();
             if (*blob_prv_mkldnn_mem_descr->prv_memory_pd() != *this->prv_memory_pd()) {
                 // prv in blob and in this descrptor may have different layouts
                 this->convert_from_extprv(blob_prv_mkldnn_mem_descr->get_prv_memory(true));
@@ -209,6 +219,15 @@ std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::create_output_mem
     return omem;
 }
 
+
+template <typename Dtype>
+bool MKLDNNMemoryDescriptor<Dtype>::get_prv_prim_desc(mkldnn::memory::primitive_desc& prim_desc)
+{
+  if (this->_prv_memory == nullptr)
+    return false;
+  prim_desc = this->_prv_memory->get_primitive_desc();
+  return true;
+}
 
 template <typename Dtype>
 std::shared_ptr<MKLDNNData<Dtype> > get_mkldnn_prv_descriptor(

@@ -27,6 +27,12 @@
 #include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+#define USR_DESC_MAX_DIMS 12
+
+  /** A type to describe tensor dimensions. */
+typedef int usr_desc_dims_t[USR_DESC_MAX_DIMS];
+
 // Base class
 struct PrvMemDescr {
   virtual void convert_from_prv(void* cpu_ptr) = 0;
@@ -37,6 +43,7 @@ struct PrvMemDescr {
   virtual bool layout_compare(std::shared_ptr<PrvMemDescr> other) = 0;
   virtual size_t prv_count() = 0;
   virtual size_t prv_size() = 0;
+  virtual bool get_usr_desc(usr_desc_dims_t usr_desc_dims, int& dim_size) = 0;
   // This might help using prv_ptr_ by different accelerators/engines
   enum PrvDescrType {
     PRV_DESCR_MKL2017,

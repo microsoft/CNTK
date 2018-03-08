@@ -382,6 +382,7 @@ COMMON_SRC =\
 
 MATH_SRC =\
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
+	$(SOURCEDIR)/Math/EltWiseEngine.cpp \
 	$(SOURCEDIR)/Math/TimesEngine.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixFloat.cpp \

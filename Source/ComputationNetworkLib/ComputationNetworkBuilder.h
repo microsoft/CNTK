@@ -193,6 +193,9 @@ public:
     ComputationNodePtr Reciprocal(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr RandomSample(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr RandomSampleInclusionFrequency(const ComputationNodePtr a, const std::wstring nodeName = L"");
+#ifdef USE_MKLDNN
+    ComputationNodePtr RectifiedLinearV2(const ComputationNodePtr a, const std::wstring nodeName = L"");
+#endif
     ComputationNodePtr RectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Reshape(const ComputationNodePtr a, const TensorShape& imageLayout, const std::wstring nodeName = L"");
     ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"");

@@ -177,9 +177,11 @@
     <ClInclude Include="mkldnn\mkldnn_fully_connected-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_memory-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_pooling-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_relu-inl.h" />
     <ClInclude Include="mkldnn\mkl_conv-common-inl.h" />
     <ClInclude Include="mkldnn\mkl_memory.h" />
     <ClInclude Include="mkldnn\mkl_util-inl.h" />
+    <ClInclude Include="EltWiseEngine.h" />
     <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="RNNCommon.h" />
     <ClInclude Include="TensorOps.h" />
@@ -207,6 +209,7 @@
     <ClInclude Include="CPUMatrixImpl.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="EltWiseEngine.cpp" />
     <ClCompile Include="BatchNormalizationEngine.cpp" />
     <ClCompile Include="ConvolutionEngine.cpp" />
     <ClCompile Include="CPUMatrixDouble.cpp" />

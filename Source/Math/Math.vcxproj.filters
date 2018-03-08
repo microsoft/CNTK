@@ -67,6 +67,9 @@
     <ClCompile Include="mkldnn\mkldnn_memory.cpp">
       <Filter>mkldnn</Filter>
     </ClCompile>
+    <ClCompile Include="EltWiseEngine.cpp">
+      <Filter>EltWise</Filter>
+    </ClCompile>
     <ClCompile Include="TimesEngine.cpp">
       <Filter>Times</Filter>
     </ClCompile>
@@ -175,6 +178,9 @@
     <ClInclude Include="mkldnn\mkldnn_fully_connected-inl.h">
       <Filter>mkldnn</Filter>
     </ClInclude>    
+    <ClInclude Include="EltWiseEngine.h">
+      <Filter>EltWise</Filter>
+    </ClInclude>
     <ClInclude Include="mkldnn\mkl_util-inl.h">
       <Filter>mkldnn</Filter>
     </ClInclude>
@@ -229,6 +235,9 @@
     </Filter>
     <Filter Include="mkldnn">
       <UniqueIdentifier>{3ffd2b93-5daf-4898-a4af-349f2f1e8dd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="EltWise">
+      <UniqueIdentifier>{8976189a-75ad-435b-831f-e1064cfbf73d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Times">
       <UniqueIdentifier>{e7305f78-8135-42b3-8cde-379eb57f9510}</UniqueIdentifier>

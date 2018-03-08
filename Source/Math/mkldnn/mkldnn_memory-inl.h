@@ -49,8 +49,6 @@ struct MKLDNNMemoryDescriptorBase : public PrvMemDescr,
     void allocate() {
       if (_prv_memory == nullptr) {
         _prv_memory = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(*_prv_memory_pd));
-        _internal_ptr = reinterpret_cast<Dtype *>(_prv_memory->get_data_handle());
-        _internal_size = (int)prv_size();
       }
     }
     std::shared_ptr<mkldnn::memory>  get_prv_memory(bool usage_check = false) {
@@ -61,9 +59,9 @@ struct MKLDNNMemoryDescriptorBase : public PrvMemDescr,
       return _prv_memory;
     }
     inline bool conversion_needed() const {
-      if (!_prv_memory_pd_not_null)
+      if (nullptr == _prv_memory_pd)
         return false;
-      if (!_usr_memory_pd_not_null)
+      if (nullptr == _usr_memory_pd)
         return false;
       if (*_usr_memory_pd != *_prv_memory_pd)
         return true;
@@ -73,18 +71,17 @@ struct MKLDNNMemoryDescriptorBase : public PrvMemDescr,
 
     void set_prv_memory_pd(std::shared_ptr<mkldnn::memory::primitive_desc> memory_pd) {
       _prv_memory_pd = memory_pd;
-      if (_prv_memory_pd)
-        _prv_memory_pd_not_null = true;
     }
 
     void set_usr_memory_pd(std::shared_ptr<mkldnn::memory::primitive_desc> memory_pd) {
       _usr_memory_pd = memory_pd;
-      if (_usr_memory_pd)
-        _usr_memory_pd_not_null = true;
     }
 
     virtual void* prv_ptr() {
-      return _internal_ptr;
+      if (_prv_memory != nullptr) {
+        return _prv_memory->get_data_handle();
+      } else
+        return NULL;
     }
     virtual size_t prv_size() { return _prv_memory_pd->get_size(); }
     virtual size_t prv_count() { return prv_size() / sizeof(Dtype); }
@@ -104,22 +101,12 @@ struct MKLDNNMemoryDescriptorBase : public PrvMemDescr,
     void check_usr_with_prv_descriptors();
     void set_prv_memory(std::shared_ptr<mkldnn::memory> memory) {
         _prv_memory = memory;
-        if (_prv_memory == nullptr) {
-          _internal_ptr = reinterpret_cast<Dtype *>(_prv_memory->get_data_handle());
-          _internal_size = (int)prv_size();
-        } else {
-          LogicError("Set NULL Prv Memory");
-        }
     }
-
+    virtual bool get_usr_desc(usr_desc_dims_t usr_desc_dims, int& dim_size);
  protected:
     std::shared_ptr<mkldnn::memory::primitive_desc> _usr_memory_pd;
     std::shared_ptr<mkldnn::memory::primitive_desc> _prv_memory_pd;
-    bool _usr_memory_pd_not_null;
-    bool _prv_memory_pd_not_null;
     std::shared_ptr<mkldnn::memory> _prv_memory;
-    Dtype* _internal_ptr;
-    int  _internal_size;
 };
 
 template <typename Dtype>
@@ -146,6 +133,8 @@ public:
       bool set_prv_ptr, const Mat &b);
     std::shared_ptr<mkldnn::memory> create_output_memory(Dtype* cpu_data, 
         const Mat &b, std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > thisData, bool in_place = false);
+
+    bool get_prv_prim_desc(mkldnn::memory::primitive_desc& desc);
 };
 
 template <typename Dtype>
