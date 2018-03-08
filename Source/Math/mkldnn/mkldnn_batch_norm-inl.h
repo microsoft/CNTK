@@ -224,7 +224,7 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
         moving_var_ptr[i] = moving_var_ptr[i] * momentum
                 + var_ptr[i] * bcf * expAvgFactor;
         //Optional, this is used to convert var to stdInv
-        var_ptr[i] = 1.0 / sqrt(var_ptr[i] + m_eps_);
+        // var_ptr[i] = 1.0 / sqrt(var_ptr[i] + m_eps_);
       }
 
     }
