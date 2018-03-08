@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <iostream>
 #pragma warning(disable : 4996)
-
+#include "mkl_cblas.h"
 #include "../Matrix.h"
 #include "mkl_memory.h"
 
@@ -249,5 +249,33 @@ template class MKLDNNMemoryDescriptor<double>;
 template struct MKLDNNMemoryDescriptorBase<float>;
 template struct MKLDNNMemoryDescriptorBase<double>;
 
+template <typename DType>
+std::shared_ptr<PrvMemDescr> MKLDNNData<DType>::get_copy()
+{
+  std::shared_ptr<MKLDNNData<DType> > new_data;
+  new_data.reset(
+    new MKLDNNData<DType>(this->_usr_memory_pd, this->_prv_memory_pd));
+  new_data->allocate();
+  void *private_ptr = new_data->prv_ptr();
+  memcpy(private_ptr, this->prv_ptr(), this->prv_size());
+  return new_data;
+}
+template <typename DType>
+void MKLDNNData<DType>::get_sum(std::shared_ptr<PrvMemDescr> other)
+{
+    void* prv_ptr = this->prv_ptr();
+    void* other_prv_ptr = other->prv_ptr();
+    size_t prv_ct = this->prv_count();
+    size_t other_prv_ct = other->prv_count();
+    if (prv_ct != other_prv_ct) {
+        fprintf(stderr, "SUM of a and b must have equal size\n");
+        return;
+    }
+    if (std::is_same<DType, float>::value) {
+        cblas_saxpy((MKL_INT)this->prv_count(), 1, reinterpret_cast<float *>(other_prv_ptr), 1, reinterpret_cast<float *>(prv_ptr), 1);
+    } else {
+        fprintf(stderr, "SUM of MKLDNN only support float so far\n"); return;
+    }
+}
 }}}
 #endif  // #ifdef MKLDNN_SUPPORTED

@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "TimesEngine.h"
+#pragma warning(disable: 4661)  
 #include "./mkldnn/mkldnn_fully_connected-inl.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

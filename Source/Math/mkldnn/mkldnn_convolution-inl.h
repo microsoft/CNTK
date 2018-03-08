@@ -46,8 +46,9 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     name = name + std::to_string(m_id);
     return name;
   }
+
   explicit MKLDNNConvolutionOp(ConvolveGeometryPtr geometry,
-    ImageLayoutKind imageLayout, bool bias = false)
+    ImageLayoutKind imageLayout, bool bias = false, bool relu = false)
     : MKLDNNLayer<DType>(), dilate_w(0), dilate_h(0)
     , fwd_bottom_data(NULL), fwd_top_data(NULL), fwd_weights_data(NULL), fwd_bias_data(NULL)
     , convFwd_pd(NULL)
@@ -56,6 +57,7 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     m_geometry = geometry;
     m_imageLayout = imageLayout;
     m_bias = bias;
+    m_relu = relu;
     m_id = s_id_gen++;
   }
 
@@ -144,6 +146,8 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
       mkldnn::memory::desc init_top_md({ top_tz }, mpcsn, mfmt_any);
       mkldnn::memory::desc init_weights_md({ weights_tz }, mpcsn, mfmt_any);
 
+
+
       // ---- Initialize convolution primitive descriptor
       std::shared_ptr<mkldnn::convolution_forward::desc> convFwd_desc;
       if (this->m_bias) {
@@ -157,7 +161,20 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
           , init_bottom_md, init_weights_md, init_top_md
           , convolutionStrides, dnn_dilate, padding_l, padding_r, mkldnn::padding_kind::zero));
       }
-      convFwd_pd.reset(new mkldnn::convolution_forward::primitive_desc(*convFwd_desc, cpu_engine));
+      if (m_relu) {
+          //add fusion for relu
+          attr_t attr = attr_t(mkldnn::round_mode::round_nearest, 1.0, attr_t::scale_t::policy_t::COMMON);
+          attr.pops.entry[0].kind = attr_t::post_ops_t::kind_t::RELU;
+          attr.pops.entry[0].eltwise.alpha = 0.0;
+          attr.pops.entry[0].eltwise.beta = 0.0;
+          attr.pops.entry[0].eltwise.scale = 1.0;
+          attr.pops.len = 1;
+          attr.mkldnn_attr_create();
+          convFwd_pd.reset(new mkldnn::convolution_forward::primitive_desc(*convFwd_desc, attr.mkldnn_attr, cpu_engine));
+      }
+      else {
+          convFwd_pd.reset(new mkldnn::convolution_forward::primitive_desc(*convFwd_desc, cpu_engine));
+      }
       assert(convFwd_pd);
       // ---- Create priv memory primitive descriptors stored as class members -------------
       typedef typename mkldnn::memory::primitive_desc MemPD;
@@ -357,10 +374,58 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     }
 
   }
-  virtual void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad) {
-    DType * srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
-    DType * kernel_ptr = mkl_experimental_direct_get(kernel);
-    DType * grad_ptr = mkl_experimental_direct_get(grad);
+  void InitReLUBwd(const Mat &src) {
+      int32_t n = this->num_;
+      int32_t iw = this->width_;
+      int32_t ih = this->height_;
+      int32_t ic = this->channels_;
+      DType negative_slope = 0;
+      void * src_data =
+          const_cast<DType*>(mkl_prv_data<DType>(src));
+      bool src_is_prv = (src_data != NULL);
+      mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
+      mkldnn::memory::data_type mpcsn = mkldnn::memory::data_type::f32;
+      // ---- Initialize memory descriptors -------------
+      //std::shared_ptr<mkldnn::memory::desc> bottom_diff_md;
+      std::shared_ptr<mkldnn::memory::desc> top_diff_md;
+      std::shared_ptr<mkldnn::memory::desc> top_data_md;
+
+      std::shared_ptr<mkldnn::memory::primitive_desc> usr_diff_mpd;
+      std::shared_ptr<mkldnn::memory::primitive_desc> prv_diff_mpd;
+
+      if (src_is_prv) {
+          std::shared_ptr<MKLDNNMemoryDescriptor<DType> > mem_descr
+              = get_mkldnn_prv_descriptor<DType>(src);
+          top_diff_md.reset(new mkldnn::memory::desc(mem_descr->prv_memory_pd()->desc()));
+          usr_diff_mpd = mem_descr->usr_memory_pd();
+          prv_diff_mpd = mem_descr->prv_memory_pd();
+      }
+      else {
+          top_diff_md.reset(new mkldnn::memory::desc({ { n, ic, ih, iw } }, mpcsn, mkldnn::memory::format::nchw));
+          usr_diff_mpd.reset(new mkldnn::memory::primitive_desc(*top_diff_md, cpu_engine));
+      }
+      top_data_md = top_diff_md;
+      mkldnn::eltwise_forward::desc fwd_training_desc(mkldnn::prop_kind::forward_training,
+          mkldnn::eltwise_relu,
+          *top_data_md, negative_slope);
+      fwd_relu_training_pd.reset(new mkldnn::relu_forward::primitive_desc(fwd_training_desc, cpu_engine));
+      mkldnn::eltwise_backward::desc reluBwd_desc(mkldnn::eltwise_relu, *top_diff_md, *top_data_md, negative_slope);
+      bwd_relu_pd.reset(new mkldnn::relu_backward::primitive_desc(reluBwd_desc, cpu_engine,
+          *fwd_relu_training_pd));
+      bwd_relu_top_diff.reset(new MKLDNNData<DType>(usr_diff_mpd, prv_diff_mpd));
+      bwd_relu_top_diff->name = "bwd_top_diff   @ " + this->getName();
+      bwd_relu_dst_data.reset(new MKLDNNData<DType>(usr_diff_mpd, prv_diff_mpd));
+      bwd_relu_dst_data->name = "bwd_bottom_data   @ " + this->getName();
+  }
+
+  virtual void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) {
+#ifdef MKL_TIMER_PROFILE
+      Timer timer;
+      timer.Start();
+#endif
+      DType * srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
+      DType * kernel_ptr = mkl_experimental_direct_get(kernel);
+      DType * grad_ptr = mkl_experimental_direct_get(grad);
     if (!b_init_conv) {
       this->init_properties((int)grad.GetNumCols());
       b_init_conv = true;
@@ -380,18 +445,45 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     
     bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
     bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(kernel_ptr, false, kernel);
-
+    
+    bool grad_prehead_prv = grad.MklMem()->head_at_prv();
     bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(grad_ptr, grad, bwdd_bottom_diff);
-
+    bool grad_head_prv = grad.MklMem()->head_at_prv();
+    if (accumulateGradient) {
+        // convert grad and save to workspace
+        if (grad_head_prv) {
+            if (!grad_prehead_prv) {
+                // forcely convert user to prv then copy prv data to ws_ptr directly
+                bwdd_bottom_diff->convert_to_prv(grad_ptr);
+            }
+            workspace.MklMem()->AssignPrvFrom(*grad.MklMem());
+        }
+        else {
+            //directly copy user data to ws_ptr
+            workspace.AssignValuesOf(grad);
+        }
+    }
     convBwdData.reset(new mkldnn::convolution_backward_data(*convBwdData_pd
       , *bwdd_top_diff_primitive, *bwdd_weights_data_primitive
       , *bwdd_bottom_diff_memory));
 
     convBwdData.submit();
+    if (accumulateGradient) {
+        if (grad_head_prv) {
+            grad.MklMem()->SumPrvFrom(*workspace.MklMem());
+        } else {
+            grad.AssignSumOf(grad, workspace);
+        }
+    }
+#ifdef MKL_TIMER_PROFILE
+    timer.Stop();
+    LOGPRINTF(stderr, "mklconvolution bwd data sum time: %f \n", timer.ElapsedSeconds() * 1000);
+#endif
   }
-  void BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, Mat* pbiasGrad = NULL) {
+  void BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, bool accumulateGradient, Mat& workspace, Mat* pbiasGrad = NULL) {
     DType * srcgrad_ptr =  mkl_experimental_direct_get(srcGrad);
     DType * in_ptr = mkl_experimental_direct_get(in);
+    DType * out_ptr = mkl_experimental_direct_get(out);
     DType * kernelgrad_ptr = mkl_experimental_direct_get(kernelGrad);
     if (!b_init_conv) {
       this->init_properties((int)srcGrad.GetNumCols());
@@ -403,12 +495,43 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     if (convBwdData_pd == NULL) {
       this->InitConvolutionBwd();
     }
+    if (m_relu) {
+        //inplace relu to update srcGrad, do once then backwarddata can also use the converted data
+        if (bwd_relu_pd == NULL) {
+            InitReLUBwd(out);
+        }
+        std::shared_ptr<mkldnn::memory> dst_memory, diff_dst_memory, diff_src_memory;
+        dst_memory = bwd_relu_dst_data->get_converted_prv(out_ptr, false, out);
+        diff_src_memory = bwd_relu_top_diff->get_converted_prv(srcgrad_ptr, false, srcGrad);
+        MKLDNNPrimitive<DType> reluBwd;
+        reluBwd.reset(new mkldnn::relu_backward(*bwd_relu_pd, *dst_memory, *diff_src_memory,
+            *diff_src_memory));
+        reluBwd.submit();
+    }
     std::shared_ptr<mkldnn::memory> bwdw_bottom_data_primitive, bwdw_top_diff_primitive;
     std::shared_ptr<mkldnn::memory> bwdw_weights_diff_memory, bwdw_bias_diff_memory;
 
     bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
     bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(in_ptr, false, in);
+
+    bool kgrad_prehead_prv = kernelGrad.MklMem()->head_at_prv();
     bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(kernelgrad_ptr, kernelGrad, bwdw_weights_diff);
+    bool kgrad_head_prv = kernelGrad.MklMem()->head_at_prv();
+    if (accumulateGradient) {
+        // convert grad and save to workspace
+        if (kgrad_head_prv) {
+            if (!kgrad_prehead_prv) {
+                // forcely convert user to prv then copy prv data to ws_ptr directly
+                bwdw_weights_diff->convert_to_prv(kernelgrad_ptr);
+            }
+            workspace.MklMem()->AssignPrvFrom(*kernelGrad.MklMem());
+        }
+        else {
+            //directly copy user data to ws_ptr
+            workspace.AssignValuesOf(kernelGrad);
+        }
+    }
+
     if (this->m_bias)
     {
       DType * gbias_ptr = mkl_experimental_direct_get(*pbiasGrad);
@@ -430,6 +553,18 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
         , *bwdw_weights_diff_memory));
     }
     convBwdWeights.submit();
+    if (accumulateGradient) {
+        if (kgrad_head_prv) {
+            kernelGrad.MklMem()->SumPrvFrom(*workspace.MklMem());
+        }
+        else {
+            kernelGrad.AssignSumOf(kernelGrad, workspace);
+        }
+    }
+#ifdef MKL_TIMER_PROFILE
+    timer.Stop();
+    LOGPRINTF(stderr, "mklconvolution bwd kernel sum time: %f \n", timer.ElapsedSeconds() * 1000);
+#endif
   }
  private:
   std::shared_ptr<MKLDNNData<DType> > fwd_bottom_data, fwd_top_data,
@@ -441,6 +576,9 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
   MKLDNNPrimitive<DType> convFwd;
   std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> convBwdData_pd;
   std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> convBwdWeights_pd;
+  std::shared_ptr<mkldnn::relu_forward::primitive_desc> fwd_relu_training_pd;
+  std::shared_ptr<mkldnn::relu_backward::primitive_desc> bwd_relu_pd;
+  std::shared_ptr<MKLDNNData<DType> > bwd_relu_dst_data, bwd_relu_top_diff;
   MKLDNNPrimitive<DType> convBwdData, convBwdWeights;
   ConvolveGeometryPtr m_geometry;
   ImageLayoutKind m_imageLayout;
@@ -449,6 +587,7 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
   int dilate_w;
   int dilate_h;
   Mat init_gbias;
+  bool m_relu;
 };  // class MKLDNNConvolutionOp
 template<> int MKLDNNConvolutionOp<float>::s_id_gen = 1;
 template<> int MKLDNNConvolutionOp<double>::s_id_gen = 1;

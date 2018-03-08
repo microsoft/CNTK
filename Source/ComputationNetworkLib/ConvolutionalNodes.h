@@ -307,7 +307,7 @@ class ConvolutionNodeBaseBias : public ConvolutionNodeBase<ElemType>, public Tra
     static const std::wstring TypeName() { return L"ConvolutionNodeBaseBias"; }
 public:
     ConvolutionNodeBaseBias(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_dilation(TensorShape(1)), m_hasBias(false)
+        : Base(deviceId, name), m_dilation(TensorShape(1)), m_hasBias(false), m_relu(false)
     {
     }
     ConvolutionNodeBaseBias(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
@@ -564,7 +564,7 @@ public:
           m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
             m_maxTempMemSizeInSamples, m_poolKind,
             ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
-            false, recomputeConvGeometry, m_hasBias);
+            false, recomputeConvGeometry, m_hasBias, m_relu);
         }
 
         if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
@@ -604,6 +604,7 @@ protected:
     bool m_convolution2D;
     TensorShape m_dilation;
     bool m_hasBias;
+    bool m_relu;
 };
 
 
@@ -613,6 +614,7 @@ protected:                                  \
     using Base::m_dilation;              \
     using Base::m_convolution2D;                 \
     using Base::m_hasBias;                 \
+    using Base::m_relu;                 \
 public:
 
 
@@ -687,6 +689,7 @@ public:
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
+        auto sliceOutputValue = ValueFor(fr);
 
         // this potentially computes over time, so we must mask gaps to 0
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
@@ -699,9 +702,9 @@ public:
             auto& grad = InputRef(0).GradientAsMatrix();
             auto sliceInput1Value = InputRef(1).ValueFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, sliceOutputValue, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
             else
-                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, sliceOutputValue, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
@@ -770,14 +773,15 @@ public:
     }
     ConvolutionBiasNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
         const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-        bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1))
+        bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1), bool relu = false)
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation)
     {
         m_hasBias = true;
+        m_relu = relu;
     }
     ConvolutionBiasNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
         const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
-        bool zeroPadding, size_t maxTempMemSizeInSamples)
+        bool zeroPadding, size_t maxTempMemSizeInSamples, bool relu = false)
         : ConvolutionBiasNode(deviceId, name, TensorShape(kernelWidth, kernelHeight, 1), TensorShape(1, 1, outputChannels),
         TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true},
         vector<bool>{zeroPadding}, TensorShape(0), TensorShape(0),
@@ -785,11 +789,12 @@ public:
     {
         m_convolution2D = true;
         m_hasBias = true;
+        m_relu = relu;
     }
     ConvolutionBiasNode(const ScriptableObjects::IConfigRecordPtr configp)
         : ConvolutionBiasNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
         configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-        configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"))
+        configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"), configp->Get(L"relu"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -800,15 +805,21 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
+        fstream << m_relu;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
+        fstream >> m_relu;
     }
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue) {
+            auto node = dynamic_pointer_cast<ConvolutionBiasNode<ElemType>>(nodeP);
+            node->m_relu = this->m_relu;
+        }
     }
     void ForwardProp(const FrameRange& fr) override
     {
@@ -834,6 +845,7 @@ public:
         if (inputIndex == 2)
             return;
         auto sliceOutputGrad = GradientFor(fr);
+        auto sliceOutputValue = ValueFor(fr);
 
         // this potentially computes over time, so we must mask gaps to 0
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
@@ -850,9 +862,9 @@ public:
             auto& biasGrad = InputRef(2).GradientAsMatrix();
             //auto& sliceInput2Value = InputRef(2).GradientAsMatrix();
             if (!m_transpose)
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward, &biasGrad);
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, sliceOutputValue, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward, &biasGrad);
             else
-                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward, &biasGrad);
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, sliceOutputValue, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward, &biasGrad);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {

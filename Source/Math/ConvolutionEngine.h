@@ -49,7 +49,7 @@ public:
 
     void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace);
 
-    void BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad = NULL);
+    void BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad = NULL);
 
     void ForwardPooling(const Mat& in, Mat& out, bool inferenceOnly);
 
@@ -63,7 +63,7 @@ public:
                                                                ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None,
                                                                ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
                                                                std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false,
-                                                               bool poolIncludePad = false, bool inputHasFreeDimension = false, bool hasBias = false);
+                                                               bool poolIncludePad = false, bool inputHasFreeDimension = false, bool hasBias = false, bool relu = false);
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 
@@ -90,7 +90,7 @@ protected:
 
     virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) = 0;
 
-    virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad) = 0;
+    virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad) = 0;
 
     virtual void EnsurePoolingInitialized() = 0;
 

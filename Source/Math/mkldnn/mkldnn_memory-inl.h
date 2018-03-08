@@ -143,6 +143,8 @@ class MKLDNNData : public MKLDNNMemoryDescriptor<Dtype> {
     MKLDNNData(std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd
         , std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd)
         : MKLDNNMemoryDescriptor<Dtype>(usr_memory_pd, prv_memory_pd) {}
+    virtual std::shared_ptr<PrvMemDescr> get_copy();
+    virtual void get_sum(std::shared_ptr<PrvMemDescr> from);
 };
 
 template <typename Dtype>

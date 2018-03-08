@@ -7,6 +7,7 @@
 #include "BatchNormalizationEngine.h"
 #include "CuDnnFactories.h"
 #include "MklDnnCommon.h"
+#pragma warning(disable: 4661)  
 #include "./mkldnn/mkldnn_batch_norm-inl.h"
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -80,12 +81,21 @@ public:
     using Base = BatchNormEngine<InoutType, StatType>;
     using typename Base::InoutMat;
     using typename Base::StatMat;
+    using ElemType = StatType;
+    using Mat = Base::StatMat;
+#ifdef USE_MKLDNN
+    MKLDNNBatchNormOp<ElemType> * m_mkldnnBM;
+    size_t m_prevBatchSize = 0;
+#endif
 
 public:
     CntkBatchNormEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
         bool spatial, ImageLayoutKind imageLayout)
         : Base(deviceId, inOutT, spatial, imageLayout)
     {
+#ifdef USE_MKLDNN
+        m_mkldnnBM = NULL;
+#endif
     }
 
 protected:
@@ -103,6 +113,12 @@ protected:
     void ForwardCore(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
                      InoutMat& out, double epsilon, StatMat& savedMean, StatMat& savedInvStdDev) override
     {
+#ifdef USE_MKLDNN
+        if (in.GetCurrentMatrixLocation() == CPU &&
+		std::is_same<InoutType, StatType>::value &&
+            ForwardCoreMKLDNN(*(const StatMat*)&in, scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance, *(StatMat*)&out, epsilon, savedMean, savedInvStdDev))
+            return;
+#endif
 #ifdef USE_MKL2017DNN
         if (in.GetCurrentMatrixLocation() == CPU &&
             std::is_same<InoutType, StatType>::value &&
@@ -116,6 +132,12 @@ protected:
     void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
                       StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) override
     {
+#ifdef USE_MKLDNN
+        if (srcGrad.GetCurrentMatrixLocation() == CPU &&
+		    std::is_same<InoutType, StatType>::value &&
+            BackwardCoreMKLDNN(*(const StatMat*)&in, *(const StatMat*)&srcGrad, *(StatMat*)&grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad))
+            return;
+#endif
 #ifdef USE_MKL2017DNN
         if (srcGrad.GetCurrentMatrixLocation() == CPU &&
             std::is_same<InoutType, StatType>::value &&
@@ -440,97 +462,71 @@ private:
         return true;
     }
 #endif
+
+#ifdef USE_MKLDNN
+    bool ForwardCoreMKLDNN(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
+        Mat& out, double epsilon, Mat& savedMean, Mat& savedVariance)
+    {
+        if (!IsSupported())
+            return false;
+        fprintf(stderr, "Using CNTK MKL DNN batch normalization engine.\n");
+        size_t batchSize = in.GetNumCols();
+        if (m_prevBatchSize == 0)
+          m_prevBatchSize = batchSize;
+        bool samBatchSize = batchSize == m_prevBatchSize;
+        if (!samBatchSize && m_mkldnnBM!=NULL) {
+          delete m_mkldnnBM;
+          m_mkldnnBM = NULL;
+          m_prevBatchSize = batchSize;
+        }
+        if (m_mkldnnBM == NULL) {
+            m_mkldnnBM = new MKLDNNBatchNormOp<ElemType>(m_inOutT, m_imageLayout);
+        }
+        if (inferenceOnly)
+        {
+            savedMean.Resize(0, 0);      // (these are not produced in this case)
+            savedVariance.Resize(0, 0);
+        }
+        else {
+            savedMean.Resize(runMean);
+            savedVariance.Resize(runMean);
+        }
+        m_mkldnnBM->Forward(in, scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance,
+            out, epsilon, savedMean, savedVariance);
+        return true;
+    }
+    bool BackwardCoreMKLDNN(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
+        Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad)
+    {
+        if (!IsSupported())
+            return false;
+        if (!accumulateDataGrad)
+            grad.SetValue((ElemType)0);
+        if (m_mkldnnBM == NULL) {
+            m_mkldnnBM = new MKLDNNBatchNormOp<ElemType>(m_inOutT, m_imageLayout);
+        }
+        m_mkldnnBM->Backward(in, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev,
+            scaleGrad, biasGrad, accumulateDataGrad);
+        return true;
+    }
+
+    bool IsSupported() {
+        if (!m_spatial) return false;
+        if (m_inOutT.GetRank() != 3) return false;
+        // MKL DNN do not support double
+        const std::type_info& ti1 = typeid(ElemType);
+        const std::type_info& ti2 = typeid(float);
+        if (ti1.hash_code() != ti2.hash_code()) {
+            return false;
+        }
+        return m_deviceId < 0;
+    }
+#endif
 };
 
 template class CntkBatchNormEngine<float, float>;
 template class CntkBatchNormEngine<double, double>;
 template class CntkBatchNormEngine<half, float>;
-
-
-#ifdef USE_MKLDNN
-template <class InoutType, class StatType>
-class MklDnnBatchNormEngine : public BatchNormEngine<InoutType, StatType>
-{
-public:
-	using Base = BatchNormEngine<InoutType, StatType>;
-	using typename Base::InoutMat;
-	using typename Base::StatMat;
-	MKLDNNBatchNormOp<InoutType> * m_mkldnnBM;
-public:
-	MklDnnBatchNormEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-		bool spatial, ImageLayoutKind imageLayout)
-		: Base(deviceId, inOutT, spatial, imageLayout), m_mkldnnBM(NULL)
-	{
-	}
-	~MklDnnBatchNormEngine() {
-		if (m_mkldnnBM != NULL)
-			delete m_mkldnnBM;
-	}
-protected:
-	using Base::m_deviceId;
-	using Base::m_imageLayout;
-	using Base::m_inOutT;
-	using Base::m_spatial;
-
-	void EnsureCompatible() override
-	{
-		if (m_spatial && m_imageLayout == ImageLayoutKind::HWC)
-			InvalidArgument("CNTK batch normalization supports only (CHW) layout.");
-		// MKL DNN do not support non-spatial
-		if (!m_spatial)
-			InvalidArgument("MKLDNN batch normalization supports only spatial.");
-		// MKL DNN do not only support 3D tensor
-		if (m_inOutT.GetRank() != 3)
-			InvalidArgument("MKLDNN batch normalization supports only 3D tensor.");
-	}
-
-	void ForwardCore(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
-		InoutMat& out, double epsilon, StatMat& savedMean, StatMat& savedInvStdDev) override
-	{
-		if (m_mkldnnBM == NULL) {
-			m_mkldnnBM = new MKLDNNBatchNormOp<InoutType>(m_inOutT, m_imageLayout);
-		}
-		if (inferenceOnly)
-		{
-			savedMean.Resize(0, 0);      // (these are not produced in this case)
-			savedInvStdDev.Resize(0, 0);
-		}
-		else {
-			savedMean.Resize(runMean);
-			savedInvStdDev.Resize(runMean);
-		}
-		m_mkldnnBM->Forward(in, scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance,
-			out, epsilon, savedMean, savedInvStdDev);
-	}
-
-	void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
-		StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) override
-	{
-		if (!accumulateDataGrad)
-			grad.SetValue((InoutType)0);
-		if (m_mkldnnBM == NULL) {
-			m_mkldnnBM = new MKLDNNBatchNormOp<InoutType>(m_inOutT, m_imageLayout);
-		}
-		m_mkldnnBM->Backward(in, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev,
-			scaleGrad, biasGrad, accumulateDataGrad);
-	}
-public:
-	static bool IsSupported(DEVICEID_TYPE deviceId, bool spatial, const TensorShape& inOutT) {
-		if (!spatial) return false;
-		if (inOutT.GetRank() != 3) return false;
-		// MKL DNN do not support double
-		const std::type_info& ti1 = typeid(InoutType);
-		const std::type_info& ti2 = typeid(float);
-		if (ti1.hash_code() != ti2.hash_code()) {
-			return false;
-		}
-		return deviceId < 0;
-	}
-};
-
-template class MklDnnBatchNormEngine<float, float>;
-template class MklDnnBatchNormEngine<double, double>;
-#endif
 
 template <typename T> bool HasFlag(T src, T testFlag)
 {

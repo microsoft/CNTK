@@ -44,6 +44,8 @@ struct PrvMemDescr {
   virtual size_t prv_count() = 0;
   virtual size_t prv_size() = 0;
   virtual bool get_usr_desc(usr_desc_dims_t usr_desc_dims, int& dim_size) = 0;
+  virtual std::shared_ptr<PrvMemDescr> get_copy() = 0;
+  virtual void get_sum(std::shared_ptr<PrvMemDescr> other) = 0;
   // This might help using prv_ptr_ by different accelerators/engines
   enum PrvDescrType {
     PRV_DESCR_MKL2017,
@@ -121,6 +123,18 @@ struct MKLMemHolder {
     if (b_disable_prv_2_cpu) {
       b_disable_prv_2_cpu = false;
     }
+  }
+  void AssignPrvFrom(MKLMemHolder& from) {
+    head_ = from.head_;
+    b_disable_prv_2_cpu = false;
+    b_eager_mode = false;
+    if (HEAD_AT_PRV == head_) {
+      prv_descriptor_ = from.prv_descriptor_->get_copy();
+    }
+  }
+  void SumPrvFrom(MKLMemHolder& from) {
+      if (HEAD_AT_PRV != head_ || !from.head_at_prv()) return;
+      prv_descriptor_->get_sum(from.prv_descriptor_);
   }
   void zero_init()
   {
