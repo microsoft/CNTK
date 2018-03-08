@@ -402,6 +402,13 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/NcclComm.cpp \
 
+
+
+MATH_SRC +=\
+	$(SOURCEDIR)/Math/mkldnn/mkldnn_base.cpp \
+	$(SOURCEDIR)/Math/mkldnn/mkldnn_memory.cpp \
+
+
 ifdef CUDA_PATH
 MATH_SRC +=\
 	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \

@@ -1,0 +1,199 @@
+/*******************************************************************************
+* Copyright 2016 Intel Corporation
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* \file mkl_batch_norm-inl.h
+* \brief
+* \author lingyan.guo@intel.com
+*         zhenlin.luo@intel.com
+*
+*******************************************************************************/
+#include "stdafx.h"
+#include <assert.h>
+#include <iostream>
+#pragma warning(disable : 4996)
+
+#include "../Matrix.h"
+#include "mkl_memory.h"
+
+#ifdef USE_MKLDNN
+
+#include "mkldnn_memory-inl.h"
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+template <typename Dtype>
+MKLDNNMemoryDescriptorBase<Dtype>::MKLDNNMemoryDescriptorBase(
+        std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd
+        , std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd)
+                                    : name("MKLDNNMemoryDescriptorBase"),
+                                    _prv_memory(NULL), _internal_ptr(NULL), _internal_size(0) {
+    _usr_memory_pd_not_null = false;
+    _prv_memory_pd_not_null = false;
+    set_usr_memory_pd(usr_memory_pd);
+    set_prv_memory_pd(prv_memory_pd);
+}
+
+template <typename Dtype>
+void MKLDNNMemoryDescriptorBase<Dtype>::check_usr_with_prv_descriptors() {
+    assert(_usr_memory_pd);
+    assert(_prv_memory_pd);
+    int32_t ndims = _usr_memory_pd->desc().data.ndims;
+    assert(ndims == _prv_memory_pd->desc().data.ndims);
+
+    for (int32_t dim = 0; dim < ndims; ++dim) {
+      assert(_usr_memory_pd->desc().data.dims[dim] == _prv_memory_pd->desc().data.dims[dim]);
+    }
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Implementation of MKLDNNMemoryDescriptor
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename Dtype>
+ MKLDNNMemoryDescriptor<Dtype>::MKLDNNMemoryDescriptor(
+                        std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd
+                        , std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd)
+        : MKLDNNMemoryDescriptorBase<Dtype>(usr_memory_pd, prv_memory_pd) {
+}
+
+template <typename Dtype>
+void MKLDNNMemoryDescriptor<Dtype>::create_reorder_to_prv(
+  std::shared_ptr<mkldnn::memory> usr_memory, MKLDNNPrimitive<Dtype>& reorder_usr2prv) {
+    assert(this->_usr_memory_pd);
+    assert(this->_prv_memory_pd);
+    if (reorder_usr2prv.aprimitive == NULL)
+        reorder_usr2prv.reset(new mkldnn::reorder(*usr_memory, *this->get_prv_memory()));
+}
+
+template <typename Dtype>
+void MKLDNNMemoryDescriptor<Dtype>::convert_to_prv(void* cpu_ptr) {
+    assert(cpu_ptr);
+    MKLDNNPrimitive<Dtype> reorder_usr2prv;
+    std::shared_ptr<mkldnn::memory> usr_memory = NULL;
+    if (usr_memory == NULL)
+      usr_memory.reset(new mkldnn::memory(*this->_usr_memory_pd, cpu_ptr));
+    create_reorder_to_prv(usr_memory, reorder_usr2prv);
+    // MKL_DLOG(INFO) << "convert usr => priv @" << this->name;
+    reorder_usr2prv.submit();;
+}
+template <typename Dtype>
+void MKLDNNMemoryDescriptor<Dtype>::convert_from_other(std::shared_ptr<PrvMemDescr> other) {
+  assert(NULL);  // Not implementation
+}
+template <typename Dtype>
+void MKLDNNMemoryDescriptor<Dtype>::create_reorder_from_prv(
+    std::shared_ptr<mkldnn::memory> usr_memory, MKLDNNPrimitive<Dtype>& reorder_prv2usr) {
+    assert(this->_usr_memory_pd);
+    assert(this->_prv_memory_pd);
+    if (reorder_prv2usr.aprimitive == NULL) {
+        reorder_prv2usr.reset(new mkldnn::reorder(*this->_prv_memory, *usr_memory));
+    }
+}
+
+template <typename Dtype>
+void MKLDNNMemoryDescriptor<Dtype>::convert_from_prv(void* cpu_ptr) {
+    assert(cpu_ptr);
+    MKLDNNPrimitive<Dtype> reorder_prv2usr;
+    std::shared_ptr<mkldnn::memory> usr_memory = NULL;
+    if (usr_memory == NULL)
+      usr_memory.reset(new mkldnn::memory(*this->_usr_memory_pd, cpu_ptr));
+    create_reorder_from_prv(usr_memory, reorder_prv2usr);
+    // MKL_DLOG(INFO) << "convert priv => usr @" << this->name;
+    reorder_prv2usr.submit();
+}
+
+template <typename Dtype>
+void MKLDNNMemoryDescriptor<Dtype>::convert_from_extprv(std::shared_ptr<mkldnn::memory> extprv_memory) {
+    MKLDNNPrimitive<Dtype> reorder_extprv2prv;
+    reorder_extprv2prv.reset(new mkldnn::reorder(*extprv_memory, *this->get_prv_memory()));
+    // MKL_DLOG(INFO) << "convert extprv => priv @" << this->name;
+    reorder_extprv2prv.submit();;
+}
+
+
+template <typename Dtype>
+bool MKLDNNMemoryDescriptor<Dtype>::on_to_cpu() {
+    if (StreamHolder::Instance().current_stream() != NULL
+      && StreamHolder::Instance().current_stream()->ready()) {
+        StreamHolder::Instance().current_stream()->wait();
+    }
+    return true;
+}
+
+template <typename Dtype>
+bool MKLDNNMemoryDescriptorBase<Dtype>::layout_compare(std::shared_ptr<PrvMemDescr> other) {
+    assert(other->get_descr_type() == PrvMemDescr::PRV_DESCR_MKLDNN);
+    std::shared_ptr<MKLDNNMemoryDescriptorBase<Dtype> > other_descr =
+        std::static_pointer_cast<MKLDNNMemoryDescriptorBase<Dtype> >(other);
+    return (*other_descr->prv_memory_pd() == *this->prv_memory_pd());
+}
+
+
+template <typename Dtype>
+std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv(Dtype* cpu_data,
+                                            bool set_prv_ptr) {
+  UNUSED(set_prv_ptr);
+  if (this->conversion_needed()) {
+    this->convert_to_prv(const_cast<Dtype*>(cpu_data));
+    return this->get_prv_memory();
+  }
+  std::shared_ptr<mkldnn::memory> pres;
+  mkldnn::memory * input_memory = new mkldnn::memory(*this->usr_memory_pd(), const_cast<Dtype*>(cpu_data));
+  pres.reset(input_memory);
+  return pres;
+}
+
+
+
+template <typename Dtype>
+std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::create_output_memory(
+    Dtype* cpu_data, bool in_place) {
+    UNUSED(in_place);
+    std::shared_ptr<mkldnn::memory> omem;
+    if (this->conversion_needed()) {
+        omem = this->get_prv_memory();
+    } else {
+      omem.reset(new mkldnn::memory(*this->usr_memory_pd(), cpu_data));
+    }
+    return omem;
+}
+
+
+template <typename Dtype>
+std::shared_ptr<MKLDNNData<Dtype> > get_mkldnn_prv_descriptor(
+    std::shared_ptr<MKLMemHolder> blob) {
+    std::shared_ptr<PrvMemDescr> blob_prv_mem_descriptor =
+        blob->get_prv_descriptor();
+    if (blob_prv_mem_descriptor == nullptr)
+      return nullptr;
+    assert(blob_prv_mem_descriptor->get_descr_type() == PrvMemDescr::PRV_DESCR_MKLDNN);
+    std::shared_ptr<MKLDNNData<Dtype> > blob_prv_mkldnn_mem_descr =
+        std::static_pointer_cast<MKLDNNData<Dtype> >(blob_prv_mem_descriptor);
+    assert(blob_prv_mkldnn_mem_descr != NULL);
+    return blob_prv_mkldnn_mem_descr;
+}
+
+
+template class MKLDNNMemoryDescriptor<float>;
+template class MKLDNNMemoryDescriptor<double>;
+template class MKLDNNMemoryDescriptorBase<float>;
+template class MKLDNNMemoryDescriptorBase<double>;
+
+}}}
+#endif  // #ifdef MKLDNN_SUPPORTED

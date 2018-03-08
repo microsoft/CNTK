@@ -604,7 +604,15 @@ public:
         }
         return false;
     }
-
+    bool IsDilation() const
+    {
+      for (int i = 0; i < m_dilation.size(); i++)
+      {
+        if (1 != m_dilation[i])
+          return true;
+      }
+      return false;
+    }
     DISABLE_COPY_AND_MOVE(ConvolveGeometry);
 
 private:

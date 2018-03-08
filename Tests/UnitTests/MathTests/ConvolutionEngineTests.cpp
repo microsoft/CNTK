@@ -263,8 +263,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             SingleMatrix workspace(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
 
-            testEng->Forward(in, kernel, out, workspace);
-            baseEng->Forward(inB, kernelB, outB, workspaceB);
+            testEng->Forward(in, kernel, out, workspace, true);
+            baseEng->Forward(inB, kernelB, outB, workspaceB, true);
 
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId << ", MaxTempMem: " << maxTempMem;
@@ -460,8 +460,8 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
                 SingleMatrix out = initMat(outBuf, crowOut, n, buf);
                 SingleMatrix outB(out.DeepClone(), baseDeviceId);
 
-                testEng->ForwardPooling(in, out);
-                baseEng->ForwardPooling(inB, outB);
+                testEng->ForwardPooling(in, out, true);
+                baseEng->ForwardPooling(inB, outB, true);
 
                 std::stringstream tmsg;
                 tmsg << "Geometry: " << (std::string)(*g) << ", Pool: " << (int)kind << ", Batch: " << n << ", Device: " << deviceId;
@@ -525,22 +525,23 @@ BOOST_AUTO_TEST_CASE(PoolingBackward)
                 SingleMatrix outB(crowOut, n, buf.data(), baseDeviceId, matrixFlagNormal);
                 SingleMatrix out(crowOut, n, buf.data(), deviceId, matrixFlagNormal);
 
-                testEng->ForwardPooling(in, out);
-                baseEng->ForwardPooling(inB, outB);
+                testEng->ForwardPooling(in, out, false);
+                baseEng->ForwardPooling(inB, outB, false);
 
                 SingleMatrix gradBuf(deviceId);
                 SingleMatrix grad = initMat(gradBuf, crowIn, n, buf);
                 SingleMatrix gradB(grad.DeepClone(), baseDeviceId);
-
-                testEng->BackwardPooling(out, srcGrad, in, grad, true);
-                baseEng->BackwardPooling(outB, srcGradB, inB, gradB, true);
-                testEng->BackwardPooling(out, srcGrad, in, grad, true);
-                baseEng->BackwardPooling(outB, srcGradB, inB, gradB, true);
+                SingleMatrix workspace(deviceId);
+                SingleMatrix workspaceB(baseDeviceId);
+                testEng->BackwardPooling(out, srcGrad, in, grad, true, workspace);
+                baseEng->BackwardPooling(outB, srcGradB, inB, gradB, true, workspaceB);
+                testEng->BackwardPooling(out, srcGrad, in, grad, true, workspace);
+                baseEng->BackwardPooling(outB, srcGradB, inB, gradB, true, workspaceB);
 
                 SingleMatrix gradReset(grad.DeepClone(), baseDeviceId);
                 SingleMatrix gradBReset(grad.DeepClone(), baseDeviceId);
-                testEng->BackwardPooling(out, srcGrad, in, gradReset, false);
-                baseEng->BackwardPooling(outB, srcGradB, inB, gradBReset, false);
+                testEng->BackwardPooling(out, srcGrad, in, gradReset, false, workspace);
+                baseEng->BackwardPooling(outB, srcGradB, inB, gradBReset, false, workspaceB);
 
                 std::stringstream tmsg;
                 tmsg << "Geometry: " << (std::string)(*g) << ", Pool: " << (int)kind << ", Batch: " << n << ", Device: " << deviceId;
@@ -601,9 +602,9 @@ BOOST_AUTO_TEST_CASE(MaxUnpooling)
         SingleMatrix outC(g->OutputShape().GetNumElements(), n, cpuDeviceId);
         SingleMatrix outG(g->OutputShape().GetNumElements(), n, gpuDeviceId);
 
-        cpuEng->ForwardPooling(inC, outC);
-        gpuEng->ForwardPooling(inG, outG);
-
+        cpuEng->ForwardPooling(inC, outC, false);
+        gpuEng->ForwardPooling(inG, outG, false);
+        
         // Second, do the unpooling.
         size_t crowIn = g->InputShape().GetNumElements();
         SingleMatrix inUBufC(cpuDeviceId);
@@ -634,8 +635,8 @@ BOOST_AUTO_TEST_CASE(MaxUnpooling)
         // Now do the pooling from unpooled source and compare with original pooling.
         SingleMatrix outC_2(g->OutputShape().GetNumElements(), n, cpuDeviceId);
         SingleMatrix outG_2(g->OutputShape().GetNumElements(), n, gpuDeviceId);
-        cpuEng->ForwardPooling(inUC, outC_2);
-        gpuEng->ForwardPooling(inUG, outG_2);
+        cpuEng->ForwardPooling(inUC, outC_2, false);
+        gpuEng->ForwardPooling(inUG, outG_2, false);
 
         BOOST_REQUIRE_MESSAGE(CheckEqual(outC_2, outC, emsg, relErr, absErr), "outC_2" << msg << ". " << emsg);
         BOOST_REQUIRE_MESSAGE(CheckEqual(outG_2, outG, emsg, relErr, absErr), "outG_2" << msg << ". " << emsg);
@@ -709,8 +710,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             SingleMatrix workspace(deviceId);
             HalfMatrix workspaceB(baseDeviceId);
 
-            testEng->Forward(in, kernel, out, workspace);
-            baseEng->Forward(inB, kernelB, outB, workspaceB);
+            testEng->Forward(in, kernel, out, workspace, true);
+            baseEng->Forward(inB, kernelB, outB, workspaceB, true);
 
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId << ", MaxTempMem: " << maxTempMem << ", Eng: " << (engKind == ConvolutionEngineKind::CuDnn ? "Cudnn" : "Ref" );
@@ -950,8 +951,8 @@ BOOST_AUTO_TEST_CASE(PoolingForward)
                 HalfMatrix outBufHalf(baseDeviceId);
                 HalfMatrix outB = initMatHalf(outBufHalf, crowOut, n, bufHalf);
 
-                testEng->ForwardPooling(in, out);
-                baseEng->ForwardPooling(inB, outB);
+                testEng->ForwardPooling(in, out, false);
+                baseEng->ForwardPooling(inB, outB, false);
 
                 std::stringstream tmsg;
                 tmsg << "Geometry: " << (std::string)(*g) << ", Pool: " << (int)kind << ", Batch: " << n << ", Device: " << deviceId;
@@ -1034,24 +1035,25 @@ BOOST_AUTO_TEST_CASE(PoolingBackward)
                 HalfMatrix outB(crowOut, n, bufHalf.data(), baseDeviceId, matrixFlagNormal);
                 SingleMatrix out(crowOut, n, buf.data(), deviceId, matrixFlagNormal);
 
-                testEng->ForwardPooling(in, out);
-                baseEng->ForwardPooling(inB, outB);
+                testEng->ForwardPooling(in, out, true);
+                baseEng->ForwardPooling(inB, outB, true);
 
                 SingleMatrix gradBuf(deviceId);
                 SingleMatrix grad = initMat(gradBuf, crowIn, n, buf);
                 CopyVecFromFloatToHalf(buf, bufHalf);
                 HalfMatrix gradBufHalf(baseDeviceId);
                 HalfMatrix gradB = initMatHalf(gradBufHalf, crowIn, n, bufHalf);
-
-                testEng->BackwardPooling(out, srcGrad, in, grad, true);
-                baseEng->BackwardPooling(outB, srcGradB, inB, gradB, true);
-                testEng->BackwardPooling(out, srcGrad, in, grad, true);
-                baseEng->BackwardPooling(outB, srcGradB, inB, gradB, true);
+                SingleMatrix workspace(deviceId);
+                HalfMatrix workspaceB(baseDeviceId);
+                testEng->BackwardPooling(out, srcGrad, in, grad, true, workspace);
+                baseEng->BackwardPooling(outB, srcGradB, inB, gradB, true, workspaceB);
+                testEng->BackwardPooling(out, srcGrad, in, grad, true, workspace);
+                baseEng->BackwardPooling(outB, srcGradB, inB, gradB, true, workspaceB);
 
                 SingleMatrix gradReset(grad.DeepClone(), baseDeviceId);
                 HalfMatrix gradBReset(gradB.DeepClone(), baseDeviceId);
-                testEng->BackwardPooling(out, srcGrad, in, gradReset, false);
-                baseEng->BackwardPooling(outB, srcGradB, inB, gradBReset, false);
+                testEng->BackwardPooling(out, srcGrad, in, gradReset, false, workspace);
+                baseEng->BackwardPooling(outB, srcGradB, inB, gradBReset, false, workspaceB);
 
                 std::stringstream tmsg;
                 tmsg << "Geometry: " << (std::string)(*g) << ", Pool: " << (int)kind << ", Batch: " << n << ", Device: " << deviceId << ", Kind: " << ((kind == PoolKind::Max) ? "Max" : "Avg" );

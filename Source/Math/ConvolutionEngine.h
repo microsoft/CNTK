@@ -22,8 +22,8 @@ enum class ConvolutionEngineKind
     CuDnn     = 1 << 1, // cuDNN, works only for 2D/3D convos with full sharing.
     Legacy    = 1 << 2, // Legacy, for backwards compatibility. REVIEW alexeyk: implement sparse version and remove Legacy altogether.
     Gemm      = 1 << 3, // Uses convolution unrolling+GEMM technique. Works only for convos with full sharing.
-
-    All       = Reference | CuDnn | Legacy | Gemm
+    MKLDNN    = 1 << 4,
+    All       = Reference | CuDnn | Legacy | Gemm | MKLDNN
 };
 
 enum class PoolKind
@@ -45,15 +45,15 @@ public:
 public:
     virtual ~ConvolutionEngine() = default;
 
-    void Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace);
+    void Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool inferenceOnly);
 
     void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace);
 
     void BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace);
 
-    void ForwardPooling(const Mat& in, Mat& out);
+    void ForwardPooling(const Mat& in, Mat& out, bool inferenceOnly);
 
-    void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient);
+    void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient, Mat& workspace);
 
     void MaxUnpooling(const Mat& out, const Mat& poolIn, Mat& in);
 
@@ -86,7 +86,7 @@ protected:
 
     virtual void EnsureConvolutionInitialized() = 0;
 
-    virtual void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) = 0;
+    virtual void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool inferenceOnly) = 0;
 
     virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) = 0;
 
@@ -94,9 +94,9 @@ protected:
 
     virtual void EnsurePoolingInitialized() = 0;
 
-    virtual void ForwardPoolingCore(const Mat& in, Mat& out) = 0;
+    virtual void ForwardPoolingCore(const Mat& in, Mat& out, bool inferenceOnly) = 0;
 
-    virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) = 0;
+    virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient, Mat& workspace) = 0;
 
     virtual void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) = 0;
 

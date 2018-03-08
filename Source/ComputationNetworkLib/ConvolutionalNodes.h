@@ -315,17 +315,7 @@ public:
                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                     bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1))
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
-        m_convolution2D(false), m_dilation(dilation)
-    {
-        // Make sure not using dilation on CPU
-        if(deviceId < 0)
-        {
-            for(int i = 0; i < dilation.size(); i++)
-            {
-                if(1 != dilation[i])
-                    RuntimeError("Dilated convolution on CPU is not yet implemented.");
-            }
-        }
+        m_convolution2D(false), m_dilation(dilation) {
     }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                     const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
@@ -419,9 +409,10 @@ public:
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
         Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
-        if (!m_transpose)
-            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward);
-        else
+        if (!m_transpose) {
+            bool inferenceOnly = !Environment().IsTraining();
+            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward, inferenceOnly);	
+        } else
         {
             // BackwardData adds results to the output so need to zero them out first.
             // REVIEW alexeyk: should be rolled into BackwardData itself.
@@ -458,7 +449,7 @@ public:
             else
             {
                 // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.
-                m_convEng->Forward(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrixBackward);
+                m_convEng->Forward(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrixBackward, false);
             }
         }
     }
@@ -913,7 +904,8 @@ public:
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         const Matrix<ElemType>& input0 = InputRef(0).ValueFor(fr);
-        m_convEng->ForwardPooling(input0, sliceOutputValue);
+        bool inferenceOnly = !Environment().IsTraining();
+        m_convEng->ForwardPooling(input0, sliceOutputValue, inferenceOnly);
     }
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -923,7 +915,7 @@ public:
         Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad, !InputRef(0).IsGradientInitializedBy(this));
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad, !InputRef(0).IsGradientInitializedBy(this), *m_tempPoolingBackward);
     }
 
     bool OutputUsedInComputingInputNodesGradients() const override
@@ -937,6 +929,17 @@ public:
         return ParentGradientOptimization::Overwrite;
     }
 
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+      Base::RequestMatricesBeforeBackprop(matrixPool);
+      RequestMatrixFromPool(m_tempPoolingBackward, matrixPool, 0, false, true);
+    }
+
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+      Base::ReleaseMatricesAfterBackprop(matrixPool);
+      ReleaseMatrixToPool(m_tempPoolingBackward, matrixPool);
+    }
 public:
     void Validate(bool isFinalValidationPass) override
     {
@@ -977,7 +980,7 @@ public:
 private:
     using TransformerNode::m_transforms;
     using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
-
+    shared_ptr<Matrix<ElemType>> m_tempPoolingBackward;
     virtual void /*TransformerNode::*/ComputeTransforms() override
     {
         if (m_transforms[0].m_axisTransforms.empty())
@@ -1053,7 +1056,7 @@ public:
         auto sliceOutputGrad = GradientFor(fr);
         Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         // BUGBUG: ForwardPooling overwrites values in sliceInput1Grad. Should handle correctly instead.
-        m_convEng->ForwardPooling(sliceOutputGrad, sliceInput0Grad);
+        m_convEng->ForwardPooling(sliceOutputGrad, sliceInput0Grad, false);
     }
 
     bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -1216,8 +1219,8 @@ public:
     {
         Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-        m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue);
+        bool inferenceOnly = !Environment().IsTraining();
+        m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue, inferenceOnly);
     }
 
     void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
@@ -1228,7 +1231,7 @@ public:
         Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad, !InputRef(0).IsGradientInitializedBy(this));
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad, !InputRef(0).IsGradientInitializedBy(this), *m_tempPoolingBackward);
     }
 
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
@@ -1300,6 +1303,17 @@ public:
     TensorShape UpperPad() const { return m_upperPad; }
     PoolKind PoolingKind() const { return m_poolKind; }
 
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+      Base::RequestMatricesBeforeBackprop(matrixPool);
+      RequestMatrixFromPool(m_tempPoolingBackward, matrixPool, 0, false, true);
+    }
+
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+      Base::ReleaseMatricesAfterBackprop(matrixPool);
+      ReleaseMatrixToPool(m_tempPoolingBackward, matrixPool);
+    }
 protected:
     void ConvertToTensorShape()
     {
@@ -1315,7 +1329,7 @@ protected:
     size_t m_windowWidth, m_windowHeight;
     size_t m_horizontalSubsample, m_verticalSubsample;
     size_t m_inputSizePerSample, m_outputSizePerSample;
-
+    shared_ptr<Matrix<ElemType>> m_tempPoolingBackward;
     ImageLayoutKind m_imageLayoutKind; // how to interpret the tensor (which dimensions are X/Y and C)
 
     // Mapping to V2 PoolingNode description..
