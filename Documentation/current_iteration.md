@@ -23,6 +23,12 @@ C.debugging.stop_profiler()
 - 1BitSGD source code is now available with CNTK license (MIT license) under Source/1BitSGD/
 - 1bitsgd build target was merged into existing gpu target
 
+## New loss function: hierarchical softmax (Thanks @yaochengji for the contribution!)
+
 ## Bug fixes
 - Fixed convergence issue in Tutorial 201B
 - Fixed pooling/unpooling to support free dimension
+- Fixed crash in CNTKBinaryFormat deserializer when crossing sweep boundary
+- Fixed shape inference bug in RNN step function for scalar broadcasting
+- Fixed a build bug when mpi=no
+- Improved distributed training aggregation speed by increasing packing threshold, and expose the knob in V2

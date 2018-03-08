@@ -235,6 +235,16 @@ namespace CNTK
             Microsoft::MSR::CNTK::CPUMatrix<float>::SetOptimizationFlags(flags);
         }
 
+        void SetMPIPackThreshold(size_t packThesholdInBytes)
+        {
+            Microsoft::MSR::CNTK::Globals::SetMPIPackThreshold(packThesholdInBytes);
+        }
+
+        size_t GetMPIPackThreshold()
+        {
+            return Microsoft::MSR::CNTK::Globals::GetMPIPackThreshold();
+        }
+
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
         {
             bool areDynamicAxesCompatible = (var1.DynamicAxes().size() == var2.DynamicAxes().size());
@@ -613,11 +623,6 @@ namespace CNTK
         bool MaxNumCPUThreadsSet()
         {
             return s_threadsAreSet;
-        }
-
-        size_t DefaultPackThresholdSizeInBytes()
-        {
-            return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
         }
     }
 

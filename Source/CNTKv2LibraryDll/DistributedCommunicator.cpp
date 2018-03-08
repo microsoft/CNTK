@@ -457,8 +457,8 @@ namespace CNTK
     {
         if (m_mpi->NumNodesInUse() == 1) // No need to aggregate anything.
             return;
-#ifdef CPUONLY
-        LogicError("Sparse block column aggregation on CPUDevice not implemented");
+#if defined(CPUONLY) || HAS_MPI == 0
+        LogicError("Sparse block column aggregation on CPUDevice or non-MPI not implemented");
 #else
         // a handy struct to access sparse block column matrix internal data
         struct SBCInfo
