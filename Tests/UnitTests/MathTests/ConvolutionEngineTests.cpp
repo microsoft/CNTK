@@ -390,6 +390,11 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardKernel)
             SingleMatrix grad(g->OutputShape().GetNumElements(), n, buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix gradB(g->OutputShape().GetNumElements(), n, buf.data(), baseDeviceId, matrixFlagNormal);
 
+            size_t crowOut = g->OutputShape().GetNumElements();
+            SingleMatrix outBuf(deviceId);
+            SingleMatrix out = initMat(outBuf, crowOut, n, buf);
+            SingleMatrix outB(out.DeepClone(), baseDeviceId);
+
             size_t mapCount = g->GetMapCount(g->InputShape().GetRank() - 1);
             buf.resize(g->KernelShape().GetNumElements() * mapCount);
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
@@ -399,10 +404,10 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardKernel)
 
             SingleMatrix workspace(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
-
-            testEng->BackwardKernel(grad, in, kernel, true, false, workspace);
-            baseEng->BackwardKernel(gradB, inB, kernelB, true, false, workspaceB);
-
+            
+            testEng->BackwardKernel(grad, in, out, kernel, true, false, workspace);
+            baseEng->BackwardKernel(gradB, inB, out, kernelB, true, false, workspaceB);
+            
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId;
             std::string msg = " are not equal, " + tmsg.str();
@@ -876,9 +881,13 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardKernel)
 
             SingleMatrix workspace(deviceId);
             HalfMatrix workspaceB(baseDeviceId);
-
-            testEng->BackwardKernel(grad, in, kernel, true, false, workspace);
-            baseEng->BackwardKernel(gradB, inB, kernelB, true, false, workspaceB);
+            size_t crowOut = g->OutputShape().GetNumElements();
+            SingleMatrix outBuf(deviceId);
+            SingleMatrix out = initMat(outBuf, crowOut, n, buf);
+            HalfMatrix outBBuf(deviceId);
+            HalfMatrix outB = initMatHalf(outBBuf, crowOut, n, bufHalf);
+            testEng->BackwardKernel(grad, in, out, kernel, true, false, workspace);
+            baseEng->BackwardKernel(gradB, inB, outB, kernelB, true, false, workspaceB);
 
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId << ", Eng: " << (engKind == ConvolutionEngineKind::CuDnn ? "Cudnn" : "Ref");

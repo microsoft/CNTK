@@ -15,6 +15,7 @@
 #include "LinearAlgebraNodes.h"
 #ifdef USE_MKLDNN
 #include "TimesTransposeNode.h"
+#include "EltWiseNodes.h"
 #endif
 #include "InputAndParamNodes.h"
 #include "NonlinearityNodes.h"
@@ -765,7 +766,11 @@ namespace CNTK
                     ASSIGN_NEW_NODE(SinhNode, network->GetDeviceId(), internalNodeName);
                     break;
                 case PrimitiveOpType::ReLU:
+#ifndef USE_MKLDNN
                     ASSIGN_NEW_NODE(RectifiedLinearNode, network->GetDeviceId(), internalNodeName);
+#else
+                    ASSIGN_NEW_NODE(RectifiedLinearNodeV2, network->GetDeviceId(), internalNodeName);
+#endif
                     break;
                 case PrimitiveOpType::Exp:
                     ASSIGN_NEW_NODE(ExpNode, network->GetDeviceId(), internalNodeName);

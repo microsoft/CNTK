@@ -269,7 +269,7 @@ protected:
         }
     }
 
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool /*inferenceOnly*/) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool /*inferenceOnly*/, Mat* /*pBias*/) override
     {
         size_t batchSize = in.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
@@ -386,7 +386,7 @@ protected:
         CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& /*out*/, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace, Mat* /*pbiasGrad*/) override
     {
         size_t batchSize = in.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.

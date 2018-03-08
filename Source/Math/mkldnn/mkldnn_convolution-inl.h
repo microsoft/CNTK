@@ -29,7 +29,10 @@
 #include "mkldnn_memory-inl.h"
 #include "mkl_conv-common-inl.h"
 #include "mkldnn_base-inl.h"
-
+namespace Microsoft { namespace MSR { namespace CNTK {
+extern void GetSizesAndStrides(int dimension, const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount = 0);
+extern void GetInputOffsets(const ConvolveGeometry* geometry, SmallVector<int>& inputOffset);
+}}}
 #ifdef USE_MKLDNN
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -64,50 +67,78 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
   virtual ~MKLDNNConvolutionOp() {}
 
   void init_properties(int batchSize) {
-    // Check ComputeOutputShape
-    ImageDimensions inT(m_geometry->InputShape(), m_imageLayout);
-    ImageDimensions outT(m_geometry->OutputShape(), m_imageLayout);
-    ImageDimensions kernelT(m_geometry->KernelShape(), m_imageLayout);
-    ImageDimensions strideT(m_geometry->Stride(), m_imageLayout);    
+      this->num_ = batchSize;
+      this->group_ = 1; //TODO: CNTK support group?
+      // Check ComputeOutputShape
+      if (m_geometry->InputShape().GetRank() == 3)
+      {
+          ImageDimensions inT(m_geometry->InputShape(), m_imageLayout);
+          ImageDimensions outT(m_geometry->OutputShape(), m_imageLayout);
+          ImageDimensions kernelT(m_geometry->KernelShape(), m_imageLayout);
+          ImageDimensions strideT(m_geometry->Stride(), m_imageLayout);
 
-    this->stride_w_ = (int)strideT.w();
-    this->stride_h_ = (int)strideT.h();
-    this->width_ = (int)inT.w();
-    this->height_ = (int)inT.h();
+          this->stride_w_ = (int)strideT.w();
+          this->stride_h_ = (int)strideT.h();
+          this->width_ = (int)inT.w();
+          this->height_ = (int)inT.h();
 
-    this->kernel_w_ = (int)kernelT.w();
-    this->kernel_h_ = (int)kernelT.h();
-    this->channels_ = (int)inT.c();
-    this->num_ = batchSize;
-    this->group_ = 1; //TODO: CNTK support group?
-    this->width_out_ = (int)outT.w();
-    this->height_out_ = (int)outT.h();
-    this->channel_output_ = (int)outT.c();
+          this->kernel_w_ = (int)kernelT.w();
+          this->kernel_h_ = (int)kernelT.h();
+          this->channels_ = (int)inT.c();
 
-    if (m_geometry->GetDilation(0) > 1)
-      this->dilate_w = (int)m_geometry->GetDilation(0)-1;
-    if (m_geometry->GetDilation(1) > 1)
-      this->dilate_h = (int)m_geometry->GetDilation(1)-1;
+          this->width_out_ = (int)outT.w();
+          this->height_out_ = (int)outT.h();
+          this->channel_output_ = (int)outT.c();
+      }
+      else
+      {
+          int dimension = 4;
+          SmallVector<size_t> outputSize, outputStrides, filterSize, filterStrides, inputSize, inputStrides, stridesSize, stridesStrides;
+          SmallVector<int>    inputOffset;
+          size_t mapCount = m_geometry->GetMapCount(m_geometry->KernelShape().GetRank() - 1);
+          GetSizesAndStrides(dimension, m_geometry->OutputShape(), batchSize, outputSize, outputStrides, mapCount);
+          GetSizesAndStrides(dimension, m_geometry->KernelShape(), mapCount, filterSize, filterStrides);
+          GetSizesAndStrides(dimension, m_geometry->InputShape(), batchSize, inputSize, inputStrides);
+          GetSizesAndStrides(dimension, m_geometry->Stride(), batchSize, stridesSize, stridesStrides);
+          this->width_ = (int)inputSize[0];
+          this->height_ = (int)inputSize[1];
+          this->channels_ = (int)inputSize[2];
+          this->kernel_w_ = (int)filterSize[0];
+          this->kernel_h_ = (int)filterSize[1];
 
-    const SmallVector<bool>& autopad = m_geometry->AutoPad();
-    int autopad_size = (int)autopad.size();
-    const TensorShape& padShape = m_geometry->LowerPad();
-    int pad_size = (int)padShape.size();
-    // For CHW
-    if (autopad_size > 0 && autopad[0]) {
-      this->pad_l_w_ = m_geometry->GetLowerPad(0);
-    } else if (pad_size > 0) {
-      this->pad_l_w_ = (int)padShape[0];
-    }
-    if (autopad_size > 1 && autopad[1]) {
-      this->pad_l_h_ = m_geometry->GetLowerPad(1);
-    } else if (pad_size > 1) {
-      this->pad_l_h_ = (int)padShape[1];
-    }
-    this->pad_r_h_ = (this->height_out_ - 1) * this->stride_h_
-      - this->pad_l_h_ - this->height_ + ((this->kernel_h_ - 1) * (this->dilate_h + 1) + 1);
-    this->pad_r_w_ = (this->width_out_ - 1) * this->stride_w_
-      - this->pad_l_w_ - this->width_ + ((this->kernel_w_ - 1) * (this->dilate_w + 1) + 1);
+          this->width_out_ = (int)outputSize[0];
+          this->height_out_ = (int)outputSize[1];
+          this->channel_output_ = (int)outputSize[2];
+
+          this->stride_w_ = (int)stridesSize[0];
+          this->stride_h_ = (int)stridesSize[1];
+      }
+      if (m_geometry->GetDilation(0) > 1)
+          this->dilate_w = (int)m_geometry->GetDilation(0) - 1;
+      if (m_geometry->GetDilation(1) > 1)
+          this->dilate_h = (int)m_geometry->GetDilation(1) - 1;
+
+      const SmallVector<bool>& autopad = m_geometry->AutoPad();
+      int autopad_size = (int)autopad.size();
+      const TensorShape& padShape = m_geometry->LowerPad();
+      int pad_size = (int)padShape.size();
+      // For CHW
+      if (autopad_size > 0 && autopad[0]) {
+          this->pad_l_w_ = m_geometry->GetLowerPad(0);
+      }
+      else if (pad_size > 0) {
+          this->pad_l_w_ = (int)padShape[0];
+      }
+      if (autopad_size > 1 && autopad[1]) {
+          this->pad_l_h_ = m_geometry->GetLowerPad(1);
+      }
+      else if (pad_size > 1) {
+          this->pad_l_h_ = (int)padShape[1];
+      }
+      this->pad_r_h_ = (this->height_out_ - 1) * this->stride_h_
+          - this->pad_l_h_ - this->height_ + ((this->kernel_h_ - 1) * (this->dilate_h + 1) + 1);
+      this->pad_r_w_ = (this->width_out_ - 1) * this->stride_w_
+          - this->pad_l_w_ - this->width_ + ((this->kernel_w_ - 1) * (this->dilate_w + 1) + 1);
   }
  private:
   void InitForward(bool inferenceOnly) {
@@ -418,7 +449,7 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
       bwd_relu_dst_data->name = "bwd_bottom_data   @ " + this->getName();
   }
 
-  virtual void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) {
+  virtual void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad) {
 #ifdef MKL_TIMER_PROFILE
       Timer timer;
       timer.Start();
@@ -446,41 +477,18 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
     bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(kernel_ptr, false, kernel);
     
-    bool grad_prehead_prv = grad.MklMem()->head_at_prv();
     bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(grad_ptr, grad, bwdd_bottom_diff);
-    bool grad_head_prv = grad.MklMem()->head_at_prv();
-    if (accumulateGradient) {
-        // convert grad and save to workspace
-        if (grad_head_prv) {
-            if (!grad_prehead_prv) {
-                // forcely convert user to prv then copy prv data to ws_ptr directly
-                bwdd_bottom_diff->convert_to_prv(grad_ptr);
-            }
-            workspace.MklMem()->AssignPrvFrom(*grad.MklMem());
-        }
-        else {
-            //directly copy user data to ws_ptr
-            workspace.AssignValuesOf(grad);
-        }
-    }
     convBwdData.reset(new mkldnn::convolution_backward_data(*convBwdData_pd
       , *bwdd_top_diff_primitive, *bwdd_weights_data_primitive
       , *bwdd_bottom_diff_memory));
 
     convBwdData.submit();
-    if (accumulateGradient) {
-        if (grad_head_prv) {
-            grad.MklMem()->SumPrvFrom(*workspace.MklMem());
-        } else {
-            grad.AssignSumOf(grad, workspace);
-        }
-    }
 #ifdef MKL_TIMER_PROFILE
     timer.Stop();
     LOGPRINTF(stderr, "mklconvolution bwd data sum time: %f \n", timer.ElapsedSeconds() * 1000);
 #endif
   }
-  void BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, bool accumulateGradient, Mat& workspace, Mat* pbiasGrad = NULL) {
+  void BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, Mat* pbiasGrad = NULL) {
     DType * srcgrad_ptr =  mkl_experimental_direct_get(srcGrad);
     DType * in_ptr = mkl_experimental_direct_get(in);
     DType * out_ptr = mkl_experimental_direct_get(out);
@@ -514,24 +522,7 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
     bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(in_ptr, false, in);
 
-    bool kgrad_prehead_prv = kernelGrad.MklMem()->head_at_prv();
     bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(kernelgrad_ptr, kernelGrad, bwdw_weights_diff);
-    bool kgrad_head_prv = kernelGrad.MklMem()->head_at_prv();
-    if (accumulateGradient) {
-        // convert grad and save to workspace
-        if (kgrad_head_prv) {
-            if (!kgrad_prehead_prv) {
-                // forcely convert user to prv then copy prv data to ws_ptr directly
-                bwdw_weights_diff->convert_to_prv(kernelgrad_ptr);
-            }
-            workspace.MklMem()->AssignPrvFrom(*kernelGrad.MklMem());
-        }
-        else {
-            //directly copy user data to ws_ptr
-            workspace.AssignValuesOf(kernelGrad);
-        }
-    }
-
     if (this->m_bias)
     {
       DType * gbias_ptr = mkl_experimental_direct_get(*pbiasGrad);
@@ -553,14 +544,6 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
         , *bwdw_weights_diff_memory));
     }
     convBwdWeights.submit();
-    if (accumulateGradient) {
-        if (kgrad_head_prv) {
-            kernelGrad.MklMem()->SumPrvFrom(*workspace.MklMem());
-        }
-        else {
-            kernelGrad.AssignSumOf(kernelGrad, workspace);
-        }
-    }
 #ifdef MKL_TIMER_PROFILE
     timer.Stop();
     LOGPRINTF(stderr, "mklconvolution bwd kernel sum time: %f \n", timer.ElapsedSeconds() * 1000);

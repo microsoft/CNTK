@@ -82,7 +82,7 @@ public:
     using typename Base::InoutMat;
     using typename Base::StatMat;
     using ElemType = StatType;
-    using Mat = Base::StatMat;
+    using Mat = Matrix<StatType>;
 #ifdef USE_MKLDNN
     MKLDNNBatchNormOp<ElemType> * m_mkldnnBM;
     size_t m_prevBatchSize = 0;
@@ -469,7 +469,7 @@ private:
     {
         if (!IsSupported())
             return false;
-        fprintf(stderr, "Using CNTK MKL DNN batch normalization engine.\n");
+        // fprintf(stderr, "Using CNTK MKL DNN batch normalization engine.\n");
         size_t batchSize = in.GetNumCols();
         if (m_prevBatchSize == 0)
           m_prevBatchSize = batchSize;

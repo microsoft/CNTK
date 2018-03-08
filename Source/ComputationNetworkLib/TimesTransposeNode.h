@@ -126,6 +126,9 @@ public:
     : Base(deviceId, name)
   {
   }
+  virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override {
+      return ParentGradientOptimization::Overwrite;
+  }
   size_t OutputRank() const { return 1; }
   virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
   {

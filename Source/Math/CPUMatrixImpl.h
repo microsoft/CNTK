@@ -1643,7 +1643,20 @@ ElemType* CPUMatrix<ElemType>::CopyToArray() const
     if (numElements != 0)
     {
         ElemType* arrayCopyTo = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
+#ifdef USE_MKLDNN
+        if (HEAD_AT_PRV == this->m_mklMem->head_)
+        {
+            std::shared_ptr<PrvMemDescr> prv_descriptor = this->m_mklMem->prv_descriptor_;
+            if (prv_descriptor != nullptr) {
+                prv_descriptor->convert_from_prv(arrayCopyTo);
+            }
+        } else {
+            memcpy(arrayCopyTo, Data(), sizeof(ElemType) * numElements);
+        }
+
+#else
         memcpy(arrayCopyTo, Data(), sizeof(ElemType) * numElements);
+#endif
         return arrayCopyTo;
     }
     else
@@ -1852,13 +1865,15 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const ElemType alph
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const CPUMatrix<ElemType>& a, const ElemType alpha)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const CPUMatrix<ElemType>& _a, const ElemType alpha)
 {
-    auto& us = *this;
-    if (this != &a)
-        RequireSize(a.GetNumRows(), a.GetNumCols());
+    // auto& _us = *this;
+    if (this != &_a)
+        RequireSize(_a.GetNumRows(), _a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -2035,19 +2050,22 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ElementDivideBy(const CPUMatrix<ElemTy
 
 //[this]=a .* b
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix<ElemType>& _a, const CPUMatrix<ElemType>& _b)
 {
-    if (a.IsEmpty() || b.IsEmpty())
+    if (_a.IsEmpty() || _b.IsEmpty())
         LogicError("AssignElementProductOf: Matrix is empty.");
 
-    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+    if (!(_a.GetNumRows() == _b.GetNumRows() && _a.GetNumCols() == _b.GetNumCols()))
         InvalidArgument("AssignElementProductOf: The input matrix dimensions do not match.");
 
-    auto& us = *this;
-    if (this != &a)
-        RequireSize(a.GetNumRows(), a.GetNumCols());
+    // auto& us = *this;
+    if (this != &_a)
+        RequireSize(_a.GetNumRows(), _a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
+    RandomBuffer<ElemType> b(_b.Data(), _b.GetNumRows(), _b.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -2070,20 +2088,23 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix
 
 //[this] +=a .* b
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddElementProductOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddElementProductOf(const CPUMatrix<ElemType>& _a, const CPUMatrix<ElemType>& _b)
 {
-    if (a.IsEmpty() || b.IsEmpty())
+    if (_a.IsEmpty() || _b.IsEmpty())
         LogicError("AddElementProductOf: Matrix is empty.");
 
-    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+    if (!(_a.GetNumRows() == _b.GetNumRows() && _a.GetNumCols() == _b.GetNumCols()))
         InvalidArgument("AddElementProductOf : The input matrix dimensions do not match.");
 
-    if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == GetNumCols()))
+    if (!(_a.GetNumRows() == GetNumRows() && _a.GetNumCols() == GetNumCols()))
         InvalidArgument("AddElementProductOf : The input matrix dimensions do not match [this].");
 
-    auto& us = *this;
+    // auto& us = *this;
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
+    RandomBuffer<ElemType> b(_b.Data(), _b.GetNumRows(), _b.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -2138,17 +2159,20 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementDivisionOf(const CPUMatri
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementMultiplyWith(const CPUMatrix<ElemType>& a)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementMultiplyWith(const CPUMatrix<ElemType>& _a)
 {
-    if (a.IsEmpty() || IsEmpty())
+    if (_a.IsEmpty() || IsEmpty())
         LogicError("ColumnElementMultiplyWith: Matrix is empty.");
 
-    if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
+    if (!(_a.GetNumRows() == GetNumRows() && _a.GetNumCols() == 1))
         InvalidArgument("ColumnElementMultiplyWith: The input matrix should be a col vector and match [this]'s rows.");
 
-    auto& us = *this;
+    // auto& us = *this;
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
+
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {

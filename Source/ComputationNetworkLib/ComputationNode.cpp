@@ -878,8 +878,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
     const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
     let matRows   = outputValues.GetNumRows();
     let matStride = matRows; // how to get from one column to the next
-    unique_ptr<ElemType[]> matDataPtr(outputValues.CopyToArray());
-    ElemType* matData = matDataPtr.get();
+    ElemType* matDataPtr = outputValues.CopyToArray();
+    ElemType* matData = matDataPtr;
     let sampleLayout = GetSampleLayout(); // this is currently only used for sparse; dense tensors are linearized
 
     // process all sequences one by one
@@ -1119,6 +1119,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
         fprintfOrDie(f, "%s", sequenceEpilogue.c_str());
     } // end loop over sequences
     fflushOrDie(f);
+    BaseMatrixStorage<ElemType>::FreeCPUArray(matDataPtr);
 }
 
 /*static*/ string WriteFormattingOptions::Processed(const wstring& nodeName, string fragment, size_t minibatchId)

@@ -9,9 +9,44 @@
 #include "CuDnnFactories.h"
 #include "MklDnnCommon.h"
 #pragma warning(disable: 4661)  
+
 #include "./mkldnn/mkldnn_convolution-inl.h"
 #include "./mkldnn/mkldnn_pooling-inl.h"
 namespace Microsoft { namespace MSR { namespace CNTK {
+void GetSizesAndStrides(int dimension, const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount)
+{
+    sizes = shape.GetDims();
+    if (mapCount)
+    {
+        if (mapCount != shape.GetDim(shape.GetRank() - 1))
+            RuntimeError("Mismatching outputShape and mapCount");
+
+        // for outputShape, pad 1 before mapCount (the last dim in shape)
+        sizes.pop_back();
+        while (sizes.size() < dimension - 2) sizes.push_back(1);
+        sizes.push_back(mapCount);
+    }
+    else
+    {
+        while (sizes.size() < dimension - 1) sizes.push_back(1);
+    }
+    sizes.push_back(lastDim);
+    strides.clear();
+    strides.push_back(1);
+    for (int i = 1; i <= sizes.size(); i++)
+    {
+        strides.push_back(sizes[i - 1] * strides[i - 1]);
+    }
+}
+
+void GetInputOffsets(const ConvolveGeometry* geometry, SmallVector<int>& inputOffset)
+{
+    size_t dim_size = geometry->InputShape().GetRank();
+    for (size_t i = 0; i < dim_size; i++)
+    {
+        inputOffset.push_back(-geometry->GetLowerPad(i));
+    }
+}
 
 template <class ElemType>
 void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool inferenceOnly, Mat* pBias)
@@ -616,12 +651,25 @@ public:
   }
 
   virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) {
-    m_mkldnnConv->BackwardData(srcGrad, kernel, grad, accumulateGradient, workspace);
+      if (accumulateGradient) {
+          workspace.Resize(grad);
+          workspace.AssignValuesOf(grad);
+      }
+      m_mkldnnConv->BackwardData(srcGrad, kernel, grad);
+      if (accumulateGradient)
+          grad.AssignSumOf(grad, workspace);
   }
 
   virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad) {
     UNUSED(allowReuse);
-    m_mkldnnConv->BackwardKernel(srcGrad, in, out, kernelGrad, accumulateGradient, workspace, pbiasGrad);
+    if (accumulateGradient)
+    {
+        workspace.Resize(kernelGrad);
+        workspace.AssignValuesOf(kernelGrad);
+    }
+    m_mkldnnConv->BackwardKernel(srcGrad, in, out, kernelGrad, pbiasGrad);
+    if (accumulateGradient)
+      kernelGrad.AssignSumOf(kernelGrad, workspace);
   }
 
   virtual void EnsurePoolingInitialized() {
@@ -645,11 +693,13 @@ public:
   }
 
   virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient, Mat& workspace) {
-    if (accumulateGradient)
-      workspace.AssignValuesOf(grad);
-    m_mkldnnPooling->Backward(out, srcGrad, in, grad);
-    if (accumulateGradient)
-      grad.AssignSumOf(grad, workspace);
+      if (accumulateGradient) {
+          workspace.Resize(grad);
+          workspace.AssignValuesOf(grad);
+      }
+      m_mkldnnPooling->Backward(out, srcGrad, in, grad);
+      if (accumulateGradient)
+          grad.AssignSumOf(grad, workspace);
   }
 
   virtual void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) {
@@ -660,7 +710,6 @@ public:
     // Not implemented but potentially can make a fallback to reference engine.
     LogicError("MaxUnpooling is not implemented for MKLDNN engine.");
   }
-
   virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
 
 public:
@@ -1041,40 +1090,6 @@ protected:
             }
         } m_context[ContextIndex_Total];
 
-        static void GetSizesAndStrides(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount = 0)
-        {
-            sizes = shape.GetDims();
-            if (mapCount)
-            {
-                if (mapCount != shape.GetDim(shape.GetRank() - 1))
-                    RuntimeError("Mismatching outputShape and mapCount");
-
-                // for outputShape, pad 1 before mapCount (the last dim in shape)
-                sizes.pop_back();
-                while (sizes.size() < m_dimension - 2) sizes.push_back(1);
-                sizes.push_back(mapCount);
-            }
-            else
-            {
-                while (sizes.size() < m_dimension - 1) sizes.push_back(1);
-            }
-            sizes.push_back(lastDim);
-            strides.clear();
-            strides.push_back(1);
-            for (int i = 1; i <= sizes.size(); i++)
-            {
-                strides.push_back(sizes[i - 1] * strides[i - 1]);
-            }
-        }
-
-        static void GetInputOffsets(const ConvolveGeometry* geometry, SmallVector<int>& inputOffset)
-        {
-            size_t dim_size = geometry->InputShape().GetRank();
-            for (size_t i = 0; i < dim_size; i++)
-            {
-                inputOffset.push_back(-geometry->GetLowerPad(i));
-            }
-        }
 
     public:
         MKLConvolutionContext() :
@@ -1117,9 +1132,9 @@ protected:
             SmallVector<size_t> outputSize, outputStrides, filterSize, filterStrides, inputSize,  inputStrides;
             SmallVector<int>    inputOffset;
 
-            GetSizesAndStrides(geometry->OutputShape(), batchSize, outputSize, outputStrides, mapCount);
-            GetSizesAndStrides(geometry->KernelShape(), mapCount, filterSize, filterStrides);
-            GetSizesAndStrides(geometry->InputShape(), batchSize, inputSize, inputStrides);
+            GetSizesAndStrides(m_dimension, geometry->OutputShape(), batchSize, outputSize, outputStrides, mapCount);
+            GetSizesAndStrides(m_dimension, geometry->KernelShape(), mapCount, filterSize, filterStrides);
+            GetSizesAndStrides(m_dimension, geometry->InputShape(), batchSize, inputSize, inputStrides);
             GetInputOffsets(geometry, inputOffset);
 
             const auto& convolutionStride = geometry->Stride().GetDims();

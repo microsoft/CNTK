@@ -40,10 +40,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<typename Dtype>
 class MKLDNNReluOp : public MKLDNNLayer<Dtype> {
+  static int s_id_gen;
+  int m_id;
  public:
   using Mat = Matrix<Dtype>;
   std::string getName() {
-    std::string name = "MKLDNNReluOp";
+    std::string name = "MKLDNNReluOp_";
+    name = name + std::to_string(m_id);
     return name;
   }
   MKLDNNReluOp(TensorShape inOutT, ImageLayoutKind imageLayout) : MKLDNNLayer<Dtype>()
@@ -51,6 +54,7 @@ class MKLDNNReluOp : public MKLDNNLayer<Dtype> {
     , num_(0), width_(0), height_(0), channels_(0)
     , m_inOutT(inOutT), m_imageLayout(imageLayout) {
     init_mkldnn_ = false;
+    m_id = s_id_gen++;
   }
   ~MKLDNNReluOp() {}
 
@@ -228,6 +232,8 @@ class MKLDNNReluOp : public MKLDNNLayer<Dtype> {
   TensorShape m_inOutT;
   ImageLayoutKind m_imageLayout;
 };  // class MKLDNNReluOp
+template<> int MKLDNNReluOp<float>::s_id_gen = 1;
+template<> int MKLDNNReluOp<double>::s_id_gen = 1;
 }}}
 #endif
 #endif  // CNTK_OPERATOR_MKL_DNN_MKLDNN_RELU_INL_H_

@@ -187,6 +187,9 @@
     <ClInclude Include="TimesEngine.h">
       <Filter>Times</Filter>
     </ClInclude>
+    <ClInclude Include="mkldnn\mkldnn_relu-inl.h">
+      <Filter>mkldnn</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
