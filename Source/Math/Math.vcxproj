@@ -172,6 +172,7 @@
     <ClInclude Include="MatrixQuantizerImpl.h" />
     <ClInclude Include="MklDnnCommon.h" />
     <ClInclude Include="mkldnn\mkldnn_base-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_batch_norm-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_convolution-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_memory-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_pooling-inl.h" />
