@@ -32,3 +32,4 @@ C.debugging.stop_profiler()
 - Fixed shape inference bug in RNN step function for scalar broadcasting
 - Fixed a build bug when mpi=no
 - Improved distributed training aggregation speed by increasing packing threshold, and expose the knob in V2
+- Fixed a memory leak in MKL layout
