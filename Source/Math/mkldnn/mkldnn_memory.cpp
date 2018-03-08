@@ -51,9 +51,8 @@ void MKLDNNMemoryDescriptorBase<Dtype>::check_usr_with_prv_descriptors() {
     assert(_prv_memory_pd);
     int32_t ndims = _usr_memory_pd->desc().data.ndims;
     assert(ndims == _prv_memory_pd->desc().data.ndims);
-
     for (int32_t dim = 0; dim < ndims; ++dim) {
-      assert(_usr_memory_pd->desc().data.dims[dim] == _prv_memory_pd->desc().data.dims[dim]);
+        assert(_usr_memory_pd->desc().data.dims[dim] == _prv_memory_pd->desc().data.dims[dim]);
     }
 }
 
@@ -147,12 +146,41 @@ bool MKLDNNMemoryDescriptorBase<Dtype>::layout_compare(std::shared_ptr<PrvMemDes
 
 template <typename Dtype>
 std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv(Dtype* cpu_data,
-                                            bool set_prv_ptr) {
-  UNUSED(set_prv_ptr);
-  if (this->conversion_needed()) {
-    this->convert_to_prv(const_cast<Dtype*>(cpu_data));
-    return this->get_prv_memory();
-  }
+                                            bool set_prv_ptr, const Mat &b) {
+    std::shared_ptr<MKLMemHolder> blob = b.MklMem();
+    if (this->conversion_needed()) {
+        const Dtype* prv_ptr = reinterpret_cast<Dtype*>(blob->prv_data());
+        if (prv_ptr == NULL) {
+            this->convert_to_prv(const_cast<Dtype*>(cpu_data));
+            if (set_prv_ptr) {
+                blob->set_prv_descriptor(this->get_shared_ptr());
+            }
+            return this->get_prv_memory(true);
+        }
+        else {
+            std::shared_ptr<MKLDNNData<Dtype> > blob_prv_mkldnn_mem_descr
+                = get_mkldnn_prv_descriptor<Dtype>(blob);
+            if (*blob_prv_mkldnn_mem_descr->prv_memory_pd() != *this->prv_memory_pd()) {
+                // prv in blob and in this descrptor may have different layouts
+                this->convert_from_extprv(blob_prv_mkldnn_mem_descr->get_prv_memory(true));
+                if (set_prv_ptr) {
+                    blob->set_prv_descriptor(this->get_shared_ptr());
+                }
+                return this->get_prv_memory(true);
+            }
+            else if (blob_prv_mkldnn_mem_descr.get() != this) {
+            }
+            return blob_prv_mkldnn_mem_descr->get_prv_memory(true);
+        }
+    } else {
+        const Dtype* prv_ptr = reinterpret_cast<Dtype*>(blob->prv_data());
+        if (prv_ptr != NULL) {
+            std::shared_ptr<MKLDNNData<Dtype> > blob_prv_mkldnn_mem_descr
+                = get_mkldnn_prv_descriptor<Dtype>(blob);
+            blob_prv_mkldnn_mem_descr->convert_from_prv(cpu_data);
+        }
+    }
+
   std::shared_ptr<mkldnn::memory> pres;
   mkldnn::memory * input_memory = new mkldnn::memory(*this->usr_memory_pd(), const_cast<Dtype*>(cpu_data));
   pres.reset(input_memory);
@@ -163,13 +191,20 @@ std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv
 
 template <typename Dtype>
 std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::create_output_memory(
-    Dtype* cpu_data, bool in_place) {
-    UNUSED(in_place);
+    Dtype* cpu_data, const Mat &b, std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > thisData, bool in_place) {
     std::shared_ptr<mkldnn::memory> omem;
     if (this->conversion_needed()) {
-        omem = this->get_prv_memory();
+        if (in_place) {
+            std::shared_ptr<MKLDNNData<Dtype> > blob_omem = get_mkldnn_prv_descriptor<Dtype>(b.MklMem());
+            omem = blob_omem->get_prv_memory();
+        }
+        else {
+            omem = this->get_prv_memory();
+            b.MklMem()->set_prv_descriptor(thisData);
+        }
     } else {
-      omem.reset(new mkldnn::memory(*this->usr_memory_pd(), cpu_data));
+        b.MklMem()->check_and_prv_to_cpu(cpu_data);
+        omem.reset(new mkldnn::memory(*this->usr_memory_pd(), cpu_data));
     }
     return omem;
 }
@@ -192,8 +227,8 @@ std::shared_ptr<MKLDNNData<Dtype> > get_mkldnn_prv_descriptor(
 
 template class MKLDNNMemoryDescriptor<float>;
 template class MKLDNNMemoryDescriptor<double>;
-template class MKLDNNMemoryDescriptorBase<float>;
-template class MKLDNNMemoryDescriptorBase<double>;
+template struct MKLDNNMemoryDescriptorBase<float>;
+template struct MKLDNNMemoryDescriptorBase<double>;
 
 }}}
 #endif  // #ifdef MKLDNN_SUPPORTED

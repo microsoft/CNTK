@@ -29,6 +29,7 @@
 #include <math.h>
 #include "mkl_memory.h"
 #include "mkldnn_memory-inl.h"
+#include "mkl_conv-common-inl.h"
 #include "mkldnn_base-inl.h"
 
 #pragma warning(push)
@@ -39,6 +40,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<typename Dtype>
 class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
+  static int s_id_gen;
+  int m_id;
  public:
   using Mat = Matrix<Dtype>;
   explicit MKLDNNBatchNormOp(TensorShape inOutT, ImageLayoutKind imageLayout)
@@ -48,11 +51,13 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
     , bwd_top_diff(NULL), bwd_bottom_diff(NULL), bwd_scaleshift_pd(NULL)
     , m_inOutT(inOutT), m_imageLayout(imageLayout), m_eps_(MKL_DNN_BN_MIN_EPSILON)
 	, accu_grad(-1), saved_var(-1) {
+      m_id = s_id_gen++;
   }
   virtual ~MKLDNNBatchNormOp() {
   }
   std::string getName() {
-    std::string name = "MKLDNNBatchNormOp";
+    std::string name = "MKLDNNBatchNormOp_";
+    name = name + std::to_string(m_id);
     return name;
   }
 
@@ -73,15 +78,26 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
     fwd_usr_input_md.reset(new mkldnn::memory::desc({ { n, ic, ih, iw } }, mpcsn, mkldnn::memory::format::nchw));
     fwd_usr_mpd.reset(new mkldnn::memory::primitive_desc(*fwd_usr_input_md, cpu_engine));
   }
-  void initFwd() {
+    void initFwd(const Mat &in) {
+        void * bottom_data = const_cast<Dtype*>(mkl_prv_data<Dtype>(in));
     // ---- Initialize memory descriptors -------------
     std::shared_ptr<mkldnn::memory::desc> input_md, scaleshift_md;
     std::shared_ptr<mkldnn::memory::primitive_desc> usr_mpd(NULL), prv_mpd(NULL);
-
-    input_md = fwd_usr_input_md;
-    usr_mpd = fwd_usr_mpd;
-    fwd_bottom_data.reset(new MKLDNNData<Dtype>(usr_mpd, prv_mpd));
-    fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
+        if (bottom_data != nullptr) {
+            std::shared_ptr<MKLDNNData<Dtype> > mem_descr
+                = get_mkldnn_prv_descriptor<Dtype>(in);
+            assert(mem_descr != NULL);
+            fwd_bottom_data = mem_descr;
+            input_md.reset(new mkldnn::memory::desc(mem_descr->prv_memory_pd()->desc()));
+            usr_mpd = mem_descr->usr_memory_pd();
+            prv_mpd = mem_descr->prv_memory_pd();
+        }
+        else {
+            input_md = fwd_usr_input_md;
+            usr_mpd = fwd_usr_mpd;
+            fwd_bottom_data.reset(new MKLDNNData<Dtype>(usr_mpd, prv_mpd));
+            fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
+        }
 
     mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
     // ---- Initialize BatchNorm primitive descriptor -------------
@@ -99,21 +115,32 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
     fwd_top_data->name = "fwd_top_data   @ " + this->getName();
     weight_memory.reset(new mkldnn::memory(fwd_inference_pd->weights_primitive_desc()));
   }
-  void InitBatchNormBwd() {
+    void InitBatchNormBwd(const Mat &in) {
       int32_t n = this->m_num_;
       int32_t w = this->m_width_;
       int32_t h = this->m_height_;
       int32_t c = this->m_channels_;
 
+        void * src_data =
+            const_cast<Dtype*>(mkl_prv_data<Dtype>(in));
+        bool src_is_prv = (src_data != NULL);
       mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
       mkldnn::memory::data_type mpcsn = mkldnn::memory::data_type::f32;
       // ---- Initialize memory descriptors -------------
 
       std::shared_ptr<mkldnn::memory::desc> top_diff_md, top_data_md;
       std::shared_ptr<mkldnn::memory::primitive_desc> usr_diff_mpd(NULL), prv_diff_mpd(NULL);
-
+        if (src_is_prv) {
+            std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > mem_descr
+                = get_mkldnn_prv_descriptor<Dtype>(in);
+            top_diff_md.reset(new mkldnn::memory::desc(mem_descr->prv_memory_pd()->desc()));
+            usr_diff_mpd = mem_descr->usr_memory_pd();
+            prv_diff_mpd = mem_descr->prv_memory_pd();
+        }
+        else {
       top_diff_md.reset(new mkldnn::memory::desc({ { n, c, h, w } }, mpcsn, mkldnn::memory::format::nchw));
       usr_diff_mpd.reset(new mkldnn::memory::primitive_desc(*top_diff_md, cpu_engine));
+        }
       shared_ptr<mkldnn::memory::desc> output_stats_md;
       if (fwd_output_memory != NULL)
         output_stats_md.reset(new mkldnn::memory::desc(fwd_output_memory->get_primitive_desc().desc()));
@@ -137,6 +164,8 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
   virtual void Forward(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly,
     double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
     Mat& out, double epsilon, Mat& savedMean, Mat& savedInvStdDev) {
+        Dtype* in_ptr = mkl_experimental_direct_get(in);
+        Dtype* out_ptr = mkl_experimental_direct_get(out);
    if (blendFactor != 0 && (blendFactor != 1 || expAvgFactor > 0))
       InvalidArgument("MKL batch normalization engine currently supports blendTimeConstant of 0 or 1 only.");
     if (!init_mkldnn_) {
@@ -144,20 +173,21 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
       init_mkldnn_ = true;
     }
     if (fwd_inference_pd == NULL) {
-      initFwd();
+            initFwd(in);
     }
     std::shared_ptr<mkldnn::memory> mean_memory, var_memory;
     std::shared_ptr<mkldnn::memory> fwd_input_primitive;
 
     Dtype* scaleShift_buf = static_cast<Dtype *>(weight_memory->get_data_handle());
     // use_weight_bias_
+#pragma omp parallel for
     for (int i = 0; i < m_channels_; i++) {
       scaleShift_buf[i] = (scale.Data())[i];
       scaleShift_buf[m_channels_ + i] = (bias.Data())[i];
     }
 
-    fwd_input_primitive = fwd_bottom_data->get_converted_prv(in.Data(), false);
-    fwd_output_memory = fwd_top_data->create_output_memory(out.Data());
+        fwd_input_primitive = fwd_bottom_data->get_converted_prv(in_ptr, false, in);
+        fwd_output_memory = fwd_top_data->create_output_memory(out_ptr, out, fwd_top_data);
 
     // ---- Create BatchNorm --------------------
     if (inferenceOnly) {
@@ -169,33 +199,32 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
       BatchNormFwd.reset(new mkldnn::batch_normalization_forward(*fwd_inference_pd,
         *fwd_input_primitive, (const mkldnn::primitive::at)*mean_memory, (const mkldnn::primitive::at)*var_memory,
         *weight_memory, *fwd_output_memory));
-    } else {
+    }
+    else {
       mean_memory.reset(new mkldnn::memory(fwd_training_pd->mean_primitive_desc(), savedMean.Data()));
       var_memory.reset(new mkldnn::memory(fwd_training_pd->variance_primitive_desc(), savedInvStdDev.Data()));
       BatchNormFwd.reset(new mkldnn::batch_normalization_forward(*fwd_training_pd,
         *fwd_input_primitive, *weight_memory, *fwd_output_memory, *mean_memory, *var_memory));
     }
     BatchNormFwd.submit();  
-    if (fwd_top_data->conversion_needed()) {
-      fwd_top_data->convert_from_prv(out.Data());
-    }
 
     if (!inferenceOnly) {
-      int32_t mean_size = (int32_t)runMean.GetNumElements();
+      size_t mean_size = runMean.GetNumElements();
       int32_t m = this->m_width_*this->m_height_*this->m_num_;
       Dtype bcf = m > 1 ? Dtype(m) / (m - 1) : 1;
       Dtype * moving_mean_ptr = reinterpret_cast<Dtype*>(runMean.Data());
       Dtype * mean_ptr = reinterpret_cast<Dtype*>(savedMean.Data());
       Dtype * moving_var_ptr = reinterpret_cast<Dtype*>(runVariance.Data());
       Dtype * var_ptr = reinterpret_cast<Dtype*>(savedInvStdDev.Data());
-      Dtype momentum = (Dtype)(1.0 - expAvgFactor);
-      for (size_t i = 0; i < mean_size; i++) {
+      Dtype momentum = 1.0 - (Dtype)expAvgFactor;
+#pragma omp parallel for
+      for (int32_t i = 0; i < mean_size; i++) {
         moving_mean_ptr[i] = moving_mean_ptr[i] * momentum
           + mean_ptr[i] * expAvgFactor;
-         moving_var_ptr[i] = moving_var_ptr[i] * momentum
+        moving_var_ptr[i] = moving_var_ptr[i] * momentum
                 + var_ptr[i] * bcf * expAvgFactor;
-          //Optional, this is used to convert var to stdInv
-          var_ptr[i] = 1.0 / sqrt(var_ptr[i] + m_eps_);
+        //Optional, this is used to convert var to stdInv
+        var_ptr[i] = 1.0 / sqrt(var_ptr[i] + m_eps_);
       }
 
     }
@@ -205,14 +234,17 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
     const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
     Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad) {
     UNUSED(blendFactor);
+        Dtype* in_ptr = mkl_experimental_direct_get(in);
+        Dtype* srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
+        Dtype* grad_ptr = mkl_experimental_direct_get(grad);
     if (!init_mkldnn_) {
-        LayerSetUp((int)grad.GetNumCols());
+        LayerSetUp((int)in.GetNumCols());
         init_mkldnn_ = true;
      }
     if (fwd_inference_pd == NULL)
-      initFwd();
+            initFwd(in);
     if (bwd_scaleshift_pd == NULL)
-      InitBatchNormBwd();
+            InitBatchNormBwd(in);
     Dtype* scaleShift_buf = static_cast<Dtype *>(weight_memory->get_data_handle());
     Dtype * var_ptr = NULL;
     Dtype * prior_grad_ptr = NULL;
@@ -231,22 +263,24 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
     // optional: convert InvStd to Variance
     var_ptr = reinterpret_cast<Dtype*>(saved_var.Data());
 
-    for (int32_t i = 0; i < saved_var.GetNumElements(); i++) {
-      var_ptr[i] = powf((1 / var_ptr[i]), 2) - m_eps_;
-    }
+        //for (int32_t i = 0; i < saved_var.GetNumElements(); i++) {
+        //    var_ptr[i] = powf((1 / var_ptr[i]), 2) - m_eps_;
+
     std::shared_ptr<mkldnn::memory> bwd_input_primitive;
     std::shared_ptr<mkldnn::memory> bwd_diff_dst_memory;
     std::shared_ptr<mkldnn::memory> bwd_diff_src_memory;
 
-    bwd_input_primitive.reset(new mkldnn::memory(*fwd_usr_mpd, in.Data()));
-
-
+        bwd_input_primitive = mkldnn_prv_memory<Dtype>(in);
+	    if (bwd_input_primitive == nullptr) 
+        {
+	      bwd_input_primitive.reset(new mkldnn::memory(*fwd_usr_mpd, in_ptr));
+	    }
     std::shared_ptr<mkldnn::memory> mean_memory, var_memory;
     mean_memory.reset(new mkldnn::memory(bwd_scaleshift_pd->mean_primitive_desc(), savedMean.Data()));
     var_memory.reset(new mkldnn::memory(bwd_scaleshift_pd->variance_primitive_desc(), saved_var.Data()));
-    bwd_diff_src_memory = bwd_bottom_diff->create_output_memory(grad.Data());
+        bwd_diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad, bwd_bottom_diff);
 
-    bwd_diff_dst_memory = bwd_top_diff->get_converted_prv(srcGrad.Data(), true);
+        bwd_diff_dst_memory = bwd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
 
     BatchNormBwd.reset(new mkldnn::batch_normalization_backward(*bwd_scaleshift_pd,
       *bwd_input_primitive, *mean_memory, *var_memory,
@@ -254,9 +288,7 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
       *weight_memory, *bwd_diff_src_memory, *diff_weight_memory));
     BatchNormBwd.submit();
 
-    if (bwd_bottom_diff->conversion_needed()) {
-      bwd_bottom_diff->convert_from_prv(grad.Data());
-    }
+
 
     Dtype * scaleShiftDiff_buf = reinterpret_cast<Dtype*>(diff_weight_memory->get_data_handle());
 
@@ -265,6 +297,7 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
     // Store ScaleShift blobs
     Dtype* diff_scale = scaleGrad.Data();
     Dtype* diff_shift = biasGrad.Data();
+#pragma omp parallel for
     for (int i = 0; i < m_channels_; i++) {
       diff_scale[i] = scaleShiftDiff_buf[i];
       diff_shift[i] = scaleShiftDiff_buf[m_channels_ + i];
@@ -298,7 +331,8 @@ class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype> {
   ImageLayoutKind m_imageLayout;
   Mat accu_grad, saved_var;
 };  // class MKLDNNBatchNormOp
-#pragma warning(pop)
+template<> int MKLDNNBatchNormOp<float>::s_id_gen = 1;
+template<> int MKLDNNBatchNormOp<double>::s_id_gen = 1;
 }}}
 #endif
 #endif  // CNTK_OPERATOR_MKL_DNN_MKLDNN_BATCH_NORM_INL_H_

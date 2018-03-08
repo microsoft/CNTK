@@ -169,6 +169,9 @@
     <ClInclude Include="mkldnn\mkldnn_batch_norm-inl.h">
       <Filter>mkldnn</Filter>
     </ClInclude>
+    <ClInclude Include="mkldnn\mkl_util-inl.h">
+      <Filter>mkldnn</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

@@ -28,8 +28,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-
-
+#include "./mkl_util-inl.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

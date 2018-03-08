@@ -88,7 +88,9 @@ struct MKLMemHolder {
     assert(prv_descriptor_.get());
     return reinterpret_cast<void*>(prv_descriptor_->prv_ptr());
   }
-
+  void clear() {
+    zero_init();
+  }
   virtual size_t prv_count() {
     if (head_ != HEAD_AT_PRV) {
       return 0;
@@ -113,9 +115,17 @@ struct MKLMemHolder {
       b_disable_prv_2_cpu = false;
     }
   }
-  MKLMemHolder() :
-    head_(HEAD_AT_CPU), prv_descriptor_(nullptr), b_disable_prv_2_cpu(false),
-      b_eager_mode(false) {}
+  void zero_init()
+  {
+    head_ = HEAD_AT_CPU;
+    prv_descriptor_ = nullptr;
+    b_disable_prv_2_cpu = false;
+    b_eager_mode = false;
+  }
+  MKLMemHolder()
+  {
+    zero_init();
+  }
 };
 #else
 struct MKLMemHolder {

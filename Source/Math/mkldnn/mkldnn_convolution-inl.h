@@ -37,22 +37,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template<typename DType>
 class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
   public MKLConvCommon<DType> {
+  static int s_id_gen;
+  int m_id;
  public:
    using Mat = Matrix<DType>;
   std::string getName() {
-    std::string name = "MKLDNNConvolutionOp";
+    std::string name = "MKLDNNConvolutionOp_";
+    name = name + std::to_string(m_id);
     return name;
   }
   explicit MKLDNNConvolutionOp(ConvolveGeometryPtr geometry,
-    ImageLayoutKind imageLayout)
+    ImageLayoutKind imageLayout, bool bias = false)
     : MKLDNNLayer<DType>(), dilate_w(0), dilate_h(0)
     , fwd_bottom_data(NULL), fwd_top_data(NULL), fwd_weights_data(NULL), fwd_bias_data(NULL)
     , convFwd_pd(NULL)
-    , convBwdData_pd(NULL), convBwdWeights_pd(NULL) {
+    , convBwdData_pd(NULL), convBwdWeights_pd(NULL), init_gbias(-1) {
     b_init_conv = false;
     m_geometry = geometry;
     m_imageLayout = imageLayout;
-    no_bias = true;
+    m_bias = bias;
+    m_id = s_id_gen++;
   }
 
   virtual ~MKLDNNConvolutionOp() {}
@@ -142,7 +146,7 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
 
       // ---- Initialize convolution primitive descriptor
       std::shared_ptr<mkldnn::convolution_forward::desc> convFwd_desc;
-      if (!this->no_bias) {
+      if (this->m_bias) {
         convFwd_desc.reset(
           new mkldnn::convolution_forward::desc(propagation, mkldnn::algorithm::convolution_direct
           , init_bottom_md, init_weights_md, init_bias_md, init_top_md
@@ -188,7 +192,7 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
       fwd_weights_data.reset(
         new MKLDNNData<DType>(usr_weights_data_memory_pd, prv_fwd_weights_data_memory_pd));
       fwd_weights_data->name = "fwd_weights_data  @ " + this->getName();
-      if (!this->no_bias) {
+      if (this->m_bias) {
         std::shared_ptr<MemPD> prv_fwd_bias_data_memory_pd(
           new MemPD(convFwd_pd->bias_primitive_desc()));
         fwd_bias_data.reset(
@@ -197,7 +201,13 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
       }
   }
  public:
-  virtual void Forward(const Mat& in, const Mat& kernel, Mat& out, bool inferenceOnly) {
+  virtual void Forward(const Mat& in, const Mat& kernel, Mat& out, bool inferenceOnly, Mat* pBias = NULL) {
+      DType *data_ptr = mkl_experimental_direct_get(in);
+      DType *out_ptr = mkl_experimental_direct_get(out);
+      DType *wmat_ptr = mkl_experimental_direct_get(kernel);
+      DType *bias_ptr = NULL;
+	  if (pBias != NULL)
+	  	bias_ptr = mkl_experimental_direct_get(*pBias);
       if (!b_init_conv) {        
         this->init_properties((int)in.GetNumCols());
         this->b_init_conv = true;
@@ -210,11 +220,15 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
       std::shared_ptr<mkldnn::memory> fwd_top_data_memory;
       // ---  init primitive and prv_memory descriptors ---------
       fwd_bottom_data_primitive =
-        fwd_bottom_data->get_converted_prv(in.Data(), false);
-      fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(kernel.Data(), true);
+        fwd_bottom_data->get_converted_prv(data_ptr, false, in);
+      fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, true, kernel);
+      if (this->m_bias) {
+        fwd_bias_data_primitive = fwd_bias_data->get_converted_prv(bias_ptr, true, *pBias);
+        init_gbias.AssignValuesOf(*pBias);
+      }
 
-      fwd_top_data_memory = fwd_top_data->create_output_memory(out.Data());
-      if (!this->no_bias) {
+      fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out, fwd_top_data);
+      if (this->m_bias) {
         convFwd.reset(new mkldnn::convolution_forward(*convFwd_pd
           , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
           , *fwd_bias_data_primitive, *fwd_top_data_memory));
@@ -224,9 +238,6 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
           , *fwd_top_data_memory));
       }
       convFwd.submit();
-      if (fwd_top_data->conversion_needed()) {
-        fwd_top_data->convert_from_prv(out.Data());
-      }
   }
   void InitConvolutionBwd() {
     int32_t g = std::max(this->group_, 1);
@@ -260,7 +271,7 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     // ---- Initialize convolution primitive descriptor -------------
     std::shared_ptr<mkldnn::convolution_backward_data::desc> convBwdData_desc;
     std::shared_ptr<mkldnn::convolution_backward_weights::desc> convBwdWeights_desc;
-    if (!this->no_bias) {
+    if (this->m_bias) {
       convBwdWeights_desc.reset(
         new mkldnn::convolution_backward_weights::desc(mkldnn::algorithm::convolution_direct
         , init_bottom_md, init_weights_md, init_bias_md, init_top_md
@@ -336,9 +347,10 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     bwdw_weights_diff.reset(
       new MKLDNNData<DType>(usr_weights_data_memory_pd, prv_bwdw_weights_diff_memory_pd));
     bwdw_weights_diff->name = "bwdw_weights_diff  @ " + this->getName();
-    if (!this->no_bias) {
+    if (this->m_bias) {
       std::shared_ptr<MemPD> prv_bwdw_bias_diff_memory_pd(
         new MemPD(convBwdWeights_pd->diff_bias_primitive_desc()));
+      mkldnn::memory::desc prv_bwd_bias_desc = convBwdWeights_pd->diff_bias_primitive_desc().desc();
       bwdw_bias_diff.reset(
         new MKLDNNData<DType>(usr_bias_data_memory_pd, prv_bwdw_bias_diff_memory_pd));
       bwdw_bias_diff->name = "bwdw_bias_diff     @ " + this->getName();
@@ -346,6 +358,9 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
 
   }
   virtual void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad) {
+    DType * srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
+    DType * kernel_ptr = mkl_experimental_direct_get(kernel);
+    DType * grad_ptr = mkl_experimental_direct_get(grad);
     if (!b_init_conv) {
       this->init_properties((int)grad.GetNumCols());
       b_init_conv = true;
@@ -363,21 +378,21 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
 
     // ---  init primitive and prv_memory descriptors ---------
     
-    bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(srcGrad.Data(), true);
-    bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(kernel.Data(), false);
+    bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
+    bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(kernel_ptr, false, kernel);
 
-    bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(grad.Data());
+    bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(grad_ptr, grad, bwdd_bottom_diff);
 
     convBwdData.reset(new mkldnn::convolution_backward_data(*convBwdData_pd
       , *bwdd_top_diff_primitive, *bwdd_weights_data_primitive
       , *bwdd_bottom_diff_memory));
 
     convBwdData.submit();
-    if (bwdd_bottom_diff->conversion_needed()) {
-      bwdd_bottom_diff->convert_from_prv(grad.Data());
-    }
   }
-  void BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernelGrad) {
+  void BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, Mat* pbiasGrad = NULL) {
+    DType * srcgrad_ptr =  mkl_experimental_direct_get(srcGrad);
+    DType * in_ptr = mkl_experimental_direct_get(in);
+    DType * kernelgrad_ptr = mkl_experimental_direct_get(kernelGrad);
     if (!b_init_conv) {
       this->init_properties((int)srcGrad.GetNumCols());
       b_init_conv = true;
@@ -391,20 +406,30 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
     std::shared_ptr<mkldnn::memory> bwdw_bottom_data_primitive, bwdw_top_diff_primitive;
     std::shared_ptr<mkldnn::memory> bwdw_weights_diff_memory, bwdw_bias_diff_memory;
 
-    bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(srcGrad.Data(), true);
-    bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(in.Data(), false);
-    bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(kernelGrad.Data());
-    if (!this->no_bias) {
+    bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
+    bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(in_ptr, false, in);
+    bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(kernelgrad_ptr, kernelGrad, bwdw_weights_diff);
+    if (this->m_bias)
+    {
+      DType * gbias_ptr = mkl_experimental_direct_get(*pbiasGrad);
+      if (gbias_ptr == nullptr)
+      {
+          pbiasGrad->AssignValuesOf(init_gbias);
+          gbias_ptr = mkl_experimental_direct_get(*pbiasGrad);
+      }
+      bwdw_bias_diff_memory = bwdw_bias_diff->create_output_memory(gbias_ptr,
+        *pbiasGrad, bwdw_bias_diff);
+      convBwdWeights.reset(new mkldnn::convolution_backward_weights(*convBwdWeights_pd
+        , *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive
+        , *bwdw_weights_diff_memory, *bwdw_bias_diff_memory));
     }
-    else {
+    else 
+    {
       convBwdWeights.reset(new mkldnn::convolution_backward_weights(*convBwdWeights_pd
         , *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive
         , *bwdw_weights_diff_memory));
     }
     convBwdWeights.submit();
-    if (bwdw_weights_diff->conversion_needed()) {
-      bwdw_weights_diff->convert_from_prv(kernelGrad.Data());
-    }
   }
  private:
   std::shared_ptr<MKLDNNData<DType> > fwd_bottom_data, fwd_top_data,
@@ -420,10 +445,13 @@ class MKLDNNConvolutionOp : public MKLDNNLayer<DType>,
   ConvolveGeometryPtr m_geometry;
   ImageLayoutKind m_imageLayout;
   bool b_init_conv;
-  bool no_bias;
+  bool m_bias;
   int dilate_w;
   int dilate_h;
+  Mat init_gbias;
 };  // class MKLDNNConvolutionOp
+template<> int MKLDNNConvolutionOp<float>::s_id_gen = 1;
+template<> int MKLDNNConvolutionOp<double>::s_id_gen = 1;
 }}}
 #endif
 #endif  // CNTK_OPERATOR_MKL_DNN_MKLDNN_CONVOLUTION_INL_H_

@@ -178,6 +178,7 @@
     <ClInclude Include="mkldnn\mkldnn_pooling-inl.h" />
     <ClInclude Include="mkldnn\mkl_conv-common-inl.h" />
     <ClInclude Include="mkldnn\mkl_memory.h" />
+    <ClInclude Include="mkldnn\mkl_util-inl.h" />
     <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="RNNCommon.h" />
     <ClInclude Include="TensorOps.h" />

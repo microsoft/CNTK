@@ -35,11 +35,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<typename Dtype>
 class MKLDNNPoolingOp : public MKLDNNLayer<Dtype> {
+  static int s_id_gen;
+  int m_id;
 public:
   using Mat = Matrix<Dtype>;
  public:
   std::string getName() {
-     std::string name = "MKLDNNPoolingOp";
+     std::string name = "MKLDNNPoolingOp_";
+     name = name + std::to_string(m_id);
      return name;
   }
   explicit MKLDNNPoolingOp(ConvolveGeometryPtr geometry,
@@ -55,6 +58,7 @@ public:
     m_imageLayout = imageLayout;
     m_kind = kind;
     this->init_mkldnn_ = false;
+    m_id = s_id_gen++;
     switch (kind) {
     case PoolKind::Max:
       m_pooling_algorithm = mkldnn::pooling_max;
@@ -129,7 +133,7 @@ public:
   }
 
  public:
-  void InitPoolingFwd() {
+  void InitPoolingFwd(const Mat &in) {
     int32_t n = this->num_;
     int32_t c = this->channels_;
     int32_t ih = this->height_;
@@ -147,6 +151,8 @@ public:
     int32_t pb = this->pad_r_h_;
     int32_t pl = this->pad_l_w_;
     int32_t pr = this->pad_r_w_;
+    bool bottom_data_is_prv =
+        (const_cast<Dtype*>(mkl_prv_data<Dtype>(in)) != NULL);
      mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
      mkldnn::memory::data_type mpcsn = mkldnn::memory::data_type::f32;
      mkldnn::memory::dims bottom_tz = { n, c, ih, iw };
@@ -157,6 +163,10 @@ public:
      typedef typename mkldnn::memory::primitive_desc MemPD;
 
      mkldnn::memory::format cmfmt = mfmt_nchw;
+     if (bottom_data_is_prv) {
+         std::shared_ptr<MKLDNNData<Dtype> > mem_descr = get_mkldnn_prv_descriptor<Dtype>(in);
+         cmfmt = static_cast<mkldnn::memory::format>(mem_descr->prv_memory_pd()->desc().data.format);
+     }
 
      std::shared_ptr<mkldnn::memory::desc> init_fwd_bottom_md(
        new mkldnn::memory::desc({ bottom_tz }, mpcsn, cmfmt));
@@ -182,7 +192,10 @@ public:
      // ---- Initialize remaining memory descriptors -------------
      std::shared_ptr<MemPD> prv_fwd_bottom_data_mpd;
      std::shared_ptr<MemPD> prv_fwd_top_data_mpd;
-
+     if (bottom_data_is_prv) {
+         prv_fwd_bottom_data_mpd.reset(new MemPD(*init_fwd_bottom_md, cpu_engine));
+         prv_fwd_top_data_mpd.reset(new MemPD(*init_fwd_top_md, cpu_engine));
+     }
      fwd_bottom_data.reset(new MKLDNNData<Dtype>(usr_bottom_data_mpd, prv_fwd_bottom_data_mpd));
      fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
 
@@ -196,16 +209,18 @@ public:
      }
   }
   virtual void Forward(const Mat& in, Mat& out, bool inferenceOnly) {
+      Dtype* in_ptr = mkl_experimental_direct_get(in);
+      Dtype* out_ptr = mkl_experimental_direct_get(out);
     if (!init_mkldnn_) {
       LayerSetUp((int)in.GetNumCols());
       init_mkldnn_ = true;
     }
     if (poolingFwdInference_pd == NULL)
-      InitPoolingFwd();
+      InitPoolingFwd(in);
     // ---  init primitive and prv_memory descriptors ----------------------
     std::shared_ptr<mkldnn::memory> fwd_input_primitive, fwd_output_memory;
-    fwd_input_primitive = fwd_bottom_data->get_converted_prv(in.Data(), false);
-    fwd_output_memory = fwd_top_data->create_output_memory(out.Data());
+    fwd_input_primitive = fwd_bottom_data->get_converted_prv(in_ptr, false, in);
+    fwd_output_memory = fwd_top_data->create_output_memory(out_ptr, out, fwd_top_data);
     MKLDNNPrimitive<Dtype> poolingFwd;
     if (!inferenceOnly && m_pooling_algorithm == mkldnn::algorithm::pooling_max) {
       poolingFwd.reset(new mkldnn::pooling_forward(*poolingFwdTraining_pd, *fwd_input_primitive,
@@ -215,11 +230,9 @@ public:
         *fwd_output_memory));
     }
     poolingFwd.submit();
-    if (fwd_top_data->conversion_needed()) {
-      fwd_top_data->convert_from_prv(out.Data());
-    }
+
   }
-  void InitPoolingBwd() {
+  void InitPoolingBwd(const Mat &out) {
     int32_t n = this->num_;
     int32_t c = this->channels_;
     int32_t ih = this->height_;
@@ -238,6 +251,9 @@ public:
 
     int32_t pr = this->pad_r_w_;
     int32_t pl = this->pad_l_w_;
+    void * top_data =
+        const_cast<Dtype*>(mkl_prv_data<Dtype>(out));
+    bool top_is_prv = (top_data != NULL);
     mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
     mkldnn::memory::data_type mpcsn = mkldnn::memory::data_type::f32;
     mkldnn::memory::dims bottom_tz = { n, c, ih, iw };
@@ -248,6 +264,11 @@ public:
     typedef typename mkldnn::memory::primitive_desc MemPD;
 
     mkldnn::memory::format bwd_cmfmt = mfmt_nchw;
+    if (top_is_prv) {
+        std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > mem_descr
+            = get_mkldnn_prv_descriptor<Dtype>(out);
+        bwd_cmfmt = static_cast<mkldnn::memory::format>(mem_descr->prv_memory_pd()->desc().data.format);
+    }
 
     std::shared_ptr<mkldnn::memory::desc> init_bwd_bottom_md(
       new mkldnn::memory::desc({ bottom_tz }, mpcsn, bwd_cmfmt));
@@ -266,7 +287,10 @@ public:
     assert(poolingBwd_pd);
     // ---- Initialize remaining memory descriptors -------------
     std::shared_ptr<MemPD> prv_bwd_bottom_diff_mpd, prv_bwd_top_diff_mpd;
-
+    if (top_is_prv) {
+        prv_bwd_bottom_diff_mpd.reset(new MemPD(*init_bwd_bottom_md, cpu_engine));
+        prv_bwd_top_diff_mpd.reset(new MemPD(*init_bwd_top_md, cpu_engine));
+    }
     bwd_bottom_diff.reset(new MKLDNNData<Dtype>(usr_bottom_data_mpd, prv_bwd_bottom_diff_mpd));
     bwd_bottom_diff->name = "bwd_bottom_diff   @ " + getName();
     bwd_top_diff.reset(new MKLDNNData<Dtype>(usr_top_data_mpd, prv_bwd_top_diff_mpd));
@@ -276,17 +300,19 @@ public:
   virtual void Backward(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) {
     UNUSED(in);
     UNUSED(out);
+    Dtype* srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
+    Dtype* grad_ptr = mkl_experimental_direct_get(grad);
     if (!init_mkldnn_) {
       LayerSetUp((int)in.GetNumCols());
       init_mkldnn_ = true;
     }
     if (poolingFwdTraining_pd == NULL)
-      InitPoolingFwd();
+      InitPoolingFwd(in);
     if (poolingBwd_pd == NULL)
-      InitPoolingBwd();
+      InitPoolingBwd(out);
     std::shared_ptr<mkldnn::memory> diff_dst_memory, diff_src_memory;
-    diff_dst_memory = bwd_top_diff->get_converted_prv(srcGrad.Data(), true);
-    diff_src_memory = bwd_bottom_diff->create_output_memory(grad.Data());
+    diff_dst_memory = bwd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
+    diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad, bwd_bottom_diff);
     MKLDNNPrimitive<Dtype>  poolingBwd;
     if (m_pooling_algorithm == mkldnn::algorithm::pooling_max) {
       poolingBwd.reset(new mkldnn::pooling_backward(*poolingBwd_pd, *diff_dst_memory,
@@ -318,6 +344,8 @@ public:
   ConvolveGeometryPtr m_geometry;
   ImageLayoutKind m_imageLayout;
 };  // class MKLDNNPoolingOp
+template<> int MKLDNNPoolingOp<float>::s_id_gen = 1;
+template<> int MKLDNNPoolingOp<double>::s_id_gen = 1;
 }}}
 #endif
 #endif  // CNTK_OPERATOR_MKL_DNN_MKLDNN_POOLING_INL_H_

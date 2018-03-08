@@ -35,9 +35,8 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <typename Dtype>
-class MKLDNNMemoryDescriptorBase : public PrvMemDescr,
+struct MKLDNNMemoryDescriptorBase : public PrvMemDescr,
  public std::enable_shared_from_this<MKLDNNMemoryDescriptorBase<Dtype> > {
-public:
     MKLDNNMemoryDescriptorBase(std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd
         , std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd);
 
@@ -54,7 +53,8 @@ public:
         _internal_size = (int)prv_size();
       }
     }
-    std::shared_ptr<mkldnn::memory>  get_prv_memory() {
+    std::shared_ptr<mkldnn::memory>  get_prv_memory(bool usage_check = false) {
+      UNUSED(usage_check);
       if (_prv_memory == nullptr) {
         allocate();
       }
@@ -119,7 +119,7 @@ public:
     bool _prv_memory_pd_not_null;
     std::shared_ptr<mkldnn::memory> _prv_memory;
     Dtype* _internal_ptr;
-    size_t  _internal_size;
+    int  _internal_size;
 };
 
 template <typename Dtype>
@@ -129,7 +129,7 @@ public:
  public:
     MKLDNNMemoryDescriptor(std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd
         , std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd);
-    ~MKLDNNMemoryDescriptor() {};
+
     virtual void convert_from_prv(void* cpu_ptr);
     virtual void convert_to_prv(void* cpu_ptr);
     virtual void convert_from_extprv(std::shared_ptr<mkldnn::memory> extprv_memory);
@@ -143,8 +143,9 @@ public:
     // in backward a conversion done already in the forward direction.
     
     std::shared_ptr<mkldnn::memory> get_converted_prv(Dtype* cpu_data,
-      bool set_prv_ptr);
-    std::shared_ptr<mkldnn::memory> create_output_memory(Dtype* cpu_data, bool in_place = false);
+      bool set_prv_ptr, const Mat &b);
+    std::shared_ptr<mkldnn::memory> create_output_memory(Dtype* cpu_data, 
+        const Mat &b, std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > thisData, bool in_place = false);
 };
 
 template <typename Dtype>
@@ -153,13 +154,28 @@ class MKLDNNData : public MKLDNNMemoryDescriptor<Dtype> {
     MKLDNNData(std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd
         , std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd)
         : MKLDNNMemoryDescriptor<Dtype>(usr_memory_pd, prv_memory_pd) {}
-    ~MKLDNNData() {};
 };
 
 template <typename Dtype>
 std::shared_ptr<MKLDNNData<Dtype> >
 get_mkldnn_prv_descriptor(std::shared_ptr<MKLMemHolder> blob);
 
+template <typename Dtype>
+inline std::shared_ptr<MKLDNNData<Dtype> > get_mkldnn_prv_descriptor(const Matrix<Dtype> &b) {
+  return get_mkldnn_prv_descriptor<Dtype>(b.MklMem());
+}
+template<typename Dtype>
+inline std::shared_ptr<mkldnn::memory> mkldnn_prv_memory(const Matrix<Dtype> &b) {
+  std::shared_ptr<MKLMemHolder> mkl_mem = b.MklMem();
+  bool mem_valid = (mkl_mem != nullptr) && mkl_mem->head_at_prv();
+  if (mem_valid) {
+    std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > mem_desc
+      = get_mkldnn_prv_descriptor<Dtype>(mkl_mem);
+    if (mem_desc != nullptr)
+      return mem_desc->get_prv_memory(true);
+  }
+  return nullptr;
+}
 template class MKLDNNData<float>;
 template class MKLDNNData<double>;
 

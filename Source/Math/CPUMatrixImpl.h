@@ -105,6 +105,9 @@ template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix()
 {
     ZeroInit();
+#ifdef USE_MKLDNN
+    m_mklMem = MKLMemHolder::create();
+#endif
 }
 
 // helper to allocate an array of ElemType
@@ -142,6 +145,9 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
     {
         SetBuffer(NewArray<ElemType>(GetNumElements()), GetNumElements() * sizeof(ElemType));
     }
+#ifdef USE_MKLDNN
+    m_mklMem = MKLMemHolder::create();
+#endif
 }
 
 template <class ElemType>
@@ -149,6 +155,9 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols, ElemT
 {
     ZeroInit();
     SetValue(numRows, numCols, pArray, matrixFlags);
+#ifdef USE_MKLDNN
+    m_mklMem = MKLMemHolder::create();
+#endif
 }
 
 //copy constructor, deep copy
@@ -173,6 +182,9 @@ CPUMatrix<ElemType>::CPUMatrix(CPUMatrix<ElemType>&& moveFrom)
     : Base(/* shallow */ true)
 {
     ShallowCopyFrom(moveFrom);
+#ifdef USE_MKLDNN
+    m_mklMem = moveFrom.m_mklMem;
+#endif
     moveFrom.ZeroValues();
 }
 
@@ -182,6 +194,9 @@ CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool 
     : Base(shallow)
 {
     ShallowCopyFrom(shallowCopyFrom);
+#ifdef USE_MKLDNN
+    m_mklMem = shallowCopyFrom.m_mklMem;
+#endif
 }
 
 //move assignment operator, shallow copy
@@ -191,6 +206,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(CPUMatrix<ElemType>&& moveFr
     if (this != &moveFrom)
     {
         ShallowCopyFrom(moveFrom);
+#ifdef USE_MKLDNN
+        m_mklMem = moveFrom.m_mklMem;
+#endif
         // release the pointer from the source object so that the destructor won't release it twice
         moveFrom.ZeroValues();
     }
@@ -200,6 +218,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(CPUMatrix<ElemType>&& moveFr
 template <class ElemType>
 void CPUMatrix<ElemType>::Clear()
 {
+#ifdef USE_MKLDNN
+    m_mklMem->clear();
+#endif
     ZeroInit();
 }
 
@@ -214,6 +235,9 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t 
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
     CPUMatrix<ElemType> slice(*this, /* shallow= */ true);
+#ifdef USE_MKLDNN
+    // TODO: potential problem, assign the mklmem to slice but mkl mem do not support slice feature
+#endif
     slice.m_numCols = numCols;
     slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * m_numRows;
 
@@ -231,6 +255,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const CPUMatrix<Elem
     Clear();
 
     ShallowCopyFrom(fromMatrix);
+#ifdef USE_MKLDNN
+    m_mklMem = fromMatrix.m_mklMem;
+#endif
     m_numCols = numCols;
     m_sliceViewOffset = fromMatrix.m_sliceViewOffset + startColumn * m_numRows;
 
@@ -252,7 +279,33 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetColumnSlice(const CPUMatrix<ElemTyp
 
     return *this;
 }
-
+template <class ElemType>
+class RandomBuffer
+{
+private:
+  ElemType *m_buf;
+  size_t m_numRows;
+  size_t m_numCols;
+public:
+  RandomBuffer(ElemType *buf, size_t m, size_t n) :
+    m_buf(buf), m_numRows(m), m_numCols(n) {}
+  size_t LocateColumn(const size_t col) const {
+    // For performance reason avoid extra validation in release.
+    assert(col == 0 || col < m_numCols);
+    return col * m_numRows; // matrix in column-wise storage
+  }
+  size_t LocateElement(const size_t row, const size_t col) const {
+    // For performance reason avoid extra validation in release.
+    assert(row < m_numRows);
+    return LocateColumn(col) + row; // matrix in column-wise storage
+  }
+  inline ElemType& operator()(const size_t row, const size_t col) {
+    return m_buf[LocateElement(row, col)];
+  }
+  inline const ElemType& operator()(const size_t row, const size_t col) const {
+    return m_buf[LocateElement(row, col)];
+  }
+};
 template <class ElemType>
 void CPUMatrix<ElemType>::CopyColumnsStrided(const CPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride)
 {
@@ -265,45 +318,47 @@ void CPUMatrix<ElemType>::CopyColumnsStrided(const CPUMatrix<ElemType>& fromMatr
 
     long n = (long) numCols, m = (long) m_numRows;
 
-    auto& us = *this;
-
+    // auto& us = *this;
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> fromM(fromMatrix.Data(), fromMatrix.m_numRows, fromMatrix.m_numCols);
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
         // four-way unrolling
         for (size_t i = 0; i < (m & ~3); i += 4)
         {
-            us(i, j * destNumColsStride) = fromMatrix(i, j * srcNumColsStride);
-            us(i + 1, j * destNumColsStride) = fromMatrix(i + 1, j * srcNumColsStride);
-            us(i + 2, j * destNumColsStride) = fromMatrix(i + 2, j * srcNumColsStride);
-            us(i + 3, j * destNumColsStride) = fromMatrix(i + 3, j * srcNumColsStride);
+            us(i, j * destNumColsStride) = fromM(i, j * srcNumColsStride);
+            us(i + 1, j * destNumColsStride) = fromM(i + 1, j * srcNumColsStride);
+            us(i + 2, j * destNumColsStride) = fromM(i + 2, j * srcNumColsStride);
+            us(i + 3, j * destNumColsStride) = fromM(i + 3, j * srcNumColsStride);
         }
 
         // handle remaining
         for (size_t i = m & ~3; i < m; i++)
         {
-            us(i, j * destNumColsStride) = fromMatrix(i, j * srcNumColsStride);
+            us(i, j * destNumColsStride) = fromM(i, j * srcNumColsStride);
         }
     }
 }
 
 //for each column of a, we add all rows of a to this starting from startIndex
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& _a, const size_t startIndex, const size_t numRows)
 {
-    if (a.GetNumRows() != numRows)
+    if (_a.GetNumRows() != numRows)
         LogicError("AddToRowSliceValuesOf: a.GetNumRows() != numRows.");
 
     if (startIndex + numRows > GetNumRows())
         LogicError("AddToRowSliceValuesOf: startIndex + numRows exceeds GetNumRows().");
 
-    if (a.GetNumCols() != GetNumCols())
+    if (_a.GetNumCols() != GetNumCols())
         LogicError("AddToRowSliceValuesOf: columns does not match.");
 
-    long n = (long) a.GetNumCols(), m = (long) numRows;
+    long n = (long)_a.GetNumCols(), m = (long) numRows;
 
-    auto& us = *this;
-
+    // auto& us = *this;
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -336,12 +391,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowSliceValuesOf(const CPUMatrix
 
     long n = (long) a.GetNumCols(); // note: OpenMP requires loop indices to be long, not size_t
     long k = (long) a.GetNumRows();
-
+    ElemType * us_buf = Data();
+    ElemType * a_buf = a.Data();
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
         // memory copy might be faster?
-        memcpy(Data() + j * numRows, a.Data() + j * k + startIndex, sizeof(ElemType) * numRows);
+        memcpy(us_buf + j * numRows, a_buf + j * k + startIndex, sizeof(ElemType) * numRows);
 
         // //four-way unrolling
         // for (long i=0, startRow = startIndex; i<(m & ~3); i+=4, startRow+=4)
@@ -363,24 +419,26 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowSliceValuesOf(const CPUMatrix
 
 //for the row slice of this starting from startIndex we add a to it.
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowSliceValuesOf(const CPUMatrix<ElemType>& _a, const size_t startIndex, const size_t numRows)
 {
-    if (a.IsEmpty())
+
+    if (_a.IsEmpty())
         LogicError("AddToRowSliceValuesOf: input matrix a is empty.");
 
-    if (a.GetNumRows() != numRows)
+    if (_a.GetNumRows() != numRows)
         LogicError("AddToRowSliceValuesOf: a.GetNumRows() != numRows.");
 
     if (startIndex + numRows > GetNumRows())
         LogicError("AddToRowSliceValuesOf: startIndex + numRows exceeds GetNumRows().");
 
-    if (a.GetNumCols() != GetNumCols())
+    if (_a.GetNumCols() != GetNumCols())
         LogicError("AddToRowSliceValuesOf: columns does not match.");
 
-    long n = (long) a.GetNumCols(), m = (long) numRows;
+    long n = (long)_a.GetNumCols(), m = (long) numRows;
 
-    auto& us = *this;
-
+    // auto& us = *this;
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -404,24 +462,25 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowSliceValuesOf(const CPUMatrix<
 
 //for each column of this, we add row slice of a starting from startIndex
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& _a, const size_t startIndex, const size_t numRows)
 {
-    if (a.IsEmpty())
+    if (_a.IsEmpty())
         LogicError("AddWithRowSliceValuesOf: input matrix a is empty.");
 
     if (GetNumRows() != numRows)
         LogicError("AddWithRowSliceValuesOf: GetNumRows() != numRows.");
 
-    if (startIndex + numRows > a.GetNumRows())
+    if (startIndex + numRows > _a.GetNumRows())
         LogicError("AddWithRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
 
-    if (a.GetNumCols() != GetNumCols())
+    if (_a.GetNumCols() != GetNumCols())
         LogicError("AddWithRowSliceValuesOf: columns does not match.");
 
-    long n = (long) a.GetNumCols(), m = (long) numRows;
+    long n = (long)_a.GetNumCols(), m = (long) numRows;
 
-    auto& us = *this;
-
+    // auto& us = *this;
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -449,17 +508,18 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::Diagonal() const
     if (m_numRows != m_numCols)
         LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", (int) m_numRows, (int) m_numCols);
 
-    CPUMatrix<ElemType> diag(1, m_numCols);
+    CPUMatrix<ElemType> diag_(1, m_numCols);
 
-    auto& us = *this;
-
+    // auto& us = *this;
+    RandomBuffer<ElemType> us(Data(), m_numRows, m_numCols);
+    RandomBuffer<ElemType> diag(diag_.Data(), 1, m_numCols);
 #pragma omp parallel for
     for (long i = 0; i < m_numRows; i++)
     {
         diag(0, (size_t) i) = us(i, i);
     }
 
-    return diag;
+    return diag_;
 }
 
 template <class ElemType>
@@ -472,18 +532,19 @@ void CPUMatrix<ElemType>::MinusOneAt(CPUMatrix<ElemType>& c, const size_t positi
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemType>& _a, const size_t numRowRepeats, const size_t numColRepeats)
 {
-    if (this == &a)
+    if (this == &_a)
         LogicError("AssignRepeatOf: a is the same as [this]. Does not support inplace repeat.");
 
-    if (a.IsEmpty())
+    if (_a.IsEmpty())
         LogicError("AssignRepeatOf: Matrix a is empty.");
 
-    RequireSize(a.GetNumRows() * numRowRepeats, a.GetNumCols() * numColRepeats);
-    long n = (long) a.GetNumCols(), m = (long) a.GetNumRows();
-    auto& us = *this;
-
+    RequireSize(_a.GetNumRows() * numRowRepeats, _a.GetNumCols() * numColRepeats);
+    long n = (long)_a.GetNumCols(), m = (long)_a.GetNumRows();
+    // auto& us = *this;
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long q = 0; q < numColRepeats; q++)
     {
@@ -516,18 +577,19 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemTyp
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowRepeatValuesOf(const CPUMatrix<ElemType>& a, const size_t numRepeats)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowRepeatValuesOf(const CPUMatrix<ElemType>& _a, const size_t numRepeats)
 {
-    if (a.IsEmpty())
+    if (_a.IsEmpty())
         LogicError("AddToRowRepeatValuesOf: input matrix a is empty.");
 
-    if (a.GetNumRows() != GetNumRows() * numRepeats)
+    if (_a.GetNumRows() != GetNumRows() * numRepeats)
         LogicError("AddToRowRepeatValuesOf: a.GetNumRows() != GetNumRows() * numRepeats.");
 
-    long n = (long) a.GetNumCols(), m = (long) GetNumRows();
+    long n = (long)_a.GetNumCols(), m = (long) GetNumRows();
 
-    auto& us = *this;
-
+    // auto& us = *this;
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -587,19 +649,20 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::Transpose()
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTransposeOf(const CPUMatrix<ElemType>& a)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTransposeOf(const CPUMatrix<ElemType>& _a)
 {
-    if (this == &a)
+    if (this == &_a)
         LogicError("AssignTransposeOf: a is the same as [this]. Does not support inplace transpose.");
 
-    if (a.IsEmpty())
+    if (_a.IsEmpty())
         LogicError("AssignTransposeOf: Matrix a is empty.");
 
-    RequireSize(a.GetNumCols(), a.GetNumRows());
-    long n = (long) a.GetNumCols(), m = (long) a.GetNumRows();
+    RequireSize(_a.GetNumCols(), _a.GetNumRows());
+    long n = (long)_a.GetNumCols(), m = (long)_a.GetNumRows();
 
-    auto& us = *this;
-
+    // auto& us = *this;
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -642,28 +705,31 @@ static void ScaleAndAddColumn(ElemType beta, ElemType* dst, const ElemType* src,
 
 // *this[:,j] = a[:,idx[j]] * alpha + *this[:,j] * beta
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& _idx, const CPUMatrix<ElemType>& _a, ElemType alpha)
 {
-    if (idx.GetNumRows() != 1) // index is 1-dimensional only
+    if (_idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoGatherColumnsOf: Map must be a row vector.");
 
     if (beta)
-        VerifySize(a.GetNumRows(), idx.GetNumCols());
+        VerifySize(_a.GetNumRows(), _idx.GetNumCols());
     else
-        Resize(a.GetNumRows(), idx.GetNumCols());
+        Resize(_a.GetNumRows(), _idx.GetNumCols());
 
-    auto& us = *this;
+    auto& _us = *this;
+    RandomBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
+    RandomBuffer<ElemType> idx(_idx.Data(), _idx.GetNumRows(), _idx.GetNumCols());
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
     // race-condition consideration: Since this loops over independent output columns, this has no race condition. Cf. DoScatterColumnsOf().
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
-    foreach_column(jOut, us)
+    foreach_column(jOut, _us)
     {
         auto jInF = idx(0, jOut);         // this is the column we need to get
         if (std::isnan(jInF) || jInF < 0) // negative index means gap
             continue;
         size_t jIn = (size_t)jInF;
-        if (jIn >= a.GetNumCols())
-            InvalidArgument("DoGatherColumnsOf: Map out of bounds. %ld >= %ld", (long int)jIn, (long int)a.GetNumCols());
-        ScaleAndAddColumn(beta, &us(0,jOut), &a(0,jIn), us.GetNumRows(), alpha);
+        if (jIn >= _a.GetNumCols())
+            InvalidArgument("DoGatherColumnsOf: Map out of bounds. %ld >= %ld", (long int)jIn, (long int)_a.GetNumCols());
+        ScaleAndAddColumn(beta, &us(0,jOut), &a(0,jIn), _us.GetNumRows(), alpha);
     }
 
     return *this;
@@ -841,7 +907,9 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
 {
     if (this == &deepCopyFrom)
         return;
-
+#ifdef USE_MKLDNN
+    m_mklMem = deepCopyFrom.m_mklMem;
+#endif
     SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
 }
 
@@ -870,7 +938,9 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
 {
     if (pArray == nullptr && numRows * numCols > 0)
         InvalidArgument("Invalid pArray. pArray == nullptr, but matrix is of size %d * %d = %d.", (int)numRows, (int)numCols, (int)(numRows * numCols));
-
+#ifdef USE_MKLDNN
+    Data();
+#endif
     SetFormat(matrixFormatDense);
     SetComputeDeviceId(CPUDEVICE);
 
@@ -1544,7 +1614,9 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
 {
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
-
+#ifdef USE_MKLDNN
+    Data();
+#endif
     VerifyResizable(__func__);
 
     size_t numElements = numRows * numCols;
@@ -1653,16 +1725,19 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::operator+(ElemType alpha) const
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOf(const ElemType alpha, const CPUMatrix<ElemType>& a)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOf(const ElemType alpha, const CPUMatrix<ElemType>& _a)
 {
-    if (a.IsEmpty())
+    if (_a.IsEmpty())
         LogicError("AssignSumOf: Matrix a is empty.");
 
-    auto& us = *this;
-    if (this != &a)
-        RequireSize(a.GetNumRows(), a.GetNumCols());
+    //auto& us = *this;
+    //if (this != &_a)
+        RequireSize(_a.GetNumRows(), _a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
+    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
+
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
