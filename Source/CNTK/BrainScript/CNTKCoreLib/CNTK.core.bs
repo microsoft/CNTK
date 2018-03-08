@@ -39,7 +39,7 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
         if       BS.Constants.IsNone (inputRank) then Inferred  # not given: one Inferred, which will get expanded
         else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
         else Repeat (inputRank, Inferred)
-    W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
+    W = ParameterTensor {_ConcatArrays (inputShape, outDim), init=init, initValueScale=initValueScale}
     b = ParameterTensor {outDim, initValue=initBias}
     outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     inferInputRankToMap =
@@ -48,8 +48,8 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
         else mapRank
     apply (x) =
         if bias
-        then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
-        else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
+        then TimesTranspose ( x, W) + b
+        else TimesTranspose ( x, W)
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
@@ -703,6 +703,7 @@ Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _AsNodes (
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = _AsNodes (vectorSequence) /*plus the function args*/ ]
 Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = _AsNodes (node) ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
+TimesTranspose(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TimesTranspose' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 QuantizedTimes(leftMatrix, rightMatrix, bitSmoothingA=1, bitSmoothingB=1, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'QuantizedTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = _AsNodes (cond) /*plus the function args*/ ]
 

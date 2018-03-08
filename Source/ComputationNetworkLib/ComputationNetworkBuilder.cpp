@@ -17,6 +17,9 @@
 #include "EvaluationNodes.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
+#ifdef USE_MKLDNN
+#include "TimesTransposeNode.h"
+#endif
 #include "NonlinearityNodes.h"
 #include "PreComputeNodes.h"
 #include "ReshapingNodes.h"
@@ -134,6 +137,9 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(TimesNode))                            return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeDimensionsNode))              return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
+#ifdef USE_MKLDNN
+    else if (nodeType == OperationNameOf(TimesTransposeNode))                   return New<TimesTransposeNode<ElemType>>(forward<_Types>(_Args)...);
+#endif
     else if (nodeType == OperationNameOf(QuantizedTimesNode))                   return New<QuantizedTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(WhereNode))                            return New<WhereNode<ElemType>>(forward<_Types>(_Args)...);
     // legacy names we also support for back compat of model-files
@@ -796,7 +802,14 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Times
 {
     return net.AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(net.GetDeviceId(), nodeName, outputRank), { a, b });
 }
+#ifdef USE_MKLDNN
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TimesTranspose(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+{
+  return net.AddNodeToNetAndAttachInputs(New<TimesTransposeNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+}
 
+#endif
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {

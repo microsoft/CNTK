@@ -67,6 +67,9 @@
     <ClCompile Include="mkldnn\mkldnn_memory.cpp">
       <Filter>mkldnn</Filter>
     </ClCompile>
+    <ClCompile Include="TimesEngine.cpp">
+      <Filter>Times</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -169,8 +172,14 @@
     <ClInclude Include="mkldnn\mkldnn_batch_norm-inl.h">
       <Filter>mkldnn</Filter>
     </ClInclude>
+    <ClInclude Include="mkldnn\mkldnn_fully_connected-inl.h">
+      <Filter>mkldnn</Filter>
+    </ClInclude>    
     <ClInclude Include="mkldnn\mkl_util-inl.h">
       <Filter>mkldnn</Filter>
+    </ClInclude>
+    <ClInclude Include="TimesEngine.h">
+      <Filter>Times</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -220,6 +229,9 @@
     </Filter>
     <Filter Include="mkldnn">
       <UniqueIdentifier>{3ffd2b93-5daf-4898-a4af-349f2f1e8dd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Times">
+      <UniqueIdentifier>{e7305f78-8135-42b3-8cde-379eb57f9510}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

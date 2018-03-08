@@ -567,16 +567,6 @@ std::unique_ptr<BatchNormEngine<float, float>> BatchNormEngine<float, float>::Cr
 	bool spatial, ImageLayoutKind imageLayout,
 	BatchNormEngineKind enabledEngines)
 {
-#ifdef USE_MKLDNN
-	if (HasFlag(enabledEngines, BatchNormEngineKind::MKLDNN) &&
-		MklDnnBatchNormEngine<float, float>::IsSupported(deviceId, spatial, inOutT))
-	{
-		if (GetMathLibTraceLevel() > 0)
-			fprintf(stderr, "Using CNTK MKL DNN batch normalization engine.\n");
-
-		return std::make_unique<MklDnnBatchNormEngine<float, float>>(deviceId, inOutT, spatial, imageLayout);
-	}
-#endif
 	// Use CNTK as default batch norm engine.
 	if (HasFlag(enabledEngines, BatchNormEngineKind::Cntk))
 	{

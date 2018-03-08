@@ -174,6 +174,7 @@
     <ClInclude Include="mkldnn\mkldnn_base-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_batch_norm-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_convolution-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_fully_connected-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_memory-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_pooling-inl.h" />
     <ClInclude Include="mkldnn\mkl_conv-common-inl.h" />
@@ -185,6 +186,7 @@
     <ClInclude Include="TensorView.h" />
     <ClInclude Include="Quantizers.h" />
     <ClInclude Include="QuantizedOperations.h" />
+    <ClInclude Include="TimesEngine.h" />
     <None Include="GPUWatcher.cu" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
@@ -235,6 +237,7 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TensorView.cpp" />
+    <ClCompile Include="TimesEngine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h" />
