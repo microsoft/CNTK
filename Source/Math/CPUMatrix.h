@@ -541,13 +541,13 @@ public:
         size_t numRows, numCols;
         int format;
         stream >> matrixName >> format >> numRows >> numCols;
-        ElemType* d_array = new ElemType[numRows * numCols];
+        ElemType* d_array = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numRows * numCols);
         for (size_t i = 0; i < numRows * numCols; ++i)
             stream >> d_array[i];
         stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         us.SetValue(numRows, numCols, d_array, matrixFlagNormal);
 
-        delete[] d_array;
+        BaseMatrixStorage<ElemType>::FreeCPUArray(d_array);
         return stream;
     }
     friend File& operator<<(File& stream, const CPUMatrix<ElemType>& us)

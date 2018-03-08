@@ -112,9 +112,6 @@ CPUMatrix<ElemType>::CPUMatrix()
 
 // helper to allocate an array of ElemType
 // Use this instead of new[] to get NaN initialization for debugging.
-template <class ElemType>
-static ElemType* NewArray(size_t n)
-{
     // We need to allocate possibly one more element for the following reason.
     // At some point we might want to fill a buffer with the result of a random
     // number generator. The RNG is oblivious to whether the buffer is on the
@@ -123,14 +120,6 @@ static ElemType* NewArray(size_t n)
     // number gaussians on the GPU is not supported so we must always
     // generate an even number. So since we wouldn't know how to update the tally
     // we are making this allocate one more element in the worst case.
-    ElemType* p = new ElemType[AsMultipleOf(n, 2)]();
-#if 0 // _DEBUG
-        ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
-        for (size_t i = 0; i < n; i++)
-            p[i] = nan;
-#endif
-    return p;
-}
 
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
@@ -143,7 +132,7 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
 
     if (GetNumElements() != 0)
     {
-        SetBuffer(NewArray<ElemType>(GetNumElements()), GetNumElements() * sizeof(ElemType));
+        SetBuffer(BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(GetNumElements()), GetNumElements() * sizeof(ElemType));
     }
 #ifdef USE_MKLDNN
     m_mklMem = MKLMemHolder::create();
@@ -908,7 +897,10 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
     if (this == &deepCopyFrom)
         return;
 #ifdef USE_MKLDNN
-    m_mklMem = deepCopyFrom.m_mklMem;
+    if (HEAD_AT_PRV == deepCopyFrom.m_mklMem->head_)
+    {
+      m_mklMem->AssignPrvFrom(*deepCopyFrom.m_mklMem);
+    } else
 #endif
     SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
 }
@@ -948,7 +940,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free previous array allocation if any before overwriting
-        delete[] Buffer();
+        BaseMatrixStorage<ElemType>::FreeCPUArray(Buffer());
 
         m_numRows = numRows;
         m_numCols = numCols;
@@ -1627,10 +1619,10 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         ElemType* pArray = nullptr;
         if (numElements > 0)
         {
-            pArray = NewArray<ElemType>(numElements);
+            pArray = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
         }
         // success: update the object
-        delete[] Buffer();
+        BaseMatrixStorage<ElemType>::FreeCPUArray(Buffer());
 
         SetBuffer(pArray, numElements * sizeof(ElemType));
         SetSizeAllocated(numElements);
@@ -1650,7 +1642,7 @@ ElemType* CPUMatrix<ElemType>::CopyToArray() const
     size_t numElements = GetNumElements();
     if (numElements != 0)
     {
-        ElemType* arrayCopyTo = NewArray<ElemType>(numElements);
+        ElemType* arrayCopyTo = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
         memcpy(arrayCopyTo, Data(), sizeof(ElemType) * numElements);
         return arrayCopyTo;
     }
@@ -1669,8 +1661,8 @@ size_t CPUMatrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentA
 
     if (numElements > currentArraySize)
     {
-        delete arrayCopyTo;
-        arrayCopyTo = NewArray<ElemType>(numElements);
+        BaseMatrixStorage<ElemType>::FreeCPUArray(arrayCopyTo);
+        arrayCopyTo = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
         currentArraySize = numElements;
     }
 

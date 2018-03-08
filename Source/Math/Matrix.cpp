@@ -4346,7 +4346,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                     else
                         m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr, matrixFlagNormal);
 
-                    delete[] arr;
+                    BaseMatrixStorage<ElemType>::FreeCPUArray(arr);
                 }
 
                 if (isBeingMoved)
