@@ -93,6 +93,18 @@ public:
                                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                    bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                    const std::wstring nodeName = L"");
+    ComputationNodePtr ConvolutionBias(const ComputationNodePtr weight,
+        const ComputationNodePtr inputValues, const ComputationNodePtr bias,
+        const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+        const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
+        const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0,
+        const std::wstring nodeName = L"");
+    ComputationNodePtr ConvolutionBias(const ComputationNodePtr weight,
+        const ComputationNodePtr inputValues, const ComputationNodePtr bias,
+        const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+        const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+        bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+        const std::wstring nodeName = L"");
     ComputationNodePtr Pooling(const ComputationNodePtr inputValues, 
                                PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim, const bool includePad,

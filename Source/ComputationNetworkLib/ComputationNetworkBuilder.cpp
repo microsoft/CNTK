@@ -165,6 +165,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     if      (nodeType == OperationNameOf(AveragePoolingNode))       return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ConvolutionNode))          return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ConvolutionBiasNode))      return New<ConvolutionBiasNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PoolingNode))              return New<PoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SparseInputValue))         return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InputValue))               return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
@@ -360,6 +361,36 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
                                                                           sharing, autoPadding, lowerPad, upperPad,
                                                                           transpose, outputShape, imageLayout, maxTempMemSizeInSamples),
                                                                           { weight, inputValues });
+}
+
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ConvolutionBias(const ComputationNodePtr weight,
+                                                                                            const ComputationNodePtr inputValues, const ComputationNodePtr bias,
+                                                                                            const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+                                                                                            const size_t horizontalSubsample, const size_t verticalSubsample,
+                                                                                            ImageLayoutKind imageLayoutKind, const bool zeroPadding, const size_t maxTempMemSizeInSamples,
+                                                                                            const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ConvolutionBiasNode<ElemType>>(net.GetDeviceId(), nodeName,
+        kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding,
+        maxTempMemSizeInSamples), { weight, inputValues, bias });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ConvolutionBias(const ComputationNodePtr weight,
+                                                                                            const ComputationNodePtr inputValues, const ComputationNodePtr bias,
+                                                                                            const TensorShape& kernelShape, const TensorShape& mapCount,
+                                                                                            const TensorShape& strideShape, const std::vector<bool>& sharing,
+                                                                                            const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                            bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                                                                            const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ConvolutionBiasNode<ElemType>>(net.GetDeviceId(), nodeName,
+        kernelShape, mapCount, strideShape,
+        sharing, autoPadding, lowerPad, upperPad,
+        transpose, outputShape, imageLayout, maxTempMemSizeInSamples),
+        { weight, inputValues, bias });
 }
 
 template <class ElemType>

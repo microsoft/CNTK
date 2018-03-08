@@ -300,41 +300,22 @@ public:
 // -----------------------------------------------------------------------
 // ConvolutionNode (convolutionWeights, inputFeature)
 // -----------------------------------------------------------------------
-
 template <class ElemType>
-class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
+class ConvolutionNodeBaseBias : public ConvolutionNodeBase<ElemType>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
-    static const std::wstring TypeName() { return L"Convolution"; }
+    static const std::wstring TypeName() { return L"ConvolutionNodeBaseBias"; }
 public:
-    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_dilation(TensorShape(1))
+    ConvolutionNodeBaseBias(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_dilation(TensorShape(1)), m_hasBias(false)
     {
     }
-    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+    ConvolutionNodeBaseBias(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                     bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1))
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
-        m_convolution2D(false), m_dilation(dilation) {
+        m_convolution2D(false), m_dilation(dilation), m_hasBias(false) {
     }
-    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
-                    const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
-                    bool zeroPadding, size_t maxTempMemSizeInSamples)
-                    : ConvolutionNode(deviceId, name, TensorShape(kernelWidth, kernelHeight, 1), TensorShape(1, 1, outputChannels),
-                                      TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true},
-                                      vector<bool>{zeroPadding}, TensorShape(0), TensorShape(0),
-                                      false, TensorShape(0), imageLayout, maxTempMemSizeInSamples)
-    {
-        m_convolution2D = true;
-    }
-    ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
-                          configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-                          configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"))
-    {
-        AttachInputsFromConfig(configp, GetExpectedNumInputs());
-    }
-
     // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs.
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
     {
@@ -399,9 +380,291 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<ConvolutionNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<ConvolutionNodeBaseBias<ElemType>>(nodeP);
             node->m_convolution2D = m_convolution2D;
         }
+    }
+
+public:
+
+    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_tempMatrixForward, matrixPool, 0, false, true);
+    }
+
+    // m_tempMatrixForward is only used as workspace for convolution, we can release it immediately afterwards
+    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_tempMatrixForward, matrixPool);
+    }
+
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_tempMatrixBackward, matrixPool, 0, false, true);
+    }
+
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_tempMatrixBackward, matrixPool);
+    }
+
+    void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
+    {
+        m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
+        if (m_convEng != nullptr)
+            m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
+    }
+
+    bool IsConvolution2D() const { return m_convolution2D; }
+
+    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    void ForwardProp(const FrameRange& fr) override
+    {
+      UNUSED(fr);
+    }
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+      UNUSED(inputIndex);
+      UNUSED(fr);
+    }
+    // TODO: should be set to virtual function
+    virtual size_t GetInputIndex() {
+      return 0;
+    }
+    void Validate(bool isFinalValidationPass) override
+    {
+      Base::Validate(isFinalValidationPass);
+      InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+      size_t inputIdx = GetInputIndex();
+      TensorShape inputShape;
+      TensorShape outputShape;
+      // If 2D convolution syntax is used then some of the tensor dimensions need to be inferred.
+      if (m_convolution2D)
+        // NOTE: when m_convolution2D is true, it's a legacy branch. Code should not enter here any more.
+      {
+        // Need to update some tensors with correct input dims.
+        auto inDims = ImageDimensions(GetInputSampleLayout(inputIdx), m_imageLayout);
+        // inputShape is used in ConvolveGeometry which supports only CHW layout.
+        inputShape = inDims.AsTensorShape(ImageLayoutKind::CHW);
+        InferConvolution2DReductionDims(inputShape, inDims.m_numChannels);
+
+        size_t kW = m_kernelShape[0];
+        size_t kH = m_kernelShape[1];
+        size_t mapCount = m_mapCount.GetNumElements();
+        size_t weightCols = kW * kH * inDims.m_numChannels;
+
+        // if mapCount is 0 then take it from the input matrix
+        if (mapCount == 0)
+          Input(0)->GetAsMatrixNumRows();
+
+        // check/infer input [0] (weights)
+        // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
+        Input(0)->ValidateInferInputDimsFrom(TensorShape(mapCount, weightCols));
+
+        if (isFinalValidationPass && (Input(0)->GetAsMatrixNumCols() != weightCols || Input(0)->GetAsMatrixNumRows() != mapCount))
+        {
+          LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]",
+            Input(0)->NodeName().c_str(), (int)mapCount, (int)weightCols);
+        }
+
+        outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+          m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+        // ConvolveGeometry always uses CHW.
+        SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
+      }
+      else
+      {
+        inputShape = GetInputSampleLayout(inputIdx);
+        // infer reduction dimensions if not given
+        InferReductionDims(inputShape, inputShape);
+        if (!m_transpose)
+        {
+          outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, false,
+            this->NeedsDynamicValidation(), isFinalValidationPass);
+
+          if (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0))    // user have explicitly set m_outputShape, we check if it's the same as outputShape
+          {
+            if (m_outputShape != outputShape)
+            {
+              InvalidArgument("%ls %ls the shape of the specified convolution output %ls is different from "
+                "the result of convoluting the input argument using the provided options %ls. It is recommended "
+                "that the output shape is not specified for convolution.", NodeName().c_str(), OperationName().c_str(),
+                static_cast<std::wstring>(m_outputShape).c_str(),
+                static_cast<std::wstring>(outputShape).c_str());
+            }
+          }
+        }
+        else
+        {
+          if (m_outputShape.GetRank() <= 0 || m_outputShape == TensorShape(0))
+          {
+            // In case of convolution transpose (deconvolution), node input (inputShape) is really the output of the convolution
+            // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
+            outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+              m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
+              this->NeedsDynamicValidation(), isFinalValidationPass);
+          }
+          else
+          {
+            // in case the user specifies the output shape, we make sure the input shape can be the result of
+            // convolution from the specified output shape
+            auto inferredShape = ConvolveGeometry::ComputeOutputShape(m_outputShape, m_kernelShape, m_mapCount, m_stride,
+              m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
+              this->NeedsDynamicValidation(), isFinalValidationPass);
+            if (inputShape != inferredShape)
+              InvalidArgument("%ls %ls the shape of the convolution transpose operand %ls is different from "
+                "the result of convoluting the specified output argument using "
+                "the provided options %ls", NodeName().c_str(), OperationName().c_str(),
+                static_cast<std::wstring>(inputShape).c_str(),
+                static_cast<std::wstring>(inferredShape).c_str());
+            outputShape = m_outputShape;
+          }
+        }
+
+        if (m_imageLayout == ImageLayoutKind::CHW)
+          SetDims(outputShape, HasMBLayout());
+        else    // legacy format
+          SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
+      }
+
+      // update LearnableParameter if it has 0 dimensions (to be inferred)
+      // Typically this would be the #inputChannels (C).
+      if (Input(0)->GetSampleLayout().GetNumElements() == 0)
+      {
+        // BUGBUG: Inference does not support sharing. Problem is that we have the information too late.
+        //         In this case, users will have to specify the correct dimensions. Good luck.
+#if 1       // old style for back compat with previous results. Randomization will differ.
+        if (Input(0)->GetSampleLayout().GetRank() == 2)
+          Input(0)->ValidateInferInputDimsFrom(TensorShape(m_mapCount.GetNumElements(), m_kernelShape.GetNumElements()));
+        else
+#endif
+        {
+          auto weightShape = m_kernelShape.GetDims();
+          for (auto outDim : m_mapCount.GetDims())
+            weightShape.push_back(outDim);
+          Input(0)->ValidateInferInputDimsFrom(TensorShape(weightShape));
+        }
+      }
+
+      if (isFinalValidationPass)
+      {
+        bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
+          (outputShape != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
+        if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
+        {
+          auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
+            m_kernelShape, m_mapCount, m_stride,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation);
+          m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
+            m_maxTempMemSizeInSamples, m_poolKind,
+            ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
+            false, recomputeConvGeometry, m_hasBias);
+        }
+
+        if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
+        {
+          LogicError("Convolution weight matrix %ls should have dimension [(filter shape) x (input channels) x (output channels)]",
+            Input(0)->NodeName().c_str());
+        }
+      }
+    }
+protected:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[1].m_axisTransforms.empty())
+        {
+            m_transforms[1] = ComputeFilterTransform();
+            if (!m_transpose)
+            {
+                // Convolution, need to inverse transform.
+                m_transforms[1] = m_transforms[1].Inverse();
+            }
+            // else: Deconvolution, nothing to do.
+        }
+        // else: transform already computed, no need to do computation again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transforms just on convolution input.
+        return (inputIndex == 1);
+    }
+
+protected:
+    // Flag that indicates whether the node is created using 2D-syntax.
+    bool m_convolution2D;
+    TensorShape m_dilation;
+    bool m_hasBias;
+};
+
+
+#define UsingConvolutionBiasNodeBaseMembers     \
+    UsingConvolutionNodeBaseMembers; \
+protected:                                  \
+    using Base::m_dilation;              \
+    using Base::m_convolution2D;                 \
+    using Base::m_hasBias;                 \
+public:
+
+
+template <class ElemType>
+class ConvolutionNode : public ConvolutionNodeBaseBias<ElemType>, public NumInputs<2>
+{
+    typedef ConvolutionNodeBaseBias<ElemType> Base; UsingConvolutionBiasNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Convolution"; }
+public:
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
+		: Base(deviceId, name)
+	{
+	}
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+		const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+		bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1))
+		: Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation) {
+	}
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+                    const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
+                    bool zeroPadding, size_t maxTempMemSizeInSamples)
+                    : ConvolutionNode(deviceId, name, TensorShape(kernelWidth, kernelHeight, 1), TensorShape(1, 1, outputChannels),
+                                      TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true},
+                                      vector<bool>{zeroPadding}, TensorShape(0), TensorShape(0),
+                                      false, TensorShape(0), imageLayout, maxTempMemSizeInSamples)
+    {
+        m_convolution2D = true;
+    }
+    ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
+                          configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
+                          configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"))
+    {
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
+    }
+
+public:
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* base) const override
+    {
+      return Base::ImplementsGradientOptimization(base);
+    }
+    void Save(File& fstream) const override
+    {
+      Base::Save(fstream);
+    }
+    void Load(File& fstream, size_t modelVersion) override
+    {
+      Base::Load(fstream, modelVersion);
+    }
+    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+      Base::CopyTo(nodeP, newName, flags);
     }
 
     void ForwardProp(const FrameRange& fr) override
@@ -453,208 +716,190 @@ public:
             }
         }
     }
-
+    virtual size_t GetInputIndex() {
+        return GetExpectedNumInputs() - 1;
+    }
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-
-        size_t inputIdx = GetExpectedNumInputs() - 1;
-        TensorShape inputShape;
-        TensorShape outputShape;
-        // If 2D convolution syntax is used then some of the tensor dimensions need to be inferred.
-        if (m_convolution2D)
-        // NOTE: when m_convolution2D is true, it's a legacy branch. Code should not enter here any more.
-        {
-            // Need to update some tensors with correct input dims.
-            auto inDims = ImageDimensions(GetInputSampleLayout(inputIdx), m_imageLayout);
-            // inputShape is used in ConvolveGeometry which supports only CHW layout.
-            inputShape = inDims.AsTensorShape(ImageLayoutKind::CHW);
-            InferConvolution2DReductionDims(inputShape, inDims.m_numChannels);
-
-            size_t kW = m_kernelShape[0];
-            size_t kH = m_kernelShape[1];
-            size_t mapCount = m_mapCount.GetNumElements();
-            size_t weightCols = kW * kH * inDims.m_numChannels;
-
-            // if mapCount is 0 then take it from the input matrix
-            if (mapCount == 0)
-                Input(0)->GetAsMatrixNumRows();
-
-            // check/infer input [0] (weights)
-            // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
-            Input(0)->ValidateInferInputDimsFrom(TensorShape(mapCount, weightCols));
-
-            if (isFinalValidationPass && (Input(0)->GetAsMatrixNumCols() != weightCols || Input(0)->GetAsMatrixNumRows() != mapCount))
-            {
-                LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]",
-                           Input(0)->NodeName().c_str(), (int)mapCount, (int)weightCols);
-            }
-
-            outputShape = this->ComputeOutputShape(inputShape, TensorShape(1), /*ceilOutDim*/false, isFinalValidationPass);
-            // ConvolveGeometry always uses CHW.
-            SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
-        }
-        else
-        {
-            inputShape = GetInputSampleLayout(inputIdx);
-            // infer reduction dimensions if not given
-            InferReductionDims(inputShape, inputShape);
-            if (!m_transpose)
-            {
-                outputShape = this->ComputeOutputShape(inputShape, m_dilation, /*ceilOutDim*/false, isFinalValidationPass);
-
-                if (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0))    // user have explicitly set m_outputShape, we check if it's the same as outputShape
-                {
-                    if (m_outputShape != outputShape)
-                    {
-                        InvalidArgument("%ls %ls the shape of the specified convolution output %ls is different from "
-                            "the result of convoluting the input argument using the provided options %ls. It is recommended "
-                            "that the output shape is not specified for convolution.", NodeName().c_str(), OperationName().c_str(),
-                            static_cast<std::wstring>(m_outputShape).c_str(),
-                            static_cast<std::wstring>(outputShape).c_str());
-                    }
-                }
-            }
-            else
-            {
-                if (m_outputShape.GetRank() <= 0 || m_outputShape == TensorShape(0))
-                {
-                    // In case of convolution transpose (deconvolution), node input (inputShape) is really the output of the convolution
-                    // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
-                    outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
-                                                                      Base::NeedsDynamicValidation(), isFinalValidationPass);
-                }
-                else
-                {
-                    // in case the user specifies the output shape, we make sure the input shape can be the result of
-                    // convolution from the specified output shape
-                    auto inferredShape = this->ComputeOutputShape(m_outputShape, TensorShape(1), false, isFinalValidationPass);
-                    if (inputShape != inferredShape)
-                        InvalidArgument("%ls %ls the shape of the convolution transpose operand %ls is different from "
-                            "the result of convoluting the specified output argument using "
-                            "the provided options %ls", NodeName().c_str(), OperationName().c_str(),
-                            static_cast<std::wstring>(inputShape).c_str(),
-                            static_cast<std::wstring>(inferredShape).c_str());
-                    outputShape = m_outputShape;
-                }
-            }
-
-            if (m_imageLayout == ImageLayoutKind::CHW)
-                SetDims(outputShape, HasMBLayout());
-            else    // legacy format
-                SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
-        }
-
-        // update LearnableParameter if it has 0 dimensions (to be inferred)
-        // Typically this would be the #inputChannels (C).
-        if (Input(0)->GetSampleLayout().GetNumElements() == 0)
-        {
-            // BUGBUG: Inference does not support sharing. Problem is that we have the information too late.
-            //         In this case, users will have to specify the correct dimensions. Good luck.
-#if 1       // old style for back compat with previous results. Randomization will differ.
-            if (Input(0)->GetSampleLayout().GetRank() == 2)
-                Input(0)->ValidateInferInputDimsFrom(TensorShape(m_mapCount.GetNumElements(), m_kernelShape.GetNumElements()));
-            else
-#endif
-            {
-                auto weightShape = m_kernelShape.GetDims();
-                for (auto outDim : m_mapCount.GetDims())
-                    weightShape.push_back(outDim);
-                Input(0)->ValidateInferInputDimsFrom(TensorShape(weightShape));
-            }
-        }
-
-        if (isFinalValidationPass)
-        {
-            bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
-                                          (outputShape != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
-            if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
-            {
-                auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
-                                                                   m_kernelShape, m_mapCount, m_stride,
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation);
-                m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
-                                                                false, recomputeConvGeometry);
-            }
-
-            if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
-            {
-                LogicError("Convolution weight matrix %ls should have dimension [(filter shape) x (input channels) x (output channels)]",
-                           Input(0)->NodeName().c_str());
-            }
-        }
     }
 
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempMatrixForward, matrixPool, 0, false, true);
     }
 
     // m_tempMatrixForward is only used as workspace for convolution, we can release it immediately afterwards
     void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterForwardProp(matrixPool);
-        ReleaseMatrixToPool(m_tempMatrixForward, matrixPool);
     }
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempMatrixBackward, matrixPool, 0, false, true);
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_tempMatrixBackward, matrixPool);
     }
-
-    void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
-    {
-        m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
-        if (m_convEng != nullptr)
-            m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
-    }
-
-    bool IsConvolution2D() const { return m_convolution2D; }
 
     bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
 private:
-    using TransformerNode::m_transforms;
-    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
-
     virtual void /*TransformerNode::*/ComputeTransforms() override
     {
-        if (m_transforms[1].m_axisTransforms.empty())
-        {
-            m_transforms[1] = ComputeFilterTransform();
-            if (!m_transpose)
-            {
-                // Convolution, need to inverse transform.
-                m_transforms[1] = m_transforms[1].Inverse();
-            }
-            // else: Deconvolution, nothing to do.
-        }
-        // else: transform already computed, no need to do computation again.
+        Base::ComputeTransforms();
     }
-
     virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
     {
-        // We support transforms just on convolution input.
-        return (inputIndex == 1);
+        return Base::SupportsTransformOnInput(inputIndex);
+    }
+};
+template <class ElemType>
+class ConvolutionBiasNode : public ConvolutionNodeBaseBias<ElemType>, public NumInputs<3>
+{
+    typedef ConvolutionNodeBaseBias<ElemType> Base; UsingConvolutionBiasNodeBaseMembers;
+    static const std::wstring TypeName() { return L"ConvolutionBias"; }
+public:
+    ConvolutionBiasNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        m_hasBias = true;
+    }
+    ConvolutionBiasNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+        const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+        bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1))
+        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation)
+    {
+        m_hasBias = true;
+    }
+    ConvolutionBiasNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+        const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
+        bool zeroPadding, size_t maxTempMemSizeInSamples)
+        : ConvolutionBiasNode(deviceId, name, TensorShape(kernelWidth, kernelHeight, 1), TensorShape(1, 1, outputChannels),
+        TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true},
+        vector<bool>{zeroPadding}, TensorShape(0), TensorShape(0),
+        false, TensorShape(0), imageLayout, maxTempMemSizeInSamples)
+    {
+        m_convolution2D = true;
+        m_hasBias = true;
+    }
+    ConvolutionBiasNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ConvolutionBiasNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
+        configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
+        configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"))
+    {
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
+    }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* base) const override
+    {
+        return Base::ImplementsGradientOptimization(base);
+    }
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
     }
 
-    TensorShape m_dilation;
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+    }
+    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+    }
+    void ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
+        Matrix<ElemType>& sliceInput2Value = InputRef(2).ValueAsMatrix();
+        if (!m_transpose) {
+            bool inferenceOnly = !Environment().IsTraining();
+            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward, inferenceOnly, &sliceInput2Value);
+        }
+        else
+        {
+            // BackwardData adds results to the output so need to zero them out first.
+            // REVIEW alexeyk: should be rolled into BackwardData itself.
+            sliceOutputValue.SetValue(0);
+            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, /*accumulateGradient =*/ true, *m_tempMatrixForward);
+        }
+    }
 
-protected:
-    // Flag that indicates whether the node is created using 2D-syntax.
-    bool m_convolution2D;
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        if (inputIndex == 2)
+            return;
+        auto sliceOutputGrad = GradientFor(fr);
+
+        // this potentially computes over time, so we must mask gaps to 0
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+        if (inputIndex == 0) // derivative with respect to the weight matrix
+        {
+            auto& grad = InputRef(0).GradientAsMatrix();
+            auto sliceInput1Value = InputRef(1).ValueFor(fr);
+            ComputationNodePtr biasPtr = Input(2);
+            biasPtr->LazyZeroGradient(this); // set gradient to 0 if this is the first time
+            auto& biasGrad = InputRef(2).GradientAsMatrix();
+            //auto& sliceInput2Value = InputRef(2).GradientAsMatrix();
+            if (!m_transpose)
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward, &biasGrad);
+            else
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward, &biasGrad);
+        }
+        else if (inputIndex == 1) // derivative with respect to the input feature
+        {
+            auto& input0 = InputRef(0).ValueAsMatrix();
+            auto sliceInput1Grad = InputRef(1).GradientFor(fr);
+            if (!m_transpose)
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->IsGradientInitializedBy(this), *m_tempMatrixBackward);
+            else
+            {
+                // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.
+                m_convEng->Forward(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrixBackward, false);
+            }
+        }
+    }
+    virtual size_t GetInputIndex() {
+        return GetExpectedNumInputs() - 2;
+    }
+    void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+    }
+    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+    }
+    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+    }
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+    }
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+    }
+    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+private:
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        Base::ComputeTransforms();
+    }
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        return Base::SupportsTransformOnInput(inputIndex);
+    }
 };
 
 // -----------------------------------------------------------------------

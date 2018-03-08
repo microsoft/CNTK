@@ -13,7 +13,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool inferenceOnly)
+void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool inferenceOnly, Mat* pBias)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
@@ -29,7 +29,7 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat&
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    ForwardCore(in, kernel, out, workspace, inferenceOnly);
+    ForwardCore(in, kernel, out, workspace, inferenceOnly, pBias);
 }
 
 template <class ElemType>
@@ -52,7 +52,7 @@ void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& ke
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernel, bool accumulateGradient, bool allowReuse, Mat& workspace)
+void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernel, bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
@@ -67,7 +67,7 @@ void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& 
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    BackwardKernelCore(srcGrad, in, kernel, accumulateGradient, allowReuse, workspace);
+    BackwardKernelCore(srcGrad, in, kernel, accumulateGradient, allowReuse, workspace, pbiasGrad);
 }
 
 template <class ElemType>
@@ -180,7 +180,7 @@ protected:
         }
     }
 
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& /*workspace*/, bool /*inferenceOnly*/) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& /*workspace*/, bool /*inferenceOnly*/, Mat* /*pBias*/) override
     {
         in.ConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
     }
@@ -190,7 +190,7 @@ protected:
         srcGrad.ConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& /*workspace*/) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& /*workspace*/, Mat* /*pbiasGrad*/) override
     {
         srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
     }
@@ -294,7 +294,7 @@ protected:
     {
     }
 
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool /*inferenceOnly*/) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool /*inferenceOnly*/, Mat* /*pBias*/) override
     {
         size_t batchSize = in.GetNumCols();
         size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
@@ -416,7 +416,7 @@ protected:
         assert(batchSize == srcGrad.GetNumCols());
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool allowReuse, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool allowReuse, Mat& workspace, Mat* /*pbiasGrad*/) override
     {
         size_t batchSize = in.GetNumCols();
         size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
@@ -565,16 +565,17 @@ private:
   ImageLayoutKind m_imageLayout;
   PoolKind m_poolKind;
   bool m_poolIncludePad;
+  bool m_hasBias;
 public:
   using Mat = Matrix<ElemType>;
 public:
  
   MklDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
-    ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
+    ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad, bool hasBias = false)
     : ConvolutionEngine<ElemType>(geometry, deviceId, imageLayout,
       maxTempMemSizeInSamples, poolKind, poolIncludePad),
     m_prevConvBatchSize(0), m_mkldnnConv(NULL), m_mkldnnPooling(NULL),
-    m_geometry(geometry), m_imageLayout(imageLayout), m_poolKind(poolKind), m_poolIncludePad(poolIncludePad) {
+    m_geometry(geometry), m_imageLayout(imageLayout), m_poolKind(poolKind), m_poolIncludePad(poolIncludePad), m_hasBias(hasBias) {
   }
   ~MklDnnConvolutionEngine() {
     if (m_mkldnnConv != NULL)
@@ -589,9 +590,9 @@ public:
 
   virtual void EnsureConvolutionInitialized() {
     if(m_mkldnnConv == NULL)
-      m_mkldnnConv = new MKLDNNConvolutionOp<ElemType>(m_geometry, m_imageLayout);
+      m_mkldnnConv = new MKLDNNConvolutionOp<ElemType>(m_geometry, m_imageLayout, m_hasBias);
   }
-  virtual void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool inferenceOnly) {
+  virtual void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool inferenceOnly, Mat* pBias) {
     UNUSED(workspace);
     size_t batchSize = in.GetNumCols();
     if (m_prevConvBatchSize == 0)
@@ -603,10 +604,10 @@ public:
       m_prevConvBatchSize = batchSize;
     }
     if(m_mkldnnConv == NULL) {
-      m_mkldnnConv = new MKLDNNConvolutionOp<ElemType>(m_geometry, m_imageLayout);
+      m_mkldnnConv = new MKLDNNConvolutionOp<ElemType>(m_geometry, m_imageLayout, m_hasBias);
     }
 
-    m_mkldnnConv->Forward(in, kernel, out, inferenceOnly);
+    m_mkldnnConv->Forward(in, kernel, out, inferenceOnly, pBias);
   }
 
   virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) {
@@ -617,11 +618,11 @@ public:
       grad.AssignSumOf(grad, workspace);
   }
 
-  virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace) {
+  virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad) {
     UNUSED(allowReuse);
     if (accumulateGradient)
       workspace.AssignValuesOf(kernelGrad);
-    m_mkldnnConv->BackwardKernel(srcGrad, in, kernelGrad);
+    m_mkldnnConv->BackwardKernel(srcGrad, in, kernelGrad, pbiasGrad);
     if (accumulateGradient)
       kernelGrad.AssignSumOf(kernelGrad, workspace);
   }
@@ -749,7 +750,7 @@ protected:
     //    [XYC x NW'H']^T * [XYC x K] -> [NW'H' x K]
     // 3. Reshape and transpose result: [NW'H' x K] -> [N x W'H'K]^T -> [W'H'K x N]
     //    In case minibatch size == 1 this step is not required and step 2 writes results directly to output (out).
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool /*inferenceOnly*/) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool /*inferenceOnly*/, Mat* /*pBias*/) override
     {
 #ifdef USE_MKL2017DNN
         if (ForwardCoreMKL(in, kernel, out)) return;
@@ -923,7 +924,7 @@ protected:
     // 2. Unrolling convolution input (in) into a matrix of [NW'H' x WHC] layout.
     // 3. Performing matrix multiplication of unrolled input with transposed output:
     //    [NW'H' x WHC]^T * [NW'H' x K] -> [WHC x K] - kernel gradients.
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace, Mat* /*pbiasGrad*/) override
     {
 #ifdef USE_MKL2017DNN
         if (BackwardKernelMKL(srcGrad, in, kernelGrad, accumulateGradient, workspace)) return;
@@ -1257,7 +1258,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
                                                                                  ConvolutionEngineKind enabledEngines, std::wstring logPrefix,
                                                                                  bool forceDeterministicAlgorithms, bool poolIncludePad,
-                                                                                 bool inputHasFreeDimension)
+                                                                                 bool inputHasFreeDimension, bool hasBias)
 {
     if (!logPrefix.empty())
         logPrefix += L": ";
@@ -1296,7 +1297,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
       if (GetMathLibTraceLevel() > 0)
         fprintf(stderr, "%lsusing MKLDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-      return std::make_unique<MklDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+      return std::make_unique<MklDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad, hasBias);
     }
 #endif
     if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
@@ -1323,8 +1324,10 @@ std::unique_ptr<ConvolutionEngine<half>> ConvolutionEngine<half>::Create(Convolv
     ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
     ConvolutionEngineKind enabledEngines, std::wstring logPrefix,
     bool forceDeterministicAlgorithms, bool poolIncludePad,
-    bool inputHasFreeDimension)
+    bool inputHasFreeDimension, bool hasBias)
 {
+	//TODO: Cudnn could support bias
+	UNUSED(hasBias);
     if (!logPrefix.empty())
         logPrefix += L": ";
 
