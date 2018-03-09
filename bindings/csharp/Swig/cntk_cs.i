@@ -90,12 +90,12 @@
 
     static NDArrayViewPtr CNTK::NDArrayView::RandomUniformFloat(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed, const DeviceDescriptor& device)
     {
-        return CNTK::NDArrayView::RandomNormal<float>(shape, rangeStart, rangeEnd, seed, device);
+        return CNTK::NDArrayView::RandomUniform<float>(shape, rangeStart, rangeEnd, seed, device);
     }
 
     static NDArrayViewPtr CNTK::NDArrayView::RandomUniformDouble(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed, const DeviceDescriptor& device)
     {
-        return CNTK::NDArrayView::RandomNormal<double>(shape, rangeStart, rangeEnd, seed, device);
+        return CNTK::NDArrayView::RandomUniform<double>(shape, rangeStart, rangeEnd, seed, device);
     }
 }
 
