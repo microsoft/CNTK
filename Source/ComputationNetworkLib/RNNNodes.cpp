@@ -139,9 +139,6 @@ void OptimizedRNNStackNode<ElemType>::ForwardProp(const FrameRange& fr)
     }
     else
     {
-        if (mb->GetNumTimeSteps() == 1)
-            RuntimeError("OptimizedRNNStackNode configured for sequence mode, but minibatch only has one time step.");
-
         shapeXT = TensorShape(InputRef(1).GetTensorSliceFor(SIZE_MAX, fr));
         shapeYT = TensorShape(          GetTensorSliceFor(SIZE_MAX, fr));
 
