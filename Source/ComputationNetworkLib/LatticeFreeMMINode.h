@@ -94,7 +94,7 @@ public:
         {
             FrameRange fr(Input(0)->GetMBLayout());
             auto gradient = Input(1)->GradientFor(fr);
-			auto label = Input(0)->ValueFor(fr);
+            auto label = Input(0)->ValueFor(fr);
 
             if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
