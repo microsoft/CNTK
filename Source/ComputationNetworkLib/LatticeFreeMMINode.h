@@ -104,7 +104,7 @@ public:
                     m_softmax->InplaceExp();
                     Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_squashingFactor * (1 - m_ceweight), *m_posteriorsDen);
 //                    Matrix<ElemType>::Scale(m_squashingFactor * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
-					Matrix<ElemType>::ScaleAndAdd(m_ceweight, label, m_squashingFactor * (1 - m_ceweight), *m_posteriorsNum);
+                    Matrix<ElemType>::ScaleAndAdd(m_ceweight, label, m_squashingFactor * (1 - m_ceweight), *m_posteriorsNum);
                 }
 
                 if (m_totalFrameNumberOfCurrentMinibatch > 0)
