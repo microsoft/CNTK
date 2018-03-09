@@ -94,6 +94,7 @@ public:
         {
             FrameRange fr(Input(0)->GetMBLayout());
             auto gradient = Input(1)->GradientFor(fr);
+			auto label = Input(0)->ValueFor(fr);
 
             if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
@@ -102,7 +103,8 @@ public:
                 {
                     m_softmax->InplaceExp();
                     Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_squashingFactor * (1 - m_ceweight), *m_posteriorsDen);
-                    Matrix<ElemType>::Scale(m_squashingFactor * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
+//                    Matrix<ElemType>::Scale(m_squashingFactor * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
+					Matrix<ElemType>::ScaleAndAdd(m_ceweight, label, m_squashingFactor * (1 - m_ceweight), *m_posteriorsNum);
                 }
 
                 if (m_totalFrameNumberOfCurrentMinibatch > 0)
