@@ -16,7 +16,6 @@ Changed current directory to D:\GitHub\CNTK\Examples\Image\DataSets\MNIST
 09/29/2016 22:45:57: 		Last modified date: Mon Sep 26 13:22:01 2016
 09/29/2016 22:45:57: 		Build type: Release
 09/29/2016 22:45:57: 		Build target: GPU
-09/29/2016 22:45:57: 		With 1bit-SGD: no
 09/29/2016 22:45:57: 		Math lib: mkl
 09/29/2016 22:45:57: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 09/29/2016 22:45:57: 		CUB_PATH: C:\src\cub-1.4.1

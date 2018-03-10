@@ -226,19 +226,16 @@ def test_distributed_mb_source_again(tmpdir):
             assert(len(data) == 0 or data[features].num_samples == 3)
 
 
-def test_distributed(tmpdir, is_1bit_sgd):
-    quantized=(True if is_1bit_sgd==1 else False)
-
+def test_distributed(tmpdir):
     simple_aggregation=lambda learner: create_data_parallel_distributed_learner(learner, False, 0)
     run_distributed_training(tmpdir, create_func=simple_aggregation)
 
-    if is_1bit_sgd == 1:
-        quantized_aggregation=lambda learner: create_data_parallel_distributed_learner(learner, True, 100)
-        run_distributed_training(tmpdir, create_func=quantized_aggregation)
+    quantized_aggregation=lambda learner: create_data_parallel_distributed_learner(learner, True, 100)
+    run_distributed_training(tmpdir, create_func=quantized_aggregation)
 
-        block_momentum=lambda learner: create_block_momentum_distributed_learner(learner, 100)
-        run_distributed_training(tmpdir, create_func=block_momentum)
+    block_momentum=lambda learner: create_block_momentum_distributed_learner(learner, 100)
+    run_distributed_training(tmpdir, create_func=block_momentum)
 
-        block_momentum_with_time=lambda learner: create_block_momentum_distributed_learner_with_time_constant(learner, 100)
-        run_distributed_training(tmpdir, create_func=block_momentum_with_time)
+    block_momentum_with_time=lambda learner: create_block_momentum_distributed_learner_with_time_constant(learner, 100)
+    run_distributed_training(tmpdir, create_func=block_momentum_with_time)
     distributed.Communicator.finalize()

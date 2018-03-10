@@ -11,7 +11,6 @@ Build info:
 		Last modified date: Fri Aug 12 05:28:23 2016
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: yes
 		Math lib: mkl
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 		CUB_PATH: c:\src\cub-1.4.1
@@ -30,7 +29,6 @@ Build info:
 		Last modified date: Fri Aug 12 05:28:23 2016
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: yes
 		Math lib: mkl
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 		CUB_PATH: c:\src\cub-1.4.1
@@ -66,7 +64,6 @@ MPI Rank 0: 08/16/2016 03:19:59: 		Built time: Aug 16 2016 03:09:16
 MPI Rank 0: 08/16/2016 03:19:59: 		Last modified date: Fri Aug 12 05:28:23 2016
 MPI Rank 0: 08/16/2016 03:19:59: 		Build type: Release
 MPI Rank 0: 08/16/2016 03:19:59: 		Build target: GPU
-MPI Rank 0: 08/16/2016 03:19:59: 		With 1bit-SGD: yes
 MPI Rank 0: 08/16/2016 03:19:59: 		Math lib: mkl
 MPI Rank 0: 08/16/2016 03:19:59: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 MPI Rank 0: 08/16/2016 03:19:59: 		CUB_PATH: c:\src\cub-1.4.1
@@ -807,7 +804,6 @@ MPI Rank 1: 08/16/2016 03:20:00: 		Built time: Aug 16 2016 03:09:16
 MPI Rank 1: 08/16/2016 03:20:00: 		Last modified date: Fri Aug 12 05:28:23 2016
 MPI Rank 1: 08/16/2016 03:20:00: 		Build type: Release
 MPI Rank 1: 08/16/2016 03:20:00: 		Build target: GPU
-MPI Rank 1: 08/16/2016 03:20:00: 		With 1bit-SGD: yes
 MPI Rank 1: 08/16/2016 03:20:00: 		Math lib: mkl
 MPI Rank 1: 08/16/2016 03:20:00: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 MPI Rank 1: 08/16/2016 03:20:00: 		CUB_PATH: c:\src\cub-1.4.1

@@ -3,9 +3,9 @@ dataDir: ../../../../Speech/Data
 # running in 'E' (Examples) leg
 tags:
     # TODO disabled; sometimes doesn't pass baseline. Need to investigate (WI # 430)
-    # due to time, only in 1BitSGD, GPU and release
-    #- nightly-e (build_sku == '1bitsgd') and (flavor == 'release') and (device == 'gpu') and (os == 'linux')
-    #- weekly-e (build_sku == '1bitsgd') and (flavor == 'release') and (device == 'gpu') and (os == 'linux')
+    # due to time, only in GPU and release
+    #- nightly-e (build_sku == 'gpu') and (flavor == 'release') and (device == 'gpu') and (os == 'linux')
+    #- weekly-e (build_sku == 'gpu') and (flavor == 'release') and (device == 'gpu') and (os == 'linux')
 
 testCases:
   CNTK Run must be completed:

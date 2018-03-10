@@ -108,6 +108,9 @@ namespace CNTK
             static bool SupportBroadcast(const std::wstring& cntkOpName);
             static bool SupportBroadcastONNXOp(const std::string& onnxOpName);
 
+            static bool IsLoopOp(const std::string &opName);
+            static bool IsRNNOp(const std::string &opName);
+
         private:
             static std::unordered_multimap<std::wstring, AttributesMapping> _cntkToONNXOpName;
             static std::unordered_map<std::wstring, std::set<size_t>> _cntkBlockOPInvalidIndices;

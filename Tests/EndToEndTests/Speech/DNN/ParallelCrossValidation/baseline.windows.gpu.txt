@@ -31,7 +31,6 @@ MPI Rank 0: 		Built time: Jan 10 2018 22:47:38
 MPI Rank 0: 		Last modified date: Wed Jan 10 22:18:32 2018
 MPI Rank 0: 		Build type: Release
 MPI Rank 0: 		Build target: GPU
-MPI Rank 0: 		With 1bit-SGD: no
 MPI Rank 0: 		With ASGD: yes
 MPI Rank 0: 		Math lib: mkl
 MPI Rank 0: 		CUDA version: 9.0.0
@@ -227,7 +226,6 @@ MPI Rank 1: 		Built time: Jan 10 2018 22:47:38
 MPI Rank 1: 		Last modified date: Wed Jan 10 22:18:32 2018
 MPI Rank 1: 		Build type: Release
 MPI Rank 1: 		Build target: GPU
-MPI Rank 1: 		With 1bit-SGD: no
 MPI Rank 1: 		With ASGD: yes
 MPI Rank 1: 		Math lib: mkl
 MPI Rank 1: 		CUDA version: 9.0.0

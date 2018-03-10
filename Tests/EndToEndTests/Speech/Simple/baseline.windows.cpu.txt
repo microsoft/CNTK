@@ -15,7 +15,6 @@ Build info:
 		Last modified date: Wed Jan 10 22:18:32 2018
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: no
 		With ASGD: yes
 		Math lib: mkl
 		CUDA version: 9.0.0
@@ -961,7 +960,6 @@ Build info:
 		Last modified date: Wed Jan 10 22:18:32 2018
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: no
 		With ASGD: yes
 		Math lib: mkl
 		CUDA version: 9.0.0

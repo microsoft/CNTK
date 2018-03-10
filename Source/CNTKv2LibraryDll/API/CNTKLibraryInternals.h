@@ -322,13 +322,15 @@ namespace CNTK
         CNTK_API void EnableCPUEvalOptimization();
         CNTK_API void DisableCPUEvalOptimization();
 
+        CNTK_API void SetMPIPackThreshold(size_t packThesholdInBytes);
+        CNTK_API size_t GetMPIPackThreshold();
+
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
         CNTK_API bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
-        CNTK_API size_t DefaultPackThresholdSizeInBytes();
 
         // This is an internal API, needed for testing.
         CNTK_API Dictionary ToDictionary(const MinibatchSourceConfig& dict);

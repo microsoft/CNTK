@@ -370,6 +370,9 @@ namespace ONNX
             { L"useStatsAcrossChannels", "across_channels" },
             { L"doVarianceScaling", "normalize_variance" },
             } } },
+        { L"Embedding",{ {
+            { L"Embedding", "Gather" },
+            } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -425,7 +428,15 @@ namespace ONNX
             (onnxOpName == "And") || (onnxOpName == "Or") || (onnxOpName == "Xor");
     }
 
+    bool Operators::IsLoopOp(const std::string &opName)
+    {
+        return opName == "PastValue" || opName == "FutureValue";
+    }
 
+    bool Operators::IsRNNOp(const std::string &opName)
+    {
+        return opName == "LSTM" || opName == "GRU" || opName == "RNN";
+    }
         std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"Clip",{ 1, 2 } },
             { L"LeakyReLU",{ 0, 1 } },
@@ -444,6 +455,7 @@ namespace ONNX
             { L"Softplus",{ 0 } },
             { L"Softsign",{ 0 } },
             { L"ImageScaler",{ 0, 1, 2, 3 } },
+            { L"MeanVarianceNormalization",{ 0 } },
         };
 
         std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {
@@ -453,7 +465,6 @@ namespace ONNX
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
             { L"PReLU",{ 1, 0 } },
-            { L"LayerNormalization",{ 1, 2, 0 } },
         };
 
         //

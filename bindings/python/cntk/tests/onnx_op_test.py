@@ -59,6 +59,9 @@ def verify_one_input(model, data, tmpdir, name):
     o0 = model.eval({model.arguments[0]:data})
     o1 = loaded_model.eval({loaded_model.arguments[0]:data})
 
+    if (type(o0) is list):
+        o0 = o0[0]
+
     assert np.allclose(o0, o1)
 
     validation_filename = os.path.join(str(tmpdir), name + R'_validation.onnx')
@@ -460,12 +463,26 @@ def test_ImageScaler(tmpdir):
 
 #LayerNormalization
 def test_LayerNormalization(tmpdir):
+    # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when 
+    # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back 
+    # from ONNX, CNTK always uses the default eposilon value (0.00001). That's why test below has the default epsilon 
+    # value. It is not expected to pass with any other epsilon value until something changes.
     test_shapes = [(3, 5, 7), (10, ), (20, 31)]
     for shape in test_shapes:
         data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
         input_operand = C.input_variable(shape=shape)        
-        model0 = model0 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
-        verify_one_input(model0, data, tmpdir, 'Pad_0')
+        model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
+        verify_one_input(model0, data, tmpdir, 'LayerNorm_0')
+
+    # This test point tests especially with epsilon = 0, because that creates a graph with 
+    # different number of ops. However, we don't expect the numbers to match in round trip
+    # because we only support default epislon (0.00001) when loading from ONNX. Therefore,
+    # this is just a load/save test.
+    model1 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
+    filename = os.path.join(str(tmpdir), R'LayerNorm_1.onnx')
+    model1.save(filename, format=C.ModelFormat.ONNX)
+    loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    assert model1.shape == loaded_model.shape
 
 #LeakyRelu
 def test_LeakyRelu(tmpdir):
@@ -500,6 +517,61 @@ def test_LRN(tmpdir):
     x_r = C.input_variable(shape=img_shape, dtype=np.float32)
     model = C.local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
     verify_one_input(model, img, tmpdir, 'LRN_1')
+
+#LSTM
+from cntk.layers import * 
+from itertools import product
+
+def CreateLSTMModel(activation, 
+                    peepholes, 
+                    self_stabilization, 
+                    cell_dim, 
+                    initial_state):  
+    return Sequential([ 
+        Recurrence(LSTM(cell_dim, 
+                        use_peepholes = peepholes, 
+                        activation = activation,    
+                        enable_self_stabilization = self_stabilization),    
+                   initial_state = initial_state)
+                            ])
+
+# lstm attributes
+use_peepholes_options = [False]
+enable_self_stabilization_options = [False]
+activation_options = [C.tanh]
+
+#Recurrence attributes
+initial_state_options = [0]
+
+input_dim = 2
+cell_dim = 3
+batch_size = 1
+sequence_len = 5
+
+def MakeLSTMNameFromConfig(use_peepholes, enable_self_stabilization, initial_state, activtion):
+    model_name = 'LSTM.' + activtion.__name__
+    if (use_peepholes):    
+        model_name += '.peephole'
+    if(enable_self_stabilization):        
+        model_name += '.stabilize'
+    if (initial_state != 0):
+        model_name += '.initial'
+    return model_name 
+
+def test_LSTM(tmpdir):
+    for config in list(product(use_peepholes_options, enable_self_stabilization_options, 
+                               initial_state_options, activation_options)):
+        model_filename = MakeLSTMNameFromConfig(*config)
+        use_peepholes, enable_self_stabilization, initial_state, activation =  config
+    
+        x = C.input_variable(input_dim, dynamic_axes=[Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+        LSTMmodel = CreateLSTMModel(peepholes = use_peepholes,   
+                                    activation = activation,
+                                    initial_state = initial_state,
+                                    cell_dim = cell_dim,
+                                    self_stabilization = enable_self_stabilization)(x)
+        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+        verify_one_input(LSTMmodel, data, tmpdir, model_filename)
 
 #MatMul
 def test_MatMul(tmpdir):
@@ -569,13 +641,20 @@ def test_MeanVarianceNormalization(tmpdir):
     input_operand = C.input_variable(shape=shape)
 
     model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
-    verify_one_input(model0, data, tmpdir, 'Pad_0')
+    verify_one_input(model0, data, tmpdir, 'MVN_0')
 
     model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
-    verify_one_input(model1, data, tmpdir, 'Pad_1')
+    verify_one_input(model1, data, tmpdir, 'MVN_1')
 
     model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
-    verify_one_input(model2, data, tmpdir, 'Pad_2')
+    verify_one_input(model2, data, tmpdir, 'MVN_2')
+
+    # The test below tests the round trip with epsilon. We loose always the epsilon value when exporting to ONNX
+    # (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back from ONNX, CNTK
+    # always uses the default eposilon value (0.00001). That's why test below has the default epsilon value. It is 
+    # not expected to pass with any other epsilon value until something changes.
+    model3 = C.mean_variance_normalization(input_operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True) 
+    verify_one_input(model3, data, tmpdir, 'MVN_3')
 
 #Min
 def test_Min(tmpdir):

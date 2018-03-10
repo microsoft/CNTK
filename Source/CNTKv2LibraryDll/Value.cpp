@@ -89,7 +89,7 @@ namespace CNTK
             {
                 colStarts[(i * maxSequenceNumCols) + j] = (SparseIndexType)nonZeroValues.size();
                 size_t oneHotIdx = oneHotSequences[i][j];
-                if (oneHotIdx == OneHotSkip)
+                if ((oneHotIdx & OneHotSkip) == OneHotSkip) // note that OneHotSkip used to be (size_t)-1, and later changed to (uint32_t)-1. Both are supported
                 {
                     nonZeroValues.push_back(0);
                     rowIndices.push_back(0);

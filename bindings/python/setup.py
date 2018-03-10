@@ -6,6 +6,7 @@ import platform
 from warnings import warn
 from setuptools import setup, Extension, find_packages
 import numpy
+import re
 
 IS_WINDOWS = platform.system() == 'Windows'
 
@@ -77,15 +78,91 @@ else:
 
 
 if 'CNTK_LIBRARIES' in os.environ:
-  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split(';' if IS_WINDOWS else None)]
+  rt_libs_all = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split(';' if IS_WINDOWS else None)]
 else:
-  rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
+  rt_libs_all = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
                                                         '*' + libname_rt_ext))]
 
 # copy CNTK_VERSION_BANNER to VERSION file
 version_file = open(os.path.join(os.path.dirname(__file__), "cntk", "VERSION"), 'w')
 version_file.write(os.environ['CNTK_VERSION_BANNER'])
 version_file.close()
+
+# Filtering out undesired libs
+#     We are using REGEX instead of GLOBs to perform accurate deletions
+rt_libs = []
+CNTK_EXTRA_LIBRARIES = []
+EXCLUDE_LIBS = []
+EXCLUDE_LIBS_SUFFIX = ""
+if IS_WINDOWS:
+    EXCLUDE_LIBS_SUFFIX = "[a-z0-9_\-\.]*\.dll$" # Match specific DLLs listed below
+    EXCLUDE_LIBS += ["cublas", "cudart", "curand", "cusparse"] # Cuda
+    EXCLUDE_LIBS += ["cudnn"] # CUDNN
+    EXCLUDE_LIBS += ["opencv_world"] # OpenCV
+    EXCLUDE_LIBS += ["mkldnn", "mklml", "libiomp5md"] # MKL + MKL-DNN
+    EXCLUDE_LIBS += ["nvml"] # NVML (Nvidia driver)
+else:
+    EXCLUDE_LIBS_SUFFIX = "[a-z0-9_\-\.]*.so[0-9\.]*"
+    EXCLUDE_LIBS += ["libcudart", "libcublas", "libcurand", "libcusparse", "libcuda", "libnvidia-ml"] # CUDA
+    EXCLUDE_LIBS += ["libcudnn"] # CUDNN
+    EXCLUDE_LIBS += ["libopencv_core", "libopencv_imgproc", "libopencv_imgcodecs"] # OpenCV
+    EXCLUDE_LIBS += ["libmklml_intel", "libiomp5", "libmkldnn"] # MKL
+    EXCLUDE_LIBS += ["libnccl"] # NCCL
+
+if "--with-deps" in sys.argv:
+    rt_libs = rt_libs_all
+    sys.argv.remove("--with-deps")
+    if 'CNTK_EXTRA_LIBRARIES' in os.environ:
+        CNTK_EXTRA_LIBRARIES = os.environ['CNTK_EXTRA_LIBRARIES'].split()
+else:
+    if "--without-deps" in sys.argv:
+        sys.argv.remove("--without-deps")
+
+    for fn in rt_libs_all:
+        exclude=False
+        for s in EXCLUDE_LIBS:
+            pattern = re.compile("%s%s" % (s, EXCLUDE_LIBS_SUFFIX), re.IGNORECASE)
+            if pattern.match(fn):
+                exclude=True
+                break
+        if not exclude:
+            rt_libs.append(fn)
+
+
+    if 'CNTK_EXTRA_LIBRARIES' in os.environ:
+        CNTK_EXTRA_LIBRARIES[:] = []
+        for fn in os.environ['CNTK_EXTRA_LIBRARIES'].split():
+            exclude=False
+            for s in EXCLUDE_LIBS:
+                pattern = re.compile("%s%s" % (s, EXCLUDE_LIBS_SUFFIX), re.IGNORECASE)
+                if pattern.match(strip_path(fn)):
+                    exclude=True
+                    break
+            if not exclude:
+                CNTK_EXTRA_LIBRARIES.append(fn)
+
+project_name = 'cntk'
+if '--project-name' in sys.argv:
+    project_name_idx = sys.argv.index('--project-name')
+    project_name = sys.argv[project_name_idx + 1]
+    sys.argv.remove('--project-name')
+    sys.argv.pop(project_name_idx)
+
+WITH_DEBUG_SYMBOL=False
+LINKER_DEBUG_ARG=''
+if "--with-debug-symbol" in sys.argv:
+    WITH_DEBUG_SYMBOL=True
+    if IS_WINDOWS:
+        LINKER_DEBUG_ARG='/DEBUG'
+    sys.argv.remove("--with-debug-symbol")
+else:
+    if IS_WINDOWS:
+        LINKER_DEBUG_ARG='/DEBUG:NONE'
+    else:
+        LINKER_DEBUG_ARG = '-s'
+
+    if "--without-debug-symbol" in sys.argv:
+        sys.argv.remove('--without-debug-symbol')
 
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set
@@ -98,9 +175,13 @@ for fn in rt_libs:
     src_file = lib_path(fn)
     tgt_file = proj_lib_path(fn)
     shutil.copy(src_file, tgt_file)
+    if not IS_WINDOWS and not WITH_DEBUG_SYMBOL:
+        os.system('strip --strip-debug %s' % tgt_file)
 
-if 'CNTK_EXTRA_LIBRARIES' in os.environ:
-    for lib in os.environ['CNTK_EXTRA_LIBRARIES'].split():
+for lib in CNTK_EXTRA_LIBRARIES:
+    shutil.copy(lib, PROJ_LIB_PATH)
+    if not IS_WINDOWS and not WITH_DEBUG_SYMBOL:
+        os.system('strip --strip-debug %s' % proj_lib_path(strip_path(lib)))
         shutil.copy(lib, PROJ_LIB_PATH)
         rt_libs.append(strip_path(lib))
 
@@ -115,17 +196,17 @@ extra_compile_args = [
 if IS_WINDOWS:
     extra_compile_args += [
         "/EHsc",
-        "/DEBUG",
+        LINKER_DEBUG_ARG,
         "/Zi",
         "/WX"
     ]
-    extra_link_args = ['/DEBUG']
+    extra_link_args = [LINKER_DEBUG_ARG]
     runtime_library_dirs = []
 else:
     extra_compile_args += [
         '--std=c++11',
     ]
-    extra_link_args = []
+    extra_link_args = [] # TODO: LINKER_DEBUG_ARG is not passed in to avoid compilation error
 
     # Expecting the dependent libs (libcntklibrary-[CNTK_COMPONENT_VERSION].so, etc.) inside
     # site-packages/cntk/libs.
@@ -175,9 +256,32 @@ cntk_install_requires = [
 if IS_PY2:
     cntk_install_requires.append('enum34>=1.1.6')
 
-setup(name="cntk",
+setup(name=project_name,
       version=os.environ['CNTK_VERSION'],
       url="http://cntk.ai",
+      description = 'CNTK is an open-source, commercial-grade deep learning framework.',
+      author = 'Microsoft Corporation',
+      author_email = 'ai-opensource@microsoft.com',
+      license='MIT',
+      keywords = 'cntk cognitivetoolkit deeplearning tensor',
+      classifiers = [
+          'Development Status :: 5 - Production/Stable',
+          'License :: OSI Approved :: MIT License',
+          'Intended Audience :: Developers',
+          'Intended Audience :: Education',
+          'Intended Audience :: Science/Research',
+          'Programming Language :: Python :: 2',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6',
+          'Topic :: Scientific/Engineering',
+          'Topic :: Scientific/Engineering :: Mathematics',
+          'Topic :: Scientific/Engineering :: Artificial Intelligence',
+          'Topic :: Software Development',
+          'Topic :: Software Development :: Libraries',
+          'Topic :: Software Development :: Libraries :: Python Modules',
+      ],
       ext_modules=[cntk_module],
       packages=packages,
       install_requires=cntk_install_requires,

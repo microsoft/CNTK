@@ -36,6 +36,8 @@
 #   BOOST_PATH= path to Boost installation, so $(BOOST_PATH)/include/boost/test/unit_test.hpp
 #     defaults to /usr/local/boost-1.60.0
 #   PYTHON_SUPPORT=true iff CNTK v2 Python module should be build
+#   PYTHON_WITH_DEPS=1 Adds third party libraries in the python package (e.g. CUDA). Must be equal to 1 or unset
+#   PYTHON_WITH_DEBUG=1 Do not strip libraries for the python package. Must be equal to 1 or unset
 #   SWIG_PATH= path to SWIG (>= 3.0.10)
 #   PYTHON_VERSIONS= list of Python versions to build for
 #     A Python version is identified by "27", "35", or "36".
@@ -529,7 +531,8 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/model.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/RNNHelper.cpp \
+    $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/ONNXToCNTK.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/ONNX.cpp \
 
@@ -1037,48 +1040,39 @@ endif
 endif
 
 ########################################
-# ImageWriter plugin
+# DelayLoadedExtensions plugin
 ########################################
 
 ifdef OPENCV_PATH
-IMAGEWRITER_LIBS_LIST := opencv_core opencv_imgproc opencv_imgcodecs
-IMAGEWRITER_LIBS:= $(addprefix -l,$(IMAGEWRITER_LIBS_LIST))
+DELAY_LOADED_EXTENSIONS_LIBS_LIST := opencv_core opencv_imgproc opencv_imgcodecs
+DELAY_LOADED_EXTENSIONS_LIBS:= $(addprefix -l,$(DELAY_LOADED_EXTENSIONS_LIBS_LIST))
 
-IMAGEWRITER_SRC =\
-  $(SOURCEDIR)/ImageWriterDll/ImageWriter.cpp \
+DELAY_LOADED_EXTENSIONS_SRC =\
+  $(SOURCEDIR)/DelayLoadedExtensionsDll/ImageWriter.cpp \
 
-IMAGEWRITER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEWRITER_SRC))
+DELAY_LOADED_EXTENSIONS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(DELAY_LOADED_EXTENSIONS_SRC))
 
-IMAGEWRITER:=$(LIBDIR)/Cntk.ImageWriter-$(CNTK_COMPONENT_VERSION).so
-ALL_LIBS += $(IMAGEWRITER)
-PYTHON_LIBS += $(IMAGEWRITER)
-JAVA_LOAD_DEPS += $(IMAGEWRITER_LIBS)
-SRC+=$(IMAGEWRITER_SRC)
+DELAY_LOADED_EXTENSIONS:=$(LIBDIR)/Cntk.DelayLoadedExtensions-$(CNTK_COMPONENT_VERSION).so
+ALL_LIBS += $(DELAY_LOADED_EXTENSIONS)
+PYTHON_LIBS += $(DELAY_LOADED_EXTENSIONS)
+JAVA_LOAD_DEPS += $(DELAY_LOADED_EXTENSIONS_LIBS)
+SRC+=$(DELAY_LOADED_EXTENSIONS_SRC)
 
 INCLUDEPATH += $(OPENCV_PATH)/include
 LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
-$(IMAGEWRITER): $(IMAGEWRITER_OBJ)
+$(DELAY_LOADED_EXTENSIONS): $(DELAY_LOADED_EXTENSIONS_OBJ)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(IMAGEWRITER_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(DELAY_LOADED_EXTENSIONS_LIBS)
 endif
 
 ########################################
 # 1bit SGD setup
 ########################################
 
-ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
-
-ifeq (,$(wildcard Source/1BitSGD/*.h))
-  $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://docs.microsoft.com/en-us/cognitive-toolkit/Enabling-1bit-SGD for instructions)
-endif
-
-  INCLUDEPATH += $(SOURCEDIR)/1BitSGD
-
-  COMMON_FLAGS += -DCNTK_PARALLEL_TRAINING_SUPPORT
-  # temporarily adding to 1bit, need to work with others to fix it
-endif
-
+INCLUDEPATH += $(SOURCEDIR)/1BitSGD
+COMMON_FLAGS += -DCNTK_PARALLEL_TRAINING_SUPPORT
+# temporarily adding to 1bit, need to work with others to fix it
 
 ########################################
 # ASGD(multiverso) setup
@@ -1284,7 +1278,7 @@ $(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(L_READER_LIBS) -ldl -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBPATH) $(LIBDIR) $(GDK_NVML_LIB_PATH)) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(L_READER_LIBS) $(LIBS) -ldl -fopenmp
 
 UNITTEST_NETWORK_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/AccumulatorNodeTests.cpp \
@@ -1427,11 +1421,28 @@ unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MA
 endif
 
 ifeq ("$(PYTHON_SUPPORT)","true")
+$(info Building Python package)
 
 # Libraries needed for the run-time (i.e., excluding test binaries)
 # TODO MPI doesn't appear explicitly here, hidden by mpic++ usage (but currently, it should be user installed)
 PYTHON_LIBS_LIST := $(LIBS_LIST) $(IMAGEREADER_LIBS_LIST)
 PYTHON_LIBS_EXCLUDE_LIST := m pthread nvidia-ml
+PYTHON_SETUP_PY_ARGS :=
+PYTHON_PROJECT_NAME:=cntk
+ifndef PYTHON_WITH_DEPS
+PYTHON_LIBS_EXCLUDE_LIST += cublas cudart curand cusparse cuda cudnn opencv_core opencv_imgproc opencv_imgcodecs mklml_intel mkldnn iomp5 nccl
+else
+$(warning Building Python package WITH dependencies)
+PYTHON_SETUP_PY_ARGS += --with-deps
+endif
+ifdef PYTHON_WITH_DEBUG
+$(warning Building Python packages WITH debug symbols)
+PYTHON_SETUP_PY_ARGS += --with-debug-symbol
+endif
+ifeq ("$(DEVICE)","gpu")
+PYTHON_PROJECT_NAME:=cntk-gpu
+endif
+PYTHON_SETUP_PY_ARGS += --project-name $(PYTHON_PROJECT_NAME)
 PYTHON_EXTRA_LIBS_BASENAMES:=$(addsuffix .so,$(addprefix lib,$(filter-out $(PYTHON_LIBS_EXCLUDE_LIST),$(PYTHON_LIBS_LIST))))
 
 # TODO dependencies
@@ -1461,7 +1472,7 @@ python: $(PYTHON_LIBS)
             for ver in $(PYTHON_VERSIONS); \
             do \
                 test -x $${py_paths[$$ver]}; \
-                $${py_paths[$$ver]} setup.py \
+                $${py_paths[$$ver]} setup.py $(PYTHON_SETUP_PY_ARGS) \
                     build_ext --inplace \
                     bdist_wheel \
                         --dist-dir $$PYTHONDIR || exit $$?; \
@@ -1519,10 +1530,13 @@ ifdef CUDA_PATH
 	echo 'libnvidia-ml.so' >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST
 endif
 	cp -p $(JAVA_SWIG_DIR)/CNTKNativeUtils.java $(JAVA_SWIG_DIR)/com/microsoft/CNTK/CNTKNativeUtils.java
+	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk-javadoc.jar README.md
+	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk-sources.jar com
 	$(JDK_BIN_PATH)/javac $(GENERATED_JAVA_DIR)/*.java
+	rm -rf $(GENERATED_JAVA_DIR)/*.java
 	mkdir -p $(LIBDIR)/java
 	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk.jar com
-	cp $(JAVA_SWIG_DIR)/cntk.jar $(LIBDIR)/java
+	cp $(JAVA_SWIG_DIR)/cntk.jar $(JAVA_SWIG_DIR)/cntk-sources.jar $(LIBDIR)/java
 	javac -cp $(JAVA_SWIG_DIR) $(JAVA_TEST_DIR)/src/Main.java -d $(LIBDIR)/java
 
 ALL += java

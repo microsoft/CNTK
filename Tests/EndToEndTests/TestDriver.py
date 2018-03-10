@@ -268,13 +268,12 @@ class Test:
 
       tempPath = os.path.join(args.build_location, args.build_sku, flavor, "bin", "cntk")
       if not os.path.isfile(tempPath):
-        for bsku in ["/build/gpu/", "/build/cpu/", "/build/1bitsgd/"]:
+        for bsku in ["/build/gpu/", "/build/cpu/"]:
           if tempPath.find(bsku) >= 0:
             tempPath = tempPath.replace(bsku, "/build/")
             break
       os.environ["TEST_CNTK_BINARY"] = tempPath
       os.environ["MPI_BINARY"] = "mpiexec"
-    os.environ["TEST_1BIT_SGD"] = ("1" if args.build_sku == "1bitsgd" else "0")
     # N.B. no cntk.exe in UWP build
     if args.build_sku != "uwp" and not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
       raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"])
@@ -798,7 +797,7 @@ if __name__ == "__main__":
   runSubparser.add_argument("-t", "--tag", help="runs tests which match the specified tag")
   runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
   runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
-  runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
+  runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu - run tests only for a specified build SKU")
   runSubparser.add_argument("--py27-paths", help="comma-separated paths to prepend when running a test against Python 2.7")
   runSubparser.add_argument("--py34-paths", help="comma-separated paths to prepend when running a test against Python 3.4")
   runSubparser.add_argument("--py35-paths", help="comma-separated paths to prepend when running a test against Python 3.5")
@@ -817,7 +816,7 @@ if __name__ == "__main__":
   listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the specified tag")
   listSubparser.add_argument("-d", "--device", help="cpu|gpu - tests for a specified device")
   listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
-  listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - list tests only for a specified build SKU")
+  listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu - list tests only for a specified build SKU")
   listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
   listSubparser.add_argument("test", nargs="*",
                              help="optional test name(s) to list, specified as Suite/TestName. ")
@@ -847,7 +846,7 @@ if __name__ == "__main__":
       sys.exit(1)
     args.flavors = [args.flavor]
 
-  args.buildSKUs = ["cpu", "gpu", "1bitsgd", "uwp"]
+  args.buildSKUs = ["cpu", "gpu", "uwp"]
   if (args.build_sku):
     args.build_sku = args.build_sku.lower()
     if not args.build_sku in args.buildSKUs:

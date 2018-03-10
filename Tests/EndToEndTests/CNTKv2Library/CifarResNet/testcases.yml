@@ -1,9 +1,9 @@
 dataDir: .
 
 tags:
-    - bvt-e (build_sku == '1bitsgd') and (device=='gpu') and ((flavor == 'release') ^ (os == 'linux'))
-    - nightly-e (build_sku == '1bitsgd') and (device=='gpu')
-    - weekly-e (build_sku == '1bitsgd') and (device=='gpu')
+    - bvt-e (build_sku == 'gpu') and (device=='gpu') and ((flavor == 'release') ^ (os == 'linux'))
+    - nightly-e (build_sku == 'gpu') and (device=='gpu')
+    - weekly-e (build_sku == 'gpu') and (device=='gpu')
 
 testCases:
   Test run must be completed:

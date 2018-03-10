@@ -79,7 +79,7 @@ for %%D in (
   Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
   Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll  
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.DelayLoadedExtensions-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
   mklml.dll
 ) do (
@@ -119,6 +119,11 @@ if /i %p_GpuBuild% equ true for %%D in (
   set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
 )
 
+set PYTHON_PROJECT_NAME=cntk
+if /i %p_GpuBuild% equ true (
+  set PYTHON_PROJECT_NAME=cntk-gpu
+)
+
 popd
 if errorlevel 1 echo Cannot restore directory.&exit /b 1
 
@@ -128,7 +133,7 @@ for %%p in (%p_CNTK_PY_VERSIONS%) do (
   call set extraPath=!p_CNTK_PY%%~p_PATH!
   echo Building for Python version '%%~p', extra path is !extraPath!
   set PATH=!extraPath!;!oldPath!
-  python.exe .\setup.py ^
+  python.exe .\setup.py --project-name %PYTHON_PROJECT_NAME% ^
       build_ext --inplace --force --compiler msvc --plat-name=win-amd64 ^
       bdist_wheel --dist-dir "%DIST_DIR%"
   if errorlevel 1 exit /b 1

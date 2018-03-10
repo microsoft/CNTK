@@ -15,7 +15,6 @@ Changed current directory to C:\cygwin64\tmp\cntk-test-20170103234236.850903\Bat
 01/04/2017 07:42:52: 		Last modified date: Tue Jan  3 18:50:06 2017
 01/04/2017 07:42:52: 		Build type: Debug
 01/04/2017 07:42:52: 		Build target: GPU
-01/04/2017 07:42:52: 		With 1bit-SGD: yes
 01/04/2017 07:42:52: 		With ASGD: no
 01/04/2017 07:42:52: 		Math lib: mkl
 01/04/2017 07:42:52: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0

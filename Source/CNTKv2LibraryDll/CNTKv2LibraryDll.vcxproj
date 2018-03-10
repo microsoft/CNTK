@@ -67,8 +67,8 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>.\API;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_1BitSGD)'=='true' and '!$(IsUWP)'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true' and '!$(IsUWP)'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'!$(IsUWP)'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'!$(IsUWP)'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
@@ -76,7 +76,7 @@
       <AdditionalDependencies>$(ReaderLibs);Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.ComputationNetwork$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.SequenceTrainingLib$(OutputSuffix)-$(CntkComponentVersion).lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>prebuild.bat "$(Configuration)" "$(CNTK_MKL_SEQUENTIAL)" "$(CNTK_ENABLE_1BitSGD)" "$(CudaPath)" "$(CUDNN_PATH)" "$(CUB_PATH)" "$(CNTK_ENABLE_ASGD)"</Command>
+      <Command>prebuild.bat "$(Configuration)" "$(CNTK_MKL_SEQUENTIAL)" "$(CudaPath)" "$(CUDNN_PATH)" "$(CUB_PATH)" "$(CNTK_ENABLE_ASGD)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -93,7 +93,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll;</DelayLoadDLLs>
-      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.ImageWriter-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.DelayLoadedExtensions-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -111,7 +111,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll;</DelayLoadDLLs>
-      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.ImageWriter-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.DelayLoadedExtensions-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -122,7 +122,7 @@
     </ClCompile>
     <Link>
       <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; msmpi.dll;</DelayLoadDLLs>
-      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.ImageWriter-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.DelayLoadedExtensions-$(CntkComponentVersion).dll</DelayLoadDLLs>
       <OptimizeReferences Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -187,6 +187,7 @@
     <ClInclude Include="proto\onnx\ONNX.h" />
     <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
     <ClInclude Include="proto\onnx\Operators.h" />
+    <ClInclude Include="proto\onnx\RNNHelper.h" />
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="tensorboard\TensorBoardUtils.h" />
     <ClInclude Include="UserDefinedFunction.h" />
@@ -243,6 +244,7 @@
     <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
     <ClCompile Include="proto\onnx\Operators.cpp" />
     <ClCompile Include="proto\onnx\protobuf\onnx-ml.pb.cc.VS_wrapper.cpp" />
+    <ClCompile Include="proto\onnx\RNNHelper.cpp" />
     <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

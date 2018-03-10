@@ -15,7 +15,6 @@ Changed current directory to /home/philly/data/CNTKTestData/Speech/ASR
 12/20/2016 15:26:38: 		Last modified date: Tue Dec 20 11:38:27 2016
 12/20/2016 15:26:38: 		Build type: release
 12/20/2016 15:26:38: 		Build target: GPU
-12/20/2016 15:26:38: 		With 1bit-SGD: no
 12/20/2016 15:26:38: 		With ASGD: yes
 12/20/2016 15:26:38: 		Math lib: mkl
 12/20/2016 15:26:38: 		CUDA_PATH: /usr/local/cuda-8.0

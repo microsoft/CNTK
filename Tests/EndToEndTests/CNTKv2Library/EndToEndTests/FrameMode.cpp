@@ -12,8 +12,6 @@ using namespace CNTK;
 using namespace std;
 using namespace std::placeholders;
 
-extern bool Is1bitSGDAvailable();
-
 namespace
 {
     struct FeedForwardClassifier
@@ -114,11 +112,8 @@ void TestFrameMode()
     std::map<std::wstring, std::function<DistributedLearnerPtr(LearnerPtr)>> learners;
     learners[L"simple"] = [](LearnerPtr l) { return CreateDataParallelDistributedLearner(MPICommunicator(), l, 0); };
 
-    if (Is1bitSGDAvailable())
-    {
-        learners[L"1bitsgd"] = [](LearnerPtr l) { return CreateQuantizedDataParallelDistributedLearner(QuantizedMPICommunicator(true, true, 32), l, 0); };
-        learners[L"blockmomentum"] = [](LearnerPtr l) { return CreateBlockMomentumDistributedLearner(MPICommunicator(), l, 0, 1024); };
-    }
+    learners[L"gpu"] = [](LearnerPtr l) { return CreateQuantizedDataParallelDistributedLearner(QuantizedMPICommunicator(true, true, 32), l, 0); };
+    learners[L"blockmomentum"] = [](LearnerPtr l) { return CreateBlockMomentumDistributedLearner(MPICommunicator(), l, 0, 1024); };
 
     // Create a set of devices.
     std::vector<DeviceDescriptor> devices;

@@ -11,7 +11,6 @@ Build info:
 		Last modified date: Thu Aug 25 15:38:08 2016
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: yes
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 		CUB_PATH: C:\R\cub-1.4.1
 		CUDNN_PATH: C:\R\cudnn-7.5-windows10-x64-v5.0-ga\cuda
@@ -29,7 +28,6 @@ Changed current directory to C:\cygwin64\tmp\cntk-test-20160825162438.206738\Exa
 08/25/2016 15:24:41: 		Last modified date: Thu Aug 25 15:38:08 2016
 08/25/2016 15:24:41: 		Build type: Release
 08/25/2016 15:24:41: 		Build target: GPU
-08/25/2016 15:24:41: 		With 1bit-SGD: yes
 08/25/2016 15:24:41: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 08/25/2016 15:24:41: 		CUB_PATH: C:\R\cub-1.4.1
 08/25/2016 15:24:41: 		CUDNN_PATH: C:\R\cudnn-7.5-windows10-x64-v5.0-ga\cuda

@@ -264,6 +264,14 @@ namespace CNTK
         bool IsUnknown() const { return (*this == NDShape::Unknown()); }
 
         ///
+        /// Returns a boolean indicating if 'this' shape is scalar
+        ///
+        bool IsScalar() const
+        {
+            return (Rank() == 0) || (Rank() == 1 && m_shapeDims[0] == 1);
+        }
+
+        ///
         /// Returns the rank of 'this' shape.
         ///
         size_t Rank() const { return m_shapeDims.size(); }
@@ -1967,6 +1975,13 @@ namespace CNTK
                 [](const Axis& axis) { return (axis == Axis::DefaultBatchAxis()); });
         }
 
+        bool HasSequenceAxis() const {
+            return (DynamicAxes().size() - (HasBatchAxis() ? 1 : 0)) > 0;
+        }
+
+        bool IsInitialized() const {
+            return m_dataFields != nullptr;
+        }
         ///
         /// Returns the name of 'this' variable
         ///
@@ -2454,9 +2469,9 @@ namespace CNTK
     public:
 
         ///
-        /// a special index for one hot to indicate zero vector
+        /// a special index for one hot to indicate zero vector, put in 32-bit range for C# binding
         ///
-        static const size_t OneHotSkip = (size_t)-1;
+        static const size_t OneHotSkip = (size_t)0xffffffff;
 
         ///
         /// A multi-dimensional value with no mask.
@@ -4506,11 +4521,6 @@ namespace CNTK
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name = L"");
 
     ///
-    /// Mean-variance normalization of the specified input operand.
-    ///
-    CNTK_API FunctionPtr MeanVarianceNormalization(const Variable& operand, const bool useStatsAcrossChannels = false, const bool doVarianceScaling = true, const std::wstring& name = L"");
-
-    ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
     inline FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"")
@@ -4521,6 +4531,16 @@ namespace CNTK
         return PerDimMeanVarianceNormalize(operand, meanVar, invStdDevVar, name);
     }
 
+    ///
+    /// Mean-variance normalization of the specified input operand.
+    ///
+    CNTK_API FunctionPtr MeanVarianceNormalization(const Variable& operand, double epsilon, const bool useStatsAcrossChannels = false, const bool doVarianceScaling = true, const std::wstring& name = L"");
+
+    inline FunctionPtr MeanVarianceNormalization(const Variable& operand, const bool useStatsAcrossChannels = false, const bool doVarianceScaling = true, const std::wstring& name = L"")
+    {
+        double defaultEpsilon = 0.00001;
+        return MeanVarianceNormalization(operand, defaultEpsilon, useStatsAcrossChannels, doVarianceScaling, name);
+    }
     ///
     /// Convolution
     ///
@@ -5297,13 +5317,30 @@ namespace CNTK
         {
         }
 
+        //
+        // Sets as the metric aggregator learner for the trainer in the case of
+        // multiple distributed learner training scenarios. The trainer will use 
+        // the DoAggregateMetricsIfNeeded method of this learner to perform 
+        // metric aggregation.
+        // 
+        void SetAsMetricAggregator()
+        {
+            m_metricAggregator = true;
+        }
+
+        bool IsMetricAggregator()
+        {
+            return m_metricAggregator;
+        }
+
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),
                       LearningRateSchedule(0)),
               m_learner(learner),
               m_communicator(communicator),
-              m_distributeAfterSamples(distributeAfterSamples)
+              m_distributeAfterSamples(distributeAfterSamples),
+              m_metricAggregator(false)
         {
             if (!m_learner)
                 InvalidArgument("Learner passed to a Distributed learner ctor must not be null.");
@@ -5315,6 +5352,7 @@ namespace CNTK
         const LearnerPtr m_learner;
         const DistributedCommunicatorPtr m_communicator;
         const size_t m_distributeAfterSamples;
+        bool m_metricAggregator;
 
         // Disallow copy and move construction and assignment
         DistributedLearner(const DistributedLearner&) = delete; DistributedLearner& operator=(const DistributedLearner&) = delete; DistributedLearner& operator=(DistributedLearner&&) = delete; DistributedLearner(DistributedLearner&&) = delete;
@@ -6102,7 +6140,7 @@ namespace CNTK
     ///
     /// Built-in MPI-based communicator.
     ///
-    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::DefaultPackThresholdSizeInBytes());
+    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::GetMPIPackThreshold());
 
     ///
     /// Distributed communicator that allows quantized aggregations.

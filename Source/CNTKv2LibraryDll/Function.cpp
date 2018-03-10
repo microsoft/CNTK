@@ -2375,16 +2375,20 @@ namespace CNTK
         return AsBlock(std::move(ElementTimes(Minus(operandPlaceholder, meanPlaceholder), invStdDevPlaceholder)), { { operandPlaceholder, operand },{ meanPlaceholder, mean },{ invStdDevPlaceholder, invStdDev } }, L"PerDimMeanVarianceNormalize", name);
     }
 
-    FunctionPtr MeanVarianceNormalization(const Variable& operand, const bool useStatsAcrossChannels, const bool doVarianceScaling, const std::wstring& name)
+    FunctionPtr MeanVarianceNormalization(const Variable& operand, double epsilon, const bool useStatsAcrossChannels, const bool doVarianceScaling, const std::wstring& name)
     {
         Dictionary additionalAttributes;
         additionalAttributes[PrimitiveFunction::AttributeNameUseStatsAcrossChannels] = useStatsAcrossChannels;
         additionalAttributes[PrimitiveFunction::AttributeNameDoVarianceScaling] = doVarianceScaling;
+        additionalAttributes[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
 
+        if (epsilon < 0)
+            InvalidArgument("Input argument epsilon must be non-negative.");
         auto operandPlaceholder = PlaceholderVariable(L"operand");
         size_t operandRank = operand.Shape().Rank();
         if (operandRank < 2 && !useStatsAcrossChannels)
             InvalidArgument("When rank of the operand is < 2, useStatsAcrossChannels must be set to false, because there is no channel dimension.");
+
         auto numAxesToReduce = useStatsAcrossChannels ? operandRank : operandRank - 1; // Assuming last dim to be the channel dim.
         std::vector<Axis> axesToReduce(numAxesToReduce);
         for (size_t i = 0; i < numAxesToReduce; ++i)
@@ -2396,8 +2400,11 @@ namespace CNTK
         }
         else
         {
-            return AsBlock(std::move(ElementDivide(operandMeanRemoved, Sqrt(ReduceMean(Square(operandMeanRemoved), axesToReduce)))),
-                { { operandPlaceholder, operand } }, std::move(additionalAttributes), L"MeanVarianceNormalization", name);
+            return AsBlock(std::move(ElementDivide(operandMeanRemoved, 
+                Plus(Sqrt(ReduceMean(Square(operandMeanRemoved), axesToReduce)), 
+                    Constant({}, operand.GetDataType(), epsilon, DeviceDescriptor::UseDefaultDevice(), L"mvn_epsilon")))),
+                { { operandPlaceholder, operand } }, std::move(additionalAttributes),
+                L"MeanVarianceNormalization", name);
         }
     }
 

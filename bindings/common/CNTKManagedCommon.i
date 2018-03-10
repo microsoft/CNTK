@@ -307,7 +307,8 @@ IGNORE_FUNCTION CNTK::Internal::AreEquivalent;
 IGNORE_FUNCTION CNTK::Internal::AreEqual;
 IGNORE_FUNCTION CNTK::Internal::PrintBuiltInfo;
 IGNORE_FUNCTION CNTK::Internal::PrintGpuInfo;
-IGNORE_FUNCTION CNTK::Internal::DefaultPackThresholdSizeInBytes;
+IGNORE_FUNCTION CNTK::Internal::SetMPIPackThreshold;
+IGNORE_FUNCTION CNTK::Internal::GetMPIPackThreshold;
 IGNORE_FUNCTION CNTK::Internal::ToDictionary;
 IGNORE_CLASS CNTK::Internal::TensorBoardFileWriter;
 // suppress SWIG warning 302: Identifier redefined.

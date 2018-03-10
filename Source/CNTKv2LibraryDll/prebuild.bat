@@ -18,11 +18,10 @@ setlocal enableDelayedexpansion
 :: well-known (non-CNTK-specific) environment variables.
 set p_Configuration=%~1
 set p_CNTK_MKL_SEQUENTIAL=%~2
-set p_CNTK_ENABLE_1BitSGD=%~3
-set p_CudaPath=%~4
-set p_CUDNN_PATH=%~5
-set p_CUB_PATH=%~6
-set p_CNTK_ENABLE_ASGD=%~7
+set p_CudaPath=%~3
+set p_CUDNN_PATH=%~4
+set p_CUB_PATH=%~5
+set p_CNTK_ENABLE_ASGD=%~6
 
 echo #ifndef _BUILDINFO_H > buildinfo.h$$
 echo #define _BUILDINFO_H >> buildinfo.h$$
@@ -74,11 +73,6 @@ if /i "%p_Configuration%" == "Release_NoOpt" set l_build_type=Release_NoOpt&set 
 echo #define _BUILDTYPE_ "%l_build_type%">> buildinfo.h$$
 echo #define _BUILDTARGET_ "%l_build_target%">> buildinfo.h$$
 
-if "%p_CNTK_ENABLE_1BitSGD%" == "true" (
-    echo #define _WITH_1BITSGD_ "yes">>buildinfo.h$$
-) else (
-    echo #define _WITH_1BITSGD_ "no">>buildinfo.h$$
-)
 :: assuming CNTK_ENABLE_ASGD was true as default value 
 if "%p_CNTK_ENABLE_ASGD%" == "false" (
     echo #define _WITH_ASGD_ "no">>buildinfo.h$$

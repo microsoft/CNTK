@@ -2,9 +2,17 @@
 
 | **Windows** | **Linux** |
 |-------------|---------------|
-| ![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/126/badge) | ![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/127/badge) |
+| [![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/126/badge)](https://cntk.ai/nightly-windows.html) | [![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/127/badge)](https://cntk.ai/nightly-linux.html) |
 
 ## Latest news
+
+***2018-02-28.*** CNTK supports nightly build
+
+If you prefer to use latest CNTK bits from master, use one of the CNTK nightly package.
+* [Nightly packages for Windows](https://cntk.ai/nightly-windows.html)
+* [Nightly packages for Linux](https://cntk.ai/nightly-linux.html)
+
+Alternatively, you can also click corresponding build badge to land to nightly build page.
 
 ***2018-01-31.* CNTK 2.4**
 
@@ -103,12 +111,6 @@ For Windows GPU:
 * Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp35-cp35m-win_amd64.whl
 * Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp36-cp36m-win_amd64.whl
 
-For Windows GPU-1bit-SGD:
-* Python 2.7: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp27-cp27m-win_amd64.whl
-* Python 3.4: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp34-cp34m-win_amd64.whl
-* Python 3.5: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp35-cp35m-win_amd64.whl
-* Python 3.6: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp36-cp36m-win_amd64.whl
-
 Linux CPU-Only:
 * Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp27-cp27mu-linux_x86_64.whl
 * Python 3.4: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp34-cp34m-linux_x86_64.whl
@@ -120,12 +122,6 @@ Linux GPU:
 * Python 3.4: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp34-cp34m-linux_x86_64.whl
 * Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp35-cp35m-linux_x86_64.whl
 * Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp36-cp36m-linux_x86_64.whl
-
-Linux GPU-1bit-SGD:
-* Python 2.7: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp27-cp27mu-linux_x86_64.whl
-* Python 3.4: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp34-cp34m-linux_x86_64.whl
-* Python 3.5: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp35-cp35m-linux_x86_64.whl
-* Python 3.6: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp36-cp36m-linux_x86_64.whl
 
 You can also try one of the below NuGet package.
 * [CNTK, CPU-Only Build](https://www.nuget.org/packages/CNTK.CPUOnly/2.3.1)
@@ -233,6 +229,11 @@ The Microsoft Cognitive Toolkit (https://cntk.ai), is a unified deep-learning to
     * Windows [Script-driven](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-with-script-on-windows) / [Manual](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-windows)
     * Linux [Manual](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-linux)
 
+### Nightly packages
+If you prefer to use latest CNTK bits from master, use one of the CNTK nightly package.
+* [Nightly packages for Windows](https://cntk.ai/nightly-windows.html)
+* [Nightly packages for Linux](https://cntk.ai/nightly-linux.html)
+
 ## Learning CNTK
 
 You may learn more about CNTK with the following resources:
@@ -250,7 +251,6 @@ You may learn more about CNTK with the following resources:
 
 ## More information
 
-* [Reasons to switch from TensorFlow to CNTK](https://docs.microsoft.com/en-us/cognitive-toolkit/reasons-to-switch-from-tensorflow-to-cntk)
 * [Contribute to CNTK](https://docs.microsoft.com/en-us/cognitive-toolkit/Contributing-to-CNTK)
 * [FAQ](https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-FAQ)
 * [Feedback](https://docs.microsoft.com/en-us/cognitive-toolkit/Feedback-Channels)

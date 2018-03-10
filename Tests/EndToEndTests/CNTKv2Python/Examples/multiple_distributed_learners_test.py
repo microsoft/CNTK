@@ -42,8 +42,10 @@ if __name__=='__main__':
 
     momentum_schedule = C.momentum_schedule_per_sample(0.9990913221888589)
     lr_per_sample = C.learning_parameter_schedule_per_sample(0.007)
+    learner1 = C.distributed.data_parallel_distributed_learner(C.momentum_sgd([p1], lr_per_sample, momentum_schedule, True))
+    learner1.set_as_metric_aggregator()    
     dist_learners = [
-        C.distributed.data_parallel_distributed_learner(C.momentum_sgd([p1], lr_per_sample, momentum_schedule, True)),
+        learner1,
         C.distributed.data_parallel_distributed_learner(C.momentum_sgd([p2], lr_per_sample, momentum_schedule, True))
     ]
 
