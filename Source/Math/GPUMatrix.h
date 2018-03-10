@@ -647,12 +647,12 @@ public:
         size_t numRows, numCols;
         int format;
         stream >> matrixNameDummy >> format >> numRows >> numCols;
-        ElemType* d_array = new ElemType[numRows * numCols];
+        ElemType* d_array = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numRows * numCols);
         for (size_t i = 0; i < numRows * numCols; ++i)
             stream >> d_array[i];
         stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         us.SetValue(numRows, numCols, us.GetComputeDeviceId(), d_array, matrixFlagNormal | format);
-        delete[] d_array;
+        BaseMatrixStorage<ElemType>::FreeCPUArray(d_array);
         return stream;
     }
     friend File& operator<<(File& stream, const GPUMatrix<ElemType>& us)
@@ -670,7 +670,7 @@ public:
         for (size_t i = 0; i < us.GetNumElements(); ++i)
             stream << pArray[i];
         
-        delete[] pArray;
+        BaseMatrixStorage<ElemType>::FreeCPUArray(pArray);
 
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;

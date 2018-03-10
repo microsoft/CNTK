@@ -18,8 +18,7 @@ enum class BatchNormEngineKind
     None  = 0,
     Cntk  = 1,
     CuDnn = 1 << 1,
-
-    All  = Cntk  | CuDnn
+    All  = CPU | CuDnn
 };
 
 #pragma warning(push)

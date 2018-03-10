@@ -173,11 +173,11 @@ endif
 ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/include
   # disable MKL-DNN until we pick up the fix for AMD cache size https://github.com/intel/mkl-dnn/commit/ccfbf83ab489b42f7452b6701498b07c28cdb502
-  #LIBS_LIST += m iomp5 pthread mklml_intel mkldnn
+  LIBS_LIST += m iomp5 pthread mklml_intel mkldnn
   LIBS_LIST += m iomp5 pthread mklml_intel
   MKL_LIB_PATH := $(MKL_PATH)/lib
   LIBPATH += $(MKL_LIB_PATH)
-  #COMMON_FLAGS += -DUSE_MKL -DUSE_MKLDNN
+  COMMON_FLAGS += -DUSE_MKL -DUSE_MKLDNN
   COMMON_FLAGS += -DUSE_MKL
 endif
 
@@ -382,6 +382,8 @@ COMMON_SRC =\
 
 MATH_SRC =\
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
+	$(SOURCEDIR)/Math/EltWiseEngine.cpp \
+	$(SOURCEDIR)/Math/TimesEngine.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixFloat.cpp \
 	$(SOURCEDIR)/Math/CPUMatrixDouble.cpp \
@@ -401,6 +403,13 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/NcclComm.cpp \
+
+
+
+MATH_SRC +=\
+	$(SOURCEDIR)/Math/mkldnn/mkldnn_base.cpp \
+	$(SOURCEDIR)/Math/mkldnn/mkldnn_memory.cpp \
+
 
 ifdef CUDA_PATH
 MATH_SRC +=\

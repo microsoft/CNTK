@@ -688,7 +688,18 @@ ElemType* Matrix<ElemType>::Data() const
                             return m_CPUSparseMatrix->Data(),
                             return m_GPUSparseMatrix->Data());
 }
-
+#ifdef USE_MKLDNN
+template <class ElemType>
+std::shared_ptr<MKLMemHolder> Matrix<ElemType>::MklMem() const
+{
+  DISPATCH_MATRIX_ON_FLAG(this,
+    nullptr,
+    return m_CPUMatrix->MklMem(),
+    return nullptr,
+    return nullptr,
+    return nullptr);
+}
+#endif
 template <class ElemType>
 ElemType* Matrix<ElemType>::CopyToArray() const
 {
@@ -4335,7 +4346,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                     else
                         m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr, matrixFlagNormal);
 
-                    delete[] arr;
+                    BaseMatrixStorage<ElemType>::FreeCPUArray(arr);
                 }
 
                 if (isBeingMoved)

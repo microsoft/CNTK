@@ -16,6 +16,9 @@
 #include "EvaluationNodes.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
+#ifdef USE_MKLDNN
+#include "TimesTransposeNode.h"
+#endif
 #include "NonlinearityNodes.h"
 #include "PreComputeNodes.h"
 #include "ReshapingNodes.h"
@@ -243,6 +246,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
     //else if (EqualInsensitive(nodeType, OperationNameOf(TransposeDimensionsNode))) ret = true; // not supported from NDL, use Transpose()
     else if (EqualInsensitive(nodeType, OperationNameOf(TransposeTimesNode))) ret = true;
+#ifdef USE_MKLDNN
+    else if (EqualInsensitive(nodeType, OperationNameOf(TimesTransposeNode))) ret = true;
+#endif
     // legacy names:
     else if (EqualInsensitive(nodeType, L"ColumnElementTimes")) ret = true;
     else if (EqualInsensitive(nodeType, L"Constant", L"Const")) ret = true;

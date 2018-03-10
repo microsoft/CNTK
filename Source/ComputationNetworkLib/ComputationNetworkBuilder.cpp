@@ -17,13 +17,18 @@
 #include "EvaluationNodes.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
+#ifdef USE_MKLDNN
+#include "TimesTransposeNode.h"
+#endif
 #include "NonlinearityNodes.h"
 #include "PreComputeNodes.h"
 #include "ReshapingNodes.h"
 #include "RecurrentNodes.h"
 #include "SpecialPurposeNodes.h"
 #include "TrainingNodes.h"
-
+#ifdef USE_MKLDNN
+#include "EltWiseNodes.h"
+#endif
 #include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -104,7 +109,11 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(RandomSampleInclusionFrequencyNode))   return New<RandomSampleInclusionFrequencyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReconcileDynamicAxisNode))             return New<ReconcileDynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReciprocalNode))                       return New<ReciprocalNode<ElemType>>(forward<_Types>(_Args)...);
+#ifdef USE_MKLDNN
+    else if (nodeType == OperationNameOf(RectifiedLinearNodeV2))                  return New<RectifiedLinearNodeV2<ElemType>>(forward<_Types>(_Args)...);
+#else
     else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
+#endif
     else if (nodeType == OperationNameOf(ReduceElementsNode))                   return New<ReduceElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
@@ -134,6 +143,9 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(TimesNode))                            return New<TimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeDimensionsNode))              return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
+#ifdef USE_MKLDNN
+    else if (nodeType == OperationNameOf(TimesTransposeNode))                   return New<TimesTransposeNode<ElemType>>(forward<_Types>(_Args)...);
+#endif
     else if (nodeType == OperationNameOf(QuantizedTimesNode))                   return New<QuantizedTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(WhereNode))                            return New<WhereNode<ElemType>>(forward<_Types>(_Args)...);
     // legacy names we also support for back compat of model-files
@@ -165,6 +177,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     if      (nodeType == OperationNameOf(AveragePoolingNode))       return New<AveragePoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(BatchNormalizationNode))   return New<BatchNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ConvolutionNode))          return New<ConvolutionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ConvolutionBiasNode))      return New<ConvolutionBiasNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PoolingNode))              return New<PoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SparseInputValue))         return New<SparseInputValue<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InputValue))               return New<InputValue<ElemType>>(forward<_Types>(_Args)...);
@@ -360,6 +373,36 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
                                                                           sharing, autoPadding, lowerPad, upperPad,
                                                                           transpose, outputShape, imageLayout, maxTempMemSizeInSamples),
                                                                           { weight, inputValues });
+}
+
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ConvolutionBias(const ComputationNodePtr weight,
+                                                                                            const ComputationNodePtr inputValues, const ComputationNodePtr bias,
+                                                                                            const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+                                                                                            const size_t horizontalSubsample, const size_t verticalSubsample,
+                                                                                            ImageLayoutKind imageLayoutKind, const bool zeroPadding, const size_t maxTempMemSizeInSamples,
+                                                                                            const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ConvolutionBiasNode<ElemType>>(net.GetDeviceId(), nodeName,
+        kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, imageLayoutKind, zeroPadding,
+        maxTempMemSizeInSamples), { weight, inputValues, bias });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ConvolutionBias(const ComputationNodePtr weight,
+                                                                                            const ComputationNodePtr inputValues, const ComputationNodePtr bias,
+                                                                                            const TensorShape& kernelShape, const TensorShape& mapCount,
+                                                                                            const TensorShape& strideShape, const std::vector<bool>& sharing,
+                                                                                            const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                                                                            bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                                                                            const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ConvolutionBiasNode<ElemType>>(net.GetDeviceId(), nodeName,
+        kernelShape, mapCount, strideShape,
+        sharing, autoPadding, lowerPad, upperPad,
+        transpose, outputShape, imageLayout, maxTempMemSizeInSamples),
+        { weight, inputValues, bias });
 }
 
 template <class ElemType>
@@ -621,7 +664,14 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Negat
 {
     return net.AddNodeToNetAndAttachInputs(New<NegateNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
+#ifdef USE_MKLDNN
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RectifiedLinearV2(const ComputationNodePtr a, const std::wstring nodeName)
+{
+  return net.AddNodeToNetAndAttachInputs(New<RectifiedLinearNodeV2<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
 
+#endif
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName)
 {
@@ -765,7 +815,14 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Times
 {
     return net.AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(net.GetDeviceId(), nodeName, outputRank), { a, b });
 }
+#ifdef USE_MKLDNN
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TimesTranspose(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+{
+  return net.AddNodeToNetAndAttachInputs(New<TimesTransposeNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+}
 
+#endif
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {

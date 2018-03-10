@@ -15,6 +15,9 @@
 #include <limits.h>
 #include "QuantizedOperations.h"
 #include "half.hpp"
+#ifdef USE_MKLDNN
+#include "./mkldnn/mkl_memory.h"
+#endif
 
 //#include "GPUMatrix.h"
 //#include "CPUSparseMatrix.h"
@@ -81,8 +84,20 @@ public:
     // Returns pointer into underlying data buffer corresponding to slice-view. This makes it different from method Buffer()
     ElemType* Data() const
     {
-        return Buffer() + m_sliceViewOffset;
+        ElemType* data_ptr = Buffer() + m_sliceViewOffset;
+#ifdef USE_MKLDNN
+        if (m_mklMem != nullptr)
+          m_mklMem->check_and_prv_to_cpu(data_ptr);
+#endif
+        return data_ptr;
     }
+
+#ifdef USE_MKLDNN
+    std::shared_ptr<MKLMemHolder> MklMem() const
+    {
+      return m_mklMem;
+    }
+#endif
 
     CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
     CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
@@ -526,13 +541,13 @@ public:
         size_t numRows, numCols;
         int format;
         stream >> matrixName >> format >> numRows >> numCols;
-        ElemType* d_array = new ElemType[numRows * numCols];
+        ElemType* d_array = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numRows * numCols);
         for (size_t i = 0; i < numRows * numCols; ++i)
             stream >> d_array[i];
         stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         us.SetValue(numRows, numCols, d_array, matrixFlagNormal);
 
-        delete[] d_array;
+        BaseMatrixStorage<ElemType>::FreeCPUArray(d_array);
         return stream;
     }
     friend File& operator<<(File& stream, const CPUMatrix<ElemType>& us)
@@ -589,6 +604,11 @@ private:
 
 private:
     static int m_optimizationFlags;
+
+private:
+#ifdef USE_MKLDNN
+    mutable std::shared_ptr<MKLMemHolder> m_mklMem;
+#endif
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;

@@ -25,7 +25,7 @@ trainNetwork = {
         
         model = Sequential (
             Scale {featScale} :
-            ConvolutionalLayer {16, (5:5), pad = true} : ReLU : 
+            ConvolutionalReluLayer {16, (5:5), pad = true} : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} : Dropout : 
             DenseLayer         {64} : ReLU : 
             LinearLayer        {labelDim}
