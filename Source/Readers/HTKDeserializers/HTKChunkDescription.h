@@ -140,10 +140,19 @@ public:
 
             // read all utterances; if they are in the same archive, htkfeatreader will be efficient in not closing the file
             m_frames.resize(featureDimension, m_totalFrames);
+            wstring prevPath = L"";
             foreach_index(i, m_utterances)
             {
                 // read features for this file
                 auto framesWrapper = GetUtteranceFrames(i);
+                if (verbosity == 2)
+                {    
+                    if (prevPath != m_utterances[i].GetPath().physicallocation())
+                    {
+                        fprintf(stderr, "HTKChunkInfo::RequireData: Reading features from path: '%ls'\n", m_utterances[i].GetPath().physicallocation().c_str());
+                        prevPath = m_utterances[i].GetPath().physicallocation();
+                    }
+                }
                 reader.read(m_utterances[i].GetPath(), featureKind, samplePeriod, framesWrapper);
             }
 
