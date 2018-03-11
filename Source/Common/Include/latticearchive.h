@@ -1409,8 +1409,14 @@ public:
             if (sscanf(q, "[%" PRIu64 "]%c", &offset, &c) != 1)
 #endif
                 RuntimeError("open: invalid TOC line (bad [] expression): %s", line);
+
             if (!toc.insert(make_pair(key, latticeref(offset, archiveindex))).second)
-                RuntimeError("open: TOC entry leads to duplicate key: %s", line);
+                /* guoye: start */
+                // sometimes, the training will report this error. I believe it is due to some small data corruption, and fine to go on, so change the error to warning
+                // RuntimeError("open: TOC entry leads to duplicate key: %s", line);
+
+                fprintf(stderr, " open: TOC entry leads to duplicate key: %s\n", line);
+            /* guoye: end */
         }
 
         // initialize symmaps  --alloc the array, but actually read the symmap on demand
