@@ -972,7 +972,13 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
 
         vector<ENTRY>& entries = (*this)[key].first; // this creates a new entry
         if (!entries.empty())
-            malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
+            /* guoye: start */
+            // malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
+            // do not want to die immediately
+        fprintf(stderr,
+            "Warning: "duplicate entry: %ls \n",
+            key.c_str());
+        /* guoye: end */
         entries.resize(e - s);
 
         // wordseqbuffer.resize(0);
@@ -1162,7 +1168,12 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
         // vector<ENTRY>& entries = (*this)[key]; // this creates a new entry
         vector<ENTRY>& entries = (*this)[key].first;
         if (!entries.empty())
-            malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
+            //malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
+            // do not want to die immediately
+            fprintf(stderr,
+                "Warning: "duplicate entry : %ls \n",
+                key.c_str());
+            
         entries.resize(e - s);
 
         vector<unsigned int>& wordids = (*this)[key].second;
