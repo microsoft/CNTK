@@ -575,9 +575,11 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
 
             // Optional parameters
-            ElemType squashingFactor = node->GetOptionalParameter("squashingFactor", "1.0");
+            ElemType acweight = node->GetOptionalParameter("acweight", "1.0");
             int alignmentWindow = node->GetOptionalParameter("alignmentWindow", "0");
             ElemType ceweight = node->GetOptionalParameter("ceweight", "0.0");
+            bool useLabelAsCEtarget = node->GetOptionalParameter("useLabelAsCEtarget", "false");
+            ElemType frameDropThresh = node->GetOptionalParameter("frameDropThresh", "0.0");
             std::string fstFilePath = node->GetOptionalParameter("fstFilePath", "");
             if (fstFilePath == "")
                 RuntimeError("fstFilePath must be set");
@@ -596,7 +598,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             if (!fexists(smapFilePath))
                 RuntimeError("File pointed to by smapFilePath does not exist: %s", smapFilePath.c_str());
 
-            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), squashingFactor, alignmentWindow, ceweight, name);
+            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), acweight, alignmentWindow, ceweight, useLabelAsCEtarget, frameDropThresh, name);
         }
     }
     else if (cnNodeType == OperationNameOf(CropNode))

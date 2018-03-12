@@ -63,20 +63,20 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0)
+        : Base(deviceId, name), m_acweight(1.0), m_alignmentWindow(0), m_ceweight(0), m_useLabelAsCEtarget(false), m_frameDropThresh(0.0), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight)
-        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const int alignmentWindow, const ElemType ceweight, const bool useLabelAsCEtarget, const ElemType frameDropThresh)
+        : Base(deviceId, name), m_acweight(acweight), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_useLabelAsCEtarget(useLabelAsCEtarget), m_frameDropThresh(frameDropThresh), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"acweight"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"useLabelAsCEtarget"), configp->Get(L"frameDropThresh"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -96,26 +96,50 @@ public:
             auto gradient = Input(1)->GradientFor(fr);
             auto label = Input(0)->ValueFor(fr);
 
+            // m_totalFrameNumberOfCurrentMinibatch == 0 seems always true, unless we do subminibatches where one minibatch is too big to fit into GPU RAM and have to divide into subminibatches and sum together in the end
             if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
-                // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
+                // for frameDrop  (why do we have to use the backup copy instead of the original directly? DropFrame seems not modifying them)
+                Matrix<ElemType> posteriorNumBackup(m_posteriorsNum->GetNumRows(), m_posteriorsNum->GetNumCols(), m_posteriorsNum->GetDeviceId());
+                posteriorNumBackup.SetValue(*m_posteriorsNum);
+                Matrix<ElemType> posteriorDenBackup(m_posteriorsDen->GetNumRows(), m_posteriorsDen->GetNumCols(), m_posteriorsDen->GetDeviceId());
+                posteriorDenBackup.SetValue(*m_posteriorsDen);
+
+                // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y  (what is c and y??)
                 if (m_ceweight != 0)
                 {
                     m_softmax->InplaceExp();
-                    Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_squashingFactor * (1 - m_ceweight), *m_posteriorsDen);
-//                    Matrix<ElemType>::Scale(m_squashingFactor * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
-                    Matrix<ElemType>::ScaleAndAdd(m_ceweight, label, m_squashingFactor * (1 - m_ceweight), *m_posteriorsNum);
+                    Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
+                    if (m_useLabelAsCEtarget)
+                    {
+                        Matrix<ElemType>::ScaleAndAdd(m_ceweight, label, m_acweight * (1 - m_ceweight), *m_posteriorsNum);
+                    }
+                    else
+                    { 
+                        Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
+                    }
                 }
 
                 if (m_totalFrameNumberOfCurrentMinibatch > 0)
                 {
                     Matrix<ElemType>::AssignScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, *m_mbGradients);
                     m_frameNumberOfCurrentMinibatch = 0;
+                    if (m_frameDropThresh >= (ElemType)1e-10)
+                    {
+                        m_mbGradients->DropFrame(posteriorNumBackup, posteriorDenBackup, m_frameDropThresh);
+                    }
                 }
                 else
                 {
                     Matrix<ElemType>::AddScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, gradient);
+                    if (m_frameDropThresh >= (ElemType)1e-10)
+                    {
+                        gradient.DropFrame(posteriorNumBackup, posteriorDenBackup, m_frameDropThresh);
+                    }
                 }
+                posteriorNumBackup.ReleaseMemory();
+                posteriorDenBackup.ReleaseMemory();
+
             }
 
             if (m_totalFrameNumberOfCurrentMinibatch > 0)
@@ -208,8 +232,8 @@ public:
             m_softmax->SetValue(*m_likelihoods);
         (*m_likelihoods) -= Input(2)->ValueAsMatrix();
 
-        if (m_squashingFactor != (ElemType)1.0)    // squashing factor
-            (*m_likelihoods) *= m_squashingFactor;
+        if (m_acweight != (ElemType)1.0)    // acoustic model weight 
+            (*m_likelihoods) *= m_acweight;
 
         m_likelihoods->InplaceExp(); // likelihood
         (*m_likelihoods) += (ElemType)1e-15;
@@ -262,9 +286,11 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<LatticeFreeMMINode<ElemType>>(nodeP);
-            node->m_squashingFactor = m_squashingFactor;
+            node->m_acweight = m_acweight;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
+            node->m_useLabelAsCEtarget = m_useLabelAsCEtarget;
+            node->m_frameDropThresh = m_frameDropThresh;
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
@@ -360,9 +386,11 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_squashingFactor;
+        fstream << m_acweight;
         fstream << m_alignmentWindow;
         fstream << m_ceweight;
+        fstream << m_useLabelAsCEtarget;
+        fstream << m_frameDropThresh;
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -379,9 +407,11 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_squashingFactor;
+        fstream >> m_acweight;
         fstream >> m_alignmentWindow;
         fstream >> m_ceweight;
+        fstream >> m_useLabelAsCEtarget;
+        fstream >> m_frameDropThresh;
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -396,7 +426,7 @@ public:
             Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
             char str[4096];
-            sprintf(str, "squashingFactor=%f alignmentWindow=%d ceweight=%f", this->m_squashingFactor, this->m_alignmentWindow, this->m_ceweight);
+            sprintf(str, "acweight=%f alignmentWindow=%d ceweight=%f", this->m_acweight, this->m_alignmentWindow, this->m_ceweight);
             fstream << string(str);
         }
 
@@ -487,9 +517,11 @@ protected:
     size_t m_frameNumberOfCurrentMinibatch;
     bool m_firstPassFinished;
     double m_savedCriterionValue;
-    ElemType m_squashingFactor;
+    ElemType m_acweight;
     int m_alignmentWindow;
     ElemType m_ceweight;
+    bool m_useLabelAsCEtarget;
+    ElemType m_frameDropThresh;
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;

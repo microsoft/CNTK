@@ -491,9 +491,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Cross
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeFreeMMI(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType squashingFactor, int alignmentWindow, ElemType ceweight, std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeFreeMMI(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType acweight, int alignmentWindow, ElemType ceweight, bool useLabelAsCEtarget, const ElemType frameDropThresh, std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LatticeFreeMMINode<ElemType>>(net.GetDeviceId(), nodeName, fstFilePath, smapFilePath, squashingFactor, alignmentWindow, ceweight), { label, prediction, logPrior });
+    return net.AddNodeToNetAndAttachInputs(New<LatticeFreeMMINode<ElemType>>(net.GetDeviceId(), nodeName, fstFilePath, smapFilePath, acweight, alignmentWindow, ceweight, useLabelAsCEtarget, frameDropThresh), { label, prediction, logPrior });
 }
 
 template <class ElemType>
