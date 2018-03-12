@@ -102,13 +102,9 @@ class MultiLearnerTrainer(SingleDataParallelTrainer):
             self.trainer = None
         return
 
-def mpi_worker_multi_learner(trainer, working_dir, checkpoint_dir, mb_source, gpu):
+def mpi_worker_multi_learner(trainer, working_dir, checkpoint_dir, mb_source):
     comm_rank = cntk.distributed.Communicator.rank()
     np.random.seed(comm_rank)
-
-    if gpu:
-        # test with only one GPU
-        cntk.try_set_default_device(cntk.gpu(0))
 
     num_paritions = cntk.Communicator.num_workers();
     partition_index = cntk.Communicator.rank();
@@ -142,9 +138,6 @@ def test_single_data_parallel_learner_vs_two_data_parallel_learners(tmpdir, devi
         pytest.skip('test only runs on Windows due to mpiexec -l option')
 
     launch_args = []
-    if device_id >= 0:
-        launch_args += ['--gpu']
-
     launch_args += ["--outputdir", str(tmpdir)]
     launch_args += ["--mb_source", mb_source]
     launch_args += ["--trainer_type", "single"]
@@ -159,8 +152,7 @@ def test_single_data_parallel_learner_vs_two_data_parallel_learners(tmpdir, devi
     for epoch_losses in loss_per_worker:
         single_learner_loss_per_worker_epochsort.append([epoch_losses[i] for i in sorted(epoch_losses)])
 
-    # We don't add the --gpu argument, 
-    # because it is already set during the previous mpi call.
+    launch_args = []
     launch_args += ["--outputdir", str(tmpdir)]
     launch_args += ["--mb_source", mb_source]
     launch_args += ["--trainer_type", "two"]
@@ -190,9 +182,6 @@ def test_multi_learner_bmuf_correct_metrics_averaging(tmpdir, device_id, mb_sour
         pytest.skip('BMUF not available on this build')
 
     launch_args = []
-    if device_id >= 0:
-        launch_args += ['--gpu']
-
     launch_args += ["--outputdir", str(tmpdir)]
     launch_args += ["--mb_source", mb_source]
     launch_args += ["--trainer_type", "multi"]
@@ -256,7 +245,6 @@ if __name__ == "__main__":
     parser.add_argument('-outputdir', '--outputdir')
     parser.add_argument('-checkpointdir', '--checkpointdir')
     parser.add_argument('-mb_source', '--mb_source')
-    parser.add_argument('-gpu', '--gpu', action='store_true')
     parser.add_argument("-trainer_type","--trainer_type")
     args = vars(parser.parse_args())
 
@@ -266,17 +254,17 @@ if __name__ == "__main__":
         trainer = MultiLearnerTrainer(frame_mode)
         if args["checkpointdir"]:
          
-            mpi_worker_multi_learner(trainer, args["outputdir"], args["checkpointdir"], args["mb_source"], args["gpu"])
+            mpi_worker_multi_learner(trainer, args["outputdir"], args["checkpointdir"], args["mb_source"])
         else:        
-            mpi_worker_multi_learner(trainer, args["outputdir"], "", args["mb_source"], args["gpu"])
+            mpi_worker_multi_learner(trainer, args["outputdir"], "", args["mb_source"])
 
     elif args["trainer_type"] == "two":
         trainer = TwoDataParallelTrainer(frame_mode)
-        mpi_worker_multi_learner(trainer, args["outputdir"], "", args["mb_source"], args["gpu"])
+        mpi_worker_multi_learner(trainer, args["outputdir"], "", args["mb_source"])
 
     elif args["trainer_type"] == "single":
         print("Coming to a single learner")
         trainer = SingleDataParallelTrainer(frame_mode)
-        mpi_worker_multi_learner(trainer, args["outputdir"], "", args["mb_source"], args["gpu"])
+        mpi_worker_multi_learner(trainer, args["outputdir"], "", args["mb_source"])
 
     cntk.distributed.Communicator.finalize()
