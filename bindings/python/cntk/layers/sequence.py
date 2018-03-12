@@ -161,6 +161,25 @@ def _sanitize_function(f):
         f = Function(f)
     return f
 
+def _santize_step_function(f):
+    import types
+    from cntk.internal.utils import get_python_function_arguments
+    if isinstance(f, types.FunctionType):
+        py_args, _ = get_python_function_arguments(f)
+        cntk_f, cntk_args = Function._to_Function_unchecked(f)
+        if len(cntk_f.arguments) > len(py_args):
+            cntk_args = [v.name for v in cntk_f.arguments]
+            additional_cntk_args = set(cntk_args) - set(py_args)
+            raise TypeError(('Recurrence Python step function makes use of additional CNTK variables or placeholders: {}. '
+                             'Your step function arguments in Python code are: {}, '
+                             'while the converted CNTK function argument are: {}. '
+                             'This is currently not a supported Python step function definition. '
+                             'Note that the current supported Python step function signature is: '
+                             'step_function(prev_state_1, prev_state_2, ..., prev_state_n, sequence_input_x) in which no references to any CNTK variables or placeholders are allowd.'
+                             ).format(additional_cntk_args, py_args, cntk_args))
+        f = Function._sanitize_check_Function(cntk_f, cntk_args, f)
+    return f
+
 
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
@@ -208,7 +227,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
     Args:
      step_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
       This function must have N+1 inputs and N outputs, where N is the number of state variables
-      (typically 1 for GRU and plain RNNs, and 2 for LSTMs).
+      (typically 1 for GRU and plain RNNs, and 2 for LSTMs). Currently only N <= 3 is supported.
      go_backwards (bool, defaults to ``False``): if ``True`` then run the recurrence from the end of the sequence to the start.
      initial_state (scalar or tensor without batch dimension; or a tuple thereof):
       the initial value for the state. This can be a constant or a learnable parameter.
@@ -228,7 +247,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
 
-    step_function = _sanitize_function(step_function)
+    step_function = _santize_step_function(step_function)
 
     # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
@@ -367,7 +386,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     Args:
      step_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
       This function must have N+1 inputs and N outputs, where N is the number of state variables
-      (typically 1 for GRU and plain RNNs, and 2 for LSTMs).
+      (typically 1 for GRU and plain RNNs, and 2 for LSTMs). Currently only N <= 3 is supported.
      go_backwards (bool, defaults to ``False``): if ``True`` then run the recurrence from the end of the sequence to the start.
      initial_state (scalar or tensor without batch dimension; or a tuple thereof):
       the initial value for the state. This can be a constant or a learnable parameter.
@@ -392,7 +411,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
-    step_function = _sanitize_function(step_function)
+    step_function = _santize_step_function(step_function)
 
     # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
@@ -480,7 +499,7 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
     Args:
      folder_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
       This function must have N+1 inputs and N outputs, where N is the number of state variables
-      (typically 1 for GRU and plain RNNs, and 2 for LSTMs).
+      (typically 1 for GRU and plain RNNs, and 2 for LSTMs). Currently only N <= 3 is supported.
      go_backwards (bool, defaults to ``False``): if ``True`` then run the recurrence from the end of the sequence to the start.
      initial_state (scalar or tensor without batch dimension; or a tuple thereof):
       the initial value for the state. This can be a constant or a learnable parameter.
@@ -562,7 +581,8 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
      generator_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
       This function must have N inputs and a N-tuple-valued output, where N is the number of state variables.
       If the emitted value should be different from the state, then the function should have
-      a tuple of N+1 outputs, where the first output is the value to emit, while the others are the state.
+      a tuple of N+1 outputs, where the first output is the value to emit, while the others are the state. 
+      Currently only N <= 3 is supported.
      until_predicate (:class:`~cntk.ops.functions.Function` or equivalent Python function):
       A function that denotes when the last element of the unfold has been emitted.
       It takes the same number of arguments as the generator, and returns a scalar that must be 1
