@@ -976,7 +976,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
             // malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
             // do not want to die immediately
         fprintf(stderr,
-            "Warning: "duplicate entry: %ls \n",
+            "Warning: duplicate entry: %ls \n",
             key.c_str());
         /* guoye: end */
         entries.resize(e - s);
@@ -1171,7 +1171,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
             //malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
             // do not want to die immediately
             fprintf(stderr,
-                "Warning: "duplicate entry : %ls \n",
+                "Warning: duplicate entry : %ls \n",
                 key.c_str());
             
         entries.resize(e - s);
