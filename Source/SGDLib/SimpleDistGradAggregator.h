@@ -251,6 +251,9 @@ private:
 
     void AggregateGradientsImpl(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool showSyncPerfStats)
     {
+        if (m_mpi->NumNodesInUse() == 1) // No need to aggregate anything.
+            return;
+
         Timer aggregationTimer;
         int deviceId = gradients[0]->GetDeviceId();
         if (showSyncPerfStats)

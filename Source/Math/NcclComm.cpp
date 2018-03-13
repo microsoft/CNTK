@@ -66,7 +66,6 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
         nvmlShutdown();
         return;
     }
-    fprintf(stderr, "GPU UUID = %s\n", thisDeviceUUID.data());
     std::vector<std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE>> allDeviceUUIDs(numRanks);
     mpi->Allgather(thisDeviceUUID.data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR, allDeviceUUIDs[0].data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR);
 
