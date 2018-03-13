@@ -162,6 +162,34 @@ def _sanitize_function(f):
     return f
 
 
+def _santize_step_function(f):
+    import types
+    from cntk.internal.utils import get_python_function_arguments
+    if isinstance(f, types.FunctionType):
+        py_args, _ = get_python_function_arguments(f)
+        try:
+            cntk_f, cntk_args = Function._to_Function_unchecked(f)
+            if len(cntk_f.arguments) > len(py_args):
+                cntk_args = [v.name for v in cntk_f.arguments]
+                additional_cntk_args = set(cntk_args) - set(py_args)
+                raise TypeError(('Recurrence Python step function makes use of additional CNTK variables or placeholders: {}. '
+                             'Your step function arguments in Python code are: {}, '
+                             'while the converted CNTK function argument are: {}. '
+                             'This is currently not a supported Python step function definition. '
+                             'Note that the current supported Python step function signature is: '
+                             'step_function(prev_state_1, prev_state_2, ..., prev_state_n, sequence_input_x) -> next_state_1, next_state_2, ..., next_state_n '
+                             'in which no references to any CNTK variables or placeholders are allowed.'
+                             ).format(additional_cntk_args, py_args, cntk_args))
+            f = Function._sanitize_check_Function(cntk_f, cntk_args, f)
+        except TypeError as e:
+            if str(e) != 'parameters cannot be created inside a @Function def':
+                raise
+            else:
+                raise TypeError('Parameter cannot be created inside Recurrence Python step function.')
+
+    return f
+
+
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
@@ -228,7 +256,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
 
-    step_function = _sanitize_function(step_function)
+    step_function = _santize_step_function(step_function)
 
     # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
@@ -392,7 +420,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
-    step_function = _sanitize_function(step_function)
+    step_function = _santize_step_function(step_function)
 
     # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
