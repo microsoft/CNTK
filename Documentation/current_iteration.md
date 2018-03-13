@@ -25,6 +25,9 @@ C.debugging.stop_profiler()
 
 ## New loss function: hierarchical softmax (Thanks @yaochengji for the contribution!)
 
+## Distributed Training with Mulitple Learners
+- Trainer now accepts multiple parameter learners for distributed training. With this change, different parameters of a network can be learned by different learners in a single training session. This also facilitates distributed training for GANs. For more information, please refer to the [Basic_GAN_Distributed.py](../Examples/Image/GAN/Basic_GAN_Distributed.py) and the [cntk.learners.distributed_multi_learner_test.py](../bindings/python/cntk/learners/tests/distributed_multi_learner_test.py)
+
 ## Bug fixes
 - Fixed convergence issue in Tutorial 201B
 - Fixed pooling/unpooling to support free dimension
@@ -33,3 +36,4 @@ C.debugging.stop_profiler()
 - Fixed a build bug when mpi=no
 - Improved distributed training aggregation speed by increasing packing threshold, and expose the knob in V2
 - Fixed a memory leak in MKL layout
+- Fixed a bug in cntk.convert API in misc.converter.py, which prevents converting complex networks.
