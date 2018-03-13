@@ -754,6 +754,9 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
     bool isFinite = std::numeric_limits<ElemType>::is_integer || std::isfinite((double) v);
     if (isFinite && v == 0)
     {
+#ifdef USE_MKLDNN
+        MklMem()->clear();
+#endif
         memset(Data(), 0, sizeof(ElemType) * GetNumElements());
     }
     else
@@ -1607,7 +1610,7 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 #ifdef USE_MKLDNN
-    Data();
+    MklMem()->clear();
 #endif
     VerifyResizable(__func__);
 
