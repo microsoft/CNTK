@@ -7,6 +7,7 @@ import os
 import numpy as np
 import cntk as C
 import pytest
+from cntk.ops.tests.ops_test_utils import cntk_device
 
 #############
 #helpers
@@ -61,6 +62,8 @@ def verify_one_input(model, data, tmpdir, name):
 
     if (type(o0) is list):
         o0 = o0[0]
+    if (type(o1) is list):
+        o1 = o1[0]
 
     assert np.allclose(o0, o1)
 
@@ -675,6 +678,24 @@ def test_Neg(tmpdir):
     data0 = np.asarray([1., -1., -2., 1.], dtype=np.float32)
     model = C.negate(data0)
     verify_no_input(model, tmpdir, 'Neg_0')
+
+#OptimizedRNNStack
+OPTIM_RNN_STACK_CONFIGS = ((True, 2, 2, 3), (True, 2, 4, 8), (True, 2, 6, 8), 
+                    (True, 4, 2, 3), (False, 2, 2, 3), (False, 2, 6, 8), 
+                    (False, 4, 4, 8))
+@pytest.mark.parametrize("bidirectional, num_layers, input_size, hidden_size", OPTIM_RNN_STACK_CONFIGS)
+def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, tmpdir, device_id):
+    if device_id == -1:
+        pytest.skip('Test only runs on GPU')
+    dev = cntk_device(device_id)    
+    from _cntk_py import constant_initializer
+    model_filename = 'optimized_rnn_stack_' + ('bi' if bidirectional else 'uni') + '_layers' + str(num_layers) + '_inp' + str(input_size) + '_hid' + str(hidden_size)
+    W = C.parameter((C.InferredDimension, input_size), constant_initializer(0.1), device=dev)
+    x = C.sequence.input_variable(shape=(input_size,))
+    s = np.asarray(np.random.uniform(-1, 1, (5,input_size)), dtype=np.float32)
+    f = C.optimized_rnnstack(x, W, hidden_size, num_layers, bidirectional=bidirectional, name='MyRnnStack')
+    f.parameters[0].value = np.reshape(np.arange(np.prod(f.parameters[0].value.shape), dtype=np.float32), f.parameters[0].value.shape)
+    verify_one_input(f, s, tmpdir, model_filename)
 
 #Pad
 def test_Pad(tmpdir):

@@ -233,9 +233,9 @@ FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<Variable> &in
         Variable B;
         std::vector<Variable> biasVariables = FindByNameHint(inputs, LSTMInputBiasNameHint);
         if (numDirections == 1 && biasVariables.size() >= 1)
-            B = biasVariables[0];
+            B = biasVariables[dir];
         else if (numDirections == 2 && biasVariables.size() == 2)
-            B = biasVariables[1];
+            B = biasVariables[dir];
 
         Variable initHVariable = GetInitialStateVariable(inputs, numDirections, LSTMInputInitialCNameHint, X.GetDataType());
         Variable initCVariable = GetInitialStateVariable(inputs, numDirections, LSTMInputInitialHNameHint, X.GetDataType());
