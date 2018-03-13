@@ -144,10 +144,8 @@ public:
 public:
     ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad),
-        m_isConvGeometryComputed(geometry->ComputeConvGeometryExplicit()), // IMP NOTE: m_isConvGeometryComputed MUST be initialized before m_mpRowCol here in this list.
-        m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
+        m_isConvGeometryComputed(false) 
     {
-        assert(m_isConvGeometryComputed);
     }
 
 protected:
@@ -166,9 +164,12 @@ protected:
 
     void EnsureConvolutionInitialized() override
     {
-        if (m_mpRowIwht == nullptr)
+        if (!m_isConvGeometryComputed)
         {
+			m_isConvGeometryComputed = m_geometry->ComputeConvGeometryExplicit();
             auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
+			m_mpRowCol = std::make_unique<Matrix<int>>(m_geometry->MpRowCol().size(), 1,
+					                                   const_cast<int*>(m_geometry->MpRowCol().data()), m_deviceId, flags);
             m_mpRowIwht = std::make_unique<Matrix<int>>(m_geometry->MpRowIwht().size(), 1,
                                                         const_cast<int*>(m_geometry->MpRowIwht().data()), m_deviceId, flags);
             m_mpRowRun = std::make_unique<Matrix<int>>(m_geometry->MpRowRun().size(), 1,
@@ -180,24 +181,27 @@ protected:
 
     void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& /*workspace*/) override
     {
-        in.ConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
+        in.ConvolutionForward(kernel, *m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
     }
 
     void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool /*accumulateGradient*/, Mat& /*workspace*/) override
     {
-        srcGrad.ConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
+        srcGrad.ConvolutionBackwardData(kernel, *m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
     }
 
     void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& /*workspace*/) override
     {
-        srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
+        srcGrad.ConvolutionBackwardKernel(in, *m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
     }
 
     void EnsurePoolingInitialized() override
     {
-        if (m_indices == nullptr)
+        if (!m_isConvGeometryComputed)
         {
-            auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
+			m_isConvGeometryComputed = m_geometry->ComputeConvGeometryExplicit();
+			auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
+			m_mpRowCol = std::make_unique<Matrix<int>>(m_geometry->MpRowCol().size(), 1,
+										               const_cast<int*>(m_geometry->MpRowCol().data()), m_deviceId, flags);
             m_mpRowIndices = std::make_unique<Matrix<int>>(m_geometry->MpRowIndices().size(), 1,
                                                            const_cast<int*>(m_geometry->MpRowIndices().data()), m_deviceId, flags);
             m_indices = std::make_unique<Matrix<int>>(m_geometry->Indices().size(), 1,
@@ -209,11 +213,11 @@ protected:
     {
         if (m_poolKind == PoolKind::Max)
         {
-            in.MaxPoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
+            in.MaxPoolingForward(*m_mpRowCol, *m_mpRowIndices, *m_indices, out);
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            in.AveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out, m_poolIncludePad);
+            in.AveragePoolingForward(*m_mpRowCol, *m_mpRowIndices, *m_indices, out, m_poolIncludePad);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -224,11 +228,11 @@ protected:
     {
         if (m_poolKind == PoolKind::Max)
         {
-            srcGrad.MaxPoolingBackward(out, in, m_mpRowCol, *m_mpRowIndices, *m_indices, grad, accumulateGradient);
+            srcGrad.MaxPoolingBackward(out, in, *m_mpRowCol, *m_mpRowIndices, *m_indices, grad, accumulateGradient);
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad, m_poolIncludePad, accumulateGradient);
+            srcGrad.AveragePoolingBackward(*m_mpRowCol, *m_mpRowIndices, *m_indices, grad, m_poolIncludePad, accumulateGradient);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -236,7 +240,7 @@ protected:
 
     void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
     {
-        out.MaxUnpooling(m_mpRowCol, *m_mpRowIndices, *m_indices, poolIn, in);
+        out.MaxUnpooling(*m_mpRowCol, *m_mpRowIndices, *m_indices, poolIn, in);
     }
 
 protected:
@@ -245,8 +249,9 @@ protected:
     // before m_mpRowCol. This ordering is required to ensure the right order of initialization
     // in the initializer list in the ctor (above) of this class.
     bool m_isConvGeometryComputed;  
-    Matrix<int> m_mpRowCol;
+    //Matrix<int> m_mpRowCol;
     // Convolution-specific maps.
+	IntMatPtr m_mpRowCol;
     IntMatPtr m_mpRowIwht;
     IntMatPtr m_mpRowRun;
     IntMatPtr m_runs;
@@ -592,6 +597,14 @@ protected:
             LogicError("GEMM convolution engine currently supports only CPU device.");
     }
 
+	void EnsureConvolutionInitialized() override
+	{
+	}
+
+	void EnsurePoolingInitialized() override
+	{
+	}
+
     // A note on notation used in the documentation for the next 3 functions:
     // for simplicity we use cuDNN-style notation for 2D convolutions (though this engine supports arbitrary convolution configuration)
     // where N - is the number of samples in a batch, C, H, W are number of channels, height and width of the input respectively.
@@ -616,6 +629,10 @@ protected:
 #ifdef USE_MKL2017DNN
         if (ForwardCoreMKL(in, kernel, out)) return;
 #endif
+
+		// Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
+		// but does not suport current geometry.
+		Base::EnsureConvolutionInitialized();
 
         size_t batchSize = in.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
@@ -644,7 +661,7 @@ protected:
 
             // Unroll inputs.
             unrolledInput.SetValue(0);
-            inputSlice.UnrollConvolutionInput(unrollCols, mapOutSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInput);
+            inputSlice.UnrollConvolutionInput(unrollCols, mapOutSize, *m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInput);
 
             // cudnn layout uses row-major kernel weight matrix.
             auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
@@ -693,6 +710,10 @@ protected:
 #else
         UNUSED(accumulateGradient);
 #endif
+
+		// Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
+		// but does not suport current geometry.
+		Base::EnsureConvolutionInitialized();
 
         size_t batchSize = srcGrad.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
@@ -750,7 +771,7 @@ protected:
 
             // Unroll outputs (source gradients).
             unrolledSrcGrad.SetValue(0);
-            srcGradSlice.UnrollConvolutionOutput(unrollCols, mapInCount, mapOutCount, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledSrcGrad);
+            srcGradSlice.UnrollConvolutionOutput(unrollCols, mapInCount, mapOutCount, *m_mpRowCol, *m_mpRowRun, *m_runs, unrolledSrcGrad);
 
             // Perform matrix multiplication of unrolled outputs with weights.
             // If there is just one sample in the sub-batch then compute result directly to the output matrix.
@@ -792,6 +813,10 @@ protected:
 #else
         UNUSED(accumulateGradient);
 #endif
+
+		// Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
+		// but does not suport current geometry.
+		Base::EnsureConvolutionInitialized();
 
         size_t batchSize = srcGrad.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
@@ -850,7 +875,7 @@ protected:
             }
             unrolledInputSlice.Reshape(mapOutSize * curBatchSize, unrollRows);
             unrolledInputSlice.SetValue(0);
-            inputSlice.UnrollConvolutionInputForKernelBackprop(mapOutSize, m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInputSlice);
+            inputSlice.UnrollConvolutionInputForKernelBackprop(mapOutSize, *m_mpRowCol, *m_mpRowRun, *m_runs, unrolledInputSlice);
 
             // cudnn layout uses row-major kernel weight matrix.
             auto kernGrad = kernelGrad.ColumnSlice(0, kernelGrad.GetNumCols());
