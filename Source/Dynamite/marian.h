@@ -699,11 +699,20 @@ namespace marian
     // Expr pow(float a, Expr b);
     // Expr pow(const Expr& a, float b);
 
-    static inline Expr dot(const Expr& a, const Expr& b, bool transA = false, bool transB = false, float scalar = 1.f)
+    static inline Expr dot(const Expr& x, const Expr& W, bool transX = false, bool transW = false, float scalar = 1.f)
     {
-        a, b, transA, transB, scalar;
-        return InternalOps::NotImplemented("dot");
+        if (W.Shape().Rank() != 2)
+            CNTK::InvalidArgument("dot: weight (second factor) must be a matrix (rank 2)");
+        auto res =
+            /*if*/ (transW) ?
+               CNTK::TransposeTimes(W, transX ? (Expr)Transpose(x) : x)
+            /*else*/ :
+                CNTK::Times(W, transX ? (Expr)Transpose(x) : x);
+        if (scalar != 1.0f)
+            res = res * scalar;
+        return res;
     }
+
     static inline Expr bdot(const Expr& aMarian, const Expr& bMarian, bool transAMarian = false, bool transBMarian = false, float scalar = 1.f)
     {
         // We operate on the internal CNTK notation which has all axes reversed in order.
@@ -859,6 +868,8 @@ namespace marian
 
     static inline Expr affine(const Expr& x, const Expr& W, const Expr& b, bool transX = false, bool transW = false, float scalar = 1.0f)
     {
+        if (W.Shape().Rank() != 2)
+            CNTK::InvalidArgument("affine: weight must be a matrix (rank 2)");
         auto res =
             /*if*/ (transW) ?
                 CNTK::TransposeAffine(W, transX ? (Expr)Transpose(x) : x, b)
