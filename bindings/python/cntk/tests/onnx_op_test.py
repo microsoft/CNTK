@@ -8,6 +8,7 @@ import numpy as np
 import cntk as C
 import pytest
 from cntk.ops.tests.ops_test_utils import cntk_device
+from itertools import product
 
 #############
 #helpers
@@ -431,6 +432,43 @@ def test_Greater(tmpdir):
     model = C.greater([41., 42., 43.], [42., 42., 42.])
     verify_no_input(model, tmpdir, 'Greater_0')
 
+#GRU
+def MakeGRUNameFromConfig(backward, initial_state, activtion):
+    model_name = 'GRU.' + activtion.__name__
+    if (initial_state != 0):
+        model_name += '.initial'
+    if (backward):        
+        model_name += '.backward'
+    else:    
+        model_name += '.forward'
+    return model_name 
+
+direction_options = [False, True]
+activation_options = [C.tanh]
+initial_state_options = [0]
+
+input_dim = 2
+cell_dim = 3
+batch_size = 1
+sequence_len = 5
+
+def test_GRU(tmpdir):
+    for config in list(product(direction_options, initial_state_options, activation_options)):
+        model_filename = MakeGRUNameFromConfig(*config)
+        print(model_filename)
+        backward, initial_state, activation =  config
+    
+        x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+        GRUModel = C.layers.Recurrence(C.layers.GRU(cell_dim,     
+                                                    activation = activation),   
+                                       initial_state = initial_state,    
+                                       go_backwards=backward)(x)
+        #CLG.plot(GRUModel, filename=cntk_pdf_filename)
+        #plot_block_internals(GRUModel, 'GRU', model_filename)
+        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+        verify_one_input(GRUModel, data, tmpdir, model_filename)
+
+
 #Hardmax
 def test_Hardmax(tmpdir):
     data = np.asarray([1., 1., 2., 3.], dtype=np.float32)
@@ -522,21 +560,18 @@ def test_LRN(tmpdir):
     verify_one_input(model, img, tmpdir, 'LRN_1')
 
 #LSTM
-from cntk.layers import * 
-from itertools import product
-
 def CreateLSTMModel(activation, 
                     peepholes, 
                     self_stabilization, 
                     cell_dim, 
                     initial_state):  
-    return Sequential([ 
-        Recurrence(LSTM(cell_dim, 
-                        use_peepholes = peepholes, 
-                        activation = activation,    
-                        enable_self_stabilization = self_stabilization),    
-                   initial_state = initial_state)
-                            ])
+    return C.layers.Sequential([  
+        C.layers.Recurrence(C.layers.LSTM(cell_dim,  
+                                          use_peepholes = peepholes,  
+                                          activation = activation,     
+                                          enable_self_stabilization = self_stabilization),     
+                            initial_state = initial_state) 
+        ])
 
 # lstm attributes
 use_peepholes_options = [False]
@@ -567,7 +602,7 @@ def test_LSTM(tmpdir):
         model_filename = MakeLSTMNameFromConfig(*config)
         use_peepholes, enable_self_stabilization, initial_state, activation =  config
     
-        x = C.input_variable(input_dim, dynamic_axes=[Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+        x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
         LSTMmodel = CreateLSTMModel(peepholes = use_peepholes,   
                                     activation = activation,
                                     initial_state = initial_state,
