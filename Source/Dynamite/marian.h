@@ -212,6 +212,7 @@ namespace marian
         DEFINE_KEYWORD(Expr,                       mask);
         DEFINE_KEYWORD(bool,                       fixed);
         DEFINE_KEYWORD(Shape,                      shape);
+        DEFINE_KEYWORD(float,                      dropout_prob);
 #pragma pop_macro("DEFINE_KEYWORD")
     };
 
