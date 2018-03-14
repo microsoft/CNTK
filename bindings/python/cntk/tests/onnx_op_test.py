@@ -716,8 +716,7 @@ def test_Neg(tmpdir):
 
 #OptimizedRNNStack
 OPTIM_RNN_STACK_CONFIGS = ((True, 2, 2, 3), (True, 2, 4, 8), (True, 2, 6, 8), 
-                    (True, 4, 2, 3), (False, 2, 2, 3), (False, 2, 6, 8), 
-                    (False, 4, 4, 8))
+                    (True, 4, 2, 3), (False, 2, 2, 3))
 @pytest.mark.parametrize("bidirectional, num_layers, input_size, hidden_size", OPTIM_RNN_STACK_CONFIGS)
 def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, tmpdir, device_id):
     if device_id == -1:
