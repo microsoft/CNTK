@@ -1,15 +1,94 @@
 #ifndef ONNXIR_UTILS_H
 #define ONNXIR_UTILS_H
 
+#include <fcntl.h>
+#include <fstream>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <sys/io.h>
+#include <unistd.h>
+#endif
+
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include "status.h"
 #pragma warning(push)
 #pragma warning(disable : 4800 4610 4512 4510 4267 4127 4125 4100 4456 4189 4996 4503)
 #include "proto/onnx/protobuf/onnx-ml.pb.h"
 #pragma warning(pop)
 
 using namespace onnx;
+using namespace ONNXIR::Common;
+
+namespace
+{
+#ifdef _WIN32
+    inline Status FileOpenRd(const std::wstring& p_path, /*out*/ int* p_fd)
+    {
+        _wsopen_s(p_fd, p_path.c_str(), _O_RDONLY | _O_SEQUENTIAL | _O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+        if (0 > *p_fd)
+        {
+            return Status(SYSTEM, errno);
+        }
+        return Status::OK();
+    }
+
+    inline Status FileOpenWr(const std::wstring& p_path, /*out*/ int* p_fd)
+    {
+        _wsopen_s(p_fd, p_path.c_str(), _O_CREAT | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+        if (0 > *p_fd)
+        {
+            return Status(SYSTEM, errno);
+        }
+        return Status::OK();
+    }
+#endif
+
+    inline Status FileOpenRd(const std::string& p_path, /*out*/ int* p_fd)
+    {
+#ifdef _WIN32
+        _sopen_s(p_fd, p_path.c_str(), _O_RDONLY | _O_SEQUENTIAL | _O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+#else
+        *p_fd = open(p_path.c_str(), O_RDONLY);
+#endif
+        if (0 > *p_fd)
+        {
+            return Status(SYSTEM, errno);
+        }
+        return Status::OK();
+    }
+
+    inline Status FileOpenWr(const std::string& p_path, /*out*/ int* p_fd)
+    {
+#ifdef _WIN32
+        _sopen_s(p_fd, p_path.c_str(), _O_CREAT | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+#else
+        *p_fd = open(p_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+#endif
+        if (0 > *p_fd)
+        {
+            return Status(SYSTEM, errno);
+        }
+        return Status::OK();
+    }
+
+    inline Status FileClose(int fd)
+    {
+        int ret = 0;
+#ifdef _WIN32
+        ret = _close(fd);
+#else
+        ret = close(fd);
+#endif
+        if (0 != ret)
+        {
+            return Status(SYSTEM, errno);
+        }
+        return Status::OK();
+    }
+}
 
 namespace ONNXIR
 {
