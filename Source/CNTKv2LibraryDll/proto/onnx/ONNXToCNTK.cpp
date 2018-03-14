@@ -612,7 +612,6 @@ std::vector<Variable> CreateRNNConstant(
     const Node *parentNode, int index, const std::string &name, onnx::TensorProto &valueProto, const DeviceDescriptor& computeDevice)
 {
     std::vector<Variable> inputs;
-    string parentONNXOpName = parentNode->OpType();
     auto dataType = valueProto.data_type();
 
     switch (dataType)
@@ -633,6 +632,7 @@ std::vector<Variable> CreateRNNConstant(
     }
     }
 
+    string parentONNXOpName = parentNode->OpType();
     // index to LSTM inputs as specified in the ONNX document. 
     // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---8
     if (parentONNXOpName == "LSTM")
@@ -805,6 +805,154 @@ std::vector<Variable> CreateRNNConstant(
             CNTK::LogicError("CreateRNNConstant received unepxpeted index: %d", index);
         }
     }
+    else if (parentONNXOpName == "GRU")
+    {
+        // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---6
+        switch (index)
+        {
+        case GRUInputIndexX:
+            // X, should not come to here 
+            return inputs;
+        case GRUInputIndexW:
+        {
+            // see ONNX spec for the tensor shape
+            int num_directions = valueProto.dims(0);
+            size_t rows = valueProto.dims(1);
+            size_t cols = valueProto.dims(2);
+
+            // CNTK cpp requires shape: (input_size, 3 * hidden_size)
+            NDShape weightShape({ rows, cols });
+
+            int input_size = cols;
+            int cell_size = rows / 3;
+
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + "_W_" + (char)dir;
+                int totalSizePerDirection = rows * cols;
+
+                // TODO: what about double?
+                float *data = new float[totalSizePerDirection];
+                for (size_t count = 0; count < totalSizePerDirection; count++)
+                {
+                    int row = count / input_size;
+                    int col = count % input_size;
+                    int sourceIndex = dir * totalSizePerDirection + count;
+                    int targetIndex = col * cell_size * GRUWeightDimensionHiddenMultiplier + row;
+                    data[targetIndex] = valueProto.float_data()[sourceIndex];
+                }
+
+                Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        case GRUInputIndexR:
+        {
+            // split into H and H1 for CNTK GRU implementation
+            int num_directions = valueProto.dims(0);
+            size_t rows = valueProto.dims(1);
+            size_t cols = valueProto.dims(2);
+
+            int input_size = cols;
+            int cell_size = rows / 3;
+
+            NDShape hShape({ (size_t)cell_size * 2, (size_t)input_size });
+            NDShape h1Shape({ (size_t)cell_size, (size_t)input_size });
+
+            inputs.resize(num_directions * 2);
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string hNodeName = name + "_H_" + (char)dir;
+                std::string h1NodeName = name + "_H1_" + (char)dir;
+                int totalSizePerDirection = rows * cols;
+
+                float *hData = new float[hShape.TotalSize()];
+                float *h1Data = new float[h1Shape.TotalSize()];
+                for (size_t count = 0; count < totalSizePerDirection; count++)
+                {
+                    int row = count / input_size;
+                    int col = count % input_size;
+                    int block = row / cell_size;
+                    int sourceIndex = dir * totalSizePerDirection + count;
+                    if (block < CNTKGRUZRWeightMultiplier)
+                    {
+                        int targetIndex = col * cell_size * CNTKGRUZRWeightMultiplier + row;
+                        hData[targetIndex] = valueProto.float_data()[sourceIndex];
+                    }
+                    else
+                    {
+                        int targetIndex = col * cell_size + row - cell_size * CNTKGRUZRWeightMultiplier;
+                        h1Data[targetIndex] = valueProto.float_data()[sourceIndex];
+                    }
+                }
+
+                Constant constantH = CreateConstantWithRawData(&hData[0], hShape, hNodeName, computeDevice);
+                Constant constantH1 = CreateConstantWithRawData(&h1Data[0], h1Shape, h1NodeName, computeDevice);
+                inputs[dir] = constantH;
+                inputs[dir + num_directions] = constantH1;
+            }
+            return inputs;
+        }
+        case GRUInputIndexB:
+            // B
+        {
+            // see ONNX spec for the tensor shape
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(1) / GRUBiasDimensionHiddenMultiplier;
+            // shape size is devided by 2 so that it only applies to input (CNTK)
+            // TODO: this incompatibility needs further investigation.
+            NDShape weightShape({ (size_t)(GRUBiasDimensionHiddenMultiplier / 2 * cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + std::string(1, (char)dir) + LSTMInputBiasNameHint;
+                int totalSizePerDirection = GRUBiasDimensionHiddenMultiplier / 2 * cell_size;
+                float *data = new float[totalSizePerDirection];
+                for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
+                {
+                    int row = targetIndex;
+                    // soruce is collmn major
+                    int src_index = row;
+                    // "fuse"
+                    data[targetIndex] =
+                        valueProto.float_data()[dir * 2 * totalSizePerDirection + src_index] +
+                        valueProto.float_data()[dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index];
+                }
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        case GRUInputIndexSequenceLens:
+            return inputs;
+        case GRUInitialH:
+        {
+            // initial_h
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(2);
+            NDShape weightShape({ (size_t)(cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + std::string(1, (char)dir) + LSTMInputInitialHNameHint;
+
+                float *data = new float[cell_size];
+                for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
+                {
+                    data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
+                }
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        break;
+        return inputs;
+        default:
+            CNTK::LogicError("CreateRNNConstant for GRU op received unepxpeted index: %d", index);
+        }
+    }
     else
     {
         NOT_IMPLEMENTED;
@@ -885,6 +1033,36 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
         case LSTMInputIndexinitial_h: // initial_h
         case LSTMInputIndexinitial_c: // initial_c
         case LSTMInputIndexP: // P
+            NOT_IMPLEMENTED;
+        default:
+            LogicError("LSTM node has unexpected input");
+        }
+    }
+    else if (parentONNXOpName == "GRU")
+    {
+        int inputIndex = CalculateNodeArgInputIndex(nodeArg, parentNode);
+        switch (inputIndex)
+        {
+        case GRUInputIndexX:
+            // X: `[seq_length, batch_size, input_size]`.
+        {
+            Variable inputVariable;
+            if (constructedNodeArgVariableMap.find(nodeArg->Name()) == constructedNodeArgVariableMap.end())
+            {
+                DataType dataType = FromONNXType(nodeArg->ToProto().type());
+                int input_size = shapeProto->dim(2).dim_value();
+                NDShape shape({ (size_t)(input_size) });
+                inputVariable = InputVariable(shape, dataType, ToWString(nodeArg->Name()), dynamicAxes);
+                constructedNodeArgVariableMap.insert(ONNXToCNTKVariableMap::value_type(nodeArg->Name(), inputVariable));
+            }
+            return std::vector<Variable>({ constructedNodeArgVariableMap[nodeArg->Name()] });
+        }
+        // other inputs shall be ONNX constant node and be created as CNTK Constant in CreateRNNConstant
+        case GRUInputIndexW:
+        case GRUInputIndexR:
+        case GRUInputIndexB:
+        case GRUInputIndexSequenceLens: 
+        case GRUInitialH:
             NOT_IMPLEMENTED;
         default:
             LogicError("LSTM node has unexpected input");
@@ -1464,6 +1642,15 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         const std::vector<string> activations = GetNamedAttributeAsStringVec(node, "activations", 
             std::vector<string>({"Sigmoid", "Tanh", "Tanh"}));
         return CreateLSTM(node, inputs, direction, activations, activation_alpha, activation_beta);
+    }
+    else if (onnxOpName == "GRU")
+    {
+        const string direction = GetNamedAttributeAsString(node, "direction");
+        std::vector<float> activation_alpha = GetNamedAttributeAsFloatVec(node, "activation_alpha", std::vector<float>());
+        std::vector<float> activation_beta = GetNamedAttributeAsFloatVec(node, "activation_beta", std::vector<float>());
+        const std::vector<string> activations = GetNamedAttributeAsStringVec(node, "activations",
+            std::vector<string>({ "Sigmoid", "Tanh" }));
+        return CreateGRU(node, inputs, direction, activations, activation_alpha, activation_beta);
     }
     if (onnxOpName == "FC")
     {
@@ -2275,7 +2462,7 @@ std::vector<FunctionPtr> ONNXToCNTKHelper::FromONNXNode(const Node *node, ONNXTo
     const Node *parentNode;
     int childIndex;
     std::tie<const Node *, int>(parentNode, childIndex) = FindParentAndChildIndex(node);
-    if (parentNode != nullptr && parentNode->OpType() == "LSTM")
+    if (parentNode != nullptr && Operators::IsRNNOp(parentNode->OpType()))
     {
         std::vector<FunctionPtr> cntkFunctions = CreateRNNConstantOp(graph, node, parentNode, childIndex, computeDevice);
         if (!cntkFunctions.empty())
@@ -2613,7 +2800,7 @@ std::vector<Variable> ONNXToCNTKHelper::CreateCNTKInputsStartingFromIndex(const 
         else
         {
             std::string parentONNXOpName = node->OpType();
-            if (parentONNXOpName == "LSTM")
+            if (Operators::IsRNNOp(node->OpType()))
             {
                 std::vector<Variable> inputVariables =
                     CreateRNNLeafVariableOrConstant(nodeArg, node, graph, constructedNodeArgVariableMap, computeDevice);
