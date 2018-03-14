@@ -603,6 +603,7 @@ protected:
 
 	void EnsurePoolingInitialized() override
 	{
+		Base::EnsurePoolingInitialized();
 	}
 
     // A note on notation used in the documentation for the next 3 functions:
