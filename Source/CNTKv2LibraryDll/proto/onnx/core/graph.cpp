@@ -2,6 +2,7 @@
 #include <iostream>
 #include <numeric>
 #include <stack>
+#include <algorithm>
 
 #include "graph.h"
 #include "op.h"
