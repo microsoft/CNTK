@@ -166,10 +166,10 @@ protected:
     {
         if (!m_isConvGeometryComputed)
         {
-			m_isConvGeometryComputed = m_geometry->ComputeConvGeometryExplicit();
+            m_isConvGeometryComputed = m_geometry->ComputeConvGeometryExplicit();
             auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
-			m_mpRowCol = std::make_unique<Matrix<int>>(m_geometry->MpRowCol().size(), 1,
-					                                   const_cast<int*>(m_geometry->MpRowCol().data()), m_deviceId, flags);
+            m_mpRowCol = std::make_unique<Matrix<int>>(m_geometry->MpRowCol().size(), 1,
+                                                       const_cast<int*>(m_geometry->MpRowCol().data()), m_deviceId, flags);
             m_mpRowIwht = std::make_unique<Matrix<int>>(m_geometry->MpRowIwht().size(), 1,
                                                         const_cast<int*>(m_geometry->MpRowIwht().data()), m_deviceId, flags);
             m_mpRowRun = std::make_unique<Matrix<int>>(m_geometry->MpRowRun().size(), 1,
@@ -198,10 +198,10 @@ protected:
     {
         if (!m_isConvGeometryComputed)
         {
-			m_isConvGeometryComputed = m_geometry->ComputeConvGeometryExplicit();
-			auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
-			m_mpRowCol = std::make_unique<Matrix<int>>(m_geometry->MpRowCol().size(), 1,
-										               const_cast<int*>(m_geometry->MpRowCol().data()), m_deviceId, flags);
+            m_isConvGeometryComputed = m_geometry->ComputeConvGeometryExplicit();
+            auto flags = IsGpu(m_deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer;
+            m_mpRowCol = std::make_unique<Matrix<int>>(m_geometry->MpRowCol().size(), 1,
+                                                      const_cast<int*>(m_geometry->MpRowCol().data()), m_deviceId, flags);
             m_mpRowIndices = std::make_unique<Matrix<int>>(m_geometry->MpRowIndices().size(), 1,
                                                            const_cast<int*>(m_geometry->MpRowIndices().data()), m_deviceId, flags);
             m_indices = std::make_unique<Matrix<int>>(m_geometry->Indices().size(), 1,
@@ -251,7 +251,7 @@ protected:
     bool m_isConvGeometryComputed;  
     //Matrix<int> m_mpRowCol;
     // Convolution-specific maps.
-	IntMatPtr m_mpRowCol;
+    IntMatPtr m_mpRowCol;
     IntMatPtr m_mpRowIwht;
     IntMatPtr m_mpRowRun;
     IntMatPtr m_runs;
@@ -597,14 +597,14 @@ protected:
             LogicError("GEMM convolution engine currently supports only CPU device.");
     }
 
-	void EnsureConvolutionInitialized() override
-	{
-	}
+    void EnsureConvolutionInitialized() override
+    {
+    }
 
-	void EnsurePoolingInitialized() override
-	{
-		Base::EnsurePoolingInitialized();
-	}
+    void EnsurePoolingInitialized() override
+    {
+        Base::EnsurePoolingInitialized();
+    }
 
     // A note on notation used in the documentation for the next 3 functions:
     // for simplicity we use cuDNN-style notation for 2D convolutions (though this engine supports arbitrary convolution configuration)
@@ -631,9 +631,9 @@ protected:
         if (ForwardCoreMKL(in, kernel, out)) return;
 #endif
 
-		// Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
-		// but does not suport current geometry.
-		Base::EnsureConvolutionInitialized();
+        // Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
+        // but does not suport current geometry.
+        Base::EnsureConvolutionInitialized();
 
         size_t batchSize = in.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
@@ -712,9 +712,9 @@ protected:
         UNUSED(accumulateGradient);
 #endif
 
-		// Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
-		// but does not suport current geometry.
-		Base::EnsureConvolutionInitialized();
+        // Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
+        // but does not suport current geometry.
+        Base::EnsureConvolutionInitialized();
 
         size_t batchSize = srcGrad.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
@@ -815,9 +815,9 @@ protected:
         UNUSED(accumulateGradient);
 #endif
 
-		// Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
-		// but does not suport current geometry.
-		Base::EnsureConvolutionInitialized();
+        // Making sure the geometry is initialized before proceeding, this is necessary when MKL is available 
+        // but does not suport current geometry.
+        Base::EnsureConvolutionInitialized();
 
         size_t batchSize = srcGrad.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
