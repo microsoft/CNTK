@@ -162,6 +162,38 @@ def test_recurrence():
     rt = FF(s, x)
     np.testing.assert_array_almost_equal(rt[0], exp, decimal=6, err_msg='Error in RecurrenceFrom(GRU()) forward')
 
+def test_recurrence_step_fun():
+    import cntk as C
+    def step_f(prev1, x):
+        return prev1 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, x):
+        return prev1 * prev2 * x, prev1 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, prev3, x):
+        return prev1 * prev2 * prev3 * x, prev1 * x, prev2 * x
+    rec = Recurrence(step_f)
+
+    with pytest.raises(ValueError):
+        def step_f(prev1, prev2, prev3, prev4, x):
+            return prev1 * prev2 * prev3 * x, prev1 * x, prev2 * x, prev4 * x
+        rec = Recurrence(step_f)
+
+    with pytest.raises(TypeError):
+        v = C.input_variable((1), name='additional_input_variable')
+        step_f = lambda prev, x: prev * v * x
+        rec = Recurrence(step_f)
+
+    with pytest.raises(TypeError):
+        def step_f(prev1, x):
+            p = C.Parameter((1))
+            return prev1 * x * p
+        rec = Recurrence(step_f)
+
+
+
 ####################################
 # recurrence (Fold()) over regular function
 ####################################
