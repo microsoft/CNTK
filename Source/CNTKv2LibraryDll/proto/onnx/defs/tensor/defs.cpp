@@ -67,7 +67,7 @@ namespace ONNXIR {
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
         .Attr("axis", "Which axis to split on", AttrType::AttributeProto_AttributeType_INT)
-        .Attr("split", "Number of tensors to output.", AttrType::AttributeProto_AttributeType_INT);
+        .Attr("split", "Number of tensors to output.", AttrType::AttributeProto_AttributeType_INTS);
 
     // Taken from ONNX
     REGISTER_OPERATOR_SCHEMA(Transpose)
@@ -89,11 +89,7 @@ namespace ONNXIR {
         .Input("axis", "Axis along which to repeat.", "T")
         .Output("output", "Repeated output.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
-            "Constrain input and output types to float tensors.")
-        .Attr("axis", "Axis along which to repeat. Default is 0.",
-            AttrType::AttributeProto_AttributeType_INT, int64_t(0))
-        .Attr("tiles", "Number of repeated copies to make of the input tensor.",
-            AttrType::AttributeProto_AttributeType_INT);
+            "Constrain input and output types to float tensors.");
 
     // Taken from ONNX
     REGISTER_OPERATOR_SCHEMA(Concat)
@@ -130,14 +126,23 @@ namespace ONNXIR {
         .Description("Given data tensor of rank r >= 1, and indices tensor of rank q, gather "
             "entries of the outer-most dimension of data indexed by indices, and concatenate "
             "them in an output tensor of rank q + (r - 1). "
-            "Example: data = [ [1.0, 1.2], [2.3, 3.4], [4.5, 5.7] ] "
-            "indices = [ [0, 1], [1, 2] ] "
-            "ouput = [ [ [1.0, 1.2], [2.3, 3.4], ], [ [2.3, 3.4], [4.5, 5.7] ] ] ")
+            "Example 1: data = [ [1.0, 1.2], [2.3, 3.4], [4.5, 5.7], ] "
+            "           indices = [ [0, 1], [1, 2], ] "
+            "           output = [ [ [1.0, 1.2], [2.3, 3.4], ], [ [2.3, 3.4], [4.5, 5.7], ], ]"
+            "Example 2: data = [ [1.0, 1.2, 1.9], [2.3, 3.4, 3.9], [4.5, 5.7, 5.9], ] "
+            "           indices = [0, 2], ] axis = 1, "
+            "           output = [ [ [1.0, 1.9], [2.3, 3.9], [4.5, 5.9], ], ]")
         .Input("data", "Tensor of rank r >= 1.", "T")
-        .Input("indices", "Tensor of int32/int64 indices, of any rank q.", "T")
-        .Output("ouput", "Tensor of rank q + (r - 1).", "T")
+        .Input("indices", "Tensor of int32/int64 indices, of any rank q.", "Tind")
+        .Output("output", "Tensor of rank q + (r - 1).", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
-            "Constrain input and output types to float tensors.");
+            "Constrain input types to float tensors.")
+        .TypeConstraint("Tind", { "tensor(int32)", "tensor(int64)" },
+            "Constrain indices types to float tensors.")
+        .Attr("axis",
+            "Which axis to gather on, defaults to 0. Negative value means counting dimensions "
+            "from the back. Accepted range in [-r, r-1]",
+            AttrType::AttributeProto_AttributeType_INT, int64_t(0));
 
     // Taken from ONNX
     REGISTER_OPERATOR_SCHEMA(Squeeze)
