@@ -20,7 +20,7 @@ enable_java=
 
 # cntk build version
 # Modify both of the following during major release
-default_build_version="2.4"
+default_build_version="2.5"
 default_build_public="no"
 build_version=$default_build_version
 build_public=$default_build_public

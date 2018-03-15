@@ -220,6 +220,7 @@ Tests/EndToEndTests/CNTKv2Python/Examples/models
 # Python bindings
 bindings/python/_cntk_py*.pyd
 bindings/python/cntk.egg-info/
+bindings/python/cntk_gpu.egg-info/
 bindings/python/cntk/cntk_py.py
 bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
@@ -238,6 +239,8 @@ Source/CNTKv2LibraryDll/proto/CNTK.pb.h
 # Auto-generated sources from ONNX proto
 Source/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.cc
 Source/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.h
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/onnx-ml.pb.cc
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/onnx-ml.pb.h
 
 bindings/python/cntk/c_plus_c.mod
 bindings/python/cntk/i_plus_c_0.mod
@@ -339,3 +342,4 @@ packages/
 /CNTK.VC.VC.opendb
 /Local
 .vs/
+cscope.out
