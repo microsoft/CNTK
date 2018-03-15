@@ -49,8 +49,8 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Cntk.Eval.Wrapper-2.4, Version=0.0.0.0, Culture=neutral, PublicKeyToken=52681d72504348ec, processorArchitecture=AMD64">
-      <HintPath>..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.4.0\lib\net45\x64\Cntk.Eval.Wrapper-2.4.dll</HintPath>
+    <Reference Include="Cntk.Eval.Wrapper-2.5, Version=0.0.0.0, Culture=neutral, PublicKeyToken=52681d72504348ec, processorArchitecture=AMD64">
+      <HintPath>..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.5.0\lib\net45\x64\Cntk.Eval.Wrapper-2.5.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -88,13 +88,13 @@
     </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\packages\CNTK.Deps.MKL.2.4.0\build\net45\CNTK.Deps.MKL.targets" Condition="Exists('..\packages\CNTK.Deps.MKL.2.4.0\build\net45\CNTK.Deps.MKL.targets')" />
-  <Import Project="..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.4.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets" Condition="Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.4.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets')" />
+  <Import Project="..\packages\CNTK.Deps.MKL.2.5.0\build\net45\CNTK.Deps.MKL.targets" Condition="Exists('..\packages\CNTK.Deps.MKL.2.5.0\build\net45\CNTK.Deps.MKL.targets')" />
+  <Import Project="..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.5.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets" Condition="Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.5.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\CNTK.Deps.MKL.2.4.0\build\net45\CNTK.Deps.MKL.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.Deps.MKL.2.4.0\build\net45\CNTK.Deps.MKL.targets'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.4.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.4.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets'))" />
+    <Error Condition="!Exists('..\packages\CNTK.Deps.MKL.2.5.0\build\net45\CNTK.Deps.MKL.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.Deps.MKL.2.5.0\build\net45\CNTK.Deps.MKL.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.5.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.5.0\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets'))" />
   </Target>
 </Project>
