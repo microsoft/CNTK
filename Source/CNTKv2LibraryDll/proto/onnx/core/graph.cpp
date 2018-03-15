@@ -444,7 +444,7 @@ namespace ONNXIR
             m_graph->m_graphProtoSyncNeeded = true;                              \
             AttributeProto a;                                                    \
             a.set_name(p_attrName);                                              \
-            a.set_type(enumType);                                               \
+            a.set_type(enumType);                                                \
             a.set_##field(p_value);                                              \
             m_attributes.emplace(p_attrName, a);                                 \
             return true;                                                         \
@@ -465,7 +465,7 @@ namespace ONNXIR
             m_graph->m_graphProtoSyncNeeded = true;                              \
             AttributeProto a;                                                    \
             a.set_name(p_attrName);                                              \
-            a.set_type(enumType);                                               \
+            a.set_type(enumType);                                                \
             *(a.mutable_##field()) = p_value;                                    \
             m_attributes.emplace(p_attrName, a);                                 \
             return true;                                                         \
@@ -487,7 +487,7 @@ namespace ONNXIR
             m_graph->m_graphProtoSyncNeeded = true;                              \
             AttributeProto a;                                                    \
             a.set_name(p_attrName);                                              \
-            a.set_type(enumType);                                               \
+            a.set_type(enumType);                                                \
             for (const auto& val : p_values)                                     \
             {                                                                    \
                 *(a.mutable_##field()->Add()) = val;                             \
