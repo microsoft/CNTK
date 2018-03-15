@@ -78,6 +78,10 @@ private:
 
     // Track phone boundaries
     bool m_withPhoneBoundaries;
+    bool m_squashLabel;
+
+    size_t m_blankID;
+    bool m_blankInFront;
 
     StateTablePtr m_stateTable;
 
