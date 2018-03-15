@@ -1548,7 +1548,7 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
     // float wer = float(mat[rec.size()][ref.size()]) / ref.size();
 
     short count, err;
-	count = 0;
+    count = 0;
     for (j = 1; j <= ref.size(); j++)
     {
         if (ref[j] == 0xfffff) count++;
