@@ -1544,25 +1544,25 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
         }
 
     
-	/* guoye: for debug purpose */
-	// float wer = float(mat[rec.size()][ref.size()]) / ref.size();
+    /* guoye: for debug purpose */
+    // float wer = float(mat[rec.size()][ref.size()]) / ref.size();
 
-	short count, err;
-	for (j = 1; j <= ref.size(); j++)
-	{
-		if (ref[j] == 0xfffff) count++;
+    short count, err;
+    for (j = 1; j <= ref.size(); j++)
+    {
+        if (ref[j] == 0xfffff) count++;
 
-	}
+    }
 
-	err = mat[rec.size()][ref.size()] - count;
+    err = mat[rec.size()][ref.size()] - count;
 
-	if (err < 0) err = 0;
-	float wer = float(err) / ref.size();
+    if (err < 0) err = 0;
+    float wer = float(err) / ref.size();
 
-	/* guoye: for debug purpose */
+    /* guoye: for debug purpose */
     
-	
-	
+    
+    
     for (i = 0; i < rec.size(); i++) delete[] mat[i];
     delete[] mat;
     return wer;
@@ -1604,10 +1604,10 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             {
                 if (!is_special_words[edges[vt_paths[i][j]].S]) path_ids.push_back(nodes[edges[vt_paths[i][j]].S].wid);
 
-				nodes[edges[vt_paths[i][j]].S].wid;
+                nodes[edges[vt_paths[i][j]].S].wid;
             }
             if (!is_special_words[edges[vt_paths[i][j]].E]) path_ids.push_back(nodes[edges[vt_paths[i][j]].E].wid);
-			nodes[edges[vt_paths[i][j]].E].wid;
+            nodes[edges[vt_paths[i][j]].E].wid;
         }
 
         vt_path_weights[i] = compute_wer(wids, path_ids);
