@@ -45,9 +45,11 @@ C.debugging.stop_profiler()
 ### Updates
 - CNTK exported ONNX models are now ONNX.checker compliant. 
 - Added ONNX support for CNTK’s OptimizedRNNStack operator (LSTM only).
+- Added support for LSTM and GRU operators
 - Added support for experimental ONNX op MeanVarianceNormalization.
 - Added support for experimental ONNX op Identity.
 - Added support for exporting CNTK’s LayerNormalization layer using ONNX MeanVarianceNormalization op.
+
 ### Bug or minor fixes:
 - Axis attribute is optional in CNTK’s ONNX Concat operator.
 - Bug fix in ONNX broadcasting for scalars.
