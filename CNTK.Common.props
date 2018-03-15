@@ -40,7 +40,7 @@
     <!-- PublicBuild:
          True if build binaries are meant to shared publicly with CNTK community. -->
     <!-- NOTE: Modify both CntkVersion and PublicBuild during MAJOR RELEASE -->
-    <PublicBuild>false</PublicBuild>
+    <PublicBuild>true</PublicBuild>
 
     <!-- CntkVersionProvidedExternally:
          Hard-coded CntkVersion can be overridden if property BUILD_CNTK_VERSION is present. -->
