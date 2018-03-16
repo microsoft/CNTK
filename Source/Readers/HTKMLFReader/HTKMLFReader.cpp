@@ -553,8 +553,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         specialwordids.insert(unigramsymbols["[UNKNOWN/]"]);
         specialwordids.insert(unigramsymbols[".]"]);
 
-		// this is to exclude the unknown words in lattice brought when merging the numerator lattice into denominator lattice.
-		specialwordids.insert(0xfffff);
+        // this is to exclude the unknown words in lattice brought when merging the numerator lattice into denominator lattice.
+        specialwordids.insert(0xfffff);
         
         /* guoye: end */
         
@@ -613,9 +613,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             specialwordids.insert((wordidmap_itr == wordidmap.end()) ? -1 : wordidmap_itr->second);
         }
 
-		// this is to exclude the unknown words in lattice brought when merging the numerator lattice into denominator lattice.
-		specialwordids.insert(0xfffff);
-		/* guoye: end */
+        // this is to exclude the unknown words in lattice brought when merging the numerator lattice into denominator lattice.
+        specialwordids.insert(0xfffff);
+        /* guoye: end */
 
     }
 
