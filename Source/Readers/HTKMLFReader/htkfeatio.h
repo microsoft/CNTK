@@ -1040,6 +1040,25 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                         // size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t)wid;
                         // wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
                         static const unsigned int unknownwordindex = 0xfffff;
+
+                        // TNed the word, to try one more time if there is an OOV
+                        if (wid == -1)
+                        {
+                            // remove / \ * _ - to see if a match could be found
+                            char tnw[200];
+                            size_t i = 0, j = 0;
+                            while (w[i] != '\0')
+                            {
+                                if (w[i] != '\\' && w[i] != '/'  && w[i] != '*' && w[i] != '-' && w[i] != '_')
+                                {
+                                    tnw[j] = w[i]; j++;
+                                }
+                                i++;
+                            }
+                            tnw[j] = '\0';
+
+                            wid = (*wordmap)[tnw];
+                        }
                         size_t wordindex = (wid == -1) ? unknownwordindex : (size_t)wid;
                         wordids.push_back(wordindex);
                         /* guoye: end  */
