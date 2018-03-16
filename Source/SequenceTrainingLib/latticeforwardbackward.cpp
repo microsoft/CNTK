@@ -1547,7 +1547,7 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
     /* guoye: for debug purpose */
     float wer = float(mat[rec.size()][ref.size()]) / ref.size();
 
-	/*
+    /*
     short count, err;
     count = 0;
 
@@ -1561,7 +1561,7 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
 
     if (err < 0) err = 0;
     float wer = float(err) / ref.size();
-	*/
+    */
 
     /* guoye: for debug purpose */
     
