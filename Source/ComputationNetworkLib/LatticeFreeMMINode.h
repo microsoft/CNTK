@@ -63,20 +63,20 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_acweight(1.0), m_alignmentWindow(0), m_ceweight(0), m_useLabelAsCEtarget(false), m_frameDropThresh(0.0), m_totalFrameNumberOfCurrentMinibatch(0)
+        : Base(deviceId, name), m_acweight(1.0), m_alignmentWindow(0), m_ceweight(0), m_useLabelAsCEtarget(false), m_frameDropThresh(0.0), m_l2NormFactor(0.0), m_isCTCmodel(false), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const int alignmentWindow, const ElemType ceweight, const bool useLabelAsCEtarget, const ElemType frameDropThresh)
-        : Base(deviceId, name), m_acweight(acweight), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_useLabelAsCEtarget(useLabelAsCEtarget), m_frameDropThresh(frameDropThresh), m_totalFrameNumberOfCurrentMinibatch(0)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const int alignmentWindow, const ElemType ceweight, const bool useLabelAsCEtarget, const ElemType frameDropThresh, const ElemType l2NormFactor, const bool isCTCmodel)
+        : Base(deviceId, name), m_acweight(acweight), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_useLabelAsCEtarget(useLabelAsCEtarget), m_frameDropThresh(frameDropThresh), m_l2NormFactor(l2NormFactor), m_isCTCmodel(isCTCmodel), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"acweight"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"useLabelAsCEtarget"), configp->Get(L"frameDropThresh"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"acweight"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"useLabelAsCEtarget"), configp->Get(L"frameDropThresh"), configp->Get(L"l2NormFactor"), configp->Get(L"isCTCmodel"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -110,14 +110,25 @@ public:
                 {
                     m_softmax->InplaceExp();
                     Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
-                    if (m_useLabelAsCEtarget)
+                    if (m_isCTCmodel)
                     {
-                        Matrix<ElemType>::ScaleAndAdd(m_ceweight, label, m_acweight * (1 - m_ceweight), *m_posteriorsNum);
+                        Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_posteriorsCTC, m_acweight * (1 - m_ceweight), *m_posteriorsNum);
                     }
                     else
-                    { 
-                        Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
+                    {
+                        if (m_useLabelAsCEtarget)
+                        {
+                            Matrix<ElemType>::ScaleAndAdd(m_ceweight, label, m_acweight * (1 - m_ceweight), *m_posteriorsNum);
+                        }
+                        else
+                        {
+                            Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
+                        }
                     }
+                }
+                if (m_l2NormFactor != 0)
+                {
+                    Matrix<ElemType>::ScaleAndAdd(m_l2NormFactor, Input(1)->ValueFor(fr), *m_posteriorsDen);
                 }
 
                 if (m_totalFrameNumberOfCurrentMinibatch > 0)
@@ -169,6 +180,9 @@ public:
     }
 
     double CalculateNumeratorsWithCE(const Matrix<ElemType>& labelMatrix, const size_t nf);
+
+    double CalculateNumeratorsCTC(const Matrix<ElemType>& labelMatrix, const size_t nf);
+    double CTCCalculation(const Matrix<ElemType>& labelMatrix, const size_t nf);
 
     double ForwardBackwardProcessForDenorminator(const size_t nf, Matrix<ElemType>& posteriors,
         const Matrix<ElemType>& tmap, const Matrix<ElemType>& tmapTranspose, const Matrix<ElemType>& smap, const Matrix<ElemType>& smapTranspose);
@@ -238,11 +252,30 @@ public:
         m_likelihoods->InplaceExp(); // likelihood
         (*m_likelihoods) += (ElemType)1e-15;
 
-        double logNumeratorWithCE = CalculateNumeratorsWithCE(*inputLabel, nf);
+        double logNumeratorWithCE = m_isCTCmodel ? CalculateNumeratorsCTC(*inputLabel, nf) : CalculateNumeratorsWithCE(*inputLabel, nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
-        
+
+        double logCTC = 0;
+        if (m_isCTCmodel && m_ceweight != 0)
+            logCTC = CTCCalculation(*inputLabel, nf);
+
+        double l2NormScore = 0;
+        if (m_l2NormFactor != 0)
+        {
+            l2NormScore = Matrix<ElemType>::InnerProductOfMatrices(*inputValue, *inputValue) * 0.5 * m_l2NormFactor;
+        }
+
         // Got the final numbers
-        m_savedCriterionValue = (1 - m_ceweight) * logDenominator - logNumeratorWithCE;
+
+        if (m_isCTCmodel)
+        {
+            m_savedCriterionValue = (1 - m_ceweight) * (logDenominator - logNumeratorWithCE) - m_ceweight*logCTC + l2NormScore;
+        }
+        else
+        {
+            m_savedCriterionValue = (1 - m_ceweight) * logDenominator - logNumeratorWithCE + l2NormScore;
+        }
+
         ElemType finalValue = (ElemType)(m_savedCriterionValue);
         Value().Resize(1, 1);
         Value().SetValue(finalValue);
@@ -291,6 +324,8 @@ public:
             node->m_ceweight = m_ceweight;
             node->m_useLabelAsCEtarget = m_useLabelAsCEtarget;
             node->m_frameDropThresh = m_frameDropThresh;
+            node->m_l2NormFactor = m_l2NormFactor;
+            node->m_isCTCmodel = m_isCTCmodel;
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
@@ -313,6 +348,7 @@ public:
         RequestMatrixFromPool(m_maxLabelIndexes, matrixPool);
         RequestMatrixFromPool(m_maxLabelValues, matrixPool);
         RequestMatrixFromPool(m_posteriorsNum, matrixPool);
+        RequestMatrixFromPool(m_posteriorsCTC, matrixPool);
         if (m_ceweight != 0)
             RequestMatrixFromPool(m_softmax, matrixPool);
     }
@@ -335,6 +371,7 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_posteriorsDen, matrixPool);
         ReleaseMatrixToPool(m_posteriorsNum, matrixPool);
+        ReleaseMatrixToPool(m_posteriorsCTC, matrixPool);
         if (m_ceweight != 0)
             ReleaseMatrixToPool(m_softmax, matrixPool);
     }
@@ -391,6 +428,8 @@ public:
         fstream << m_ceweight;
         fstream << m_useLabelAsCEtarget;
         fstream << m_frameDropThresh;
+        fstream << m_l2NormFactor;
+        fstream << m_isCTCmodel;
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -412,6 +451,8 @@ public:
         fstream >> m_ceweight;
         fstream >> m_useLabelAsCEtarget;
         fstream >> m_frameDropThresh;
+        fstream >> m_l2NormFactor;
+        fstream >> m_isCTCmodel;
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -426,7 +467,7 @@ public:
             Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
             char str[4096];
-            sprintf(str, "acweight=%f alignmentWindow=%d ceweight=%f", this->m_acweight, this->m_alignmentWindow, this->m_ceweight);
+            sprintf(str, "acweight=%f alignmentWindow=%d ceweight=%f l2NormFactor=%f", this->m_acweight, this->m_alignmentWindow, this->m_ceweight, this->m_l2NormFactor);
             fstream << string(str);
         }
 
@@ -522,6 +563,8 @@ protected:
     ElemType m_ceweight;
     bool m_useLabelAsCEtarget;
     ElemType m_frameDropThresh;
+    ElemType m_l2NormFactor;
+    bool m_isCTCmodel;
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;
@@ -535,6 +578,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_maxLabelValues;
     shared_ptr<Matrix<ElemType>> m_posteriorsNum;
     shared_ptr<Matrix<ElemType>> m_posteriorsDen;
+    shared_ptr<Matrix<ElemType>> m_posteriorsCTC;
     shared_ptr<Matrix<ElemType>> m_likelihoods;
 
     shared_ptr<Matrix<ElemType>> m_mbValues;

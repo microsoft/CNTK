@@ -138,6 +138,339 @@ void LatticeFreeMMINode<ElemType>::InitializeFromTfstFiles(const wstring& fstFil
     m_smap->SetMatrixFromCSRFormat(&smapRow[0], &smapCol[0], &smapVal[0], smapCount, nsenones, nstates);
 }
 
+template <class ElemType>
+double LatticeFreeMMINode<ElemType>::CTCCalculation(const Matrix<ElemType>& labelMatrix, const size_t nf)
+{
+    if (nf == 0) return 0;
+    size_t nsenones = labelMatrix.GetNumRows();
+    int blankid = (int)nsenones - 1;
+    // copy likelihoods to CPU
+    size_t nstates = m_senoneSequence.size();
+    size_t bufferSize = nsenones * nf;
+    m_likelihoodBuffer.resize(bufferSize);
+    ElemType* refArr = &m_likelihoodBuffer[0];
+    m_softmax->CopyToArray(refArr, bufferSize);
+
+    m_alphaNums.clear();
+    m_alphaNums.resize(nstates * nf, DBL_MIN_EXP);
+
+    for (int i = 0; i < nf; i++)
+    {
+        if (i == 0)
+        {
+            int currentSenone = m_senoneSequence[0].Senone;
+            m_alphaNums[0] = m_likelihoodBuffer[currentSenone];
+            currentSenone = m_senoneSequence[1].Senone;
+            m_alphaNums[1] = m_likelihoodBuffer[currentSenone];
+        }
+        else
+        {
+            for (int j = 0; j <= i, j < nstates; j++)
+            {
+                int currentSenone = m_senoneSequence[j].Senone;
+                int baseIndex = (i - 1)*nstates + j;
+
+                if (j == 0)
+                {
+                    m_alphaNums[i*nstates] = m_alphaNums[baseIndex] + m_likelihoodBuffer[i * nsenones + currentSenone];
+                }
+                else if (j > 1 && currentSenone != blankid && currentSenone != m_senoneSequence[j - 2].Senone)
+                {
+                    double x = Logadd(m_alphaNums[baseIndex], m_alphaNums[baseIndex - 1]);
+                    m_alphaNums[i * nstates + j] = Logadd(x, m_alphaNums[baseIndex - 2])
+                        + m_likelihoodBuffer[i * nsenones + currentSenone];
+                }
+                else
+                {
+                    m_alphaNums[i * nstates + j] = Logadd(m_alphaNums[baseIndex], m_alphaNums[baseIndex - 1])
+                        + m_likelihoodBuffer[i * nsenones + currentSenone];
+                }
+            }
+        }
+    }
+
+    double logForwardScore = Logadd(m_alphaNums[nstates * nf - 1], m_alphaNums[nstates * nf - 2]);
+    if (std::isnan(logForwardScore))
+        RuntimeError("logForwardScore for numerator should not be nan.");
+
+    m_betas.clear();
+    m_betas.resize(nstates, DBL_MIN_EXP);
+    m_betasTemp.clear();
+    m_betasTemp.resize(nstates, DBL_MIN_EXP);
+    m_betas[nstates - 1] = m_likelihoodBuffer[(nf - 1) * nsenones + m_senoneSequence[nstates - 1].Senone];
+    m_betas[nstates - 2] = m_likelihoodBuffer[(nf - 1) * nsenones + m_senoneSequence[nstates - 2].Senone];
+
+    for (int i = nf - 1; i >= 0; i--)
+    {
+        double absum = DBL_MIN_EXP;
+        for (int j = 0; j < nstates; j++)
+        {
+            double abTime = m_alphaNums[i * nstates + j] + m_betas[j] - m_likelihoodBuffer[i * nsenones + m_senoneSequence[j].Senone];
+            m_alphaNums[i * nstates + j] = abTime;
+            absum = Logadd(absum, abTime);
+
+            m_betasTemp[j] = m_betas[j];
+        }
+
+        //assert(absum != -FLT_MAX);
+        //cout << i << " : " << log(absum) << endl;
+        for (int j = 0; j < nstates; j++)
+        {
+            m_alphaNums[i * nstates + j] -= absum;
+        }
+
+        if (i > 0)
+        {
+
+            for (int j = 0; j < nstates; j++)
+            {
+                int currentSenone = m_senoneSequence[j].Senone;
+                //if (i - 1 < m_senoneSequence[j].Begin || i - 1 > m_senoneSequence[j].End) m_betas[j] = DBL_MIN_EXP;
+                //else
+                {
+                    if (j < nstates - 1)
+                    {
+                        if (j < nstates - 2 && m_senoneSequence[j].Senone != blankid && m_senoneSequence[j].Senone != m_senoneSequence[j + 2].Senone)
+                        {
+                            double x = Logadd(m_betasTemp[j], m_betasTemp[j + 1]);
+                            m_betas[j] = Logadd(x, m_betasTemp[j + 2]) + m_likelihoodBuffer[(i - 1) * nsenones + currentSenone];
+                        }
+                        else
+                            m_betas[j] = Logadd(m_betasTemp[j], m_betasTemp[j + 1]) + m_likelihoodBuffer[(i - 1) * nsenones + currentSenone];
+                    }
+                    else
+                    {
+                        m_betas[nstates - 1] = m_betasTemp[nstates - 1] + m_likelihoodBuffer[(i - 1) * nsenones + currentSenone];
+                    }
+
+                }
+            }
+        }
+    }
+
+#ifdef _DEBUG
+    cout << "log forward score: " << logForwardScore << endl;
+    double logBackwardScore = Logadd(m_betas[0], m_betas[1]);
+    cout << "log backward score: " << logBackwardScore << endl;
+#endif
+
+    // asign posteriors to m_posteriorsNum
+    m_posteriorsAtHost.clear();
+    m_posteriorsAtHost.resize(nf * nsenones, 0);
+    for (int i = 0; i < nf; i++)
+    {
+        for (int j = 0; j < nstates; j++)
+        {
+            m_posteriorsAtHost[i * nsenones + m_senoneSequence[j].Senone] += exp((ElemType)m_alphaNums[i * nstates + j]);
+        }
+    }
+    m_posteriorsCTC->Resize(nsenones, nf);
+    m_posteriorsCTC->SetValue(nsenones, nf, m_deviceId, &m_posteriorsAtHost[0]);
+
+    return logForwardScore;
+}
+
+template <class ElemType>
+double LatticeFreeMMINode<ElemType>::CalculateNumeratorsCTC(const Matrix<ElemType>& labelMatrix, const size_t nf)
+{
+    if (nf == 0) return 0;
+
+    // Temp, hardalignment
+    if (m_alignmentWindow == 0)
+    {
+        m_posteriorsNum->SetValue(labelMatrix);
+        return Matrix<ElemType>::InnerProductOfMatrices(*m_likelihoods, labelMatrix);
+    }
+
+    size_t nsenones = labelMatrix.GetNumRows();
+    int blankid = (int)nsenones - 1;
+    GetLabelSequence(labelMatrix);
+    assert(m_labelVector.size() == nf);
+
+    // get labeled senone sequence
+    m_senoneSequence.clear();
+    m_stateSequence.clear();
+    int lastState = 0;
+    int beginWithWindow = 0;
+    int endWithWindow = nf - 1;
+    int index = 0;
+    int lastSenone = -1;
+    while (index < nf)
+    {
+        int currentSenone = (int)m_labelVector[index];
+        int startIndex = index;
+        index++;
+        while (index < nf)
+        {
+            if ((int)m_labelVector[index] != currentSenone) break;
+            index++;
+        }
+        {
+            beginWithWindow = m_alignmentWindow < 0 ? 0 : std::max(0, startIndex - m_alignmentWindow);
+            endWithWindow = (m_alignmentWindow < 0 ? nf : std::min((int)nf, index + m_alignmentWindow)) - 1;
+            if (currentSenone != blankid && lastSenone != blankid)
+            {
+                m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
+                lastState = m_fsa[lastState][blankid].first;
+                m_stateSequence.push_back(lastState);
+            }
+            m_senoneSequence.push_back({ currentSenone, beginWithWindow, endWithWindow });
+            lastState = m_fsa[lastState][currentSenone].first;
+            m_stateSequence.push_back(lastState);
+            lastSenone = currentSenone;
+        }
+    }
+    if (lastSenone != blankid)
+    {
+        m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
+        lastState = m_fsa[lastState][blankid].first;
+        m_stateSequence.push_back(lastState);
+    }
+
+    // copy likelihoods to CPU
+    size_t nstates = m_senoneSequence.size();
+    size_t bufferSize = nsenones * nf;
+    m_likelihoodBuffer.resize(bufferSize);
+    ElemType* refArr = &m_likelihoodBuffer[0];
+    m_likelihoods->CopyToArray(refArr, bufferSize);
+    for (int i = 0; i < bufferSize; i++)
+    {
+        m_likelihoodBuffer[i] = log(m_likelihoodBuffer[i]);
+    }
+
+    m_alphaNums.clear();
+    m_alphaNums.resize(nstates * nf, DBL_MIN_EXP);
+
+    for (int i = 0; i < nf; i++)
+    {
+        if (i == 0)
+        {
+            int currentSenone = m_senoneSequence[0].Senone;
+            m_alphaNums[0] = m_fsa[0][currentSenone].second + m_likelihoodBuffer[currentSenone];
+            currentSenone = m_senoneSequence[1].Senone;
+            m_alphaNums[1] = m_fsa[0][currentSenone].second + m_likelihoodBuffer[currentSenone];
+        }
+        else
+        {
+            for (int j = 0; j <= i, j < nstates; j++)
+            {
+                if (i < m_senoneSequence[j].Begin || i > m_senoneSequence[j].End) continue;
+
+                int currentSenone = m_senoneSequence[j].Senone;
+                int baseIndex = (i - 1)*nstates + j;
+
+                if (j == 0)
+                {
+                    m_alphaNums[i*nstates] = m_alphaNums[baseIndex] + m_fsa[m_stateSequence[0]][currentSenone].second + m_likelihoodBuffer[i * nsenones + currentSenone];
+                }
+                else if (j > 1 && currentSenone != blankid && currentSenone != m_senoneSequence[j - 2].Senone)
+                {
+                    assert(m_fsa[m_stateSequence[j]][currentSenone].second != 0);
+                    assert(m_fsa[m_stateSequence[j - 1]][currentSenone].second != 0);
+                    assert(m_fsa[m_stateSequence[j - 2]][currentSenone].second != 0);
+                    double x = Logadd(m_alphaNums[baseIndex] + m_fsa[m_stateSequence[j]][currentSenone].second, m_alphaNums[baseIndex - 1] + m_fsa[m_stateSequence[j - 1]][currentSenone].second);
+                    m_alphaNums[i * nstates + j] = Logadd(x, m_alphaNums[baseIndex - 2] + m_fsa[m_stateSequence[j - 2]][currentSenone].second)
+                        + m_likelihoodBuffer[i * nsenones + currentSenone];
+                }
+                else
+                {
+                    assert(m_fsa[m_stateSequence[j]][currentSenone].second != 0);
+                    assert(m_fsa[m_stateSequence[j - 1]][currentSenone].second != 0);
+                    m_alphaNums[i * nstates + j] = Logadd(m_alphaNums[baseIndex] + m_fsa[m_stateSequence[j]][currentSenone].second, m_alphaNums[baseIndex - 1] + m_fsa[m_stateSequence[j - 1]][currentSenone].second)
+                        + m_likelihoodBuffer[i * nsenones + currentSenone];
+                }
+            }
+        }
+    }
+
+    double logForwardScore = Logadd(m_alphaNums[nstates * nf - 1] + m_fsa[m_stateSequence[nstates - 1]][-1].second,
+        m_alphaNums[nstates * nf - 2] + m_fsa[m_stateSequence[nstates - 2]][-1].second);
+
+    if (std::isnan(logForwardScore))
+        RuntimeError("logForwardScore for numerator should not be nan.");
+
+    m_betas.clear();
+    m_betas.resize(nstates, DBL_MIN_EXP);
+    m_betasTemp.clear();
+    m_betasTemp.resize(nstates, DBL_MIN_EXP);
+    m_betas[nstates - 1] = m_fsa[m_stateSequence[nstates - 1]][-1].second;
+    m_betas[nstates - 2] = m_fsa[m_stateSequence[nstates - 2]][-1].second;
+
+    for (int i = nf - 1; i >= 0; i--)
+    {
+        double absum = DBL_MIN_EXP;
+        for (int j = 0; j < nstates; j++)
+        {
+            double abTime = m_alphaNums[i * nstates + j] + m_betas[j];
+            m_alphaNums[i * nstates + j] = abTime;
+            absum = Logadd(absum, abTime);
+
+            m_betasTemp[j] = m_betas[j] + m_likelihoodBuffer[i * nsenones + m_senoneSequence[j].Senone];
+        }
+
+        //assert(absum != -FLT_MAX);
+        //cout << i << " : " << log(absum) << endl;
+        for (int j = 0; j < nstates; j++)
+        {
+            m_alphaNums[i * nstates + j] -= absum;
+        }
+
+        if (i > 0)
+        {
+            for (int j = 0; j < nstates; j++)
+            {
+                if (i - 1 < m_senoneSequence[j].Begin || i - 1 > m_senoneSequence[j].End) m_betas[j] = DBL_MIN_EXP;
+                else
+                {
+                    if (j < nstates - 1)
+                    {
+                        assert(m_fsa[m_stateSequence[j]][m_senoneSequence[j].Senone].second != 0);
+                        assert(m_fsa[m_stateSequence[j]][m_senoneSequence[j + 1].Senone].second != 0);
+                        if (j < nstates - 2 && m_senoneSequence[j].Senone != blankid && m_senoneSequence[j].Senone != m_senoneSequence[j + 2].Senone)
+                        {
+                            assert(m_fsa[m_stateSequence[j]][m_senoneSequence[j + 2].Senone].second != 0);
+                            double x = Logadd(m_betasTemp[j] + m_fsa[m_stateSequence[j]][m_senoneSequence[j].Senone].second,
+                                m_betasTemp[j + 1] + m_fsa[m_stateSequence[j]][m_senoneSequence[j + 1].Senone].second);
+                            m_betas[j] = Logadd(x, m_betasTemp[j + 2] + m_fsa[m_stateSequence[j]][m_senoneSequence[j + 2].Senone].second);
+                        }
+                        else
+                            m_betas[j] = Logadd(m_betasTemp[j] + m_fsa[m_stateSequence[j]][m_senoneSequence[j].Senone].second,
+                                m_betasTemp[j + 1] + m_fsa[m_stateSequence[j]][m_senoneSequence[j + 1].Senone].second);
+                    }
+                    else
+                    {
+                        assert(m_fsa[m_stateSequence[nstates - 1]][m_senoneSequence[nstates - 1].Senone].second != 0);
+                        m_betas[nstates - 1] = m_betasTemp[nstates - 1] + m_fsa[m_stateSequence[nstates - 1]][m_senoneSequence[nstates - 1].Senone].second;
+                    }
+                }
+            }
+        }
+    }
+
+#ifdef _DEBUG
+    cout << "log forward score: " << logForwardScore << endl;
+    double logBackwardScore = Logadd(m_betas[0] + m_likelihoodBuffer[m_senoneSequence[0].Senone] + m_fsa[0][m_senoneSequence[0].Senone].second,
+        m_betas[1] + m_likelihoodBuffer[m_senoneSequence[1].Senone] + m_fsa[0][m_senoneSequence[1].Senone].second);
+    cout << "log backward score: " << logBackwardScore << endl;
+#endif
+
+    // asign posteriors to m_posteriorsNum
+    m_posteriorsAtHost.clear();
+    m_posteriorsAtHost.resize(nf * nsenones, 0);
+    for (int i = 0; i < nf; i++)
+    {
+        for (int j = 0; j < nstates; j++)
+        {
+            m_posteriorsAtHost[i * nsenones + m_senoneSequence[j].Senone] += exp((ElemType)m_alphaNums[i * nstates + j]);
+        }
+    }
+    m_posteriorsNum->Resize(nsenones, nf);
+    m_posteriorsNum->SetValue(nsenones, nf, m_deviceId, &m_posteriorsAtHost[0]);
+
+    // return the forward path score
+    return logForwardScore;
+}
+
 // If m_ceweight == 0, return the log numerator score of MMI
 // Else, return (1-m_ceweight) * logNum - m_ceweight * logCE
 template <class ElemType>
@@ -272,7 +605,7 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
 
 #ifdef _DEBUG
     fprintf(stderr, "log forward score: %lf\n", logForwardScore);
-    double logBackwardScore = m_betas[0] + m_likelihoodBuffer[m_senoneSequence[0].Senone];
+    double logBackwardScore = m_betas[0] + m_likelihoodBuffer[m_senoneSequence[0].Senone] + m_fsa[0][m_senoneSequence[0].Senone].second;
     fprintf(stderr, "log backward score: %lf\n", logBackwardScore);
 #endif
     
@@ -293,7 +626,7 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     if (m_ceweight == 0)
         return logForwardScore;
     else
-    {
+    {   // this is questionable: even if using soft-target for CE cacluation, it should not include LM score (fsa transition prob), but m_posteriorsAtHost does include that.
         double logSum = 0;
         for (int i = 0; i < nf * nsenones; i++)
         {
@@ -371,8 +704,8 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
         absum = (ElemType)1.0 / column.SumOfElements();
 
 #ifdef _DEBUG
-        //double lfp = -log(absum) + bwlogscale + sumfwscale[f];
-        //assert((lfp / logForwardPath < 1.01 && lfp / logForwardPath > 0.99) || (lfp < 1e-3 && lfp > -1e-3 && logForwardPath < 1e-3 && logForwardPath > -1e-3));  // total path scores should remain constant
+        double lfp = -log(absum) + bwlogscale + sumfwscale[f];
+        assert((lfp / logForwardPath < 1.01 && lfp / logForwardPath > 0.99) || (lfp < 1e-3 && lfp > -1e-3 && logForwardPath < 1e-3 && logForwardPath > -1e-3));  // total path scores should remain constant
         bwlogscale -= log(scale);
 #endif
 
@@ -400,8 +733,8 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
     fprintf(stderr, "log backward score: %lf\n", logbwscore);
 
     // verify the posterior sum
-    //ElemType tp = posteriors.SumOfElements();
-    //assert(tp / nf > 0.99 && tp / nf < 1.01);
+    ElemType tp = posteriors.SumOfElements();
+    assert(tp / nf > 0.99 && tp / nf < 1.01);
 #endif
 
     if (std::isnan(logForwardPath))
