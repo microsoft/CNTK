@@ -609,7 +609,7 @@ Constant CreateConstantWithRawData(DType *data,const  NDShape &shape, const std:
 }
 
 std::vector<Variable> CreateRNNConstant(
-    const Node *parentNode, int index, const std::string &name, onnx::TensorProto &valueProto, const DeviceDescriptor& computeDevice)
+    const Node *parentNode, int index, const std::string &name, const onnx::TensorProto &valueProto, const DeviceDescriptor& computeDevice)
 {
     std::vector<Variable> inputs;
     auto dataType = valueProto.data_type();
@@ -962,18 +962,18 @@ std::vector<Variable> CreateRNNConstant(
 std::vector<FunctionPtr> CreateRNNConstantOp(const Graph* graph, const Node *node, const Node *parentNode, int index,
     const DeviceDescriptor& computeDevice)
 {
-    onnx::TensorProto valueProto;
-    if (!graph->GetInitialTensor(node->Name(), valueProto))
+    const onnx::TensorProto *valueProto;
+    if (!graph->GetInitialTensor(node->Name(), &valueProto))
     {
         NodeAttributes::const_iterator itValue = node->GetAttributes().find("value");
         if (itValue == node->GetAttributes().cend())
         {
             return std::vector<FunctionPtr>();
         }
-        valueProto = itValue->second.t();
+        valueProto = &itValue->second.t();
     }
 
-    std::vector<Variable> constantNodes = CreateRNNConstant(parentNode, index, node->Name(), valueProto, computeDevice);
+    std::vector<Variable> constantNodes = CreateRNNConstant(parentNode, index, node->Name(), *valueProto, computeDevice);
     std::vector<FunctionPtr> returns;
     for (auto c : constantNodes)
         returns.push_back(c);
@@ -986,11 +986,11 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
 {
     string parentONNXOpName = parentNode->OpType();
     std::string nodeName = nodeArg->Name();
-    onnx::TensorProto valueProto;
-    if (graph->GetInitialTensor(nodeName, valueProto))
+    const onnx::TensorProto *valueProto;
+    if (graph->GetInitialTensor(nodeName, &valueProto))
     {
         int index = CalculateNodeArgInputIndex(nodeArg, parentNode);
-        return CreateRNNConstant(parentNode, index, nodeName, valueProto, computeDevice);
+        return CreateRNNConstant(parentNode, index, nodeName, *valueProto, computeDevice);
     }
 
     const TensorShapeProto *shapeProto = nodeArg->Shape();
@@ -1080,10 +1080,10 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     string parentONNXOpName = parentNode->OpType();
 
     std::string nodeName = nodeArg->Name();
-    onnx::TensorProto valueProto;
-    if (graph->GetInitialTensor(nodeName, valueProto))
+    const onnx::TensorProto *valueProto;
+    if (graph->GetInitialTensor(nodeName, &valueProto))
     { 
-        return CreateConstant(valueProto, nodeName, computeDevice);
+        return CreateConstant(*valueProto, nodeName, computeDevice);
     }
 
     auto shapeProto = nodeArg->Shape();
@@ -2475,8 +2475,8 @@ std::vector<FunctionPtr> ONNXToCNTKHelper::FromONNXNode(const Node *node, ONNXTo
     else
     {
         FunctionPtr cntkFunction = CreateCNTKNode(node, inputs, computeDevice);
-        constructedNodeMap.insert(ONNXToCNTKMap::value_type(node, std::vector<FunctionPtr>({ cntkFunction })));
-        return std::vector<FunctionPtr>({ cntkFunction });
+            constructedNodeMap.insert(ONNXToCNTKMap::value_type(node, std::vector<FunctionPtr>({ cntkFunction })));
+            return std::vector<FunctionPtr>({ cntkFunction });
     }
 }
 
@@ -2756,7 +2756,15 @@ FunctionPtr ONNXToCNTK::CreateGraph(ONNXIR::Graph* src, const DeviceDescriptor& 
     std::vector<FunctionPtr> functions;
     for (Node::NodeConstIterator it = itNodeFn->first->InputNodes_begin(); it != itNodeFn->first->InputNodes_end(); ++it)
     {
-        functions.insert(functions.end(), constructedFunctions[*it].begin(), constructedFunctions[*it].end());
+        // TODO: consulting ONNXIR to see how to do this solidly.
+        // https://msasg.visualstudio.com/DefaultCollection/Shared%20Data/AIToolkits-CNTK/_queries?id=1134732&_a=edit&triage=true
+        std::vector<FunctionPtr> &constructedFuncts = constructedFunctions[*it];
+        for (int index = 0; index < constructedFuncts.size(); index++)
+        {
+            FunctionPtr &constructedFunct = constructedFuncts[index];
+            if (constructedFunct->RootFunction()->OpName() != L"Combine")
+                functions.insert(functions.end(), constructedFunct);
+        }
     }
 
     if (functions.empty())

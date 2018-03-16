@@ -1,7 +1,5 @@
 #include "status.h"
 
-#include <string>
-
 namespace ONNXIR
 {
     namespace Common

@@ -2140,7 +2140,7 @@ ONNXIR::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionPt
     inputArg.SetShape(inputShape);
 
     // this is the output NodeArg of the reshaped node. It has to be named 
-    // with the original node's output NodeArg so that LotusIR can make a the connection. 
+    // with the original node's output NodeArg so that ONNXIR can make a the connection. 
     onnx::TypeProto typeProto = ToTypeProto(shape, false);
     ONNXIR::NodeArg outputArg(outputNodeArgName, &typeProto);
 
@@ -2597,7 +2597,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
                 Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
                 int64_t axisIndex = ConvertAxisToOnnx(axis, src->Inputs()[0]);
                 bool workaroundONNXRT = false;
-                // this code is to workarund a LotusRT bug that fails
+                // this code is to workaround a ONNXRT bug that fails
                 // to take axes attribute into consideration.
                 // we need to convert op attribute to a default ONNX case
                 // where axes is not set (or set to ordered indices).

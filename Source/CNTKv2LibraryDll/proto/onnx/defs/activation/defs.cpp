@@ -111,9 +111,9 @@ namespace ONNXIR {
             "the batch_size", AttrType::AttributeProto_AttributeType_INT);
 
     // Taken from RS4
-    REGISTER_OPERATOR_SCHEMA(Linear)
-        .Description("Linear takes one input data (Tensor<T>) and produces one output "
-            "data (Tensor<T>) where the linear function, f(x)= alpha * x + beta is "
+    REGISTER_OPERATOR_SCHEMA(Affine)
+        .Description("Affine takes one input data (Tensor<T>) and produces one output "
+            "data (Tensor<T>) where the affine function, f(x)= alpha * x + beta is "
             "applied to the tensor elementwise.")
         .Input("X", "Input tensor of any shape", "T")
         .Output("Y", "Output tensor of same shape and type as input X.", "T")

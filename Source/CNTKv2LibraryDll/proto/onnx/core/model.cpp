@@ -1,5 +1,3 @@
-#include <fcntl.h>
-#include <fstream>
 #ifdef _MSC_VER
 #pragma warning(push)
 // 'type' : forcing value to bool 'true' or 'false' (performance warning)
@@ -17,74 +15,7 @@
 #include <unistd.h>
 #endif
 #include "model.h"
-
-namespace
-{
-#ifdef _WIN32
-    inline Status FileOpenRd(const std::wstring& p_path, /*out*/ int* p_fd)
-    {
-        _wsopen_s(p_fd, p_path.c_str(), _O_RDONLY | _O_SEQUENTIAL | _O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
-        if (0 > *p_fd)
-        {
-            return Status(SYSTEM, errno);
-        }
-        return Status::OK();
-    }
-
-    inline Status FileOpenWr(const std::wstring& p_path, /*out*/ int* p_fd)
-    {
-        _wsopen_s(p_fd, p_path.c_str(), _O_CREAT | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
-        if (0 > *p_fd)
-        {
-            return Status(SYSTEM, errno);
-        }
-        return Status::OK();
-    }
-#endif
-
-    inline Status FileOpenRd(const std::string& p_path, /*out*/ int* p_fd)
-    {
-#ifdef _WIN32
-        _sopen_s(p_fd, p_path.c_str(), _O_RDONLY | _O_SEQUENTIAL | _O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
-#else
-        *p_fd = open(p_path.c_str(), O_RDONLY);
-#endif
-        if (0 > *p_fd)
-        {
-            return Status(SYSTEM, errno);
-        }
-        return Status::OK();
-    }
-
-    inline Status FileOpenWr(const std::string& p_path, /*out*/ int* p_fd)
-    {
-#ifdef _WIN32
-        _sopen_s(p_fd, p_path.c_str(), _O_CREAT | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
-#else
-        *p_fd = open(p_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-#endif
-        if (0 > *p_fd)
-        {
-            return Status(SYSTEM, errno);
-        }
-        return Status::OK();
-    }
-
-    inline Status FileClose(int fd)
-    {
-        int ret = 0;
-#ifdef _WIN32
-        ret = _close(fd);
-#else
-        ret = close(fd);
-#endif
-        if (0 != ret)
-        {
-            return Status(SYSTEM, errno);
-        }
-        return Status::OK();
-    }
-}
+#include "utils.h"
 
 namespace ONNXIR
 {
@@ -92,118 +23,116 @@ namespace ONNXIR
         bool p_isONNX,
         const ModelMetaData& p_modelMetaData)
     {
-        m_graph.reset(new Graph(p_graphName, p_isONNX));
-        m_modelProto.set_ir_version(Version::IR_VERSION);
+        m_modelProto.reset(new ModelProto);
+        m_modelProto->set_ir_version(Version::IR_VERSION);
+        m_modelProto->mutable_graph()->set_name(p_graphName);
         m_modelMetaData = p_modelMetaData;
         for (auto& metaData : m_modelMetaData)
         {
-            auto prop = m_modelProto.add_metadata_props();
+            auto prop = m_modelProto->add_metadata_props();
             prop->set_key(metaData.first);
             prop->set_value(metaData.second);
         }
-    }
-
-    Model::Model(const std::string& p_graphName,
-        const std::string& p_graphDocString,
-        const std::string& p_producerName,
-        const std::string& p_producerVersion,
-        const std::string& p_domain,
-        VERSION p_modelVersion,
-        const std::string& p_docString,
-        const ModelMetaData& p_modelMetaData)
-    {
-        m_graph.reset(new Graph(p_graphName, p_graphDocString));
-        m_modelProto.set_ir_version(Version::IR_VERSION);
-        m_modelMetaData = p_modelMetaData;
-        for (auto& metaData : m_modelMetaData)
-        {
-            auto prop = m_modelProto.add_metadata_props();
-            prop->set_key(metaData.first);
-            prop->set_value(metaData.second);
-        }
-
-        m_modelProto.set_producer_name(p_producerName);
-        m_modelProto.set_producer_version(p_producerVersion);
-        m_modelProto.set_domain(p_domain);
-        m_modelProto.set_model_version(p_modelVersion);
-        m_modelProto.set_doc_string(p_docString);
+        // Set m_domainToVersion to contain related domains with latest version.
+        AddImportOpSets(p_isONNX);
+        m_graph.reset(new Graph(m_modelProto->mutable_graph(), m_domainToVersion, p_isONNX));
     }
 
     Model::Model(const ModelProto& p_modelProto)
+        : Model(std::unique_ptr<ModelProto>(new ModelProto(p_modelProto)))
     {
-        m_modelProto = p_modelProto;
-        if (m_modelProto.has_graph())
-        {
-            m_graph.reset(new Graph(m_modelProto.graph()));
-        }
+    }
 
-        for (auto& prop : m_modelProto.metadata_props())
+    Model::Model(std::unique_ptr<ModelProto> p_modelProto)
+    {
+        assert(nullptr != p_modelProto);
+        m_modelProto.reset(p_modelProto.release());
+        for (auto& prop : m_modelProto->metadata_props())
         {
             m_modelMetaData[prop.key()] = prop.value();
+        }
+
+        if (0 == m_modelProto->opset_import_size())
+        {
+            // Operator sets are not specified in this model.
+            // Will use global operator store instead.
+            AddImportOpSets(false);
+        }
+        else
+        {
+            for (auto& opSet : m_modelProto->opset_import())
+            {
+                m_domainToVersion[opSet.domain()] = static_cast<int>(opSet.version());
+            }
+        }
+
+        if (m_modelProto->has_graph())
+        {
+            m_graph.reset(new Graph(m_modelProto->mutable_graph(), m_domainToVersion));
         }
     }
 
     VERSION Model::IrVersion() const
     {
-        if (m_modelProto.has_ir_version())
+        if (m_modelProto->has_ir_version())
         {
-            return m_modelProto.ir_version();
+            return m_modelProto->ir_version();
         }
         return c_noVersion;
     }
 
     const std::string& Model::ProducerName() const
     {
-        return m_modelProto.producer_name();
+        return m_modelProto->producer_name();
     }
 
     void Model::SetProducerName(const std::string& p_producerName)
     {
-        m_modelProto.set_producer_name(p_producerName);
+        m_modelProto->set_producer_name(p_producerName);
     }
 
     const std::string& Model::ProducerVersion() const
     {
-        return m_modelProto.producer_version();
+        return m_modelProto->producer_version();
     }
 
     void Model::SetProducerVersion(const std::string& p_producerVersion)
     {
-        m_modelProto.set_producer_version(p_producerVersion);
+        m_modelProto->set_producer_version(p_producerVersion);
     }
 
     const std::string& Model::Domain() const
     {
-        return m_modelProto.domain();
+        return m_modelProto->domain();
     }
 
     void Model::SetDomain(const std::string& p_domain)
     {
-        m_modelProto.set_domain(p_domain);
+        m_modelProto->set_domain(p_domain);
     }
 
     VERSION Model::ModelVersion() const
     {
-        if (m_modelProto.has_model_version())
+        if (m_modelProto->has_model_version())
         {
-            return m_modelProto.model_version();
+            return m_modelProto->model_version();
         }
         return c_noVersion;
     }
 
     void Model::SetModelversion(VERSION p_modelVersion)
     {
-        m_modelProto.set_model_version(p_modelVersion);
+        m_modelProto->set_model_version(p_modelVersion);
     }
 
     const std::string& Model::DocString() const
     {
-        return m_modelProto.doc_string();
+        return m_modelProto->doc_string();
     }
 
     void Model::SetDocString(const std::string& p_docString)
     {
-        m_modelProto.set_doc_string(p_docString);
+        m_modelProto->set_doc_string(p_docString);
     }
 
     const ModelMetaData& Model::MetaData() const
@@ -221,10 +150,29 @@ namespace ONNXIR
         return m_graph.get();
     }
 
-    const ModelProto& Model::ToProto()
+    ModelProto Model::ToProto()
     {
-        *(m_modelProto.mutable_graph()) = m_graph->ToGraphProto();
-        return m_modelProto;
+        *(m_modelProto->mutable_graph()) = m_graph->ToGraphProto();
+        return *m_modelProto;
+    }
+
+    void Model::AddImportOpSets(bool p_isONNX)
+    {
+        auto& domainToVersionRangeMap = OpSchemaRegistry::DomainToVersionRange::Instance().Map();
+        for (auto& domainToVersionRange : domainToVersionRangeMap)
+        {
+            if (p_isONNX && domainToVersionRange.first.compare(c_onnxDomain) != 0)
+            {
+                // Constructing a pure ONNX model.
+                // Only ops in ONNX domain should be used.
+                continue;
+            }
+
+            m_domainToVersion[domainToVersionRange.first] = domainToVersionRange.second.second;
+            auto opSetIdProto = m_modelProto->add_opset_import();
+            opSetIdProto->set_domain(domainToVersionRange.first);
+            opSetIdProto->set_version(domainToVersionRange.second.second);
+        }
     }
 
 #ifdef _WIN32
@@ -259,16 +207,18 @@ namespace ONNXIR
 
     Status Model::LoadFromBytes(int count, void *pBytes, /*out*/ std::shared_ptr<Model>* p_model)
     {
-        ModelProto modelProto;
-        bool result = modelProto.ParseFromArray(pBytes, count);
+        std::unique_ptr<ModelProto> modelProto(new ModelProto);
+        bool result = modelProto->ParseFromArray(pBytes, count);
         if (!result)
         {
             return Status(ONNX, INVALID_PROTOBUF, "Protobuf parsing failed.");
         }
 
-        (*p_model).reset(new Model(modelProto));
-        RETURN_IF_ERROR((*p_model)->MainGraph()->Resolve());
-
+        (*p_model).reset(new Model(std::move(modelProto)));
+        if ((*p_model)->MainGraph() != nullptr)
+        {
+            RETURN_IF_ERROR((*p_model)->MainGraph()->Resolve());
+        }
         return Status::OK();
     }
 
@@ -297,17 +247,20 @@ namespace ONNXIR
             new CodedInputStream(raw_input.get()));
         // Allows protobuf library versions < 3.2.0 to parse messages greater than 64MB.
         coded_input->SetTotalBytesLimit(INT_MAX, INT_MAX);
-        ModelProto modelProto;
-        bool result = modelProto.ParseFromCodedStream(coded_input.get());
+        std::unique_ptr<ModelProto> modelProto(new ModelProto);
+        bool result = modelProto->ParseFromCodedStream(coded_input.get());
         coded_input.reset();
         raw_input.reset();
         if (!result)
         {
             return Status(ONNX, INVALID_PROTOBUF, "Protobuf parsing failed.");
         }
-        (*p_model).reset(new Model(modelProto));
-        RETURN_IF_ERROR((*p_model)->MainGraph()->Resolve());
 
+        (*p_model).reset(new Model(std::move(modelProto)));
+        if ((*p_model)->MainGraph() != nullptr)
+        {
+            RETURN_IF_ERROR((*p_model)->MainGraph()->Resolve());
+        }
         return Status::OK();
     }
 
@@ -319,7 +272,7 @@ namespace ONNXIR
         }
 
         RETURN_IF_ERROR(p_model.MainGraph()->Resolve());
-        auto& modelProto = p_model.ToProto();
+        auto modelProto = p_model.ToProto();
         bool result = modelProto.SerializeToFileDescriptor(p_fd);
         if (result)
         {
