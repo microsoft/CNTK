@@ -264,7 +264,7 @@ public:
             //                                                       (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
             //                                                       lmf, wp, amf, boostmmifactor, seqsMBRmode, uidsstripe, boundariesstripe);
             
-            fprintf(stderr, "calgammaformb: i = %d, utt = %ls \n", int(i), lattices[i]->second.key.c_str());
+            // fprintf(stderr, "calgammaformb: i = %d, utt = %ls \n", int(i), lattices[i]->second.key.c_str());
 
             double denavlogp = lattices[i]->second.forwardbackward(parallellattice,
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
