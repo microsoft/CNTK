@@ -10,7 +10,7 @@
 
 Change profiler details output format to be chrome://tracing
 
-Enable per-node timing. Working example [here](../Examples/Image/Classification/MLP/Python/SimpleMNIST.py)
+Enable per-node timing. Working example [here](/Examples/Image/Classification/MLP/Python/SimpleMNIST.py)
 * per-node timing creates items in profiler details when profiler is enabled.
 * usage in Python:
 ```
@@ -38,7 +38,7 @@ New loss function: hierarchical softmax
 * Thanks @yaochengji for the contribution!
 
 Distributed Training with Mulitple Learners
-* Trainer now accepts multiple parameter learners for distributed training. With this change, different parameters of a network can be learned by different learners in a single training session. This also facilitates distributed training for GANs. For more information, please refer to the [Basic_GAN_Distributed.py](../Examples/Image/GAN/Basic_GAN_Distributed.py) and the [cntk.learners.distributed_multi_learner_test.py](../bindings/python/cntk/learners/tests/distributed_multi_learner_test.py)
+* Trainer now accepts multiple parameter learners for distributed training. With this change, different parameters of a network can be learned by different learners in a single training session. This also facilitates distributed training for GANs. For more information, please refer to the [Basic_GAN_Distributed.py](/Examples/Image/GAN/Basic_GAN_Distributed.py) and the [cntk.learners.distributed_multi_learner_test.py](/bindings/python/cntk/learners/tests/distributed_multi_learner_test.py)
 
 Operators
 * Added MeanVarianceNormalization operator. 
