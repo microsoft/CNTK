@@ -137,10 +137,12 @@ public:
         // check total frame number to be added ?
         // int deviceid = loglikelihood.GetDeviceId();
         /* guoye: start */
+        /*
         for (size_t i = 0; i < lattices.size(); i++)
         {
             // fprintf(stderr, "calgammaformb: i = %d, utt = %ls \n", int(i), lattices[i]->second.key.c_str());
         }
+        */
         size_t boundaryframenum;
         std::vector<size_t> validframes; // [s] cursor pointing to next utterance begin within a single parallel sequence [s]
         validframes.assign(samplesInRecurrentStep, 0);
@@ -261,7 +263,9 @@ public:
             //                                                       (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
             //                                                       (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
             //                                                       lmf, wp, amf, boostmmifactor, seqsMBRmode, uidsstripe, boundariesstripe);
-                                                                   
+            
+            fprintf(stderr, "calgammaformb: i = %d, utt = %ls \n", int(i), lattices[i]->second.key.c_str());
+
             double denavlogp = lattices[i]->second.forwardbackward(parallellattice,
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,

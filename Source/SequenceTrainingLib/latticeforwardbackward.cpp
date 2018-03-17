@@ -1439,7 +1439,7 @@ void lattice::EMBRsamplepaths(const std::vector<double> &edgelogbetas,
             // the node has no outgoing arc
             if (vt_node_out_edge_indices[curnodeidx].size() == 0)
             {
-                if (nodes[curnodeidx].wid == 2 && nodes[curnodeidx].t == info.numframes)
+                if ( (nodes[curnodeidx].wid == 2 || nodes[curnodeidx].wid == 0) && nodes[curnodeidx].t == info.numframes)
                 {
                     /*
                     if (curnodeidx != (nodes.size() - 1))
@@ -2215,11 +2215,17 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         return LOGZERO; // failed, do not use resulting matrix
     }
     // sanity check
+
     if (nodes[0].wid != 0)    RuntimeError("The first node is not 0 (i.e.) !NULL, but is %d \n", int(nodes[0].wid));
-    if(nodes[nodes.size()-1].wid != 2 ) RuntimeError("The last node is not 2 (i.e.) </s>, but is %d \n", int(nodes[0].wid));
+
+    // the lattice last node could be either 0 or 2, i.e., if it is an merged lattice (merged numerator and denominator the dnb code dedicately removes ending !NULL,  it is 0. If it is not merged lattice (the one that I changed TAMER code to only use denominator lattice), the last node could be !NULL
+    if(nodes[nodes.size()-1].wid != 2 && nodes[nodes.size() - 1].wid != 0) RuntimeError("The last node is not 2 (i.e.) </s> or 0 (i.e, !NULL), but is %d \n", int(nodes[0].wid));
     for (size_t i = 1; i < nodes.size() - 1; i++)
     {
-        if (nodes[i].wid == 2) RuntimeError("The  node %d wid is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i),  int(nodes.size()));
+        if (nodes[nodes.size() - 1].wid == 2)
+        {
+            if (nodes[i].wid == 2) RuntimeError("The  node %d wid is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i), int(nodes.size()));
+        }
         if (nodes[i].wid == 0) RuntimeError("The  node %d wid is  0 (i.e.) </s>, but it is not the first node, total number of node is %d \n", int(i), int(nodes.size()));
 
     }
@@ -2408,7 +2414,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
     
         
-        // fprintf(stderr, "\n forwardbackward: average WER for an utterance is %f, #words = %d \n", avg_wer, int(wids.size()));
+        fprintf(stderr, "\n forwardbackward: WER for an utterance is %f, #words = %d \n", onebest_wer, int(wids.size()));
         if(getPathMethodEMBR == "nbest" && showWERMode == "onebest") return onebest_wer;
         else return avg_wer;
     }

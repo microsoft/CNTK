@@ -887,6 +887,12 @@ public:
             is_special_words.resize(info.numnodes);
             for (size_t i = 0; i < info.numnodes; i++)
             {
+                /*
+                if (nodes[i].wid == 0xfffff)
+                {
+                    nodes[i].wid;
+                }
+                */
                 if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
                 else is_special_words[i] = false;
             }
