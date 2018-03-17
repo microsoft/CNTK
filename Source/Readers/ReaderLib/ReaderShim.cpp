@@ -336,8 +336,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
         else if (i->second.sampleLayout.GetNumElements() != AsTensorShape(sampleShape).GetNumElements())
         {
-            RuntimeError("Sample shape provided by the deserializer '%s' does not match the shape expected by the network '%s'.",
-                string(AsTensorShape(sampleShape)).c_str(), string(i->second.sampleLayout).c_str());
+            RuntimeError("Sample shape for '%ls' provided by the deserializer '%s' does not match the shape expected by the network '%s'.", 
+                i->first.c_str(), string(AsTensorShape(sampleShape)).c_str(), string(i->second.sampleLayout).c_str());
         }
     }
 
