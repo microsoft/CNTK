@@ -12,7 +12,7 @@ AlwaysBreakTemplateDeclarations: true
 AccessModifierOffset: -4
 BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: false
-ColumnLimit: 0
+ColumnLimit: 120
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 DerivePointerAlignment: true
 ForEachMacros: [ BOOST_FOREACH, foreach_column, foreach_coord, foreach_index, foreach_row, foreach_row_in_submat ]
@@ -24,6 +24,7 @@ SpaceAfterCStyleCast: true
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
+SortIncludes: false
 Standard: Cpp11
 TabWidth: 4
 UseTab: Never
