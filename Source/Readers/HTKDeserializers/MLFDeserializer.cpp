@@ -186,18 +186,43 @@ public:
             for (size_t i = 0; i < utterance.size(); ++i)
                 sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
         }
+        size_t numberOfSamples = 0;
+        if (m_deserializer.m_squashLabel)
+            numberOfSamples = utterance.size() + 1;
+        else
+            numberOfSamples = sequence.m_numberOfSamples;
 
-        auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
+        auto s = make_shared<MLFSequenceData<ElementType>>(numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
         auto* startRange = s->m_indices;
+        if (m_deserializer.m_squashLabel && m_deserializer.m_blankInFront)
+        {
+            fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID));
+            startRange += 1;
+        }
         for (const auto& range : utterance)
         {
             if (range.ClassId() >= m_deserializer.m_dimension)
                 // TODO: Possibly set m_valid to false, but currently preserving the old behavior.
                 RuntimeError("Class id '%ud' exceeds the model output dimension '%d'.", range.ClassId(), (int)m_deserializer.m_dimension);
 
+            //if not squash labels
             // Filling all range of frames with the corresponding class id.
-            fill(startRange, startRange + range.NumFrames(), static_cast<IndexType>(range.ClassId()));
-            startRange += range.NumFrames();
+            if (!m_deserializer.m_squashLabel)
+            {
+                fill(startRange, startRange + range.NumFrames(), static_cast<IndexType>(range.ClassId()));
+                startRange += range.NumFrames();
+            }
+            else
+            {
+                fill(startRange, startRange + 1, static_cast<IndexType>(range.ClassId()));
+                startRange += 1;
+            }
+            
+        }
+        if (m_deserializer.m_squashLabel && !m_deserializer.m_blankInFront)
+        {
+            fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID));
+            startRange += 1;
         }
 
         result.push_back(s);
@@ -337,6 +362,10 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
             "value '%ud'\n", m_dimension, numeric_limits<ClassIdType>::max());
 
     m_withPhoneBoundaries = streamConfig(L"phoneBoundaries", false);
+    m_squashLabel = streamConfig(L"squashLabel", false);
+    m_blankID = streamConfig(L"blankID", g_64MB);
+    m_blankInFront = streamConfig(L"blankInFront", false);
+
     if (m_frameMode && m_withPhoneBoundaries)
         LogicError("frameMode and phoneBoundaries are mutually exclusive options.");
 
@@ -373,6 +402,9 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? DataType::Float : DataType::Double;
 
     m_withPhoneBoundaries = labelConfig(L"phoneBoundaries", "false");
+    m_squashLabel = labelConfig(L"squashLabel", "false");
+    m_blankID = labelConfig(L"blankID", g_64MB);
+    m_blankInFront = labelConfig(L"blankInFront", true);
 
     wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
     InitializeStream(name);
