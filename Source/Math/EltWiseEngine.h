@@ -8,17 +8,22 @@
 #include "Matrix.h"
 #include "TensorShape.h" // for ImageLayoutKind
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 enum class EltWiseEngineKind
 {
-    None  = 0,
+    None = 0,
     MKLDNN = 1 << 1,
-    All  = MKLDNN
+    All = MKLDNN
 };
 enum class UnaryEltWiseKind
 {
-  RELU
+    RELU
 };
 template <class ElemType>
 class MATH_API UnaryEltWiseEngine
@@ -27,23 +32,21 @@ public:
     using Mat = Matrix<ElemType>;
 
 public:
-    virtual ~UnaryEltWiseEngine() {};
+    virtual ~UnaryEltWiseEngine(){};
 
     void Forward(const Mat& in, Mat& out, bool inferenceOnly);
 
     void Backward(const Mat& in, const Mat& srcGrad, Mat& grad);
 
-    static std::unique_ptr<UnaryEltWiseEngine<ElemType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-                                                             ImageLayoutKind imageLayout,
-                                                             UnaryEltWiseKind kind,
-                                                             EltWiseEngineKind enabledEngines = EltWiseEngineKind::All);
+    static std::unique_ptr<UnaryEltWiseEngine<ElemType>>
+    Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT, ImageLayoutKind imageLayout, UnaryEltWiseKind kind,
+           EltWiseEngineKind enabledEngines = EltWiseEngineKind::All);
 
     DISABLE_COPY_AND_MOVE(UnaryEltWiseEngine);
 
 protected:
-    UnaryEltWiseEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-                    ImageLayoutKind imageLayout)
-                    : m_deviceId(deviceId), m_inOutT(inOutT), m_imageLayout(imageLayout)
+    UnaryEltWiseEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT, ImageLayoutKind imageLayout)
+        : m_deviceId(deviceId), m_inOutT(inOutT), m_imageLayout(imageLayout)
     {
     }
 
@@ -59,4 +62,6 @@ protected:
     ImageLayoutKind m_imageLayout;
 };
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
