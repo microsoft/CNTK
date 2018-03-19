@@ -2414,7 +2414,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
         EMBRerrorsignal(parallelstate, thisedgealignments, edge_weights, errorsignal);
     
         
-        fprintf(stderr, "\n forwardbackward: WER for an utterance is %f, #words = %d \n", onebest_wer, int(wids.size()));
+        // fprintf(stderr, "\n forwardbackward: WER for an utterance is %f, #words = %d \n", onebest_wer, int(wids.size()));
         if(getPathMethodEMBR == "nbest" && showWERMode == "onebest") return onebest_wer;
         else return avg_wer;
     }
