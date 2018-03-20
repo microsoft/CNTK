@@ -47,6 +47,19 @@ private:
     vector<vector<float>>& m_sequenceData;
 
 public:
+    void GetSequence(size_t sequenceId, vector<SequenceDataPtr>& result) override
+    {
+        assert(m_chunkBegin <= sequenceId);
+        assert(sequenceId < m_chunkEnd);
+
+        auto data = make_shared<MockDenseSequenceData>();
+        data->m_data = &m_sequenceData[sequenceId][0];
+        data->m_numberOfSamples = m_sequenceLength;
+        data->m_sampleShape = m_sampleShape;
+        data->m_key.m_sequence = sequenceId;
+        result.push_back(data);
+    }
+
     MockChunk(ChunkIdType chunkdId, size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, uint32_t sequenceLength)
         : m_chunkId(chunkdId),
           m_chunkBegin(chunkBegin),
@@ -58,34 +71,17 @@ public:
         assert(chunkBegin <= chunkEnd);
         assert(chunkEnd <= sequenceData.size());
     }
-
-    void GetSequence(size_t seqIdInChunk, vector<SequenceDataPtr>& result) override
-    {
-        // Calls are for sequence id in chunk, so we convert it to sequnce id in m_sequenceData
-        size_t sequenceId = m_chunkBegin + seqIdInChunk;
-        assert(m_chunkBegin <= sequenceId);
-        assert(sequenceId < m_chunkEnd);
-
-        auto data = make_shared<MockDenseSequenceData>();
-        data->m_data = &m_sequenceData[sequenceId][0];
-        data->m_numberOfSamples = m_sequenceLength;
-        data->m_sampleShape = m_sampleShape;
-        data->m_key.m_sequence = sequenceId;
-        result.push_back(data);
-    }
     
     virtual void SequenceInfos(std::vector<SequenceInfo>& sequenceToFill) override 
     {
         unsigned int numberOfSamples = 1;
-        for (size_t i = m_chunkBegin; i < m_chunkEnd; i++)
+        for (size_t seqGlobalIdx = m_chunkBegin; seqGlobalIdx < m_chunkEnd; seqGlobalIdx++)
         {
-            size_t idxInChunk = i - m_chunkBegin;
-            SequenceInfo seq{ idxInChunk, numberOfSamples, m_chunkId, SequenceKey(i,0) };
+            SequenceInfo seq{ seqGlobalIdx, numberOfSamples, m_chunkId, SequenceKey(seqGlobalIdx,0) };
             sequenceToFill.push_back(seq);
         }
-        
     }
-
+    
     ~MockChunk() override {};
 };
 
@@ -157,6 +153,7 @@ public:
         size_t chunkBegin = chunkId * m_numSequencesPerChunk;
         size_t chunkEnd = chunkBegin + m_numSequencesPerChunk;
         shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkId, chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);
+        //shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);
         return chunk;
     }
 
