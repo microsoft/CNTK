@@ -144,7 +144,7 @@ UnaryEltWiseEngine<ElemType>::Create(DEVICEID_TYPE deviceId, const TensorShape& 
         UNUSED(inOutT);
 #endif
         if (GetMathLibTraceLevel() > 0)
-            fprintf(stderr, "Could not find appropriate Rectified Linear engine.");
+            fprintf(stderr, "Could not find appropriate Rectified Linear engine.\n");
     }
     return nullptr;
 }

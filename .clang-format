@@ -12,7 +12,7 @@ AlwaysBreakTemplateDeclarations: true
 AccessModifierOffset: -4
 BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: false
-ColumnLimit: 120
+ColumnLimit: 0
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 DerivePointerAlignment: true
 ForEachMacros: [ BOOST_FOREACH, foreach_column, foreach_coord, foreach_index, foreach_row, foreach_row_in_submat ]

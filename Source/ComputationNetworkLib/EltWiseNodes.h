@@ -63,7 +63,7 @@ protected:
     {
         ValidateUnaryMap(isFinalValidationPass);
         auto shape = GetSampleLayout();
-        if (m_reluEng == nullptr)
+        if (m_reluEng == nullptr && m_deviceId == CPUDEVICE)
         {
             if (GetMathLibTraceLevel() > 0)
                 fprintf(stderr, "use Cntk Rectified Linear engine.");
