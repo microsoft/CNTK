@@ -71,7 +71,7 @@ public:
         /* guoye: start */
         // denlattices.getlattice(key, LP->second, expectedframes); // this loads the lattice from disk, using the existing L.second object
         denlattices.getlattice(key, LP->second, specialwordids, expectedframes); // this loads the lattice from disk, using the existing L.second object
-        // fprintf(stderr, "latticesource.h:getlattices: %ls \n", key.c_str());
+        fprintf(stderr, "latticesource.h:getlattices: %ls \n", key.c_str());
         /* guoye: end */
         L = LP;
     }
