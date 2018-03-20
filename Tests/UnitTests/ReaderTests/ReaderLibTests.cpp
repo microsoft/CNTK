@@ -992,34 +992,6 @@ BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
     test(noRandomizer, epochSize);
 }
 
-BOOST_AUTO_TEST_CASE(LTNoRandomizerMultiWorker)
-{
-    auto num_chunks = 2;
-    auto num_sequences = 3;
-    size_t num_workers = 4;
-    vector<float> input(num_sequences * num_chunks);
-    iota(input.begin(), input.end(), 0.0f);
-
-    for (int i = 0; i < num_workers; ++i)
-    {
-        auto mockDeserializer = make_shared<MockDeserializer>(num_chunks, num_sequences, input);
-        auto randomizer = make_shared<LTNoRandomizer>(mockDeserializer, false);
-
-        EpochConfiguration config;
-        config.m_allowMinibatchesToCrossSweepBoundaries = true;
-        config.m_numberOfWorkers = num_workers;
-        config.m_minibatchSizeInSamples = 1;
-        config.m_truncationSize = 1;
-        config.m_totalEpochSizeInSweeps = 1;
-        config.m_epochIndex = 0;
-        config.m_workerRank = i;
-
-        randomizer->StartEpoch(config);
-        Sequences sequences = randomizer->GetNextSequences(1, 1);
-        BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
-    }
-}
-
 // Check that each worker reads unique sequences. A bug was causing duplicate sequences in workers.
 BOOST_AUTO_TEST_CASE(LTNoRandomizerCheckNoDuplicateSequence)
 {
