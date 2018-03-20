@@ -98,7 +98,7 @@ namespace CNTK
 
         static std::vector<size_t> VecFloatToVecSize_t(const std::vector<float> &vecFloat);
 
-        static std::vector<Axis> ConvertPermutationONNXToCNTK(const std::vector<int64_t> &permutation, bool hasBatchAxis);
+        static std::vector<Axis> ConvertPermutationONNXToCNTK(const std::vector<int64_t> &permutation, bool hasBatchAxis, bool hasSequenceAxis);
 
         static float GetNamedAttributeAsFloat(const Node *node, const string &attributeName);
         static float GetNamedAttributeAsFloat(const Node *node, const string &attributeName, float defaultValue);
@@ -140,6 +140,20 @@ namespace CNTK
         static FunctionPtr CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs);
         static FunctionPtr CreateCNTKConvTransposeNode(const Node *node, const std::vector<Variable> &inputs);
         static FunctionPtr CreateCNTKFCNode(const std::wstring& nodeName, const std::vector<Variable>& inputs);
+
+        //
+        // Methods for creating CNTK input variables for a given node.
+        //
+        static std::vector<Variable> CreateCNTKInputsStartingFromIndex(const Node* node, ONNXToCNTKMap & constructedNodeMap,
+            ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const Graph* graph, size_t startIndex, const DeviceDescriptor& computeDevice);
+        static std::vector<Variable> CreateCNTKInputs(const Node* node, ONNXToCNTKMap & constructedNodeMap,
+            ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const Graph* graph, const DeviceDescriptor& computeDevice);
+
+        //
+        // Method for special checking if an ONNX node belongs to special subgraph that is created by OptimizedRNNStack export.
+        //
+        static std::pair<bool, std::vector<FunctionPtr> > CheckNodeBelongsToOptimizedRnnStack(const Node* node, const std::vector<Variable>& inputs,
+            ONNXToCNTKMap & constructedNodeMap, ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const Graph* graph, const DeviceDescriptor& computeDevice);
 
         static ConvAutoPadType ConvertStrToConvAutoPadType(const string& str);
     };
@@ -595,10 +609,9 @@ Constant CreateConstantWithRawData(DType *data,const  NDShape &shape, const std:
 }
 
 std::vector<Variable> CreateRNNConstant(
-    const Node *parentNode, int index, const std::string &name, onnx::TensorProto &valueProto, const DeviceDescriptor& computeDevice)
+    const Node *parentNode, int index, const std::string &name, const onnx::TensorProto &valueProto, const DeviceDescriptor& computeDevice)
 {
     std::vector<Variable> inputs;
-    string parentONNXOpName = parentNode->OpType();
     auto dataType = valueProto.data_type();
 
     switch (dataType)
@@ -619,6 +632,7 @@ std::vector<Variable> CreateRNNConstant(
     }
     }
 
+    string parentONNXOpName = parentNode->OpType();
     // index to LSTM inputs as specified in the ONNX document. 
     // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---8
     if (parentONNXOpName == "LSTM")
@@ -791,6 +805,154 @@ std::vector<Variable> CreateRNNConstant(
             CNTK::LogicError("CreateRNNConstant received unepxpeted index: %d", index);
         }
     }
+    else if (parentONNXOpName == "GRU")
+    {
+        // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---6
+        switch (index)
+        {
+        case GRUInputIndexX:
+            // X, should not come to here 
+            return inputs;
+        case GRUInputIndexW:
+        {
+            // see ONNX spec for the tensor shape
+            int num_directions = valueProto.dims(0);
+            size_t rows = valueProto.dims(1);
+            size_t cols = valueProto.dims(2);
+
+            // CNTK cpp requires shape: (input_size, 3 * hidden_size)
+            NDShape weightShape({ rows, cols });
+
+            int input_size = cols;
+            int cell_size = rows / 3;
+
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + "_W_" + (char)dir;
+                int totalSizePerDirection = rows * cols;
+
+                // TODO: what about double?
+                float *data = new float[totalSizePerDirection];
+                for (size_t count = 0; count < totalSizePerDirection; count++)
+                {
+                    int row = count / input_size;
+                    int col = count % input_size;
+                    int sourceIndex = dir * totalSizePerDirection + count;
+                    int targetIndex = col * cell_size * GRUWeightDimensionHiddenMultiplier + row;
+                    data[targetIndex] = valueProto.float_data()[sourceIndex];
+                }
+
+                Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        case GRUInputIndexR:
+        {
+            // split into H and H1 for CNTK GRU implementation
+            int num_directions = valueProto.dims(0);
+            size_t rows = valueProto.dims(1);
+            size_t cols = valueProto.dims(2);
+
+            int input_size = cols;
+            int cell_size = rows / 3;
+
+            NDShape hShape({ (size_t)cell_size * 2, (size_t)input_size });
+            NDShape h1Shape({ (size_t)cell_size, (size_t)input_size });
+
+            inputs.resize(num_directions * 2);
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string hNodeName = name + "_H_" + (char)dir;
+                std::string h1NodeName = name + "_H1_" + (char)dir;
+                int totalSizePerDirection = rows * cols;
+
+                float *hData = new float[hShape.TotalSize()];
+                float *h1Data = new float[h1Shape.TotalSize()];
+                for (size_t count = 0; count < totalSizePerDirection; count++)
+                {
+                    int row = count / input_size;
+                    int col = count % input_size;
+                    int block = row / cell_size;
+                    int sourceIndex = dir * totalSizePerDirection + count;
+                    if (block < CNTKGRUZRWeightMultiplier)
+                    {
+                        int targetIndex = col * cell_size * CNTKGRUZRWeightMultiplier + row;
+                        hData[targetIndex] = valueProto.float_data()[sourceIndex];
+                    }
+                    else
+                    {
+                        int targetIndex = col * cell_size + row - cell_size * CNTKGRUZRWeightMultiplier;
+                        h1Data[targetIndex] = valueProto.float_data()[sourceIndex];
+                    }
+                }
+
+                Constant constantH = CreateConstantWithRawData(&hData[0], hShape, hNodeName, computeDevice);
+                Constant constantH1 = CreateConstantWithRawData(&h1Data[0], h1Shape, h1NodeName, computeDevice);
+                inputs[dir] = constantH;
+                inputs[dir + num_directions] = constantH1;
+            }
+            return inputs;
+        }
+        case GRUInputIndexB:
+            // B
+        {
+            // see ONNX spec for the tensor shape
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(1) / GRUBiasDimensionHiddenMultiplier;
+            // shape size is devided by 2 so that it only applies to input (CNTK)
+            // TODO: this incompatibility needs further investigation.
+            NDShape weightShape({ (size_t)(GRUBiasDimensionHiddenMultiplier / 2 * cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + std::string(1, (char)dir) + LSTMInputBiasNameHint;
+                int totalSizePerDirection = GRUBiasDimensionHiddenMultiplier / 2 * cell_size;
+                float *data = new float[totalSizePerDirection];
+                for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
+                {
+                    int row = targetIndex;
+                    // soruce is collmn major
+                    int src_index = row;
+                    // "fuse"
+                    data[targetIndex] =
+                        valueProto.float_data()[dir * 2 * totalSizePerDirection + src_index] +
+                        valueProto.float_data()[dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index];
+                }
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        case GRUInputIndexSequenceLens:
+            return inputs;
+        case GRUInitialH:
+        {
+            // initial_h
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(2);
+            NDShape weightShape({ (size_t)(cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + std::string(1, (char)dir) + LSTMInputInitialHNameHint;
+
+                float *data = new float[cell_size];
+                for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
+                {
+                    data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
+                }
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        break;
+        return inputs;
+        default:
+            CNTK::LogicError("CreateRNNConstant for GRU op received unepxpeted index: %d", index);
+        }
+    }
     else
     {
         NOT_IMPLEMENTED;
@@ -800,18 +962,18 @@ std::vector<Variable> CreateRNNConstant(
 std::vector<FunctionPtr> CreateRNNConstantOp(const Graph* graph, const Node *node, const Node *parentNode, int index,
     const DeviceDescriptor& computeDevice)
 {
-    onnx::TensorProto valueProto;
-    if (!graph->GetInitialTensor(node->Name(), valueProto))
+    const onnx::TensorProto *valueProto;
+    if (!graph->GetInitialTensor(node->Name(), &valueProto))
     {
         NodeAttributes::const_iterator itValue = node->GetAttributes().find("value");
         if (itValue == node->GetAttributes().cend())
         {
             return std::vector<FunctionPtr>();
         }
-        valueProto = itValue->second.t();
+        valueProto = &itValue->second.t();
     }
 
-    std::vector<Variable> constantNodes = CreateRNNConstant(parentNode, index, node->Name(), valueProto, computeDevice);
+    std::vector<Variable> constantNodes = CreateRNNConstant(parentNode, index, node->Name(), *valueProto, computeDevice);
     std::vector<FunctionPtr> returns;
     for (auto c : constantNodes)
         returns.push_back(c);
@@ -824,11 +986,11 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
 {
     string parentONNXOpName = parentNode->OpType();
     std::string nodeName = nodeArg->Name();
-    onnx::TensorProto valueProto;
-    if (graph->GetInitialTensor(nodeName, valueProto))
+    const onnx::TensorProto *valueProto;
+    if (graph->GetInitialTensor(nodeName, &valueProto))
     {
         int index = CalculateNodeArgInputIndex(nodeArg, parentNode);
-        return CreateRNNConstant(parentNode, index, nodeName, valueProto, computeDevice);
+        return CreateRNNConstant(parentNode, index, nodeName, *valueProto, computeDevice);
     }
 
     const TensorShapeProto *shapeProto = nodeArg->Shape();
@@ -876,6 +1038,36 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
             LogicError("LSTM node has unexpected input");
         }
     }
+    else if (parentONNXOpName == "GRU")
+    {
+        int inputIndex = CalculateNodeArgInputIndex(nodeArg, parentNode);
+        switch (inputIndex)
+        {
+        case GRUInputIndexX:
+            // X: `[seq_length, batch_size, input_size]`.
+        {
+            Variable inputVariable;
+            if (constructedNodeArgVariableMap.find(nodeArg->Name()) == constructedNodeArgVariableMap.end())
+            {
+                DataType dataType = FromONNXType(nodeArg->ToProto().type());
+                int input_size = shapeProto->dim(2).dim_value();
+                NDShape shape({ (size_t)(input_size) });
+                inputVariable = InputVariable(shape, dataType, ToWString(nodeArg->Name()), dynamicAxes);
+                constructedNodeArgVariableMap.insert(ONNXToCNTKVariableMap::value_type(nodeArg->Name(), inputVariable));
+            }
+            return std::vector<Variable>({ constructedNodeArgVariableMap[nodeArg->Name()] });
+        }
+        // other inputs shall be ONNX constant node and be created as CNTK Constant in CreateRNNConstant
+        case GRUInputIndexW:
+        case GRUInputIndexR:
+        case GRUInputIndexB:
+        case GRUInputIndexSequenceLens: 
+        case GRUInitialH:
+            NOT_IMPLEMENTED;
+        default:
+            LogicError("LSTM node has unexpected input");
+        }
+    }
     else
     {
         NOT_IMPLEMENTED;
@@ -888,10 +1080,10 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     string parentONNXOpName = parentNode->OpType();
 
     std::string nodeName = nodeArg->Name();
-    onnx::TensorProto valueProto;
-    if (graph->GetInitialTensor(nodeName, valueProto))
+    const onnx::TensorProto *valueProto;
+    if (graph->GetInitialTensor(nodeName, &valueProto))
     { 
-        return CreateConstant(valueProto, nodeName, computeDevice);
+        return CreateConstant(*valueProto, nodeName, computeDevice);
     }
 
     auto shapeProto = nodeArg->Shape();
@@ -1220,9 +1412,16 @@ std::vector<size_t> ONNXToCNTKHelper::VecFloatToVecSize_t(const std::vector<floa
 }
 
 // this method is to undo ConvertPermutationCNTKToONNX.
-std::vector<Axis> ONNXToCNTKHelper::ConvertPermutationONNXToCNTK(const std::vector<int64_t> &permutation, bool hasBatchAxis)
+std::vector<Axis> ONNXToCNTKHelper::ConvertPermutationONNXToCNTK(const std::vector<int64_t> &permutation, bool hasBatchAxis, bool hasSequenceAxis)
 {
     std::vector<int64_t> localPermutation = permutation;
+    if (hasSequenceAxis)
+    {
+        localPermutation.erase(localPermutation.begin());
+        for (int i = 0; i < localPermutation.size(); i++)
+            localPermutation[i]--;
+    }
+
     if (hasBatchAxis)
     {
         localPermutation.erase(localPermutation.begin());
@@ -1443,6 +1642,15 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         const std::vector<string> activations = GetNamedAttributeAsStringVec(node, "activations", 
             std::vector<string>({"Sigmoid", "Tanh", "Tanh"}));
         return CreateLSTM(node, inputs, direction, activations, activation_alpha, activation_beta);
+    }
+    else if (onnxOpName == "GRU")
+    {
+        const string direction = GetNamedAttributeAsString(node, "direction");
+        std::vector<float> activation_alpha = GetNamedAttributeAsFloatVec(node, "activation_alpha", std::vector<float>());
+        std::vector<float> activation_beta = GetNamedAttributeAsFloatVec(node, "activation_beta", std::vector<float>());
+        const std::vector<string> activations = GetNamedAttributeAsStringVec(node, "activations",
+            std::vector<string>({ "Sigmoid", "Tanh" }));
+        return CreateGRU(node, inputs, direction, activations, activation_alpha, activation_beta);
     }
     if (onnxOpName == "FC")
     {
@@ -2081,7 +2289,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "Transpose")
     {
         std::vector<int64_t> permutation = GetNamedAttributeAsInt64Vec(node, "perm");
-        std::vector<Axis> argsortedPermutation = ConvertPermutationONNXToCNTK(permutation, inputs[0].HasBatchAxis());
+        std::vector<Axis> argsortedPermutation = ConvertPermutationONNXToCNTK(permutation, inputs[0].HasBatchAxis(), inputs[0].HasSequenceAxis());
         FunctionPtr cntkFunction = Transpose(inputs[0], argsortedPermutation, ToWString(node->Name()));
         return cntkFunction;
     }
@@ -2177,11 +2385,36 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         size_t normalizeVariance = GetNamedAttributeAsInt64(node, "normalize_variance", 1);
         return MeanVarianceNormalization(inputs[0], !!acrossChannels, !!normalizeVariance, ToWString(node->Name()));
     }
+    else if (onnxOpName == "Identity")
+    {
+        FunctionPtr cntkFunction = Alias(inputs[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
     else
     {
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());
         return nullptr;
     }
+}
+
+std::pair<const Node *, int> FindParent(const Node *node)
+{
+    Node::NodeConstIterator it = node->OutputNodes_begin();
+    if (it != node->OutputNodes_end())
+    {
+        const Node *parent = *it;
+        int index = 0;
+        for (auto nodeArg : parent->InputDefs())
+        {
+            // TODO: Check whether we should use node output arg name for the check below. 
+            if (nodeArg.Name() == node->Name())
+            {
+                return std::make_pair(parent, index);
+            }
+            index++;
+        }
+    }
+    return std::make_pair(nullptr, -1);
 }
 
 std::pair<const Node *, int> FindParentAndChildIndex(const Node *node)
@@ -2193,6 +2426,7 @@ std::pair<const Node *, int> FindParentAndChildIndex(const Node *node)
         int index = 0;
         for (auto nodeArg : parent->InputDefs())
         {
+            // TODO: Check whether we should use node output arg name for the check below. 
             if (nodeArg.Name() == node->Name())
             {
                 return std::make_pair(parent, index);
@@ -2214,48 +2448,21 @@ std::vector<FunctionPtr> ONNXToCNTKHelper::FromONNXNode(const Node *node, ONNXTo
         return std::vector<FunctionPtr>({ itONNXToCNTKMap->second });
     }
 
-    std::vector<Variable> inputs;
-    const std::vector<NodeArg>& inputDefs = node->InputDefs();
-    for (std::vector<NodeArg>::const_iterator it = inputDefs.begin(); it != inputDefs.end(); ++it)
-    {
-        const NodeArg *nodeArg = &(*it);
-        const Node* inputNode = GetChildNode(node, &(*it));
-        if (inputNode != nullptr)
-        {
-            ONNXToCNTKMap::iterator itNodeMap = constructedNodeMap.find(const_cast<Node *>(inputNode));
-            if (itNodeMap != constructedNodeMap.end())
-            {
-                inputs.insert(inputs.end(), itNodeMap->second.begin(), itNodeMap->second.end());
-            }
-            else
-            {
-                std::vector<FunctionPtr> inputVariables = FromONNXNode(inputNode, constructedNodeMap, 
-                    constructedNodeArgVariableMap, graph, computeDevice);
-                inputs.insert(inputs.end(), inputVariables.begin(), inputVariables.end());
-            }
-        }
-        else
-        {
-            std::string parentONNXOpName = node->OpType();
-            if (parentONNXOpName == "LSTM")
-            {
-                std::vector<Variable> inputVariables =
-                    CreateRNNLeafVariableOrConstant(nodeArg, node, graph, constructedNodeArgVariableMap, computeDevice);
-                inputs.insert(inputs.end(), inputVariables.begin(), inputVariables.end());
-            }
-            else
-            {
-                Variable inputVariable = CreateLeafVariableOrConstant(nodeArg, node, graph, computeDevice);
-                inputs.push_back(inputVariable);
-            }
-        }
-    }
+    std::vector<Variable> inputs = CreateCNTKInputs(node, constructedNodeMap, constructedNodeArgVariableMap, graph, computeDevice);
+
+    // Special check if node belongs to the subgraph created by CNTK's OptimizedRNNStack export.
+    std::vector<FunctionPtr> lstmCntkFunction;
+    bool isOptimizedRnnStack(false);
+    std::tie<bool, std::vector<FunctionPtr>>(isOptimizedRnnStack, lstmCntkFunction) = 
+        CheckNodeBelongsToOptimizedRnnStack(node, inputs, constructedNodeMap, constructedNodeArgVariableMap, graph, computeDevice);
+    if (isOptimizedRnnStack)
+        return lstmCntkFunction;
 
     // 
     const Node *parentNode;
     int childIndex;
     std::tie<const Node *, int>(parentNode, childIndex) = FindParentAndChildIndex(node);
-    if (parentNode != nullptr && parentNode->OpType() == "LSTM")
+    if (parentNode != nullptr && Operators::IsRNNOp(parentNode->OpType()))
     {
         std::vector<FunctionPtr> cntkFunctions = CreateRNNConstantOp(graph, node, parentNode, childIndex, computeDevice);
         if (!cntkFunctions.empty())
@@ -2268,8 +2475,8 @@ std::vector<FunctionPtr> ONNXToCNTKHelper::FromONNXNode(const Node *node, ONNXTo
     else
     {
         FunctionPtr cntkFunction = CreateCNTKNode(node, inputs, computeDevice);
-        constructedNodeMap.insert(ONNXToCNTKMap::value_type(node, std::vector<FunctionPtr>({ cntkFunction })));
-        return std::vector<FunctionPtr>({ cntkFunction });
+            constructedNodeMap.insert(ONNXToCNTKMap::value_type(node, std::vector<FunctionPtr>({ cntkFunction })));
+            return std::vector<FunctionPtr>({ cntkFunction });
     }
 }
 
@@ -2549,7 +2756,15 @@ FunctionPtr ONNXToCNTK::CreateGraph(ONNXIR::Graph* src, const DeviceDescriptor& 
     std::vector<FunctionPtr> functions;
     for (Node::NodeConstIterator it = itNodeFn->first->InputNodes_begin(); it != itNodeFn->first->InputNodes_end(); ++it)
     {
-        functions.insert(functions.end(), constructedFunctions[*it].begin(), constructedFunctions[*it].end());
+        // TODO: consulting ONNXIR to see how to do this solidly.
+        // https://msasg.visualstudio.com/DefaultCollection/Shared%20Data/AIToolkits-CNTK/_queries?id=1134732&_a=edit&triage=true
+        std::vector<FunctionPtr> &constructedFuncts = constructedFunctions[*it];
+        for (int index = 0; index < constructedFuncts.size(); index++)
+        {
+            FunctionPtr &constructedFunct = constructedFuncts[index];
+            if (constructedFunct->RootFunction()->OpName() != L"Combine")
+                functions.insert(functions.end(), constructedFunct);
+        }
     }
 
     if (functions.empty())
@@ -2565,4 +2780,111 @@ FunctionPtr ONNXToCNTK::CreateGraph(ONNXIR::Graph* src, const DeviceDescriptor& 
         // in case multiple outputs are in a graph, combine them into one CNTK graph.
         return Combine(std::vector<Variable>(functions.begin(), functions.end()));
     }
+}
+
+std::vector<Variable> ONNXToCNTKHelper::CreateCNTKInputsStartingFromIndex(const Node* node, ONNXToCNTKMap & constructedNodeMap,
+    ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const Graph* graph, size_t startIndex, const DeviceDescriptor& computeDevice)
+{
+    std::vector<Variable> inputs;
+    const std::vector<NodeArg>& inputDefs = node->InputDefs();
+    for (std::vector<NodeArg>::const_iterator it = inputDefs.begin() + startIndex; it != inputDefs.end(); ++it)
+    {
+        const NodeArg *nodeArg = &(*it);
+        const Node* inputNode = GetChildNode(node, &(*it));
+        if (inputNode != nullptr)
+        {
+            ONNXToCNTKMap::iterator itNodeMap = constructedNodeMap.find(const_cast<Node *>(inputNode));
+            if (itNodeMap != constructedNodeMap.end())
+            {
+                inputs.insert(inputs.end(), itNodeMap->second.begin(), itNodeMap->second.end());
+            }
+            else
+            {
+                std::vector<FunctionPtr> inputVariables = FromONNXNode(inputNode, constructedNodeMap,
+                    constructedNodeArgVariableMap, graph, computeDevice);
+                inputs.insert(inputs.end(), inputVariables.begin(), inputVariables.end());
+            }
+        }
+        else
+        {
+            std::string parentONNXOpName = node->OpType();
+            if (Operators::IsRNNOp(node->OpType()))
+            {
+                std::vector<Variable> inputVariables =
+                    CreateRNNLeafVariableOrConstant(nodeArg, node, graph, constructedNodeArgVariableMap, computeDevice);
+                inputs.insert(inputs.end(), inputVariables.begin(), inputVariables.end());
+            }
+            else
+            {
+                Variable inputVariable = CreateLeafVariableOrConstant(nodeArg, node, graph, computeDevice);
+                inputs.push_back(inputVariable);
+            }
+        }
+    }
+    return inputs;
+}
+
+std::vector<Variable> ONNXToCNTKHelper::CreateCNTKInputs(const Node* node, ONNXToCNTKMap & constructedNodeMap,
+    ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const Graph* graph, const DeviceDescriptor& computeDevice)
+{
+    return CreateCNTKInputsStartingFromIndex(node, constructedNodeMap, constructedNodeArgVariableMap, graph, 0, computeDevice);
+}
+
+std::pair<bool, std::vector<FunctionPtr> > ONNXToCNTKHelper::CheckNodeBelongsToOptimizedRnnStack(const Node* node, const std::vector<Variable>& inputs,
+    ONNXToCNTKMap & constructedNodeMap, ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const Graph* graph, const DeviceDescriptor& computeDevice)
+{
+    std::vector<FunctionPtr> lstmCntkFunction;
+    bool isOptimizedRnnStack(false);
+    const string shapeAdaptorFirstOpName = "Transpose"; // First op in the shape adaptor needed for ONNX LSTM.
+
+    // The idea is that any time you see a Transpose node, there's a posibility that it was created
+    // as part of export for CNTK's OptimizedRNNStack. We then check for that possibility and if it
+    // is confirmed, then we do not add this Transpose node or the next Reshape node, but directly 
+    // create the next LSTM node (that follows the Reshape node). This special handling is needed 
+    // because ONNX spec, as of this comment, specifies the shape of the output of LSTM in such a 
+    // way that it cannnot be directly fed into the next LSTM. Therefore, during OptimizedRNNStack
+    // export, when there are multiple layers, we have to insert Transpose and Reshape nodes to modify
+    // the output of the previous layer to match the required shape of the input of the next layer.
+    // When loading such model back in CNTK, since we really do not need these Transpose and Reshape
+    // nodes (because CNTK's LSTM node's input/output shapes agree/match). So as an optimization
+    // (and also because it is complicated to Transpose two axes, one of which is the batch axis,
+    // in CNTK) we detect this special subgraph and if it is detected, we skip Transpose and Reshape
+    // nodes. 
+    if (node->OpType() == shapeAdaptorFirstOpName)
+    {
+        std::vector<int64_t> permutation = GetNamedAttributeAsInt64Vec(node, "perm");
+        const Node* firstParentNode(nullptr), *grandParentNode(nullptr);
+        Node::NodeConstIterator it = node->OutputNodes_begin();
+        if (it != node->OutputNodes_end())
+        {
+            firstParentNode = *it;
+        }
+        if (firstParentNode != nullptr)
+        {
+            it = firstParentNode->OutputNodes_begin();
+            if (it != node->OutputNodes_end())
+            {
+                grandParentNode = *it;
+            }
+        }
+
+        // This is the check that detects the special case of OptimizedRNNStac export. Criteria is as follows:
+        // 1. Current node is Transpose.
+        // 2. Parent node is Reshape.
+        // Grandparent node is LSTM.
+        // 'perm' attribute of the current Transpose node is length 4 (because that is the dimensionality of ONNX LSTM node output).
+        // First input to Transpose node is rank 1 (that is the dimensionality of output of CNTK's LSTM node).
+        if ((firstParentNode != nullptr) && (grandParentNode != nullptr) && firstParentNode->OpType() == "Reshape" && grandParentNode->OpType() == "LSTM" &&
+            permutation.size() == 4 && inputs[0].Shape().Rank() == 1)
+        {
+            std::vector<Variable> inputsnextLSTMInputs = CreateCNTKInputsStartingFromIndex(grandParentNode, constructedNodeMap,
+                constructedNodeArgVariableMap, graph, 1, computeDevice);
+            inputsnextLSTMInputs.insert(inputsnextLSTMInputs.begin(), inputs[0]);
+            FunctionPtr cntkFunction = CreateCNTKNode(grandParentNode, inputsnextLSTMInputs, computeDevice);
+            lstmCntkFunction.push_back(cntkFunction);
+            constructedNodeMap.insert(ONNXToCNTKMap::value_type(grandParentNode, lstmCntkFunction));
+            isOptimizedRnnStack = true;
+        }
+    }
+    return std::make_pair(isOptimizedRnnStack, lstmCntkFunction);
 }

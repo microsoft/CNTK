@@ -27,7 +27,7 @@ namespace ONNXIR
     typedef size_t NODEINDEX;
     typedef int64_t VERSION;
     typedef ValueInfoProto NodeArgInfo;
-    typedef std::unordered_map<std::string, TensorProto> InitialTensorSet;
+    typedef std::unordered_map<std::string, const TensorProto*> InitialTensorSet;
     typedef std::unordered_map<std::string, TypeProto> ArgNameToTypeMap;
 
     class Graph;
@@ -347,17 +347,6 @@ namespace ONNXIR
             NODEINDEX m_currentNodeIndex;
         };
 
-        // Constructor from scratch.
-        // <p_isONNX> is a special flag to indicate whether it's
-        // going to construct a ONNX graph. With ONNX graph, strict
-        // type checking will be skiped.
-        Graph(const std::string& p_name, bool p_isONNX = false);
-        Graph(const std::string& p_name, const std::string& p_docString);
-
-        // Constructor: Given a <GraphProto> loaded from model file, construct
-        // a <Graph> object.
-        Graph(const GraphProto& p_graphProto);
-
         // Resolve <*this> graph to ensure it's in a good shape with full
         // functionality.
         // 1. Run through all validation rules.
@@ -374,14 +363,17 @@ namespace ONNXIR
         const std::string& Name() const;
         void SetName(const std::string& p_name);
 
+        const std::string& Description() const;
+        void SetDescription(const std::string& p_desription);
+
         // Add/Remove/Get initial tensors for some graph inputs.
         void AddInitialTensor(const TensorProto& p_tensor);
         void RemoveInitialTensor(const std::string& p_tensorName);
         bool GetInitialTensor(const std::string& p_tensorName,
-            TensorProto& p_value) const;
+            const TensorProto** p_value) const;
         const InitialTensorSet& GetAllInitialTensors() const;
 
-        // Get graph inputs/outputs.
+        // Get graph inputs/outputs/valueinfos.
         const std::vector<const NodeArg*>& GetInputs() const;
         const std::vector<const NodeArg*>& GetOutputs() const;
         const std::vector<const NodeArg*>& GetValueInfo() const;
@@ -447,6 +439,15 @@ namespace ONNXIR
 
     private:
 
+        friend class Model;
+
+        Graph() = delete;
+
+        // Constructor: Given a <GraphProto> loaded from model file, construct
+        // a <Graph> object.
+        Graph(GraphProto* p_graphProto,
+            const std::unordered_map<std::string, int>& p_domainToVersion, bool p_isONNX = true);
+
         enum Type
         {
             // A main graph.
@@ -495,15 +496,11 @@ namespace ONNXIR
             const OpSignature* p_op,
             const std::unordered_map<std::string, Node::EdgeEnd>& p_outputArgs);
 
-        // Clean function definition map.
-        // Remove function definitions not refered by any node.
-        void CleanFunctionDefMap(const std::set<std::string>& p_funcDefNames);
-
         // Add source/sink nodes to <*this> graph.
         void AddSourceSinkNodes();
 
         // Set graph inputs/outputs when resolving a graph..
-        void SetGraphInputsOutputs();
+        Status SetGraphInputsOutputs();
 
         // Sync graph inputs/outputs when serializing to proto.
         void SyncGraphInputsOutputs();
@@ -525,12 +522,15 @@ namespace ONNXIR
         // When serilizing <*this> Graph to a GraphProto, the nodes and
         // functions in <Graph> will also be fed into <m_graphProto> so that
         // it's consistent with <*this> graph.
-        GraphProto m_graphProto;
+        // This pointer is owned by parent model.
+        GraphProto* m_graphProto;
 
         // The node which refers to <*this> graph (Function).
         Node* m_node;
 
-        InitialTensorSet m_nameToInitialTensor;
+        std::unordered_map<std::string, int> m_nameToInitialTensorIndex;
+        InitialTensorSet m_nameToInitialTensorPtr;
+        std::vector<int> m_removedInitializerIndexes;
 
         // A flag indicates whether <*this> graph needs to be resolved.
         bool m_graphResolveNeeded;
@@ -550,6 +550,8 @@ namespace ONNXIR
 
         // Graph value_info.
         std::vector<const NodeArg*> m_valueInfo;
+
+        const std::unordered_map<std::string, int>* m_domainToVersion;
     };
 }
 

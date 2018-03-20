@@ -7,6 +7,9 @@ namespace ONNXIR
     static const std::string c_noOp = "NoOp";
     static const std::string c_constantOp = "Constant";
     static const std::string c_constantValue = "value";
+    static const std::string c_onnxDomain = "";
+    static const std::string c_mlDomain = "ai.onnx.ml";
+    static const std::string c_msDomain = "com.microsoft";
 
     // Singleton wrapper around allowed data types.
     // This implements construct on first use which is needed to ensure
@@ -32,6 +35,7 @@ namespace ONNXIR
         const std::string c_complex128 = "complex128";
         const std::string c_string = "string";
         const std::string c_bool = "bool";
+        const std::string c_undefined = "undefined";
 
         std::unordered_set<std::string>& GetAllowedDataTypes();
         ~TypesWrapper() = default;

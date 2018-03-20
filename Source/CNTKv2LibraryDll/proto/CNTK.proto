@@ -20,16 +20,16 @@ message Axis {
 message NDArrayView {
 
   enum DataType {
-	Unknown = 0;
-	Float = 1;
-	Double = 2;
+    Unknown = 0;
+    Float = 1;
+    Double = 2;
         Float16 = 4;
   }
   
   enum StorageFormat {
-	Dense = 0;
-	SparseCSC = 1;
-	SparseBlockCol = 2;
+    Dense = 0;
+    SparseCSC = 1;
+    SparseBlockCol = 2;
   }
   
   DataType data_type = 1;
@@ -37,16 +37,16 @@ message NDArrayView {
   NDShape shape = 3;
   
   message FloatValues {
-	repeated float value = 1 [packed = true];
+    repeated float value = 1 [packed = true];
   }
   
   message DoubleValues {
-	repeated double value = 1 [packed = true];
+    repeated double value = 1 [packed = true];
   }
 
   oneof values {
-	FloatValues float_values = 4;
-	DoubleValues double_values = 5;
+    FloatValues float_values = 4;
+    DoubleValues double_values = 5;
   }
 
   // TODO: bool read_only = 6;
@@ -66,32 +66,32 @@ message DictionaryValue {
   uint64 version = 1;
 
   enum Type {
-	None = 0;
-	Bool = 1;
-	Int = 2;
-	SizeT = 3;
-	Float = 4;
-	Double = 5;
-	String = 6;
-	NDShape = 7;
-	Axis = 8;
-	Vector = 9;
-	Dictionary = 10;
-	NDArrayView = 11;
+    None = 0;
+    Bool = 1;
+    Int = 2;
+    SizeT = 3;
+    Float = 4;
+    Double = 5;
+    String = 6;
+    NDShape = 7;
+    Axis = 8;
+    Vector = 9;
+    Dictionary = 10;
+    NDArrayView = 11;
   }
   
   Type value_type = 2;
   oneof value {
-	bool bool_value = 3;
-	int32 int_value = 4;
-	uint64 size_t_value = 5;
-	float float_value = 6;
-	double double_value = 7;
-	string string_value = 8;
-	NDShape nd_shape_value = 9;
-	Axis axis_value = 10;
-	Vector vector_value = 11;
-	Dictionary dictionary_value = 12;
-	NDArrayView nd_array_view_value = 13;
+    bool bool_value = 3;
+    int32 int_value = 4;
+    uint64 size_t_value = 5;
+    float float_value = 6;
+    double double_value = 7;
+    string string_value = 8;
+    NDShape nd_shape_value = 9;
+    Axis axis_value = 10;
+    Vector vector_value = 11;
+    Dictionary dictionary_value = 12;
+    NDArrayView nd_array_view_value = 13;
   }  
 }

@@ -29,7 +29,7 @@ more common case) is as follows:
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
-The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
+The squared error is then of course ``(2.5)**2 + (1-6)**2 = 29``.
 
 Most of the data containers like parameters, constants, values, etc. implement
 the asarray() method, which returns a NumPy interface.

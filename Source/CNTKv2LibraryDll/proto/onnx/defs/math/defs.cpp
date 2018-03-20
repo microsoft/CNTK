@@ -2,11 +2,25 @@
 
 namespace ONNXIR {
 
-    #define REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(OpName)                                          \
+#define REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(OpName)                                          \
     REGISTER_OPERATOR_SCHEMA(OpName)                                                                        \
-        .Description("Elementwise "#OpName" takes one or more input data (Tensor<T>) and produces one "     \
-            "output data (Tensor<T>) where the declared function is applied to the input "                  \
-            "tensors elementwise.")                                                                         \
+        .Description(                                                                                        \
+            "Performs element-wise binary "#OpName" (with limited broadcast support)."                        \
+                                                                                                            \
+            "If necessary, the right-hand-side argument will be broadcasted to match the shape of"            \
+            "left-handside argument. When broadcasting is specified, the second tensor can either be of"    \
+            "size 1 (a scalar value) or having its shape as a contiguous subset of the first tensor's"        \
+            "shape. The starting of the mutually equal shape is specified by the argument \"axis\" and if"    \
+            "it is not set, suffix matching is assumed. 1-dim expansion doesn't work yet. "                    \
+                                                                                                            \
+            "For example, the following tensor shapes are supported (with broadcast=1): "                    \
+            "shape(A) = (2, 3, 4, 5), shape(B) = (,), i.e. B is a scalar"                                    \
+            "shape(A) = (2, 3, 4, 5), shape(B) = (5,)"                                                        \
+            "shape(A) = (2, 3, 4, 5), shape(B) = (4, 5)"                                                    \
+            "shape(A) = (2, 3, 4, 5), shape(B) = (3, 4), with axis=1"                                        \
+            "shape(A) = (2, 3, 4, 5), shape(B) = (2), with axis=0"                                            \
+                                                                                                            \
+            "Attribute broadcast=1 needs to be passed to enable broadcasting")                                \
         .Input("A", "First operand, should share the type with the second operand.", "T")                   \
         .Input("B", "Second operand. With broadcasting can be of smaller size than A. "                     \
             "If broadcasting is disabled it should be of the same size..", "T")                             \
@@ -19,11 +33,11 @@ namespace ONNXIR {
             AttrType::AttributeProto_AttributeType_INT);
 
     REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Add)
-    REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Sub)
-    REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Mul)
-    REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Div)
+        REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Sub)
+        REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Mul)
+        REGISTER_ELEMENTWISE_BROADCAST_OPERATOR_SCHEMA(Div)
 
-    #define REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(OpName, output)                                            \
+#define REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(OpName, output)                                            \
     REGISTER_OPERATOR_SCHEMA(OpName)                                                                        \
         .Description("Element-wise "#OpName" of each of the input tensors. The first input tensor can be "  \
             "used in-place as the output tensor, in which case the "#OpName" will be done in "              \
@@ -34,13 +48,13 @@ namespace ONNXIR {
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },                      \
             "Constrain input and output types to float tensors.");
 
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Max, "max")
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Min, "min")
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Sum, "sum")
-    REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Mean, "mean")
+        REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Max, "max")
+        REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Min, "min")
+        REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Sum, "sum")
+        REGISTER_ELEMENTWISE_OPERATOR_SCHEMA(Mean, "mean")
 
-    // Taken from ONNX
-    REGISTER_OPERATOR_SCHEMA(Neg)
+        // Taken from ONNX
+        REGISTER_OPERATOR_SCHEMA(Neg)
         .Description("Neg takes one input data (Tensor<T>) and produces one output data "
             "(Tensor<T>) where each element flipped sign, y = -x, is applied to "
             "the tensor elementwise.")
@@ -57,7 +71,7 @@ namespace ONNXIR {
         .Input("X", "Input tensor of any shape", "T")
         .Output("Y", "Output tensor of same shape and type as input X.", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
-             "Constrain input and output types to float tensors.");
+            "Constrain input and output types to float tensors.");
 
     // Take from ONNX
     REGISTER_OPERATOR_SCHEMA(Reciprocal)
@@ -173,18 +187,18 @@ namespace ONNXIR {
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
             "Constrain input and output types to float tensors.")
         .Attr("transA",
-              "Whether A should be transposed",
-              AttrType::AttributeProto_AttributeType_INT)
+            "Whether A should be transposed",
+            AttrType::AttributeProto_AttributeType_INT)
         .Attr("transB",
-              "Whether B should be transposed",
-              AttrType::AttributeProto_AttributeType_INT)
+            "Whether B should be transposed",
+            AttrType::AttributeProto_AttributeType_INT)
         .Attr("broadcast",
-              "Whether C should be broadcasted",
-              AttrType::AttributeProto_AttributeType_INT)
+            "Whether C should be broadcasted",
+            AttrType::AttributeProto_AttributeType_INT)
         .Attr("alpha",
-              "Scalar multiplier for the product of input tensors A * B",
-              AttrType::AttributeProto_AttributeType_FLOAT)
+            "Scalar multiplier for the product of input tensors A * B",
+            AttrType::AttributeProto_AttributeType_FLOAT)
         .Attr("beta",
-              "Scalar multiplier for input tensor C",
-              AttrType::AttributeProto_AttributeType_FLOAT);
+            "Scalar multiplier for input tensor C",
+            AttrType::AttributeProto_AttributeType_FLOAT);
 }

@@ -73,6 +73,23 @@ def prepare_ImageNet_data():
         copyfile(os.path.join(base_path_bak, 'val1024.zip'), os.path.join(base_path, 'val1024.zip'))
     return base_path
 
+def prepare_MNIST_data():
+    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             *"../../../../Examples/Image/DataSets/MNIST".split("/"))
+    base_path = os.path.normpath(base_path)
+    if not os.path.isdir(base_path):
+        os.mkdir(base_path)
+
+    # If Train-28x28_cntk_text.txt don't exist locally, copy to local location
+    if not os.path.isfile(os.path.join(base_path, 'Train-28x28_cntk_text.txt')):
+        # copy from backup location
+        base_path_bak = os.path.join(os.environ[envvar],
+                                     *"Image/MNIST".split("/"))
+        base_path_bak = os.path.normpath(base_path_bak)
+
+        copyfile(os.path.join(base_path_bak, 'Train-28x28_cntk_text.txt'), os.path.join(base_path, 'Train-28x28_cntk_text.txt'))
+    return base_path
+
 def prepare_Grocery_data():
     base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              *"../../../../Examples/Image/DataSets/Grocery".split("/"))
