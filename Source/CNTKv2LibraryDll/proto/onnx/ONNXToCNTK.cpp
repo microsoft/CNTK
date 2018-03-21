@@ -641,7 +641,7 @@ std::vector<Variable> CreateRNNConstant(
         {
         case LSTMInputIndexX:
             // X, should not come to here
-            return inputs;
+            CNTK::LogicError("input to a recurrent node shall not be a constant");
         case LSTMInputIndexW:
         case LSTMInputIndexH:
             // W, R:
@@ -659,7 +659,7 @@ std::vector<Variable> CreateRNNConstant(
 
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + (index == 1 ? "_W_" : "_R_") + (char)dir;
+                std::string nodeName = name + (index == 1 ? "_W_" : "_R_") + (char)('0' + dir);
                 int totalSizePerDirection = rows * cols;
 
                 // TODO: what about double?
@@ -706,7 +706,7 @@ std::vector<Variable> CreateRNNConstant(
             NDShape weightShape({ (size_t)(4 * cell_size) });
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + std::string(1, (char)dir) + LSTMInputBiasNameHint;
+                std::string nodeName = name + std::string(1, (char)('0' + dir)) + LSTMInputBiasNameHint;
                 int totalSizePerDirection = 4 * cell_size;
                 float *data = new float[totalSizePerDirection];
                 for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
@@ -726,7 +726,7 @@ std::vector<Variable> CreateRNNConstant(
                         row -= 2 * cell_size;
                     }
 
-                    // soruce is collmn major
+                    // source is column major
                     int src_index = row;
                     // "fuse"
                     data[targetIndex] =
@@ -760,7 +760,7 @@ std::vector<Variable> CreateRNNConstant(
             NDShape weightShape({ (size_t)(cell_size) });
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + std::string(1, (char)dir);
+                std::string nodeName = name + std::string(1, (char)('0' + dir));
                 if (index == 5) 
                     nodeName += LSTMInputInitialHNameHint;
                 else
@@ -787,7 +787,7 @@ std::vector<Variable> CreateRNNConstant(
                 for (int i = 0; i < 3; i++)
                 {
                     std::string nodeName = name + ((i == 0) ? "_i" : ((i == 1) ? "_o" : "_f")) + 
-                        std::string(1, (char)dir) + LSTMInputPeepholeNameHint;
+                        std::string(1, (char)('0' + dir)) + LSTMInputPeepholeNameHint;
                     float *data = new float[cell_size];
                     NDShape weightShape({ (size_t)(cell_size) });
                     for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
@@ -800,9 +800,8 @@ std::vector<Variable> CreateRNNConstant(
                 }
             return inputs;
         }
-        break;
         default:
-            CNTK::LogicError("CreateRNNConstant received unepxpeted index: %d", index);
+            CNTK::LogicError("CreateRNNConstant received unexpected index: %d", index);
         }
     }
     else if (parentONNXOpName == "GRU")
@@ -812,7 +811,7 @@ std::vector<Variable> CreateRNNConstant(
         {
         case GRUInputIndexX:
             // X, should not come to here 
-            return inputs;
+            CNTK::LogicError("input to a recurrent node shall not be a constant");
         case GRUInputIndexW:
         {
             // see ONNX spec for the tensor shape
@@ -828,7 +827,7 @@ std::vector<Variable> CreateRNNConstant(
 
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + "_W_" + (char)dir;
+                std::string nodeName = name + "_W_" + (char)('0' + dir);
                 int totalSizePerDirection = rows * cols;
 
                 // TODO: what about double?
@@ -863,8 +862,8 @@ std::vector<Variable> CreateRNNConstant(
             inputs.resize(num_directions * 2);
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string hNodeName = name + "_H_" + (char)dir;
-                std::string h1NodeName = name + "_H1_" + (char)dir;
+                std::string hNodeName = name + "_H_" + (char)('0' + dir);
+                std::string h1NodeName = name + "_H1_" + (char)('0' + dir);
                 int totalSizePerDirection = rows * cols;
 
                 float *hData = new float[hShape.TotalSize()];
@@ -900,18 +899,18 @@ std::vector<Variable> CreateRNNConstant(
             // see ONNX spec for the tensor shape
             int num_directions = valueProto.dims(0);
             int cell_size = valueProto.dims(1) / GRUBiasDimensionHiddenMultiplier;
-            // shape size is devided by 2 so that it only applies to input (CNTK)
+            // shape size is divided by 2 so that it only applies to input (CNTK)
             // TODO: this incompatibility needs further investigation.
             NDShape weightShape({ (size_t)(GRUBiasDimensionHiddenMultiplier / 2 * cell_size) });
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + std::string(1, (char)dir) + LSTMInputBiasNameHint;
+                std::string nodeName = name + std::string(1, '0' + dir) + LSTMInputBiasNameHint;
                 int totalSizePerDirection = GRUBiasDimensionHiddenMultiplier / 2 * cell_size;
                 float *data = new float[totalSizePerDirection];
                 for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
                 {
                     int row = targetIndex;
-                    // soruce is collmn major
+                    // source is column major
                     int src_index = row;
                     // "fuse"
                     data[targetIndex] =
@@ -934,7 +933,7 @@ std::vector<Variable> CreateRNNConstant(
             NDShape weightShape({ (size_t)(cell_size) });
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + std::string(1, (char)dir) + LSTMInputInitialHNameHint;
+                std::string nodeName = name + std::string(1, (char)('0' + dir)) + LSTMInputInitialHNameHint;
 
                 float *data = new float[cell_size];
                 for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
@@ -947,10 +946,113 @@ std::vector<Variable> CreateRNNConstant(
             }
             return inputs;
         }
-        break;
-        return inputs;
         default:
-            CNTK::LogicError("CreateRNNConstant for GRU op received unepxpeted index: %d", index);
+            CNTK::LogicError("CreateRNNConstant for GRU op received unexpected index: %d", index);
+        }
+    }
+    else if (parentONNXOpName == "RNN")
+    {
+        // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---6-1
+        switch (index)
+        {
+        case RNNInputIndexX:
+            // X, should not come to here 
+            CNTK::LogicError("input to a recurrent node shall not be a constant");
+        case RNNInputIndexW:
+        case RNNInputIndexR:
+        {
+            // see ONNX spec for the tensor shape
+            int num_directions = valueProto.dims(0);
+            size_t rows = valueProto.dims(1);
+            size_t cols = valueProto.dims(2);
+
+            // CNTK cpp requires shape: (input_size, 3 * hidden_size)
+            NDShape weightShape({ rows, cols });
+
+            int input_size = cols;
+            int cell_size = rows;
+
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + (index == RNNInputIndexW ? "_W_" : "_R_") + (char)('0' + dir);
+                int totalSizePerDirection = rows * cols;
+
+                // TODO: what about double?
+                float *data = new float[totalSizePerDirection];
+                for (size_t count = 0; count < totalSizePerDirection; count++)
+                {
+                    int row = count / input_size;
+                    int col = count % input_size;
+                    int sourceIndex = dir * totalSizePerDirection + count;
+                    int targetIndex = col * cell_size + row;
+                    data[targetIndex] = valueProto.float_data()[sourceIndex];
+                }
+
+                Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        case RNNInputIndexB:
+            // B
+        {
+            // see ONNX spec for the tensor shape:
+            // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---6-1
+            // shape of bias is [num_directions, 2*hidden_size] thus we divide dim(1) by 2
+            // to get cell_size. 
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(1) / 2;
+            NDShape weightShape({ (size_t)(cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + std::string(1, '0' + dir) + LSTMInputBiasNameHint;
+                int totalSizePerDirection = cell_size;
+                float *data = new float[totalSizePerDirection];
+                for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
+                {
+                    int row = targetIndex;
+                    // source is column major
+                    int src_index = row;
+                    // "fuse"
+                    // RNN only has one bias vector. It is applied after element-wise addition
+                    // of projected input and hidden states. Therefore we need to fuse two biases 
+                    // in ONNX into one.
+                    // RNNBiasMultiplier = 2
+                    data[targetIndex] =
+                        valueProto.float_data()[dir * RNNBiasMultiplier * totalSizePerDirection + src_index] +
+                        valueProto.float_data()[dir * RNNBiasMultiplier * totalSizePerDirection + totalSizePerDirection + src_index];
+                }
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        case RNNInputIndexSequenceLens:
+            return inputs;
+        case RNNInitialH:
+        {
+            // initial_h
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(2);
+            NDShape weightShape({ (size_t)(cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
+            {
+                std::string nodeName = name + std::string(1, (char)('0' + dir)) + LSTMInputInitialHNameHint;
+
+                float *data = new float[cell_size];
+                for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
+                {
+                    data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
+                }
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
+            }
+            return inputs;
+        }
+        default:
+            CNTK::LogicError("CreateRNNConstant for GRU op received unexpected index: %d", index);
         }
     }
     else
@@ -1065,7 +1167,37 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
         case GRUInitialH:
             NOT_IMPLEMENTED;
         default:
-            LogicError("LSTM node has unexpected input");
+            LogicError("GRU node has unexpected input");
+        }
+    }
+    else if (parentONNXOpName == "RNN")
+    {
+        int inputIndex = CalculateNodeArgInputIndex(nodeArg, parentNode);
+        switch (inputIndex)
+        {
+        case GRUInputIndexX:
+            // X: `[seq_length, batch_size, input_size]`.
+        {
+            Variable inputVariable;
+            if (constructedNodeArgVariableMap.find(nodeArg->Name()) == constructedNodeArgVariableMap.end())
+            {
+                DataType dataType = FromONNXType(nodeArg->ToProto().type());
+                int input_size = shapeProto->dim(2).dim_value();
+                NDShape shape({ (size_t)(input_size) });
+                inputVariable = InputVariable(shape, dataType, ToWString(nodeArg->Name()), dynamicAxes);
+                constructedNodeArgVariableMap.insert(ONNXToCNTKVariableMap::value_type(nodeArg->Name(), inputVariable));
+            }
+            return std::vector<Variable>({ constructedNodeArgVariableMap[nodeArg->Name()] });
+        }
+        // other inputs shall be ONNX constant node and be created as CNTK Constant in CreateRNNConstant
+        case GRUInputIndexW:
+        case GRUInputIndexR:
+        case GRUInputIndexB:
+        case GRUInputIndexSequenceLens:
+        case GRUInitialH:
+            NOT_IMPLEMENTED;
+        default:
+            LogicError("RNN node has unexpected input");
         }
     }
     else
@@ -1651,6 +1783,15 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         const std::vector<string> activations = GetNamedAttributeAsStringVec(node, "activations",
             std::vector<string>({ "Sigmoid", "Tanh" }));
         return CreateGRU(node, inputs, direction, activations, activation_alpha, activation_beta);
+    }
+    else if (onnxOpName == "RNN")
+    {
+        const string direction = GetNamedAttributeAsString(node, "direction");
+        std::vector<float> activation_alpha = GetNamedAttributeAsFloatVec(node, "activation_alpha", std::vector<float>());
+        std::vector<float> activation_beta = GetNamedAttributeAsFloatVec(node, "activation_beta", std::vector<float>());
+        const std::vector<string> activations = GetNamedAttributeAsStringVec(node, "activations",
+            std::vector<string>({ "Tanh" }));
+        return CreateRNN(node, inputs, direction, activations, activation_alpha, activation_beta);
     }
     if (onnxOpName == "FC")
     {
