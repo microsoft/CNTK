@@ -853,7 +853,12 @@ public:
             freadOrDie(&info, sizeof(info), 1, f);
             freadvector(f, "NODE", nodes, info.numnodes);
             if (nodes.back().t != info.numframes)
-                RuntimeError("fread: mismatch between info.numframes and last node's time");
+                /* guoye: start */
+            {
+                // RuntimeError("fread: mismatch between info.numframes and last node's time");
+                fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", nodes.back().t, info.numframes);
+            }
+            /* guoye: end */
             freadvector(f, "EDGE", edges, info.numedges);
             freadvector(f, "ALIG", align);
             fcheckTag(f, "END ");
@@ -866,7 +871,15 @@ public:
             freadOrDie(&info, sizeof(info), 1, f);
             freadvector(f, "NODS", nodes, info.numnodes);
             if (nodes.back().t != info.numframes)
+            {
                 RuntimeError("fread: mismatch between info.numframes and last node's time");
+                /* guoye: start */
+                {
+                    // RuntimeError("fread: mismatch between info.numframes and last node's time");
+                    fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", nodes.back().t, info.numframes);
+                }
+                /* guoye: end */
+            }
             freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
             freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
             fcheckTag(f, "END ");
