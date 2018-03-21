@@ -873,7 +873,6 @@ public:
             freadvector(f, "NODS", nodes, info.numnodes);
             if (nodes.back().t != info.numframes)
             {
-                RuntimeError("fread: mismatch between info.numframes and last node's time");
                 /* guoye: start */
                 {
                     // RuntimeError("fread: mismatch between info.numframes and last node's time");
