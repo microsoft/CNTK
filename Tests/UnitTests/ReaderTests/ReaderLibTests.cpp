@@ -47,6 +47,18 @@ private:
     vector<vector<float>>& m_sequenceData;
 
 public:
+    MockChunk(ChunkIdType chunkdId, size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, uint32_t sequenceLength)
+        : m_chunkId(chunkdId),
+        m_chunkBegin(chunkBegin),
+        m_chunkEnd(chunkEnd),
+        m_sampleShape(NDShape({ 1 })),
+        m_sequenceLength(sequenceLength),
+        m_sequenceData(sequenceData)
+    {
+        assert(chunkBegin <= chunkEnd);
+        assert(chunkEnd <= sequenceData.size());
+    }
+
     void GetSequence(size_t sequenceId, vector<SequenceDataPtr>& result) override
     {
         assert(m_chunkBegin <= sequenceId);
@@ -58,18 +70,6 @@ public:
         data->m_sampleShape = m_sampleShape;
         data->m_key.m_sequence = sequenceId;
         result.push_back(data);
-    }
-
-    MockChunk(ChunkIdType chunkdId, size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, uint32_t sequenceLength)
-        : m_chunkId(chunkdId),
-          m_chunkBegin(chunkBegin),
-          m_chunkEnd(chunkEnd),
-          m_sampleShape(NDShape({ 1 })),
-          m_sequenceLength(sequenceLength),
-          m_sequenceData(sequenceData)
-    {
-        assert(chunkBegin <= chunkEnd);
-        assert(chunkEnd <= sequenceData.size());
     }
     
     virtual void SequenceInfos(std::vector<SequenceInfo>& sequenceToFill) override 
@@ -152,8 +152,7 @@ public:
         assert(chunkId < m_numChunks);
         size_t chunkBegin = chunkId * m_numSequencesPerChunk;
         size_t chunkEnd = chunkBegin + m_numSequencesPerChunk;
-        shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkId, chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);
-        //shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);
+        shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkId, chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);        
         return chunk;
     }
 
