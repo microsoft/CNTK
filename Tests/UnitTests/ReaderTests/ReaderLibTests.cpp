@@ -152,7 +152,7 @@ public:
         assert(chunkId < m_numChunks);
         size_t chunkBegin = chunkId * m_numSequencesPerChunk;
         size_t chunkEnd = chunkBegin + m_numSequencesPerChunk;
-        shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkId, chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);        
+        shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkId, chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);
         return chunk;
     }
 
