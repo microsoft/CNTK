@@ -448,7 +448,7 @@ namespace ONNX
 
     bool Operators::IsRNNOp(const std::string &opName)
     {
-        return opName == "LSTM" || opName == "GRU" || opName == "RNN";
+        return opName == "LSTM" || opName == "GRU" || opName == "RNN" || opName == "RNNStep";
     }
         std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"Clip",{ 1, 2 } },
