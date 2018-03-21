@@ -1274,20 +1274,8 @@ std::tuple<std::vector<int>, bool, int, bool> CNTKToONNXHelper::CalculateBroadca
 }
 
 // prepare an input node arg with correct name and meta data so that LotusIR can make the connection. 
-void CNTKToONNXHelper::PrepareRNNInput(const Variable &X, std::vector<ONNXIR::NodeArg> &nodeInputs)
+void CNTKToONNXHelper::PrepareRNNInput(const Variable &input, std::vector<ONNXIR::NodeArg> &nodeInputs)
 {
-    Variable input;
-    wstring opName = X.Owner() ? X.Owner()->OpName() : L"";
-    if (X.BlockFunctionVariableMapping().IsInitialized() && !Operators::IsRNNOp(ToString(opName)))
-    {
-        input = X.BlockFunctionVariableMapping();
-    }
-    else
-    {
-        input = X;
-    }
-
-
     std::string inputName = ToString(input.Uid());
     onnx::TypeProto inputArgType = ToTypeProto(input.Shape(), (int)(input.DynamicAxes().size()));
     
@@ -3122,7 +3110,7 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
             mulNode->AddAttribute("broadcast", static_cast<int64_t>(1));
 
             auto input2 = inputs[biasIndexInOnnxInputs];
-            ONNXIR::NodeArg addTensorOutputArg(nodeName + string("_add_output0"), &input0ArgType);
+            ONNXIR::NodeArg addTensorOutputArg(nodeName + string("_Output_0"), &input0ArgType);
             node = graph->AddNode(nodeName + string("_add"), "Add",
                 "", { mulTensorOutputArg, input2 }, { addTensorOutputArg });
             node->AddAttribute("broadcast", static_cast<int64_t>(1));
