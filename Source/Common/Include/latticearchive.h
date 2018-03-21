@@ -855,8 +855,9 @@ public:
             if (nodes.back().t != info.numframes)
                 /* guoye: start */
             {
-                // RuntimeError("fread: mismatch between info.numframes and last node's time");
-                fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", nodes.back().t, info.numframes);
+                // RuntimeError("fread: mismatch between info.numframes and last node's time"); 
+                // sometimes, the data is corrputed, let's try to live with it
+                fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", int(nodes.back().t), int(info.numframes));
             }
             /* guoye: end */
             freadvector(f, "EDGE", edges, info.numedges);
@@ -876,7 +877,8 @@ public:
                 /* guoye: start */
                 {
                     // RuntimeError("fread: mismatch between info.numframes and last node's time");
-                    fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", nodes.back().t, info.numframes);
+                    // sometimes, the data is corrputed, let's try to live with it
+                    fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", int(nodes.back().t), int(info.numframes));
                 }
                 /* guoye: end */
             }
