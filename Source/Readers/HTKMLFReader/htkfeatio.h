@@ -1291,7 +1291,9 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                             }
                             tnw[j] = '\0';
 
-                            wid = (*wordmap)[tnw];
+                         
+                            mp_itr = wordidmap.find(std::string(tnw));
+                            wid = ((mp_itr == wordidmap.end()) ? -1 : mp_itr->second);
                             /*
                             fprintf(stderr,
                             "Warning: parseentry: wid = %d, new wid = %d, w = %s, tnw = %s \n",
