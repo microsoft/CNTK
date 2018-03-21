@@ -677,7 +677,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         */
         msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>
         // msra::asr::htkmlfreader<msra::asr::htkmlfentry>
-            labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, htktimetoframe); // label MLF
+           labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, htktimetoframe); // label MLF
         // labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, (map<string, size_t>*) NULL, htktimetoframe); // label MLF
         /* guoye: end */
         // get the temp file name for the page file
