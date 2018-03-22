@@ -490,5 +490,17 @@ namespace ONNX
             { L"Dropout" },
         };
 
+        std::set<std::wstring> Operators::_optimizedRnnStackOpNames = {
+            { L"lstm" },
+            { L"rnnReLU" },
+            { L"rnnTanh" },
+        };
+
+        std::unordered_map<std::wstring, std::string> Operators::_optimizedRnnOpNameToOnnxOpName = {
+            { L"lstm", "LSTM" },
+            { L"rnnReLU", "RNN" },
+            { L"rnnTanh","RNN" },
+        };
+
     }
 }
