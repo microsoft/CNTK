@@ -2386,10 +2386,14 @@ namespace CNTK
             InvalidArgument("Input argument epsilon must be non-negative.");
         auto operandPlaceholder = PlaceholderVariable(L"operand");
         size_t operandRank = operand.Shape().Rank();
-        if (operandRank < 2 && !useStatsAcrossChannels)
-            InvalidArgument("When rank of the operand is < 2, useStatsAcrossChannels must be set to false, because there is no channel dimension.");
+        size_t numAxesToReduce;
+        if (operandRank < 1)
+            InvalidArgument("The rank of the operand must be >= 1.");
+        else if (operandRank < 2)
+            numAxesToReduce = operandRank; // Operand's a vector, useStatsAcrossChannels is ignored and mean is computed over the vector.
+        else
+            numAxesToReduce = useStatsAcrossChannels ? operandRank : operandRank - 1; // Assuming last dim to be the channel dim.
 
-        auto numAxesToReduce = useStatsAcrossChannels ? operandRank : operandRank - 1; // Assuming last dim to be the channel dim.
         std::vector<Axis> axesToReduce(numAxesToReduce);
         for (size_t i = 0; i < numAxesToReduce; ++i)
             axesToReduce[i] = Axis(i);

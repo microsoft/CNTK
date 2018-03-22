@@ -107,6 +107,21 @@ enum
     GRUInitialH = 5,
 };
 
+enum
+{
+    RNNInputIndexX = 0,
+    RNNInputIndexW = 1,
+    RNNInputIndexR = 2,
+    RNNInputIndexB = 3,
+    RNNInputIndexSequenceLens = 4,
+    RNNInitialH = 5,
+};
+
+enum
+{
+    CNTKRNNOutputYhIndex = 0
+};
+
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---6
 // size of weight/bias matrix is a multiple of hidden size
 enum
@@ -130,6 +145,20 @@ enum
     CNTKGRUInputCount = 7
 };
 
+enum
+{
+    CNTKRNNWeightIndex = 0,
+    CNTKRNNHweightIndex = 1,
+    CNTKRNNBiasIndex = 2,
+    CNTKRNNDelayIndex = 3,
+    CNTKRNNInputIndex = 4,
+    CNTKRNNInputCount = 5
+};
+
+enum
+{
+    RNNBiasMultiplier = 2
+};
 
 const string RNNDirectionBidirection = "bidirectional";
 const string RNNDirectionReverse = "reverse";
@@ -141,6 +170,9 @@ FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<Variable> &in
 FunctionPtr CreateGRU(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
 
+FunctionPtr CreateRNN(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
+
 void TraceLSTMPathes(const FunctionPtr& src, string &f_activation, string &g_activation, string &h_activation,
     RNNDirection &direction, Variable &initStateH, Variable &initStateC, Variable &peepholeCi, Variable &peepholeCo, Variable &peepholeCf,
     double &stabilizer_dh, double &stabilizer_dc, double &stabilizer_c);
@@ -148,5 +180,10 @@ void TraceLSTMPathes(const FunctionPtr& src, string &f_activation, string &g_act
 void TraceGRUPathes(const FunctionPtr& src, string &f_activation, string &g_activation,
     RNNDirection &direction, Variable &initStateH);
 
+void TraceRNNPathes(const FunctionPtr& src, string &activation,
+    RNNDirection &direction, Variable &initStateH);
+
 std::string MapActivationNameONNXToCNTK(const std::string &onnxOp);
 std::string MapActivationNameCNTKToONNX(const std::string &cntkOp);
+
+std::vector<FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const FunctionPtr src, const std::string &RNNStepOpName);

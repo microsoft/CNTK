@@ -45,7 +45,7 @@ void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
                 std::swap(window.m_sequences[workerSequencePosition++], window.m_sequences[i]);
         }
 
-        window.m_sequences.erase(window.m_sequences.begin() + workerSequencePosition);
+        window.m_sequences.erase(window.m_sequences.begin() + workerSequencePosition, window.m_sequences.end());
     }
 
     // If last chunk, add the sweep marker.

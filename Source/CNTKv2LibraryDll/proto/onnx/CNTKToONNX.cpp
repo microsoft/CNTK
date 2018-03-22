@@ -107,7 +107,7 @@ namespace CNTK
         static ONNXIR::Node *InsertReshapeNodeToCNTKFunction(const FunctionPtr &src, ONNXIR::Node* node, const std::vector<int> &shape, ONNXIR::Graph* graph);
 
         //
-        //  Create a LSTM node.
+        //  methods to create a RNN/LSTM/GRU node.
         //
         static ONNXIR::Node* CreateLSTMNode(const FunctionPtr& src,
             ONNXIR::Graph* graph,
@@ -119,17 +119,27 @@ namespace CNTK
             std::unordered_map<FunctionPtr, ONNXIR::Node*>& functionNodes,
             std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
             const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+        static ONNXIR::Node *CreateRNNNode(const FunctionPtr &src,
+            ONNXIR::Graph* graph,
+            std::unordered_map<FunctionPtr, ONNXIR::Node*>& functionNodes,
+            std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+            const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
         static void PrepareRNNInput(const Variable &X, std::vector<ONNXIR::NodeArg> &nodeInputs);
         static void PrepareLSTMInitialStateNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
             const std::vector<Variable> &initialVariables, int batchSize, int cellSize, 
             const std::string &uid, std::vector<ONNXIR::NodeArg> &nodeInputs);
 
-        static void PrepareGRUWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
-            const std::vector<Variable> &Ws, std::vector<ONNXIR::NodeArg> &nodeInputs);
+        static void PrepareRNNWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+            const std::vector<Variable> &Ws, std::vector<ONNXIR::NodeArg> &nodeInputs,
+            std::function<void(const std::vector<NDArrayViewPtr> &srcTensors,
+                onnx::TensorProto& dst, const onnx::TypeProto &inputArgType)> weightConverter);
         static void PrepareGRUZRHWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
             const std::vector<Variable> &Rs, const std::vector<Variable> &Rh1s, std::vector<ONNXIR::NodeArg> &nodeInputs);
         static void PrepareGRUBiasNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+            const std::vector<Variable> &Bs, std::vector<ONNXIR::NodeArg> &nodeInputs);
+
+        static void PrepareRNNBiasNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
             const std::vector<Variable> &Bs, std::vector<ONNXIR::NodeArg> &nodeInputs);
 
         static void PrepareLSTMWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
@@ -157,7 +167,7 @@ namespace CNTK
             onnx::TensorProto& dst, const onnx::TypeProto &inputArgType);
 
 
-        static void CopyGRUBiasTensors(const std::vector<NDArrayViewPtr> &srcTensors, 
+        static void CopyRNNBiasTensors(const std::vector<NDArrayViewPtr> &srcTensors, 
             onnx::TensorProto& dst, const onnx::TypeProto &inputArgType);
 
         static void CopyGRUWeightTensors(const std::vector<NDArrayViewPtr> &srcTensors,
@@ -165,6 +175,9 @@ namespace CNTK
 
         static void CopyGRUStateWeightTensors(
             const std::vector<NDArrayViewPtr> &srcZRTensors, const std::vector<NDArrayViewPtr> &srcHTensors,
+            onnx::TensorProto& dst, const onnx::TypeProto &inputArgType);
+
+        static void CopyRNNWeightTensors(const std::vector<NDArrayViewPtr> &srcTensors,
             onnx::TensorProto& dst, const onnx::TypeProto &inputArgType);
 
         static void FillTensorWithScalar(const std::vector<NDArrayViewPtr>& src, onnx::TensorProto& dst, const std::vector<int> dstShape);
@@ -434,7 +447,7 @@ void AppendCNTKBiasWeightToONNXTensor(DType *data, const NDShape &shape, onnx::T
             row -= 2 * cell_size;
         }
 
-        // soruce is collmn major
+        // source is collmn major
         int src_index = row;
         if (typeid(DType) == typeid(float))
             *(dst.mutable_float_data()->Add()) = (float)data[src_index];
@@ -502,7 +515,7 @@ void AppendCNTKWeightToONNXTensor(DType *data, const NDShape &shape, onnx::Tenso
             row -= 2 * cell_size;
         }
 
-        // soruce is collum major
+        // source is column major
         int src_index = LSTMWeightDimensionHiddenMultiplier * cell_size * col + row;
         if (typeid(DType) == typeid(float))
             *(dst.mutable_float_data()->Add()) = (float)(data[src_index] * stabilizer);
@@ -618,7 +631,7 @@ void CNTKToONNXHelper::CopyTensorsWithMultipliers(const std::vector<NDArrayViewP
     CopyShapeTypeProtoToTensorProto(inputArgType, dst);
 }
 
-void CNTKToONNXHelper::CopyGRUBiasTensors(const std::vector<NDArrayViewPtr> &srcTensors,
+void CNTKToONNXHelper::CopyRNNBiasTensors(const std::vector<NDArrayViewPtr> &srcTensors,
     onnx::TensorProto& dst, const onnx::TypeProto &inputArgType)
 {
     if (srcTensors.empty())
@@ -688,7 +701,7 @@ void CNTKToONNXHelper::CopyGRUWeightTensors(const std::vector<NDArrayViewPtr> &s
             int row = targetIndex / input_size,
                 col = targetIndex % input_size;
 
-            // soruce is collum major
+            // source is column major
             int srcIndex = 3 * cell_size * col + row;
             AddDataElementArrayViewToTensorProto(srcTemp, srcIndex, dst);
         }
@@ -749,6 +762,42 @@ void CNTKToONNXHelper::CopyGRUStateWeightTensors(
             }
 
             AddDataElementArrayViewToTensorProto(srcBlockTensor, src_index, dst);
+        }
+    }
+
+    CopyShapeTypeProtoToTensorProto(inputArgType, dst);
+}
+
+void CNTKToONNXHelper::CopyRNNWeightTensors(const std::vector<NDArrayViewPtr> &srcTensors,
+    onnx::TensorProto& dst, const onnx::TypeProto &inputArgType)
+{
+    if (srcTensors.empty())
+        return;
+
+    DataType dataType = srcTensors[0]->GetDataType();
+    SetTensorType(dst, dataType);
+
+    for (int i = 0; i < srcTensors.size(); i++)
+    {
+        auto srcTemp = srcTensors[i]->DeepClone();
+        auto srcShape = srcTemp->Shape();
+
+        int cell_size = srcShape[0];
+        int input_size = srcShape[1];
+
+        // This is our own copy so move it to the CPU.
+        srcTemp->ChangeDevice(DeviceDescriptor::CPUDevice());
+
+        auto totalSize = srcShape.TotalSize();
+        for (size_t targetIndex = 0; targetIndex < totalSize; targetIndex++)
+        {
+            // row major layout
+            int row = targetIndex / input_size,
+                col = targetIndex % input_size;
+
+            // source is column major
+            int srcIndex = cell_size * col + row;
+            AddDataElementArrayViewToTensorProto(srcTemp, srcIndex, dst);
         }
     }
 
@@ -1274,20 +1323,8 @@ std::tuple<std::vector<int>, bool, int, bool> CNTKToONNXHelper::CalculateBroadca
 }
 
 // prepare an input node arg with correct name and meta data so that LotusIR can make the connection. 
-void CNTKToONNXHelper::PrepareRNNInput(const Variable &X, std::vector<ONNXIR::NodeArg> &nodeInputs)
+void CNTKToONNXHelper::PrepareRNNInput(const Variable &input, std::vector<ONNXIR::NodeArg> &nodeInputs)
 {
-    Variable input;
-    wstring opName = X.Owner() ? X.Owner()->OpName() : L"";
-    if (X.BlockFunctionVariableMapping().IsInitialized() && !Operators::IsRNNOp(ToString(opName)))
-    {
-        input = X.BlockFunctionVariableMapping();
-    }
-    else
-    {
-        input = X;
-    }
-
-
     std::string inputName = ToString(input.Uid());
     onnx::TypeProto inputArgType = ToTypeProto(input.Shape(), (int)(input.DynamicAxes().size()));
     
@@ -1496,31 +1533,7 @@ ONNXIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
     std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    // sanity check: 
-    std::vector<FunctionPtr> lstms;
-    if (src->OpName() == L"LSTM")
-    {
-        lstms.push_back(src);
-    }
-    else if (src->OpName() == L"Splice") // src is a Splice op with inputs from two LSTM ops.
-    {
-        for (auto &input : src->Inputs())
-        {
-            lstms.push_back(input.Owner());
-        }
-    }
-    else
-    {
-        LogicError("An LSTM op should start with an LSTM op (single direction) or a Splice op (bidirectional).");
-    }
-
-    // For single direction LSTM,  lstms.size() == 1. For bidirectional LSTM, lstms.size() == 2. 
-    // It is an error otherwise.
-    if (lstms.size() == 0 || lstms.size() > 2 ||
-        std::any_of(lstms.cbegin(), lstms.cend(), [](const FunctionPtr &f) {return f->OpName() != L"LSTM"; }))
-    {
-        LogicError("Invalid number of LSTM ops to construct an ONNX LSTM node.");
-    }
+    std::vector<FunctionPtr> lstms = GetRNNBlocksFromSingleOrBidirectionalRNN(src, "LSTM");
     
     // order forward, backward
     std::map<RNNDirection, int> directionCount({ { RNNDirection::Forward, 0 } ,{ RNNDirection::Backward, 0 } });
@@ -1789,7 +1802,7 @@ void CNTKToONNXHelper::PrepareGRUBiasNode(ONNXIR::Graph* graph, std::unordered_m
 
     onnx::TensorProto dstTensor;
 
-    CopyGRUBiasTensors(srcTensors, dstTensor, inputArgType);
+    CopyRNNBiasTensors(srcTensors, dstTensor, inputArgType);
     variableNode->AddAttribute("value", dstTensor);
     nodeInputs.push_back(inputArg);
 
@@ -1828,8 +1841,11 @@ void CNTKToONNXHelper::PrepareGRUZRHWeightNode(ONNXIR::Graph* graph, std::unorde
 
     variableNodes.emplace(Rzrs[0], variableNode);
 }
-void CNTKToONNXHelper::PrepareGRUWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
-    const std::vector<Variable> &Ws, std::vector<ONNXIR::NodeArg> &nodeInputs)
+
+void CNTKToONNXHelper::PrepareRNNWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+    const std::vector<Variable> &Ws, std::vector<ONNXIR::NodeArg> &nodeInputs, 
+    std::function<void(const std::vector<NDArrayViewPtr> &srcTensors,
+        onnx::TensorProto& dst, const onnx::TypeProto &inputArgType)> weightConverter)
 {
     // TODO: sanity check for all variables to have the same shape and data types.
     bool doReverseVec = false;
@@ -1852,7 +1868,7 @@ void CNTKToONNXHelper::PrepareGRUWeightNode(ONNXIR::Graph* graph, std::unordered
 
     onnx::TensorProto dstTensor;
 
-    CopyGRUWeightTensors(srcTensors, dstTensor, inputArgType);
+    weightConverter(srcTensors, dstTensor, inputArgType);
     variableNode->AddAttribute("value", dstTensor);
     nodeInputs.push_back(inputArg);
 
@@ -1865,31 +1881,7 @@ ONNXIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
     std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    // sanity check: 
-    std::vector<FunctionPtr> grus;
-    if (src->OpName() == L"GRU")
-    {
-        grus.push_back(src);
-    }
-    else if (src->OpName() == L"Splice") // src is a Splice op with inputs from two LSTM ops.
-    {
-        for (auto &input : src->Inputs())
-        {
-            grus.push_back(input.Owner());
-        }
-    }
-    else
-    {
-        LogicError("An GRU op should start with an GRU op (single direction) or a Splice op (bidirectional).");
-    }
-
-    // For single direction GRU,  grus.size() == 1. For bidirectional GRU, grus.size() == 2. 
-    // It is an error otherwise.
-    if (grus.size() == 0 || grus.size() > 2 ||
-        std::any_of(grus.cbegin(), grus.cend(), [](const FunctionPtr &f) {return f->OpName() != L"GRU"; }))
-    {
-        LogicError("Invalid number of GRU ops to construct an ONNX GRU node.");
-    }
+    std::vector<FunctionPtr> grus = GetRNNBlocksFromSingleOrBidirectionalRNN(src, "GRU");
 
     // order forward, backward
     std::map<RNNDirection, int> directionCount({ { RNNDirection::Forward, 0 } ,{ RNNDirection::Backward, 0 } });
@@ -1931,7 +1923,6 @@ ONNXIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
         int directionIndex = grus.size() == 1 ? 0 : (direction ? 1 : 0);
 
         initialHs[directionIndex] = initStateH;
-
 
         activations[directionIndex * GRUActivationCount + GRUActivationFIndex] = f_activation;
         activations[directionIndex * GRUActivationCount + GRUActivationGIndex] = g_activation;
@@ -1978,7 +1969,7 @@ ONNXIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
     // inputs
     std::vector<ONNXIR::NodeArg> nodeInputs;
     PrepareRNNInput(Xs[0], nodeInputs);
-    PrepareGRUWeightNode(graph, variableNodes, Ws, nodeInputs);
+    PrepareRNNWeightNode(graph, variableNodes, Ws, nodeInputs, CopyGRUWeightTensors);
     PrepareGRUZRHWeightNode(graph, variableNodes, Rzrs, Rhs, nodeInputs);
 
     {
@@ -2069,6 +2060,219 @@ ONNXIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
     ONNXIR::Node *squeezedLSTMNode = InsertReshapeNodeToCNTKFunction(src, gruNode, shape, graph);
     functionNodes.emplace(src, squeezedLSTMNode);
     return squeezedLSTMNode;
+}
+
+void CNTKToONNXHelper::PrepareRNNBiasNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+    const std::vector<Variable> &Bs, std::vector<ONNXIR::NodeArg> &nodeInputs)
+{
+    // TODO: sanity check for all variables to have the same shape and data types.
+    bool doReverseVec = false;
+    int numDirections = Bs.size();
+    int hiddenSize = Bs[0].Shape()[0];
+
+    std::vector<int> shape({ numDirections, 2 * hiddenSize });
+
+    // ONNX GRU spec has 2 bias, for forward and backward.
+    onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
+    UpdateONNXType(Bs[0].GetDataType(), inputArgType);
+    ONNXIR::NodeArg inputArg(ToString(Bs[0].Uid()), &inputArgType);
+    std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
+    std::vector<ONNXIR::NodeArg> varInputs;
+    std::string inputName = inputArg.Name();
+    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
+
+    std::vector<NDArrayViewPtr> srcTensors;
+    for (int i = 0; i < Bs.size(); i++)
+    {
+        const Variable &variable = Bs[i];
+        srcTensors.push_back(variable.IsParameter() ? Parameter(variable).Value() : Constant(variable).Value());
+    }
+
+    onnx::TensorProto dstTensor;
+
+    CopyRNNBiasTensors(srcTensors, dstTensor, inputArgType);
+    variableNode->AddAttribute("value", dstTensor);
+    nodeInputs.push_back(inputArg);
+
+    variableNodes.emplace(Bs[0], variableNode);
+}
+
+
+ONNXIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
+    ONNXIR::Graph* graph,
+    std::unordered_map<FunctionPtr, ONNXIR::Node*>& functionNodes,
+    std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    std::vector<FunctionPtr> rnns = GetRNNBlocksFromSingleOrBidirectionalRNN(src, "RNNStep");
+
+    // order forward, backward
+    std::map<RNNDirection, int> directionCount({ { RNNDirection::Forward, 0 } ,{ RNNDirection::Backward, 0 } });
+
+    // The following construct refers to ONNX spec:
+    // https://github.com/onnx/onnx/blob/master/docs/Operators.md#lstm
+    // specifically, for attrubute and variable dimension. 
+    // We use the term from the spec as possible as we can to maintain a close correlation
+    // to the ONNX specification. 
+
+    int num_directions = rnns.size();
+    // A list of 3 (or 6 if bidirectional) activation functions for input, output, forget, cell, and hidden.
+    std::vector<std::string> activations(num_directions);
+
+    // TODO:
+    // In principle all these variables shall be treated as either constant or op output. 
+    // In reality except X, all other inputs to LSTM can be treated as constant.
+    std::vector<Variable> Xs(num_directions), Ws(num_directions), Rs(num_directions),
+        Bs(num_directions), initialHs(num_directions);
+
+    std::vector<Variable> Yhs(rnns.size());
+
+    for (std::vector<FunctionPtr>::const_iterator itRNNBlock = rnns.cbegin(); itRNNBlock != rnns.cend(); itRNNBlock++)
+    {
+        // src has to be an RNN node. 
+        const FunctionPtr& rnn = *itRNNBlock;
+        std::vector<Variable> inputs = rnn->Inputs();
+        if (inputs.size() != CNTKRNNInputCount)
+            LogicError("A RNN block does not have expected input count (%d). Actual input count is %d", (int)CNTKRNNInputCount, (int)inputs.size());
+
+        string activation;
+        RNNDirection direction;
+        Variable initStateH;
+        TraceRNNPathes(rnn, activation, direction, initStateH);
+
+        directionCount[direction]++;
+
+        int directionIndex = rnns.size() == 1 ? 0 : (direction ? 1 : 0);
+
+        initialHs[directionIndex] = initStateH;
+
+        activations[directionIndex] = activation;
+
+        Xs[directionIndex] = inputs[CNTKRNNInputIndex];
+
+        Ws[directionIndex] = inputs[CNTKRNNWeightIndex];
+
+        Rs[directionIndex] = inputs[CNTKRNNHweightIndex];
+
+        Bs[directionIndex] = inputs[CNTKRNNBiasIndex];
+
+        std::vector<Variable> outputs = rnn->Outputs();
+
+        Yhs[directionIndex] = outputs[CNTKRNNOutputYhIndex];
+    }
+
+    SanityCheckForConstantOrParameters(Ws);
+    SanityCheckForConstantOrParameters(Rs);
+    SanityCheckForConstantOrParameters(Bs);
+
+    // ensure that if there is one direction, it is not backward.
+    // if there two directions, they are forward and backward, and
+    // that the inputs (Xs) are the same.
+    if (std::any_of(directionCount.begin(), directionCount.end(), [](std::map<RNNDirection, int>::value_type &v) {return v.second > 1; }))
+    {
+        LogicError("RNN node is invalid because there should be no more than one path in each direction.");
+    }
+    if (rnns.size() == 2 && Xs[0] != Xs[1])
+    {
+        LogicError("Bi-directional RNN node is invalid because the two RNN nodes do not share one same input.");
+    }
+
+    string direction = DeriveDirectionString(rnns, directionCount);
+
+    // an RNN output size is the hidden size
+    int hidden_size = rnns[0]->Outputs()[0].Shape()[0];
+
+    // inputs
+    std::vector<ONNXIR::NodeArg> nodeInputs;
+    PrepareRNNInput(Xs[0], nodeInputs);
+    PrepareRNNWeightNode(graph, variableNodes, Ws, nodeInputs, CopyRNNWeightTensors);
+    PrepareRNNWeightNode(graph, variableNodes, Rs, nodeInputs, CopyRNNWeightTensors);
+
+    {
+        bool hasBias = std::all_of(Bs.begin(), Bs.end(), [](Variable &v) {return v.IsInitialized(); });
+        if (hasBias)
+        {
+            PrepareRNNBiasNode(graph, variableNodes, Bs, nodeInputs);
+        }
+        else
+        {
+            AddEmptyInput(nodeInputs);
+        }
+
+        {
+            // sequence_lens is not supported
+            AddEmptyInput(nodeInputs);
+        }
+
+        bool has_initial_h = std::all_of(initialHs.begin(), initialHs.end(), [](Variable &v) {return v.IsInitialized(); });
+        if (has_initial_h)
+        {
+            std::string hiddenUid = ToString(Yhs[0].Uid()) + "_initial_h";
+            PrepareLSTMInitialStateNode(graph, variableNodes, initialHs, FreeBatchSize, hidden_size, hiddenUid, nodeInputs);
+        }
+        else
+        {
+            AddEmptyInput(nodeInputs);
+        }
+    }
+
+    const int output_sequence = RNNOutputSequence;       // RNN in CNTK always output full sequence of output
+    std::vector<ONNXIR::NodeArg> nodeOutputs;
+    {
+        if (output_sequence == 1)
+        {
+            std::string nodeName;
+            if (rnns.size() == 1)
+                nodeName = ToString(Yhs[0].Uid());
+            else
+                nodeName = ToString(src->Output().Uid());
+
+            auto outputArgType = ToTypeProto(std::vector<int>({ FreeSequenceLen, (int)Yhs.size(), FreeBatchSize, (int)Yhs[0].Shape()[0] }), false);
+            UpdateONNXType(Yhs[0].GetDataType(), outputArgType);
+            ONNXIR::NodeArg outputArg(nodeName, &outputArgType);
+            nodeOutputs.push_back(outputArg);
+        }
+        else
+        {
+            ONNXIR::NodeArg outputArg("", nullptr);
+            nodeOutputs.push_back(outputArg);
+        }
+
+        {
+            Variable Yh = Yhs[0];
+            std::string nodeName = ToString(Yh.Uid()) + "_h";
+
+            const int batchSize = 1;
+            const bool doReverseVec = false;
+            auto outputArgType = ToTypeProto(std::vector<int>({ (int)Yhs.size(), batchSize, (int)Yh.Shape()[0] }), doReverseVec);
+            UpdateONNXType(Yh.GetDataType(), outputArgType);
+            ONNXIR::NodeArg outputArg(nodeName, &outputArgType);
+            nodeOutputs.push_back(outputArg);
+        }
+    }
+
+    if (Xs[0].Owner().get() != nullptr)
+        CreateNode(Xs[0].Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+
+    auto nodeName = src->Name().empty() ? ToString(src->Uid()) : ToString(src->Name());
+    ONNXIR::Node *rnnNode = graph->AddNode(nodeName, "RNN", "", nodeInputs, nodeOutputs);
+
+    rnnNode->AddAttribute("activations", activations);
+    rnnNode->AddAttribute("direction", direction);
+    rnnNode->AddAttribute("hidden_size", (int64_t)hidden_size);
+    rnnNode->AddAttribute("output_sequence", (int64_t)output_sequence);
+
+    //// TODO: make bidirectional RNN work by figuring out output data 
+    //// layout transpose in InsertReshapeNodeToCNTKFunction. 
+    if (rnns.size() == 2)
+        NOT_IMPLEMENTED;
+
+    //// TODO: uncomment this code once LotusRT output shape matches ONNX
+    //// squeeze direction axis out. This is safe because it is not bi-directional node.
+    std::vector<int> shape({ FreeSequenceLen, 1, hidden_size });
+    ONNXIR::Node *squeezedRNNNode = InsertReshapeNodeToCNTKFunction(src, rnnNode, shape, graph);
+    functionNodes.emplace(src, squeezedRNNNode);
+    return squeezedRNNNode;
 }
 
 ONNXIR::Node *CNTKToONNXHelper::AddReshapeNode(const ONNXIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName, ONNXIR::Graph* graph)
@@ -2176,7 +2380,11 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //        return CreateLSTMNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     //}
     //else 
-    if (opName == "GRU")
+    if (opName == "RNNStep")
+    { 
+        return CreateRNNNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
+    else if (opName == "GRU")
     {
         return CreateGRUNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     }
@@ -3122,7 +3330,7 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
             mulNode->AddAttribute("broadcast", static_cast<int64_t>(1));
 
             auto input2 = inputs[biasIndexInOnnxInputs];
-            ONNXIR::NodeArg addTensorOutputArg(nodeName + string("_add_output0"), &input0ArgType);
+            ONNXIR::NodeArg addTensorOutputArg(nodeName + string("_Output_0"), &input0ArgType);
             node = graph->AddNode(nodeName + string("_add"), "Add",
                 "", { mulTensorOutputArg, input2 }, { addTensorOutputArg });
             node->AddAttribute("broadcast", static_cast<int64_t>(1));
