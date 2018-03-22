@@ -114,7 +114,10 @@ function WhlFileInfoFromVersionFile(
             throw "`nFatal Error: Malformed version information in [$versionFile]."
         }
         $cntkVersion = $cntkVersion -replace "-", "."
-        $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk-"
+        if ($cntkTarget -eq "GPU")
+            $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk_gpu-"
+        else:
+            $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk-"
 
         return @{ Name = "{0}-cp{1}-cp{2}m-win_amd64.whl" -f $cntkVersion, $pyVersion, $pyVersion; CntkUrl = "{0}/{1}" -f $wheelBaseUrl, $cntkTarget }
     }
