@@ -674,7 +674,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTransposeOf(const CPUMatrix<Elem
     long n = (long) _a.GetNumCols(), m = (long) _a.GetNumRows();
 
     // auto& us = *this;
-    RandomBuffer<ElemType> us(Data(), m, n);
+    RandomBuffer<ElemType> us(Data(), n, m);
     RandomBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
@@ -785,7 +785,7 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
     if (isFinite && v == 0)
     {
 #ifdef USE_MKLDNN
-        MklMem()->clear();
+        MklMemClear();
 #endif
         memset(Data(), 0, sizeof(ElemType) * GetNumElements());
     }
@@ -1642,7 +1642,7 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 #ifdef USE_MKLDNN
-    MklMem()->clear();
+    MklMemClear();
 #endif
     VerifyResizable(__func__);
 

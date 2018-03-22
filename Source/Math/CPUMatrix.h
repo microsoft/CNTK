@@ -104,6 +104,12 @@ public:
     {
         return m_mklMem;
     }
+
+    void MklMemClear()
+    {
+        if (m_mklMem)
+            m_mklMem->clear();
+    }
 #endif
 
     CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
