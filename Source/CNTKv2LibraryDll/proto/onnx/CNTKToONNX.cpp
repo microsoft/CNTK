@@ -3429,6 +3429,9 @@ ONNXIR::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const Functi
     auto bidirectional = (bool)(src->Attributes()[L"bidirectional"].Value<bool>());
     auto recurrentOp = (wstring)src->Attributes()[L"recurrentOp"].Value<wstring>();
 
+    if (!Operators::IsOptimizedRnnStackOp(recurrentOp))
+        InvalidArgument("Recurrent op used for OptimizedRNNStack is not supported for ONNX export.");
+
     size_t numDirections = bidirectional ? 2 : 1;
     size_t inputSize = src->Inputs()[0].Shape()[0];
     auto Wcombined = src->Inputs()[1];
@@ -3550,10 +3553,17 @@ ONNXIR::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const Functi
         outputs.push_back(outputArg_Yc);
 
         // ==== Step 6. Add ONNX LSTM node ====
+        auto rnnOpNameLookup = Operators::OptimizedRnnToOnnxOpLookup();
         auto rnnNodeName = (src->Name().empty() ? ToString(src->Uid()) : ToString(src->Name())) + std::to_string(i);
-        functionNode = graph->AddNode(rnnNodeName, "LSTM", "", inputs, outputs);
+        functionNode = graph->AddNode(rnnNodeName, rnnOpNameLookup[recurrentOp], "", inputs, outputs);
 
-        std::vector<std::string> singleDirectionActivation({ "Sigmoid", "Tanh", "Tanh" }); // REVIEW: Check this is the order.
+        std::vector<std::string> singleDirectionActivation;
+        if (recurrentOp == L"lstm")
+            singleDirectionActivation = { "Sigmoid", "Tanh", "Tanh" };
+        else if (recurrentOp == L"rnnReLU")
+            singleDirectionActivation = { "Relu" };
+        else if (recurrentOp == L"rnnTanh")
+            singleDirectionActivation = { "Tanh" };
         std::vector<std::string> activations;
         activations.insert(activations.end(), singleDirectionActivation.begin(), singleDirectionActivation.end());
         if (bidirectional)
@@ -3575,7 +3585,6 @@ std::tuple<std::vector<NDArrayViewPtr>, std::vector<NDArrayViewPtr>, std::vector
 CNTKToONNXHelper::SplitOptimzedRnnWtoIndivMats(Matrix<float>& WbigIn,
     size_t numLayers, size_t inputSize, size_t hiddenSize, bool bidirectional, wstring recurrentOp)
 {
-    std::vector<NDArrayViewPtr> onnxInputTensor(3);
     size_t numDirections = bidirectional ? 2 : 1;
     size_t numGates;
     if (recurrentOp == L"lstm")
@@ -3716,7 +3725,6 @@ std::vector<NDArrayViewPtr> CNTKToONNXHelper::ToRnnWeightPerLayerOnnxFormat(std:
         size_t offset = 0;
         for (size_t j = 0; j < numDirections; ++j)
         {
-            // Matrix<float> temp = W[i*numDirections + j].Transpose(); // Have to do this because Matrix::InplaceTranspose is not implemented.
             Matrix<float> temp(W[i*numDirections + j].GetNumCols(), W[i*numDirections + j].GetNumRows(), W[i*numDirections + j].Data(), CPUDEVICE); 
             currLayerWeightMatrix.SetColumnSlice(temp, offset, layerInputSize);
             offset += layerInputSize;

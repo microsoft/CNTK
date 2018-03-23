@@ -53,6 +53,23 @@ namespace CNTK
                 return _cntkToONNXOpName;
             }
 
+            //
+            // Method to check if a name is a valid optimizedRnnStack op name.
+            //
+            static inline bool IsOptimizedRnnStackOp(const std::wstring& opName)
+            {
+                return _optimizedRnnStackOpNames.find(opName) != _optimizedRnnStackOpNames.end();
+            }
+
+            //
+            // Return a lookup table that maps CNTK's optimizedRNNStack op to one of the
+            // ONNX RNN ops.
+            //
+            static inline const std::unordered_map<std::wstring, std::string>& OptimizedRnnToOnnxOpLookup()
+            {
+                return _optimizedRnnOpNameToOnnxOpName;
+            }
+
             static std::tuple<int, int> GetElementWiseInputIndices(const std::wstring& opName);
 
             //
@@ -115,6 +132,8 @@ namespace CNTK
             static std::unordered_multimap<std::wstring, AttributesMapping> _cntkToONNXOpName;
             static std::unordered_map<std::wstring, std::set<size_t>> _cntkBlockOPInvalidIndices;
             static std::unordered_map<std::wstring, std::vector<int>> _cntkToONNXInputIndices;
+            static std::set<std::wstring>_optimizedRnnStackOpNames;
+            static std::unordered_map<std::wstring, std::string> _optimizedRnnOpNameToOnnxOpName;
             static std::set<std::wstring> _cntkLayerOPName;
         };
 
