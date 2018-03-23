@@ -743,6 +743,39 @@ void CPUMatrixTensorArgOpImpl(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>&
                               const SmallVector<size_t>& reducingOpDims,
                               const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
+template <class ElemType>
+class ColMajorBuffer
+{
+private:
+    ElemType* m_buf;
+    size_t m_numRows;
+    size_t m_numCols;
+
+public:
+    ColMajorBuffer(ElemType* buf, size_t m, size_t n)
+        : m_buf(buf), m_numRows(m), m_numCols(n) {}
+    size_t LocateColumn(const size_t col) const
+    {
+        // For performance reason avoid extra validation in release.
+        assert(col == 0 || col < m_numCols);
+        return col * m_numRows; // matrix in column-wise storage
+    }
+    size_t LocateElement(const size_t row, const size_t col) const
+    {
+        // For performance reason avoid extra validation in release.
+        assert(row < m_numRows);
+        return LocateColumn(col) + row; // matrix in column-wise storage
+    }
+    inline ElemType& operator()(const size_t row, const size_t col)
+    {
+        return m_buf[LocateElement(row, col)];
+    }
+    inline const ElemType& operator()(const size_t row, const size_t col) const
+    {
+        return m_buf[LocateElement(row, col)];
+    }
+};
+
 } // namespace CNTK
 } // namespace MSR
 } // namespace Microsoft
