@@ -64,7 +64,7 @@
     <Content Include="ImageRecognitionAppCS_TemporaryKey.pfx" />
   </ItemGroup>
   <PropertyGroup>
-    <CntkVersion>2.4</CntkVersion>
+    <CntkVersion>2.5</CntkVersion>
     <CntkVersion Condition=" '$(BUILD_CNTK_VERSION)' != '' ">$(BUILD_CNTK_VERSION)</CntkVersion>
     <CntkComponentVersion>$(CntkVersion)</CntkComponentVersion>
     <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">$(CntkComponentVersion)d</CntkComponentVersion>
