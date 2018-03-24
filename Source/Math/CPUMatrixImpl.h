@@ -7014,6 +7014,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
     return *this;
 }
 
+extern "C" void openblas_set_num_threads(int num_threads); 
+
 // note: this function does not depend on the <ElemType> parameter
 template <class ElemType>
 int CPUMatrix<ElemType>::SetNumThreads(int numThreads)

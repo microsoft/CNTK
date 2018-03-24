@@ -35,7 +35,7 @@ mkl_check=include/mkl_version.h
 # Experimental OpenBLAS support.
 have_openblas=no
 openblas_path=
-openblas_check=include/openblas_config.h
+openblas_check=openblas_config.h
 
 # Boost library
 boost_path=

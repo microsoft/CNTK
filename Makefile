@@ -188,7 +188,7 @@ endif
 ifeq ("$(MATHLIB)","openblas")
   INCLUDEPATH += $(OPENBLAS_PATH)/include
   LIBPATH += $(OPENBLAS_PATH)/lib
-  LIBS_LIST += openblas m pthread
+  LIBS_LIST += openblas m pthread lapacke
   CPPFLAGS += -DUSE_OPENBLAS
 endif
 
