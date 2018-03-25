@@ -1275,32 +1275,30 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
 
 
                         // TNed the word, to try one more time if there is an OOV
-                        
+                        /**/
+                        /*
                         if (wid == -1)
                         {
                             // remove / \ * _ - to see if a match could be found
                             char tnw[200];
-                            size_t i = 0, j = 0;
-                            while (w[i] != '\0')
+                            size_t i1 = 0, j = 0;
+                            while (w[i1] != '\0')
                             {
-                            if (w[i] != '\\' && w[i] != '/'  && w[i] != '*' && w[i] != '-' && w[i] != '_')
+                            if (w[i1] != '\\' && w[i1] != '/'  && w[i1] != '*' && w[i1] != '-' && w[i1] != '_')
                             {
-                            tnw[j] = w[i]; j++;
+                            tnw[j] = w[i1]; j++;
                             }
-                            i++;
+                            i1++;
                             }
                             tnw[j] = '\0';
 
                          
                             mp_itr = wordidmap.find(std::string(tnw));
                             wid = ((mp_itr == wordidmap.end()) ? -1 : mp_itr->second);
-                            /*
-                            fprintf(stderr,
-                            "Warning: parseentry: wid = %d, new wid = %d, w = %s, tnw = %s \n",
-                            -1, wid, w, tnw);
-                            */
+                         
 
                         }
+                        */
                         
 
 

@@ -331,6 +331,10 @@ protected:
     size_t m_numPathsEMBR; // number of sampled paths
     string m_showWERMode; // number of sampled paths
     bool m_excludeSpecialWords; 
+    bool m_wordNbest;
+    bool m_useAccInNbest;
+    float m_accWeightInNbest;
+    size_t m_numRawPathsEMBR;
     /* guoye： end */
     
     // decide whether should apply regularization into BatchNormalizationNode

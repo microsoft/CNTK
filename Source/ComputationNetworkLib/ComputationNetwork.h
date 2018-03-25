@@ -561,7 +561,11 @@ public:
                             const bool& enforceValidPathEMBR = false,
                             const string& getPathMethodEMBR = "sampling",
                             const string& showWERMode = "average",
-                            const bool& excludeSpecialWords = false
+                            const bool& excludeSpecialWords = false,
+                            const bool& wordNbest = false,
+                            const bool& useAccInNbest = false,
+                            const float& accWeightInNbest = 1.0f,
+                            const size_t& numRawPathsEMBR = 100
                             );
                             /* guoye: end */
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);

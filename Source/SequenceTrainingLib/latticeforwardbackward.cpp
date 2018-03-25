@@ -664,21 +664,188 @@ double lattice::forwardbackwardlattice(const std::vector<float> &edgeacscores, p
 
 /* guoye: start */
 
+void lattice::constructnodenbestoken(std::vector<NBestToken> &tokenlattice, const bool wordNbest, size_t numtokens2keep, size_t nidx) const
+{
+    std::map<double, std::vector<PrevTokenInfo>>::iterator mp_itr;
+    std::map<uint64_t, std::vector<size_t>> mp_wid_tokenidx;
+    std::map<uint64_t, std::vector<size_t>>::iterator mp_itr1;
+    size_t count;
+    bool done;
+    TokenInfo tokeninfo;
+    uint64_t wid;
+    vector<size_t> vt_tokenidx;
+
+    if (wordNbest) mp_wid_tokenidx.clear();
+
+    count = 0;
+    done = false;
+    // Sometime,s numtokens is larger than numPathsEMBR. if </s>, keep tokens to be numPathsEMBR
+
+    for (mp_itr = tokenlattice[nidx].mp_score_token_infos.begin(); mp_itr != tokenlattice[nidx].mp_score_token_infos.end(); mp_itr++)
+    {
+        for (size_t i = 0; i < mp_itr->second.size(); i++)
+        {
+            tokeninfo.prev_edge_index = mp_itr->second[i].prev_edge_index;
+            tokeninfo.prev_token_index = mp_itr->second[i].prev_token_index;
+            tokeninfo.score = mp_itr->first;
+
+            if (wordNbest)
+            {
+                wid = nodes[edges[tokeninfo.prev_edge_index].S].wid;
+                mp_itr1 = mp_wid_tokenidx.find(wid);
+
+                bool different = true;
+
+                if (mp_itr1 == mp_wid_tokenidx.end())
+                {
+                    // the wid does not exist in previous tokens of this node, so it is a path with different word sequence
+                    vt_tokenidx.clear();
+                    vt_tokenidx.push_back(count);
+                    mp_wid_tokenidx.insert(pair<uint64_t, std::vector<size_t>>(wid, vt_tokenidx));
+                }
+                else
+                {
+                    for (size_t j = 0; j < mp_itr1->second.size(); j++)
+                    {
+
+                        size_t oldnodeidx, oldtokenidx, newnodeidx, newtokenidx;
+
+                        oldnodeidx = edges[tokenlattice[nidx].vt_nbest_tokens[mp_itr1->second[j]].prev_edge_index].S;
+                        oldtokenidx = tokenlattice[nidx].vt_nbest_tokens[mp_itr1->second[j]].prev_token_index;
+                        newnodeidx = edges[tokeninfo.prev_edge_index].S; newtokenidx = tokeninfo.prev_token_index;
+
+
+                        while (1)
+                        {
+                            if (nodes[oldnodeidx].wid != nodes[newnodeidx].wid) break;
+                            if (oldnodeidx == newnodeidx)
+                            {
+                                if (oldtokenidx == newtokenidx)  different = false;
+                                break;
+                            }
+
+                            if (oldnodeidx == 0 || newnodeidx == 0)
+                            {
+                                fprintf(stderr, "nbestlatticeEMBR: WARNING: should not come her, oldnodeidx = %d, newnodeidx = %d\n", int(oldnodeidx), int(newnodeidx));
+                                break;
+                            }
+                            oldnodeidx = edges[tokenlattice[oldnodeidx].vt_nbest_tokens[oldtokenidx].prev_edge_index].S;
+                            oldtokenidx = tokenlattice[oldnodeidx].vt_nbest_tokens[oldtokenidx].prev_token_index;
+
+                            newnodeidx = edges[tokenlattice[newnodeidx].vt_nbest_tokens[newtokenidx].prev_edge_index].S;
+                            newtokenidx = tokenlattice[newnodeidx].vt_nbest_tokens[newtokenidx].prev_token_index;
+                        }
+                        if (!different) break;
+                    }
+
+                    if (different)
+                    {
+                        mp_itr1->second.push_back(count);
+                    }
+                }
+
+                if (different)
+                {
+                    tokenlattice[nidx].vt_nbest_tokens.push_back(tokeninfo);
+                    count++;
+                }
+            }
+            else
+            {
+                tokenlattice[nidx].vt_nbest_tokens.push_back(tokeninfo);
+                count++;
+            }
+
+            if (count >= numtokens2keep)
+            {
+                done = true;
+                break;
+            }
+        }
+        if (done) break;
+    }
+
+    // free the space.
+    tokenlattice[nidx].mp_score_token_infos.clear();
+
+}
+/* guoye: start */
+float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
+{
+    short ** mat;
+    size_t i, j;
+
+    mat = new short*[rec.size() + 1];
+    for (i = 0; i <= rec.size(); i++) mat[i] = new short[ref.size() + 1];
+
+    for (i = 0; i <= rec.size(); i++) mat[i][0] = short(i);
+    for (j = 1; j <= ref.size(); j++) mat[0][j] = short(j);
+
+    for (i = 1; i <= rec.size(); i++)
+        for (j = 1; j <= ref.size(); j++)
+        {
+            mat[i][j] = mat[i - 1][j - 1];
+
+            if (rec[i - 1] != ref[j - 1])
+            {
+
+                if ((mat[i - 1][j]) < mat[i][j]) mat[i][j] = mat[i - 1][j];
+                if ((mat[i][j - 1]) < mat[i][j]) mat[i][j] = mat[i][j - 1];
+                mat[i][j] ++;
+            }
+        }
+
+
+    /* guoye: for debug purpose */
+    float wer = float(mat[rec.size()][ref.size()]) / ref.size();
+
+    /*
+    short count, err;
+    count = 0;
+
+    for (j = 1; j <= ref.size(); j++)
+    {
+    if (ref[j] == 0xfffff) count++;
+
+    }
+
+    err = mat[rec.size()][ref.size()] - count;
+
+    if (err < 0) err = 0;
+    float wer = float(err) / ref.size();
+    */
+
+    /* guoye: for debug purpose */
+
+
+
+    for (i = 0; i < rec.size(); i++) delete[] mat[i];
+    delete[] mat;
+    return wer;
+}
+
+
+
 double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &tokenlattice, const size_t numtokens, const bool enforceValidPathEMBR, const bool excludeSpecialWords, 
-    const float lmf, const float wp, const float amf) const
+    const float lmf, const float wp, const float amf, const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numPathsEMBR, std::vector<size_t> wids) const
 { // ^^ TODO: remove this
   // --- hand off to parallelized (CUDA) implementation if available
     
+  
 
-    bool done;
     std::map<double, std::vector<PrevTokenInfo>>::iterator mp_itr;
-    size_t count = 0;
+
+
+    
+
+    size_t numtokens2keep;
+  
 
     // TODO: support parallel state
     parallelstate;
     PrevTokenInfo prevtokeninfo;
     std::vector<PrevTokenInfo> vt_prevtokeninfo;
-    TokenInfo tokeninfo;
+    
     // if we get here, we have no CUDA, and do it the good ol' way
 
     // allocate return values
@@ -717,30 +884,14 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
             if(tokenlattice[e.S].vt_nbest_tokens.size() != 0)
                 RuntimeError("nbestlatticeEMBR: node = %d,  mp_score_token_infos.size() = %d, vt_nbest_tokens.size() = %d, both are not 0!", int(e.S), int(tokenlattice[e.S].mp_score_token_infos.size()), int(tokenlattice[e.S].vt_nbest_tokens.size()));
             
+          
+           
+            // Sometime,s numtokens is larger than numPathsEMBR. if </s>, keep tokens to be numPathsEMBR
 
-            count = 0;
-            done = false;
-            for (mp_itr = tokenlattice[e.S].mp_score_token_infos.begin(); mp_itr != tokenlattice[e.S].mp_score_token_infos.end(); mp_itr++)
-            {
-                for (size_t i = 0; i < mp_itr->second.size(); i++)
-                {
-                    tokeninfo.prev_edge_index = mp_itr->second[i].prev_edge_index;
-                    tokeninfo.prev_token_index = mp_itr->second[i].prev_token_index;
-                    tokeninfo.score = mp_itr->first;
-                    tokenlattice[e.S].vt_nbest_tokens.push_back(tokeninfo);
-                    count++;
-                    if (count >= numtokens)
-                    {
-                        done = true;
-                        break;
-                    }
+            if (nodes[e.S].wid == 2) numtokens2keep = numPathsEMBR;
+            else numtokens2keep = numtokens;
 
-                }
-                if (done) break;
-            }
-
-            // free the space.
-            tokenlattice[e.S].mp_score_token_infos.clear();
+            constructnodenbestoken(tokenlattice, wordNbest, numtokens2keep, e.S);
 
         }
 
@@ -760,6 +911,45 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
             prevtokeninfo.prev_token_index = i;
 
             double pathscore = tokenlattice[e.S].vt_nbest_tokens[i].score + edgescore;
+            
+            if (useAccInNbest && nodes[e.E].wid == 2)
+            {
+                // add the wegithed path Accuracy into path score
+
+                std::vector<size_t> path, path_ids; // stores the edges in the path
+               
+                size_t curnodeidx, curtokenidx, prevtokenidx, prevnodeidx;
+                // ignore the edge with ending node </s> in the path, as </s> will anyway not be used for WER computation
+                path.clear(); // store the edge sequence of the path
+                path_ids.clear(); // store the wid sequence of the path
+                curnodeidx = e.S;
+                curtokenidx = i;
+                while (curnodeidx != 0)
+                {
+                    path.insert(path.begin(), tokenlattice[curnodeidx].vt_nbest_tokens[curtokenidx].prev_edge_index);
+
+                    prevtokenidx = tokenlattice[curnodeidx].vt_nbest_tokens[curtokenidx].prev_token_index;
+                    prevnodeidx = edges[tokenlattice[curnodeidx].vt_nbest_tokens[curtokenidx].prev_edge_index].S;
+
+                    curnodeidx = prevnodeidx;
+                    curtokenidx = prevtokenidx;
+                 }
+                 
+                 
+                 for (size_t k = 0; k < path.size(); k++)
+                 {
+                     if (k == 0)
+                     {
+                         if (!is_special_words[edges[path[k]].S]) path_ids.push_back(nodes[edges[path[k]].S].wid);
+                     }
+                     if (!is_special_words[edges[path[k]].E]) path_ids.push_back(nodes[edges[path[k]].E].wid);
+                 }
+
+                 float wer = compute_wer(wids, path_ids);
+                 // will fabor the path with better WER
+                 pathscore -= double(accWeightInNbest*wer);
+            }
+                
             mp_itr = tokenlattice[e.E].mp_score_token_infos.find(pathscore);
             if (mp_itr != tokenlattice[e.E].mp_score_token_infos.end())
             {
@@ -774,28 +964,10 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
 
         }   
     }
-    // for the last node, which is </s>
-    count = 0;
-    done = false;
-    for (mp_itr = tokenlattice[tokenlattice.size() - 1].mp_score_token_infos.begin(); mp_itr != tokenlattice[tokenlattice.size() - 1].mp_score_token_infos.end(); mp_itr++)
-    {
-        for (size_t i = 0; i < mp_itr->second.size(); i++)
-        {
-            tokeninfo.prev_edge_index = mp_itr->second[i].prev_edge_index;
-            tokeninfo.prev_token_index = mp_itr->second[i].prev_token_index;
-            tokeninfo.score = mp_itr->first;
-            tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens.push_back(tokeninfo);
-            count++;
-            if (count >= numtokens)
-            {
-                done = true;
-                break;
-            }
-        }
-        if (done) break;
-    }
-    // free the space.
-    tokenlattice[tokenlattice.size() - 1].mp_score_token_infos.clear();
+    // for the last node, which is </s> or !NULL (!NULL if you do not merge numerator lattice into denominator lattice)
+    numtokens2keep = numPathsEMBR;
+    constructnodenbestoken(tokenlattice, wordNbest, numtokens2keep, tokenlattice.size() - 1);
+    
     
     double bestscore;
     if (tokenlattice[tokenlattice.size() - 1].vt_nbest_tokens.size() == 0)
@@ -1517,61 +1689,6 @@ void lattice::EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<
 }
 
 /* guoye: end */
-/* guoye: start */
-float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
-{
-    short ** mat;
-    size_t i, j;
-
-    mat = new short*[rec.size() + 1];
-    for (i = 0; i <= rec.size(); i++) mat[i] = new short[ref.size() + 1];
-
-    for (i = 0; i <= rec.size(); i++) mat[i][0] = short(i);
-    for (j = 1; j <= ref.size(); j++) mat[0][j] = short(j);
-
-    for(i = 1; i <= rec.size(); i++)
-        for (j = 1; j <= ref.size(); j++)
-        {
-            mat[i][j] = mat[i - 1][j - 1];
-
-            if (rec[i - 1] != ref[j - 1])
-            {
-                
-                if ((mat[i - 1][j]) < mat[i][j]) mat[i][j] = mat[i - 1][j];
-                if ((mat[i][j-1]) < mat[i][j]) mat[i][j] = mat[i][j-1];
-                mat[i][j] ++;
-            }
-        }
-
-    
-    /* guoye: for debug purpose */
-    float wer = float(mat[rec.size()][ref.size()]) / ref.size();
-
-    /*
-    short count, err;
-    count = 0;
-
-    for (j = 1; j <= ref.size(); j++)
-    {
-        if (ref[j] == 0xfffff) count++;
-
-    }
-
-    err = mat[rec.size()][ref.size()] - count;
-
-    if (err < 0) err = 0;
-    float wer = float(err) / ref.size();
-    */
-
-    /* guoye: for debug purpose */
-    
-    
-    
-    for (i = 0; i < rec.size(); i++) delete[] mat[i];
-    delete[] mat;
-    return wer;
-}
-
 
 
 
@@ -2192,8 +2309,8 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::ssematrixbase &logLLs, const msra::asr::simplesenonehmm &hset,
                                 msra::math::ssematrixbase &result, msra::math::ssematrixbase &errorsignalbuf,
                                 const float lmf, const float wp, const float amf, const float boostingfactor,
-                                const bool sMBRmode, const bool EMBR, const string  EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const string getPathMethodEMBR, const string showWERMode, const bool excludeSpecialWords, array_ref<size_t> uids, vector<size_t> wids, const_array_ref<size_t> bounds,
-                                const_array_ref<htkmlfwordsequence::word> transcript, const std::vector<float> &transcriptunigrams) const
+                                const bool sMBRmode, const bool EMBR, const string  EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR,  const string getPathMethodEMBR, const string showWERMode, const bool excludeSpecialWords,  const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numRawPathsEMBR, array_ref<size_t> uids, vector<size_t> wids, const_array_ref<size_t> bounds,
+                                const_array_ref<htkmlfwordsequence::word> transcript, const std::vector<float> &transcriptunigram) const
                                 
 /* guoye: end*/
 {
@@ -2220,14 +2337,27 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 
     // the lattice last node could be either 0 or 2, i.e., if it is an merged lattice (merged numerator and denominator the dnb code dedicately removes ending !NULL,  it is 0. If it is not merged lattice (the one that I changed TAMER code to only use denominator lattice), the last node could be !NULL
     if(nodes[nodes.size()-1].wid != 2 && nodes[nodes.size() - 1].wid != 0) RuntimeError("The last node is not 2 (i.e.) </s> or 0 (i.e, !NULL), but is %d \n", int(nodes[0].wid));
+    // I want to make sure there is only one </s>, it is crucial when the useAccinNbest is true: we add sentence acc into nbest cost function in the </s>.
+    size_t sent_end_count = 0;
+
+    if (nodes[nodes.size() - 1].wid == 2) sent_end_count = 1;
+
     for (size_t i = 1; i < nodes.size() - 1; i++)
     {
-        if (nodes[nodes.size() - 1].wid == 2)
+        if (nodes[i].wid == 2)
         {
-            if (nodes[i].wid == 2) RuntimeError("The  node %d wid is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i), int(nodes.size()));
+            if (nodes[nodes.size() - 1].wid == 2)
+            {
+                RuntimeError("The  node %d wid is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i), int(nodes.size()));
+            }
+            sent_end_count++;
         }
-        if (nodes[i].wid == 0) RuntimeError("The  node %d wid is  0 (i.e.) </s>, but it is not the first node, total number of node is %d \n", int(i), int(nodes.size()));
+        if (nodes[i].wid == 0) RuntimeError("The  node %d wid is  0 (i.e.) </s>, but it is not the first node or last node, total number of node is %d \n", int(i), int(nodes.size()));
 
+    }
+    if (sent_end_count != 1)
+    {
+        RuntimeError("</s> count is not 1 in the lattice, but %d, and total number of node is %d \n", int(sent_end_count), int(nodes.size()));
     }
     
     /* guoye: end */
@@ -2257,7 +2387,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     // score the ground truth  --only if a transcript is provided, which happens if the user provides a language model
     // TODO: no longer used, remove this. 'transcript' parameter is no longer used in this function.
     transcript;
-    transcriptunigrams;
+    transcriptunigram;
 
     // allocate alpha/beta/gamma matrices (all are sharing the same memory in-place)
     std::vector<msra::math::ssematrixbase *> abcs;
@@ -2340,7 +2470,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
             }
             else //nbest
             {           
-                double bestscore = nbestlatticeEMBR(edgeacscores, parallelstate, tokenlattice, numPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, lmf, wp, amf);
+                double bestscore = nbestlatticeEMBR(edgeacscores, parallelstate, tokenlattice, numPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, lmf, wp, amf,  wordNbest, useAccInNbest, accWeightInNbest, numRawPathsEMBR, wids);
                 totalfwscore = bestscore; // to make the code happy, it should be called bestscore, rather than totalfwscore though, will fix later
             }
         }

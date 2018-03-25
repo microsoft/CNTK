@@ -631,7 +631,11 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
                                      const bool& enforceValidPathEMBR,
                                     const string& getPathMethodEMBR,
                                     const string& showWERMode,
-                                    const bool& excludeSpecialWords
+                                    const bool& excludeSpecialWords,
+                                    const bool& wordNbest,
+                                    const bool& useAccInNbest,
+                                    const float& accWeightInNbest,
+                                    const size_t& numRawPathsEMBR
                                     /* guoye: end */
                                      )
 {
@@ -645,8 +649,8 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
     
     if(EMBR)
     {
-        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useEMBR=true, EMBRUnit=%s, numPathsEMBR=%d, enforceValidPathEMBR = %d, getPathMethodEMBR = %s, showWERMode = %s, excludeSpecialWords = %d \n",
-            amf, lmf, wp, bMMIfactor, EMBRUnit.c_str(), int(numPathsEMBR), int(enforceValidPathEMBR), getPathMethodEMBR.c_str(), showWERMode.c_str(), int(excludeSpecialWords));
+        fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useEMBR=true, EMBRUnit=%s, numPathsEMBR=%d, enforceValidPathEMBR = %d, getPathMethodEMBR = %s, showWERMode = %s, excludeSpecialWords = %d, wordNbest = %d, useAccInNbest = %d,  accWeightInNbest = %f, numRawPathsEMBR = %d \n",
+            amf, lmf, wp, bMMIfactor, EMBRUnit.c_str(), int(numPathsEMBR), int(enforceValidPathEMBR), getPathMethodEMBR.c_str(), showWERMode.c_str(), int(excludeSpecialWords), int(wordNbest), int(useAccInNbest), float(accWeightInNbest), int(numRawPathsEMBR));
     }
     else if(sMBR)
     {
@@ -675,7 +679,7 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
             /* guoye: start */
             // node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR);
             node->SetMBR(sMBR || EMBR);
-            node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode, excludeSpecialWords);
+            node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode, excludeSpecialWords, wordNbest, useAccInNbest, accWeightInNbest, numRawPathsEMBR);
             /* guoye: end */
         }
     }
@@ -1563,7 +1567,7 @@ template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, 
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 */
 
-template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR, const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords);
+template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR, const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords, const bool& wordNbest, const bool& useAccInNbest, const float& accWeightInNbest, const size_t& numRawPathsEMBR);
 
 /* guoye: end */
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
@@ -1582,7 +1586,7 @@ template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net,
 */
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR,
-    const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords);
+    const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords, const bool& wordNbest, const bool& useAccInNbest, const float& accWeightInNbest, const size_t& numRawPathsEMBR);
                                                   
 /* guoye: end */
 

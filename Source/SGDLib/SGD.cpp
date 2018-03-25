@@ -519,7 +519,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         */
         ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hSmoothingWeight, m_frameDropThresh, m_doReferenceAlign,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR,
-                                                  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR, m_enforceValidPathEMBR, m_getPathMethodEMBR, m_showWERMode, m_excludeSpecialWords);
+                                                  m_seqGammarCalcUseEMBR, m_EMBRUnit, m_numPathsEMBR, m_enforceValidPathEMBR, m_getPathMethodEMBR, m_showWERMode, m_excludeSpecialWords, m_wordNbest, m_useAccInNbest, m_accWeightInNbest, m_numRawPathsEMBR);
         /* guoye: end */
     }
 
@@ -3079,8 +3079,21 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // don't include path that has special words if true
     m_excludeSpecialWords = configSGD(L"excludeSpecialWords", false);
+    
+    // true then, we force the nbest has different word sequence
+    m_wordNbest =  configSGD(L"wordNbest", false);
+    m_useAccInNbest = configSGD(L"useAccInNbest", false);
+    m_accWeightInNbest = configSGD(L"accWeightInNbest", 1.0f);
 
+    m_numRawPathsEMBR = configSGD(L"numRawPathsEMBR", (size_t)100);
 
+    if (!m_useAccInNbest)
+    {
+        if (m_numRawPathsEMBR > m_numPathsEMBR)
+        {
+            fprintf(stderr, "SGDParams: WARNING: we do not use acc in nbest, so no need to make numRawPathsEMBR = %d larger than numPathsEMBR = %d  \n", (int)m_numRawPathsEMBR, (int)m_numPathsEMBR);
+        }
+    }
     if (m_getPathMethodEMBR == "sampling" && m_showWERMode == "onebest")
     {
         RuntimeError("There is no way to show onebest WER in sampling based EMBR");

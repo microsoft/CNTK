@@ -661,7 +661,7 @@ public:
     void SetReferenceAlign(const bool doreferencealign) { m_doReferenceAlignment = doreferencealign; }
 
     void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR,
-        const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords)
+        const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords, const bool& wordNbest, const bool& useAccInNbest, const float& accWeightInNbest, const size_t& numRawPathsEMBR)
     {
         msra::lattices::SeqGammarCalParam param;
         param.amf = amf;
@@ -678,6 +678,10 @@ public:
         param.getPathMethodEMBR = getPathMethodEMBR;
         param.showWERMode = showWERMode;
         param.excludeSpecialWords = excludeSpecialWords;
+        param.wordNbest = wordNbest;
+        param.useAccInNbest = useAccInNbest;
+        param.accWeightInNbest = accWeightInNbest;
+        param.numRawPathsEMBR = numRawPathsEMBR;
         /* guoye: end */
         m_gammaCalculator.SetGammarCalculationParams(param);
     }

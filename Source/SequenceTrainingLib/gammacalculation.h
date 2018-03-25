@@ -35,6 +35,10 @@ struct SeqGammarCalParam
     std::string getPathMethodEMBR;
     std::string showWERMode;
     bool excludeSpecialWords;
+    bool wordNbest;
+    bool useAccInNbest;
+    float accWeightInNbest;
+    size_t numRawPathsEMBR;
     /* guoye: end */
     SeqGammarCalParam()
     {
@@ -52,6 +56,10 @@ struct SeqGammarCalParam
         getPathMethodEMBR = "sampling";
         showWERMode = "average";
         excludeSpecialWords = false;
+        wordNbest = false;
+        useAccInNbest = false;
+        accWeightInNbest = 1.0;
+        numRawPathsEMBR = 100;
         /* guoye: end*/
     }
 };
@@ -114,6 +122,10 @@ public:
         getPathMethodEMBR = gammarParam.getPathMethodEMBR;
         showWERMode = gammarParam.showWERMode;
         excludeSpecialWords = gammarParam.excludeSpecialWords;
+        wordNbest = gammarParam.wordNbest;
+        useAccInNbest = gammarParam.useAccInNbest;
+        accWeightInNbest = gammarParam.accWeightInNbest;
+        numRawPathsEMBR = gammarParam.numRawPathsEMBR;
         /* guoye: end */
     }
 
@@ -269,7 +281,7 @@ public:
             double denavlogp = lattices[i]->second.forwardbackward(parallellattice,
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
-                                                                   lmf, wp, amf, boostmmifactor, seqsMBRmode, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode, excludeSpecialWords, uidsstripe, widsstripe, boundariesstripe);
+                                                                   lmf, wp, amf, boostmmifactor, seqsMBRmode, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode, excludeSpecialWords, wordNbest, useAccInNbest, accWeightInNbest, numRawPathsEMBR, uidsstripe, widsstripe, boundariesstripe);
             
             /* guoye: end */
             /* guoye: start */
@@ -591,6 +603,10 @@ protected:
     std::string getPathMethodEMBR;
     std::string showWERMode;
     bool excludeSpecialWords;
+    bool wordNbest;
+    bool useAccInNbest;
+    float accWeightInNbest;
+    size_t numRawPathsEMBR;
     /* guoye: end */
 
 private:
