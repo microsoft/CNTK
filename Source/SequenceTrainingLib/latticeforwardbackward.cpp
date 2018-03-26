@@ -681,10 +681,19 @@ void lattice::constructnodenbestoken(std::vector<NBestToken> &tokenlattice, cons
     done = false;
     // Sometime,s numtokens is larger than numPathsEMBR. if </s>, keep tokens to be numPathsEMBR
 
+    // size_t k = 0;
     for (mp_itr = tokenlattice[nidx].mp_score_token_infos.begin(); mp_itr != tokenlattice[nidx].mp_score_token_infos.end(); mp_itr++)
     {
+        
+        // fprintf(stderr, "nidx = %d, k = %d \n", int(nidx), int(k++));
+
+        // if (k == 46)
+        //{
+        //     k += 0;
+        // }
         for (size_t i = 0; i < mp_itr->second.size(); i++)
         {
+            // fprintf(stderr, "nidx = %d, i = %d \n", int(nidx), int(i));
             tokeninfo.prev_edge_index = mp_itr->second[i].prev_edge_index;
             tokeninfo.prev_token_index = mp_itr->second[i].prev_token_index;
             tokeninfo.score = mp_itr->first;
@@ -729,11 +738,17 @@ void lattice::constructnodenbestoken(std::vector<NBestToken> &tokenlattice, cons
                                 fprintf(stderr, "nbestlatticeEMBR: WARNING: should not come her, oldnodeidx = %d, newnodeidx = %d\n", int(oldnodeidx), int(newnodeidx));
                                 break;
                             }
-                            oldnodeidx = edges[tokenlattice[oldnodeidx].vt_nbest_tokens[oldtokenidx].prev_edge_index].S;
-                            oldtokenidx = tokenlattice[oldnodeidx].vt_nbest_tokens[oldtokenidx].prev_token_index;
+                            size_t tmpnodeix, tmptokenidx;
+                        
 
-                            newnodeidx = edges[tokenlattice[newnodeidx].vt_nbest_tokens[newtokenidx].prev_edge_index].S;
-                            newtokenidx = tokenlattice[newnodeidx].vt_nbest_tokens[newtokenidx].prev_token_index;
+                            tmpnodeix = edges[tokenlattice[oldnodeidx].vt_nbest_tokens[oldtokenidx].prev_edge_index].S;
+                            tmptokenidx = tokenlattice[oldnodeidx].vt_nbest_tokens[oldtokenidx].prev_token_index;
+                            oldnodeidx = tmpnodeix; oldtokenidx = tmptokenidx;
+                            
+
+                            tmpnodeix = edges[tokenlattice[newnodeidx].vt_nbest_tokens[newtokenidx].prev_edge_index].S;
+                            tmptokenidx = tokenlattice[newnodeidx].vt_nbest_tokens[newtokenidx].prev_token_index;
+                            newnodeidx = tmpnodeix; newtokenidx = tmptokenidx;
                         }
                         if (!different) break;
                     }
@@ -859,7 +874,13 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
     foreach_index(j, edges)
     {
         const auto &e = edges[j];
-        
+        /*
+        fprintf(stderr, "j = %d \n", j);
+        if (j == 166)
+        {
+            j += 0;
+        }
+        */
         if (enforceValidPathEMBR)
         {
             if (e.S == 0 && nodes[e.E].wid != 1) continue;
