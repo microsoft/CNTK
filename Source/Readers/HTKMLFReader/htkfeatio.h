@@ -1042,7 +1042,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                         static const unsigned int unknownwordindex = 0xfffff;
 
                         // TNed the word, to try one more time if there is an OOV
-                        
+                        /*
                         if (wid == -1)
                         {
                             // remove / \ * _ - to see if a match could be found
@@ -1065,7 +1065,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                                 -1, wid, w, tnw);
 
                         }
-                        
+                        */
 
                         size_t wordindex = (wid == -1) ? unknownwordindex : (size_t)wid;
                         wordids.push_back(wordindex);
@@ -1276,7 +1276,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
 
                         // TNed the word, to try one more time if there is an OOV
                         /**/
-                        
+                        /*
                         if (wid == -1)
                         {
                             // remove / \ * _ - to see if a match could be found
@@ -1299,7 +1299,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
 
                         }
                         
-                        
+                        */
 
 
                         static const unsigned int unknownwordindex = 0xfffff;

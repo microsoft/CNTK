@@ -2470,7 +2470,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
             }
             else //nbest
             {           
-                double bestscore = nbestlatticeEMBR(edgeacscores, parallelstate, tokenlattice, numPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, lmf, wp, amf,  wordNbest, useAccInNbest, accWeightInNbest, numRawPathsEMBR, wids);
+                double bestscore = nbestlatticeEMBR(edgeacscores, parallelstate, tokenlattice, numRawPathsEMBR, enforceValidPathEMBR, excludeSpecialWords, lmf, wp, amf,  wordNbest, useAccInNbest, accWeightInNbest, numPathsEMBR, wids);
                 totalfwscore = bestscore; // to make the code happy, it should be called bestscore, rather than totalfwscore though, will fix later
             }
         }
