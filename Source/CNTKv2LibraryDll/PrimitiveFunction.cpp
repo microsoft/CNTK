@@ -194,6 +194,8 @@ namespace CNTK
             outputDynamicAxes = inputs[2].DynamicAxes();
         else if (op == PrimitiveOpType::ElementMaxPooling)
             outputDynamicAxes = inputs[1].DynamicAxes();
+        else if (op == PrimitiveOpType::StochasticBinary)
+            outputDynamicAxes = inputs[0].DynamicAxes();
         else if ((op == PrimitiveOpType::PackedIndex) || (op == PrimitiveOpType::GatherPacked))
             outputDynamicAxes = inputs[1].DynamicAxes();
         else if ((op == PrimitiveOpType::ReconcileDynamicAxis) || (op == PrimitiveOpType::ToSequenceLike))
@@ -1065,6 +1067,12 @@ namespace CNTK
                         {
                             assert(m_inputs.size() >= 3);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
+                            break;
+                        }
+                        case PrimitiveOpType::StochasticBinary:
+                        {
+                            assert(m_inputs.size() == 1);
+                            outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
                         }
                         default:

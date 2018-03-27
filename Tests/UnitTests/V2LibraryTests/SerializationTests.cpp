@@ -348,7 +348,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Atanh) == 85 &&
                   static_cast<size_t>(PrimitiveOpType::Asinh) == 86 &&
                   static_cast<size_t>(PrimitiveOpType::TopK) == 87 &&
-                  static_cast<size_t>(PrimitiveOpType::ElementMaxPooling) == 90,
+                  static_cast<size_t>(PrimitiveOpType::ElementMaxPooling) == 90 &&
+                  static_cast<size_t>(PrimitiveOpType::StochasticBinary) == 91,
                   "PrimitiveOpType enum value was modified.");
 }
 

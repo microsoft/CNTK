@@ -100,6 +100,7 @@ namespace CNTK
         Squeeze = 88,
         ConstantOp = 89,
         ElementMaxPooling = 90,
+        StochasticBinary = 91,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

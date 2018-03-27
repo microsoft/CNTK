@@ -116,6 +116,7 @@ namespace CNTK
         {PrimitiveOpType::ConstantOp, L"ConstantOp"},
         {PrimitiveOpType::Squeeze, L"Squeeze"},
         {PrimitiveOpType::ElementMaxPooling, L"ElementMaxPooling" },
+        {PrimitiveOpType::StochasticBinary, L"StochasticBinary" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -298,6 +299,10 @@ namespace CNTK
         static const std::wstring AttributeNameCustomAttributes;
         static const std::wstring AttributeNameNumItems;
         static const std::wstring AttributeNameFillValue;
+        static const std::wstring AttributeNameNeuronST;
+        static const std::wstring AttributeNameRFAdjusted;
+        static const std::wstring AttributeNamePassThrough;
+        static const std::wstring AttributeNameAnnealRate;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

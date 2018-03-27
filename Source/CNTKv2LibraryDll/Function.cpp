@@ -2464,6 +2464,17 @@ namespace CNTK
         //return AsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, std::move(attributes), blockName), blockName);
     }
 
+    FunctionPtr StochasticBinary(const Variable& operand, bool neuronST, bool RFAdjusted, bool passThrough, float annealRate, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameNeuronST] = neuronST;
+        additionalProperties[PrimitiveFunction::AttributeNameRFAdjusted] = RFAdjusted;
+        additionalProperties[PrimitiveFunction::AttributeNamePassThrough] = passThrough;
+        additionalProperties[PrimitiveFunction::AttributeNameAnnealRate] = annealRate;
+
+        //return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::StochasticBinary, operand, additionalProperties, name), name);
+        return UnaryOp(PrimitiveOpType::StochasticBinary, operand, std::move(additionalProperties), name);
+    }
 
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)
     {

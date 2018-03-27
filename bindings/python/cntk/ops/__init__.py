@@ -2531,6 +2531,43 @@ def element_max_pooling(*inputs, name=''):
     return element_max_pooling(inputs, name) # C++ projection expects inputs as a list
 
 @typemap
+def stochastic_binary(x, neuronST=True, RFAdjusted=False, passThrough=True, annealRate=1.0, name=''):
+    '''
+    stochastic binary node.
+
+    Example:
+        >>> # create 2x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data1 = np.asarray([[[1, 2],
+        ...                      [4, 5]]], dtype=np.float32)
+
+        >>> x = C.constant(value=data1)
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data2 = np.asarray([[[10, 20],
+        ...                       [30, 40],
+        ...                       [50, 60]]],dtype=np.float32)
+        >>> y = C.constant(value=data2)
+        >>> # splice both inputs on axis=0 returns a 5x2 matrix
+        >>> C.splice(x, y, axis=1).eval()
+        array([[[  1.,   2.],
+                [  4.,   5.],
+                [ 10.,  20.],
+                [ 30.,  40.],
+                [ 50.,  60.]]], dtype=float32)
+
+    Args:
+        inputs: one or more input tensors
+        axis (int or :class:`~cntk.axis.Axis`, optional, keyword only): axis along which the
+         concatenation will be performed
+        name (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.cntk_py import stochastic_binary
+    return stochastic_binary(x, neuronST, RFAdjusted, passThrough, annealRate, name) # C++ projection expects inputs as a list
+
+@typemap
 def unpack_batch(x, name=''):
     '''
     Concatenate the input tensor's last dynamic axis to static axis.

@@ -774,6 +774,15 @@ namespace CNTK
                 case PrimitiveOpType::ElementMaxPooling:
                     computationNodePtr = New<ElementMaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::StochasticBinary:
+                {
+                    auto neuronST = functionConfig[PrimitiveFunction::AttributeNameNeuronST].Value<bool>();
+                    auto RFAdjusted = functionConfig[PrimitiveFunction::AttributeNameRFAdjusted].Value<bool>();
+                    auto passThrough = functionConfig[PrimitiveFunction::AttributeNamePassThrough].Value<bool>();
+                    auto annealRate = functionConfig[PrimitiveFunction::AttributeNameAnnealRate].Value<float>();
+                    computationNodePtr = New<StochasticBinaryNode<ElementType>>(network->GetDeviceId(), internalNodeName, neuronST, RFAdjusted, passThrough, annealRate);
+                    break;
+                }
                 case PrimitiveOpType::RandomSample:
                 {
                     auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
