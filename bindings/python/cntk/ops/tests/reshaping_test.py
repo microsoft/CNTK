@@ -526,6 +526,13 @@ def test_gather_op(device_id, precision):
     expectd_grad = np.asarray([[1,1],[1,1],[0,0],[1,1],[1,1],[0,0]], dtype=np.float32)
     assert np.array_equal(grads, expectd_grad)
 
+    #gather with indices from learning parameter (no gradients should passed through the indices -- 0s should be passed)
+    indices_params = C.parameter(shape=(1,), init=1.0)
+    grads = C.gather(r, (indices_params *a)).grad({a:a_data}, [r, indices_params])
+    assert np.array_equal(grads[r], expectd_grad)
+    assert np.array_equal(grads[indices_params], np.asarray([0.0], dtype=np.float32))
+
+
     b_data = [AA([[0,2],[1,3]], dtype=PRECISION_TO_TYPE[precision]),
               AA([[2,4],[3,5]], dtype=PRECISION_TO_TYPE[precision])]
     b = C.input_variable((2,2))
@@ -570,6 +577,15 @@ def test_gather_op_with_axis(device_id, precision):
     x = C.constant(data)
     i = C.constant(indices)
     y = C.gather(x, i, axis=1)
+    z = y.eval({}, device=cntk_device(device_id))
+    assert np.allclose(output, z)
+
+    data = np.array([ [[1.0, 1.2, 1.9]], [[2.3, 3.4, 3.9]], [[4.5, 5.7, 5.9]], ]).astype(PRECISION_TO_TYPE[precision])
+    indices = np.array([ 0, 2]).astype(PRECISION_TO_TYPE[precision]).astype(PRECISION_TO_TYPE[precision])
+    output = np.array([ [[1.0, 1.9]], [[2.3, 3.9]], [[4.5, 5.9]], ]).astype(PRECISION_TO_TYPE[precision])
+    x = C.constant(data)
+    i = C.constant(indices)
+    y = C.gather(x, i, axis=2)
     z = y.eval({}, device=cntk_device(device_id))
     assert np.allclose(output, z)
 

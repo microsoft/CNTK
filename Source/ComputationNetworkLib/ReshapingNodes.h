@@ -2105,7 +2105,7 @@ public:
         }
         else
         {
-            LogicError("%ls operation doesn't expect gradient on left operand", OperationName().c_str());
+            //No graidents pass through indices (the left operand), so do nothing
         }
     }
 
