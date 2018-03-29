@@ -582,6 +582,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             ElemType frameDropThresh = node->GetOptionalParameter("frameDropThresh", "0.0");
             ElemType l2NormFactor = node->GetOptionalParameter("l2NormFactor", "0.0");
             bool isCTCmodel = node->GetOptionalParameter("isCTCmodel", "false");
+            bool usePrior = node->GetOptionalParameter("usePrior", "true");
             std::string fstFilePath = node->GetOptionalParameter("fstFilePath", "");
             if (fstFilePath == "")
                 RuntimeError("fstFilePath must be set");
@@ -600,7 +601,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             if (!fexists(smapFilePath))
                 RuntimeError("File pointed to by smapFilePath does not exist: %s", smapFilePath.c_str());
 
-            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), acweight, alignmentWindow, ceweight, useLabelAsCEtarget, frameDropThresh, l2NormFactor, isCTCmodel, name);
+            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), acweight, alignmentWindow, ceweight, useLabelAsCEtarget, frameDropThresh, l2NormFactor, isCTCmodel, usePrior, name);
         }
     }
     else if (cnNodeType == OperationNameOf(CropNode))

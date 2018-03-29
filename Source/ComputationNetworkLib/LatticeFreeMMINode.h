@@ -63,20 +63,20 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_acweight(1.0), m_alignmentWindow(0), m_ceweight(0), m_useLabelAsCEtarget(false), m_frameDropThresh(0.0), m_l2NormFactor(0.0), m_isCTCmodel(false), m_totalFrameNumberOfCurrentMinibatch(0)
+        : Base(deviceId, name), m_acweight(1.0), m_alignmentWindow(0), m_ceweight(0), m_useLabelAsCEtarget(false), m_frameDropThresh(0.0), m_l2NormFactor(0.0), m_isCTCmodel(false), m_usePrior(true), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const int alignmentWindow, const ElemType ceweight, const bool useLabelAsCEtarget, const ElemType frameDropThresh, const ElemType l2NormFactor, const bool isCTCmodel)
-        : Base(deviceId, name), m_acweight(acweight), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_useLabelAsCEtarget(useLabelAsCEtarget), m_frameDropThresh(frameDropThresh), m_l2NormFactor(l2NormFactor), m_isCTCmodel(isCTCmodel), m_totalFrameNumberOfCurrentMinibatch(0)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const int alignmentWindow, const ElemType ceweight, const bool useLabelAsCEtarget, const ElemType frameDropThresh, const ElemType l2NormFactor, const bool isCTCmodel, const bool usePrior)
+        : Base(deviceId, name), m_acweight(acweight), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_useLabelAsCEtarget(useLabelAsCEtarget), m_frameDropThresh(frameDropThresh), m_l2NormFactor(l2NormFactor), m_isCTCmodel(isCTCmodel), m_usePrior(usePrior), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"acweight"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"useLabelAsCEtarget"), configp->Get(L"frameDropThresh"), configp->Get(L"l2NormFactor"), configp->Get(L"isCTCmodel"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"acweight"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"useLabelAsCEtarget"), configp->Get(L"frameDropThresh"), configp->Get(L"l2NormFactor"), configp->Get(L"isCTCmodel"), configp->Get(L"usePrior"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -244,7 +244,8 @@ public:
         m_likelihoods->AssignLogSoftmaxOf(*inputValue, true);
         if (m_ceweight != 0)
             m_softmax->SetValue(*m_likelihoods);
-        (*m_likelihoods) -= Input(2)->ValueAsMatrix();
+        if (m_usePrior)
+            (*m_likelihoods) -= Input(2)->ValueAsMatrix();
 
         if (m_acweight != (ElemType)1.0)    // acoustic model weight 
             (*m_likelihoods) *= m_acweight;
@@ -326,6 +327,7 @@ public:
             node->m_frameDropThresh = m_frameDropThresh;
             node->m_l2NormFactor = m_l2NormFactor;
             node->m_isCTCmodel = m_isCTCmodel;
+            node->m_usePrior = m_usePrior;
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
@@ -430,6 +432,7 @@ public:
         fstream << m_frameDropThresh;
         fstream << m_l2NormFactor;
         fstream << m_isCTCmodel;
+        fstream << m_usePrior;
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -453,6 +456,7 @@ public:
         fstream >> m_frameDropThresh;
         fstream >> m_l2NormFactor;
         fstream >> m_isCTCmodel;
+        fstream >> m_usePrior;
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -467,7 +471,7 @@ public:
             Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
             char str[4096];
-            sprintf(str, "acweight=%f alignmentWindow=%d ceweight=%f l2NormFactor=%f", this->m_acweight, this->m_alignmentWindow, this->m_ceweight, this->m_l2NormFactor);
+            sprintf(str, "acweight=%f alignmentWindow=%d ceweight=%f l2NormFactor=%f useLabelAsCETarget=%d isCTCmodel=%d usePrior=%d", this->m_acweight, this->m_alignmentWindow, this->m_ceweight, this->m_l2NormFactor, this->m_useLabelAsCEtarget, this->m_isCTCmodel, this->m_usePrior);
             fstream << string(str);
         }
 
@@ -565,6 +569,7 @@ protected:
     ElemType m_frameDropThresh;
     ElemType m_l2NormFactor;
     bool m_isCTCmodel;
+    bool m_usePrior;
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;
