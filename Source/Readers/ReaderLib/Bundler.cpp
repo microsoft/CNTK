@@ -64,6 +64,8 @@ void Bundler::CreateChunkDescriptions()
         RuntimeError("Driving deserializer provided too many chunks.");
     }
 
+    assert(m_mbDefiningDeserializer == std::numeric_limits<size_t>::max() || m_mbDefiningDeserializer < m_deserializers.size());
+
     // Creating a table of weak chunks for non driving deserializers.
     for (size_t i = 0; i < m_deserializers.size(); ++i)
     {
@@ -84,6 +86,7 @@ void Bundler::CreateChunkDescriptions()
     std::vector<SequenceInfo> sequenceDescriptions;
     sequenceDescriptions.reserve(chunks.front().m_numberOfSequences);
     SequenceInfo s;
+
     for (ChunkIdType chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
     {
         size_t numberOfSamples = 0;
