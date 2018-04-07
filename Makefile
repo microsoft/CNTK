@@ -1106,7 +1106,8 @@ $(MULTIVERSO_LIB):
 	@mkdir -p $(LIBDIR)
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build/$(BUILDTYPE)
-	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
+	@cmake -DCMAKE_INSTALL_PREFIX=$(LIBDIR) \
+		-DCMAKE_VERBOSE_MAKEFILE=TRUE \
 		-DCMAKE_CXX_COMPILER=$(CXX) \
 		-DOpenMP_CXX_FLAGS="" \
 		-DOpenMP_C_FLAGS="" \
@@ -1119,6 +1120,7 @@ $(MULTIVERSO_LIB):
 		-DCMAKE_BUILD_TYPE=$(MULTIVERSO_CMAKE_BUILDTYPE) \
 		-B./Source/Multiverso/build/$(BUILDTYPE) -H./Source/Multiverso
 	@make VERBOSE=1 -C ./Source/Multiverso/build/$(BUILDTYPE) -j multiverso
+	@make VERBOSE=1 -C ./Source/Multiverso/build/$(BUILDTYPE) install
 
 UNITTEST_MULTIVERSO_SRC = \
 	$(SOURCEDIR)/Multiverso/Test/unittests/test_array.cpp \
