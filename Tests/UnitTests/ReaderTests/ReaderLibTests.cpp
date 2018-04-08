@@ -988,6 +988,58 @@ BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
     test(noRandomizer, epochSize);
 }
 
+BOOST_AUTO_TEST_CASE(LTNoRandomizerMultiWorker)
+{
+    auto num_chunks = 2;
+    auto num_sequences_per_chunk = 3;
+    size_t num_workers = 4;
+
+    vector<float> data(num_chunks * num_sequences_per_chunk);
+    iota(data.begin(), data.end(), 0.0f);
+
+    for (int w = 0; w < num_workers; ++w)
+    {
+        auto mockDeserializer = make_shared<MockDeserializer>(num_chunks, num_sequences_per_chunk, data);
+        auto randomizer = make_shared<LTNoRandomizer>(mockDeserializer);
+
+        EpochConfiguration epochConfiguration;
+        epochConfiguration.m_numberOfWorkers = num_workers;
+        epochConfiguration.m_workerRank = w;
+        epochConfiguration.m_minibatchSizeInSamples = 2;
+        epochConfiguration.m_totalEpochSizeInSamples = data.size();
+        epochConfiguration.m_epochIndex = 0;
+        randomizer->StartEpoch(epochConfiguration);
+
+        if (w < 2)
+        {
+            // Worker 0 and 1 will get two sequences.
+            Sequences sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
+            sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
+        }
+        else if (w == 2)
+        {
+            // Worker 2 will get only one sequence from the first
+            // chunk, but not from the second chunk. There are 6 sequences
+            // with indices [0,5], we take mod 4, which matches only for 2.
+            Sequences sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
+            sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK(sequences.m_data.empty());
+        }
+        else
+        {
+            // Worker 3 (4th worker) will not get any sequence from the
+            // first chunk, but gets one from the second chunk.
+            Sequences sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK(sequences.m_data.empty());
+            sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
+        }
+    }
+}
+
 // Check that each worker reads unique sequences. A bug was causing duplicate sequences in workers.
 BOOST_AUTO_TEST_CASE(LTNoRandomizerCheckNoDuplicateSequence)
 {
