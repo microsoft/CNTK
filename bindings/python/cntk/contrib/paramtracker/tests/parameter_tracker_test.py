@@ -220,7 +220,51 @@ def test_tf2cntk_save_load_conv2d_parameters():
         #cntk output shape: [batch, out_channels, h, w]
         np.testing.assert_array_almost_equal(tf_conv_result.transpose(0, 3, 1, 2), cntk_conv_result)
 
+def test_tf2cntk_save_load_contrib_conv2d_parameters():
+    workdir = tempfile.gettempdir()
+    params1 = ParameterTracker(workdir)
+    params2 = ParameterTracker(workdir)
 
+    filter_h = 3
+    filter_w = 3
+    in_channels = 3
+    out_channels = 5
+    spatial_shape = (15, 15)
+
+    tf_input = tf.placeholder(tf.float32, [None] + list(spatial_shape) + [in_channels])
+    conv2d_scope = "test_tf2cntk_save_load_embedding_parameters"
+    with tf.variable_scope(conv2d_scope):
+        tf_conv = tf.contrib.layers.conv2d(tf_input, out_channels, [filter_h, filter_w], stride=1, padding='VALID', activation_fn=tf.tanh)
+
+
+    cntk_input = C.input_variable((in_channels,) + spatial_shape, dtype=np.float32)
+    cntk_conv = C.layers.Convolution2D(num_filters=out_channels, filter_shape=(filter_h, filter_w), strides=1, pad=False, activation=C.tanh)(cntk_input)
+
+    init_op = tf.global_variables_initializer()
+
+    params1.track_parameter('conv', conv2d_scope, get_value_func=get_tf_contrib_conv2d_param_value)
+    params2.track_parameter('conv', cntk_conv, set_value_func=set_cntk_conv2d_params_from_tf)
+
+    init_op = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        sess.run(init_op)
+        batch_size = 3
+        input_data = np.random.random((batch_size,) + spatial_shape + (in_channels,)).astype(np.float32)
+        tf_conv_result = sess.run(tf_conv, {tf_input: input_data})
+
+        params1.save_parameters(sess)
+        params2.load_parameters()
+        # tf filter  shape: [filter_height, filter_width, in_channels, out_channels]
+        # cntk filter shape: [out_channels, in_channels, filter_height, filter_width]
+        tf_param_value = get_tf_contrib_conv2d_param_value(conv2d_scope, sess)
+        np.testing.assert_allclose(tf_param_value['W'].transpose(3, 2, 0, 1), (cntk_conv.parameters[0] * 1.0).eval())
+        np.testing.assert_allclose(tf_param_value['b'].reshape(cntk_conv.parameters[1].shape), (cntk_conv.parameters[1] * 1.0).eval())
+
+
+        cntk_conv_result = cntk_conv.eval({cntk_input: input_data.transpose(0, 3, 1, 2)})
+        #tf output shape: [batch, h, w, out_channels]
+        #cntk output shape: [batch, out_channels, h, w]
+        np.testing.assert_array_almost_equal(tf_conv_result.transpose(0, 3, 1, 2), cntk_conv_result)
 
 def test_tf2cntk_save_load_rnn_parameters():
     workdir = tempfile.gettempdir()

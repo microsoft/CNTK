@@ -75,6 +75,7 @@ class ParameterTracker(object):
         self.name_space = []
 
     def _enter_key_space(self, name):
+        assert(name is not None)
         self.name_space.append(name)
 
     def _exit_key_space(self):
@@ -82,7 +83,7 @@ class ParameterTracker(object):
             self.name_space.pop()
 
     def _name_key(self, key):
-        return self.name_space[-1] + "." + key if self.name_space else key
+        return self.name_space[-1] + "." + key if len(self.name_space) > 0 else key
 
     def _init_stores(self, to_store_path, from_store_path):
         self.to_store = KeyNumpyStore(to_store_path) if to_store_path is not None else None
@@ -95,6 +96,7 @@ class ParameterTracker(object):
     def reset(self, to_store_path=None, from_store_path=None):
         self._init_stores(to_store_path, from_store_path)
         self.entries = {}
+        self.name_space = []
         return self
 
     def set_workingpath(self, to_store_path=None, from_store_path=None):
@@ -231,6 +233,11 @@ def set_cntk_conv2d_bias_from_tf(p, value):
 def tf_get_conv2d_param(tf_conv_params, sess):
     w_value, b_value = sess.run(tf_conv_params)
     return {'W': w_value, 'b': b_value}
+
+def get_tf_contrib_conv2d_param_value(tf_contrib_name_scope, sess):
+    params = get_tf_vars(tf_contrib_name_scope, ['weights', 'biases'])
+    v = sess.run(params)
+    return {'W': v['weights'], 'b': v['biases']}
 
 def set_cntk_conv2d_params_from_tf(conv, value):
     w_value, b_value = value['W'], value['b']
