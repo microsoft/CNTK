@@ -812,7 +812,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         //TODO: 1) check whether this is a matrix; 2) use sparse matrix value? 
-        auto result = ValueFor(fr);
+        auto result = this->ValueFor(fr);
         result.SetDiagonalValue(ElemType(1.0));
     }
 
