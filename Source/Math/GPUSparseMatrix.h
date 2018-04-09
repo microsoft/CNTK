@@ -56,6 +56,7 @@ public:
     using Base::Buffer;
     using Base::GetNumRows;
     using Base::GetNumCols;
+    using Base::GetDiagSize;
     using Base::SetNumRows;
     using Base::SetNumCols;
     using Base::GetNumElements;

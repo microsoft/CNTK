@@ -1984,6 +1984,12 @@ size_t Matrix<ElemType>::GetNumCols() const
 }
 
 template <class ElemType>
+size_t Matrix<ElemType>::GetDiagSize() const
+{
+    return m_baseMatrix->GetDiagSize();
+}
+
+template <class ElemType>
 size_t Matrix<ElemType>::GetNumElements() const
 {
     return GetNumRows() * GetNumCols();

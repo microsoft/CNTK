@@ -177,6 +177,7 @@ public:
     void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
     size_t GetNumRows() const;
     size_t GetNumCols() const;
+    size_t GetDiagSize() const;
     size_t GetNumElements() const;
     bool HasNoElements() const { return GetNumElements() == 0; }
     bool IsEmpty() const;
