@@ -288,7 +288,7 @@ DeviceBoundNumber<ElemType>::~DeviceBoundNumber()
     {
         if (m_computeDevice < 0)
         {
-            delete m_data;
+            BaseMatrixStorage<ElemType>::FreeCPUArray(m_data);
             m_data = NULL;
         }
         else
@@ -337,7 +337,7 @@ ElemType* GPUMatrix<ElemType>::CopyToArray() const
     if (numElements != 0)
     {
         PrepareDevice();
-        ElemType* pArray = new ElemType[numElements];
+        ElemType* pArray = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
         CUDA_CALL(cudaMemcpy(pArray, Data(), sizeof(ElemType) * m_numRows * m_numCols, cudaMemcpyDeviceToHost));
         return pArray;
     }
@@ -356,8 +356,8 @@ size_t GPUMatrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentA
 
     if (numElements > currentArraySize)
     {
-        delete arrayCopyTo;
-        arrayCopyTo = new ElemType[numElements];
+        BaseMatrixStorage<ElemType>::FreeCPUArray(arrayCopyTo);
+        arrayCopyTo = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
         currentArraySize = numElements;
     }
 

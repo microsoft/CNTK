@@ -14,6 +14,9 @@
 #include "InputAndParamNodes.h"
 #include "NonlinearityNodes.h"
 #include "LinearAlgebraNodes.h"
+#ifdef USE_MKLDNN
+#include "TimesTransposeNode.h"
+#endif
 #include "RecurrentNodes.h"
 #include "EvaluationNodes.h"
 #include "TrainingNodes.h"
@@ -299,6 +302,13 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = node->As<TransposeTimesNode<ElementType>>()->OutputRank();
                     opType = PrimitiveOpType::TransposeTimes;
                 }
+#ifdef USE_MKLDNN
+		        else if (node->OperationName() == OperationNameOf(TimesTransposeNode))
+		        {
+			        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = node->As<TimesTransposeNode<ElementType>>()->OutputRank();
+			        opType = PrimitiveOpType::TimesTranspose;
+		        }
+#endif
                 else if (node->OperationName() == OperationNameOf(PastValueNode))
                 {
                     if (inputVars.size() == 1)
@@ -390,6 +400,22 @@ namespace CNTK
 
                     opType = PrimitiveOpType::Convolution;
                 }
+#ifdef USE_MKLDNN
+				else if (node->OperationName() == OperationNameOf(ConvolutionBiasNode))
+				{
+					auto convolutionNode = node->As<ConvolutionBiasNode<ElementType>>();
+					primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(convolutionNode->Strides());
+					primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(convolutionNode->Sharing());
+					primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(convolutionNode->AutoPad());
+					primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(convolutionNode->LowerPad());
+					primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(convolutionNode->UpperPad());
+					primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTranspose] = convolutionNode->Transpose();
+					primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputShape] = AsNDShape(convolutionNode->OutputShape());
+					primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = convolutionNode->MaxTempMemSizeInSamples();
+
+					opType = PrimitiveOpType::ConvolutionBias;
+				}
+#endif
                 else if (node->OperationName() == OperationNameOf(ROIPoolingNode))
                 {
                     auto roiPoolingNode = node->As<ROIPoolingNode<ElementType>>();

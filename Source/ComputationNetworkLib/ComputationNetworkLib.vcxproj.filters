@@ -156,6 +156,12 @@
     <ClInclude Include="ComputationGraphAlgorithms.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="EltWiseNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="TimesTransposeNode.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

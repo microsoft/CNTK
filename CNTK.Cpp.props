@@ -66,10 +66,8 @@
     <MathDelayLoad>mklml.dll</MathDelayLoad>
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
     <HasMklDnn>false</HasMklDnn>
-    <!-- disable MKL-DNN until we pick up the fix for AMD cache size https://github.com/intel/mkl-dnn/commit/ccfbf83ab489b42f7452b6701498b07c28cdb502
     <HasMklDnn Condition="Exists('$(MKL_PATH)\include\mkldnn.h')">true</HasMklDnn>
     <MathDefine Condition="$(HasMklDnn)">$(MathDefine);USE_MKLDNN</MathDefine>
-    -->
     <MathLinkLibrary Condition="$(HasMklDnn)">$(MathLinkLibrary);mkldnn.lib</MathLinkLibrary>
     <MathDelayLoad Condition="$(HasMklDnn)">$(MathDelayLoad);mkldnn.dll</MathDelayLoad>
   </PropertyGroup>

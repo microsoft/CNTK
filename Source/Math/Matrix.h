@@ -21,6 +21,9 @@
 #include <initializer_list>
 #include "QuantizedOperations.h"
 #include "half.hpp"
+#ifdef USE_MKLDNN
+#include "./mkldnn/mkl_memory.h"
+#endif
 
 // Forward declarations
 namespace CNTK
@@ -182,6 +185,9 @@ public:
     bool IsEmpty() const;
     size_t BufferSize() const;
     ElemType* Data() const;
+#ifdef USE_MKLDNN
+    std::shared_ptr<MKLMemHolder> MklMem() const;
+#endif
     bool IsView() const;
 
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
