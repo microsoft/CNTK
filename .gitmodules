@@ -1,6 +1,3 @@
-[submodule "Source/1BitSGD"]
-	path = Source/1BitSGD
-	url = https://github.com/CNTK-components/CNTK1bitSGD
 [submodule "Source/Multiverso"]
 	path = Source/Multiverso
 	url = https://github.com/Microsoft/Multiverso

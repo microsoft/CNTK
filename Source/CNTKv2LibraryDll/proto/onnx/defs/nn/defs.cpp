@@ -1,5 +1,5 @@
 #include "proto/onnx/core/op.h"
-
+#include "proto/onnx/core/constants.h"
 
 namespace ONNXIR {
     REGISTER_OPERATOR_SCHEMA(FC)
@@ -402,33 +402,34 @@ namespace ONNXIR {
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" }, "Constrain input and output types to float tensors.")
         .Attr("p", "Value of p, default 2.", AttrType::AttributeProto_AttributeType_INT, int64_t(2));
 
+
+    std::function<void(OperatorSchemaSetter&)> LRNDocGenerator() {
+        return [=](OperatorSchemaSetter& schema) {
+            schema.Description("Perform local response normalization. "
+                "NOTE: Only supports Caffe across channel mode. ");
+            schema.Input("X", "Input tensor of any shape", "T");
+            schema.Output("Y", "Output tensor of same shape and type as input X.", "T");
+            schema.TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
+                "Constrain input and output types to float tensors.");
+            schema.Attr("size", "[default 5]: the number of channels to sum over (for cross "
+                  "channel LRN) or the side length of the square region to sum over (for within "
+                  "channel LRN)", AttrType::AttributeProto_AttributeType_INT, int64_t(5));
+            schema.Attr("alpha", "Scalar scaling factor. Default is 0.0001",
+                AttrType::AttributeProto_AttributeType_FLOAT, float(0.0001));
+            schema.Attr("beta", "Scalar exponent in the LRN.  Default is 0.5.",
+                AttrType::AttributeProto_AttributeType_FLOAT, float(0.5));
+            schema.Attr("bias", "An offset (must be positive to avoid dividing by 0). Defaults to 1.0.",
+                AttrType::AttributeProto_AttributeType_FLOAT, float(1.0));
+        };
+    }
+
+    REGISTER_OPERATOR_SCHEMA(LocalResponseNormalization)
+        .FillUsing(LRNDocGenerator());
+
+    // TODO: to be duplicated.
     REGISTER_OPERATOR_SCHEMA(LRN)
-        .Description("Perform local response normalization. "
-            "NOTE: Only supports Caffe across channel mode. ")
-        .Input("input", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
-        .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" }, "Constrain input and output "
-             " types to float tensors.")
-        .Attr("size", "[default 5]: the number of channels to sum over (for cross "
-              "channel LRN) or the side length of the square region to sum over (for within "
-              "channel LRN)", AttrType::AttributeProto_AttributeType_INT, int64_t(5))
-        .Attr("alpha", "Scalar scaling factor. Default is 0.0001", AttrType::AttributeProto_AttributeType_FLOAT, float(0.0001))
-        .Attr("beta", "Scalar exponent in the LRN.  Default is 0.5.", AttrType::AttributeProto_AttributeType_FLOAT, float(0.5))
-        .Attr("bias", "An offset (must be positive to avoid dividing by 0). Defaults to 1.0.",
-            AttrType::AttributeProto_AttributeType_FLOAT, float(1.0));
+        .FillUsing(LRNDocGenerator());
 
-    REGISTER_OPERATOR_SCHEMA(MVN)
-        .Description("Perform mean variance normalization.")
-        .Input("input", "Input tensor of any shape", "T")
-        .Output("output", "Output tensor of same shape and type as input X.", "T")
-        .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" }, "Constrain input and output "
-            "types to float tensors.")
-        .Attr("across_channels", "If true, mean and variance are computed across channels. "
-            "Default is false.", AttrType::AttributeProto_AttributeType_INT, int64_t(0))
-        .Attr("normalize_variance", "If false, normalize the mean only. Default is true.",
-            AttrType::AttributeProto_AttributeType_INT, int64_t(1));
-
-    // Manually added on 2/14/2018.
     REGISTER_OPERATOR_SCHEMA(MeanVarianceNormalization)
         .Description("Perform mean variance normalization.")
         .Input("input", "Input tensor of any shape", "T")
@@ -488,10 +489,10 @@ namespace ONNXIR {
         .Output("output", "Result, has same shape and type as X", "T")
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" }, "Constrain input and "
             "output types to float tensors.")
-        .Attr("mode", "enum {'NN', 'BILINEAR' }, Nearest neighbor or bilinear upsampling.",
+        .Attr("mode", "enum {'NEAREST', 'BILINEAR' }, Nearest neighbor or bilinear upsampling.",
             AttrType::AttributeProto_AttributeType_STRING)
-        .Attr("width_scale", "Scale along width dimension", AttrType::AttributeProto_AttributeType_INT)
-        .Attr("height_scale", "Scale along height dimension", AttrType::AttributeProto_AttributeType_INT);
+        .Attr("width_scale", "Scale along width dimension", AttrType::AttributeProto_AttributeType_FLOAT)
+        .Attr("height_scale", "Scale along height dimension", AttrType::AttributeProto_AttributeType_FLOAT);
 
     REGISTER_OPERATOR_SCHEMA(Crop)
         .Description("Crop and image to the specified spatial dimensions.  If scale is given,"
@@ -502,8 +503,8 @@ namespace ONNXIR {
         .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" }, "Constrain input and "
             "output types to float tensors.")
         .Attr("border", "A 1-D tensor of values (leftBorder, topBorder, rightBorder, bottomBorder)",
-            AttrType::AttributeProto_AttributeType_INT)
-        .Attr("scale", "A 1-D tensor of values (height, width)", AttrType::AttributeProto_AttributeType_INT);
+            AttrType::AttributeProto_AttributeType_INTS)
+        .Attr("scale", "A 1-D tensor of values (height, width)", AttrType::AttributeProto_AttributeType_INTS);
 
     // Taken from ONNX
     REGISTER_OPERATOR_SCHEMA(Pad)
@@ -537,5 +538,28 @@ namespace ONNXIR {
             "Constrain input and output types to float tensors.")
         .Attr("image", "Image tensor stored as a sequence of floats [C,H,W].", AttrType::AttributeProto_AttributeType_TENSOR);
 
+    REGISTER_OPERATOR_SCHEMA(LegacyPadding)
+        .SetDomain(c_msDomain)
+        .Description("his operator is designed to support CoreML's pooling operator under IncludeLastPixel padding mode.. "
+            "To simulate CoreML's pooling operator, First, copy kernel shape, strides, padding "
+            "amounts from the original pooling operator to this LegacyPadding operator. "
+            "Second, create a pooling operator under auto_pad=VALID with the kernel and strides used in the original pooling. "
+            "Third, connect the output of LegacyPadding operator with the pooling operator we just create. ")
+        .Input("data", "Input tensor.", "T")
+        .Output("output", "Tensor after padding.", "T")
+        .TypeConstraint("T", { "tensor(float16)", "tensor(float)", "tensor(double)" },
+            "Constrain input and output types to float tensors.")
+        .Attr("pads",
+              "Padding amounts along H- and W-axes, [pad_h, pad_w]. ",
+              AttrType::AttributeProto_AttributeType_INTS, int64_t(1))
+        .Attr("kernel_shape",
+              "The size of the kernel along H- and W-axes, [k_h, k_w]. Notice that the kernel is a 2-D tensor. ",
+              AttrType::AttributeProto_AttributeType_INTS, int64_t(1))
+        .Attr("strides",
+              "Stride along H- and W-axes, [stride_h, stride_w].",
+              AttrType::AttributeProto_AttributeType_INTS, int64_t(1))
+        .Attr("value",
+              "One float, indicates the value to be filled, default is 0",
+              AttrType::AttributeProto_AttributeType_FLOAT, float(0));
 }
 

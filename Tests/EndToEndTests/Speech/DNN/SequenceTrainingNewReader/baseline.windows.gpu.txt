@@ -15,7 +15,6 @@ Build info:
 		Last modified date: Wed Jan 17 02:36:31 2018
 		Build type: Debug
 		Build target: GPU
-		With 1bit-SGD: yes
 		With ASGD: yes
 		Math lib: mkl
 		CUDA version: 9.0.0

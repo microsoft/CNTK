@@ -15,6 +15,10 @@ REM overridden at msbuild invocation.
 set p_OutDir=%~1
 set p_DebugBuild=%~2
 set p_GpuBuild=%~3
+set p_CNTK_VERSION=%~4
+shift
+set p_CNTK_VERSION_BANNER=%~4
+shift
 set p_CNTK_COMPONENT_VERSION=%~4
 set p_SWIG_PATH=%~5
 set p_CNTK_PY_VERSIONS=%~6
@@ -56,6 +60,8 @@ set CNTK_LIB_PATH=%p_OutDir%
 
 set DIST_DIR=%p_OutDir%\Python
 set PATH=%p_SWIG_PATH%;%PATH%
+set CNTK_VERSION=%p_CNTK_VERSION%
+set CNTK_VERSION_BANNER=%p_CNTK_VERSION_BANNER%
 set CNTK_COMPONENT_VERSION=%p_CNTK_COMPONENT_VERSION%
 set MSSdk=1
 set DISTUTILS_USE_SDK=1
@@ -73,7 +79,7 @@ for %%D in (
   Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
   Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll  
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.DelayLoadedExtensions-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
   mklml.dll
 ) do (
@@ -113,6 +119,11 @@ if /i %p_GpuBuild% equ true for %%D in (
   set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
 )
 
+set PYTHON_PROJECT_NAME=cntk
+if /i %p_GpuBuild% equ true (
+  set PYTHON_PROJECT_NAME=cntk-gpu
+)
+
 popd
 if errorlevel 1 echo Cannot restore directory.&exit /b 1
 
@@ -122,7 +133,7 @@ for %%p in (%p_CNTK_PY_VERSIONS%) do (
   call set extraPath=!p_CNTK_PY%%~p_PATH!
   echo Building for Python version '%%~p', extra path is !extraPath!
   set PATH=!extraPath!;!oldPath!
-  python.exe .\setup.py ^
+  python.exe .\setup.py --project-name %PYTHON_PROJECT_NAME% ^
       build_ext --inplace --force --compiler msvc --plat-name=win-amd64 ^
       bdist_wheel --dist-dir "%DIST_DIR%"
   if errorlevel 1 exit /b 1

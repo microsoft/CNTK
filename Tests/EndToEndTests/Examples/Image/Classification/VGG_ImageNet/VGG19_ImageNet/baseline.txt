@@ -23,7 +23,6 @@ Build info:
 		Last modified date: Thu May 18 14:23:48 2017
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: yes
 		With ASGD: yes
 		Math lib: mkl
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0

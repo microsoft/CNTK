@@ -2761,7 +2761,8 @@ def gather(reference, indices, axis=None, name=''):
     Args:
         reference: A tensor of values
         indices: A tensor of indices
-        axis: The axis along which the indices refer to. Default (None) means the  first axis.
+        axis: The axis along which the indices refer to. Default (None) means the  first axis. Only one axis is supported;
+        and only static axis is supported.
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -3943,7 +3944,7 @@ def cast(node_input, dtype, name=''):
     return cast(arg_node_input, arg_dtype, name)
 
 @typemap
-def mean_variance_normalization(operand, use_stats_across_channels = False, do_variance_scaling = True, name=''):
+def mean_variance_normalization(operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True, name=''):
     '''
     Computes mean-variance normalization of the specified input operand. 
 
@@ -3972,6 +3973,7 @@ def mean_variance_normalization(operand, use_stats_across_channels = False, do_v
 
     Args:
         operand: Input tensor, with dimensions :math:`[C \\times H \\times W]`.
+        epsilon (double, default 0.00001): epsilon added to the standard deviation to avoid division by 0.
         use_stats_across_channels (bool): If False, mean and variance are computed per channel.
          If True, mean and variance are computed over the entire tensor (all axes).
         do_variance_scaling (bool): If False, only the mean is subtracted. If True, it is also
@@ -3982,5 +3984,7 @@ def mean_variance_normalization(operand, use_stats_across_channels = False, do_v
     
     '''
     from cntk.cntk_py import mean_variance_normalization
+    if epsilon < 0:
+        raise ValueError('epsilon must be non-negative.')
     operand = sanitize_input(operand, get_data_type(operand))  
-    return mean_variance_normalization(operand, use_stats_across_channels, do_variance_scaling, name)
+    return mean_variance_normalization(operand, epsilon, use_stats_across_channels, do_variance_scaling, name)

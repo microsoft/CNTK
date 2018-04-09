@@ -1,8 +1,10 @@
+#include "proto/onnx/core/constants.h"
 #include "proto/onnx/core/op.h"
 
 namespace ONNXIR {
 
     REGISTER_OPERATOR_SCHEMA(ArrayFeatureExtractor)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be selected from", "T1")
         .Input("Y", "Data to be selected from", "T2")
         .Output("Z", "Selected data as an array", "T1")
@@ -14,6 +16,7 @@ namespace ONNXIR {
 
 
     REGISTER_OPERATOR_SCHEMA(Binarizer)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be binarized", "T")
         .Output("Y", "Binarized output data", "T")
         .Description(R"DOC(
@@ -23,6 +26,7 @@ namespace ONNXIR {
         .Attr("threshold", "Values greater than this are set to 1, else set to 0", AttrType::AttributeProto_AttributeType_FLOAT);
 
     REGISTER_OPERATOR_SCHEMA(CastMap)
+        .SetDomain(c_mlDomain)
         .Input("X", "The input values", "T1")
         .Output("Y", "The output values", "T2")
         .Description(R"DOC(
@@ -35,6 +39,7 @@ namespace ONNXIR {
         .Attr("max_map", "if casting from a sparse map, what is the max key in the map", AttrType::AttributeProto_AttributeType_INT);
 
     REGISTER_OPERATOR_SCHEMA(CategoryMapper)
+        .SetDomain(c_mlDomain)
         .Input("X", "Input data", "T1")
         .Output("Y", "Output data, if strings are input, then output is INTS, and vice versa.", "T2")
         .Description(R"DOC(
@@ -56,8 +61,9 @@ namespace ONNXIR {
 
 
     REGISTER_OPERATOR_SCHEMA(DictVectorizer)
-        .Input("X", "The input dictionary", "T")
-        .Output("Y", "The tensor", "tensor(int64)")
+        .SetDomain(c_mlDomain)
+        .Input("X", "The input dictionary", "T1")
+        .Output("Y", "The tensor", "T2")
         .Description(R"DOC(
             Uses an index mapping to convert a dictionary to an array.
             The output array will be equal in length to the index mapping vector parameter.
@@ -69,12 +75,14 @@ namespace ONNXIR {
             For example: if the ``string_vocabulary`` parameter is set to ``["a", "c", "b", "z"]``,
             then an input of ``{"a": 4, "c": 8}`` will produce an output of ``[4, 8, 0, 0]``.
             )DOC")
-        .TypeConstraint("T", { "map(string, int64)", "map(int64, string)" }, " allowed types.")
+        .TypeConstraint("T1", { "map(string, int64)", "map(int64, string)", "map(int64, float)", "map(int64, double)", "map(string, float)", "map(string, double)"}, " allowed types.")
+        .TypeConstraint("T2", { "tensor(int64)", "tensor(float)", "tensor(double)", "tensor(string)" }, " allowed types.")
         .Attr("string_vocabulary", "The vocabulary vector of strings", AttrType::AttributeProto_AttributeType_STRINGS)
         .Attr("int64_vocabulary", "The vocabulary vector of int64s", AttrType::AttributeProto_AttributeType_INTS);
 
 
     REGISTER_OPERATOR_SCHEMA(Imputer)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be imputed", "T")
         .Output("Y", "Imputed output data", "T")
         .Description(R"DOC(
@@ -90,18 +98,19 @@ namespace ONNXIR {
 
 
     REGISTER_OPERATOR_SCHEMA(FeatureVectorizer)
+        .SetDomain(c_mlDomain)
         .Input("X", "ordered input tensors", "T")
-        .Output("Y", "flattened feature vectors.", "T")
+        .Output("Y", "flattened output vector.", "T")
         .Description(R"DOC(
             Concatenates a list of input tensors of floats into one tensor.
-            Input order in inputs must match inputlist and inputdimensions order.
+            The size of each input in the input list is expressed in inputdimensions.
             )DOC")
         .TypeConstraint("T", { "tensor(float)" }, " allowed types.")
-        .Attr("inputlist", "list of string names of the input features, output features will appear in this order", AttrType::AttributeProto_AttributeType_STRINGS)
         .Attr("inputdimensions", "the size of the inputs in the input list", AttrType::AttributeProto_AttributeType_INTS);
 
 
     REGISTER_OPERATOR_SCHEMA(LabelEncoder)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be encoded", "T1")
         .Output("Y", "Encoded output data", "T2")
         .Description(R"DOC(
@@ -117,6 +126,7 @@ namespace ONNXIR {
 
 
     REGISTER_OPERATOR_SCHEMA(LinearClassifier)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be classified", "T1")
         .Output("Y", "Classification outputs (one class per example", "T2")
         .Output("Z", "Classification outputs (All classes scores per example,N,E", "tensor(float)")
@@ -130,10 +140,11 @@ namespace ONNXIR {
         .Attr("post_transform", "post eval transform for score, enum 'NONE', 'SOFTMAX', 'LOGISTIC', 'SOFTMAX_ZERO', 'PROBIT'", AttrType::AttributeProto_AttributeType_STRING)
         .Attr("multi_class", "whether to do OvR or multinomial (0=OvR and is default)", AttrType::AttributeProto_AttributeType_INT)
         .Attr("classlabels_strings", "class labels if using string labels, size E", AttrType::AttributeProto_AttributeType_STRINGS)
-        .Attr("classlabels_int64s", "class labels if using int labels, size E", AttrType::AttributeProto_AttributeType_INTS);
+        .Attr("classlabels_ints", "class labels if using int labels, size E", AttrType::AttributeProto_AttributeType_INTS);
 
 
     REGISTER_OPERATOR_SCHEMA(LinearRegressor)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be regressed", "T")
         .Output("Y", "Regression outputs (one per target, per example", "tensor(float)")
         .Description(R"DOC(
@@ -152,6 +163,7 @@ namespace ONNXIR {
 
 
     REGISTER_OPERATOR_SCHEMA(Normalizer)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be encoded", "T")
         .Output("Y", "encoded output data", "tensor(float)")
         .Description(R"DOC(
@@ -166,18 +178,22 @@ namespace ONNXIR {
 
 
     REGISTER_OPERATOR_SCHEMA(OneHotEncoder)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be encoded", "T")
         .Output("Y", "encoded output data", "tensor(float)")
         .Description(R"DOC(
             Replace the inputs with an array of ones and zeros, where the only
-            one is the zero-based category that was passed in.  The total category count 
-            will determine the length of the vector. For example if we pass a 
-            tensor with a single value of 4, and a category count of 8, the 
+            one is the zero-based category that was passed in.  The total category count
+            will determine the length of the vector. For example if we pass a
+            tensor with a single value of 4, and a category count of 8, the
             output will be a tensor with 0,0,0,0,1,0,0,0 .
-            This operator assumes every input in X is of the same category set 
+            This operator assumes every input in X is of the same category set
             (meaning there is only one category count).
+
+            If the input is a tensor of float, int32, or double, the data will be cast
+            to int64s and the cats_int64s category list will be used for the lookups.
             )DOC")
-        .TypeConstraint("T", { "tensor(string)", "tensor(int64)" }, " allowed types.")
+        .TypeConstraint("T", { "tensor(string)", "tensor(int64)","tensor(int32)", "tensor(float)","tensor(double)" }, "allowed types.")
         .Attr("cats_int64s", "list of cateogries, ints", AttrType::AttributeProto_AttributeType_INTS)
         .Attr("cats_strings", "list of cateogries, strings", AttrType::AttributeProto_AttributeType_STRINGS)
         .Attr("zeros", "if true and category is not present, will return all zeros, if false and missing category, operator will return false", AttrType::AttributeProto_AttributeType_INT);
@@ -185,6 +201,7 @@ namespace ONNXIR {
 
     // Input: X, output: Y
     REGISTER_OPERATOR_SCHEMA(Scaler)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be scaled", "T")
         .Output("Y", "Scaled output data", "tensor(float)")
         .Description(R"DOC(
@@ -195,6 +212,7 @@ namespace ONNXIR {
         .Attr("offset", "first, offset by thisfirst, offset by this, can be one value or a separate value for each feature", AttrType::AttributeProto_AttributeType_FLOATS);
 
     REGISTER_OPERATOR_SCHEMA(SVMClassifier)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be classified", "T1")
         .Output("Y", "Classification outputs, one class per example", "T2")
         .Output("Z", "Classification outputs, All classes scores per example,N,E*(E-1)/2 if dual scores, or E if probabilities are used.", "tensor(float)")
@@ -214,14 +232,15 @@ namespace ONNXIR {
         .Attr("rho", "", AttrType::AttributeProto_AttributeType_FLOATS)
         .Attr("post_transform", "post eval transform for score, enum 'NONE', 'SOFTMAX', 'LOGISTIC', 'SOFTMAX_ZERO', 'PROBIT'", AttrType::AttributeProto_AttributeType_STRING)
         .Attr("classlabels_strings", "class labels if using string labels", AttrType::AttributeProto_AttributeType_STRINGS)
-        .Attr("classlabels_int64s", "class labels if using int labels", AttrType::AttributeProto_AttributeType_INTS);
+        .Attr("classlabels_ints", "class labels if using int labels", AttrType::AttributeProto_AttributeType_INTS);
 
 
     REGISTER_OPERATOR_SCHEMA(SVMRegressor)
+        .SetDomain(c_mlDomain)
         .Input("X", "Input N,F", "T")
         .Output("Y", "All target scores, N,E", "tensor(float)")
         .Description(R"DOC(
-            SVM regressor. Also supports oneclass svm. 
+            SVM regressor. Also supports oneclass svm.
             )DOC")
         .TypeConstraint("T", { "tensor(float)", "tensor(double)", "tensor(int64)", "tensor(int32)" }, " allowed types.")
         .Attr("kernel_type", "enum 'LINEAR', 'POLY', 'RBF', 'SIGMOID', defaults to linear", AttrType::AttributeProto_AttributeType_STRING)
@@ -235,18 +254,19 @@ namespace ONNXIR {
         .Attr("one_class", "If this regressor is a oneclass svm set this param to 1, otherwise use 0 (default is zero)", AttrType::AttributeProto_AttributeType_INT);
 
     REGISTER_OPERATOR_SCHEMA(TreeEnsembleClassifier)
+        .SetDomain(c_mlDomain)
         .Input("X", "Data to be classified", "T1")
         .Output("Y", "Classification outputs (one class per example", "T2")
         .Output("Z", "Classification outputs (All classes scores per example,N,E", "tensor(float)")
         .Description(R"DOC(
             Tree Ensemble classifier.  Returns the top class for each input in N.
-            All args with nodes_ are fields of a tuple of tree nodes, and 
+            All args with nodes_ are fields of a tuple of tree nodes, and
             it is assumed they are the same length, and an index i will decode the
-            tuple across these inputs.  Each node id can appear only once 
+            tuple across these inputs.  Each node id can appear only once
             for each tree id."
             All fields prefixed with class_ are tuples of votes at the leaves.
             A leaf may have multiple votes, where each vote is weighted by
-            the associated class_weights index.  
+            the associated class_weights index.
             It is expected that either classlabels_strings or classlabels_INTS
             will be passed and the class_ids are an index into this list.
             Mode enum is BRANCH_LEQ, BRANCH_LT, BRANCH_GTE, BRANCH_GT, BRANCH_EQ, BRANCH_NEQ, LEAF.
@@ -273,17 +293,18 @@ namespace ONNXIR {
 
 
     REGISTER_OPERATOR_SCHEMA(TreeEnsembleRegressor)
+        .SetDomain(c_mlDomain)
         .Input("X", "Input N,F", "T")
         .Output("Y", "NxE floats", "tensor(float)")
         .Description(R"DOC(
             Tree Ensemble regressor.  Returns the regressed values for each input in N.
-            All args with nodes_ are fields of a tuple of tree nodes, and 
+            All args with nodes_ are fields of a tuple of tree nodes, and
             it is assumed they are the same length, and an index i will decode the
-            tuple across these inputs.  Each node id can appear only once 
+            tuple across these inputs.  Each node id can appear only once
             for each tree id.
             All fields prefixed with target_ are tuples of votes at the leaves.
             A leaf may have multiple votes, where each vote is weighted by
-            the associated target_weights index.  
+            the associated target_weights index.
             All trees must have their node ids start at 0 and increment by 1.
             Mode enum is BRANCH_LEQ, BRANCH_LT, BRANCH_GTE, BRANCH_GT, BRANCH_EQ, BRANCH_NEQ, LEAF
             )DOC")
@@ -306,14 +327,15 @@ namespace ONNXIR {
         .Attr("aggregate_function", "post eval transform for score,  enum 'AVERAGE', 'SUM', 'MIN', 'MAX'", AttrType::AttributeProto_AttributeType_STRING)
         .Attr("base_values", "base values for regression, added to final score, size must be the same as n_outputs or can be left unassigned (assumed 0)", AttrType::AttributeProto_AttributeType_FLOATS);
 
-    REGISTER_OPERATOR_SCHEMA(VecDictionizer)
+    REGISTER_OPERATOR_SCHEMA(ZipMap)
+        .SetDomain(c_mlDomain)
         .Input("X", "The input values", "tensor(float)")
         .Output("Y", "The output map", "T")
         .Description(R"DOC(
-            Makes a map from the input and the attributes.  
+            Makes a map from the input and the attributes.
             Assumes input 0 are the values, and the keys are specified by the attributes.
             Must provide keys in either classlabels_strings or classlabels_int64s (but not both).
-            Input 0 may have a batch size larger than 1, 
+            Input 0 may have a batch size larger than 1,
             but each input in the batch must be the size of the keys specified by the attributes.
             The order of the input and attributes determines the key-value mapping.
             )DOC")

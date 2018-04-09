@@ -9,8 +9,8 @@ If you have installed CNTK on your machine, after going through the :cntkwiki:`i
 you can start using CNTK from Python right away (don't forget to ``activate`` your Python environment if you did not install CNTK into your root environment):
 
     >>> import cntk
-    >>> cntk.__version__
-    '2.4+'
+
+You can check CNTK version using ``cntk.__version__``.
     
     >>> cntk.minus([1, 2, 3], [4, 5, 6]).eval()
     array([-3., -3., -3.], dtype=float32)
@@ -29,7 +29,7 @@ more common case) is as follows:
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
-The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
+The squared error is then of course ``(2.5)**2 + (1-6)**2 = 29``.
 
 Most of the data containers like parameters, constants, values, etc. implement
 the asarray() method, which returns a NumPy interface.

@@ -8,6 +8,7 @@
 #include <random>
 #include <set>
 #include "NoRandomizer.h"
+#include "LTNoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
 #include "CorpusDescriptor.h"
@@ -38,6 +39,7 @@ BOOST_AUTO_TEST_SUITE(ReaderLibTests)
 class MockChunk : public Chunk
 {
 private:
+    ChunkIdType m_chunkId;
     size_t m_chunkBegin;
     size_t m_chunkEnd;
     NDShape m_sampleShape;
@@ -45,12 +47,13 @@ private:
     vector<vector<float>>& m_sequenceData;
 
 public:
-    MockChunk(size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, uint32_t sequenceLength)
-        : m_chunkBegin(chunkBegin),
-          m_chunkEnd(chunkEnd),
-          m_sampleShape(NDShape({ 1 })),
-          m_sequenceLength(sequenceLength),
-          m_sequenceData(sequenceData)
+    MockChunk(ChunkIdType chunkdId, size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, uint32_t sequenceLength)
+        : m_chunkId(chunkdId),
+        m_chunkBegin(chunkBegin),
+        m_chunkEnd(chunkEnd),
+        m_sampleShape(NDShape({ 1 })),
+        m_sequenceLength(sequenceLength),
+        m_sequenceData(sequenceData)
     {
         assert(chunkBegin <= chunkEnd);
         assert(chunkEnd <= sequenceData.size());
@@ -65,9 +68,20 @@ public:
         data->m_data = &m_sequenceData[sequenceId][0];
         data->m_numberOfSamples = m_sequenceLength;
         data->m_sampleShape = m_sampleShape;
+        data->m_key.m_sequence = sequenceId;
         result.push_back(data);
     }
-
+    
+    virtual void SequenceInfos(std::vector<SequenceInfo>& sequenceToFill) override 
+    {
+        unsigned int numberOfSamples = 1;
+        for (size_t seqGlobalIdx = m_chunkBegin; seqGlobalIdx < m_chunkEnd; seqGlobalIdx++)
+        {
+            SequenceInfo seq{ seqGlobalIdx, numberOfSamples, m_chunkId, SequenceKey(seqGlobalIdx,0) };
+            sequenceToFill.push_back(seq);
+        }
+    }
+    
     ~MockChunk() override {};
 };
 
@@ -138,7 +152,7 @@ public:
         assert(chunkId < m_numChunks);
         size_t chunkBegin = chunkId * m_numSequencesPerChunk;
         size_t chunkEnd = chunkBegin + m_numSequencesPerChunk;
-        shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);
+        shared_ptr<Chunk> chunk = make_shared<MockChunk>(chunkId, chunkBegin, chunkEnd, m_sequenceData, m_sequenceLength);
         return chunk;
     }
 
@@ -972,6 +986,44 @@ BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
     epochSize = (size_t)(sweepNumberOfSamples / 1.5);
     test(blockRandomizer, epochSize);
     test(noRandomizer, epochSize);
+}
+
+// Check that each worker reads unique sequences. A bug was causing duplicate sequences in workers.
+BOOST_AUTO_TEST_CASE(LTNoRandomizerCheckNoDuplicateSequence)
+{
+    auto num_chunks = 2;
+    auto num_sequences = 10;
+    size_t num_workers = 2;
+    vector<float> input(num_sequences * num_chunks);
+    iota(input.begin(), input.end(), 0.0f);
+
+    for (int i = 0; i < num_workers; ++i)
+    {
+        auto mockDeserializer = make_shared<MockDeserializer>(num_chunks, num_sequences, input);
+        auto randomizer = make_shared<LTNoRandomizer>(mockDeserializer, false);
+
+        EpochConfiguration config;
+        config.m_allowMinibatchesToCrossSweepBoundaries = true;
+        config.m_numberOfWorkers = num_workers;
+        config.m_minibatchSizeInSamples = 10;
+        config.m_truncationSize = 1;
+        config.m_totalEpochSizeInSweeps = 1;
+        config.m_epochIndex = 0;
+        config.m_workerRank = i;
+
+        randomizer->StartEpoch(config);
+        Sequences sequences = randomizer->GetNextSequences(1, 10);
+        BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
+        for (size_t j = 0; j < sequences.m_data[0].size(); j++)
+        {
+            shared_ptr<MockDenseSequenceData> sequence = std::dynamic_pointer_cast<MockDenseSequenceData>(sequences.m_data[0][j]);
+            // Worker 0 should have data 0,2,4 ..,10,12 .. 18
+            // Worker 1 should have data 1,3,5 ..,11,13 .. 19
+            // Sequence should keys follow the same pattern.
+            BOOST_CHECK_EQUAL(*(static_cast<float*>(sequence->m_data)), (float)i + j * 2);
+            BOOST_CHECK_EQUAL(sequence->m_key.m_sequence, i + j * 2);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)

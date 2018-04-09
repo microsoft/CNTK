@@ -503,15 +503,16 @@ namespace CNTK
         static bool UpdateOperandShapes(std::vector<std::pair<Variable, NDShape>>& newOperandShapes);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool inferInputDimensions)
+        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool inferInputDimensions, bool allowScalarBroadcast = true)
         {
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
-            if (leftOperandShape.IsUnknown())
+            // when scalar allows broadcasting, keep unknown shape
+            if (leftOperandShape.IsUnknown() && !(allowScalarBroadcast && rightOperandShape.IsScalar()))
                 leftOperandShape = rightOperandShape;
 
-            if (rightOperandShape.IsUnknown())
+            if (rightOperandShape.IsUnknown() && !(allowScalarBroadcast && leftOperandShape.IsScalar()))
                 rightOperandShape = leftOperandShape;
 
             // All operand shapes should be known

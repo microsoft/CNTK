@@ -1,10 +1,10 @@
 dataDir: .
 
 tags:  
-  - bvt-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu')) and (flavor == 'release')
+  - bvt-i (build_sku != 'gpu') and ((build_sku == 'cpu') or (device == 'gpu')) and (flavor == 'release')
   # This test also runs in debug mode, as the debug version of EvalDll is also included in the NuGet package.
-  - nightly-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
-  - weekly-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
+  - nightly-i (build_sku != 'gpu') and ((build_sku == 'cpu') or (device == 'gpu'))
+  - weekly-i (build_sku != 'gpu') and ((build_sku == 'cpu') or (device == 'gpu'))
 
 testCases:
   Test run must be completed:

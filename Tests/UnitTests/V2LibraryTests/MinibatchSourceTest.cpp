@@ -297,6 +297,28 @@ void TestCBFDeserializers()
     }
 }
 
+void TestCBFSweepBoundary()
+{
+    static const int MaxSweeps = 10;
+    static const size_t BatchSize = 4096;
+
+    auto config = MinibatchSourceConfig({ CBFDeserializer(L"Simple_jagged_sequence.bin") }, true);
+    config.maxSweeps = MaxSweeps;
+    config.randomizationWindowInChunks = 4;
+    auto cbf = CreateCompositeMinibatchSource(config);
+
+    auto cpuDevice = DeviceDescriptor::CPUDevice();
+    int sweeps = 0;
+    while (sweeps < MaxSweeps)
+    {
+        auto mb = cbf->GetNextMinibatch(BatchSize, cpuDevice);
+        auto& value = mb.cbegin()->second;
+        if (value.sweepEnd)
+        {
+            sweeps++;
+        }
+    }
+}
 
 void CompareCBFAndCTFDeserializers(size_t maxSamples, size_t mbSize, bool randomize)
 {
@@ -397,6 +419,7 @@ BOOST_AUTO_TEST_CASE(RandomizedMinibatchSourceWithNoData)
 BOOST_AUTO_TEST_CASE(CBFDeserializer)
 {
     TestCBFDeserializers();
+    TestCBFSweepBoundary();
 }
 
 

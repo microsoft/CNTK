@@ -3,13 +3,13 @@ CPU info:
     Hardware threads: 12
     Total Memory: 57700428 kB
 -------------------------------------------------------------------
-=== Running mpiexec -n 2 /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu DeviceId=-1 timestamping=true numCPUThreads=6 shareNodeValueMatrices=true stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
+=== Running mpiexec -n 2 /home/ubuntu/workspace/build/gpu/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu DeviceId=-1 timestamping=true numCPUThreads=6 shareNodeValueMatrices=true stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 15:20:50
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation  OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=6  shareNodeValueMatrices=true  stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation  OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=6  shareNodeValueMatrices=true  stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 15:20:50
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation  OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=6  shareNodeValueMatrices=true  stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation  OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=6  shareNodeValueMatrices=true  stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
 Changed current directory to /home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data
 Changed current directory to /home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data
 --------------------------------------------------------------------------
@@ -36,7 +36,7 @@ ping [mpihelper]: 2 nodes pinging each other
 [fdb4dbbde386:91636] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
 MPI Rank 0: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 15:20:50
 MPI Rank 0: 
-MPI Rank 0: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation  OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=6  shareNodeValueMatrices=true  stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
+MPI Rank 0: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation  OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=6  shareNodeValueMatrices=true  stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
 MPI Rank 0: 12/12/2017 15:20:50: -------------------------------------------------------------------
 MPI Rank 0: 12/12/2017 15:20:50: Build info: 
 MPI Rank 0: 
@@ -44,7 +44,6 @@ MPI Rank 0: 12/12/2017 15:20:50: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 0: 12/12/2017 15:20:50: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 0: 12/12/2017 15:20:50: 		Build type: release
 MPI Rank 0: 12/12/2017 15:20:50: 		Build target: GPU
-MPI Rank 0: 12/12/2017 15:20:50: 		With 1bit-SGD: yes
 MPI Rank 0: 12/12/2017 15:20:50: 		With ASGD: yes
 MPI Rank 0: 12/12/2017 15:20:50: 		Math lib: mkl
 MPI Rank 0: 12/12/2017 15:20:50: 		CUDA version: 9.0.0
@@ -235,7 +234,7 @@ MPI Rank 0:
 MPI Rank 0: 12/12/2017 15:28:31: __COMPLETED__
 MPI Rank 1: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 15:20:50
 MPI Rank 1: 
-MPI Rank 1: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation  OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=6  shareNodeValueMatrices=true  stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
+MPI Rank 1: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation/cntkcv.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/ParallelCrossValidation  OutputDir=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=6  shareNodeValueMatrices=true  stderr=/tmp/cntk-test-20171211223423.932710/Speech/DNN_ParallelCrossValidation@release_cpu/stderr
 MPI Rank 1: 12/12/2017 15:20:50: -------------------------------------------------------------------
 MPI Rank 1: 12/12/2017 15:20:50: Build info: 
 MPI Rank 1: 
@@ -243,7 +242,6 @@ MPI Rank 1: 12/12/2017 15:20:50: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 1: 12/12/2017 15:20:50: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 1: 12/12/2017 15:20:50: 		Build type: release
 MPI Rank 1: 12/12/2017 15:20:50: 		Build target: GPU
-MPI Rank 1: 12/12/2017 15:20:50: 		With 1bit-SGD: yes
 MPI Rank 1: 12/12/2017 15:20:50: 		With ASGD: yes
 MPI Rank 1: 12/12/2017 15:20:50: 		Math lib: mkl
 MPI Rank 1: 12/12/2017 15:20:50: 		CUDA version: 9.0.0

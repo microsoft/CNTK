@@ -21,7 +21,6 @@ ping [mpihelper]: 1 nodes pinging each other
 04/18/2017 06:26:47: 		Last modified date: Thu Apr 13 06:08:38 2017
 04/18/2017 06:26:47: 		Build type: release
 04/18/2017 06:26:47: 		Build target: GPU
-04/18/2017 06:26:47: 		With 1bit-SGD: no
 04/18/2017 06:26:47: 		With ASGD: yes
 04/18/2017 06:26:47: 		Math lib: mkl
 04/18/2017 06:26:47: 		CUDA_PATH: /usr/local/cuda-8.0

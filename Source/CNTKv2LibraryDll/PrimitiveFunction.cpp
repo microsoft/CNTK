@@ -291,8 +291,10 @@ namespace CNTK
                         if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
                             LogicError("PastValue/FutureValue Function '%S': Input operand '%S' with #dynamic axes != 2 (1 sequence axis and 1 batch axis) is not supported.", AsString().c_str(), inputOperandVar.AsString().c_str());
                     }
-
-                    outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], /*inferInputDimensions =*/ true);
+                    // PastValue and FutureValue are used in RNN loops
+                    // scalar broadcasting is disabled to make sure input/output shape matches exactly
+                    bool isDelayOp = (m_op == PrimitiveOpType::PastValue || m_op == PrimitiveOpType::FutureValue);
+                    outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], /*inferInputDimensions =*/ true, /*allowScalarBroadcast*/ !isDelayOp);
                     break;
                 }
                 case PrimitiveOpType::Clip:

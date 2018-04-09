@@ -16,7 +16,6 @@ Changed current directory to D:\GitHub\CNTK\Examples\Image\Miscellaneous\CIFAR-1
 09/29/2016 21:58:44: 		Last modified date: Mon Sep 26 13:22:01 2016
 09/29/2016 21:58:44: 		Build type: Release
 09/29/2016 21:58:44: 		Build target: GPU
-09/29/2016 21:58:44: 		With 1bit-SGD: no
 09/29/2016 21:58:44: 		Math lib: mkl
 09/29/2016 21:58:44: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 09/29/2016 21:58:44: 		CUB_PATH: C:\src\cub-1.4.1

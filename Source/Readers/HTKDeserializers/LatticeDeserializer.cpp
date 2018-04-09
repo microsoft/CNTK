@@ -59,6 +59,9 @@ protected:
         if (descriptor.NumberOfSequences() == 0 || descriptor.SizeInBytes() == 0)
             LogicError("Empty chunks are not supported.");
 
+        if (m_verbosity == 1)
+            fprintf(stderr, "Reading lattice from file '%ls'\n", fileName.c_str());
+
         auto f = FileWrapper::OpenOrDie(fileName, L"rbS");
         size_t sizeInBytes = descriptor.SizeInBytes();
 

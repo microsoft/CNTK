@@ -24,7 +24,6 @@ CNTK 2.0rc2+ (HEAD 431a9e, May 17 2017 16:38:22) on 5e7fd7c6732f at 2017/05/18 0
 05/18/2017 08:54:00: 		Last modified date: Wed May 17 16:02:00 2017
 05/18/2017 08:54:00: 		Build type: release
 05/18/2017 08:54:00: 		Build target: GPU
-05/18/2017 08:54:00: 		With 1bit-SGD: no
 05/18/2017 08:54:00: 		With ASGD: yes
 05/18/2017 08:54:00: 		Math lib: mkl
 05/18/2017 08:54:00: 		CUDA_PATH: /usr/local/cuda-8.0

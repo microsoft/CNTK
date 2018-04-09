@@ -7,6 +7,8 @@ import os
 import numpy as np
 import cntk as C
 import pytest
+from cntk.ops.tests.ops_test_utils import cntk_device
+from itertools import product
 
 #############
 #helpers
@@ -58,6 +60,11 @@ def verify_one_input(model, data, tmpdir, name):
 
     o0 = model.eval({model.arguments[0]:data})
     o1 = loaded_model.eval({loaded_model.arguments[0]:data})
+
+    if (type(o0) is list):
+        o0 = o0[0]
+    if (type(o1) is list):
+        o1 = o1[0]
 
     assert np.allclose(o0, o1)
 
@@ -425,6 +432,43 @@ def test_Greater(tmpdir):
     model = C.greater([41., 42., 43.], [42., 42., 42.])
     verify_no_input(model, tmpdir, 'Greater_0')
 
+#GRU
+def test_GRU(tmpdir):
+    def MakeGRUNameFromConfig(backward, initial_state, activition):
+        model_name = 'GRU.' + activition.__name__
+        if (initial_state != 0):
+            model_name += '.initial'
+        if (backward):        
+            model_name += '.backward'
+        else:    
+            model_name += '.forward'
+        return model_name 
+
+    direction_options = [False, True]
+    activation_options = [C.tanh]
+    initial_state_options = [0]
+
+    input_dim = 2
+    cell_dim = 3
+    batch_size = 1
+    sequence_len = 5
+
+    for config in list(product(direction_options, initial_state_options, activation_options)):
+        model_filename = MakeGRUNameFromConfig(*config)
+        print(model_filename)
+        backward, initial_state, activation =  config
+    
+        x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+        GRUModel = C.layers.Recurrence(C.layers.GRU(cell_dim,     
+                                                    activation = activation),   
+                                       initial_state = initial_state,    
+                                       go_backwards=backward)(x)
+        #CLG.plot(GRUModel, filename=cntk_pdf_filename)
+        #plot_block_internals(GRUModel, 'GRU', model_filename)
+        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+        verify_one_input(GRUModel, data, tmpdir, model_filename)
+
+
 #Hardmax
 def test_Hardmax(tmpdir):
     data = np.asarray([1., 1., 2., 3.], dtype=np.float32)
@@ -460,12 +504,26 @@ def test_ImageScaler(tmpdir):
 
 #LayerNormalization
 def test_LayerNormalization(tmpdir):
+    # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when 
+    # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back 
+    # from ONNX, CNTK always uses the default eposilon value (0.00001). That's why test below has the default epsilon 
+    # value. It is not expected to pass with any other epsilon value until something changes.
     test_shapes = [(3, 5, 7), (10, ), (20, 31)]
     for shape in test_shapes:
         data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
         input_operand = C.input_variable(shape=shape)        
-        model0 = model0 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
-        verify_one_input(model0, data, tmpdir, 'Pad_0')
+        model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
+        verify_one_input(model0, data, tmpdir, 'LayerNorm_0')
+
+    # This test point tests especially with epsilon = 0, because that creates a graph with 
+    # different number of ops. However, we don't expect the numbers to match in round trip
+    # because we only support default epislon (0.00001) when loading from ONNX. Therefore,
+    # this is just a load/save test.
+    model1 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
+    filename = os.path.join(str(tmpdir), R'LayerNorm_1.onnx')
+    model1.save(filename, format=C.ModelFormat.ONNX)
+    loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    assert model1.shape == loaded_model.shape
 
 #LeakyRelu
 def test_LeakyRelu(tmpdir):
@@ -500,6 +558,59 @@ def test_LRN(tmpdir):
     x_r = C.input_variable(shape=img_shape, dtype=np.float32)
     model = C.local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
     verify_one_input(model, img, tmpdir, 'LRN_1')
+
+#LSTM
+def test_LSTM(tmpdir):
+    def CreateLSTMModel(activation, 
+                        peepholes, 
+                        self_stabilization, 
+                        cell_dim, 
+                        initial_state):  
+        return C.layers.Sequential([  
+            C.layers.Recurrence(C.layers.LSTM(cell_dim,  
+                                              use_peepholes = peepholes,  
+                                              activation = activation,     
+                                              enable_self_stabilization = self_stabilization),     
+                                initial_state = initial_state) 
+            ])
+
+
+    def MakeLSTMNameFromConfig(use_peepholes, enable_self_stabilization, initial_state, activition):
+        model_name = 'LSTM.' + activition.__name__
+        if (use_peepholes):    
+            model_name += '.peephole'
+        if(enable_self_stabilization):        
+            model_name += '.stabilize'
+        if (initial_state != 0):
+            model_name += '.initial'
+        return model_name 
+
+    # lstm attributes
+    use_peepholes_options = [False]
+    enable_self_stabilization_options = [False]
+    activation_options = [C.tanh]
+
+    #Recurrence attributes
+    initial_state_options = [0]
+
+    input_dim = 2
+    cell_dim = 3
+    batch_size = 1
+    sequence_len = 5
+
+    for config in list(product(use_peepholes_options, enable_self_stabilization_options, 
+                               initial_state_options, activation_options)):
+        model_filename = MakeLSTMNameFromConfig(*config)
+        use_peepholes, enable_self_stabilization, initial_state, activation =  config
+    
+        x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+        LSTMmodel = CreateLSTMModel(peepholes = use_peepholes,   
+                                    activation = activation,
+                                    initial_state = initial_state,
+                                    cell_dim = cell_dim,
+                                    self_stabilization = enable_self_stabilization)(x)
+        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+        verify_one_input(LSTMmodel, data, tmpdir, model_filename)
 
 #MatMul
 def test_MatMul(tmpdir):
@@ -569,13 +680,20 @@ def test_MeanVarianceNormalization(tmpdir):
     input_operand = C.input_variable(shape=shape)
 
     model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
-    verify_one_input(model0, data, tmpdir, 'Pad_0')
+    verify_one_input(model0, data, tmpdir, 'MVN_0')
 
     model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
-    verify_one_input(model1, data, tmpdir, 'Pad_1')
+    verify_one_input(model1, data, tmpdir, 'MVN_1')
 
     model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
-    verify_one_input(model2, data, tmpdir, 'Pad_2')
+    verify_one_input(model2, data, tmpdir, 'MVN_2')
+
+    # The test below tests the round trip with epsilon. We loose always the epsilon value when exporting to ONNX
+    # (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back from ONNX, CNTK
+    # always uses the default eposilon value (0.00001). That's why test below has the default epsilon value. It is 
+    # not expected to pass with any other epsilon value until something changes.
+    model3 = C.mean_variance_normalization(input_operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True) 
+    verify_one_input(model3, data, tmpdir, 'MVN_3')
 
 #Min
 def test_Min(tmpdir):
@@ -596,6 +714,25 @@ def test_Neg(tmpdir):
     data0 = np.asarray([1., -1., -2., 1.], dtype=np.float32)
     model = C.negate(data0)
     verify_no_input(model, tmpdir, 'Neg_0')
+
+#OptimizedRNNStack
+OPTIM_RNN_STACK_CONFIGS = ((True, 2, 2, 3, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
+                           (True, 4, 2, 3, 'lstm'), (False, 2, 2, 3, 'lstm'),
+                           (True, 1, 2, 3, 'rnnReLU'), (True, 4, 4, 8, 'rnnReLU'), (False, 2, 6, 8, 'rnnReLU'), 
+                           (True, 4, 2, 3, 'rnnTanh'), (False, 2, 2, 3, 'rnnTanh'), (True, 1, 2, 3, 'rnnTanh'))
+@pytest.mark.parametrize("bidirectional, num_layers, input_size, hidden_size, recurrent_op", OPTIM_RNN_STACK_CONFIGS)
+def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
+    if device_id == -1:
+        pytest.skip('Test only runs on GPU')
+    dev = cntk_device(device_id)    
+    from _cntk_py import constant_initializer
+    model_filename = 'optimized_rnn_stack_' + ('bi' if bidirectional else 'uni') + '_layers' + str(num_layers) + '_inp' + str(input_size) + '_hid' + str(hidden_size)
+    W = C.parameter((C.InferredDimension, input_size), constant_initializer(0.1), device=dev)
+    x = C.sequence.input_variable(shape=(input_size,))
+    s = np.asarray(np.random.uniform(-1, 1, (5,input_size)), dtype=np.float32)
+    f = C.optimized_rnnstack(x, W, hidden_size, num_layers, bidirectional=bidirectional, recurrent_op=recurrent_op, name='MyRnnStack')
+    f.parameters[0].value = np.reshape(np.arange(np.prod(f.parameters[0].value.shape), dtype=np.float32), f.parameters[0].value.shape)
+    verify_one_input(f, s, tmpdir, model_filename)
 
 #Pad
 def test_Pad(tmpdir):
@@ -695,6 +832,81 @@ def test_Reshape(tmpdir):
     i1 = C.input_variable(shape=(3,2))
     model = C.reshape(i1, (2,3))
     verify_one_input(model, data, tmpdir, 'Reshape_1')
+
+#RNN
+def test_GRU(tmpdir):
+    def CreatRNN(cell_dim, 
+                 activation, 
+                 initial_state,
+                 direction, 
+                 num_layers, 
+                 init=C.default_override_or(C.glorot_uniform()), 
+                 init_bias=C.default_override_or(0)):
+        if direction == 'bidirectional':  
+            return C.layers.Sequential([  
+                C.layers.For(range(num_layers), lambda i: [  
+                    (C.layers.Recurrence(C.layers.RNNStep(cell_dim, 
+                                                          activation = activation,    
+                                                          init = init,   
+                                                          init_bias = init_bias),  
+                                initial_state = initial_state,  
+                                return_full_state = False, go_backwards=False),   
+                     C.layers.Recurrence(C.layers.RNNStep(cell_dim, activation = activation,   
+                                    init = init,  
+                                    init_bias = init_bias), 
+                                initial_state = initial_state,  
+                                return_full_state = False, go_backwards=True)),   
+                    C.splice])])
+        else:
+            go_backward = False if direction == 'forward' else True
+            return C.layers.Sequential([ 
+                C.layers.For(range(num_layers), lambda i: [ 
+                    C.layers.Recurrence(C.layers.RNNStep(cell_dim, 
+                                                         activation = activation,   
+                                    init = init,  
+                                    init_bias = init_bias),  
+                                initial_state = initial_state,  
+                                return_full_state = False, go_backwards=go_backward)])])
+
+    def MakeRNNNameFromConfig(direction, num_layers, initial_state, activition):
+        model_name = 'GRU.' + direction + '.'
+
+        if num_layers == 1:
+            model_name += 'one_layer.'
+        else:
+            assert (num_layers == 2), "needs 1 or 2 layers!"
+            model_name += 'two_layer.'
+
+        if (initial_state != 0):
+            model_name += 'initial.'
+        
+        model_name += activition.__name__
+        return model_name 
+
+    direction_options = ['forward', 'reverse', 'bidirectional']
+    num_layers_options = [1, 2]
+    initial_state_options = [0]
+    activation_options = [C.tanh, C.relu, C.sigmoid]
+
+    input_dim = 2
+    hidden_dim = 3
+    batch_size = 1
+    sequence_len = 5
+
+    for config in list(product(direction_options, num_layers_options, initial_state_options, activation_options)):
+        model_filename = MakeRNNNameFromConfig(*config)
+        print(model_filename)
+        direction, num_layers, initial_state, activation = config
+    
+        x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+        RNNModel = CreatRNN(
+            hidden_dim, 
+            activation,  
+            initial_state, 
+            direction, 
+            num_layers)(x)
+        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+        verify_one_input(RNNModel, data, tmpdir, model_filename)
 
 #Selu
 def test_Selu(tmpdir):

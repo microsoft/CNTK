@@ -14,6 +14,7 @@ RUN=1
 CLEAN_AFTER=0
 CLEAN_BEFORE=0
 RANDOM_OUTPUT=0
+BUILD_VERSION=
 CODE_COVERAGE=no
 FLAVORS="debug:release"
 TARGETS="cpu:gpu"
@@ -40,6 +41,7 @@ case $key in
     echo "  -cc|--code-coverage - build with support for code coverage (gcov)"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
     echo "  -cba|--clean-build-after - clean up the enlistment binaries after build"
+    echo "  -bv|--build-version <build_version> - build using given version assuming public availablity (default hard-coded in configure file)"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
     echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
     echo "  -x|--extra-configure-options <options> - extra options to pass to configure"
@@ -67,6 +69,10 @@ case $key in
     -cba|--clean-build-after)
     CLEAN_AFTER=1
     BUILD=1
+    ;;
+    -bv|--build-version)
+    BUILD_VERSION="${2,,}"
+    shift # past argument
     ;;
     -f|--flavors)
     FLAVORS="${2,,}"
@@ -134,11 +140,6 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
     if [[ $VS140COMNTOOLS == "" ]]; then
         echo "============ Visual Studio 14.0 environment not properly setup or VS not installed ============"
         echo "============ Please find and run the appropriate vcvarsall.bat script ============"
-        exit 1
-    fi
-
-    if [[ "${TARGETS,,}" =~ "1bitsgd" && "${TARGETS,,}" =~ "gpu" ]]; then
-        echo "============ Cannot specify both GPU and 1bit-SGD as targets, please choose one ============"
         exit 1
     fi
 
@@ -224,32 +225,24 @@ if [[ $BUILD == 1 ]]; then
             fi
 
             if [[ $OS == "Windows_NT" ]]; then
-                OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=
                 if [[ $TARGET == "cpu" ]]; then
                     CONFIGURATION=${FLAVOR}_CpuOnly
                 else
                     CONFIGURATION=${FLAVOR}
-                    if [[ $TARGET == "1bitsgd" ]]; then
-                        OneBitSGDOPT=/property:CNTK_ENABLE_1BitSGD=true
-                    fi
                 fi
 
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     msbuild.exe /nologo /verbosity:m /property:Configuration=$CONFIGURATION /t:Clean 1>&6 2>&7 || exit $?
                 fi
-                msbuild.exe /nologo /verbosity:m /m /property:Configuration=$CONFIGURATION $OneBitSGDOPT 1>&6 2>&7 || exit $?
+                msbuild.exe /nologo /verbosity:m /m /property:Configuration=$CONFIGURATION 1>&6 2>&7 || exit $?
             else
-                OneBitSGDOPT=no
                 BUILD_DIR=build/$TARGET/$FLAVOR
                 if [[ $TARGET == "cpu" ]]; then
                     CUDAOPT=no
                 else
                     CUDAOPT=yes
-                    if [[ $TARGET == "1bitsgd" ]]; then
-                        OneBitSGDOPT=yes
-                    fi
                 fi
-                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT $EXTRA_CONFIGURE_OPTIONS
+                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --with-build-version=$BUILD_VERSION $EXTRA_CONFIGURE_OPTIONS
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi

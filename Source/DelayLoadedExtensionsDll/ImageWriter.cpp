@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// ImageWriter.cpp : Defines the exported functions for the ImageWriter DLL.
+// ImageWriter.cpp : Defines the exported functions for the DelayLoadedExtensions DLL.
 //
 
 #define IMAGEWRITER_EXPORTS // creating the exports here

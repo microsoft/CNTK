@@ -9,10 +9,10 @@
       <Filter>GPU</Filter>
     </ClCompile>
     <ClCompile Include="MatrixQuantizerCPU.cpp">
-      <Filter>CPU\1bitSGD</Filter>
+      <Filter>CPU\GPU</Filter>
     </ClCompile>
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp">
-      <Filter>GPU\1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClCompile>
     <ClCompile Include="TensorView.cpp">
       <Filter>Tensors</Filter>
@@ -27,10 +27,10 @@
       <Filter>Misc</Filter>
     </ClCompile>
     <ClCompile Include="QuantizedMatrix.cpp">
-      <Filter>1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClCompile>
     <ClCompile Include="MatrixQuantizerImpl.cpp">
-      <Filter>1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClCompile>
     <ClCompile Include="BatchNormalizationEngine.cpp">
       <Filter>BatchNormalization</Filter>
@@ -78,14 +78,14 @@
       <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="MatrixQuantizerGPU.h">
-      <Filter>GPU\1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClInclude>
     <ClInclude Include="MatrixQuantizerCPU.h">
-      <Filter>CPU\1bitSGD</Filter>
+      <Filter>CPU\GPU</Filter>
     </ClInclude>
     <ClInclude Include="MemAllocator.h" />
     <ClInclude Include="CUDAPageLockedMemAllocator.h">
-      <Filter>GPU\1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClInclude>
     <ClInclude Include="TensorView.h">
       <Filter>Tensors</Filter>
@@ -109,10 +109,10 @@
       <Filter>Misc</Filter>
     </ClInclude>
     <ClInclude Include="QuantizedMatrix.h">
-      <Filter>1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClInclude>
     <ClInclude Include="MatrixQuantizerImpl.h">
-      <Filter>1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClInclude>
     <ClInclude Include="ConvolveGeometry.h">
       <Filter>Convolution</Filter>
@@ -170,10 +170,7 @@
     <Filter Include="GPU">
       <UniqueIdentifier>{cc9a219d-d8ab-484a-b253-fd2a29ad7c7c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GPU\1bitSGD">
-      <UniqueIdentifier>{cc9ad68a-5ca1-40ad-9a60-4e55ef3d802b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="CPU\1bitSGD">
+    <Filter Include="CPU\GPU">
       <UniqueIdentifier>{af1f6489-f531-4338-a4c5-ebe52b884e5c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Tensors">
@@ -184,9 +181,6 @@
     </Filter>
     <Filter Include="Convolution">
       <UniqueIdentifier>{3a49e94d-14ee-4ca1-a56e-a1472206a076}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="1bitSGD">
-      <UniqueIdentifier>{546cacbd-253e-485b-8c8c-8b9ee0e2f631}</UniqueIdentifier>
     </Filter>
     <Filter Include="BatchNormalization">
       <UniqueIdentifier>{8f982dac-298d-4e48-b060-8e6cba5ff554}</UniqueIdentifier>

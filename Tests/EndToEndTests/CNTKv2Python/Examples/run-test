@@ -13,7 +13,7 @@ python -c "import pytest; print('PyTest: %s'%pytest.__version__)" || exit 1
 ERRORS=0
 # Note: keep pattern below in sync with pytest.ini
 for t in *_test.py; do
-  py.test --verbose --deviceid $TEST_DEVICE --is1bitsgd $TEST_1BIT_SGD "$t"
+  py.test --verbose --deviceid $TEST_DEVICE "$t"
   # Allow exit 0 (all run successfully) and 5 (no test to run)
   (( $? == 0 || $? == 5 )) || ((ERRORS++))
 done

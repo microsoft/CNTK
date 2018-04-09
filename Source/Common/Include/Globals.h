@@ -30,6 +30,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void SetNodeTiming(bool enable) { m_enableNodeTiming = enable; }
         static bool ShouldEnableNodeTiming() { return m_enableNodeTiming; }
+
+        static void SetMPIPackThreshold(std::size_t packThreholdInBytes) { m_mpiPackThresholdInBytes = packThreholdInBytes; }
+        static std::size_t GetMPIPackThreshold() { return m_mpiPackThresholdInBytes; }
     private:
         static std::atomic<bool> m_forceDeterministicAlgorithms;
         // The global flag to enable matrices values in forward and backward prop
@@ -37,5 +40,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static std::atomic<bool> m_forceConstantRandomSeed;
         static std::atomic<bool> m_optimizeGradientAccumulation;
         static std::atomic<bool> m_enableNodeTiming;
+        static std::atomic<std::size_t> m_mpiPackThresholdInBytes;
     };
 }}}

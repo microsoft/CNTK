@@ -75,12 +75,12 @@ namespace CNTK
 #else
     QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool, bool, size_t)
     {
-        LogicError("Quantized MPI Communicator is not supported for this build. The 1BitSGD build is needed, see CNTK wiki for details.");
+        LogicError("Quantized MPI Communicator is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
     }
 
     DistributedLearnerPtr CreateQuantizedDataParallelDistributedLearner(QuantizedDistributedCommunicatorPtr, LearnerPtr, size_t, bool)
     {
-        LogicError("Quantized Distributed Trainer is not supported for this build. The 1BitSGD build is needed, see CNTK wiki for details.");
+        LogicError("Quantized Distributed Trainer is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
     }
 
     DistributedLearnerPtr CreateBlockMomentumDistributedLearner(
@@ -92,7 +92,7 @@ namespace CNTK
         bool /*resetSGDMomentumAfterAggregation*/,
         double /*blockLearningRate*/)
     {
-        LogicError("Block Momentum Distributed Trainer is not supported for this build. The 1BitSGD build is needed, see CNTK wiki for details.");
+        LogicError("Block Momentum Distributed Trainer is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
     }
 
     DistributedLearnerPtr CreateBlockMomentumDistributedLearner(
@@ -105,7 +105,7 @@ namespace CNTK
         bool /*resetSGDMomentumAfterAggregation*/,
         double /*blockLearningRate*/)
     {
-        LogicError("Block Momentum Distributed Trainer is not supported for this build. The 1BitSGD build is needed, see CNTK wiki for details.");
+        LogicError("Block Momentum Distributed Trainer is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
     }
 #endif
 

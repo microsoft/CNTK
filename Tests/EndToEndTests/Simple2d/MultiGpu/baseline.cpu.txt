@@ -16,7 +16,6 @@ requestnodes [MPIWrapper]: using 1 out of 1 MPI nodes on a single host (1 reques
 12/15/2016 08:50:42: 		Last modified date: Wed Dec 14 12:53:26 2016
 12/15/2016 08:50:42: 		Build type: Release
 12/15/2016 08:50:42: 		Build target: GPU
-12/15/2016 08:50:42: 		With 1bit-SGD: yes
 12/15/2016 08:50:42: 		With ASGD: yes
 12/15/2016 08:50:42: 		Math lib: mkl
 12/15/2016 08:50:42: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0

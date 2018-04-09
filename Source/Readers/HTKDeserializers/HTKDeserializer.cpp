@@ -547,6 +547,10 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
     const UtteranceDescription* utterance = chunkInfo.GetUtterance(utteranceIndex);
     auto utteranceFrames = chunkInfo.GetUtteranceFrames(utteranceIndex);
 
+    if (m_verbosity == 2) 
+    {
+        fprintf(stderr, "HTKDeserializer::GetSequenceById: Reading features for utterance [%u,%u]\n", utterance->GetPath().s, utterance->GetPath().e);
+    }
     // wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors()
     MatrixAsVectorOfVectors utteranceFramesWrapper(utteranceFrames);
 

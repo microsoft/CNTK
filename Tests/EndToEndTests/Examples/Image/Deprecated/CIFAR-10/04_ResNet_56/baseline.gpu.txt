@@ -16,7 +16,6 @@ Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161
 12/15/2016 08:29:38: 		Last modified date: Wed Dec 14 12:53:20 2016
 12/15/2016 08:29:38: 		Build type: Release
 12/15/2016 08:29:38: 		Build target: GPU
-12/15/2016 08:29:38: 		With 1bit-SGD: no
 12/15/2016 08:29:38: 		With ASGD: yes
 12/15/2016 08:29:38: 		Math lib: mkl
 12/15/2016 08:29:38: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0

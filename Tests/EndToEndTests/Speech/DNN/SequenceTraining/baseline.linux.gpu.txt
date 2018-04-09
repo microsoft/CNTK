@@ -3,10 +3,10 @@ CPU info:
     Hardware threads: 12
     Total Memory: 57691188 kB
 -------------------------------------------------------------------
-=== Running /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/SequenceTraining/cntk_sequence.cntk currentDirectory=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData RunDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu DataDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/SequenceTraining OutputDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu DeviceId=0 timestamping=true
+=== Running /home/ubuntu/workspace/build/gpu/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/SequenceTraining/cntk_sequence.cntk currentDirectory=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData RunDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu DataDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/SequenceTraining OutputDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu DeviceId=0 timestamping=true
 CNTK 2.3.1+ (HEAD b7b3e4, Jan 17 2018 02:42:45) at 2018/01/17 06:13:45
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/SequenceTraining/cntk_sequence.cntk  currentDirectory=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData  RunDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu  DataDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/SequenceTraining  OutputDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu  DeviceId=0  timestamping=true
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/SequenceTraining/cntk_sequence.cntk  currentDirectory=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData  RunDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu  DataDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/DNN/SequenceTraining  OutputDir=/tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu  DeviceId=0  timestamping=true
 Changed current directory to /tmp/cntk-test-20180117061317.742222/Speech/DNN_SequenceTraining@release_gpu/TestData
 01/17/2018 06:13:45: -------------------------------------------------------------------
 01/17/2018 06:13:45: Build info: 
@@ -15,7 +15,6 @@ Changed current directory to /tmp/cntk-test-20180117061317.742222/Speech/DNN_Seq
 01/17/2018 06:13:45: 		Last modified date: Wed Jan 17 02:34:37 2018
 01/17/2018 06:13:45: 		Build type: release
 01/17/2018 06:13:45: 		Build target: GPU
-01/17/2018 06:13:45: 		With 1bit-SGD: yes
 01/17/2018 06:13:45: 		With ASGD: yes
 01/17/2018 06:13:45: 		Math lib: mkl
 01/17/2018 06:13:45: 		CUDA version: 9.0.0

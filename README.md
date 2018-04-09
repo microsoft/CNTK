@@ -2,9 +2,81 @@
 
 | **Windows** | **Linux** |
 |-------------|---------------|
-| ![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/126/badge) | ![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/127/badge) |
+| [![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/126/badge)](https://cntk.ai/nightly-windows.html) | [![Build Status](https://aiinfra.visualstudio.com/_apis/public/build/definitions/a95b3960-90bb-440b-bd18-d3ec5d1cf8c3/127/badge)](https://cntk.ai/nightly-linux.html) |
 
 ## Latest news
+
+***2018-03-15.*** CNTK 2.5
+
+Change profiler details output format to be chrome://tracing
+
+Enable per-node timing. Working example [here](/Examples/Image/Classification/MLP/Python/SimpleMNIST.py)
+* per-node timing creates items in profiler details when profiler is enabled.
+* usage in Python:
+```
+import cntk as C
+C.debugging.debug.set_node_timing(True)
+C.debugging.start_profiler() # optional
+C.debugging.enable_profiler() # optional
+#<trainer|evaluator|function> executions
+<trainer|evaluator|function>.print_node_timing()
+C.debugging.stop_profiler()
+```
+
+Example profiler details view in chrome://tracing
+![ProfilerDetailWithNodeTiming](https://cntk.ai/Images/ProfilerDetailWithNodeTiming.jpg)
+
+CPU inference performance improvements using MKL
+* Accelerates some common tensor ops in Intel CPU inference for float32, especially for fully connected networks
+* Can be turned on/off by cntk.cntk_py.enable_cpueval_optimization()/cntk.cntk_py.disable_cpueval_optimization()
+
+1BitSGD incorporated into CNTK
+* 1BitSGD source code is now available with CNTK license (MIT license) under Source/1BitSGD/
+* 1bitsgd build target was merged into existing gpu target
+
+New loss function: hierarchical softmax
+* Thanks @yaochengji for the contribution!
+
+Distributed Training with Mulitple Learners
+* Trainer now accepts multiple parameter learners for distributed training. With this change, different parameters of a network can be learned by different learners in a single training session. This also facilitates distributed training for GANs. For more information, please refer to the [Basic_GAN_Distributed.py](/Examples/Image/GAN/Basic_GAN_Distributed.py) and the [cntk.learners.distributed_multi_learner_test.py](/bindings/python/cntk/learners/tests/distributed_multi_learner_test.py)
+
+Operators
+* Added MeanVarianceNormalization operator. 
+
+Bug fixes
+* Fixed convergence issue in Tutorial 201B
+* Fixed pooling/unpooling to support free dimension for sequences
+* Fixed crash in CNTKBinaryFormat deserializer when crossing sweep boundary
+* Fixed shape inference bug in RNN step function for scalar broadcasting
+* Fixed a build bug when mpi=no
+* Improved distributed training aggregation speed by increasing packing threshold, and expose the knob in V2
+* Fixed a memory leak in MKL layout
+* Fixed a bug in cntk.convert API in misc.converter.py, which prevents converting complex networks.
+
+ONNX
+* Updates
+    * CNTK exported ONNX models are now ONNX.checker compliant. 
+    * Added ONNX support for CNTK’s OptimizedRNNStack operator (LSTM only).
+    * Added support for LSTM and GRU operators
+    * Added support for experimental ONNX op MeanVarianceNormalization.
+    * Added support for experimental ONNX op Identity.
+    * Added support for exporting CNTK’s LayerNormalization layer using ONNX MeanVarianceNormalization op.
+* Bug or minor fixes:
+    * Axis attribute is optional in CNTK’s ONNX Concat operator.
+    * Bug fix in ONNX broadcasting for scalars.
+    * Bug fix in ONNX ConvTranspose operator. 
+    * Backward compatibility bug fix in LeakyReLu (argument ‘alpha’ reverted to type double).
+
+Misc
+* Added a new API ``find_by_uid()`` under ``cntk.logging.graph``. 
+
+***2018-02-28.*** CNTK supports nightly build
+
+If you prefer to use latest CNTK bits from master, use one of the CNTK nightly package.
+* [Nightly packages for Windows](https://cntk.ai/nightly-windows.html)
+* [Nightly packages for Linux](https://cntk.ai/nightly-linux.html)
+
+Alternatively, you can also click corresponding build badge to land to nightly build page.
 
 ***2018-01-31.* CNTK 2.4**
 
@@ -103,12 +175,6 @@ For Windows GPU:
 * Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp35-cp35m-win_amd64.whl
 * Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp36-cp36m-win_amd64.whl
 
-For Windows GPU-1bit-SGD:
-* Python 2.7: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp27-cp27m-win_amd64.whl
-* Python 3.4: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp34-cp34m-win_amd64.whl
-* Python 3.5: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp35-cp35m-win_amd64.whl
-* Python 3.6: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp36-cp36m-win_amd64.whl
-
 Linux CPU-Only:
 * Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp27-cp27mu-linux_x86_64.whl
 * Python 3.4: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3.1-cp34-cp34m-linux_x86_64.whl
@@ -121,101 +187,11 @@ Linux GPU:
 * Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp35-cp35m-linux_x86_64.whl
 * Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3.1-cp36-cp36m-linux_x86_64.whl
 
-Linux GPU-1bit-SGD:
-* Python 2.7: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp27-cp27mu-linux_x86_64.whl
-* Python 3.4: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp34-cp34m-linux_x86_64.whl
-* Python 3.5: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp35-cp35m-linux_x86_64.whl
-* Python 3.6: https://cntk.ai/PythonWheel/GPU-1bit-SGD/cntk-2.3.1-cp36-cp36m-linux_x86_64.whl
-
 You can also try one of the below NuGet package.
 * [CNTK, CPU-Only Build](https://www.nuget.org/packages/CNTK.CPUOnly/2.3.1)
 * [CNTK, GPU Build](https://www.nuget.org/packages/CNTK.GPU/2.3.1)
 * [CNTK, UWP CPU-Only Build](http://www.nuget.org/packages/CNTK.UWP.CPUOnly/2.3.1)
 * [CNTK CPU-only Model Evaluation Libraries (MKL based)](http://www.nuget.org/packages/Microsoft.Research.CNTK.CpuEval-mkl/2.3.1)
-
-
-***2017-11-22.* CNTK 2.3**
-Release of Cognitive Toolkit v.2.3.
-
-Highlights:
-* Better ONNX support.
-* Switched to NCCL2 for better performance in distributed training.
-* Improved C# API.
-* OpenCV is not required to install CNTK, it is only required for Tensorboard Image feature and image reader.
-* Various performance improvement.
-* Added Network Optimization API.
-* Faster Adadelta for sparse.
-
-See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_3_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-11-10.*** Switch from CNTKCustomMKL to Intel MKLML. MKLML is released with [Intel MKL-DNN](https://github.com/01org/mkl-dnn/releases) as a trimmed version of Intel MKL for MKL-DNN. To set it up:
-
-On Linux:
-
-    sudo mkdir /usr/local/mklml
-    sudo wget https://github.com/01org/mkl-dnn/releases/download/v0.11/mklml_lnx_2018.0.1.20171007.tgz
-    sudo tar -xzf mklml_lnx_2018.0.1.20171007.tgz -C /usr/local/mklml
-
-On Windows:
-
-    Create a directory on your machine to hold MKLML, e.g. mkdir c:\local\mklml
-    Download the file [mklml_win_2018.0.1.20171007.zip](https://github.com/01org/mkl-dnn/releases/download/v0.11/mklml_win_2018.0.1.20171007.zip).
-    Unzip it into your MKLML path, creating a versioned sub directory within.
-    Set the environment variable `MKLML_PATH` to the versioned sub directory, e.g. setx MKLML_PATH c:\local\mklml\mklml_win_2018.0.1.20171007
-
-***2017-10-10.*** Preview: CNTK ONNX Format Support
-Update CNTK to support load and save ONNX format from https://github.com/onnx/onnx, please try it and provide feedback. We only support ONNX OPs. This is a preview, and we expect a breaking change in the future.
-
-* Support loading a model saved in ONNX format.
-* Support saving a model in ONNX format, not all CNTK models are currently supported. Only a subset of CNTK models are supported and no RNN. We will add more in the future.
-
-To load an ONNX model, simply specify the format parameter for the load function.
-```
-import cntk as C
-
-C.Function.load(<path of your ONNX model>, format=C.ModelFormat.ONNX)
-```
-
-To save a CNTK graph as ONNX model, simply specify the format in the save function.
-
-```
-import cntk as C
-
-x = C.input_variable(<input shape>)
-z = create_model(x)
-z.save(<path of where to save your ONNX model>, format=C.ModelFormat.ONNX)
-```
-
-If you want to try ONNX, you can build from master or `pip install` one of the below wheel that matches you Python environment.
-
-For Windows CPU-Only:
-* Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp27-cp27m-win_amd64.whl
-* Python 3.4: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp34-cp34m-win_amd64.whl
-* Python 3.5: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp35-cp35m-win_amd64.whl
-* Python 3.6: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp36-cp36m-win_amd64.whl
-
-For Windows GPU:
-* Python 2.7: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp27-cp27m-win_amd64.whl
-* Python 3.4: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp34-cp34m-win_amd64.whl
-* Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp35-cp35m-win_amd64.whl
-* Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp36-cp36m-win_amd64.whl
-
-Linux CPU-Only:
-* Python 2.7: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp27-cp27mu-linux_x86_64.whl
-* Python 3.4: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp34-cp34m-linux_x86_64.whl
-* Python 3.5: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp35-cp35m-linux_x86_64.whl
-* Python 3.6: https://cntk.ai/PythonWheel/CPU-Only/cntk-2.3-Pre-cp36-cp36m-linux_x86_64.whl
-
-Linux GPU:
-* Python 2.7: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp27-cp27mu-linux_x86_64.whl
-* Python 3.4: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp34-cp34m-linux_x86_64.whl
-* Python 3.5: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp35-cp35m-linux_x86_64.whl
-* Python 3.6: https://cntk.ai/PythonWheel/GPU/cntk-2.3-Pre-cp36-cp36m-linux_x86_64.whl
-
-
-See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_2_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
 See [all news](https://docs.microsoft.com/en-us/cognitive-toolkit/news)
 
@@ -232,6 +208,11 @@ The Microsoft Cognitive Toolkit (https://cntk.ai), is a unified deep-learning to
 * [Setup CNTK development environment](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-development-environment)
     * Windows [Script-driven](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-with-script-on-windows) / [Manual](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-windows)
     * Linux [Manual](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-linux)
+
+### Nightly packages
+If you prefer to use latest CNTK bits from master, use one of the CNTK nightly package.
+* [Nightly packages for Windows](https://cntk.ai/nightly-windows.html)
+* [Nightly packages for Linux](https://cntk.ai/nightly-linux.html)
 
 ## Learning CNTK
 
@@ -250,7 +231,6 @@ You may learn more about CNTK with the following resources:
 
 ## More information
 
-* [Reasons to switch from TensorFlow to CNTK](https://docs.microsoft.com/en-us/cognitive-toolkit/reasons-to-switch-from-tensorflow-to-cntk)
 * [Contribute to CNTK](https://docs.microsoft.com/en-us/cognitive-toolkit/Contributing-to-CNTK)
 * [FAQ](https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-FAQ)
 * [Feedback](https://docs.microsoft.com/en-us/cognitive-toolkit/Feedback-Channels)

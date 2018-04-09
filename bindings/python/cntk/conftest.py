@@ -15,8 +15,6 @@ collect_ignore = ["contrib/crosstalk/crosstalk_tensorflow.py"]
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],
                      help="list of device ids to pass to test functions")
-    parser.addoption("--is1bitsgd", default="0",
-                     help="whether 1-bit SGD is used")
 
 DEVICE_MAP = {
     'auto': 'auto',
@@ -42,19 +40,6 @@ def pytest_generate_tests(metafunc):
                                    "use integer values or 'auto'".format(elem))
 
         metafunc.parametrize("device_id", devices)
-
-    if 'is_1bit_sgd' in metafunc.fixturenames:
-        if (len(metafunc.config.option.is1bitsgd)) > 1:
-            del metafunc.config.option.is1bitsgd[0]
-
-        is1bitsgd = set()
-        for elem in metafunc.config.option.is1bitsgd:
-            if elem == "0" or elem == "1":
-                is1bitsgd.add(int(elem))
-            else:
-                raise RuntimeError("invalid is1bitsgd value {}, only 0 or 1 allowed".format(elem))
-
-        metafunc.parametrize("is_1bit_sgd", is1bitsgd)
 
 #
 # Adding the namespaces so that doctests work
