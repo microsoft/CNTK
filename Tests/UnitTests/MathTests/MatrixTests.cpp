@@ -308,7 +308,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
     c_ns1.SetDiagonalValue(d);
     foreach_coord(i, j, c_ns1)
     {
-        if (i == j)
+        if (i == j && i <= 4)
             BOOST_CHECK_EQUAL(val1, c_ns1(i, j));
         else
             BOOST_CHECK_EQUAL(0, c_ns1(i, j));
@@ -332,12 +332,11 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
     c_ns2.SetDiagonalValue(d);
     foreach_coord(i, j, c_ns2)
     {
-        if (i == j)
+        if (i == j && i <= 4)
             BOOST_CHECK_EQUAL(val1, c_ns2(i, j));
         else
             BOOST_CHECK_EQUAL(0, c_ns2(i, j));
     }
-
 
 
     SingleMatrix c1(5, 5, c_deviceIdZero);
