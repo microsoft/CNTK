@@ -1310,7 +1310,7 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
     if (vector.GetNumElements() == 1) // reduce to simple form
         SetDiagonalValue(vector.Data()[0]);
 
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
+    else if (vector.GetNumRows() != diag_size && vector.GetNumCols() != diag_size)
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
