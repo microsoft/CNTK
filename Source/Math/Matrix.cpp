@@ -1506,7 +1506,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 SetDiagonalValue(vector.m_GPUMatrix->Get00Element()) // BUGBUG: efficiency
                                 );
     }
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != diag_size)
+    else if (vector.GetNumRows() != diag_size && vector.GetNumCols() != diag_size)
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
