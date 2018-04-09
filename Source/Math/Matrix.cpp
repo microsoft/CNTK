@@ -1473,9 +1473,6 @@ void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
     if (IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
                             m_CPUMatrix->SetDiagonalValue(v),
@@ -1487,9 +1484,6 @@ void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
 template <class ElemType>
 void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
 {
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: Input vector must be a vector.");
 
@@ -1500,7 +1494,8 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
         return;
 
     DecideAndMoveToRightDevice(*this, vector);
-
+    //for non-squared matrix, the major diagonal size is defined by the row or col with smaller dimension
+    size_t diag_size = GetNumRows() < GetNumCols() ? GetNumRows() : GetNumCols();
     if (vector.GetNumElements() == 1) // reduce to simple form
     {
         DISPATCH_MATRIX_ON_FLAG(&vector,
@@ -1511,7 +1506,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 SetDiagonalValue(vector.m_GPUMatrix->Get00Element()) // BUGBUG: efficiency
                                 );
     }
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
+    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != diag_size)
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
