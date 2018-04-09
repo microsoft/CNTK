@@ -1494,8 +1494,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
         return;
 
     DecideAndMoveToRightDevice(*this, vector);
-    //for non-squared matrix, the major diagonal size is defined by the row or col with smaller dimension
-    size_t diag_size = GetNumRows() < GetNumCols() ? GetNumRows() : GetNumCols();
+
     if (vector.GetNumElements() == 1) // reduce to simple form
     {
         DISPATCH_MATRIX_ON_FLAG(&vector,
@@ -1506,7 +1505,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 SetDiagonalValue(vector.m_GPUMatrix->Get00Element()) // BUGBUG: efficiency
                                 );
     }
-    else if (vector.GetNumRows() != diag_size && vector.GetNumCols() != diag_size)
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {

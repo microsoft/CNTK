@@ -1301,20 +1301,17 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
     if (IsEmpty() || vector.IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    //for non-squared matrix, the major diagonal size is defined by the row or col with smaller dimension
-    diag_size = GetNumRows() < GetNumCols() ? GetNumRows() : GetNumCols();
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: input vector must be a vector.");
 
     if (vector.GetNumElements() == 1) // reduce to simple form
         SetDiagonalValue(vector.Data()[0]);
 
-    else if (vector.GetNumRows() != diag_size && vector.GetNumCols() != diag_size)
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
-        CUDA_LONG N = (CUDA_LONG) diag_size;
+        CUDA_LONG N = (CUDA_LONG)GetDiagSize();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
         SyncGuard syncGuard;

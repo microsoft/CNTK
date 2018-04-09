@@ -928,11 +928,8 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
 template <class ElemType>
 void CPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
-    //for non-squared matrix, the major diagonal size is defined by the row or col with smaller dimension
-    size_t diag_size = GetNumRows() < GetNumCols() ? GetNumRows() : GetNumCols();
-
     auto& us = *this;
-    long m = (long) diag_size;
+    long m = (long) GetDiagSize();
 #pragma omp parallel for
     // four-way unrolling
     for (long i = 0; i < (m & ~3); i += 4)
@@ -955,21 +952,18 @@ void CPUMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vector)
     if (IsEmpty() || vector.IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    //for non-squared matrix, the major diagonal size is defined by the row or col with smaller dimension
-    size_t diag_size = GetNumRows() < GetNumCols() ? GetNumRows() : GetNumCols();
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: input vector must be a vector.");
 
     if (vector.GetNumElements() == 1) // reduce to simple form
         SetDiagonalValue(vector(0, 0));
-    else if (vector.GetNumRows() != diag_size && vector.GetNumCols() != diag_size)
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
         auto& us = *this;
 
-        long m = (long) diag_size;
+        long m = (long) GetDiagSize();
         if (vector.GetNumRows() == 1) // row vector
         {
 #pragma omp parallel for
