@@ -762,7 +762,7 @@ namespace CNTK
 
                 if (i < operands.size() - 1)
                 {
-                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasUnboundDimension())
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && (!mainOperandShape.HasUnboundDimension() || (spatial && mainOperandShape[mainOperandShape.Rank() - 1] != NDShape::FreeDimension)))
                     {
                         size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;
