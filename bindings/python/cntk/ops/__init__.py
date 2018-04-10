@@ -2186,7 +2186,8 @@ def zeros_like(x, name=''):
 @typemap
 def eye_like(x, name=''):
     '''
-    Creates a tensor with diagonal set to 1s and with the same shape and dynamic axes as ``x``:
+    Creates a matrix with diagonal set to 1s and with the same shape and dynamic axes as ``x``. To be a matrix,
+     ``x`` must have exactly two axes (counting both dynamic and static axes).
 
     Example:
         >>> x0 = np.arange(24).reshape((2, 3, 4)).astype('f')
@@ -2208,6 +2209,8 @@ def eye_like(x, name=''):
     '''
     from cntk.cntk_py import eye_like
     x = sanitize_input(x)
+    if len(x.dynamic_axes) + len(x.shape) > 2:
+        raise(ValueError('eye_like operand must have exactly two axes (counting both dynamic and static axes) however "%s" is provided as the operand'%recurrent_op))
     return eye_like(x, name)
 
 
