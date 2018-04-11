@@ -57,6 +57,7 @@ static const FixedEventDesc c_fixedEvtDesc[profilerEvtMax] = {
     { "Epoch", profilerEvtTime, false },                            // profilerEvtMainEpoch
     { "_Minibatch Iteration", profilerEvtTime, false },             // profilerEvtMainMinibatch
     { "__Get Minibatch", profilerEvtTime, true },                   // profilerEvtMainGetMinibatch
+    { "__Forward", profilerEvtTime, true },                         // profilerEvtMainForward
     { "__Forward + Backward", profilerEvtTime, true },              // profilerEvtMainFB
     { "__Gradient Aggregation", profilerEvtTime, true },            // profilerEvtMainGradient
     { "__Weight Update", profilerEvtTime, true },                   // profilerEvtMainWeights
@@ -108,6 +109,9 @@ struct ProfilerState
     unsigned long long      customEventOffset;           // Offset to current place in buffer
     unique_ptr<char[]>      customEventBuffer;           // Pointer to custom event buffer
     long long               startClock;
+
+    bool                    disableGradientAgg;             //Disable SGD GradientAgg for benchmark
+    bool                    disableWeights;                 //Disable SGD Weight Update for benchmark
 };
 
 
@@ -167,6 +171,8 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
     g_profilerState->syncGpu = syncGpu;
     g_profilerState->enabled = false;
 
+    g_profilerState->disableGradientAgg = false;
+    g_profilerState->disableWeights = false;
     if (_wmkdir(g_profilerState->profilerDir.c_str()) == -1 && errno != EEXIST)
     {
         RuntimeError("Error: ProfilerInit: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
@@ -585,7 +591,29 @@ void ProfilerGenerateDetailFile(const std::wstring& fileName)
     fclose(f);
 }
 
+//
+// SGD enabled GradientAgg
+//
+bool PERF_PROFILER_API DisabledGradientAgg()
+{
+    if (g_profilerState != nullptr)
+    {
+        return g_profilerState->disableGradientAgg;
+    }
+    return false;
+}
 
+//
+// SGD enabled Weight Update
+//
+bool PERF_PROFILER_API DisabledWeightsUpdate()
+{
+    if (g_profilerState != nullptr)
+    {
+        return g_profilerState->disableWeights;
+    }
+    return false;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scoped helpers.
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -594,7 +622,20 @@ void ProfilerContext::Init(const std::wstring& profilerDir, const unsigned long 
 {
     ProfilerInit(profilerDir, customEventBufferBytes, logSuffix, syncGpu);
 }
-
+void ProfilerContext::DisableGradientAgg()
+{
+    if (g_profilerState != nullptr)
+    {
+        g_profilerState->disableGradientAgg = true;
+    }
+}
+void ProfilerContext::DisableUpdateWeights()
+{
+    if (g_profilerState != nullptr)
+    {
+        g_profilerState->disableWeights = true;
+    }
+}
 ProfilerContext::~ProfilerContext()
 {
     ProfilerClose();

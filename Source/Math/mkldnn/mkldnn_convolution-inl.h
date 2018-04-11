@@ -174,7 +174,8 @@ private:
     void InitForward(bool inferenceOnly)
     {
         auto propagation = (inferenceOnly) ? mkldnn::prop_kind::forward_scoring : mkldnn::prop_kind::forward_training;
-
+        if (m_relu)
+            propagation = mkldnn::prop_kind::forward_inference;
         int32_t g = std::max(this->group_, 1);
         int32_t n = this->num_;
         int32_t iw = this->width_;
