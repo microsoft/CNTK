@@ -524,7 +524,7 @@ public:
             delete[] tmp;
             m_sortedIndices->ScaleAndAdd(ElemType(1), *m_steps, *m_sortedIndices);
         }
-        reshapedInputGradient.DoScatterColumnsOf(ElemType(1), m_sortedIndices->Reshaped(1, m_sortedIndices->GetNumElements()), reshapedOutputGradient, ElemType(1));
+        reshapedInputGradient.DoScatterColumnsOf(ElemType(1), m_sortedIndices->Reshaped(1, m_sortedIndices->GetNumElements()), reshapedOutputGradient, ElemType(1), /*idxHaveDups*/ false);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }

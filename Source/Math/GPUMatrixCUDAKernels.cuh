@@ -3465,7 +3465,7 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
         CUDA_LONG resultCol = col2blockIds[rhsRow]; // resultCol == rhsRow maps to columnid
 
         // assume resultValues are 0-initialized
-        atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
+        atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal); //TODO: this does not work with fp16 for sparse embedding
     }
 }
 

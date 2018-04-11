@@ -56,3 +56,28 @@ def test_batchnorm(device_id):
 
     data = AA([[1,2,3]]).astype(np.float16)
     bn.grad(data, wrt=[scale,bias])
+
+def test_rnn(device_id):
+    if device_id == -1:
+        pytest.skip('Test only runs on GPU')
+
+    batch_size = 8
+    sequence_len = 100
+    vocab_dim = 20
+    embed_dim = 10
+    hidden_dim = 7
+    input = C.cast(C.sequence.input_variable(()), np.float16)
+    with C.default_options(dtype=np.float16):
+        embed = C.layers.Embedding(embed_dim)(C.one_hot(input, num_classes=vocab_dim, sparse_output=False))
+        z = C.layers.Recurrence(C.layers.LSTM(hidden_dim))(embed)
+
+    feed = np.floor(np.random.rand(batch_size, sequence_len).astype(np.float32) * (vocab_dim - 1))
+    z.grad(feed, wrt=z.parameters)
+    
+    num_layers = 2
+    W = C.parameter((C.InferredDimension, embed_dim), init=C.glorot_uniform(), dtype=np.float16)
+    with C.default_options(dtype=np.float16):
+        z = C.optimized_rnnstack(embed, W, hidden_dim, num_layers)
+
+    feed = np.floor(np.random.rand(batch_size, sequence_len).astype(np.float32) * (vocab_dim - 1))
+    z.grad(feed, wrt=z.parameters)
