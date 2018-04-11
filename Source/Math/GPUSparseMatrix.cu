@@ -2913,6 +2913,15 @@ void GPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
 {
+    if (vector.IsEmpty())
+        LogicError("SetDiagonalValue: Input vector is empty.");
+
+    if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
+        LogicError("SetDiagonalValue: input tensor must be a vector.");
+
+    if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
+        LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
+
     if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
         LogicError("SetDiagonalValue: Matrix format is not supported.");
 

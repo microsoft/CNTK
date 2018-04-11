@@ -761,7 +761,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        auto result = ValueFor(fr);
+        auto& result = Value();
         result.SetValue(m_fillValue);
     }
 
