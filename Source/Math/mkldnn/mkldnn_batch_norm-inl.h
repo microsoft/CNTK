@@ -211,7 +211,7 @@ public:
         }
 
         fwd_input_primitive = fwd_bottom_data->get_converted_prv(in_ptr, false, in);
-        fwd_output_memory = fwd_top_data->create_output_memory(out_ptr, out, fwd_top_data);
+        fwd_output_memory = fwd_top_data->create_output_memory(out_ptr, out);
 
         // ---- Create BatchNorm --------------------
         if (inferenceOnly)
@@ -306,7 +306,7 @@ public:
         std::shared_ptr<mkldnn::memory> mean_memory, var_memory;
         mean_memory.reset(new mkldnn::memory(bwd_scaleshift_pd->mean_primitive_desc(), savedMean.Data()));
         var_memory.reset(new mkldnn::memory(bwd_scaleshift_pd->variance_primitive_desc(), saved_var.Data()));
-        bwd_diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad, bwd_bottom_diff);
+        bwd_diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad);
 
         bwd_diff_dst_memory = bwd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
 

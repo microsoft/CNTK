@@ -34,8 +34,13 @@ size_t CountNans(const SingleMatrix& src);
 template <typename T>
 bool CheckEqual(const Matrix<T>& result, const Matrix<T>& reference, std::string& msg, T maxRelError, T maxAbsError)
 {
+#ifndef WIN32
+    T* res = result.CopyToArray();
+    T* ref = reference.CopyToArray();
+#else
     std::unique_ptr<T[], void (*)(void*)> res(result.CopyToArray(), &BaseMatrixStorage<T>::template FreeCPUArray);
     std::unique_ptr<T[], void (*)(void*)> ref(reference.CopyToArray(), &BaseMatrixStorage<T>::template FreeCPUArray);
+#endif
     int count = 0;
     int badIndex = -1;
     for (int i = 0; i < result.GetNumElements(); ++i)
@@ -52,13 +57,22 @@ bool CheckEqual(const Matrix<T>& result, const Matrix<T>& reference, std::string
            << ", rel = " << (std::abs(a - b) / std::max(std::abs(a), std::abs(b))) << ", abs = " << std::abs(a - b);
         msg = ss.str();
     }
+#ifndef WIN32
+    BaseMatrixStorage<T>::FreeCPUArray(res);
+    BaseMatrixStorage<T>::FreeCPUArray(ref);
+#endif
     return count == 0;
 }
 
 inline bool CheckEqual(const Matrix<float>& result, const Matrix<half>& reference, std::string& msg, float maxRelError, float maxAbsError)
 {
+#ifndef WIN32
+    float* res = result.CopyToArray();
+    half* ref = reference.CopyToArray();
+#else
     std::unique_ptr<float[], void (*)(void*)> res(result.CopyToArray(), BaseMatrixStorage<float>::FreeCPUArray);
     std::unique_ptr<half[], void (*)(void*)> ref(reference.CopyToArray(), BaseMatrixStorage<half>::FreeCPUArray);
+#endif
     int count = 0;
     int badIndex = -1;
     for (int i = 0; i < result.GetNumElements(); ++i)
@@ -75,6 +89,10 @@ inline bool CheckEqual(const Matrix<float>& result, const Matrix<half>& referenc
            << ", rel = " << (std::abs(a - b) / std::max(std::abs(a), std::abs(b))) << ", abs = " << std::abs(a - b);
         msg = ss.str();
     }
+#ifndef WIN32
+    BaseMatrixStorage<float>::FreeCPUArray(res);
+    BaseMatrixStorage<half>::FreeCPUArray(ref);
+#endif
     return count == 0;
 }
 

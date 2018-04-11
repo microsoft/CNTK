@@ -104,6 +104,9 @@ private:
     static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
 
 public:
+    shared_ptr<CPUMatrix <ElemType> > getCpuMatrix() const {
+        return m_CPUMatrix;
+    }
     // Constructors, destructors and other static matrix builders
     // Each constructor can take deviceId as parameter.
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)

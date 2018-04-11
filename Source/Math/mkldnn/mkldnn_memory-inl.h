@@ -30,7 +30,7 @@
 #include "../Matrix.h"
 #ifdef USE_MKLDNN
 #include "mkldnn.hpp"
-
+#include "../CPUMatrix.h"
 #include "mkldnn_base-inl.h"
 
 namespace Microsoft
@@ -145,6 +145,7 @@ class MKLDNNMemoryDescriptor : public MKLDNNMemoryDescriptorBase<Dtype>
 public:
     using Mat = Matrix<Dtype>;
 
+    using CPUMat = CPUMatrix<Dtype>;
 public:
     MKLDNNMemoryDescriptor(std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd,
                            std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd);
@@ -164,9 +165,10 @@ public:
     // in backward a conversion done already in the forward direction.
 
     std::shared_ptr<mkldnn::memory> get_converted_prv(Dtype* cpu_data, bool set_prv_ptr, const Mat& b);
-    std::shared_ptr<mkldnn::memory> create_output_memory(Dtype* cpu_data, const Mat& b,
-                                                         std::shared_ptr<MKLDNNMemoryDescriptor<Dtype>> thisData,
-                                                         bool in_place = false);
+    std::shared_ptr<mkldnn::memory> get_converted_prv2(Dtype* cpu_data,
+        bool set_prv_ptr, const CPUMat &b);
+    std::shared_ptr<mkldnn::memory> create_output_memory(Dtype* cpu_data, 
+        const Mat &b, bool in_place = false);
 
     bool get_prv_prim_desc(mkldnn::memory::primitive_desc& desc);
 };
@@ -205,8 +207,6 @@ inline std::shared_ptr<mkldnn::memory> mkldnn_prv_memory(const Matrix<Dtype>& b)
     }
     return nullptr;
 }
-template class MKLDNNData<float>;
-template class MKLDNNData<double>;
 
 } // namespace CNTK
 } // namespace MSR

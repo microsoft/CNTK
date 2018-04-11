@@ -28,7 +28,7 @@
 #include "mkl_memory.h"
 
 #ifdef USE_MKLDNN
-
+#include "mkldnn_sum-inl.h"
 #include "mkldnn_memory-inl.h"
 
 namespace Microsoft
@@ -169,8 +169,8 @@ bool MKLDNNMemoryDescriptorBase<Dtype>::layout_compare(std::shared_ptr<PrvMemDes
 }
 
 template <typename Dtype>
-std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv(Dtype* cpu_data, bool set_prv_ptr,
-                                                                                 const Mat& b)
+std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv2(Dtype* cpu_data,
+    bool set_prv_ptr, const CPUMat &b)
 {
     std::shared_ptr<MKLMemHolder> blob = b.MklMem();
     if (this->conversion_needed())
@@ -223,9 +223,14 @@ std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv
 }
 
 template <typename Dtype>
+std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv(Dtype* cpu_data,
+                                            bool set_prv_ptr, const Mat &b) {
+    return get_converted_prv2(cpu_data, set_prv_ptr, *b.getCpuMatrix());
+}
+template <typename Dtype>
 std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::create_output_memory(
-    Dtype* cpu_data, const Mat& b, std::shared_ptr<MKLDNNMemoryDescriptor<Dtype>> thisData, bool in_place)
-{
+    Dtype* cpu_data, const Mat &b, bool in_place) {
+    std::shared_ptr<PrvMemDescr> thisData = this->get_shared_ptr();
     std::shared_ptr<mkldnn::memory> omem;
     if (this->conversion_needed())
     {
@@ -270,8 +275,10 @@ std::shared_ptr<MKLDNNData<Dtype>> get_mkldnn_prv_descriptor(std::shared_ptr<MKL
     return blob_prv_mkldnn_mem_descr;
 }
 
+template class MKLDNNMemoryDescriptor<half>;
 template class MKLDNNMemoryDescriptor<float>;
 template class MKLDNNMemoryDescriptor<double>;
+template struct MKLDNNMemoryDescriptorBase<half>;
 template struct MKLDNNMemoryDescriptorBase<float>;
 template struct MKLDNNMemoryDescriptorBase<double>;
 
@@ -284,6 +291,21 @@ std::shared_ptr<PrvMemDescr> MKLDNNData<DType>::get_copy()
     void* private_ptr = new_data->prv_ptr();
     memcpy(private_ptr, this->prv_ptr(), this->prv_size());
     return new_data;
+}
+template <typename DType>
+bool PrvMemDescr::add_to(bool usr_pd, std::shared_ptr<PrvMemDescr> to,
+    void *to_cpu_ptr, std::shared_ptr<PrvMemDescr> from, void *from_cpu_ptr)
+{
+    std::shared_ptr<MKLDNNData<DType> > from_data = std::static_pointer_cast<MKLDNNData<DType> >(from);
+    std::shared_ptr<MKLDNNData<DType> > to_data = std::static_pointer_cast<MKLDNNData<DType> >(to);
+    MKLDNNSumOp<DType> sumOp;
+    if (usr_pd) {
+        return sumOp.direct_usr_two_sum((DType*)to_cpu_ptr, (DType*)from_cpu_ptr,
+            (DType*)to_cpu_ptr, to_data->usr_memory_pd());
+    }
+    else {
+        return sumOp.direct_prv_two_sum(*to_data, *from_data, *to_data);
+    }
 }
 template <typename DType>
 void MKLDNNData<DType>::get_sum(std::shared_ptr<PrvMemDescr> other)
@@ -308,6 +330,14 @@ void MKLDNNData<DType>::get_sum(std::shared_ptr<PrvMemDescr> other)
         return;
     }
 }
+template class MKLDNNData<half>;
+template class MKLDNNData<float>;
+template class MKLDNNData<double>;
+
+template bool PrvMemDescr::add_to<float>(bool usr_pd, std::shared_ptr<PrvMemDescr> to,
+    void *to_cpu_ptr, std::shared_ptr<PrvMemDescr> from, void *from_cpu_ptr);
+template bool PrvMemDescr::add_to<double>(bool usr_pd, std::shared_ptr<PrvMemDescr> to,
+    void *to_cpu_ptr, std::shared_ptr<PrvMemDescr> from, void *from_cpu_ptr);
 } // namespace CNTK
 } // namespace MSR
 } // namespace Microsoft

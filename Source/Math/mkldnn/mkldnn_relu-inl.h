@@ -141,7 +141,7 @@ public:
         // ---- Initialize memory descriptors -------------
         std::shared_ptr<mkldnn::memory> input_primitive;
         input_primitive = fwd_bottom_data->get_converted_prv(in_ptr, false, in);
-        std::shared_ptr<mkldnn::memory> output_memory = fwd_top_data->create_output_memory(out_ptr, out, fwd_top_data);
+        std::shared_ptr<mkldnn::memory> output_memory = fwd_top_data->create_output_memory(out_ptr, out);
         MKLDNNPrimitive<Dtype> reluFwd;
         if (!inferenceOnly)
         {
@@ -228,7 +228,7 @@ public:
         std::shared_ptr<mkldnn::memory> src_memory, diff_dst_memory, diff_src_memory;
         src_memory = bwd_bottom_data->get_converted_prv(in_ptr, false, in);
         diff_dst_memory = bwd_top_diff->get_converted_prv(srcgrad_ptr, false, srcGrad);
-        diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad, bwd_bottom_diff);
+        diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad);
         MKLDNNPrimitive<Dtype> reluBwd;
         reluBwd.reset(new mkldnn::relu_backward(*bwd_pd, *src_memory, *diff_dst_memory, *diff_src_memory));
 #ifdef MKL_TIMER_PROFILE

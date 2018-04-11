@@ -62,6 +62,40 @@ protected:
     ImageLayoutKind m_imageLayout;
 };
 
+enum class BinaryEltWiseKind
+{
+  PLUS
+};
+template <class ElemType>
+class MATH_API BinaryEltWiseEngine
+{
+public:
+  using Mat = Matrix<ElemType>;
+
+public:
+  virtual ~BinaryEltWiseEngine() {};
+
+  void Forward(const TensorShape& ishape, Mat& ina, Mat& inb, Mat& out);
+  void Backward(Mat& in, Mat& out);
+  static std::unique_ptr<BinaryEltWiseEngine<ElemType>> Create(DEVICEID_TYPE deviceId,
+    BinaryEltWiseKind kind,
+    EltWiseEngineKind enabledEngines = EltWiseEngineKind::All);
+
+  DISABLE_COPY_AND_MOVE(BinaryEltWiseEngine);
+
+protected:
+  BinaryEltWiseEngine(DEVICEID_TYPE deviceId)
+    : m_deviceId(deviceId)
+  {
+  }
+
+  virtual void EnsureCompatible() = 0;
+
+  virtual void ForwardTwoCore(const TensorShape& iashape, Mat& ina, Mat& inb, Mat& out) = 0;
+  virtual void BackwardTwoCore(Mat& in, Mat& out) = 0;
+protected:
+  DEVICEID_TYPE m_deviceId;
+};
 } // namespace CNTK
 } // namespace MSR
 } // namespace Microsoft

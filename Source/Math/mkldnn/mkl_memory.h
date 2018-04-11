@@ -52,6 +52,9 @@ struct PrvMemDescr
     virtual bool get_usr_desc(usr_desc_dims_t usr_desc_dims, int& dim_size) = 0;
     virtual std::shared_ptr<PrvMemDescr> get_copy() = 0;
     virtual void get_sum(std::shared_ptr<PrvMemDescr> other) = 0;
+    template <typename DType>
+    static bool add_to(bool usr_pd, std::shared_ptr<PrvMemDescr> to,
+      void *to_cpu_ptr, std::shared_ptr<PrvMemDescr> from, void *from_cpu_ptr);
     // This might help using prv_ptr_ by different accelerators/engines
     enum PrvDescrType
     {
@@ -164,6 +167,12 @@ struct MKLMemHolder
         if (HEAD_AT_PRV != head_ || !from.head_at_prv())
             return;
         prv_descriptor_->get_sum(from.prv_descriptor_);
+    }
+  template <typename DType>
+  bool AddTo(void* this_cpu_ptr, MKLMemHolder& from, void* from_cpu_ptr) {
+      if ((head_at_prv() && from.head_at_cpu()) || (head_at_cpu() && from.head_at_prv())) return false;
+      bool usr_pd = head_at_cpu() ? true : false;
+      return PrvMemDescr::add_to<DType>(usr_pd, this->prv_descriptor_, this_cpu_ptr, from.prv_descriptor_, from_cpu_ptr);
     }
     void zero_init()
     {

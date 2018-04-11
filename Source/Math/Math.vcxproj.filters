@@ -73,6 +73,9 @@
     <ClCompile Include="TimesEngine.cpp">
       <Filter>Times</Filter>
     </ClCompile>
+    <ClCompile Include="mkldnn\mkldnn_util.cpp">
+      <Filter>mkldnn</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -188,6 +191,9 @@
       <Filter>Times</Filter>
     </ClInclude>
     <ClInclude Include="mkldnn\mkldnn_relu-inl.h">
+      <Filter>mkldnn</Filter>
+    </ClInclude>
+    <ClInclude Include="mkldnn\mkldnn_sum-inl.h">
       <Filter>mkldnn</Filter>
     </ClInclude>
   </ItemGroup>
