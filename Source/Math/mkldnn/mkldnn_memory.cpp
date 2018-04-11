@@ -43,6 +43,7 @@ MKLDNNMemoryDescriptorBase<Dtype>::MKLDNNMemoryDescriptorBase(
     std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd,
     std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd)
     : name("MKLDNNMemoryDescriptorBase"), _prv_memory(NULL), _usr_memory_pd(NULL), _prv_memory_pd(NULL)
+    , _cpu_data(NULL), _usr_memory(NULL)
 {
     set_usr_memory_pd(usr_memory_pd);
     set_prv_memory_pd(prv_memory_pd);
@@ -107,7 +108,6 @@ void MKLDNNMemoryDescriptor<Dtype>::convert_to_prv(void* cpu_ptr)
     create_reorder_to_prv(usr_memory, reorder_usr2prv);
     // MKL_DLOG(INFO) << "convert usr => priv @" << this->name;
     reorder_usr2prv.submit();
-    ;
 }
 template <typename Dtype>
 void MKLDNNMemoryDescriptor<Dtype>::convert_from_other(std::shared_ptr<PrvMemDescr> other)
@@ -170,7 +170,7 @@ bool MKLDNNMemoryDescriptorBase<Dtype>::layout_compare(std::shared_ptr<PrvMemDes
 
 template <typename Dtype>
 std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv2(Dtype* cpu_data,
-    bool set_prv_ptr, const CPUMat &b)
+    bool set_prv_ptr, const CPUMat &b, bool * b_same)
 {
     std::shared_ptr<MKLMemHolder> blob = b.MklMem();
     if (this->conversion_needed())
@@ -214,22 +214,25 @@ std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv
             std::shared_ptr<MKLDNNData<Dtype>> blob_prv_mkldnn_mem_descr = get_mkldnn_prv_descriptor<Dtype>(blob);
             blob_prv_mkldnn_mem_descr->convert_from_prv(cpu_data);
         }
+        if(NULL == this->_cpu_data || cpu_data != this->_cpu_data)
+        {
+            if(b_same != NULL)
+                *b_same = *b_same && false;
+            this->_cpu_data = cpu_data;
+            this->_usr_memory.reset(new mkldnn::memory(*this->usr_memory_pd(), const_cast<Dtype*>(cpu_data)));
+        }
+        return this->_usr_memory;
     }
-
-    std::shared_ptr<mkldnn::memory> pres;
-    mkldnn::memory* input_memory = new mkldnn::memory(*this->usr_memory_pd(), const_cast<Dtype*>(cpu_data));
-    pres.reset(input_memory);
-    return pres;
 }
 
 template <typename Dtype>
 std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv(Dtype* cpu_data,
-                                            bool set_prv_ptr, const Mat &b) {
-    return get_converted_prv2(cpu_data, set_prv_ptr, *b.getCpuMatrix());
+                                            bool set_prv_ptr, const Mat &b, bool * b_same) {
+    return get_converted_prv2(cpu_data, set_prv_ptr, *b.getCpuMatrix(), b_same);
 }
 template <typename Dtype>
 std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::create_output_memory(
-    Dtype* cpu_data, const Mat &b, bool in_place) {
+    Dtype* cpu_data, const Mat &b, bool in_place, bool * b_same) {
     std::shared_ptr<PrvMemDescr> thisData = this->get_shared_ptr();
     std::shared_ptr<mkldnn::memory> omem;
     if (this->conversion_needed())
@@ -244,13 +247,20 @@ std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::create_output_mem
             omem = this->get_prv_memory();
             b.MklMem()->set_prv_descriptor(thisData);
         }
+        return omem;
     }
     else
     {
         b.MklMem()->check_and_prv_to_cpu(cpu_data);
-        omem.reset(new mkldnn::memory(*this->usr_memory_pd(), cpu_data));
+        if(NULL == this->_cpu_data || cpu_data != this->_cpu_data)
+        {
+            if(b_same != NULL)
+                *b_same = *b_same && false;
+            this->_cpu_data = cpu_data;
+            this->_usr_memory.reset(new mkldnn::memory(*this->usr_memory_pd(), cpu_data));
     }
-    return omem;
+        return this->_usr_memory;
+    }
 }
 
 template <typename Dtype>

@@ -168,8 +168,8 @@ struct MKLMemHolder
             return;
         prv_descriptor_->get_sum(from.prv_descriptor_);
     }
-  template <typename DType>
-  bool AddTo(void* this_cpu_ptr, MKLMemHolder& from, void* from_cpu_ptr) {
+    template <typename DType>
+    bool AddTo(void* this_cpu_ptr, MKLMemHolder& from, void* from_cpu_ptr) {
       if ((head_at_prv() && from.head_at_cpu()) || (head_at_cpu() && from.head_at_prv())) return false;
       bool usr_pd = head_at_cpu() ? true : false;
       return PrvMemDescr::add_to<DType>(usr_pd, this->prv_descriptor_, this_cpu_ptr, from.prv_descriptor_, from_cpu_ptr);

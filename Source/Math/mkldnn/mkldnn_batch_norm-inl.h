@@ -262,13 +262,10 @@ public:
 
         DType* scaleShift_buf = static_cast<DType*>(weight_memory->get_data_handle());
         // use_weight_bias_
-#pragma omp parallel for
-        for (int i = 0; i < m_channels_; i++)
-        {
-            scaleShift_buf[i] = (scale.Data())[i];
-            scaleShift_buf[m_channels_ + i] = (bias.Data())[i];
-        }
-
+        DType* scale_ptr = scale.Data();
+        DType* bias_ptr = bias.Data();
+        memcpy(scaleShift_buf, scale_ptr, sizeof(DType)*m_channels_);
+        memcpy(&scaleShift_buf[m_channels_], bias_ptr, sizeof(DType)*m_channels_);
         fwd_input_primitive = fwd_bottom_data->get_converted_prv(in_ptr, false, in);
         fwd_output_memory = fwd_top_data->create_output_memory(out_ptr, out);
 
