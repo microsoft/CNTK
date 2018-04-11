@@ -465,10 +465,6 @@ public:
 
     virtual void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace)
     {
-#ifdef MKL_TIMER_PROFILE
-        Timer timer;
-        timer.Start();
-#endif
         DType* srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
         DType* kernel_ptr = mkl_experimental_direct_get(kernel);
         DType* grad_ptr = mkl_experimental_direct_get(grad);
@@ -493,11 +489,11 @@ public:
 
         bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
         bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(kernel_ptr, false, kernel);
-	    std::shared_ptr<mkldnn::memory> bwdd_bottom_diff_ws_memory;
 	    if (accumulateGradient) {
 		    workspace.Resize(grad);
-		    bwdd_bottom_diff_dst = bwdd_bottom_diff_ws_memory = bwdd_bottom_diff_ws->create_output_memory(workspace.Data(), workspace);
+		    bwdd_bottom_diff_dst  = bwdd_bottom_diff_ws->create_output_memory(workspace.Data(), workspace);
 		    bwdd_bottom_diff_memory = bwdd_bottom_diff->get_converted_prv(grad_ptr, true, grad);
+            grad_ptr = mkl_experimental_direct_get(grad);
 	    }
 	    else
 	    {
@@ -512,10 +508,6 @@ public:
             DType * workspace_ptr = mkl_experimental_direct_get(workspace);
 		    grad.MklMem()->template AddTo<DType>(grad_ptr, *workspace.MklMem(), workspace_ptr);
 	    }
-#ifdef MKL_TIMER_PROFILE
-        timer.Stop();
-        LOGPRINTF(stderr, "mklconvolution bwd data sum time: %f \n", timer.ElapsedSeconds() * 1000);
-#endif
     }
     void BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, bool accumulateGradient, Mat& workspace, Mat* pbiasGrad = NULL)
     {
@@ -589,10 +581,7 @@ public:
             DType * workspace_ptr = mkl_experimental_direct_get(workspace);
             kernelGrad.MklMem()->template AddTo<DType>(kernelgrad_ptr, *workspace.MklMem(), workspace_ptr);
         }
-#ifdef MKL_TIMER_PROFILE
-        timer.Stop();
-        LOGPRINTF(stderr, "mklconvolution bwd kernel sum time: %f \n", timer.ElapsedSeconds() * 1000);
-#endif
+
     }
 
 private:

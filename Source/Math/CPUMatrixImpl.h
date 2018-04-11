@@ -939,7 +939,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
         InvalidArgument("Invalid pArray. pArray == nullptr, but matrix is of size %d * %d = %d.", (int) numRows,
                         (int) numCols, (int) (numRows * numCols));
 #ifdef USE_MKLDNN
-    Data();
+    MklMem()->clear();
 #endif
     SetFormat(matrixFormatDense);
     SetComputeDeviceId(CPUDEVICE);

@@ -502,8 +502,6 @@ private:
     {
         if (!IsSupported())
             return false;
-        if (!accumulateDataGrad)
-            grad.SetValue((ElemType)0);
         if (m_mkldnnBM == NULL) {
             m_mkldnnBM = new MKLDNNBatchNormOp<ElemType>(m_inOutT, m_imageLayout);
         }

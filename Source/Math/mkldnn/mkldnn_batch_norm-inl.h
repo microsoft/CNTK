@@ -63,8 +63,7 @@ public:
           m_inOutT(inOutT),
           m_imageLayout(imageLayout),
           m_eps_(MKL_DNN_BN_MIN_EPSILON),
-          accu_grad(-1),
-          saved_var(-1)
+          accu_grad(-1)
     {
         m_id = s_id_gen++;
     }
@@ -176,6 +175,10 @@ private:
 
         bwd_bottom_diff.reset(new MKLDNNData<Dtype>(usr_diff_mpd, prv_diff_mpd));
         bwd_bottom_diff->name = "bwd_bottom_diff   @ " + this->getName();
+
+        bwd_bottom_diff_ws.reset(new MKLDNNData<Dtype>(usr_diff_mpd, prv_diff_mpd));
+        bwd_bottom_diff_ws->name = "bwd_bottom_diff_ws   @ " + this->getName();
+
         bwd_top_diff.reset(new MKLDNNData<Dtype>(usr_diff_mpd, prv_diff_mpd));
         bwd_top_diff->name = "bwd_top_diff   @ " + this->getName();
     }
@@ -249,8 +252,6 @@ public:
             {
                 moving_mean_ptr[i] = moving_mean_ptr[i] * momentum + mean_ptr[i] * expAvgFactor;
                 moving_var_ptr[i] = moving_var_ptr[i] * momentum + var_ptr[i] * bcf * expAvgFactor;
-                // Optional, this is used to convert var to stdInv
-                // var_ptr[i] = 1.0 / sqrt(var_ptr[i] + m_eps_);
             }
         }
     }
@@ -274,30 +275,27 @@ public:
             InitBatchNormBwd(in);
         Dtype* scaleShift_buf = static_cast<Dtype*>(weight_memory->get_data_handle());
         Dtype* var_ptr = NULL;
-        Dtype* prior_grad_ptr = NULL;
-        accu_grad.AssignValuesOf(grad);
-        saved_var.AssignValuesOf(savedInvStdDev);
         // use_weight_bias_
-
-        for (int i = 0; i < m_channels_; i++)
-        {
-            scaleShift_buf[i] = (scale.Data())[i];
-        }
-
-        // if accumulated needed, save prior grad firstly
-        if (accumulateDataGrad)
-            prior_grad_ptr = reinterpret_cast<Dtype*>(accu_grad.Data());
+        memcpy(scaleShift_buf, scale.Data(), m_channels_ * sizeof(Dtype));
 
         // optional: convert InvStd to Variance
-        var_ptr = reinterpret_cast<Dtype*>(saved_var.Data());
-
-        // for (int32_t i = 0; i < saved_var.GetNumElements(); i++) {
-        //    var_ptr[i] = powf((1 / var_ptr[i]), 2) - m_eps_;
-
+        var_ptr = reinterpret_cast<Dtype*>(savedInvStdDev.Data());
         std::shared_ptr<mkldnn::memory> bwd_input_primitive;
         std::shared_ptr<mkldnn::memory> bwd_diff_dst_memory;
-        std::shared_ptr<mkldnn::memory> bwd_diff_src_memory;
-
+        std::shared_ptr<mkldnn::memory> bwd_bottom_diff_memory;
+        std::shared_ptr<mkldnn::memory> bwd_bottom_diff_dst;
+        std::shared_ptr<mkldnn::memory> bwd_bottom_diff_ws_memory;
+        if (accumulateDataGrad)
+        {
+            accu_grad.Resize(grad);
+            bwd_bottom_diff_dst = bwd_bottom_diff_ws_memory = bwd_bottom_diff_ws->create_output_memory(accu_grad.Data(), accu_grad);
+            bwd_bottom_diff_memory = bwd_bottom_diff->get_converted_prv(grad_ptr, true, grad);
+            grad_ptr = mkl_experimental_direct_get(grad);
+        }
+        else
+        {
+            bwd_bottom_diff_dst = bwd_bottom_diff_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad);
+        }
         bwd_input_primitive = mkldnn_prv_memory<Dtype>(in);
         if (bwd_input_primitive == nullptr)
         {
@@ -305,29 +303,27 @@ public:
         }
         std::shared_ptr<mkldnn::memory> mean_memory, var_memory;
         mean_memory.reset(new mkldnn::memory(bwd_scaleshift_pd->mean_primitive_desc(), savedMean.Data()));
-        var_memory.reset(new mkldnn::memory(bwd_scaleshift_pd->variance_primitive_desc(), saved_var.Data()));
-        bwd_diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad);
+        var_memory.reset(new mkldnn::memory(bwd_scaleshift_pd->variance_primitive_desc(), var_ptr));
 
         bwd_diff_dst_memory = bwd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
 
         BatchNormBwd.reset(new mkldnn::batch_normalization_backward(
             *bwd_scaleshift_pd, *bwd_input_primitive, *mean_memory, *var_memory, *bwd_diff_dst_memory, *weight_memory,
-            *bwd_diff_src_memory, *diff_weight_memory));
+            *bwd_bottom_diff_dst, *diff_weight_memory));
         BatchNormBwd.submit();
 
         Dtype* scaleShiftDiff_buf = reinterpret_cast<Dtype*>(diff_weight_memory->get_data_handle());
 
         if (accumulateDataGrad)
-            grad.AssignSumOf(grad, accu_grad);
+        {
+            Dtype * workspace_ptr = mkl_experimental_direct_get(accu_grad);
+            grad.MklMem()->template AddTo<Dtype>(grad_ptr, *accu_grad.MklMem(), workspace_ptr);
+        }
         // Store ScaleShift blobs
         Dtype* diff_scale = scaleGrad.Data();
         Dtype* diff_shift = biasGrad.Data();
-#pragma omp parallel for
-        for (int i = 0; i < m_channels_; i++)
-        {
-            diff_scale[i] = scaleShiftDiff_buf[i];
-            diff_shift[i] = scaleShiftDiff_buf[m_channels_ + i];
-        }
+        memcpy(diff_scale, scaleShiftDiff_buf, sizeof(Dtype)*m_channels_);
+        memcpy(diff_shift, &scaleShiftDiff_buf[m_channels_], sizeof(Dtype)*m_channels_);
     }
 
 private:
@@ -345,7 +341,8 @@ private:
     std::shared_ptr<mkldnn::batch_normalization_backward::primitive_desc> bwd_scaleshift_pd;
     MKLDNNPrimitive<Dtype> BatchNormBwd;
     std::shared_ptr<MKLDNNData<Dtype>> bwd_top_diff;
-    std::shared_ptr<MKLDNNData<Dtype>> bwd_bottom_diff;
+    std::shared_ptr<MKLDNNData<Dtype>> bwd_bottom_diff, bwd_bottom_diff_ws;
+
     std::shared_ptr<mkldnn::memory> weight_memory;
     std::shared_ptr<mkldnn::memory> diff_weight_memory;
     std::shared_ptr<mkldnn::memory> fwd_output_memory;
@@ -355,7 +352,7 @@ private:
     bool fix_gamma;
     TensorShape m_inOutT;
     ImageLayoutKind m_imageLayout;
-    Mat accu_grad, saved_var;
+    Mat accu_grad;
 }; // class MKLDNNBatchNormOp
 template <>
 int MKLDNNBatchNormOp<float>::s_id_gen = 1;

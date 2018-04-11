@@ -167,8 +167,6 @@ public:
 
     void Backward(Mat& in, Mat& out)
     {
-        UNUSED(in);
-        UNUSED(out);
         // For each in_v[i] = out
         std::shared_ptr<MKLMemHolder> in_mem = in.MklMem();
         std::shared_ptr<MKLMemHolder> out_mem = out.MklMem();
@@ -183,14 +181,7 @@ public:
         }
         else
         {
-            if (out_mem->head_ == HEAD_AT_CPU)
-            {
-                std::shared_ptr<MKLDNNData<Dtype> > _out_data;
-                std::shared_ptr<MKLDNNData<Dtype> > in_data = get_mkldnn_prv_descriptor<Dtype>(in);
-                _out_data.reset(new MKLDNNData<Dtype>(in_data->usr_memory_pd(), in_data->prv_memory_pd()));
-                _out_data->create_output_memory(out.Data(), out);
-            }
-            out_mem->AssignPrvFrom(*in_mem);
+            out_mem->set_prv_descriptor(in_mem->get_prv_descriptor());
         }
     }
 
