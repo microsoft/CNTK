@@ -43,16 +43,16 @@ namespace MSR
 namespace CNTK
 {
 
-template <typename Dtype>
-class MKLDNNBatchNormOp : public MKLDNNLayer<Dtype>
+template <typename DType>
+class MKLDNNBatchNormOp : public MKLDNNLayer<DType>
 {
     static int s_id_gen;
     int m_id;
 
 public:
-    using Mat = Matrix<Dtype>;
-    explicit MKLDNNBatchNormOp(TensorShape inOutT, ImageLayoutKind imageLayout)
-        : MKLDNNLayer<Dtype>(),
+    using Mat = Matrix<DType>;
+    explicit MKLDNNBatchNormOp(TensorShape inOutT, ImageLayoutKind imageLayout, bool relu = false)
+        : MKLDNNLayer<DType>(),
           fwd_top_data(NULL),
           fwd_bottom_data(NULL),
           fwd_inference_pd(NULL),
@@ -66,6 +66,7 @@ public:
           accu_grad(-1)
     {
         m_id = s_id_gen++;
+        m_relu = relu;
     }
     virtual ~MKLDNNBatchNormOp() {}
     std::string getName()
@@ -95,13 +96,13 @@ private:
     }
     void initFwd(const Mat& in)
     {
-        void* bottom_data = const_cast<Dtype*>(mkl_prv_data<Dtype>(in));
+        void* bottom_data = const_cast<DType*>(mkl_prv_data<DType>(in));
         // ---- Initialize memory descriptors -------------
         std::shared_ptr<mkldnn::memory::desc> input_md, scaleshift_md;
         std::shared_ptr<mkldnn::memory::primitive_desc> usr_mpd(NULL), prv_mpd(NULL);
         if (bottom_data != nullptr)
         {
-            std::shared_ptr<MKLDNNData<Dtype>> mem_descr = get_mkldnn_prv_descriptor<Dtype>(in);
+            std::shared_ptr<MKLDNNData<DType>> mem_descr = get_mkldnn_prv_descriptor<DType>(in);
             assert(mem_descr != NULL);
             fwd_bottom_data = mem_descr;
             input_md.reset(new mkldnn::memory::desc(mem_descr->prv_memory_pd()->desc()));
@@ -112,7 +113,7 @@ private:
         {
             input_md = fwd_usr_input_md;
             usr_mpd = fwd_usr_mpd;
-            fwd_bottom_data.reset(new MKLDNNData<Dtype>(usr_mpd, prv_mpd));
+            fwd_bottom_data.reset(new MKLDNNData<DType>(usr_mpd, prv_mpd));
             fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
         }
 
@@ -124,12 +125,29 @@ private:
         mkldnn::batch_normalization_forward::desc BatchNormFwdTraining_desc(
             mkldnn::prop_kind::forward_training, *input_md, m_eps_, mkldnn::batch_normalization_flag::use_scale_shift);
 
-        fwd_inference_pd.reset(
+        if (m_relu)
+        {
+            attr_t attr = attr_t(mkldnn::round_mode::round_nearest, 1.0, attr_t::scale_t::policy_t::COMMON);
+            attr.pops.entry[0].kind = attr_t::post_ops_t::kind_t::RELU;
+            attr.pops.entry[0].eltwise.alpha = 0.0;
+            attr.pops.entry[0].eltwise.beta = 0.0;
+            attr.pops.entry[0].eltwise.scale = 1.0;
+            attr.pops.len = 1;
+            attr.mkldnn_attr_create();
+            fwd_inference_pd.reset(
+                new mkldnn::batch_normalization_forward::primitive_desc(BatchNormFwdInference_desc, attr.mkldnn_attr, cpu_engine));
+            fwd_training_pd.reset(
+                new mkldnn::batch_normalization_forward::primitive_desc(BatchNormFwdTraining_desc, attr.mkldnn_attr, cpu_engine));
+        }
+        else
+        {
+            fwd_inference_pd.reset(
             new mkldnn::batch_normalization_forward::primitive_desc(BatchNormFwdInference_desc, cpu_engine));
-        fwd_training_pd.reset(
-            new mkldnn::batch_normalization_forward::primitive_desc(BatchNormFwdTraining_desc, cpu_engine));
+            fwd_training_pd.reset(
+                new mkldnn::batch_normalization_forward::primitive_desc(BatchNormFwdTraining_desc, cpu_engine));
+        }
 
-        fwd_top_data.reset(new MKLDNNData<Dtype>(usr_mpd, prv_mpd));
+        fwd_top_data.reset(new MKLDNNData<DType>(usr_mpd, prv_mpd));
         fwd_top_data->name = "fwd_top_data   @ " + this->getName();
         weight_memory.reset(new mkldnn::memory(fwd_inference_pd->weights_primitive_desc()));
     }
@@ -140,7 +158,7 @@ private:
         int32_t h = this->m_height_;
         int32_t c = this->m_channels_;
 
-        void* src_data = const_cast<Dtype*>(mkl_prv_data<Dtype>(in));
+        void* src_data = const_cast<DType*>(mkl_prv_data<DType>(in));
         bool src_is_prv = (src_data != NULL);
         mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
         mkldnn::memory::data_type mpcsn = mkldnn::memory::data_type::f32;
@@ -150,7 +168,7 @@ private:
         std::shared_ptr<mkldnn::memory::primitive_desc> usr_diff_mpd(NULL), prv_diff_mpd(NULL);
         if (src_is_prv)
         {
-            std::shared_ptr<MKLDNNMemoryDescriptor<Dtype>> mem_descr = get_mkldnn_prv_descriptor<Dtype>(in);
+            std::shared_ptr<MKLDNNMemoryDescriptor<DType>> mem_descr = get_mkldnn_prv_descriptor<DType>(in);
             top_diff_md.reset(new mkldnn::memory::desc(mem_descr->prv_memory_pd()->desc()));
             usr_diff_mpd = mem_descr->usr_memory_pd();
             prv_diff_mpd = mem_descr->prv_memory_pd();
@@ -173,23 +191,61 @@ private:
 
         diff_weight_memory.reset(new mkldnn::memory(bwd_scaleshift_pd->diff_weights_primitive_desc()));
 
-        bwd_bottom_diff.reset(new MKLDNNData<Dtype>(usr_diff_mpd, prv_diff_mpd));
+        bwd_bottom_diff.reset(new MKLDNNData<DType>(usr_diff_mpd, prv_diff_mpd));
         bwd_bottom_diff->name = "bwd_bottom_diff   @ " + this->getName();
 
-        bwd_bottom_diff_ws.reset(new MKLDNNData<Dtype>(usr_diff_mpd, prv_diff_mpd));
+        bwd_bottom_diff_ws.reset(new MKLDNNData<DType>(usr_diff_mpd, prv_diff_mpd));
         bwd_bottom_diff_ws->name = "bwd_bottom_diff_ws   @ " + this->getName();
 
-        bwd_top_diff.reset(new MKLDNNData<Dtype>(usr_diff_mpd, prv_diff_mpd));
+        bwd_top_diff.reset(new MKLDNNData<DType>(usr_diff_mpd, prv_diff_mpd));
         bwd_top_diff->name = "bwd_top_diff   @ " + this->getName();
     }
+    void InitReLUBwd(const Mat& src)
+    {
+        int32_t n = this->m_num_;
+        int32_t iw = this->m_width_;
+        int32_t ih = this->m_height_;
+        int32_t ic = this->m_channels_;
+        DType negative_slope = 0;
+        void* src_data = const_cast<DType*>(mkl_prv_data<DType>(src));
+        bool src_is_prv = (src_data != NULL);
+        mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
+        mkldnn::memory::data_type mpcsn = mkldnn::memory::data_type::f32;
+        std::shared_ptr<mkldnn::memory::desc> top_diff_md;
+        std::shared_ptr<mkldnn::memory::desc> top_data_md;
 
+        std::shared_ptr<mkldnn::memory::primitive_desc> usr_diff_mpd;
+        std::shared_ptr<mkldnn::memory::primitive_desc> prv_diff_mpd;
+        if (src_is_prv)
+        {
+            std::shared_ptr<MKLDNNMemoryDescriptor<DType>> mem_descr = get_mkldnn_prv_descriptor<DType>(src);
+            top_diff_md.reset(new mkldnn::memory::desc(mem_descr->prv_memory_pd()->desc()));
+            usr_diff_mpd = mem_descr->usr_memory_pd();
+            prv_diff_mpd = mem_descr->prv_memory_pd();
+        }
+        else
+        {
+            top_diff_md.reset(new mkldnn::memory::desc({ { n, ic, ih, iw } }, mpcsn, mkldnn::memory::format::nchw));
+            usr_diff_mpd.reset(new mkldnn::memory::primitive_desc(*top_diff_md, cpu_engine));
+        }
+        top_data_md = top_diff_md;
+        mkldnn::eltwise_forward::desc fwd_training_desc(mkldnn::prop_kind::forward_training, mkldnn::eltwise_relu,
+            *top_data_md, negative_slope);
+        fwd_relu_training_pd.reset(new mkldnn::relu_forward::primitive_desc(fwd_training_desc, cpu_engine));
+        mkldnn::eltwise_backward::desc reluBwd_desc(mkldnn::eltwise_relu, *top_diff_md, *top_data_md, negative_slope);
+        bwd_relu_pd.reset(new mkldnn::relu_backward::primitive_desc(reluBwd_desc, cpu_engine, *fwd_relu_training_pd));
+        bwd_relu_top_diff.reset(new MKLDNNData<DType>(usr_diff_mpd, prv_diff_mpd));
+        bwd_relu_top_diff->name = "bwd_top_diff   @ " + this->getName();
+        bwd_relu_dst_data.reset(new MKLDNNData<DType>(usr_diff_mpd, prv_diff_mpd));
+        bwd_relu_dst_data->name = "bwd_bottom_data   @ " + this->getName();
+    }
 public:
     virtual void Forward(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor,
                          double blendFactor, Mat& runMean, Mat& runVariance, Mat& out, double epsilon, Mat& savedMean,
                          Mat& savedInvStdDev)
     {
-        Dtype* in_ptr = mkl_experimental_direct_get(in);
-        Dtype* out_ptr = mkl_experimental_direct_get(out);
+        DType* in_ptr = mkl_experimental_direct_get(in);
+        DType* out_ptr = mkl_experimental_direct_get(out);
         if (blendFactor != 0 && (blendFactor != 1 || expAvgFactor > 0))
             InvalidArgument("MKL batch normalization engine currently supports blendTimeConstant of 0 or 1 only.");
         if (!init_mkldnn_)
@@ -204,7 +260,7 @@ public:
         std::shared_ptr<mkldnn::memory> mean_memory, var_memory;
         std::shared_ptr<mkldnn::memory> fwd_input_primitive;
 
-        Dtype* scaleShift_buf = static_cast<Dtype*>(weight_memory->get_data_handle());
+        DType* scaleShift_buf = static_cast<DType*>(weight_memory->get_data_handle());
         // use_weight_bias_
 #pragma omp parallel for
         for (int i = 0; i < m_channels_; i++)
@@ -241,12 +297,12 @@ public:
         {
             size_t mean_size = runMean.GetNumElements();
             int32_t m = this->m_width_ * this->m_height_ * this->m_num_;
-            Dtype bcf = m > 1 ? Dtype(m) / (m - 1) : 1;
-            Dtype* moving_mean_ptr = reinterpret_cast<Dtype*>(runMean.Data());
-            Dtype* mean_ptr = reinterpret_cast<Dtype*>(savedMean.Data());
-            Dtype* moving_var_ptr = reinterpret_cast<Dtype*>(runVariance.Data());
-            Dtype* var_ptr = reinterpret_cast<Dtype*>(savedInvStdDev.Data());
-            Dtype momentum = 1.0 - (Dtype) expAvgFactor;
+            DType bcf = m > 1 ? DType(m) / (m - 1) : 1;
+            DType* moving_mean_ptr = reinterpret_cast<DType*>(runMean.Data());
+            DType* mean_ptr = reinterpret_cast<DType*>(savedMean.Data());
+            DType* moving_var_ptr = reinterpret_cast<DType*>(runVariance.Data());
+            DType* var_ptr = reinterpret_cast<DType*>(savedInvStdDev.Data());
+            DType momentum = 1.0 - (DType) expAvgFactor;
 #pragma omp parallel for
             for (int32_t i = 0; i < mean_size; i++)
             {
@@ -256,14 +312,15 @@ public:
         }
     }
 
-    virtual void Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor,
+    virtual void Backward(const Mat& in, const Mat& out, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor,
                           const Mat& savedMean, const Mat& savedInvStdDev, Mat& scaleGrad, Mat& biasGrad,
                           bool accumulateDataGrad)
     {
         UNUSED(blendFactor);
-        Dtype* in_ptr = mkl_experimental_direct_get(in);
-        Dtype* srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
-        Dtype* grad_ptr = mkl_experimental_direct_get(grad);
+        DType* in_ptr = mkl_experimental_direct_get(in);
+        DType* out_ptr = mkl_experimental_direct_get(out);
+        DType* srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
+        DType* grad_ptr = mkl_experimental_direct_get(grad);
         if (!init_mkldnn_)
         {
             LayerSetUp((int) in.GetNumCols());
@@ -273,13 +330,26 @@ public:
             initFwd(in);
         if (bwd_scaleshift_pd == NULL)
             InitBatchNormBwd(in);
-        Dtype* scaleShift_buf = static_cast<Dtype*>(weight_memory->get_data_handle());
-        Dtype* var_ptr = NULL;
+        if (m_relu)
+        {
+            if (bwd_relu_pd == NULL)
+            {
+                InitReLUBwd(out);
+            }
+            std::shared_ptr<mkldnn::memory> dst_memory, diff_dst_memory, diff_src_memory;
+            dst_memory = bwd_relu_dst_data->get_converted_prv(out_ptr, false, out);
+            diff_src_memory = bwd_relu_top_diff->get_converted_prv(srcgrad_ptr, false, srcGrad);
+            MKLDNNPrimitive<DType> reluBwd;
+            reluBwd.reset(new mkldnn::relu_backward(*bwd_relu_pd, *dst_memory, *diff_src_memory, *diff_src_memory));
+            reluBwd.submit();
+        }
+        DType* scaleShift_buf = static_cast<DType*>(weight_memory->get_data_handle());
+        DType* var_ptr = NULL;
         // use_weight_bias_
-        memcpy(scaleShift_buf, scale.Data(), m_channels_ * sizeof(Dtype));
+        memcpy(scaleShift_buf, scale.Data(), m_channels_ * sizeof(DType));
 
         // optional: convert InvStd to Variance
-        var_ptr = reinterpret_cast<Dtype*>(savedInvStdDev.Data());
+        var_ptr = reinterpret_cast<DType*>(savedInvStdDev.Data());
         std::shared_ptr<mkldnn::memory> bwd_input_primitive;
         std::shared_ptr<mkldnn::memory> bwd_diff_dst_memory;
         std::shared_ptr<mkldnn::memory> bwd_bottom_diff_memory;
@@ -296,7 +366,7 @@ public:
         {
             bwd_bottom_diff_dst = bwd_bottom_diff_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad);
         }
-        bwd_input_primitive = mkldnn_prv_memory<Dtype>(in);
+        bwd_input_primitive = mkldnn_prv_memory<DType>(in);
         if (bwd_input_primitive == nullptr)
         {
             bwd_input_primitive.reset(new mkldnn::memory(*fwd_usr_mpd, in_ptr));
@@ -312,18 +382,18 @@ public:
             *bwd_bottom_diff_dst, *diff_weight_memory));
         BatchNormBwd.submit();
 
-        Dtype* scaleShiftDiff_buf = reinterpret_cast<Dtype*>(diff_weight_memory->get_data_handle());
+        DType* scaleShiftDiff_buf = reinterpret_cast<DType*>(diff_weight_memory->get_data_handle());
 
         if (accumulateDataGrad)
         {
-            Dtype * workspace_ptr = mkl_experimental_direct_get(accu_grad);
-            grad.MklMem()->template AddTo<Dtype>(grad_ptr, *accu_grad.MklMem(), workspace_ptr);
+            DType * workspace_ptr = mkl_experimental_direct_get(accu_grad);
+            grad.MklMem()->template AddTo<DType>(grad_ptr, *accu_grad.MklMem(), workspace_ptr);
         }
         // Store ScaleShift blobs
-        Dtype* diff_scale = scaleGrad.Data();
-        Dtype* diff_shift = biasGrad.Data();
-        memcpy(diff_scale, scaleShiftDiff_buf, sizeof(Dtype)*m_channels_);
-        memcpy(diff_shift, &scaleShiftDiff_buf[m_channels_], sizeof(Dtype)*m_channels_);
+        DType* diff_scale = scaleGrad.Data();
+        DType* diff_shift = biasGrad.Data();
+        memcpy(diff_scale, scaleShiftDiff_buf, sizeof(DType)*m_channels_);
+        memcpy(diff_shift, &scaleShiftDiff_buf[m_channels_], sizeof(DType)*m_channels_);
     }
 
 private:
@@ -332,27 +402,31 @@ private:
     std::shared_ptr<mkldnn::memory::primitive_desc> fwd_usr_mpd;
 
     // Forward
-    std::shared_ptr<MKLDNNData<Dtype>> fwd_top_data, fwd_bottom_data;
+    std::shared_ptr<MKLDNNData<DType>> fwd_top_data, fwd_bottom_data;
     std::shared_ptr<mkldnn::batch_normalization_forward::primitive_desc> fwd_inference_pd;
     std::shared_ptr<mkldnn::batch_normalization_forward::primitive_desc> fwd_training_pd;
-    MKLDNNPrimitive<Dtype> BatchNormFwd;
+    MKLDNNPrimitive<DType> BatchNormFwd;
 
     // Backward
     std::shared_ptr<mkldnn::batch_normalization_backward::primitive_desc> bwd_scaleshift_pd;
-    MKLDNNPrimitive<Dtype> BatchNormBwd;
-    std::shared_ptr<MKLDNNData<Dtype>> bwd_top_diff;
-    std::shared_ptr<MKLDNNData<Dtype>> bwd_bottom_diff, bwd_bottom_diff_ws;
+    MKLDNNPrimitive<DType> BatchNormBwd;
+    std::shared_ptr<MKLDNNData<DType>> bwd_top_diff;
+    std::shared_ptr<MKLDNNData<DType>> bwd_bottom_diff, bwd_bottom_diff_ws;
 
     std::shared_ptr<mkldnn::memory> weight_memory;
     std::shared_ptr<mkldnn::memory> diff_weight_memory;
     std::shared_ptr<mkldnn::memory> fwd_output_memory;
+    std::shared_ptr<mkldnn::relu_forward::primitive_desc> fwd_relu_training_pd;
+    std::shared_ptr<mkldnn::relu_backward::primitive_desc> bwd_relu_pd;
+    std::shared_ptr<MKLDNNData<DType>> bwd_relu_dst_data, bwd_relu_top_diff;
     // common
     int32_t m_num_, m_width_, m_height_, m_channels_;
-    Dtype m_eps_;
+    DType m_eps_;
     bool fix_gamma;
     TensorShape m_inOutT;
     ImageLayoutKind m_imageLayout;
     Mat accu_grad;
+    bool m_relu;
 }; // class MKLDNNBatchNormOp
 template <>
 int MKLDNNBatchNormOp<float>::s_id_gen = 1;
