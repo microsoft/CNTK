@@ -2435,15 +2435,10 @@ namespace CNTK
             return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
                 maxTempMemSizeInSamples, name);
         }
-        else if (groups > 1)
-        {
-            return Internal::GroupConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
-                groups, maxTempMemSizeInSamples, name);
-        }
         else
         {
             return Internal::Convolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
-                { 0 }, maxTempMemSizeInSamples, name);
+                { 0 }, groups, maxTempMemSizeInSamples, name);
         }
     }
 
@@ -2461,6 +2456,7 @@ namespace CNTK
         if ((reductionRank != 0) && (reductionRank != 1))
             LogicError("reductionRank: must be 1 or 0.");
 
+        size_t groups = 1;
         if (reductionRank == 1)
             return Internal::Convolution(convolutionMap,
                 operand,
@@ -2470,6 +2466,7 @@ namespace CNTK
                 dilation,
                 true,
                 outputShape,
+                groups,
                 maxTempMemSizeInSamples,
                 name);
         else
@@ -2502,6 +2499,7 @@ namespace CNTK
                 dilation,
                 true,
                 outputShape,
+                groups,
                 maxTempMemSizeInSamples,
                 name);
             return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ConvolutionTranspose", name);
@@ -3237,6 +3235,7 @@ namespace CNTK
             const NDShape& dilation,
             bool transpose,
             const NDShape& outputShape,
+            size_t groups,
             size_t maxTempMemSizeInSamples,
             const std::wstring& name)
         {
@@ -3257,6 +3256,7 @@ namespace CNTK
             additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
             additionalProperties[PrimitiveFunction::AttributeNameKernelShape] = NDShape({0});
             additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+            additionalProperties[PrimitiveFunction::AttributeNameGroups] = groups;
 
             return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
         }
@@ -3298,50 +3298,10 @@ namespace CNTK
                 dilation,
                 false,
                 { 0 },
+                PrimitiveFunction::convolutionOpDefaultValueForGroups,
                 maxTempMemSizeInSamples,
                 name);
             return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Convolution", name);
-        }
-
-        FunctionPtr GroupConvolution(const Variable& convolutionMap,
-            const Variable& operand,
-            const NDShape& strides,
-            const std::vector<bool>& sharing,
-            const std::vector<bool>& autoPadding,
-            const NDShape& dilation,
-            size_t groups,
-            size_t maxTempMemSizeInSamples,
-            const std::wstring& name)
-        {
-            assert(groups > 1);
-
-            auto filterShape = convolutionMap.Shape();
-            auto filterRank = static_cast<int>(filterShape.Rank());
-            auto inputRank = static_cast<int>(operand.Shape().Rank());
-            auto M = filterShape[filterRank - 1]; // Number of output channels.
-            auto C = operand.Shape()[inputRank - 1]; // Number of input channels in operand.
-            auto kC = filterShape[filterRank - 2]; // Number of input channels in kernel.
-            if (M % groups)
-                LogicError("groups: number of output channels must be divisble by groups.");
-            if (C != (kC * groups))
-                LogicError("groups: number of input channels (C) must be equal to number of input kernel channels (kC) * groups (G).");
-
-            auto operandPlaceholder = PlaceholderVariable();
-            std::vector<Variable> opsOutputVector(groups);
-            auto outputChannelStepSize = static_cast<int>(M / groups);
-            auto inputChannelStepSize = static_cast<int>(C / groups);
-            assert(inputChannelStepSize == static_cast<int>(kC));
-            for (int i = 0; i < groups; ++i)
-            {
-                auto groupConvMap = Slice(convolutionMap, { Axis(filterRank - 1) }, { i*outputChannelStepSize },
-                    { (i + 1)*outputChannelStepSize });
-                auto groupOperand = Slice(operandPlaceholder, { Axis(inputRank - 1) }, { i*inputChannelStepSize },
-                    { (i + 1)*inputChannelStepSize });
-                opsOutputVector[i] = Internal::Convolution(groupConvMap, groupOperand, strides, sharing, autoPadding, dilation,
-                    false, { 0 }, maxTempMemSizeInSamples, name)->Output();
-            }
-            auto splicedConv = Splice(opsOutputVector, Axis(inputRank - 1));
-            return AsBlock(std::move(splicedConv), { { operandPlaceholder, operand } }, L"Convolution", name);
         }
     }
 }

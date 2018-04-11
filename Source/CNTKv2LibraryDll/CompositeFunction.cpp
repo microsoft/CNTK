@@ -1082,12 +1082,15 @@ namespace CNTK
                     NDShape outputShape = NDShape::Unknown();
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
                         outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+                    auto groups = PrimitiveFunction::convolutionOpDefaultValueForGroups;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameGroups))
+                        groups = functionConfig[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
                     ASSIGN_NEW_NODE(ConvolutionNode, network->GetDeviceId(), internalNodeName,
                                                                            AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
                                                                            sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
                                                                            outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
-                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation));
+                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
                     break;
                 }
                 case PrimitiveOpType::CosDistance:
