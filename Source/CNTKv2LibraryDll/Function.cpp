@@ -1688,9 +1688,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr EyeLike(const Variable& operand, const std::wstring& name)
+    FunctionPtr EyeLike(const Variable& operand, bool isOutputSparse, const std::wstring& name)
     {
-        return UnaryOp(PrimitiveOpType::EyeLikeOp, operand, {}, name);
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameOutputSparse] = isOutputSparse;
+        return UnaryOp(PrimitiveOpType::EyeLikeOp, operand, std::move(additionalProperties), name);
     }
 
     std::vector<Variable> AutoBroadcastSequence(PrimitiveOpType op, const Variable& left, const Variable& right, bool autoBroadcast)

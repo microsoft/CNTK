@@ -2888,6 +2888,53 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatr
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
+{
+    if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+        LogicError("SetDiagonalValue: Matrix format is not supported.");
+
+    this->RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize());
+    this->PrepareDevice();
+
+    GPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    GPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* targetData = NzValues();
+    CUDA_LONG N = (CUDA_LONG)SecondaryIndexCount();
+    int blocksPerGrid = (int)ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _setSparseDiagonalValue<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(v,
+        secondaryIndices,
+        majorIndices,
+        targetData,
+        GetDiagSize(),
+        N);
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
+{
+    if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+        LogicError("SetDiagonalValue: Matrix format is not supported.");
+
+    this->RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize());
+    this->PrepareDevice();
+
+    GPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    GPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* v = vector.Data();
+    ElemType* targetData = NzValues();
+    CUDA_LONG N = (CUDA_LONG)SecondaryIndexCount();
+    int blocksPerGrid = (int)ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _setSparseDiagonalValue<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(v,
+        secondaryIndices,
+        majorIndices,
+        targetData,
+        GetDiagSize(),
+        N);
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
     VerifyWritable(__FUNCTION__);

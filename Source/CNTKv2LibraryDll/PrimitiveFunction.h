@@ -290,6 +290,7 @@ namespace CNTK
         static const std::wstring AttributeNameSeqGammarWordPen;
         static const std::wstring AttributeNameNumClass;
         static const std::wstring AttributeNameOneHotOutputSparse;
+        static const std::wstring AttributeNameOutputSparse;
         static const std::wstring AttributeNameOneHotAxis;
         static const std::wstring AttributeNameSequenceAxisNamePrefix;
         static const std::wstring AttributeNameSequenceUnpackPaddingValue;

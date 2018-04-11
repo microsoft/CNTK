@@ -151,15 +151,16 @@ def test_ones_like(operand, device_id, precision):
                    expected_forward, expected_backward)
 
 Matrices = [
-    ([[2.1, 3.1], [4.7, 4.1]])
+    ([[2.1, 4.7], [2.1, 2.1]]),
+    ([[2.1], [4.7], [5.1]]),
+    ([[2.1], [4.7], [5.1], [5.8]]),
 ]
 
 
 @pytest.mark.parametrize("operand", Matrices)
 def test_eye_like(operand, device_id, precision):
-    def np_eye_like(matrix):
-        np.eye(matrix.shape[0], matrix.shape[1], dtype=np.float32)
-    operand = AA(operand)
+    np_eye_like = lambda matrix: np.eye(matrix.shape[0], matrix.shape[1], dtype=np.float32)
+    operand = AA(operand).astype(np.float32)
     expected = np_eye_like(operand)
 
     expected_forward = [expected]
@@ -168,5 +169,8 @@ def test_eye_like(operand, device_id, precision):
     }
 
     from .. import eye_like
-    _test_unary_op(precision, device_id, eye_like, operand,
-                   expected_forward, expected_backward)
+    import cntk as C
+    # C.try_set_default_device(C.cpu())
+    x = C.input_variable(operand.shape[1:], dtype=np.float32)
+    actual = C.eye_like(x, sparse_output=True).eval({x: operand}).todense()
+    np.testing.assert_almost_equal(actual, expected)

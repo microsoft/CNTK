@@ -958,7 +958,9 @@ namespace CNTK
                 }
                 case PrimitiveOpType::EyeLikeOp:
                 {
-                    computationNodePtr = New<EyeLikeNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    bool outputSparse = functionConfig[PrimitiveFunction::AttributeNameOutputSparse].Value<bool>();
+                    //computationNodePtr = New<EyeLikeNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputSparse);
+                    ASSIGN_NEW_NODE(EyeLikeNode, network->GetDeviceId(), internalNodeName, outputSparse);
                     break;
                 }
                 case PrimitiveOpType::ROIPooling:

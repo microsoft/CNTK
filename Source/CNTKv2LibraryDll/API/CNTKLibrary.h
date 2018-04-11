@@ -4131,7 +4131,7 @@ namespace CNTK
     ///
     /// Create an instance of a eye-like operation. This produces ones with the shape and dynamic axes specified by the operand.
     ///
-    CNTK_API FunctionPtr EyeLike(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr EyeLike(const Variable& operand, bool isOutputSparse, const std::wstring& name = L"");
 
 
     ///

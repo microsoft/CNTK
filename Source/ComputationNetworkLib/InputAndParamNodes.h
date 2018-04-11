@@ -795,13 +795,17 @@ template <class ElemType>
 class EyeLikeNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"ConstantOp"; }
+    static const std::wstring TypeName() { return L"EyeLikeOp"; }
 public:
     DeclareConstructorFromConfigWithNumInputs(EyeLikeNode);
     EyeLikeNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : EyeLikeNode(deviceId, name, false)
     {
-       
+    }
+
+    EyeLikeNode(DEVICEID_TYPE deviceId, const wstring& name, bool isOutputSparse)
+        : Base(deviceId, name), m_isOutputSparse(isOutputSparse)
+    {
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /* inputIndex */, const FrameRange& /* t */) override
@@ -811,8 +815,11 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        //TODO: 1) check whether this is a matrix; 2) use sparse matrix value? 
-        auto result = this->ValueFor(fr);
+        auto& result = this->Value();
+        if (m_isOutputSparse && result.GetMatrixType() != SPARSE)
+        {
+            result.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+        }
         result.SetDiagonalValue(ElemType(1.0));
     }
 
@@ -830,6 +837,8 @@ public:
     {
         return false;
     }
+private:
+    bool m_isOutputSparse;
 };
 
 template class EyeLikeNode<float>;

@@ -1477,8 +1477,8 @@ void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
                             this,
                             m_CPUMatrix->SetDiagonalValue(v),
                             m_GPUMatrix->SetDiagonalValue(v),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+                            m_CPUSparseMatrix->SetDiagonalValue(v),
+                            m_GPUMatrix->SetDiagonalValue(v));
 }
 
 template <class ElemType>
@@ -1516,8 +1516,10 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 m_CPUMatrix->SetDiagonalValue(*vector.m_CPUMatrix),
                                 assert(vector.m_GPUMatrix);
                                 m_GPUMatrix->SetDiagonalValue(*vector.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
+                                assert(vector.m_CPUMatrix);
+                                m_CPUSparseMatrix->SetDiagonalValue(*vector.m_CPUMatrix),
+                                assert(vector.m_GPUMatrix);
+                                m_GPUMatrix->SetDiagonalValue(*vector.m_GPUMatrix));
     }
 }
 

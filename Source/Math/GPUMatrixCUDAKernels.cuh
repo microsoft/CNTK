@@ -5854,6 +5854,48 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
     }
 }
 
+template<class ElemType>
+__global__ void _setSparseDiagonalValue(ElemType v,
+    GPUSPARSE_INDEX_TYPE *secondaryIndices,
+    GPUSPARSE_INDEX_TYPE *majorIndices,
+    ElemType *targetBuffer,
+    size_t diagSize,
+    size_t num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < diagSize)
+    {
+        majorIndices[index] = index;
+        targetBuffer[index] = v;
+        secondaryIndices[index] = index;
+    }
+    else if (index < num_elements)
+    {
+        secondaryIndices[index] = diagSize;
+    }
+}
+
+template<class ElemType>
+__global__ void _setSparseDiagonalValue(ElemType *vector,
+    GPUSPARSE_INDEX_TYPE *secondaryIndices,
+    GPUSPARSE_INDEX_TYPE *majorIndices,
+    ElemType *targetBuffer,
+    size_t diagSize,
+    size_t num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < diagSize)
+    {
+        majorIndices[index] = index;
+        targetBuffer[index] = vector[index];
+        secondaryIndices[index] = index;
+    }
+    else if (index < num_elements)
+    {
+        secondaryIndices[index] = diagSize;
+    }
+}
+
 }}}
 
 #endif // !CPUONLY
