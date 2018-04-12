@@ -2186,18 +2186,14 @@ def zeros_like(x, name=''):
 @typemap
 def eye_like(x, sparse_output = True, name=''):
     '''
-    Creates a matrix with diagonal set to 1s and with the same shape and dynamic axes as ``x``. To be a matrix,
+    Creates a matrix with diagonal set to 1s and of the same shape and the same dynamic axes as ``x``. To be a matrix,
      ``x`` must have exactly two axes (counting both dynamic and static axes).
 
     Example:
-        >>> x0 = np.arange(24).reshape((2, 3, 4)).astype('f')
-        >>> x = C.input_variable((3, 4))
+        >>> x0 = np.arange(12).reshape((3, 4)).astype('f')
+        >>> x = C.input_variable(4)
         >>> C.eye_like(x).eval({x: x0})
         array([[[ 1.,  0.,  0.,  0.],
-                [ 0.,  1.,  0.,  0.],
-                [ 0.,  0.,  1.,  0.]],
-        <BLANKLINE>
-               [[ 1.,  0.,  0.,  0.],
                 [ 0.,  1.,  0.,  0.],
                 [ 0.,  0.,  1.,  0.]]], dtype=float32)
 

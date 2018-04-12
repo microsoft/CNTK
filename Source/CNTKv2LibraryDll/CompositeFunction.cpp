@@ -959,7 +959,6 @@ namespace CNTK
                 case PrimitiveOpType::EyeLikeOp:
                 {
                     bool outputSparse = functionConfig[PrimitiveFunction::AttributeNameOutputSparse].Value<bool>();
-                    //computationNodePtr = New<EyeLikeNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputSparse);
                     ASSIGN_NEW_NODE(EyeLikeNode, network->GetDeviceId(), internalNodeName, outputSparse);
                     break;
                 }
