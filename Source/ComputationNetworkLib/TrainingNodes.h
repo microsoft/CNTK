@@ -193,6 +193,9 @@ public:
         // reduce over all frames
         Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logSoftmaxOfRight);
         Value() *= -1;
+        InputRef(1).ValueFor(fr).Print("in");
+        InputRef(0).ValueFor(fr).Print("lmout");
+        ComputationNode<ElemType>::BroadcastToPacked(InputRef(1).ValueFor(fr), InputRef(1).GetMBLayout(), /*beta =*/ 0, *m_logSoftmaxOfRight, fr, m_tempGatherIndices);
 #if NANCHECK
         Value().HasNan("CrossEntropyWithSoftmax");
 #endif
@@ -223,6 +226,7 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -231,11 +235,13 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_tempGatherIndices, matrixPool);
     }
 
 protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
 };
 
 template class CrossEntropyWithSoftmaxNode<float>;

@@ -1342,8 +1342,8 @@ public:
             LogicError("NotifyFunctionValuesMBSizeModified: Must only be called on nodes with MBLayout.");
         if (GetSampleMatrixNumRows() != Value().GetNumRows())
             LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its row dimension %d changed by the reader to %d.", NodeName().c_str(), OperationName().c_str(), (int) GetSampleMatrixNumRows(), (int) Value().GetNumRows());
-        //if (GetMBLayout()->GetNumCols() != Value().GetNumCols())
-        //    LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its col dimension %d changed by the reader to %d, but different from MBLayout.", NodeName().c_str(), OperationName().c_str(), (int) GetMBLayout()->GetNumCols(), (int) Value().GetNumCols());
+        if (GetMBLayout()->GetNumCols() != Value().GetNumCols())
+            LogicError("NotifyFunctionValuesMBSizeModified: %ls %ls operation had its col dimension %d changed by the reader to %d, but different from MBLayout.", NodeName().c_str(), OperationName().c_str(), (int) GetMBLayout()->GetNumCols(), (int) Value().GetNumCols());
     }
 
     // -----------------------------------------------------------------------

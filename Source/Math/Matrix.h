@@ -397,6 +397,12 @@ public:
     Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType>& totalScore,
         const vector<size_t> & extraUttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep,
         const size_t mbSize, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+    //RNNT
+    Matrix<ElemType>& AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2);
+    Matrix<ElemType>& AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq,
+        const Matrix<ElemType>& phoneBoundary, Matrix<ElemType>& totalScore, const vector<size_t>& uttToChanInd, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttBeginPhonePos,
+        const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNumInMB,
+        const size_t blankTokenId, const int delayConstraint, const bool isColWise);
 
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);

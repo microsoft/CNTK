@@ -1149,4 +1149,219 @@ private:
 template class OutputMultiplexerNode<float>;
 template class OutputMultiplexerNode<double>;
 
+// -----------------------------------------------------------------------
+// RNNTNode (prediction, transcription )
+// RNNT training criterion, primarily based on the paper "Sequence Transduction with Recurrent Neural Networks", https://arxiv.org/pdf/1211.3711.pdf
+// blankTokenId (input): id of the blank token. If specified as SIZE_MAX, will be replaced with (numberOfLabels - 1)
+// 
+// -----------------------------------------------------------------------
+
+template<class ElemType>
+class RNNTNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RNNT";
+    }
+public:
+    RNNTNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankTokenId = SIZE_MAX, int delayConstraint = -1) :
+        Base(deviceId, name), m_blankTokenId(blankTokenId)
+    {
+    }
+
+    RNNTNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RNNTNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        // Left node must be a scalar
+        if (inputIndex == 0)  //left derivative
+        {
+            BackpropToLeft(*m_outputLogDistribution, InputRef(inputIndex).Gradient(), Gradient());
+        }
+        else if (inputIndex == 1)
+        {
+            FrameRange frameRange(InputRef(0).GetMBLayout());
+            BackpropToRight(*m_outputDistribution, InputRef(inputIndex).Gradient(), Gradient(), *m_RNNTposterior);
+            InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
+        }
+        else
+            RuntimeError("RNNTNode criterion expects only two inputs: labels and network output.");
+    }
+
+    void BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
+        const Matrix<ElemType>& gradientValues)
+    {
+#if DUMPOUTPUT
+        logSoftmaxOfRight.Print("RNNTNode Partial-logSoftmaxOfRight");
+        gradientValues.Print("RNNTNode Partial-gradientValues");
+        inputGradientValues.Print("RNNTNode Partial-Left-in");
+#endif
+
+        Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
+
+#if DUMPOUTPUT
+        inputGradientValues.Print("RNNTNode Partial-Left-out");
+#endif
+    }
+
+    void BackpropToRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+        const Matrix<ElemType> &CTCposterior)
+    {
+#if DUMPOUTPUT
+        softmaxOfRight.Print("RNNTNode Partial-softmaxOfRight");
+        inputFunctionValues.Print("RNNTNode Partial-inputFunctionValues");
+        gradientValues.Print("RNNTNode Partial-gradientValues");
+        inputGradientValues.Print("RNNTNode Partial-Right-in");
+#endif  
+        // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
+        Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues);
+
+#if DUMPOUTPUT
+        inputGradientValues.Print("RNNTNode Partial-Right");
+#endif
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        m_outputDensity->AssignUserOp1(InputRef(1).Value(), InputRef(2).Value());
+        m_outputLogDistribution->AssignLogSoftmaxOf(*m_outputDensity, true);
+
+        m_outputDistribution->SetValue(*m_outputLogDistribution);
+        m_outputDistribution->InplaceExp();
+
+
+
+        m_RNNTposterior->SwitchToMatrixType(m_outputDistribution->GetMatrixType(), m_outputDistribution->GetFormat(), false);
+        m_RNNTposterior->Resize(m_outputDistribution->GetNumRows(), m_outputDistribution->GetNumCols());
+
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
+        // compute CTC score
+        m_GammaCal.twodimForwardBackward(Value(), *m_outputLogDistribution, *m_maxIndexes, *m_maxValues, *m_RNNTposterior, InputRef(0).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId );
+
+#if NANCHECK
+        functionValues.HasNan("RNNTNode");
+#endif
+#if DUMPOUTPUT
+        functionValues.Print("RNNTNode");
+#endif
+    }
+
+    virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr; // no layout
+
+        if (isFinalValidationPass)
+        {
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match vector dimension
+                Input(0)->HasMBLayout() &&
+                Input(0)->GetMBLayout() == Input(1)->GetMBLayout()))
+            {
+                LogicError("The Matrix dimension in the RNNTNode operation does not match.");
+            }
+
+            auto leftNode = dynamic_pointer_cast<LabelsToGraphNode<ElemType>>(Input(0));
+            if (!leftNode)
+                LogicError("RNNTNode: Please pass LabelsToGraph(labels) for second argument");
+        }
+
+        SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<RNNTNode<ElemType>>(nodeP);
+
+            node->m_outputDensity->SetValue(*m_outputDensity);
+            node->m_outputDistribution->SetValue(*m_outputDistribution);
+            node->m_outputLogDistribution->SetValue(*m_outputLogDistribution);
+            node->m_maxIndexes->SetValue(*m_maxIndexes);
+            node->m_maxValues->SetValue(*m_maxValues);
+            node->m_delayConstraint = m_delayConstraint;
+            node->m_RNNTposterior->SetValue(*m_RNNTposterior);
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_outputDensity, matrixPool);
+        RequestMatrixFromPool(m_outputLogDistribution, matrixPool);
+        RequestMatrixFromPool(m_outputDistribution, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+        RequestMatrixFromPool(m_RNNTposterior, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_outputDensity, matrixPool);
+        ReleaseMatrixToPool(m_outputLogDistribution, matrixPool);
+        ReleaseMatrixToPool(m_outputDistribution, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
+        ReleaseMatrixToPool(m_RNNTposterior, matrixPool);
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+
+        size_t cols = Input(0)->Value().GetNumCols();
+        m_maxIndexes->Resize(1, cols);
+        m_maxValues->Resize(1, cols);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_delayConstraint;
+        fstream << m_blankTokenId;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_delayConstraint;
+        fstream >> m_blankTokenId;
+    }
+
+    int DelayConstraint() { return m_delayConstraint; }
+    size_t BlankTokenId() { return m_blankTokenId; }
+
+protected:
+    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+    shared_ptr<Matrix<ElemType>> m_outputDensity;
+    shared_ptr<Matrix<ElemType>> m_outputDistribution;
+    shared_ptr<Matrix<ElemType>> m_outputLogDistribution;
+    shared_ptr<Matrix<ElemType>> m_maxIndexes;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
+    shared_ptr<Matrix<ElemType>> m_RNNTposterior;
+
+    msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+    size_t m_blankTokenId;
+    int m_delayConstraint;
+};
+
+template class RNNTNode<float>;
+template class RNNTNode<double>;
+
 } } }

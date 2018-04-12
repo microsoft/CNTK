@@ -1477,6 +1477,22 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+    const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, GPUMatrix<ElemType> & totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame,
+    const vector<size_t> & uttBeginPhonePos, const std::vector<size_t> & uttFrameNum, const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences,
+    const size_t maxFrameNum, const size_t maxPhoneNumInMB, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2)
+{
+    return *this;
+}
+
+
+template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
 {
     return *this;

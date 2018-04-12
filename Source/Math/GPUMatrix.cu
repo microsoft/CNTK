@@ -4657,6 +4657,148 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
     return *this;
 }
 
+// Calculate RNNT score
+// prob (input): the posterior output from the network
+// alpha, beta (output): alpha and beta for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBoundary (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// totalScore (output): total CTC score
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numParallelSequences (input): channel number in this minibatch
+// maxFrameNum (input): the maximum channel frame number
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy
+//      delayConstraint=-1 means no constraint
+template<class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemType>& prob,
+    GPUMatrix<ElemType>& alpha,
+    GPUMatrix<ElemType>& beta,
+    const GPUMatrix<ElemType> phoneSeq,
+    const GPUMatrix<ElemType> phoneBoundary,
+    GPUMatrix<ElemType> &totalScore,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t> & uttBeginFrame,
+    const std::vector<size_t> & uttBeginPhonePos,
+    const std::vector<size_t> & uttFrameNum,
+    const std::vector<size_t> & uttPhoneNum,
+    const size_t numParallelSequences,
+    const size_t maxFrameNum, 
+    const size_t maxPhoneNumInMB,
+    const size_t blankTokenId,
+    const int delayConstraint, 
+    const bool isColWise)
+{
+    if (isColWise)
+    {
+        maxPhoneNumInMB;
+        uttBeginPhonePos;
+        PrepareDevice();
+        // Total number of phones
+        long totalPhoneNum = prob.GetNumRows();
+        size_t uttNum = uttFrameNum.size();
+
+        // Max number of phones in utterances in this minibatch
+        size_t maxPhoneNum = phoneSeq.GetNumRows();
+
+        size_t *gpuFrameNum;
+        CUDA_CALL(cudaMalloc((void **)&gpuFrameNum, uttNum * sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(gpuFrameNum, uttFrameNum.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+
+        size_t *gpuPhoneNum;
+        CUDA_CALL(cudaMalloc((void **)&gpuPhoneNum, uttNum * sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(gpuPhoneNum, uttPhoneNum.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+
+        size_t *gpuBeginFrame;
+        CUDA_CALL(cudaMalloc((void **)&gpuBeginFrame, uttNum * sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(gpuBeginFrame, uttBeginFrame.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+
+        size_t *gpuUttToChanInd;
+        CUDA_CALL(cudaMalloc((void **)&gpuUttToChanInd, uttNum * sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(gpuUttToChanInd, uttToChanInd.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+
+        cudaEvent_t done = nullptr;
+        CUDA_CALL(cudaEventCreate(&done));
+        dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+        // x dimension is for utterances
+        // y dimention is for phone sequence in each utterance
+        // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances 
+        dim3 block_tail((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+        for (long t = 0; t < maxFrameNum; t++)
+        {
+            _assignAlphaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
+                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+        for (long t = maxFrameNum - 1; t >= 0; t--)
+        {
+            _assignBetaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
+                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+        
+        ElemType zerVar = 0.0;
+        totalScore.SetColumn(&zerVar, 0);
+        _assignTotalScore << <uttNum, 1, 0, t_stream >> > (beta.Data(), totalScore.Data(), uttNum, gpuUttToChanInd, gpuBeginFrame, numParallelSequences, maxPhoneNum, phoneSeq.Data(), blankTokenId);
+
+        dim3 block_tail_2((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+
+        _assignCTCScore << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, gpuUttToChanInd,
+            gpuBeginFrame, gpuPhoneNum, gpuFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
+
+        CUDA_CALL(cudaFree(gpuFrameNum));
+        CUDA_CALL(cudaFree(gpuPhoneNum));
+        CUDA_CALL(cudaFree(gpuBeginFrame));
+        CUDA_CALL(cudaFree(gpuUttToChanInd));
+
+        CUDA_CALL(cudaEventRecord(done));
+        CUDA_CALL(cudaEventSynchronize(done));
+        CUDA_CALL(cudaEventDestroy(done));
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    return *this;
+}
+
+//user defined matrix operation 
+//this one is for RNN T output = input1(k,t) + input2(k,u).
+//inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
+template<class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1,  GPUMatrix<ElemType>& in2)
+{
+    if (in1.IsEmpty() || in2.IsEmpty())
+        LogicError("AssignElementProductOf: Matrix is empty.");
+
+    
+    if (in1.GetNumRows() != in2.GetNumRows() )
+        InvalidArgument("The input matrix dimensions do not match.");
+
+    int nCol1 = in1.GetNumCols();
+    int nCol2 = in2.GetNumCols();
+    RequireSize(in1.GetNumRows(),nCol1*nCol2);
+    int BS = in1.GetNumRows();
+
+    // the output matrix is of size (nt+1, BS)
+    //dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+    //dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+
+    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM );
+        // x dimension is for utterances
+        // y dimention is for phone sequence in each utterance
+        // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances 
+    dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (nCol1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (nCol1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+    in1.PrepareDevice();
+    SyncGuard syncGuard;
+    _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, nCol1, nCol2);
+    //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
+
+    return *this;
+}
 template <class ElemType>
 void GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed)
 {

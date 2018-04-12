@@ -5791,6 +5791,22 @@ __global__ void _assignTotalScore(ElemType *betaScore,
 }
 
 template<class ElemType>
+__global__ void _assignUserOp1(ElemType* us, 
+                              ElemType *in1,
+                              ElemType *in2,
+                              int BS,
+                              int nCol1,
+                              int nCol2)
+{
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    const CUDA_LONG u = blockIdx.z * blockDim.z + threadIdx.z;
+
+    if(k < BS && t < nCol1 && u < nCol2)
+        us[IDX2C(k, t*nCol2+u,BS)] = in1[IDX2C(k,t,BS)]*in1[IDX2C(k,t,BS)] + in2[IDX2C(k,u,BS)]*in2[IDX2C(k,u,BS)];
+}
+
+template<class ElemType>
 __global__ void _assignOneHot(ElemType *indices,
                                   ElemType *targetBuffer,
                                   size_t num_class,

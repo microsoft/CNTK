@@ -6561,6 +6561,325 @@ void _assignCTCScore(
     }
 }
 
+
+// Calculate alpha in forward-backward calculation. equation (6), (7) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
+// GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
+// prob (input): the posterior output from the network
+// alpha (output): alpha for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numChannels (input): channel number in this minibatch
+// uttNum (input): number of utterances
+// t (input): time stamp to process
+// maxPhoneNum (input): the max number of phones between utterances
+// totalPhoneNum (input): the total number of phones of all utterances
+// blankTokenId (input): id of the CTC blank token
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      delayConstraint=-1 means no constraint
+template<class ElemType>
+void _assignRNNTAlphaScore(
+    const ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttBeginPhonePos,
+    const std::vector<size_t>& uttPhoneNum,
+    size_t numChannels,
+    const size_t uttNum,
+    const size_t  t,
+    const size_t u,
+    const size_t maxPhoneNum, // Maximum length of utterance in this MB
+    const size_t maxPhoneNumInMB, //maximum length of phone in this MB
+    const size_t totalPhoneNum, // Total number of phones
+    const size_t blankTokenId,
+    const int delayConstraint)
+
+    
+{
+    for (size_t uttId = 0; uttId < uttNum; uttId++) {
+
+        // Number of phones and frames in this utterance
+        size_t frameNum = uttFrameNum[uttId];
+        if (t >= frameNum) continue;
+        
+        size_t phoneNum = uttPhoneNum[uttId];
+        if (u >= phoneNum + 1) continue;
+
+        // Current  phone indices in phoneSeq matrix
+        size_t labelid = uttId*maxPhoneNum + u ;
+        
+        // Actual current phone label
+        size_t phoneId = (size_t)(phoneSeq[labelid]); //phone ID of u
+
+        //time Index of the current frame in minibatch
+        size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+
+        // phone Index of the current frame in minibatch
+        size_t unitId = (u + uttBeginPhonePos[uttId] * numChannels) + uttToChanInd[uttId];
+
+        //(t,u) index of outputdistribution in minibatch
+        size_t tuID = timeId * maxPhoneNumInMB + unitId;
+
+        // Index of outputdistribution of observing phoneId at frame timeId
+        //size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u)|t,u)
+
+        //index for alpha
+        size_t alphaId = maxPhoneNum* timeId + u; // alpha_t(s)
+
+        if (t == 0 && u == 0)
+        {
+            alphaScore[alphaId] = 0.0;
+        }
+        else if ((t == 0 && u == 1))
+        {
+            size_t alphaId_1 = alphaId - 1; // alpha ID for [t,u-1]
+            size_t tuID_1 = tuID - numChannels; //tuID for [t,u-1]           
+            size_t probId_1 = tuID_1 * totalPhoneNum + phoneId; //ID for p(y(u)|t,u-1)
+
+            alphaScore[alphaId] = alphaScore[alphaId_1] + prob[probId_1];
+        }
+        else if (t == 1 && u == 0 )
+        {            
+            size_t tuID_2 = tuID - numChannels * maxPhoneNumInMB; //tuID for [t-1,u]
+            size_t alphaId_2 = alphaId - numChannels * maxPhoneNum; //alpha ID for [t-1, u]
+            size_t probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
+            alphaScore[alphaId] = alphaScore[alphaId_2] + prob[probId_2];
+
+        }
+        else
+        {
+            size_t alphaId_1 = alphaId - 1; // alpha ID for [t,u-1]
+            size_t tuID_1 = tuID - numChannels; //tuID for [t,u-1]           
+            size_t probId_1 = tuID_1 * totalPhoneNum + phoneId; //ID for p(y(u)|t,u-1)
+            size_t tuID_2 = tuID - numChannels * maxPhoneNumInMB; //tuID for [t-1,u]
+            size_t alphaId_2 = alphaId - numChannels * maxPhoneNum; //alpha ID for [t-1, u]
+            size_t probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
+
+            ElemType x = LZERO, y = LZERO;
+            x = alphaScore[alphaId_1] + prob[probId_1];
+            y = alphaScore[alphaId_2] + prob[probId_2];
+
+            alphaScore[alphaId] = LogAdd(x, y);
+        }
+    }
+}
+
+// Calculate beta in forward-backward calculation, equation (10), (11) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+void _assignRNNTBetaScore(
+    const ElemType *prob,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttBeginPhonePos,
+    const std::vector<size_t>& uttPhoneNum,
+    const size_t numChannels,
+    const size_t uttNum,
+    const size_t t,
+    const size_t u,
+    const size_t maxPhoneNum,
+    const size_t maxPhoneNumInMB, //maximum length of phone in this MB
+    const size_t totalPhoneNum,
+    const size_t blankTokenId,
+    const int delayConstraint)
+    
+{
+    for (size_t uttId = 0; uttId < uttNum; uttId++) {
+
+        // Number of phones and frames in this utterance
+        size_t frameNum = uttFrameNum[uttId];
+        if (t >= frameNum) continue;
+
+        size_t phoneNum = uttPhoneNum[uttId];
+        if (u >= phoneNum + 1) continue;
+
+        // Current and previous phone indices in phoneSeq matrix
+        size_t labelid = uttId*maxPhoneNum + u;
+
+        // Actual current phone label
+        size_t phoneId = (size_t)(phoneSeq[labelid + 1]); //phone ID of u+1
+
+                                                          // Index of the current frame in minibatch
+        size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];  //timeid in chunk for t
+
+        // Index of the current frame in minibatch
+        size_t unitId = (u + uttBeginPhonePos[uttId] * numChannels) + uttToChanInd[uttId];  //phoneseq id in chunk for u
+        size_t tuID = timeId * maxPhoneNumInMB + unitId;       //tuId for (t,u)
+
+        // Index of probability of observing phoneId at frame timeId
+        size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u+1)|t,u)
+
+        size_t betaId = maxPhoneNum* timeId + u; //betaid for (t,u)
+
+        if (u == phoneNum && t == frameNum - 1)
+        {
+            size_t probId_1 = tuID*totalPhoneNum + blankTokenId;//ID for p(phi|t,u)
+            betaScore[betaId] = prob[probId_1];
+        }
+        else if (u == phoneNum && t == frameNum - 2)
+        {
+            size_t probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
+            size_t betaId_1 = betaId + numChannels * maxPhoneNum ; //beta ID for (t+1,u)
+            betaScore[betaId] = betaScore[betaId_1] + prob[probId_1];
+        }
+        else if (u == phoneNum - 1 && t == frameNum - 1)
+        {
+            size_t betaId_2 = betaId + 1; //beid for (t,u+1)
+            betaScore[betaId] = betaScore[betaId_2] + prob[probId];
+        }
+        else
+        {
+            size_t probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
+            size_t betaId_1 = betaId + numChannels * maxPhoneNum; //beta ID for (t+1,u)
+            size_t betaId_2 = betaId + 1; //beid for (t,u+1)
+
+            ElemType x = LZERO, y = LZERO;
+            x = betaScore[betaId_1] + prob[probId_1];
+            y = betaScore[betaId_2] + prob[probId];
+
+            betaScore[betaId] = LogAdd(x, y);
+        }
+    }
+}
+
+// Calculate CTC score. equation (8) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
+template<class ElemType>
+void _assignRNNTTotalScore(ElemType *alphaScore,
+    ElemType *betaScore,
+    std::vector<ElemType>& totalScore,
+    const size_t uttNum,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttPhoneNum,
+    const size_t numChannels,
+    const size_t maxPhoneNum)
+
+{
+    //#pragma omp parallel for
+    
+    ElemType x = LZERO;
+    for (int uttId = 0; uttId < uttNum; uttId++) {
+        if (uttId < uttNum)
+        {
+            for (size_t n = 1; n <= uttFrameNum[uttId] + uttPhoneNum[uttId]; n++)
+            {
+                x = LZERO;
+                for (size_t t = 0; t <= n; t++)
+                {
+                    size_t u = n - t;
+                    size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+
+                    size_t alphaId = maxPhoneNum* timeId + u;
+                    x = LogAdd(x, alphaScore[alphaId] + betaScore[alphaId]);
+                }
+                if (n > 2)
+                {
+                    if (fabs(x- totalScore[uttId]) > 1e-4)
+                        fprintf(stderr, "bad totalscore for RNNT %f %f\n", x, totalScore[uttId]);
+                }
+                else
+                    totalScore[uttId] = x;
+
+            }
+            
+        }
+    }
+}
+
+// Calculate derivative, equation (15) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+void _assignRNNTScore(
+    ElemType *RNNTscore,
+    ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    const size_t uttNum,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttBeginPhonePos,
+    const std::vector<size_t>& uttPhoneNum,
+    const std::vector<size_t>& uttFrameNum,
+    const size_t numChannels,
+    const size_t maxPhoneNum,
+    const size_t maxPhoneNumInMB,
+    const size_t totalPhoneNum,
+    const size_t blankTokenId)
+{
+    ElemType x = LZERO, y = LZERO;
+    
+    for (size_t uttId = 0; uttId < uttNum; uttId++) {
+        size_t zeroID = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+//#pragma omp parallel for
+        for (int t = 0; t < uttFrameNum[uttId]; t++) {
+            size_t phoneNum = uttPhoneNum[uttId];            
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId]; //time ID in MB for t
+            ElemType P_lx = betaScore[zeroID]; //p(y|x)
+
+            for (int u = 0; u < phoneNum + 1; u++)
+            {
+                size_t alphaId = maxPhoneNum* timeId + u;     //alpha ID for (t,u)   
+                // Index of the current phone in minibatch
+                size_t unitId = (u + uttBeginPhonePos[uttId] * numChannels) + uttToChanInd[uttId];  //phoneseq id in chunk for u
+                size_t tuID = timeId * maxPhoneNumInMB + unitId;       //tuId for (t,u)
+
+                x = alphaScore[alphaId] + betaScore[alphaId] - P_lx;
+
+                for (int k = 0; k < totalPhoneNum; k++)
+                {
+                    size_t ktuID = tuID*totalPhoneNum + k;
+                    y = x + prob[ktuID];
+
+                    if (y < LZERO)
+                        RNNTscore[ktuID] = 0.0f;
+                    else
+                        RNNTscore[ktuID] = exp(y);
+                   
+                    
+                }
+                if (u < phoneNum)  //k == y(u+1)
+                {
+                    long phoneId = phoneSeq[uttId*maxPhoneNum + u+1];  //actual phone ID for u+1
+                    size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u+1)|t,u)
+                    size_t betaId = alphaId + 1; //betaId for (t,u+1)
+
+                    x = alphaScore[alphaId] + betaScore[betaId] + prob[probId] - P_lx;
+                    if (x < LZERO)
+                        y = 0.0f;
+                    else
+                        y = exp(x);
+                    RNNTscore[probId] -= y;      
+                }
+                // k == phi
+                size_t probId = tuID *totalPhoneNum + blankTokenId;
+                size_t betaId = alphaId + numChannels * maxPhoneNum;  //beta ID for(t+1,u)
+                x = alphaScore[alphaId] + betaScore[betaId] + prob[probId] - P_lx;
+
+                if (x < LZERO)
+                    y = 0.0f;
+                else
+                    y = exp(x);
+                RNNTscore[probId] -= y;
+            }
+            
+        }
+    }
+}
 template<class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
@@ -6591,7 +6910,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
 
         std::vector<ElemType> scores(uttNum);
         _assignTotalScore(beta.Data(), scores, uttNum, uttToChanInd, uttBeginFrame, numParallelSequences, maxPhoneNum);
-
+        
         _assignCTCScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
             uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
 
@@ -6611,6 +6930,88 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     return *this;
 }
 
+
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& in2)
+{
+    
+    if (in1.IsEmpty() || in2.IsEmpty())
+        LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
+
+    if (in1.GetNumRows() != in2.GetNumRows() )
+        InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
+    
+    size_t nCol1 = in1.GetNumCols();
+    size_t nCol2 = in2.GetNumCols();
+    auto& us = *this;
+    RequireSize(in1.GetNumRows(), nCol1 * nCol2);
+   
+    long n = (long)GetNumRows(); 
+#pragma omp parallel for
+    for (long k = 0; k < n; k++)
+    {
+        for (long t = 0; t<(long)nCol1; t++) 
+            for (long u = 0; u < (long)nCol2; u++)
+            {
+                us(k, t*nCol2+u) = in1(k,t)*in1(k,t) + in2(k,u)*in2(k,u);
+            }        
+    }
+    return *this;
+
+}
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq,
+    const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const vector<size_t>& uttToChanInd, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttBeginPhonePos,
+    const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNumInMB,
+    const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+
+{
+    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
+    if (isColWise)
+    {
+        // Total number of phones
+        size_t totalPhoneNum = prob.GetNumRows();
+        size_t uttNum = uttFrameNum.size();
+
+        // Max number of phones in utterances in this minibatch
+        size_t maxPhoneNum = phoneSeq.GetNumRows();
+
+        for (size_t t = 0; t < maxFrameNum; t++)
+        {
+            for(size_t u=0; u<maxPhoneNum+1;u++)
+                _assignRNNTAlphaScore(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
+                    uttFrameNum, uttBeginFrame, uttBeginPhonePos, uttPhoneNum, numParallelSequences, uttNum, t, u, maxPhoneNum, maxPhoneNumInMB, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+        for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
+        {
+            for (size_t u = 0; u<maxPhoneNum + 1; u++)
+                _assignRNNTBetaScore(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
+                    uttFrameNum, uttBeginFrame, uttBeginPhonePos, uttPhoneNum, numParallelSequences, uttNum, t, u, maxPhoneNum, maxPhoneNumInMB, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+        std::vector<ElemType> scores(uttNum);
+        _assignRNNTTotalScore(alpha.Data(), beta.Data(), scores, uttNum, uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum);
+        this->SetValue(0.0);
+        _assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
+            uttBeginFrame, uttBeginPhonePos, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, maxPhoneNumInMB, totalPhoneNum, blankTokenId);
+
+        
+        totalScore(0, 0) = 0.0;
+        for (size_t utt = 0; utt < uttNum; utt++)
+        {
+            totalScore(0, 0) -= scores[utt];
+        }
+
+        return *this;
+
+    }
+    else {
+        LogicError("Only ColWise minibatch layout is supported.");
+    }
+
+    return *this;
+}
 /// the kernel function for RCRF backward computation
 template <class ElemType>
 void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
