@@ -84,6 +84,7 @@ class lattice
     {
         size_t prev_edge_index;
         size_t prev_token_index;
+        double path_score; // use pure to indicatethe path score does not consider the WER of the path
     };
 
     struct NBestToken

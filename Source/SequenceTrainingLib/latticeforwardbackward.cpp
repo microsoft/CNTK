@@ -696,7 +696,8 @@ void lattice::constructnodenbestoken(std::vector<NBestToken> &tokenlattice, cons
             // fprintf(stderr, "nidx = %d, i = %d \n", int(nidx), int(i));
             tokeninfo.prev_edge_index = mp_itr->second[i].prev_edge_index;
             tokeninfo.prev_token_index = mp_itr->second[i].prev_token_index;
-            tokeninfo.score = mp_itr->first;
+            // tokeninfo.score = mp_itr->first;
+            tokeninfo.score = mp_itr->second[i].path_score;
 
             if (wordNbest)
             {
@@ -932,6 +933,9 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
             prevtokeninfo.prev_token_index = i;
 
             double pathscore = tokenlattice[e.S].vt_nbest_tokens[i].score + edgescore;
+
+            prevtokeninfo.path_score = pathscore;
+
             
             if (useAccInNbest && nodes[e.E].wid == 2)
             {
@@ -967,8 +971,11 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
                  }
 
                  float wer = compute_wer(wids, path_ids);
-                 // will fabor the path with better WER
+                 // will favor the path with better WER
                  pathscore -= double(accWeightInNbest*wer);
+
+                 // If you only want WER to affect the selection of Nbest, disable the below line. If you aslo want the WER as weight in error computation, enable this line
+                 // prevtokeninfo.path_score = pathscore;
             }
                 
             mp_itr = tokenlattice[e.E].mp_score_token_infos.find(pathscore);
