@@ -89,7 +89,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_inputInvalidMatrix;      // [0,j] contains 1 if matrix column belongs to an frame with boundary condition or a gap frame
     shared_ptr<Matrix<ElemType>> m_zeroMatrix;              // constant [1]-dimensional 0 used for backprop  --TODO: could use a static map[deviceId]
     shared_ptr<Matrix<ElemType>> m_packedIndexMatrix;       // index mapping for DoGatherColumnsOf() in case of per-sequence initial state
-
+    bool m_packedIndexHaveDups;                              // whether indices in m_packedIndexMatrix has dups
     shared_ptr<Matrix<ElemType>> m_delayedValue;            // saves the activation of the previous step that this node points to
     MBLayoutPtr m_delayedActivationMBLayout;                // layout for m_delayedValue
 };

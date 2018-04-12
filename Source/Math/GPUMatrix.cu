@@ -1024,7 +1024,7 @@ static void Peek(const GPUMatrix<ElemType>& m, const char* which)
 #define ALLOW_ATOMIC_SCATTER // allow to disable this, until we know atomicAdd() works properly here
 
 template <class ElemType>
-__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
+__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements, bool useAtomicAdd)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
 
@@ -1050,7 +1050,10 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     ElemType res = (comp_t)ra * (comp_t)alpha; // TODO_NV: investigate atomicAdd
     if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
 #ifdef ALLOW_ATOMIC_SCATTER
-        atomicAdd(&rus, res); // rus += res;
+        if (useAtomicAdd)
+            atomicAdd(&rus, res); // rus += res;
+        else
+            rus += res;
 #else
         rus += res;
 #endif
@@ -1059,7 +1062,7 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
 
 // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha, bool useAtomicAdd)
 {
     if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
@@ -1103,7 +1106,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     CUDA_LONG NN = (CUDA_LONG)(a.GetNumElements()); // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
-    _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
+    _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN, useAtomicAdd);
 
     //SyncGuard syncGuard;
     //_doScatterColumnsOf<ElemType><<<a.GetNumCols(), a.GetNumRows(), 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);

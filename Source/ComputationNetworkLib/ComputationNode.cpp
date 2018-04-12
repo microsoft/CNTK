@@ -213,7 +213,7 @@ template<class ElemType>
         if (gapPadValue && (*gapPadValue == 0) && (unpackedData->GetMatrixType() == MatrixType::SPARSE))
             unpackedData->SetValue(*gapPadValue);
 
-        unpackedData->DoScatterColumnsOf(0, *scatterIdxMatrix, packedData, 1);
+        unpackedData->DoScatterColumnsOf(0, *scatterIdxMatrix, packedData, 1, /*idxHaveDups*/ false);
 
         // DoScatterColumnsOf fills the target with 0 before scattering if passed beta == 0. 
         // This we need to mask only if the gapPadValue != 0
