@@ -28,7 +28,8 @@
 #include <boost/random/normal_distribution.hpp>
 #pragma warning(pop)
 #include <boost/random/uniform_real_distribution.hpp>
-
+#include "mkldnn/mkldnn_memory-inl.h"
+#include "mkldnn/mkl_util-inl.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include "Windows.h"
@@ -938,7 +939,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
         InvalidArgument("Invalid pArray. pArray == nullptr, but matrix is of size %d * %d = %d.", (int) numRows,
                         (int) numCols, (int) (numRows * numCols));
 #ifdef USE_MKLDNN
-    Data();
+    MklMem()->clear();
 #endif
     SetFormat(matrixFormatDense);
     SetComputeDeviceId(CPUDEVICE);
@@ -5616,6 +5617,15 @@ void CPUMatrix<ElemType>::Multiply(const CPUMatrix<ElemType>& a, const CPUMatrix
     return CPUMatrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, false, b, false, 0.0, c);
 }
 
+template<typename ElemType>
+inline ElemType * mkl_prv_data(const CPUMatrix<ElemType> &b) {
+    std::shared_ptr<MKLMemHolder> bottom_data_mem = b.MklMem();
+    bool mem_valid = (bottom_data_mem != nullptr) && bottom_data_mem->head_at_prv();
+    if (mem_valid) {
+        return reinterpret_cast<ElemType*>(bottom_data_mem->prv_data());
+    }
+    return NULL;
+}
 /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
 /// if a is a column vector, add to all columns of c
 /// if a is a row vector, add to all rows of c
@@ -5640,20 +5650,54 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
         if ((int) c.GetNumRows() != m || (int) c.GetNumCols() != n)
             InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
-
-        if (std::is_same<ElemType, double>::value)
-        {
-            cblas_daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()),
-                        incy);
-        }
-        else if (std::is_same<ElemType, float>::value)
+        ElemType * prv_a = mkl_prv_data<ElemType>(a);
+        ElemType * prv_c = mkl_prv_data<ElemType>(c);
+        if (prv_a != NULL && prv_c != NULL)
         {
 #pragma warning(suppress : 4244)
-            cblas_saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
+            cblas_saxpy(len, alpha, reinterpret_cast<float*>(prv_a), incx, reinterpret_cast<float*>(prv_c), incy);
+        }
+        else if (prv_a != NULL && prv_c == NULL)
+        {
+            std::shared_ptr<MKLDNNData<ElemType> > tmp_mkl_dnn;
+            std::shared_ptr<MKLDNNData<ElemType> > a_mem_desc = mkl_get_mem_desc<ElemType>(a.MklMem());
+            tmp_mkl_dnn.reset(new MKLDNNData<ElemType>(a_mem_desc->usr_memory_pd(), a_mem_desc->prv_memory_pd()));
+            tmp_mkl_dnn->name = "u+=alpha p ";
+            tmp_mkl_dnn->get_converted_prv2(c.Data(), true, c);
+
+            ElemType* aBufPtr = prv_a;
+            ElemType * cBufPtr = mkl_prv_data<ElemType>(c);
+#pragma warning(suppress : 4244)
+            cblas_saxpy(len, alpha, reinterpret_cast<float*>(aBufPtr), incx, reinterpret_cast<float*>(cBufPtr), incy);
+        }
+        else if (prv_a == NULL && prv_c != NULL)
+        {
+            std::shared_ptr<MKLDNNData<ElemType> > tmp_mkl_dnn;
+            std::shared_ptr<MKLDNNData<ElemType> > c_mem_desc = mkl_get_mem_desc<ElemType>(c.MklMem());
+            tmp_mkl_dnn.reset(new MKLDNNData<ElemType>(c_mem_desc->usr_memory_pd(), c_mem_desc->prv_memory_pd()));
+            tmp_mkl_dnn->name = "p+=alpha u ";
+            tmp_mkl_dnn->get_converted_prv2(a.Data(), true, a);
+
+            ElemType* aBufPtr = mkl_prv_data<ElemType>(a);
+            ElemType * cBufPtr = prv_c;
+#pragma warning(suppress : 4244)
+            cblas_saxpy(len, alpha, reinterpret_cast<float*>(aBufPtr), incx, reinterpret_cast<float*>(cBufPtr), incy);
         }
         else
         {
-            RuntimeError("Unsupported data format");
+	        if (std::is_same<ElemType, double>::value)
+	        {
+	                cblas_daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
+	        }
+	        else if (std::is_same<ElemType, float>::value)
+	        {
+	#pragma warning(suppress : 4244)
+	            cblas_saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
+	        }
+	        else
+	        {
+	            RuntimeError("Unsupported data format");
+	        }
         }
     }
     else if (a.GetNumElements() == 1) // scalar, add to all elements
@@ -5712,11 +5756,60 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     }
     else // row vector, add it to all rows
     {
+        ElemType * prv_a = mkl_prv_data<ElemType>(a);
+        ElemType * prv_c = mkl_prv_data<ElemType>(c);
         int m = (int) c.GetNumRows();
         int n = (int) c.GetNumCols();
         if (n != (int) a.GetNumCols())
             InvalidArgument("To add row vector, cols should match.");
+        if (prv_a != NULL && prv_c != NULL)
+        {
+            ElemType* aBufPtr = prv_a;
+            ElemType* cBufPtr = prv_c;
+#pragma omp parallel for
+            foreach_row(i, c)
+            {
+#pragma warning(suppress : 4244)
+                cblas_saxpy(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + i), m);
+            }
+        }
+        else if (prv_a == NULL && prv_c != NULL)
+        {
+            std::shared_ptr<MKLDNNData<ElemType> > tmp_mkl_dnn;
+            std::shared_ptr<MKLDNNData<ElemType> > c_mem_desc = mkl_get_mem_desc<ElemType>(c.MklMem());
+            tmp_mkl_dnn.reset(new MKLDNNData<ElemType>(c_mem_desc->usr_memory_pd(), c_mem_desc->prv_memory_pd()));
+            tmp_mkl_dnn->name = "p+=alpha u ";
+            tmp_mkl_dnn->get_converted_prv2(a.Data(), true, a);
 
+            ElemType* aBufPtr = mkl_prv_data<ElemType>(a);
+            ElemType * cBufPtr = prv_c;
+#pragma omp parallel for
+            foreach_row(i, c)
+            {
+#pragma warning(suppress : 4244)
+                cblas_saxpy(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + i), m);
+            }
+        }
+        else if (prv_a != NULL && prv_c == NULL)
+        {
+            std::shared_ptr<MKLDNNData<ElemType> > tmp_mkl_dnn;
+            std::shared_ptr<MKLDNNData<ElemType> > a_mem_desc = mkl_get_mem_desc<ElemType>(a.MklMem());
+            tmp_mkl_dnn.reset(new MKLDNNData<ElemType>(a_mem_desc->usr_memory_pd(), a_mem_desc->prv_memory_pd()));
+            tmp_mkl_dnn->name = "u+=alpha p ";
+            tmp_mkl_dnn->get_converted_prv2(c.Data(), true, c);
+
+            ElemType* aBufPtr = prv_a;
+            ElemType * cBufPtr = mkl_prv_data<ElemType>(c);
+#pragma omp parallel for
+            foreach_row(i, c)
+            {
+#pragma warning(suppress : 4244)
+                cblas_saxpy(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + i), m);
+            }
+
+        }
+        else
+        {
         ElemType* aBufPtr = a.Data();
         ElemType* cBufPtr = c.Data();
         if (std::is_same<ElemType, double>::value)
@@ -5739,6 +5832,207 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         else
         {
             RuntimeError("Unsupported data format");
+        }
+    }
+}
+}
+template <class ElemType>
+void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    if (a.IsEmpty() || c.IsEmpty())
+        LogicError("ScaleAndAdd:  one of the input matrices is empty.");
+    if (a.GetNumRows() != 1 && a.GetNumCols() != 1) // a is not a col or row vector
+    {
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+        const int len = m * n;
+        const int incx = 1;
+        const int incy = 1;
+        assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
+        if ((int)c.GetNumRows() != m || (int)c.GetNumCols() != n)
+            InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
+        ElemType * prv_a = mkl_prv_data<ElemType>(a);
+        ElemType * prv_c = mkl_prv_data<ElemType>(c);
+        if (prv_a != NULL && prv_c != NULL)
+        {
+            ElemType* aBufPtr = prv_a;
+            ElemType* cBufPtr = prv_c;
+#pragma warning(suppress : 4244)
+            cblas_saxpby(len, alpha, reinterpret_cast<float*>(aBufPtr), incx, beta, reinterpret_cast<float*>(cBufPtr), incy);
+        }
+        else if (prv_a != NULL && prv_c == NULL)
+        {
+            std::shared_ptr<MKLDNNData<ElemType> > tmp_mkl_dnn;
+            std::shared_ptr<MKLDNNData<ElemType> > a_mem_desc = mkl_get_mem_desc<ElemType>(a.MklMem());
+            tmp_mkl_dnn.reset(new MKLDNNData<ElemType>(a_mem_desc->usr_memory_pd(), a_mem_desc->prv_memory_pd()));
+            tmp_mkl_dnn->name = "u+=p ";
+            tmp_mkl_dnn->get_converted_prv2(c.Data(), true, c);
+            ElemType* aBufPtr = prv_a;
+            ElemType * cBufPtr = mkl_prv_data<ElemType>(c);
+#pragma warning(suppress : 4244)
+            cblas_saxpby(len, alpha, reinterpret_cast<float*>(aBufPtr), incx, beta, reinterpret_cast<float*>(cBufPtr), incy);
+
+        }
+        else if (prv_a == NULL && prv_c != NULL)
+        {
+            std::shared_ptr<MKLDNNData<ElemType> > tmp_mkl_dnn;
+            std::shared_ptr<MKLDNNData<ElemType> > c_mem_desc = mkl_get_mem_desc<ElemType>(c.MklMem());
+            tmp_mkl_dnn.reset(new MKLDNNData<ElemType>(c_mem_desc->usr_memory_pd(), c_mem_desc->prv_memory_pd()));
+            tmp_mkl_dnn->name = "p+=alpha u ";
+            tmp_mkl_dnn->get_converted_prv2(a.Data(), true, a);
+
+            ElemType* aBufPtr = mkl_prv_data<ElemType>(a);
+            ElemType * cBufPtr = prv_c;
+#pragma warning(suppress : 4244)
+            cblas_saxpby(len, alpha, reinterpret_cast<float*>(aBufPtr), incx, beta, reinterpret_cast<float*>(cBufPtr), incy);
+        }
+        else
+        {
+            if (std::is_same<ElemType, double>::value)
+            {
+                cblas_daxpby(len, alpha, reinterpret_cast<double*>(a.Data()), incx, beta, reinterpret_cast<double*>(c.Data()), incy);
+            }
+            else if (std::is_same<ElemType, float>::value)
+            {
+#pragma warning(suppress : 4244)
+                cblas_saxpby(len, alpha, reinterpret_cast<float*>(a.Data()), incx, beta, reinterpret_cast<float*>(c.Data()), incy);
+            }
+            else
+            {
+                RuntimeError("Unsupported data format");
+            }
+        }
+    }
+    else if (a.GetNumElements() == 1) // scalar, add to all elements
+    {
+        ElemType v = alpha * a(0, 0);
+        long m = (long)c.GetNumRows(), n = (long)c.GetNumCols();
+#pragma omp parallel for
+        for (long j = 0; j < n; j++)
+        {
+            for (long i = 0; i < (m & ~3); i += 4)
+            {
+                c(i, j) += v;
+                c(i + 1, j) += v;
+                c(i + 2, j) += v;
+                c(i + 3, j) += v;
+                c(i, j) *= beta;
+                c(i + 1, j) *= beta;
+                c(i + 2, j) *= beta;
+                c(i + 3, j) *= beta;
+            }
+            for (long i = m & ~3; i < m; i++)
+            {
+                c(i, j) += v;
+                c(i, j) *= beta;
+            }
+        }
+    }
+    else if (a.GetNumCols() == 1) // col vector, add it to all columns
+    {
+        int m = (int)c.GetNumRows();
+        if (m != (int)a.GetNumRows())
+            InvalidArgument("To add column vector, rows should match.");
+        ElemType* aBufPtr = a.Data();
+        ElemType* cBufPtr = c.Data();
+        if (std::is_same<ElemType, double>::value)
+        {
+#pragma omp parallel for
+            foreach_column(j, c)
+            {
+                cblas_daxpby(m, alpha, reinterpret_cast<double*>(aBufPtr), 1, beta, reinterpret_cast<double*>(cBufPtr + c.LocateColumn(j)), 1);
+            }
+        }
+        else if (std::is_same<ElemType, float>::value)
+        {
+#pragma omp parallel for
+            foreach_column(j, c)
+            {
+#pragma warning(suppress : 4244)
+                cblas_saxpby(m, alpha, reinterpret_cast<float*>(aBufPtr), 1, beta, reinterpret_cast<float*>(cBufPtr + c.LocateColumn(j)), 1);
+            }
+        }
+        else
+        {
+            RuntimeError("Unsupported data format");
+        }
+    }
+    else // row vector, add it to all rows
+    {
+        ElemType * prv_a = mkl_prv_data<ElemType>(a);
+        ElemType * prv_c = mkl_prv_data<ElemType>(c);
+        int m = (int)c.GetNumRows();
+        int n = (int)c.GetNumCols();
+        if (n != (int)a.GetNumCols())
+            InvalidArgument("To add row vector, cols should match.");
+        if (prv_a != NULL && prv_c != NULL)
+        {
+            ElemType* aBufPtr = prv_a;
+            ElemType* cBufPtr = prv_c;
+#pragma omp parallel for
+            foreach_row(i, c)
+            {
+#pragma warning(suppress : 4244)
+                cblas_saxpby(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, beta, reinterpret_cast<float*>(cBufPtr + i), m);
+            }
+        }
+        else if (prv_a == NULL && prv_c != NULL)
+        {
+            std::shared_ptr<MKLDNNData<ElemType> > tmp_mkl_dnn;
+            std::shared_ptr<MKLDNNData<ElemType> > c_mem_desc = mkl_get_mem_desc<ElemType>(c.MklMem());
+            tmp_mkl_dnn.reset(new MKLDNNData<ElemType>(c_mem_desc->usr_memory_pd(), c_mem_desc->prv_memory_pd()));
+            tmp_mkl_dnn->name = "p+=alpha u ";
+            tmp_mkl_dnn->get_converted_prv2(a.Data(), true, a);
+            ElemType* aBufPtr = mkl_prv_data<ElemType>(a);
+            ElemType * cBufPtr = prv_c;
+#pragma omp parallel for
+            foreach_row(i, c)
+            {
+#pragma warning(suppress : 4244)
+                cblas_saxpby(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, beta, reinterpret_cast<float*>(cBufPtr + i), m);
+            }
+        }
+        else if (prv_a != NULL && prv_c == NULL)
+        {
+            std::shared_ptr<MKLDNNData<ElemType> > tmp_mkl_dnn;
+            std::shared_ptr<MKLDNNData<ElemType> > a_mem_desc = mkl_get_mem_desc<ElemType>(a.MklMem());
+            tmp_mkl_dnn.reset(new MKLDNNData<ElemType>(a_mem_desc->usr_memory_pd(), a_mem_desc->prv_memory_pd()));
+            tmp_mkl_dnn->name = "u+=alpha p ";
+            tmp_mkl_dnn->get_converted_prv2(c.Data(), true, c);
+            ElemType* aBufPtr = prv_a;
+            ElemType * cBufPtr = mkl_prv_data<ElemType>(c);
+#pragma omp parallel for
+            foreach_row(i, c)
+            {
+#pragma warning(suppress : 4244)
+                cblas_saxpby(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, beta, reinterpret_cast<float*>(cBufPtr + i), m);
+            }
+        }
+        else
+        {
+            ElemType* aBufPtr = a.Data();
+            ElemType* cBufPtr = c.Data();
+            if (std::is_same<ElemType, double>::value)
+            {
+#pragma omp parallel for
+                foreach_row(i, c)
+                {
+                    cblas_daxpby(n, alpha, reinterpret_cast<double*>(aBufPtr), 1, beta, reinterpret_cast<double*>(cBufPtr + i), m);
+                }
+            }
+            else if (std::is_same<ElemType, float>::value)
+            {
+#pragma omp parallel for
+                foreach_row(i, c)
+                {
+#pragma warning(suppress : 4244)
+                    cblas_saxpby(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, beta, reinterpret_cast<float*>(cBufPtr + i), m);
+                }
+            }
+            else
+            {
+                RuntimeError("Unsupported data format");
+            }
         }
     }
 }

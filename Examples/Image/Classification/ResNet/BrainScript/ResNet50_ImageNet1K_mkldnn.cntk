@@ -1,0 +1,126 @@
+# ResNet-50 with ImageNet -- 50 layers bottleneck ResNet for image classification
+# Reference: "Deep Residual Learning for Image Recognition" https://arxiv.org/abs/1512.03385
+
+command = TrainNetwork
+
+precision = "float"; traceLevel = -1; deviceId = "-1"
+
+RootDir = "."
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+MeanDir = "$DataDir$"
+
+modelPath = "$ModelDir$/ResNet_50"
+#stderr = "$OutputDir$/ResNet_50_BS_out"
+
+parallelTrain = false
+profilerEnabled="true"
+#disableGradientAgg="true"
+#disableWeights="true"
+TrainNetwork = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        include "$ConfigDir$/Macros_mkldnn.bs"
+
+        imageShape  = 224:224:3                 # image dimensions
+        labelDim    = 1000                      # number of distinct labels
+
+        cMap        = 64:128:256:512:1024:2048
+        numLayers   = 2:3:5:2
+        bnTimeConst = 4096
+
+        # stride in BottleneckInc
+        stride1x1 = (2:2)
+        stride3x3 = (1:1)
+
+        model = Sequential(
+            # conv1 and max pooling
+            ConvBNReLULayer {cMap[0], (7:7), (2:2), bnTimeConst} :
+            MaxPoolingLayer {(3:3), stride = 2, pad = true} :
+
+            # conv2_x
+            ResNetBottleneckInc {cMap[2], cMap[0], (1:1), (1:1), bnTimeConst} :
+            ResNetBottleneckStack {numLayers[0], cMap[2], cMap[0], bnTimeConst} :
+
+            # conv3_x
+            ResNetBottleneckInc {cMap[3], cMap[1], stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckStack {numLayers[1], cMap[3], cMap[1], bnTimeConst} :
+
+            # conv4_x
+            ResNetBottleneckInc {cMap[4], cMap[2], stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckStack {numLayers[2], cMap[4], cMap[2], bnTimeConst} :
+
+            # conv5_x
+            ResNetBottleneckInc {cMap[5], cMap[3], stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckStack {numLayers[3], cMap[5], cMap[3], bnTimeConst} :
+
+            # avg pooling
+            AveragePoolingLayer {(7: 7), stride = 1} :
+
+            # FC
+            LinearLayer {labelDim, init = 'normal', initValueScale = 0.01}
+        )
+
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+
+        # apply model to features
+        z        = model (features)
+
+        # loss and error computation
+        ce       = CrossEntropyWithSoftmax (labels, z)
+        errs     = ClassificationError (labels, z)
+        top5Errs = ClassificationError (labels, z, topN = 5)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs : top5Errs)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 768
+        minibatchSize = 64
+        maxEpochs = 2
+        learningRatesPerMB = 1*30: 0.1*30: 0.01*20: 0.001
+        momentumPerMB = 0.9
+        useNAG = true # use Nesterov Momentum
+        gradUpdateType = "None"
+        L2RegWeight = 0.0001
+        dropoutRate = 0
+        numMBsToShowResult = 100
+
+        disableRegInBatchNormalization = true
+
+        ParallelTrain = {
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            parallelizationStartEpoch = 1
+            DataParallelSGD = {
+                gradientBits = 32
+            }
+        }
+    }
+
+    reader=[
+        readerType=UCIFastReader
+        file=$DataDir$/imagenet_data0.5K.txt
+        randomize=None
+        features=[
+            dim=150528
+            start=1
+        ]
+        labels=[
+            dim=1
+            start=0
+    	    labelDim=1000
+    	    labelMappingFile=$DataDir$/labelmap.1K.txt
+        ]
+    ]   
+}

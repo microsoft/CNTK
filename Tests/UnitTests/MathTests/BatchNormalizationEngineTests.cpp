@@ -237,6 +237,9 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             SingleMatrix xB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
 
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
+            SingleMatrix y(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
+            SingleMatrix yB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
+            std::generate(begin(buf), end(buf), [&] { return nd(rng); });
             SingleMatrix dy(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix dyB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
 
@@ -268,14 +271,14 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
 
             CudaTimer time1;
             time1.Start();
-            engCntk->Backward(x, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias, false);
-            engCntk->Backward(x, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias, true);
+            engCntk->Backward(x, y, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias, false);
+            engCntk->Backward(x, y, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias, true);
             time1.Stop();
 
             CudaTimer time2;
             time2.Start();
-            engCudnn->Backward(xB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB, false);
-            engCudnn->Backward(xB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB, true);
+            engCudnn->Backward(xB, yB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB, false);
+            engCudnn->Backward(xB, yB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB, true);
             time2.Stop();
 
             std::stringstream tmsg;

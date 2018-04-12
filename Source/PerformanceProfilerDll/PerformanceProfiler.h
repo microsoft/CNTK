@@ -67,6 +67,7 @@ enum ProfilerEvents
     profilerEvtMainEpoch,                   // Train epoch loop time
     profilerEvtMainMinibatch,               // One minibatch loop time
     profilerEvtMainGetMinibatch,            // GetMinibatch() function time
+    profilerEvtMainForward,                 // Forward pass time
     profilerEvtMainFB,                      // Forward + Backward pass time
     profilerEvtMainGradient,                // Gradient aggregation time
     profilerEvtMainWeights,                 // Weight update time
@@ -129,6 +130,17 @@ void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int 
 
 
 //
+// SGD enabled GradientAgg
+//
+bool PERF_PROFILER_API DisabledGradientAgg();
+
+//
+// SGD enabled Weight Update
+//
+bool PERF_PROFILER_API DisabledWeightsUpdate();
+
+
+//
 // Generate reports and release all resources.
 //
 void PERF_PROFILER_API ProfilerClose();
@@ -140,6 +152,8 @@ void PERF_PROFILER_API ProfilerClose();
 struct PERF_PROFILER_API ProfilerContext
 {
     void Init(const std::wstring& profilerDir = L"", const unsigned long long customEventBufferBytes = (32 * 1024 * 1024), const std::wstring& logSuffix = L"", const bool syncGpu = false);
+    void DisableGradientAgg();
+    void DisableUpdateWeights();
     ~ProfilerContext();
 };
 

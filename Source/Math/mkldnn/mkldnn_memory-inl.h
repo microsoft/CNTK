@@ -30,7 +30,7 @@
 #include "../Matrix.h"
 #ifdef USE_MKLDNN
 #include "mkldnn.hpp"
-
+#include "../CPUMatrix.h"
 #include "mkldnn_base-inl.h"
 
 namespace Microsoft
@@ -127,16 +127,14 @@ struct MKLDNNMemoryDescriptorBase : public PrvMemDescr,
     std::string name; // for debugging purposes
 
     void check_usr_with_prv_descriptors();
-    void set_prv_memory(std::shared_ptr<mkldnn::memory> memory)
-    {
-        _prv_memory = memory;
-    }
     virtual bool get_usr_desc(usr_desc_dims_t usr_desc_dims, int& dim_size);
 
 protected:
     std::shared_ptr<mkldnn::memory::primitive_desc> _usr_memory_pd;
     std::shared_ptr<mkldnn::memory::primitive_desc> _prv_memory_pd;
     std::shared_ptr<mkldnn::memory> _prv_memory;
+    std::shared_ptr<mkldnn::memory> _usr_memory;
+    void * _cpu_data;
 };
 
 template <typename Dtype>
@@ -145,6 +143,7 @@ class MKLDNNMemoryDescriptor : public MKLDNNMemoryDescriptorBase<Dtype>
 public:
     using Mat = Matrix<Dtype>;
 
+    using CPUMat = CPUMatrix<Dtype>;
 public:
     MKLDNNMemoryDescriptor(std::shared_ptr<mkldnn::memory::primitive_desc> usr_memory_pd,
                            std::shared_ptr<mkldnn::memory::primitive_desc> prv_memory_pd);
@@ -163,10 +162,11 @@ public:
     // The last get_blob_data_ptr() argument is a hack for reusing
     // in backward a conversion done already in the forward direction.
 
-    std::shared_ptr<mkldnn::memory> get_converted_prv(Dtype* cpu_data, bool set_prv_ptr, const Mat& b);
-    std::shared_ptr<mkldnn::memory> create_output_memory(Dtype* cpu_data, const Mat& b,
-                                                         std::shared_ptr<MKLDNNMemoryDescriptor<Dtype>> thisData,
-                                                         bool in_place = false);
+    std::shared_ptr<mkldnn::memory> get_converted_prv(Dtype* cpu_data, bool set_prv_ptr, const Mat& b, bool * b_same = NULL);
+    std::shared_ptr<mkldnn::memory> get_converted_prv2(Dtype* cpu_data,
+        bool set_prv_ptr, const CPUMat &b, bool * b_same = NULL);
+    std::shared_ptr<mkldnn::memory> create_output_memory(Dtype* cpu_data, 
+        const Mat &b, bool in_place = false, bool * b_same = NULL);
 
     bool get_prv_prim_desc(mkldnn::memory::primitive_desc& desc);
 };
@@ -205,8 +205,6 @@ inline std::shared_ptr<mkldnn::memory> mkldnn_prv_memory(const Matrix<Dtype>& b)
     }
     return nullptr;
 }
-template class MKLDNNData<float>;
-template class MKLDNNData<double>;
 
 } // namespace CNTK
 } // namespace MSR

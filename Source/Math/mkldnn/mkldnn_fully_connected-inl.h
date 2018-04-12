@@ -171,7 +171,7 @@ public:
         fwd_bottom_data_primitive = fwd_bottom_data->get_converted_prv(in_ptr, false, in);
         fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(weight_ptr, false, weight);
 
-        fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out, fwd_top_data);
+        fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out);
 
         ipFwd.reset(new mkldnn::inner_product_forward(*ipFwd_pd, *fwd_bottom_data_primitive,
                                                       *fwd_weights_data_primitive, *fwd_top_data_memory));
@@ -272,7 +272,7 @@ public:
         std::shared_ptr<mkldnn::primitive> bwdw_top_diff_primitive, bwdw_bottom_data_primitive;
         bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(in_ptr, false, in);
         bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(grad_ptr, false, grad);
-        bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(gradw_ptr, gradWeight, bwdw_weights_diff);
+        bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(gradw_ptr, gradWeight);
         ipBwdWeights.reset(new mkldnn::inner_product_backward_weights(
             *ipBwdWeights_pd, *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive, *bwdw_weights_diff_memory));
         ipBwdWeights.submit();
@@ -291,7 +291,7 @@ public:
         std::shared_ptr<mkldnn::primitive> bwdd_top_diff_primitive, bwdd_weights_data_primitive;
         bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(grad_ptr, false, grad);
         bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(w_ptr, false, weight);
-        bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(gradin_ptr, gradData, bwdd_bottom_diff);
+        bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(gradin_ptr, gradData);
         ipBwdData.reset(new mkldnn::inner_product_backward_data(
             *ipBwdData_pd, *bwdd_top_diff_primitive, *bwdd_weights_data_primitive, *bwdd_bottom_diff_memory));
         ipBwdData.submit();

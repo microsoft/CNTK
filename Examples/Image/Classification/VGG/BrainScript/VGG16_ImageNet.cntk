@@ -36,7 +36,7 @@ Train = {
         labelDim    = $NumLabels$
                 
         model = Sequential (
-            ConvolutionalReluLayer {64, (3:3), pad = true} :
+        	ConvolutionalReluLayer {64, (3:3), pad = true} :
             ConvolutionalReluLayer {64, (3:3), pad = true} :
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
             ConvolutionalReluLayer {128, (3:3), pad = true} :

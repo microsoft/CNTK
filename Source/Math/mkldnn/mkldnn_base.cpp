@@ -63,9 +63,10 @@ std::shared_ptr<MKLDNNStream> MKLDNNPrimitive<Dtype>::submit()
     this->get_mkldnn_stream()->submit({*(this->aprimitive)});
     return mkldnn_stream;
 }
-
+template class MKLDNNLayer<half>;
 template class MKLDNNLayer<double>;
 template class MKLDNNLayer<float>;
+template class MKLDNNPrimitive<half>;
 template class MKLDNNPrimitive<double>;
 template class MKLDNNPrimitive<float>;
 } // namespace CNTK

@@ -77,7 +77,10 @@ public:
           convFwd_pd(NULL),
           convBwdData_pd(NULL),
           convBwdWeights_pd(NULL),
-          init_gbias(-1)
+          init_gbias(-1),
+          b_init_convBwdData(false),
+          b_init_convBwdWeights(false),
+          b_init_convFwd(false)
     {
         b_init_conv = false;
         m_geometry = geometry;
@@ -174,7 +177,8 @@ private:
     void InitForward(bool inferenceOnly)
     {
         auto propagation = (inferenceOnly) ? mkldnn::prop_kind::forward_scoring : mkldnn::prop_kind::forward_training;
-
+        if (m_relu)
+            propagation = mkldnn::prop_kind::forward_inference;
         int32_t g = std::max(this->group_, 1);
         int32_t n = this->num_;
         int32_t iw = this->width_;
@@ -283,32 +287,39 @@ public:
             this->init_properties((int) in.GetNumCols());
             this->b_init_conv = true;
         }
+
+        bool b_same = true;
         if (convFwd_pd == NULL)
         {
             InitForward(inferenceOnly);
         }
-        std::shared_ptr<mkldnn::memory> fwd_bottom_data_primitive, fwd_weights_data_primitive, fwd_bias_data_primitive;
-        std::shared_ptr<mkldnn::memory> fwd_top_data_memory;
+
         // ---  init primitive and prv_memory descriptors ---------
-        fwd_bottom_data_primitive = fwd_bottom_data->get_converted_prv(data_ptr, false, in);
-        fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, true, kernel);
+        fwd_bottom_data_primitive = fwd_bottom_data->get_converted_prv(data_ptr, false, in, &b_same);
+        fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, true, kernel, &b_same);
         if (this->m_bias)
         {
-            fwd_bias_data_primitive = fwd_bias_data->get_converted_prv(bias_ptr, true, *pBias);
+            fwd_bias_data_primitive = fwd_bias_data->get_converted_prv(bias_ptr, true, *pBias, &b_same);
             init_gbias.AssignValuesOf(*pBias);
         }
 
-        fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out, fwd_top_data);
-        if (this->m_bias)
+        fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out, false, &b_same);
+        if (!b_init_convFwd || !b_same)
         {
-            convFwd.reset(new mkldnn::convolution_forward(*convFwd_pd, *fwd_bottom_data_primitive,
-                                                          *fwd_weights_data_primitive, *fwd_bias_data_primitive,
-                                                          *fwd_top_data_memory));
-        }
-        else
-        {
-            convFwd.reset(new mkldnn::convolution_forward(*convFwd_pd, *fwd_bottom_data_primitive,
-                                                          *fwd_weights_data_primitive, *fwd_top_data_memory));
+            //each mkldnn memory have dedicate _prv_memory
+            if (this->m_bias)
+            {
+                convFwd.reset(new mkldnn::convolution_forward(*convFwd_pd, *fwd_bottom_data_primitive,
+                    *fwd_weights_data_primitive, *fwd_bias_data_primitive,
+                    *fwd_top_data_memory));
+            }
+            else
+            {
+                convFwd.reset(new mkldnn::convolution_forward(*convFwd_pd, *fwd_bottom_data_primitive,
+                    *fwd_weights_data_primitive, *fwd_top_data_memory));
+            }
+            if (!b_init_convFwd)
+                b_init_convFwd = true;
         }
         convFwd.submit();
     }
@@ -393,6 +404,9 @@ public:
         // ---  init primitive and prv_memory descriptors ----------------------
         bwdd_bottom_diff.reset(new MKLDNNData<DType>(usr_bottom_data_memory_pd, prv_bwdd_bottom_diff_memory_pd));
         bwdd_bottom_diff->name = "bwdd_bottom_diff   @ " + this->getName();
+        bwdd_bottom_diff_ws.reset(
+          new MKLDNNData<DType>(usr_bottom_data_memory_pd, prv_bwdd_bottom_diff_memory_pd));
+        bwdd_bottom_diff_ws->name = "bwdd_bottom_diff_ws   @ " + this->getName();
         bwdw_bottom_data.reset(new MKLDNNData<DType>(usr_bottom_data_memory_pd, prv_bwdw_bottom_data_memory_pd));
         bwdw_bottom_data->name = "bwdw_bottom_data   @ " + this->getName();
 
@@ -404,6 +418,9 @@ public:
         bwdd_weights_data->name = "bwdd_weights_data  @ " + this->getName();
         bwdw_weights_diff.reset(new MKLDNNData<DType>(usr_weights_data_memory_pd, prv_bwdw_weights_diff_memory_pd));
         bwdw_weights_diff->name = "bwdw_weights_diff  @ " + this->getName();
+        bwdw_weights_diff_ws.reset(
+          new MKLDNNData<DType>(usr_weights_data_memory_pd, prv_bwdw_weights_diff_memory_pd));
+        bwdw_weights_diff_ws->name = "bwdw_weights_diff_ws  @ " + this->getName();
         if (this->m_bias)
         {
             std::shared_ptr<MemPD> prv_bwdw_bias_diff_memory_pd(
@@ -456,12 +473,8 @@ public:
         bwd_relu_dst_data->name = "bwd_bottom_data   @ " + this->getName();
     }
 
-    virtual void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad)
+    virtual void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace)
     {
-#ifdef MKL_TIMER_PROFILE
-        Timer timer;
-        timer.Start();
-#endif
         DType* srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
         DType* kernel_ptr = mkl_experimental_direct_get(kernel);
         DType* grad_ptr = mkl_experimental_direct_get(grad);
@@ -474,6 +487,8 @@ public:
         {
             this->InitForward(true);
         }
+
+        bool b_same = true;
         if (convBwdData_pd == NULL)
         {
             this->InitConvolutionBwd();
@@ -481,23 +496,36 @@ public:
 
         std::shared_ptr<mkldnn::memory> bwdd_top_diff_primitive, bwdd_weights_data_primitive, bwdd_diff_src_primitive;
         std::shared_ptr<mkldnn::memory> bwdd_bottom_diff_memory;
-
+        std::shared_ptr<mkldnn::memory> bwdd_bottom_diff_dst;
         // ---  init primitive and prv_memory descriptors ---------
 
-        bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
-        bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(kernel_ptr, false, kernel);
-
-        bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(grad_ptr, grad, bwdd_bottom_diff);
-        convBwdData.reset(new mkldnn::convolution_backward_data(
-            *convBwdData_pd, *bwdd_top_diff_primitive, *bwdd_weights_data_primitive, *bwdd_bottom_diff_memory));
-
+        bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad, &b_same);
+        bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(kernel_ptr, false, kernel, &b_same);
+	    if (accumulateGradient) {
+		    workspace.Resize(grad);
+		    bwdd_bottom_diff_dst  = bwdd_bottom_diff_ws->create_output_memory(workspace.Data(), workspace, false, &b_same);
+		    bwdd_bottom_diff_memory = bwdd_bottom_diff->get_converted_prv(grad_ptr, true, grad, &b_same);
+            grad_ptr = mkl_experimental_direct_get(grad);
+	    }
+	    else
+	    {
+		    bwdd_bottom_diff_dst = bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(grad_ptr, grad, false, &b_same);
+	    }
+        if (!b_init_convBwdData || !b_same)
+        {
+            convBwdData.reset(new mkldnn::convolution_backward_data(
+                *convBwdData_pd, *bwdd_top_diff_primitive, *bwdd_weights_data_primitive, *bwdd_bottom_diff_dst));
+            if (!b_init_convBwdData)
+                b_init_convBwdData = true;
+        }
         convBwdData.submit();
-#ifdef MKL_TIMER_PROFILE
-        timer.Stop();
-        LOGPRINTF(stderr, "mklconvolution bwd data sum time: %f \n", timer.ElapsedSeconds() * 1000);
-#endif
+	    if (accumulateGradient)
+	    {
+            DType * workspace_ptr = mkl_experimental_direct_get(workspace);
+		    grad.MklMem()->template AddTo<DType>(grad_ptr, *workspace.MklMem(), workspace_ptr);
+	    }
     }
-    void BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, Mat* pbiasGrad = NULL)
+    void BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, bool accumulateGradient, Mat& workspace, Mat* pbiasGrad = NULL)
     {
         DType* srcgrad_ptr = mkl_experimental_direct_get(srcGrad);
         DType* in_ptr = mkl_experimental_direct_get(in);
@@ -516,6 +544,7 @@ public:
         {
             this->InitConvolutionBwd();
         }
+        bool b_same = true;
         if (m_relu)
         {
             // inplace relu to update srcGrad, do once then backwarddata can also use the converted data
@@ -524,20 +553,27 @@ public:
                 InitReLUBwd(out);
             }
             std::shared_ptr<mkldnn::memory> dst_memory, diff_dst_memory, diff_src_memory;
-            dst_memory = bwd_relu_dst_data->get_converted_prv(out_ptr, false, out);
-            diff_src_memory = bwd_relu_top_diff->get_converted_prv(srcgrad_ptr, false, srcGrad);
+            dst_memory = bwd_relu_dst_data->get_converted_prv(out_ptr, false, out, &b_same);
+            diff_src_memory = bwd_relu_top_diff->get_converted_prv(srcgrad_ptr, false, srcGrad, &b_same);
             MKLDNNPrimitive<DType> reluBwd;
             reluBwd.reset(new mkldnn::relu_backward(*bwd_relu_pd, *dst_memory, *diff_src_memory, *diff_src_memory));
             reluBwd.submit();
         }
         std::shared_ptr<mkldnn::memory> bwdw_bottom_data_primitive, bwdw_top_diff_primitive;
         std::shared_ptr<mkldnn::memory> bwdw_weights_diff_memory, bwdw_bias_diff_memory;
-
-        bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
-        bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(in_ptr, false, in);
-
-        bwdw_weights_diff_memory =
-            bwdw_weights_diff->create_output_memory(kernelgrad_ptr, kernelGrad, bwdw_weights_diff);
+        std::shared_ptr<mkldnn::memory> bwdw_weights_diff_ws_memory, bwdw_weights_diff_dst;
+        bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad, &b_same);
+        bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(in_ptr, false, in, &b_same);
+        if (accumulateGradient) {
+            // make sure workspace is user data
+            workspace.Resize(kernelGrad);
+            bwdw_weights_diff_dst = bwdw_weights_diff_ws_memory = bwdw_weights_diff_ws->create_output_memory(workspace.Data(), workspace, false, &b_same);
+            bwdw_weights_diff_memory = bwdw_weights_diff->get_converted_prv(kernelgrad_ptr, true, kernelGrad, &b_same);
+        }
+        else
+        {
+            bwdw_weights_diff_dst = bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(kernelgrad_ptr, kernelGrad, false, &b_same);
+        }
         if (this->m_bias)
         {
             DType* gbias_ptr = mkl_experimental_direct_get(*pbiasGrad);
@@ -546,28 +582,43 @@ public:
                 pbiasGrad->AssignValuesOf(init_gbias);
                 gbias_ptr = mkl_experimental_direct_get(*pbiasGrad);
             }
-            bwdw_bias_diff_memory = bwdw_bias_diff->create_output_memory(gbias_ptr, *pbiasGrad, bwdw_bias_diff);
-            convBwdWeights.reset(new mkldnn::convolution_backward_weights(
-                *convBwdWeights_pd, *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive, *bwdw_weights_diff_memory,
-                *bwdw_bias_diff_memory));
+            bwdw_bias_diff_memory = bwdw_bias_diff->create_output_memory(gbias_ptr, *pbiasGrad, false, &b_same);
+
         }
-        else
+        if (!b_init_convBwdWeights || !b_same)
         {
-            convBwdWeights.reset(new mkldnn::convolution_backward_weights(
-                *convBwdWeights_pd, *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive, *bwdw_weights_diff_memory));
+            if (this->m_bias)
+            {
+                convBwdWeights.reset(new mkldnn::convolution_backward_weights(
+                    *convBwdWeights_pd, *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive, *bwdw_weights_diff_dst,
+                    *bwdw_bias_diff_memory));
+            }
+            else
+            {
+                convBwdWeights.reset(new mkldnn::convolution_backward_weights(
+                    *convBwdWeights_pd, *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive, *bwdw_weights_diff_dst));
+            }
+            if (!b_init_convBwdWeights)
+                b_init_convBwdWeights = true;
         }
         convBwdWeights.submit();
-#ifdef MKL_TIMER_PROFILE
-        timer.Stop();
-        LOGPRINTF(stderr, "mklconvolution bwd kernel sum time: %f \n", timer.ElapsedSeconds() * 1000);
-#endif
+        if (accumulateGradient)
+        {
+            DType * workspace_ptr = mkl_experimental_direct_get(workspace);
+            kernelGrad.MklMem()->template AddTo<DType>(kernelgrad_ptr, *workspace.MklMem(), workspace_ptr);
+        }
+
     }
 
 private:
+    std::shared_ptr<mkldnn::memory> fwd_bottom_data_primitive, fwd_weights_data_primitive, fwd_bias_data_primitive;
+    std::shared_ptr<mkldnn::memory> fwd_top_data_memory;
     std::shared_ptr<MKLDNNData<DType>> fwd_bottom_data, fwd_top_data, fwd_weights_data, fwd_bias_data,
         bwdd_weights_data, bwdw_bottom_data;
     std::shared_ptr<MKLDNNData<DType>> bwdd_bottom_diff, bwdd_top_diff, bwdw_top_diff, bwdw_weights_diff,
         bwdw_bias_diff;
+    std::shared_ptr<MKLDNNData<DType> > bwdd_bottom_diff_ws, bwdw_weights_diff_ws;
+		
     std::shared_ptr<mkldnn::convolution_forward::primitive_desc> convFwd_pd;
     MKLDNNPrimitive<DType> convFwd;
     std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> convBwdData_pd;
@@ -584,11 +635,10 @@ private:
     int dilate_h;
     Mat init_gbias;
     bool m_relu;
+    bool b_init_convBwdData;
+    bool b_init_convBwdWeights;
+    bool b_init_convFwd;
 }; // class MKLDNNConvolutionOp
-template <>
-int MKLDNNConvolutionOp<float>::s_id_gen = 1;
-template <>
-int MKLDNNConvolutionOp<double>::s_id_gen = 1;
 } // namespace CNTK
 } // namespace MSR
 } // namespace Microsoft

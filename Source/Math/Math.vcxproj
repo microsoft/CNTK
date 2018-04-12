@@ -178,6 +178,7 @@
     <ClInclude Include="mkldnn\mkldnn_memory-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_pooling-inl.h" />
     <ClInclude Include="mkldnn\mkldnn_relu-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_sum-inl.h" />
     <ClInclude Include="mkldnn\mkl_conv-common-inl.h" />
     <ClInclude Include="mkldnn\mkl_memory.h" />
     <ClInclude Include="mkldnn\mkl_util-inl.h" />
@@ -232,6 +233,7 @@
     <ClCompile Include="MatrixQuantizerImpl.cpp" />
     <ClCompile Include="mkldnn\mkldnn_base.cpp" />
     <ClCompile Include="mkldnn\mkldnn_memory.cpp" />
+    <ClCompile Include="mkldnn\mkldnn_util.cpp" />
     <ClCompile Include="NoGPU.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="QuantizedMatrix.cpp" />

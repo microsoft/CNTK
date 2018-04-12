@@ -549,6 +549,7 @@ public:
                                               const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c);
 
     static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
+    static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, ElemType beta, CPUMatrix<ElemType>& c);
     static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b,
                                     CPUMatrix<ElemType>& c);
     static void AssignScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b,

@@ -5226,8 +5226,16 @@ template <class ElemType>
         Scale(alpha, a, c);
     else
     {
-        ScaleAndAdd(alpha / beta, a, c); // c1=alpha/beta * a + c
-        Scale(beta, c);                  // c/beta * beta
+        CurrentDataLocation curLocation = c.GetCurrentMatrixLocation();
+        if (curLocation == CurrentDataLocation::CPU)
+        {
+            CPUMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_CPUMatrix, beta, *c.m_CPUMatrix);
+        }
+        else
+        {
+	        ScaleAndAdd(alpha / beta, a, c); // c1=alpha/beta * a + c
+	        Scale(beta, c);                  // c/beta * beta
+        }
         // TODO: two lines above should be changed as follows:
         // Scale(beta, c);                  // c1 = c * beta
         // ScaleAndAdd(alpha, a, c); // c=alpha * a + c1 = alpha * a + beta * c

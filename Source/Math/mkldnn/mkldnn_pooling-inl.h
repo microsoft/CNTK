@@ -245,7 +245,7 @@ public:
         // ---  init primitive and prv_memory descriptors ----------------------
         std::shared_ptr<mkldnn::memory> fwd_input_primitive, fwd_output_memory;
         fwd_input_primitive = fwd_bottom_data->get_converted_prv(in_ptr, false, in);
-        fwd_output_memory = fwd_top_data->create_output_memory(out_ptr, out, fwd_top_data);
+        fwd_output_memory = fwd_top_data->create_output_memory(out_ptr, out);
         MKLDNNPrimitive<Dtype> poolingFwd;
         if (!inferenceOnly && m_pooling_algorithm == mkldnn::algorithm::pooling_max)
         {
@@ -337,7 +337,7 @@ public:
             InitPoolingBwd(out);
         std::shared_ptr<mkldnn::memory> diff_dst_memory, diff_src_memory;
         diff_dst_memory = bwd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad);
-        diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad, bwd_bottom_diff);
+        diff_src_memory = bwd_bottom_diff->create_output_memory(grad_ptr, grad);
         MKLDNNPrimitive<Dtype> poolingBwd;
         if (m_pooling_algorithm == mkldnn::algorithm::pooling_max)
         {

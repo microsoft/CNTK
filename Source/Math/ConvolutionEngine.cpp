@@ -709,28 +709,14 @@ public:
     virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient,
                                   Mat& workspace)
     {
-        if (accumulateGradient)
-        {
-            workspace.Resize(grad);
-            workspace.AssignValuesOf(grad);
-        }
-        m_mkldnnConv->BackwardData(srcGrad, kernel, grad);
-        if (accumulateGradient)
-            grad.AssignSumOf(grad, workspace);
+        m_mkldnnConv->BackwardData(srcGrad, kernel, grad, accumulateGradient, workspace);
     }
 
     virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad,
                                     bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad)
     {
         UNUSED(allowReuse);
-        if (accumulateGradient)
-        {
-            workspace.Resize(kernelGrad);
-            workspace.AssignValuesOf(kernelGrad);
-        }
-        m_mkldnnConv->BackwardKernel(srcGrad, in, out, kernelGrad, pbiasGrad);
-        if (accumulateGradient)
-            kernelGrad.AssignSumOf(kernelGrad, workspace);
+        m_mkldnnConv->BackwardKernel(srcGrad, in, out, kernelGrad, accumulateGradient, workspace, pbiasGrad);
     }
 
     virtual void EnsurePoolingInitialized()

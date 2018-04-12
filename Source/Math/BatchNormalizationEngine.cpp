@@ -67,13 +67,13 @@ void BatchNormEngine<InoutType, StatType>::Forward(const InoutMat& in, const Sta
 }
 
 template <class InoutType, class StatType>
-void BatchNormEngine<InoutType, StatType>::Backward(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor,
+void BatchNormEngine<InoutType, StatType>::Backward(const InoutMat& in, const InoutMat& out, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor,
                                          const StatMat& savedMean, const StatMat& savedInvStdDev, StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad)
 {
     assert(!savedMean.IsEmpty());
     assert(!savedInvStdDev.IsEmpty());
     EnsureCompatible();
-    BackwardCore(in, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad);
+    BackwardCore(in, out, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad);
 }
 
 template <class InoutType, class StatType>
@@ -88,15 +88,17 @@ public:
 #ifdef USE_MKLDNN
     MKLDNNBatchNormOp<ElemType> * m_mkldnnBM;
     size_t m_prevBatchSize = 0;
+    bool m_relu;
 #endif
 
 public:
     CntkBatchNormEngine(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-        bool spatial, ImageLayoutKind imageLayout)
+        bool spatial, ImageLayoutKind imageLayout, bool relu)
         : Base(deviceId, inOutT, spatial, imageLayout)
     {
 #ifdef USE_MKLDNN
         m_mkldnnBM = NULL;
+        m_relu = relu;
 #endif
     }
 
@@ -131,13 +133,13 @@ protected:
         in.BatchNormalizationForward(scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance, out, epsilon, savedMean, savedInvStdDev);
     }
 
-    void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
+    void BackwardCore(const InoutMat& in, const InoutMat& out, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
                       StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) override
     {
 #ifdef USE_MKLDNN
         if (srcGrad.GetCurrentMatrixLocation() == CPU &&
 		    std::is_same<InoutType, StatType>::value &&
-            BackwardCoreMKLDNN(*(const StatMat*)&in, *(const StatMat*)&srcGrad, *(StatMat*)&grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad))
+            BackwardCoreMKLDNN(*(const StatMat*)&in, *(const StatMat*)&out, *(const StatMat*)&srcGrad, *(StatMat*)&grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad))
             return;
 #endif
 #ifdef USE_MKL2017DNN
@@ -482,7 +484,7 @@ private:
           m_prevBatchSize = batchSize;
         }
         if (m_mkldnnBM == NULL) {
-            m_mkldnnBM = new MKLDNNBatchNormOp<ElemType>(m_inOutT, m_imageLayout);
+            m_mkldnnBM = new MKLDNNBatchNormOp<ElemType>(m_inOutT, m_imageLayout, m_relu);
         }
         if (inferenceOnly)
         {
@@ -497,17 +499,15 @@ private:
             out, epsilon, savedMean, savedVariance);
         return true;
     }
-    bool BackwardCoreMKLDNN(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
+    bool BackwardCoreMKLDNN(const Mat& in, const Mat& out, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
         Mat& scaleGrad, Mat& biasGrad, bool accumulateDataGrad)
     {
         if (!IsSupported())
             return false;
-        if (!accumulateDataGrad)
-            grad.SetValue((ElemType)0);
         if (m_mkldnnBM == NULL) {
-            m_mkldnnBM = new MKLDNNBatchNormOp<ElemType>(m_inOutT, m_imageLayout);
+            m_mkldnnBM = new MKLDNNBatchNormOp<ElemType>(m_inOutT, m_imageLayout, m_relu);
         }
-        m_mkldnnBM->Backward(in, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev,
+        m_mkldnnBM->Backward(in, out, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev,
             scaleGrad, biasGrad, accumulateDataGrad);
         return true;
     }
@@ -538,7 +538,7 @@ template <typename T> bool HasFlag(T src, T testFlag)
 template <class InoutType, class StatType>
 std::unique_ptr<BatchNormEngine<InoutType, StatType>> BatchNormEngine<InoutType, StatType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                                                                              bool spatial, ImageLayoutKind imageLayout,
-                                                                             BatchNormEngineKind enabledEngines)
+                                                                             BatchNormEngineKind enabledEngines, bool relu)
 {
     // Use CNTK as default batch norm engine.
     if (HasFlag(enabledEngines, BatchNormEngineKind::Cntk))
@@ -546,7 +546,7 @@ std::unique_ptr<BatchNormEngine<InoutType, StatType>> BatchNormEngine<InoutType,
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "Using CNTK batch normalization engine.\n");
 
-        return std::make_unique<CntkBatchNormEngine<InoutType, StatType>>(deviceId, inOutT, spatial, imageLayout);
+        return std::make_unique<CntkBatchNormEngine<InoutType, StatType>>(deviceId, inOutT, spatial, imageLayout, relu);
     }
 
     if (HasFlag(enabledEngines, BatchNormEngineKind::CuDnn))
@@ -563,7 +563,7 @@ std::unique_ptr<BatchNormEngine<InoutType, StatType>> BatchNormEngine<InoutType,
 template <>
 std::unique_ptr<BatchNormEngine<float, float>> BatchNormEngine<float, float>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
 	bool spatial, ImageLayoutKind imageLayout,
-	BatchNormEngineKind enabledEngines)
+	BatchNormEngineKind enabledEngines, bool relu)
 {
 	// Use CNTK as default batch norm engine.
 	if (HasFlag(enabledEngines, BatchNormEngineKind::Cntk))
@@ -571,7 +571,7 @@ std::unique_ptr<BatchNormEngine<float, float>> BatchNormEngine<float, float>::Cr
 		if (GetMathLibTraceLevel() > 0)
 			fprintf(stderr, "Using CNTK batch normalization engine.\n");
 
-		return std::make_unique<CntkBatchNormEngine<float, float>>(deviceId, inOutT, spatial, imageLayout);
+		return std::make_unique<CntkBatchNormEngine<float, float>>(deviceId, inOutT, spatial, imageLayout, relu);
 	}
 
 	if (HasFlag(enabledEngines, BatchNormEngineKind::CuDnn))

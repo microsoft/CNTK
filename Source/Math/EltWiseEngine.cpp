@@ -8,6 +8,7 @@
 #pragma warning(disable : 4661)
 #ifdef USE_MKLDNN
 #include "./mkldnn/mkldnn_relu-inl.h"
+#include "./mkldnn/mkldnn_sum-inl.h"
 #endif
 
 namespace Microsoft
@@ -163,6 +164,121 @@ UnaryEltWiseEngine<half>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOu
 template class UnaryEltWiseEngine<float>;
 template class UnaryEltWiseEngine<double>;
 template class UnaryEltWiseEngine<half>;
+#ifdef USE_MKLDNN
+template <class ElemType>
+class MklDnnBinaryEltWiseEngine : public BinaryEltWiseEngine<ElemType>
+{
+public:
+    using Base = BinaryEltWiseEngine<ElemType>;
+    using typename Base::Mat;
+    MKLDNNSumOp<ElemType> * m_sum;
+    size_t m_prevBatchSize = 0;
+public:
+    MklDnnBinaryEltWiseEngine(DEVICEID_TYPE deviceId)
+        : Base(deviceId), m_sum(NULL), m_prevBatchSize(0)
+    {
+    }
+    ~MklDnnBinaryEltWiseEngine() {
+        if (m_sum != NULL)
+            delete m_sum;
+    }
+protected:
+    using Base::m_deviceId;
+
+    void EnsureCompatible() override
+    {
+    }
+    virtual void ForwardTwoCore(const TensorShape& inshape, Mat& ina, Mat& inb, Mat& out)
+    {
+        size_t batchSize = ina.GetNumCols();
+        if (m_prevBatchSize == 0)
+            m_prevBatchSize = batchSize;
+        bool samBatchSize = batchSize == m_prevBatchSize;
+        if (!samBatchSize && m_sum != NULL) {
+            delete m_sum;
+            m_sum = NULL;
+            m_prevBatchSize = batchSize;
+        }
+        if (m_sum == NULL) {
+            m_sum = new MKLDNNSumOp<ElemType>();
+        }
+        std::vector<Mat*> in_v;
+        in_v.push_back(&ina);
+        in_v.push_back(&inb);
+        m_sum->Forward(inshape, in_v, out);
+    }
+
+    virtual void BackwardTwoCore(Mat& in, Mat& out)
+    {
+        m_sum->Backward(in, out);
+    }
+public:
+    static bool IsSupported(DEVICEID_TYPE deviceId) {
+        if (!std::is_same<ElemType, float>::value)
+            return false;
+        return deviceId < 0;
+    }
+};
+
+template class MklDnnBinaryEltWiseEngine<float>;
+template class MklDnnBinaryEltWiseEngine<double>;
+#endif
+
+template <class ElemType>
+void BinaryEltWiseEngine<ElemType>::Forward(const TensorShape& ishape,
+    Mat& ina, Mat& inb, Mat& out)
+{
+    EnsureCompatible();
+    ForwardTwoCore(ishape, ina, inb, out);
+}
+
+template <class ElemType>
+void BinaryEltWiseEngine<ElemType>::Backward(Mat& in, Mat& out)
+{
+    EnsureCompatible();
+    BackwardTwoCore(in, out);
+}
+
+
+template <class ElemType>
+std::unique_ptr<BinaryEltWiseEngine<ElemType>> BinaryEltWiseEngine<ElemType>::Create(DEVICEID_TYPE deviceId,
+    BinaryEltWiseKind kind,
+    EltWiseEngineKind enabledEngines)
+{
+    if (BinaryEltWiseKind::PLUS == kind) {
+#ifdef USE_MKLDNN
+        if (HasFlag(enabledEngines, EltWiseEngineKind::MKLDNN) &&
+            MklDnnBinaryEltWiseEngine<ElemType>::IsSupported(deviceId))
+        {
+            if (GetMathLibTraceLevel() > 0)
+                fprintf(stderr, "Using CNTK MKL DNN Rectified Linear engine.\n");
+            return std::make_unique<MklDnnBinaryEltWiseEngine<ElemType>>(deviceId);
+        }
+#else
+        UNUSED(enabledEngines);
+        UNUSED(kind);
+        UNUSED(deviceId);
+#endif
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "Could not find appropriate Rectified Linear engine.");
+    }
+    return nullptr;
+}
+
+
+template <>
+std::unique_ptr<BinaryEltWiseEngine<half>> BinaryEltWiseEngine<half>::Create(DEVICEID_TYPE deviceId,
+    BinaryEltWiseKind kind,
+    EltWiseEngineKind enabledEngines)
+{
+    UNUSED(deviceId);
+    UNUSED(kind);
+    UNUSED(enabledEngines);
+    return nullptr;
+}
+template class BinaryEltWiseEngine<float>;
+template class BinaryEltWiseEngine<double>;
+template class BinaryEltWiseEngine<half>;
 } // namespace CNTK
 } // namespace MSR
 } // namespace Microsoft

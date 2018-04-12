@@ -22,6 +22,9 @@
 #include <set>
 #include "Quantizers.h"
 #include "InputAndParamNodes.h"
+#ifdef USE_MKLDNN
+#include "EltWiseEngine.h"
+#endif
 
 namespace Microsoft
 {
@@ -43,10 +46,21 @@ class PlusNode : public BinaryElementWiseNode<ElemType>
     {
         return L"Plus";
     }
+#ifdef USE_MKLDNN
+private:
+	std::unique_ptr<BinaryEltWiseEngine<ElemType>> m_plusEng;
+#endif
 
 public:
     DeclareConstructorFromConfigWithNumInputs(PlusNode);
-    PlusNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name) {}
+    PlusNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+#ifdef USE_MKLDNN
+		m_plusEng = BinaryEltWiseEngine<ElemType>::Create(m_deviceId,
+			BinaryEltWiseKind::PLUS, EltWiseEngineKind::All);
+#endif
+    }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -54,7 +68,16 @@ public:
         auto result = ValueTensorFor(rank, fr);
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+#ifdef USE_MKLDNN
+        if (input0.GetShape() == input1.GetShape()) {
+            m_plusEng->Forward(input0.GetShape(),
+                input0.GetSOB(), input1.GetSOB(), result.GetSOB());
+        }
+        else
+#endif
+        {
         result.AssignSumOf(input0, input1);
+        }
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -74,8 +97,17 @@ public:
                 if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
                     LogicError("Gradients should be reused.");
             }
-            else
-                inputGradient.AssignCopyOf(gradient);
+            else {
+#ifdef USE_MKLDNN
+                if (inputGradient.GetShape() == gradient.GetShape()) {
+                    m_plusEng->Backward(gradient.GetSOB(), inputGradient.GetSOB());
+                }
+                else
+#endif
+                {
+                    inputGradient.AssignCopyOf(gradient);
+                }
+            }
         }
         else
             inputGradient.AddCopyOf(gradient);
