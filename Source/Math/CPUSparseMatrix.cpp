@@ -180,6 +180,9 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
+    if (NzCount() > 0)
+        //So far only support SetDiagonalValue for zero sparse matrix for now
+        NOT_IMPLEMENTED;
     RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize(), true, false);
     CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
     CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
@@ -199,6 +202,10 @@ void CPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vector)
 {
+    if (NzCount() > 0)
+        //So far only support SetDiagonalValue for zero sparse matrix for now
+        NOT_IMPLEMENTED;
+
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: input vector must be a vector.");
 

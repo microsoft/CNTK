@@ -820,6 +820,7 @@ public:
         {
             result.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
         }
+        result.SetValue(ElemType(0.0));
         result.SetDiagonalValue(ElemType(1.0));
     }
 
@@ -836,6 +837,18 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
         return false;
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_isOutputSparse;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_isOutputSparse;
     }
 private:
     bool m_isOutputSparse;

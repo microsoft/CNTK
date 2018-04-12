@@ -293,17 +293,19 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
     // void SetDiagonalValue(const ElemType v);//on non-squared matrix row < col
     SingleMatrix c_ns1(4, 6, c_deviceIdZero);
     const float val_ns1 = -0.00332f;
+    c_ns1.SetValue(0.0f);
     c_ns1.SetDiagonalValue(val_ns1);
     foreach_coord(i, j, c_ns1)
     {
         if (i == j && i <= 4)
-            BOOST_CHECK_EQUAL(val, c_ns1(i, j));
+            BOOST_CHECK_EQUAL(val_ns1, c_ns1(i, j));
         else
             BOOST_CHECK_EQUAL(0, c_ns1(i, j));
     }
 
     // void SetDiagonalValue(const Matrix<ElemType>& vector);
     const float val1_ns1 = 43.324f;
+    c_ns1.SetValue(0.0f);
     d.SetValue(val1_ns1);
     c_ns1.SetDiagonalValue(d);
     foreach_coord(i, j, c_ns1)
@@ -317,31 +319,36 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
     // void SetDiagonalValue(const ElemType v);//on non-squared matrix row > col
     SingleMatrix c_ns2(7, 4, c_deviceIdZero);
     const float val_ns2 = -0.00332f;
+    c_ns2.SetValue(0.0f);
     c_ns2.SetDiagonalValue(val_ns2);
     foreach_coord(i, j, c_ns2)
     {
         if (i == j && i <= 4)
-            BOOST_CHECK_EQUAL(val, c_ns2(i, j));
+            BOOST_CHECK_EQUAL(val_ns2, c_ns2(i, j));
         else
             BOOST_CHECK_EQUAL(0, c_ns2(i, j));
     }
 
     // void SetDiagonalValue(const Matrix<ElemType>& vector);
+    SingleMatrix c_ns2_1(7, 4, c_deviceIdZero);
+    SingleMatrix dd(4, 1, c_deviceIdZero);
     const float val1_ns2 = 43.324f;
-    d.SetValue(val1_ns2);
-    c_ns2.SetDiagonalValue(d);
+    dd.SetValue(val1_ns2);
+    c_ns2_1.SetValue(0.0f);
+    c_ns2_1.SetDiagonalValue(dd);
     foreach_coord(i, j, c_ns2)
     {
         if (i == j && i <= 4)
-            BOOST_CHECK_EQUAL(val1, c_ns2(i, j));
+            BOOST_CHECK_EQUAL(val1_ns2, c_ns2_1(i, j));
         else
-            BOOST_CHECK_EQUAL(0, c_ns2(i, j));
+            BOOST_CHECK_EQUAL(0, c_ns2_1(i, j));
     }
 
 
     SingleMatrix c1(5, 5, c_deviceIdZero);
     SingleMatrix d1(1, 5, c_deviceIdZero);
     float val2 = 0.53f;
+    c1.SetValue(0.0f);
     d1 = d1.Transpose();
     d1.SetValue(val2);
     c1.SetDiagonalValue(d1);

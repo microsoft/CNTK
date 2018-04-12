@@ -1288,7 +1288,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
-    CUDA_LONG N = (CUDA_LONG) GetNumRows();
+    CUDA_LONG N = (CUDA_LONG) GetDiagSize();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
     SyncGuard syncGuard;
@@ -1315,7 +1315,7 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
         SyncGuard syncGuard;
-        _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N);
+        _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N, (CUDA_LONG) GetNumRows());
     }
 }
 

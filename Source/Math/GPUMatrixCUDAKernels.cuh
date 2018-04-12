@@ -1425,12 +1425,13 @@ template <class ElemType>
 __global__ void _setDiagonalValueFromVector(
     ElemType* a,
     const ElemType* b,
-    const CUDA_LONG N)
+    const CUDA_LONG N,
+    const CUDA_LONG ld)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[IDX2C(id, id, N)] = b[id];
+    a[IDX2C(id, id, ld)] = b[id];
 }
 
 template <class ElemType>

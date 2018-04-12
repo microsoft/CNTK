@@ -1487,7 +1487,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: Input vector must be a vector.");
 
-    if (vector.GetNumRows() * vector.GetNumCols() != GetNumRows())
+    if (vector.GetNumRows() * vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: Input vector must match matrix dimension.");
 
     if (IsEmpty())
