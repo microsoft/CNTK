@@ -179,7 +179,6 @@ def test_eye_like(operand, sparse_output, device_id, precision):
     cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
     actual = my_eval(cntk_eye_like, {x: operand})
     grad = cntk_eye_like.grad({x: operand})
-    my_eval(x + cntk_eye_like, {x: operand})
     np.testing.assert_almost_equal(actual, expected)
     np.testing.assert_almost_equal(grad, expected_grad)
     tempdir = os.path.join(tempfile.gettempdir(), 'eye_like_test')
