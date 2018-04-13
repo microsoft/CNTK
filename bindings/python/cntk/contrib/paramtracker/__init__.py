@@ -86,7 +86,7 @@ class ParameterTracker(object):
             ParameterTracker.instances[key] = ParameterTracker()
         return ParameterTracker.instances[key]
 
-    def __init__(self, to_path=None, from_path=None):
+    def __init__(self, to_path=None, from_path=None, key_value_store_create_func = lambda path: KeyNumpyStore(path)):
         '''
         A tracker to save and load parameters for various frameworks, e.g. CNTK, Tensorflow, Caffe2 and MxNet.
         
@@ -138,6 +138,7 @@ class ParameterTracker(object):
             from_path:
         '''
         self.entries = {}
+        self.key_value_store_create_func = key_value_store_create_func
         self._init_stores(to_path, from_path)
         self.name_space = []
 
@@ -153,12 +154,12 @@ class ParameterTracker(object):
         return self.name_space[-1] + "." + key if len(self.name_space) > 0 else key
 
     def _init_stores(self, to_store_path, from_store_path):
-        self.to_store = KeyNumpyStore(to_store_path) if to_store_path is not None else None
+        self.to_store = self.key_value_store_create_func (to_store_path) if to_store_path is not None else None
         if from_store_path is None or to_store_path == from_store_path:
             #if no from_store is specified or its path is the same as the to_store, use the to_store
             self.from_store = self.to_store
         else:
-            self.from_store = KeyNumpyStore(from_store_path)
+            self.from_store = self.key_value_store_create_func (from_store_path)
 
     def reset(self, to_store_path=None, from_store_path=None):
         self._init_stores(to_store_path, from_store_path)
@@ -171,11 +172,11 @@ class ParameterTracker(object):
         return self
 
     def set_frompath(self, from_store_path):
-        self.from_store = KeyNumpyStore(from_store_path)
+        self.from_store = self.key_value_store_create_func (from_store_path)
         return self
 
     def set_topath(self, to_store_path):
-        self.to_store = KeyNumpyStore(to_store_path)
+        self.to_store = self.key_value_store_create_func (to_store_path)
         return self
 
     def share_values_to(self, other_parameter_tracker):
