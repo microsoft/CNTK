@@ -8,7 +8,7 @@ import cntk as C
 from cntk import sgd, Trainer, learning_parameter_schedule, parameter, \
                  times, cross_entropy_with_softmax, \
                  classification_error, UnitType, combine
-from cntk.debugging.debug import debug_model, _DebugNode
+from cntk.debugging.debug import debug_model, _DebugNode, set_node_timing
 import pytest
 
 
@@ -193,4 +193,8 @@ def test_debug_multi_output(train_f):
     assert line_5.startswith(v_t)
     assert line_6.startswith(v_p) and line_7.startswith(v_i) or \
            line_6.startswith(v_i) and line_7.startswith(v_p)
+
+@pytest.mark.parametrize("enable", [True, False])
+def test_set_node_timing(enable):
+    set_node_timing(enable)
 

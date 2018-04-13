@@ -313,7 +313,7 @@ namespace CNTK
         CNTK_API void StopProfiler();
 
         CNTK_API void EnableNodeTiming();
-        CNTK_API void DisableNodeTimeing();
+        CNTK_API void DisableNodeTiming();
 
         CNTK_API void EnableCPUEvalOptimization();
         CNTK_API void DisableCPUEvalOptimization();

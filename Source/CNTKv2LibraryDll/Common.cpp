@@ -215,7 +215,7 @@ namespace CNTK
             Microsoft::MSR::CNTK::Globals::SetNodeTiming(true);
         }
 
-        void DisableNodeTimeing()
+        void DisableNodeTiming()
         {
             Microsoft::MSR::CNTK::Globals::SetNodeTiming(false);
         }
