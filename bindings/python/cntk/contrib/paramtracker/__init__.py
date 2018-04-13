@@ -89,7 +89,50 @@ class ParameterTracker(object):
     def __init__(self, to_path=None, from_path=None):
         '''
         A tracker to save and load parameters for various frameworks, e.g. CNTK, Tensorflow, Caffe2 and MxNet.
+        
+        To track parameters from one framework (say Tensorflow) to another framework (say CNTK), the steps to take:
+        
+            1. Create get_param_value functions for the source framework, e.g. ::
+            
+                def get_tf_param_value(p, sess):
+                    return SavedParams(sess.run(p), [p])
 
+            2. Create set_param_value functions for the target framework, e.g. ::
+            
+                def set_cntk_param_value(p, value):
+                    p.value = value
+                    return [p]
+            
+            3. Create the source parameter tracker and the target parameter tracker with shared working path:: 
+            
+                shared_working_path = ...
+                source_params = ParameterTracker(to_path=shared_working_path)
+                target_params = ParameterTracker(from_path=shared_working_path)
+                
+            4. Insert tracking codes when the networks are created, e.g. ::
+
+                #In the source framework:
+                tf_weights = tf_aa = tf.get_variable('tf_weights', [2,3,5],  initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+                source_params.track_parameter('weights', tf_weights, get_value_func=get_tf_param_value)
+                
+                #In the target framework: 
+                cntk_weights = C.Parameter((2,3,5), name='cntk_weights', dtype=np.float32)
+                target_params.track_parameter('weights', cntk_aa, set_value_func=set_cntk_param_value)
+
+            5. Call `save_parameters` after the parameter values are ready in the source framework, e.g. ::
+
+                 sess.run(init_op)
+                 saved_param_list = source_params.save_parameters(sess)
+                 
+                 #or with CNTK source
+                 saved_param_list = source_parameters.save_parameters() #note that the context parameter is optional
+
+            6. Call `load_parameters` after the parameter values are available in the from_path, e.g. ::
+                
+                 target_params.load_parameters()
+                 
+            7. Verify with your customized code to check the parity of the models in two frameworks.
+                
         Args:
             to_path:
             from_path:
@@ -258,7 +301,7 @@ def set_cntk_lstm_param(rnn_func, value):
 
     Args:
         rnn_func: a CNTK lstm recurrence function
-        value:  a tuple of  weights and bias: (tf_weights, tf_bias) in numpy arrays
+        value:  a dictionary of  weights and bias: {W: ..., H: ..., b: ...}
 
     Returns:
         A list of set parameters.

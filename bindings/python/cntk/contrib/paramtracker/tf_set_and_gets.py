@@ -42,7 +42,8 @@ def get_tf_lstm_param_value(tf_lstm_info, sess, param_keywords=['kernel', 'bias'
         rnn_func: (rnn_var_scope, rnn_output, rnn_state) where runn_var_scope is a string to identify the scope of the LSTM weight and bias parameters.
         sess: tensorflow session
 
-    Returns: Numpy array fo the rnn parameter values: (rnn_weights, rnn_bias)
+    Returns: 
+        SavedParams where value is a dictionary of values that are required by CNTK. 
     '''
     import tensorflow as tf
     tf_param_name_scope, hidden_dim = tf_lstm_info
@@ -67,7 +68,8 @@ def get_tf_contrib_gru_param_value(rnn_func_info, sess):
         rnn_func_info: (rnn_var_scope, cell_dim, input_dim) where runn_var_scope is a string to identify the scope of the LSTM weight and bias parameters.
         sess: tensorflow session
 
-    Returns: Numpy array fo the rnn parameter values: (rnn_weights, rnn_bias)
+    Returns: 
+        SavedParams where value is a dictionary of values that are required by CNTK. 
 
     '''
     rnn_var_scope, cell_dim, input_dim = rnn_func_info
@@ -97,8 +99,8 @@ def get_tf_gru_param_value(rnn_func_info, sess):
         rnn_func_info: (rnn_var_scope, cell_dim, input_dim) where runn_var_scope is a string to identify the scope of the LSTM weight and bias parameters.
         sess: tensorflow session
 
-    Returns: Numpy array fo the rnn parameter values: (rnn_weights, rnn_bias)
-
+    Returns: 
+        SavedParams where value is a dictionary of values that are required by CNTK. 
     '''
     rnn_var_scope, cell_dim, input_dim = rnn_func_info
     params = get_tf_vars(rnn_var_scope,
