@@ -42,6 +42,9 @@
     <!-- NOTE: Modify both CntkVersion and PublicBuild during MAJOR RELEASE -->
     <PublicBuild>true</PublicBuild>
 
+    <PythonWithDeps>false</PythonWithDeps>
+    <PythonWithDeps Condition="$(PublicBuild)">true</PythonWithDeps>
+
     <!-- CntkVersionProvidedExternally:
          Hard-coded CntkVersion can be overridden if property BUILD_CNTK_VERSION is present. -->
     <CntkVersionProvidedExternally>false</CntkVersionProvidedExternally>
