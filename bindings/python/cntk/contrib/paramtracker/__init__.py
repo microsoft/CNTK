@@ -11,6 +11,7 @@ frameworks.
 import os
 import numpy as np
 import shutil
+import collections
 from contextlib import contextmanager
 
 
@@ -53,8 +54,31 @@ class KeyNumpyStore(object):
         KeyNumpyStore.clear(self.keystore_dir)
 
 
+SavedParams = collections.namedtuple('SavedParams', 'value params')
+SavedParams.__doc__ = '''\
+Loaded parameter record.
+
+value - the saved value which can be a single value, a dict of values, and lists depending on how the target framework consume the values.
+params - a list of the saved params in the native framework for debug or bookkeeping, e.g. a list of tf.variable in tensorflow, and a list of Parameters in CNTK.
+    '''
+
 class ParameterTracker(object):
     instances = {}
+
+    @contextmanager
+    def name_scope(self, scope):
+        '''
+        Nested name scope for the parameter tracker. A systematic manner to organize the name space for the keys,
+        especially when networks are created deep in a few nested function calls.
+        Args:
+            scope: the name of the nested level of scope.
+
+        Returns: None
+
+        '''
+        self._enter_key_space(scope)
+        yield
+        self._exit_key_space()
 
     @staticmethod
     def get_instance(key):
@@ -113,7 +137,9 @@ class ParameterTracker(object):
 
     def share_values_to(self, other_parameter_tracker):
         '''
-        Set the other parameter tracker to share the same working director as this tracker so to cross talk.
+        Set the other parameter tracker to share the same working director as this tracker so to cross talk. This is
+        for in-process sharing. For cross-processes sharing, please set the source parameter tracker's to-working-path by
+        `set_topath` to the target parameter tracker's from-working-path by `set_frompath`.
         Args:
             other_parameter_tracker: the other parameter tracker to be tied. The two parameter trackers will share the same working.
             directory so to crosstalk. 
@@ -135,10 +161,10 @@ class ParameterTracker(object):
         Args:
             key (str): The unique key of the parameter being tracked.  
             param: The parameter to be tracking.
-            get_value_func: A function (param, context[option]) -> value which provides the value to be saved with optional 
-            context.   
+            get_value_func: A function (param, context[option]) -> value which provides the value to be saved with optional
+               context.
             set_value_func: A function (param, parameter_value, context[optional]) -> [list_of_set_parameters] which perform necessary
-            transformatoin of the parameter value and set it to the appropriate parameter with optional context.
+               transformatoin of the parameter value and set it to the appropriate parameter with optional context.
         Returns:
             A list of parameters which have been set.
         '''
@@ -147,10 +173,12 @@ class ParameterTracker(object):
 
     def load_parameters(self, context=None, key_criteria_func = None):
         '''
-        
+        Load the parameters that are saved in the from_working_path which is set by `set_frompath`.
         Args:
-            context: 
-            key_criteria_func: 
+            context (optional): The context of framework which is needed to load the parameters. This context will be consumed
+               by get_param_value function of the corresponding framework. For example, in Tensorflow it is usually the session;
+               if necessary, it may contain additional context as needed by the specific set of get_param_value functions.
+            key_criteria_func: A criteria to filter the keys of the parameters to be loaded.
 
         Returns:
             A list of parameters which have been set. If the parameters have been set more than once, there will be duplicated 
@@ -173,23 +201,32 @@ class ParameterTracker(object):
         return set_params
 
     def save_parameters(self, context = None, key_criteria_func = None):
+        '''
+        Save the parameters to the to_working_path which is set by `set_topath`.
+
+        Args:
+            context (optional): The context of framework which is needed to load the parameters. This context will be consumed
+               by get_param_value function of the corresponding framework. For example, in Tensorflow it is usually the session;
+               if necessary, it may contain additional context as needed by the specific set of get_param_value functions.
+            key_criteria_func: A criteria to filter the keys of the parameters to be saved.
+
+        Returns:
+            A list of parameters which have been saved for loading. If the parameters have been saved more than once,
+               there will be duplicated items in the list for debugging purpose.
+        '''
         if self.to_store is None:
             raise (
             ValueError('Parameter tracker working path is not set. Please use set_workingpath to set the value.'))
+        saved_params = []
         for key, entry in self.entries.items():
             if key_criteria_func is None or key_criteria_func(key):
                 param, get_value_func, _ = entry
                 if get_value_func is not None:
-                    param_value = get_value_func(param, context) if context\
+                    value, params = get_value_func(param, context) if context\
                              else get_value_func(param)
-                    self.to_store[key] = param_value
-        return self
-
-@contextmanager
-def key_scope(param_tracker, scope):
-    param_tracker._enter_key_space(scope)
-    yield
-    param_tracker._exit_key_space()
+                    self.to_store[key] = value
+                    saved_params.extend(params)
+        return saved_params
 
 
 def get_tf_vars(var_scope, param_names, name_extra_func=lambda name: name[name.rfind('/') + 1:-2]):
@@ -201,11 +238,11 @@ def get_tf_vars(var_scope, param_names, name_extra_func=lambda name: name[name.r
     return params
 
 def get_tf_param_value(p, sess):
-    return sess.run(p)
+    return SavedParams(sess.run(p), [p])
 
 
 def get_cntk_param_value(p):
-    return (p * 1.0).eval()
+    return SavedParams((p * 1.0).eval(), [p])
 
 def set_cntk_param_value(p, value):
     p.value = value
@@ -217,37 +254,40 @@ def set_tf_param_value(p, value, sess):
     sess.run(assign_op)
     return [p]
 
-def track_cntk_embedding(tracker, key, embedder):
-    tracker.track_parameter(key, embedder.parameters[0], get_value_func=get_cntk_param_value, set_value_func=set_cntk_param_value)
 
-def set_cntk_conv2d_weights_from_tf(conv_weights, value):
+def get_cntk_embedding(key, embedder):
+    return get_cntk_param_value(embedder.parameters[0])
+
+
+def set_cntk_embedding(embedder, value):
+    return set_cntk_param_value(embedder.parameters[0], value)
+
+
+def get_tf_conv2d_param_value(tf_contrib_name_scope, sess, param_keywords = ['weights', 'biases']):
+    scope, keywords = tf_contrib_name_scope, param_keywords
+    params = get_tf_vars(scope, keywords)
+    v = sess.run(params)
     #data_format = 'NHWC'
     #tf filter  shape: [filter_height, filter_width, in_channels, out_channels]
     #cntk filter shape: [out_channels, in_channels, filter_height, filter_width]
-    w_value = value.transpose(3,2,0,1)
-    return set_cntk_param_value(conv_weights, w_value)
+    return SavedParams({'W': v[keywords[0]].transpose(3,2,0,1),
+                        #cntk bias shape is [out_channells, 1, 1] but tf bias shpae is [out_channels,]
+                        'b': v[keywords[1]].reshape(v[keywords[1]].shape + (1, 1))},
+                       params.values())
 
-def set_cntk_conv2d_bias_from_tf(p, value):
-    return set_cntk_param_value(p, value.reshape(p.shape))
-
-def tf_get_conv2d_param(tf_conv_params, sess):
-    w_value, b_value = sess.run(tf_conv_params)
-    return {'W': w_value, 'b': b_value}
 
 def get_tf_contrib_conv2d_param_value(tf_contrib_name_scope, sess):
-    params = get_tf_vars(tf_contrib_name_scope, ['weights', 'biases'])
-    v = sess.run(params)
-    return {'W': v['weights'], 'b': v['biases']}
+    return get_tf_conv2d_param_value(tf_contrib_name_scope, sess, param_keywords=['weights', 'biases'])
 
-def set_cntk_conv2d_params_from_tf(conv, value):
+
+def set_cntk_conv2d_params(conv, value):
     w_value, b_value = value['W'], value['b']
     params = {p.name: p for p in conv.parameters}
-    return set_cntk_conv2d_weights_from_tf(params['W'], w_value) + \
-           set_cntk_conv2d_bias_from_tf(params['b'], b_value)
+    return set_cntk_param_value(params['W'], w_value) + \
+           set_cntk_param_value(params['b'], b_value)
 
 
-
-def get_tf_lstm_param_value(rnn_func, sess):
+def get_tf_lstm_param_value(tf_lstm_info, sess, param_keywords=['kernel', 'bias']):
     '''
     Args:
         rnn_func: (rnn_var_scope, rnn_output, rnn_state) where runn_var_scope is a string to identify the scope of the LSTM weight and bias parameters.
@@ -256,14 +296,22 @@ def get_tf_lstm_param_value(rnn_func, sess):
     Returns: Numpy array fo the rnn parameter values: (rnn_weights, rnn_bias)
     '''
     import tensorflow as tf
-    rnn_var_scope, fw, fw_s = rnn_func
-    tf_parameters = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, rnn_var_scope)
-    rnn_weights = [p for p in tf_parameters if 'kernel' in p.name][0]
-    rnn_bias = [p for p in tf_parameters if 'bias' in p.name][0]
-    return sess.run({'W': rnn_weights, 'b': rnn_bias})
+    tf_param_name_scope, hidden_dim = tf_lstm_info
+    if isinstance(tf_param_name_scope, tuple):
+        scope, keywords = tf_param_name_scope
+    else:
+        scope, keywords = tf_param_name_scope, param_keywords
+    params = get_tf_vars(scope, keywords)
+    v = sess.run(params)
+    W = v[keywords[0]]
+    b = v[keywords[1]]
+
+    cntk_W = W[0:- hidden_dim, :]
+    cntk_H = W[-hidden_dim:, :]
+    return SavedParams({'W': cntk_W, 'H': cntk_H, 'b': b}, params.values())
 
 
-def set_cntk_lstm_param_from_tf(rnn_func, value):
+def set_cntk_lstm_param(rnn_func, value):
     '''
 
     Args:
@@ -274,27 +322,30 @@ def set_cntk_lstm_param_from_tf(rnn_func, value):
 
     '''
     b, W, H = rnn_func.parameters
-    tf_weights, tf_bias = value['W'], value['b']
-    b.value = tf_bias
-    W.value = tf_weights[0:W.shape[0], :]
-    H.value = tf_weights[W.shape[0]:, :]
+    from_W, from_H, from_b = value['W'], value['H'], value['b']
+    b.value = from_b
+    W.value = from_W
+    H.value = from_H
     return [W, H, b]
 
-def get_tf_contrib_gru_param_value(rnn_func, sess):
+
+
+def get_tf_contrib_gru_param_value(rnn_func_info, sess):
     '''
 
     Args:
-        rnn_func: (rnn_var_scope, rnn_output, rnn_state) where runn_var_scope is a string to identify the scope of the LSTM weight and bias parameters.
+        rnn_func_info: (rnn_var_scope, cell_dim, input_dim) where runn_var_scope is a string to identify the scope of the LSTM weight and bias parameters.
         sess: tensorflow session
 
     Returns: Numpy array fo the rnn parameter values: (rnn_weights, rnn_bias)
 
     '''
-    rnn_var_scope, cell_func, cell_dim, input_dim = rnn_func
+    rnn_var_scope, cell_dim, input_dim = rnn_func_info
     params = get_tf_vars(rnn_var_scope, ['w_ru', 'b_ru', 'w_c', 'b_c'])
     v = sess.run(params)
     w_ru, b_ru, w_c, b_c = v['w_ru'], v['b_ru'], v['w_c'], v['b_c']
 
+    #decomposing tf's stacking of GRU paramters to the standard notation in paper: https://arxiv.org/abs/1701.05923
     value = {
         'W_z': w_ru[0:input_dim, cell_dim: 2* cell_dim],#TODO: double check accordingt to tf.contrib.gru document, it should be: -w_ru[0:input_dim, cell_dim: 2* cell_dim],
         'W_r': w_ru[0:input_dim, 0:cell_dim],
@@ -306,17 +357,69 @@ def get_tf_contrib_gru_param_value(rnn_func, sess):
         'U_r': w_ru[input_dim:input_dim+cell_dim, 0:cell_dim],
         'U_h': w_c[input_dim:input_dim+cell_dim,:]
     }
-    return value
+    return SavedParams(value, params.values())
 
-def set_cntk_gru_param_from_tf_contrib(rnn_func, value):
+
+def get_tf_gru_param_value(rnn_func_info, sess):
+    '''
+
+    Args:
+        rnn_func_info: (rnn_var_scope, cell_dim, input_dim) where runn_var_scope is a string to identify the scope of the LSTM weight and bias parameters.
+        sess: tensorflow session
+
+    Returns: Numpy array fo the rnn parameter values: (rnn_weights, rnn_bias)
+
+    '''
+    rnn_var_scope, cell_dim, input_dim = rnn_func_info
+    params = get_tf_vars(rnn_var_scope,
+                         ['gates/kernel', 'gates/bias',
+                          'candidate/kernel', 'candidate/bias'],
+                         name_extra_func=lambda name: name[name.rfind('/', 0, name.rfind('/')) + 1:-2])
+    #in tf rnn_cell_imply.py:
+    #    gate_inputs = math_ops.matmul(
+    #    array_ops.concat([inputs, state], 1), self._gate_kernel)
+    #    gate_inputs = nn_ops.bias_add(gate_inputs, self._gate_bias)
+    #
+    #    candidate = math_ops.matmul(
+    #    array_ops.concat([inputs, r_state], 1), self._candidate_kernel)
+    #    candidate = nn_ops.bias_add(candidate, self._candidate_bias)
+    #    value = math_ops.sigmoid(gate_inputs)
+    #    r, u = array_ops.split(value=value, num_or_size_splits=2, axis=1)
+    #    r_state = r * state
+    #    c = self._activation(candidate)
+    #    new_h = u * state + (1 - u) * c
+
+    v = sess.run(params)
+    w_rz = v['gates/kernel']
+    b_rz = v['gates/bias']
+    w_hu = v['candidate/kernel']
+    b_hu = v['candidate/bias']
+    value = {
+        'W_z': w_rz[0:input_dim, cell_dim: 2* cell_dim],
+        'W_r': w_rz[0:input_dim, 0:cell_dim],
+        'W_h': w_hu[0:input_dim,:],
+        'b_z': b_rz[cell_dim: 2* cell_dim],
+        'b_r': b_rz[0:cell_dim],
+        'b_h': b_hu,
+        'U_z': w_rz[input_dim:input_dim+cell_dim, cell_dim: 2* cell_dim],
+        'U_r': w_rz[input_dim:input_dim+cell_dim, 0:cell_dim],
+        'U_h': w_hu[input_dim:input_dim+cell_dim,:]
+    }
+
+    return SavedParams(value, params.values())
+
+
+def set_cntk_gru_param(rnn_func, value):
     '''
 
     Args:
         rnn_func: a CNTK lstm recurrence function
-        value:  a tuple of  weights and bias: (tf_weights, tf_bias) in numpy arrays
+        value:  a dictionary of GRU parameters according to paper:  https://arxiv.org/abs/1701.05923 and the original one:
+          https://arxiv.org/abs/1406.1078. Echoing the https://arxiv.org/abs/1701.05923 notation, the string keys
+           are 'W_z', 'W_r', 'W_h', 'b_z', 'b_r', 'b_h', 'U_z', 'U_r', 'U_h'.
 
     Returns:
-
+        A list of set parameters.
     '''
     params = {p.name: p for p in rnn_func.parameters}
     params['W'].value = np.hstack([value['W_z'], value['W_r'], value['W_h']])
@@ -324,21 +427,3 @@ def set_cntk_gru_param_from_tf_contrib(rnn_func, value):
     params['H'].value = np.hstack([value['U_z'], value['U_r']])
     params['H1'].value = value['U_h']
     return list(params.values())
-
-
-def set_cntk_gru_param_from_tf(rnn_func, value):
-    '''
-
-    Args:
-        rnn_func: a CNTK lstm recurrence function
-        value:  a tuple of  weights and bias: (tf_weights, tf_bias) in numpy arrays
-
-    Returns:
-
-    '''
-    b, W, H = rnn_func.parameters
-    tf_weights, tf_bias = value['W'], value['b']
-    b.value = tf_bias
-    W.value = tf_weights[0:W.shape[0], :]
-    H.value = tf_weights[W.shape[0]:, :]
-    return [W, H, b]
