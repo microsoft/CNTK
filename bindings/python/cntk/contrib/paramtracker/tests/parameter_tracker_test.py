@@ -3,7 +3,7 @@ import numpy as np
 import cntk as C
 import tensorflow as tf
 from cntk.contrib.paramtracker import *
-
+from cntk.contrib.paramtracker.tf_set_and_gets import *
 
 import tempfile
 
