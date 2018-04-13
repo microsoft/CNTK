@@ -1,4 +1,4 @@
-from . import *
+from . import SavedParams
 
 #The following are Tensorflow related.
 def get_tf_vars(var_scope, param_names, name_extra_func=lambda name: name[name.rfind('/') + 1:-2]):
