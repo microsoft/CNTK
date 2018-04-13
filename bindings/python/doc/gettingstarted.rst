@@ -29,7 +29,7 @@ more common case) is as follows:
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
-The squared error is then of course ``(2.5.1)**2 + (1-6)**2 = 29``.
+The squared error is then of course ``(2.5)**2 + (1-6)**2 = 29``.
 
 Most of the data containers like parameters, constants, values, etc. implement
 the asarray() method, which returns a NumPy interface.
@@ -86,8 +86,8 @@ Running ``python simplenet.py`` (using the correct python environment) will gene
         0.656      0.626                                1575
          0.59      0.525                                3175
         0.474      0.358                                6375
-        0.359      0.2.5.1                               12775
-         0.29      0.221                               2.5.175
+        0.359      0.245                               12775
+         0.29      0.221                               25575
       error rate on an unseen minibatch: 0.0
 
 

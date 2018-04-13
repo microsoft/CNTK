@@ -6,6 +6,10 @@
 
 ## Latest news
 
+***2018-04-16.*** CNTK 2.5.1
+
+Repack CNTK 2.5 with third party libraries included in the bundles (Python wheel packages)
+
 ***2018-03-15.*** CNTK 2.5
 
 Change profiler details output format to be chrome://tracing
