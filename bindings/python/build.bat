@@ -18,7 +18,7 @@ call "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" amd64 -vcvars_ver=14.
 
 set MSSdk=1
 set DISTUTILS_USE_SDK=1
-set CNTK_VERSION=2.5
+set CNTK_VERSION=2.5.1
 set CNTK_VERSION_BANNER=%CNTK_VERSION%+
 set CNTK_COMPONENT_VERSION=%CNTK_VERSION%
 

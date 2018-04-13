@@ -99,18 +99,18 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\CNTK.Deps.Cuda.2.5.0\build\native\CNTK.Deps.Cuda.targets" Condition="Exists('..\packages\CNTK.Deps.Cuda.2.5.0\build\native\CNTK.Deps.Cuda.targets')" />
-    <Import Project="..\packages\CNTK.Deps.MKL.2.5.0\build\native\CNTK.Deps.MKL.targets" Condition="Exists('..\packages\CNTK.Deps.MKL.2.5.0\build\native\CNTK.Deps.MKL.targets')" />
-    <Import Project="..\packages\CNTK.Deps.OpenCV.Zip.2.5.0\build\native\CNTK.Deps.OpenCV.Zip.targets" Condition="Exists('..\packages\CNTK.Deps.OpenCV.Zip.2.5.0\build\native\CNTK.Deps.OpenCV.Zip.targets')" />
-    <Import Project="..\packages\CNTK.GPU.2.5.0\build\native\CNTK.GPU.targets" Condition="Exists('..\packages\CNTK.GPU.2.5.0\build\native\CNTK.GPU.targets')" />
+    <Import Project="..\packages\CNTK.Deps.Cuda.2.5.1\build\native\CNTK.Deps.Cuda.targets" Condition="Exists('..\packages\CNTK.Deps.Cuda.2.5.1\build\native\CNTK.Deps.Cuda.targets')" />
+    <Import Project="..\packages\CNTK.Deps.MKL.2.5.1\build\native\CNTK.Deps.MKL.targets" Condition="Exists('..\packages\CNTK.Deps.MKL.2.5.1\build\native\CNTK.Deps.MKL.targets')" />
+    <Import Project="..\packages\CNTK.Deps.OpenCV.Zip.2.5.1\build\native\CNTK.Deps.OpenCV.Zip.targets" Condition="Exists('..\packages\CNTK.Deps.OpenCV.Zip.2.5.1\build\native\CNTK.Deps.OpenCV.Zip.targets')" />
+    <Import Project="..\packages\CNTK.GPU.2.5.1\build\native\CNTK.GPU.targets" Condition="Exists('..\packages\CNTK.GPU.2.5.1\build\native\CNTK.GPU.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\CNTK.Deps.Cuda.2.5.0\build\native\CNTK.Deps.Cuda.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.Deps.Cuda.2.5.0\build\native\CNTK.Deps.Cuda.targets'))" />
-    <Error Condition="!Exists('..\packages\CNTK.Deps.MKL.2.5.0\build\native\CNTK.Deps.MKL.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.Deps.MKL.2.5.0\build\native\CNTK.Deps.MKL.targets'))" />
-    <Error Condition="!Exists('..\packages\CNTK.Deps.OpenCV.Zip.2.5.0\build\native\CNTK.Deps.OpenCV.Zip.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.Deps.OpenCV.Zip.2.5.0\build\native\CNTK.Deps.OpenCV.Zip.targets'))" />
-    <Error Condition="!Exists('..\packages\CNTK.GPU.2.5.0\build\native\CNTK.GPU.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.GPU.2.5.0\build\native\CNTK.GPU.targets'))" />
+    <Error Condition="!Exists('..\packages\CNTK.Deps.Cuda.2.5.1\build\native\CNTK.Deps.Cuda.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.Deps.Cuda.2.5.1\build\native\CNTK.Deps.Cuda.targets'))" />
+    <Error Condition="!Exists('..\packages\CNTK.Deps.MKL.2.5.1\build\native\CNTK.Deps.MKL.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.Deps.MKL.2.5.1\build\native\CNTK.Deps.MKL.targets'))" />
+    <Error Condition="!Exists('..\packages\CNTK.Deps.OpenCV.Zip.2.5.1\build\native\CNTK.Deps.OpenCV.Zip.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.Deps.OpenCV.Zip.2.5.1\build\native\CNTK.Deps.OpenCV.Zip.targets'))" />
+    <Error Condition="!Exists('..\packages\CNTK.GPU.2.5.1\build\native\CNTK.GPU.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.GPU.2.5.1\build\native\CNTK.GPU.targets'))" />
   </Target>
 </Project>
