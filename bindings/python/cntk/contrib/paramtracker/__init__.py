@@ -8,7 +8,9 @@ Parameter tracker (Contrib) for taking snapshots in one framework and restore in
 frameworks.
 '''
 
+
 import os
+import py
 import numpy as np
 import shutil
 import collections
@@ -26,6 +28,8 @@ class KeyNumpyStore(object):
             shutil.rmtree(store_dir)
 
     def __init__(self, store_dir):
+        if isinstance(store_dir, py._path.local.LocalPath):
+            store_dir = str(store_dir)
         if not os.path.exists(store_dir):
             os.mkdir(store_dir)
         self.keystore_dir = store_dir
