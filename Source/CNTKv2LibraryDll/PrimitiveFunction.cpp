@@ -356,11 +356,14 @@ namespace CNTK
                         case PrimitiveOpType::ELU:
                         case PrimitiveOpType::StableSigmoid:
                         case PrimitiveOpType::ConstantOp:
-                        case PrimitiveOpType::EyeLikeOp:
-                            if (m_inputs[0].DynamicAxes().size() + m_inputs[0].Shape().Rank() > 2)
-                                InvalidArgument("EyeLike: Operand '%S' must have least than 2 axes including dynamic and static axes.", m_inputs[0].AsString().c_str());
                         case PrimitiveOpType::Cast:
                             assert(m_inputs.size() == 1);
+                            outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
+                            break;
+                        case PrimitiveOpType::EyeLikeOp:
+                            assert(m_inputs.size() == 1);
+                            if (m_inputs[0].DynamicAxes().size() + m_inputs[0].Shape().Rank() > 2)
+                                InvalidArgument("EyeLike: Operand '%S' must have least than 2 axes including dynamic and static axes.", m_inputs[0].AsString().c_str());
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
                         case PrimitiveOpType::Where:
