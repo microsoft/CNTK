@@ -142,7 +142,7 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
 
     if (GetNumElements() != 0)
     {
-        SetBuffer(BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(GetNumElements()),
+        SetBuffer(BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(GetNumElements(), true),
                   GetNumElements() * sizeof(ElemType));
     }
 }
@@ -161,6 +161,9 @@ CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols, ElemT
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom)
 {
+#ifdef USE_MKLDNN
+    m_mklMem = MKLMemHolder::create();
+#endif
     ZeroInit();
     SetValue(deepCopyFrom);
 }
@@ -294,7 +297,7 @@ void CPUMatrix<ElemType>::CopyColumnsStrided(const CPUMatrix<ElemType>& fromMatr
     long n = (long) numCols, m = (long) m_numRows;
 
     // auto& us = *this;
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> fromM(fromMatrix.Data(), fromMatrix.m_numRows, fromMatrix.m_numCols);
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
@@ -333,7 +336,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignToRowSliceValuesOf(const CPUMatr
     long n = (long) _a.GetNumCols(), m = (long) numRows;
 
     // auto& us = *this;
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
@@ -414,7 +417,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowSliceValuesOf(const CPUMatrix<
     long n = (long) _a.GetNumCols(), m = (long) numRows;
 
     // auto& us = *this;
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
@@ -457,7 +460,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddWithRowSliceValuesOf(const CPUMatri
     long n = (long) _a.GetNumCols(), m = (long) numRows;
 
     // auto& us = *this;
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
@@ -490,7 +493,7 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::Diagonal() const
     CPUMatrix<ElemType> diag_(1, m_numCols);
 
     // auto& us = *this;
-    ColMajorBuffer<ElemType> us(Data(), m_numRows, m_numCols);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> diag(diag_.Data(), 1, m_numCols);
 #pragma omp parallel for
     for (long i = 0; i < m_numRows; i++)
@@ -523,7 +526,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemTyp
     RequireSize(_a.GetNumRows() * numRowRepeats, _a.GetNumCols() * numColRepeats);
     long n = (long) _a.GetNumCols(), m = (long) _a.GetNumRows();
     // auto& us = *this;
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long q = 0; q < numColRepeats; q++)
@@ -568,7 +571,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowRepeatValuesOf(const CPUMatrix
     long n = (long) _a.GetNumCols(), m = (long) GetNumRows();
 
     // auto& us = *this;
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
@@ -645,7 +648,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTransposeOf(const CPUMatrix<Elem
     long n = (long) _a.GetNumCols(), m = (long) _a.GetNumRows();
 
     // auto& us = *this;
-    ColMajorBuffer<ElemType> us(Data(), n, m);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
@@ -1750,7 +1753,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOf(const ElemType alpha, cons
     RequireSize(_a.GetNumRows(), _a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 
 #pragma omp parallel for
@@ -1882,7 +1885,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const CPUMatrix<Ele
         RequireSize(_a.GetNumRows(), _a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
@@ -2075,7 +2078,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix
         RequireSize(_a.GetNumRows(), _a.GetNumCols());
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
     ColMajorBuffer<ElemType> b(_b.Data(), _b.GetNumRows(), _b.GetNumCols());
 #pragma omp parallel for
@@ -2115,7 +2118,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddElementProductOf(const CPUMatrix<El
     // auto& us = *this;
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
     ColMajorBuffer<ElemType> b(_b.Data(), _b.GetNumRows(), _b.GetNumCols());
 #pragma omp parallel for
@@ -2184,7 +2187,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementMultiplyWith(const CPUMat
     // auto& us = *this;
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
-    ColMajorBuffer<ElemType> us(Data(), m, n);
+    ColMajorBuffer<ElemType> us(Data(), GetNumRows(), GetNumCols());
     ColMajorBuffer<ElemType> a(_a.Data(), _a.GetNumRows(), _a.GetNumCols());
 
 #pragma omp parallel for

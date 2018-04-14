@@ -77,10 +77,11 @@ protected:
         }
     }
 
-    void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
+    void BackwardCore(const InoutMat& in, const InoutMat& out, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
                       StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) override
     {
         UNUSED(blendFactor);  // BUGBUG: It should be used.
+        UNUSED(out);
         m_inOutCuDnnT.UpdateBatchSize(srcGrad.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL_PERSISTENT : CUDNN_BATCHNORM_PER_ACTIVATION;
         // REVIEW alexeyk: change betaParamDiff to 1 and update CNTK BN engine.
