@@ -8,6 +8,7 @@ from cntk.contrib.paramtracker.tf_set_and_gets import *
 import tempfile
 
 def test_key_numpy_store_create(tmpdir):
+    tmpdir = str(tmpdir)
     store = KeyNumpyStore(tmpdir)
     store['a_b_c'] = np.ones((2, 2, 3))
 
@@ -19,7 +20,7 @@ def test_key_numpy_store_create(tmpdir):
 def test_save_load_parameters(tmpdir):
     target_params = ParameterTracker.get_instance('cntk')
     source_params = ParameterTracker.get_instance('tf')\
-                            .set_workingpath(tmpdir)\
+                            .set_workingpath(str(tmpdir))\
                             .share_values_to(target_params)
 
 
@@ -46,7 +47,7 @@ def test_save_load_parameters(tmpdir):
 def test_save_load_parameters_key_name_scope(tmpdir):
     target_params = ParameterTracker.get_instance('cntk')
     source_params = ParameterTracker.get_instance('tf')\
-                            .set_workingpath(tmpdir)\
+                            .set_workingpath(str(tmpdir))\
                             .share_values_to(target_params)
 
 
@@ -86,6 +87,7 @@ def test_save_load_parameters_key_name_scope(tmpdir):
 
 
 def test_tf2cntk_save_load_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
     with tf.variable_scope("test_tf2cntk_save_load_parameters"):
@@ -106,6 +108,7 @@ def test_tf2cntk_save_load_parameters(tmpdir):
         np.testing.assert_equal(get_tf_param_value(tf_aa, sess).value, (cntk_aa * 1.0).eval())
 
 def test_cntk2tf_save_load_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
     with tf.variable_scope("test_cntk2tf_save_load_parameters"):
@@ -126,6 +129,7 @@ def test_cntk2tf_save_load_parameters(tmpdir):
 
 
 def test_tf2cntk_save_load_embedding_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
@@ -163,6 +167,7 @@ def test_tf2cntk_save_load_embedding_parameters(tmpdir):
 
 
 def test_tf2cntk_save_load_conv2d_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
@@ -210,6 +215,7 @@ def test_tf2cntk_save_load_conv2d_parameters(tmpdir):
         np.testing.assert_array_almost_equal(tf_conv_result.transpose(0, 3, 1, 2), cntk_conv_result)
 
 def test_tf2cntk_save_load_contrib_conv2d_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
@@ -256,6 +262,7 @@ def test_tf2cntk_save_load_contrib_conv2d_parameters(tmpdir):
 
 
 def test_tf2cntk_save_load_rnn_lstm_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
@@ -298,6 +305,7 @@ def test_tf2cntk_save_load_rnn_lstm_parameters(tmpdir):
 
 
 def test_tf2cntk_save_load_bidr_rnn_lstm_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
@@ -358,6 +366,7 @@ def test_tf2cntk_save_load_bidr_rnn_lstm_parameters(tmpdir):
 
 
 def test_tf2cntk_save_load_contrib_gru_rnn_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
@@ -388,6 +397,7 @@ def test_tf2cntk_save_load_contrib_gru_rnn_parameters(tmpdir):
         np.testing.assert_array_almost_equal(tf_rnn_result, cntk_rnn_result)
 
 def test_tf2cntk_save_load_gru_rnn_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
@@ -418,6 +428,7 @@ def test_tf2cntk_save_load_gru_rnn_parameters(tmpdir):
 
 
 def test_tf2cntk_save_load_contrib_gru_birnn_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
@@ -461,6 +472,7 @@ def test_tf2cntk_save_load_contrib_gru_birnn_parameters(tmpdir):
         np.testing.assert_array_almost_equal(tf_rnn_bw_result, cntk_rnn_bw_result)
 
 def test_tf2cntk_save_load_gru_birnn_single_tf_cell_template_parameters(tmpdir):
+    tmpdir = str(tmpdir)
     source_params = ParameterTracker(tmpdir)
     target_params = ParameterTracker(tmpdir)
 
