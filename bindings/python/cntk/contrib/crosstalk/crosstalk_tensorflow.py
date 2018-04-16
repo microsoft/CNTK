@@ -68,12 +68,10 @@ def _conv2d_getter(sess):
     def _get(pd, attr):
         W = _trainable_getter(sess)(pd.W)
         #handling input with sequence axis:
-        # data_format = 'NHWC'
-        # tf filter  shape: [filter_height, filter_width, in_channels, out_channels]
-        # cntk filter shape: [out_channels, in_channels, filter_height, filter_width] + len(tf_w.shape) - 4
-        #if this is a sequence axis, the 0-th axis is the sequence so to offset 1
-        offset = len(W.shape) - 4  # for batch without sequence, W.shape is of rank 4, with sequence it is rank 5
-        axis_perm = (3 + offset, 2 + offset, 0 + offset, 1 + offset)
+        W_rank = len(W.shape)
+        #the transpose from tf [H, W, C] to cntk's [C, H, W] happens at the tailing axes excluding the leading dynamic
+        #axes (batch and sequence axes) in the data format:
+        axis_perm = (list(range(W_rank - 3)) if W_rank > 3 else []) + [i + W_rank - 3 for i in [2,0,1]]
         if pd.b:
             b = _trainable_getter(sess)(pd.b)
         else:
