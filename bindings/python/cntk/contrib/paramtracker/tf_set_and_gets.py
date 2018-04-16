@@ -26,7 +26,9 @@ def get_tf_conv2d_param_value(tf_contrib_name_scope, sess, param_keywords = ['we
     #data_format = 'NHWC'
     #tf filter  shape: [filter_height, filter_width, in_channels, out_channels]
     #cntk filter shape: [out_channels, in_channels, filter_height, filter_width]
-    return SavedParams({'W': v[keywords[0]].transpose(3,2,0,1),
+    offset = len(v[keywords[0]].shape) - 4
+    axis_perm = (3 + offset, 2 + offset, 0 + offset, 1 + offset)
+    return SavedParams({'W': v[keywords[0]].transpose(axis_perm),
                         #cntk bias shape is [out_channells, 1, 1] but tf bias shape is [out_channels,]
                         'b': v[keywords[1]].reshape(v[keywords[1]].shape + (1, 1))},
                        params.values())
