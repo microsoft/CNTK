@@ -119,7 +119,7 @@ protected:
     {
 #ifdef USE_MKLDNN
         if (in.GetCurrentMatrixLocation() == CPU &&
-		std::is_same<InoutType, StatType>::value &&
+        std::is_same<InoutType, StatType>::value &&
             ForwardCoreMKLDNN(*(const StatMat*)&in, scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance, *(StatMat*)&out, epsilon, savedMean, savedInvStdDev))
             return;
 #endif
@@ -138,7 +138,7 @@ protected:
     {
 #ifdef USE_MKLDNN
         if (srcGrad.GetCurrentMatrixLocation() == CPU &&
-		    std::is_same<InoutType, StatType>::value &&
+            std::is_same<InoutType, StatType>::value &&
             BackwardCoreMKLDNN(*(const StatMat*)&in, *(const StatMat*)&out, *(const StatMat*)&srcGrad, *(StatMat*)&grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad))
             return;
 #endif
@@ -562,27 +562,27 @@ std::unique_ptr<BatchNormEngine<InoutType, StatType>> BatchNormEngine<InoutType,
 
 template <>
 std::unique_ptr<BatchNormEngine<float, float>> BatchNormEngine<float, float>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-	bool spatial, ImageLayoutKind imageLayout,
-	BatchNormEngineKind enabledEngines, bool relu)
+    bool spatial, ImageLayoutKind imageLayout,
+    BatchNormEngineKind enabledEngines, bool relu)
 {
-	// Use CNTK as default batch norm engine.
-	if (HasFlag(enabledEngines, BatchNormEngineKind::Cntk))
-	{
-		if (GetMathLibTraceLevel() > 0)
-			fprintf(stderr, "Using CNTK batch normalization engine.\n");
+    // Use CNTK as default batch norm engine.
+    if (HasFlag(enabledEngines, BatchNormEngineKind::Cntk))
+    {
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "Using CNTK batch normalization engine.\n");
 
-		return std::make_unique<CntkBatchNormEngine<float, float>>(deviceId, inOutT, spatial, imageLayout, relu);
-	}
+        return std::make_unique<CntkBatchNormEngine<float, float>>(deviceId, inOutT, spatial, imageLayout, relu);
+    }
 
-	if (HasFlag(enabledEngines, BatchNormEngineKind::CuDnn))
-	{
-		if (GetMathLibTraceLevel() > 0)
-			fprintf(stderr, "Using cuDNN batch normalization engine.\n");
+    if (HasFlag(enabledEngines, BatchNormEngineKind::CuDnn))
+    {
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "Using cuDNN batch normalization engine.\n");
 
-		return CuDnnBatchNormEngineFactory<float, float>::Create(deviceId, inOutT, spatial, imageLayout);
-	}
+        return CuDnnBatchNormEngineFactory<float, float>::Create(deviceId, inOutT, spatial, imageLayout);
+    }
 
-	RuntimeError("Could not find appropriate batch normalization engine.");
+    RuntimeError("Could not find appropriate batch normalization engine.");
 }
 template class BatchNormEngine<float, float>;
 template class BatchNormEngine<double, double>;

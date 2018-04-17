@@ -102,7 +102,7 @@ namespace CNTK
         LatticeSequenceWithSoftmax = 90,
         Cast = 91,
 #ifdef USE_MKLDNN
-		TimesTranspose = 92,
+        TimesTranspose = 92,
         ConvolutionBias = 93,
 #endif
         // New op types should only be appended to the end of this list 

@@ -149,18 +149,18 @@ public:
 
     static mkldnn::memory::dims GetDimFromTensorShape(const TensorShape& a, mkldnn::memory::format format)
     {
-		//TODO: Sum support > 4 dimension
-		size_t dimension = 4;
+        //TODO: Sum support > 4 dimension
+        size_t dimension = 4;
         size_t size = a.size();
         if (format == mkldnn::memory::format::nchw && size > dimension)
             size = dimension;
         mkldnn::memory::dims in_dim;
         for (int i = 0; i < size; i++)
             in_dim.push_back((int)a[size-1-i]);
-		if (size < dimension) {
-			for (size_t i = size; i < dimension; i++)
-				in_dim.push_back((int)1);
-		}
+        if (size < dimension) {
+            for (size_t i = size; i < dimension; i++)
+                in_dim.push_back((int)1);
+        }
         return in_dim;
     }
 

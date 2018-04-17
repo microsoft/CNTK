@@ -5688,19 +5688,19 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         }
         else
         {
-	        if (std::is_same<ElemType, double>::value)
-	        {
-	                cblas_daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
-	        }
-	        else if (std::is_same<ElemType, float>::value)
-	        {
-	#pragma warning(suppress : 4244)
-	            cblas_saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
-	        }
-	        else
-	        {
-	            RuntimeError("Unsupported data format");
-	        }
+            if (std::is_same<ElemType, double>::value)
+            {
+                    cblas_daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
+            }
+            else if (std::is_same<ElemType, float>::value)
+            {
+    #pragma warning(suppress : 4244)
+                cblas_saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
+            }
+            else
+            {
+                RuntimeError("Unsupported data format");
+            }
         }
     }
     else if (a.GetNumElements() == 1) // scalar, add to all elements

@@ -5233,8 +5233,8 @@ template <class ElemType>
         }
         else
         {
-	        ScaleAndAdd(alpha / beta, a, c); // c1=alpha/beta * a + c
-	        Scale(beta, c);                  // c/beta * beta
+            ScaleAndAdd(alpha / beta, a, c); // c1=alpha/beta * a + c
+            Scale(beta, c);                  // c/beta * beta
         }
         // TODO: two lines above should be changed as follows:
         // Scale(beta, c);                  // c1 = c * beta

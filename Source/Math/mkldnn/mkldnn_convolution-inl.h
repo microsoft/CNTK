@@ -501,16 +501,16 @@ public:
 
         bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(srcgrad_ptr, true, srcGrad, &b_same);
         bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(kernel_ptr, false, kernel, &b_same);
-	    if (accumulateGradient) {
-		    workspace.Resize(grad);
-		    bwdd_bottom_diff_dst  = bwdd_bottom_diff_ws->create_output_memory(workspace.Data(), workspace, false, &b_same);
-		    bwdd_bottom_diff_memory = bwdd_bottom_diff->get_converted_prv(grad_ptr, true, grad, &b_same);
+        if (accumulateGradient) {
+            workspace.Resize(grad);
+            bwdd_bottom_diff_dst  = bwdd_bottom_diff_ws->create_output_memory(workspace.Data(), workspace, false, &b_same);
+            bwdd_bottom_diff_memory = bwdd_bottom_diff->get_converted_prv(grad_ptr, true, grad, &b_same);
             grad_ptr = mkl_experimental_direct_get(grad);
-	    }
-	    else
-	    {
-		    bwdd_bottom_diff_dst = bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(grad_ptr, grad, false, &b_same);
-	    }
+        }
+        else
+        {
+            bwdd_bottom_diff_dst = bwdd_bottom_diff_memory = bwdd_bottom_diff->create_output_memory(grad_ptr, grad, false, &b_same);
+        }
         if (!b_init_convBwdData || !b_same)
         {
             convBwdData.reset(new mkldnn::convolution_backward_data(
@@ -519,11 +519,11 @@ public:
                 b_init_convBwdData = true;
         }
         convBwdData.submit();
-	    if (accumulateGradient)
-	    {
+        if (accumulateGradient)
+        {
             DType * workspace_ptr = mkl_experimental_direct_get(workspace);
-		    grad.MklMem()->template AddTo<DType>(grad_ptr, *workspace.MklMem(), workspace_ptr);
-	    }
+            grad.MklMem()->template AddTo<DType>(grad_ptr, *workspace.MklMem(), workspace_ptr);
+        }
     }
     void BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad, bool accumulateGradient, Mat& workspace, Mat* pbiasGrad = NULL)
     {
@@ -618,7 +618,7 @@ private:
     std::shared_ptr<MKLDNNData<DType>> bwdd_bottom_diff, bwdd_top_diff, bwdw_top_diff, bwdw_weights_diff,
         bwdw_bias_diff;
     std::shared_ptr<MKLDNNData<DType> > bwdd_bottom_diff_ws, bwdw_weights_diff_ws;
-		
+        
     std::shared_ptr<mkldnn::convolution_forward::primitive_desc> convFwd_pd;
     MKLDNNPrimitive<DType> convFwd;
     std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> convBwdData_pd;

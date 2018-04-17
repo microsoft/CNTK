@@ -2413,7 +2413,7 @@ public:
         m_runCountUntied(0),
         m_one(1, 1, deviceId),
         m_convertRunningVariancePending(false),
-		m_reluFuse(reluFuse), m_dBias(deviceId)
+        m_reluFuse(reluFuse), m_dBias(deviceId)
     {
         m_one.SetValue((StatType)1); // (constant value used for GPU-side update of runCount)
     }
@@ -2444,7 +2444,7 @@ public:
 #endif
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
-		fstream << m_reluFuse;
+        fstream << m_reluFuse;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -2473,7 +2473,7 @@ public:
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
-			fstream >> m_reluFuse;
+            fstream >> m_reluFuse;
         }
         else
         {
@@ -2551,7 +2551,7 @@ public:
             node->m_epsilon               = m_epsilon;
             node->m_useCntkEngine         = m_useCntkEngine;
             node->m_disableRegularization = m_disableRegularization;
-			node->m_reluFuse			  = m_reluFuse;
+            node->m_reluFuse              = m_reluFuse;
         }
     }
 
@@ -2726,7 +2726,7 @@ public:
             auto sliceInputValue          = Input(DATA)->ValueFor(fr);
             const Matrix<StatType>& scale = this->template TypedInput<StatType>(SCALE)->Value();
             const Matrix<StatType>& bias  = this->template TypedInput<StatType>(BIAS)->Value();
-			Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
             // If inputIndex is not DATA and we get here, then it means that DATA receives no gradient.
             // However, the underlying engine does not foresee this case, and thus always needs a place
             // to store the gradient. Hence, in that case, we create a dummy object and use that instead.
@@ -3067,7 +3067,7 @@ private:
     std::unique_ptr<BatchNormEngine<ElemType, StatType>> m_bnEng;
 
     bool m_convertRunningVariancePending;
-	bool m_reluFuse = false;
+    bool m_reluFuse = false;
 };
 
 }}}

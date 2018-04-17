@@ -625,14 +625,14 @@ class ConvolutionNode : public ConvolutionNodeBaseBias<ElemType>, public NumInpu
     static const std::wstring TypeName() { return L"Convolution"; }
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
-		: Base(deviceId, name)
-	{
-	}
+        : Base(deviceId, name)
+    {
+    }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
-		const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-		bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1))
-		: Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation) {
-	}
+        const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+        bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1))
+        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation) {
+    }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                     const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
                     bool zeroPadding, size_t maxTempMemSizeInSamples)
@@ -676,7 +676,7 @@ public:
         Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
         if (!m_transpose) {
             bool inferenceOnly = !Environment().IsTraining();
-            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward, inferenceOnly);	
+            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward, inferenceOnly);    
         } else
         {
             // BackwardData adds results to the output so need to zero them out first.

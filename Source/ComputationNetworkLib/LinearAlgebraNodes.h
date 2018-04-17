@@ -48,7 +48,7 @@ class PlusNode : public BinaryElementWiseNode<ElemType>
     }
 #ifdef USE_MKLDNN
 private:
-	std::unique_ptr<BinaryEltWiseEngine<ElemType>> m_plusEng;
+    std::unique_ptr<BinaryEltWiseEngine<ElemType>> m_plusEng;
 #endif
 
 public:
@@ -57,8 +57,8 @@ public:
         : Base(deviceId, name)
     {
 #ifdef USE_MKLDNN
-		m_plusEng = BinaryEltWiseEngine<ElemType>::Create(m_deviceId,
-			BinaryEltWiseKind::PLUS, EltWiseEngineKind::All);
+        m_plusEng = BinaryEltWiseEngine<ElemType>::Create(m_deviceId,
+            BinaryEltWiseKind::PLUS, EltWiseEngineKind::All);
 #endif
     }
 
