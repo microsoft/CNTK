@@ -320,7 +320,7 @@ class BaseMatrixStorage : public enable_shared_from_this<BaseMatrixStorage<ElemT
 
 public:
     template <class T>
-    static T* NewCPUArray(size_t n)
+    static T* NewCPUArray(size_t n, bool zero_data = false)
     {
 #ifdef USE_MKLDNN
         void* ptr;
@@ -334,6 +334,8 @@ public:
         if (ret != 0)
             throw std::bad_alloc();
 #endif
+        if (zero_data)
+            memset(ptr, 0, size);
         return (T*) ptr;
 #else
         ElemType* p = new ElemType[AsMultipleOf(n, 2)]();

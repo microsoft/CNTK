@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
             // REVIEW alexeyk: add cases for testing numerical stability.
 
             BOOST_REQUIRE_MESSAGE(!runMean.HasNan("runMean"), "runMean" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(runMean, runMeanB, emsg, relErr, absErr), "runMean" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(runMean, runMeanB, emsg, relErr*100, absErr*100), "runMean" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(runMeanBuf) == crowScaleBias * 2, "runMean" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!runInvStdDev.HasNan("runInvStdDev"), "runInvStdDev" << msgNan);
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
             BOOST_REQUIRE_MESSAGE(CountNans(runInvStdDevBuf) == crowScaleBias * 2, "runInvStdDev" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!saveMean.HasNan("saveMean"), "saveMean" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(saveMean, saveMeanB, emsg, relErr, absErr), "saveMean" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(saveMean, saveMeanB, emsg, relErr*10, absErr*100), "saveMean" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(saveMeanBuf) == crowScaleBias * 2, "saveMean" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!saveInvStdDev.HasNan("saveInvStdDev"), "saveInvStdDev" << msgNan);
@@ -301,11 +301,11 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             BOOST_REQUIRE_MESSAGE(!dScale.HasNan("dScale"), "dScale" << msgNan);
             // After using boost norm_distribution, we have to adapt the tolerance value. But we get the same result on Windows and Linux.
             // When using std norm_distribution, different tolerance values are needed for Windows than for Linux.
-            BOOST_REQUIRE_MESSAGE(CheckEqual(dScale, dScaleB, emsg, relErr * 88, absErr * 16), "dScale" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dScale, dScaleB, emsg, relErr * 88, absErr * 100), "dScale" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dScaleBuf) == crowScaleBias * 2, "dScale" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!dBias.HasNan("dBias"), "dBias" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasB, emsg, relErr * 88, absErr * 16), "dBias" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasB, emsg, relErr * 88, absErr * 100), "dBias" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dBiasBuf) == crowScaleBias * 2, "dBias" << msgNotNan);
 
 #if 0

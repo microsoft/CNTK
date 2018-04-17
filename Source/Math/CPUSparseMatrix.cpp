@@ -764,6 +764,12 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
                 memcpy(unCompIndex, GetUnCompIndex(), MajorIndexSize());
                 memcpy(compIndex, GetCompIndex(), SecondaryIndexSize());
             }
+            else
+            {
+                memset(unCompIndex, 0, numNZElemToReserve * sizeof(CPUSPARSE_INDEX_TYPE));
+                memset(compIndex, 0, newCompIndexSize * sizeof(CPUSPARSE_INDEX_TYPE));
+                memset(pArray, 0, numNZElemToReserve * sizeof(ElemType));
+            }
 
             // TODO: This is super ugly. The internals of the storage object should be a shared_ptr.
             BaseMatrixStorage<ElemType>::FreeCPUArray(Buffer());
