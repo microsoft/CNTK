@@ -529,7 +529,10 @@ void ComputationNetwork::CollectInputAndLearnableParametersRec(const Computation
     else if (node->OperationName() == OperationNameOf(InputValue) || node->OperationName() == OperationNameOf(SparseInputValue))
         inputs.push_back(node);
     else if (node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired())
+    {
         learnableParameters.push_back(node);
+        visited.insert(node);
+    }
     else
     {
         // PreComputeNodes that are already done should not be traversed
