@@ -229,7 +229,6 @@ private:
 #ifdef _MSC_VER
         return _vscwprintf(format, args);
 #elif defined(__UNIX__)
-        // TODO: Really??? Write to file in order to know the length of a string?
         const int BUF_SIZE = 256;
         int n = 0;
         std::vector<wchar_t> vec(BUF_SIZE);
