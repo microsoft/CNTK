@@ -316,7 +316,8 @@ public:
                     bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1),
                     size_t groups=1)
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
-        m_convolution2D(false), m_dilation(dilation)
+        m_convolution2D(false), m_dilation(dilation), m_groups(groups), m_hasBias(false), m_relu(false)
+    {
     }
     // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs.
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
@@ -388,9 +389,6 @@ public:
     }
 
 public:
-                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
-                                                                      Base::NeedsDynamicValidation(), isFinalValidationPass);
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation);
 
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
@@ -643,10 +641,13 @@ public:
     {
     }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
-        const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-        bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1))
-        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation) {
+                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1),
+                    size_t groups=1)
+        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups)
+    {
     }
+
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                     const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
                     bool zeroPadding, size_t maxTempMemSizeInSamples)
