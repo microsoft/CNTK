@@ -229,14 +229,16 @@ private:
 #ifdef _MSC_VER
         return _vscwprintf(format, args);
 #elif defined(__UNIX__)
-        // TODO: Really??? Write to file in order to know the length of a string?
-        FILE* dummyf = fopen("/dev/null", "w");
-        if (dummyf == NULL)
-            perror("The following error occurred in basetypes.h:cprintf");
-        int n = vfwprintf(dummyf, format, args);
-        if (n < 0)
-            perror("The following error occurred in basetypes.h:cprintf");
-        fclose(dummyf);
+        const int BUF_SIZE = 256;
+        int n = 0;
+        std::vector<wchar_t> vec(BUF_SIZE);
+        do {
+            vec.resize(vec.size() * 2);
+            va_list args2;
+            va_copy(args2, args);
+            n = vswprintf(&vec[0], vec.size(), format, args2);
+            va_end(args2);
+        } while (n < 0);
         return n;
 #endif
     }
@@ -245,14 +247,11 @@ private:
 #ifdef _MSC_VER
         return _vscprintf(format, args);
 #elif defined(__UNIX__)
-        // TODO: Really??? Write to file in order to know the length of a string?
-        FILE* dummyf = fopen("/dev/null", "wb");
-        if (dummyf == NULL)
-            perror("The following error occurred in basetypes.h:cprintf");
-        int n = vfprintf(dummyf, format, args);
+        int n = vsnprintf(NULL, 0, format, args);
         if (n < 0)
+        {
             perror("The following error occurred in basetypes.h:cprintf");
-        fclose(dummyf);
+        }
         return n;
 #endif
     }
