@@ -244,10 +244,11 @@ protected:
         return result;
     }
 
-    TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
+    virtual TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
+        const size_t DEAFULT_NUM_GROUPS = 1;
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, ceilOutDim,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, DEAFULT_NUM_GROUPS, ceilOutDim,
             Base::NeedsDynamicValidation(), isFinalValidationPass);
     }
 
@@ -307,14 +308,15 @@ class ConvolutionNodeBaseBias : public ConvolutionNodeBase<ElemType>, public Tra
     static const std::wstring TypeName() { return L"ConvolutionNodeBaseBias"; }
 public:
     ConvolutionNodeBaseBias(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_dilation(TensorShape(1)), m_hasBias(false), m_relu(false)
+        : Base(deviceId, name), m_dilation(TensorShape(1)), m_groups(1), m_hasBias(false), m_relu(false)
     {
     }
     ConvolutionNodeBaseBias(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1))
+                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1),
+                    size_t groups=1)
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
-        m_convolution2D(false), m_dilation(dilation), m_hasBias(false) {
+        m_convolution2D(false), m_dilation(dilation)
     }
     // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs.
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
@@ -386,6 +388,9 @@ public:
     }
 
 public:
+                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
+                                                                      Base::NeedsDynamicValidation(), isFinalValidationPass);
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation);
 
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
@@ -599,10 +604,19 @@ protected:
         return (inputIndex == 1);
     }
 
+    virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape, 
+        const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
+    {
+        return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, m_groups, ceilOutDim,
+            Base::NeedsDynamicValidation(), isFinalValidationPass);
+    }
+
 protected:
     // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
     TensorShape m_dilation;
+    size_t m_groups;
     bool m_hasBias;
     bool m_relu;
 };

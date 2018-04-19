@@ -314,6 +314,9 @@ namespace CNTK
         static const std::wstring AttributeNameFillValue;
         static const std::wstring AttributeNameUseStatsAcrossChannels;
         static const std::wstring AttributeNameDoVarianceScaling;
+        static const std::wstring AttributeNameGroups;
+
+        static const size_t convolutionOpDefaultValueForGroups = 1;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -747,7 +750,7 @@ namespace CNTK
 
         static NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
                                                 std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-                                                bool transpose, bool inferDimensions, NDShape& dilation, bool ceilOutputDim = false);
+                                                bool transpose, bool inferDimensions, NDShape& dilation, size_t groups=1, bool ceilOutputDim = false);
 
         static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
         {
@@ -762,7 +765,7 @@ namespace CNTK
 
                 if (i < operands.size() - 1)
                 {
-                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasUnboundDimension())
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && (!mainOperandShape.HasUnboundDimension() || (spatial && mainOperandShape[mainOperandShape.Rank() - 1] != NDShape::FreeDimension)))
                     {
                         size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;

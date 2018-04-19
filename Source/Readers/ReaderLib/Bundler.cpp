@@ -64,6 +64,8 @@ void Bundler::CreateChunkDescriptions()
         RuntimeError("Driving deserializer provided too many chunks.");
     }
 
+    assert(m_mbDefiningDeserializer == std::numeric_limits<size_t>::max() || m_mbDefiningDeserializer < m_deserializers.size());
+
     // Creating a table of weak chunks for non driving deserializers.
     for (size_t i = 0; i < m_deserializers.size(); ++i)
     {
@@ -84,6 +86,7 @@ void Bundler::CreateChunkDescriptions()
     std::vector<SequenceInfo> sequenceDescriptions;
     sequenceDescriptions.reserve(chunks.front().m_numberOfSequences);
     SequenceInfo s;
+
     for (ChunkIdType chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
     {
         size_t numberOfSamples = 0;
@@ -115,36 +118,18 @@ void Bundler::CreateChunkDescriptions()
                     break;
                 }
 
-                sequenceSamples = std::max<size_t>(sequenceSamples, s.m_numberOfSamples);
-                if (std::find(secondaryChunks[deserializerIndex].begin(), secondaryChunks[deserializerIndex].end(), s.m_chunkId) == secondaryChunks[deserializerIndex].end())
-                    secondaryChunks[deserializerIndex].push_back(s.m_chunkId);
-            }
-
-            if (m_mbDefiningDeserializer != std::numeric_limits<size_t>::max())
-            {
-                if (m_mbDefiningDeserializer != 0)
+                if (m_mbDefiningDeserializer == std::numeric_limits<size_t>::max())
                 {
-                    // Pick up the sequence from a particular deserializer.
-                    if (m_deserializers[m_mbDefiningDeserializer]->GetSequenceInfo(sequenceDescriptions[sequenceIndex], s))
-                        sequenceSamples = s.m_numberOfSamples;
-                    else
-                        invalid.insert(sequenceIndex);
-                }
-            }
-            else
-            {
-                // Need to check the sequence length for all deserializers.
-                for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
-                {
-                    isValid = m_deserializers[deserializerIndex]->GetSequenceInfo(sequenceDescriptions[sequenceIndex], s);
-                    if (!isValid)
-                    {
-                        invalid.insert(sequenceIndex);
-                        break;
-                    }
-
+                    // Need to check the sequence length for all deserializers.
                     sequenceSamples = std::max<size_t>(sequenceSamples, s.m_numberOfSamples);
                 }
+                else if (m_mbDefiningDeserializer == deserializerIndex)
+                {
+                    sequenceSamples = s.m_numberOfSamples;
+                }
+
+                if (std::find(secondaryChunks[deserializerIndex].begin(), secondaryChunks[deserializerIndex].end(), s.m_chunkId) == secondaryChunks[deserializerIndex].end())
+                    secondaryChunks[deserializerIndex].push_back(s.m_chunkId);
             }
 
             if (isValid)
