@@ -858,7 +858,7 @@ protected:
                      Mat* /*pBias*/) override
     {
 #ifdef USE_MKL2017DNN
-        if (ForwardCoreMKL(in, kernel, out))
+        if (ForwardCoreMKL(in, kernel, out, nullptr))
             return;
 #endif
 
@@ -1303,7 +1303,7 @@ protected:
     MKLConvolutionContext m_mklContext;
 
     // convolution implementation with MKL 2017 DNN functions
-    bool ForwardCoreMKL(const Mat& in, const Mat& kernel, Mat& out)
+    bool ForwardCoreMKL(const Mat& in, const Mat& kernel, Mat& out, Mat* /*pBias*/)
     {
         if (!m_mklContext.Supported(m_geometry.get(), true))
             return false;
