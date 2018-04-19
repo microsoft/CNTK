@@ -1914,6 +1914,9 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "BatchNormalization" || onnxOpName == "SpatialBN")
     {
+        auto is_test = GetNamedAttributeAsInt64(node, "is_test", 0);
+        if (is_test == 0)
+            NOT_IMPLEMENTED;
         // TODO: implement this right once ready.
         const Variable &operand = inputs[0];
         const Variable &scale = inputs[1];
@@ -1922,25 +1925,34 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         const Variable &runningInvStd = inputs[4];
         const Variable &runningCount = Constant::Scalar(0.0F);
 
-        bool spatial = onnxOpName == "SpatialBN" || GetNamedAttributeAsInt64(node, "spatial", 0) != 0;
+        bool spatial = onnxOpName == "SpatialBN" || GetNamedAttributeAsInt64(node, "spatial", 1) != 0;
 
         double normalizationTimeConstant = 0.0;
-        if (HasNamedAttribute(node, "momentum"))
-        {
-            float momentum = GetNamedAttributeAsFloat(node, "momentum");
-            if ((momentum > (1.0f - std::numeric_limits<float>::epsilon())) &&
-                (momentum < (1.0f + std::numeric_limits<float>::epsilon())))
-                normalizationTimeConstant = INFINITY;
-            else if (momentum > 0.0f)
-                normalizationTimeConstant = -48.0f / log1p(momentum - 1.0f);
-            else
-                normalizationTimeConstant = 0.0;
-        }
+        float momentum = GetNamedAttributeAsFloat(node, "momentum", 0.9f);
+        if ((momentum > (1.0f - std::numeric_limits<float>::epsilon())) &&
+            (momentum < (1.0f + std::numeric_limits<float>::epsilon())))
+            normalizationTimeConstant = INFINITY;
+        else if (momentum > 0.0f)
+            normalizationTimeConstant = -48.0f / log1p(momentum - 1.0f);
+        else
+            normalizationTimeConstant = 0.0;
 
         // TODO: avoid hardcoded values
         double blendTimeConstant = 0;
-        double epsilon = 0.00001;
+        double epsilon = static_cast<double>(GetNamedAttributeAsFloat(node, "epsilon", 0.00001f));
         bool useCuDNNEngine = true;
+        if ((epsilon < (0.00001f - std::numeric_limits<float>::epsilon())))
+        {
+            // REVIEW SPTIWARI: We are leaving some buffer in comparing with 1e-5 in the "if" condition above,
+            // because 1e-5 is a common value for epsilon (ONNX default) and we do not want the model
+            // to run slow for this common case because of any floating point differences. But for anything
+            // clearly lower than 1e-5, we will not use cuDNN's batch normalization engine, because it floors
+            // epsilon at 1e-5, and that can produce wrong numbers. For the special case when epsilon happens 
+            // to be within (1e-5 , 1e-5 - std::numeric_limits<float>::epsilon()] range, cuDNN engine will be
+            // used but it will print a warning that it is flooring epsilon to 1e-5.
+            fprintf(stderr, "Epsilon = %0.7f, which is < 1e-5. CuDNN engine cannot be used for Batch Normalization. Could be slow.", epsilon);
+            useCuDNNEngine = false;
+        }
         bool disableRegularization = false;
         FunctionPtr cntkFunction = BatchNormalization(operand,
                                                       scale,

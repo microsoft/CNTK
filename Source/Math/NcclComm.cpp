@@ -36,38 +36,46 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     size_t numRanks = mpi->NumNodesInUse();
 
     auto nvmlRes = nvmlInit();
+    std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE> thisDeviceUUID{ 'C', 'P', 'U', 0 };
+
     if (nvmlRes != NVML_SUCCESS)
     {
         fprintf(stderr, "NcclComm: disabled, failed to initialize NVML library, error code %s\n", nvmlErrorString(nvmlRes));
-        return;
-    }
-    std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE> thisDeviceUUID { 'C', 'P', 'U', 0 };
-    if (deviceId != CPUDEVICE)
-    {
-        nvmlDevice_t thisDevice;
-        nvmlRes = nvmlDeviceGetHandleByIndex(deviceId, &thisDevice);
-        if (nvmlRes != NVML_SUCCESS)
-        {
-            fprintf(stderr, "NcclComm: disabled, failed to obtain nvmlDevice handle: %s\n", nvmlErrorString(nvmlRes));
-            nvmlShutdown();
-            return;
-        }
-        nvmlRes = nvmlDeviceGetUUID(thisDevice, thisDeviceUUID.data(), thisDeviceUUID.size());
-        if (nvmlRes != NVML_SUCCESS)
-        {
-            fprintf(stderr, "NcclComm: disabled, failed to obtain nvmlDevice UUID: %s\n", nvmlErrorString(nvmlRes));
-            nvmlShutdown();
-            return;
-        }
     }
     else
     {
-        fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
-        nvmlShutdown();
-        return;
+        if (deviceId != CPUDEVICE)
+        {
+            nvmlDevice_t thisDevice;
+            nvmlRes = nvmlDeviceGetHandleByIndex(deviceId, &thisDevice);
+            if (nvmlRes != NVML_SUCCESS)
+            {
+                fprintf(stderr, "NcclComm: disabled, failed to obtain nvmlDevice handle: %s\n", nvmlErrorString(nvmlRes));
+            }
+            else
+            {
+                nvmlRes = nvmlDeviceGetUUID(thisDevice, thisDeviceUUID.data(), thisDeviceUUID.size());
+                if (nvmlRes != NVML_SUCCESS)
+                {
+                    fprintf(stderr, "NcclComm: disabled, failed to obtain nvmlDevice UUID: %s\n", nvmlErrorString(nvmlRes));
+                }
+            }
+        }
+        else
+        {
+            fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
+        }
     }
     std::vector<std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE>> allDeviceUUIDs(numRanks);
     mpi->Allgather(thisDeviceUUID.data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR, allDeviceUUIDs[0].data(), NVML_DEVICE_UUID_BUFFER_SIZE, MPI_CHAR);
+
+    std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE> defaultDeviceUUID{ 'C', 'P', 'U', 0 };
+    for (auto deviceUUID : allDeviceUUIDs)
+    {
+        if (deviceUUID == defaultDeviceUUID) {
+            return;
+        }
+    }
 
     for (size_t r = 0; r < numRanks; r++)
     {
@@ -83,20 +91,22 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     }
     nvmlShutdown();
 
-    ncclUniqueId ncclId;
+    ncclUniqueId ncclId = {};
     ncclResult_t res;
 
     if (mpi->IsMainNode())
     {
-        res = ncclGetUniqueId(&ncclId);
-        if (res != ncclSuccess)
-        {
-            fprintf(stderr, "NcclComm failed to obtain ncclUniqueId: %s\n", ncclGetErrorString(res));
-            return;
-        }
+        ncclGetUniqueId(&ncclId);
     }
 
     mpi->Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0);
+
+    static const ncclUniqueId emptyNcclId = {};
+    if (memcmp(&ncclId, &emptyNcclId, sizeof(ncclId)) == 0)
+    {
+        fprintf(stderr, "NcclComm failed to obtain ncclUniqueId: %s\n", ncclGetErrorString(res));
+        return;
+    }
 
     PrepareDevice(deviceId);
     res = ncclCommInitRank(&m_ncclComm, numRanks, ncclId, mpi->CurrentNodeRank());

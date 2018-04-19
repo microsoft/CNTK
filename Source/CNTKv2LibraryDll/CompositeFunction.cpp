@@ -1471,7 +1471,22 @@ template <typename ElementType>
         return GetNode(variable.BlockFunctionVariableMapping(), network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
     }
     else
-        computationNodePtr = CreateComputationNode<ElementType>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+    {
+        switch (variable.GetDataType())
+        {
+        case DataType::Float:
+            computationNodePtr = CreateComputationNode<float>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+            break;
+        case DataType::Double:
+            computationNodePtr = CreateComputationNode<double>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+            break;
+        case DataType::Float16:
+            computationNodePtr = CreateComputationNode<half>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+            break;
+        default:
+            RuntimeError("Unsupported variable data type for CreateComputationNode");
+        }
+    }
 
     PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
     if (!primitiveFunction || (primitiveFunction->OpType() != PrimitiveOpType::Combine))

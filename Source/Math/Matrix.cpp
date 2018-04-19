@@ -1152,31 +1152,26 @@ Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matri
 // Unlike gather, for scatter, 'this' must have been sized already.
 // Invalid entries (gap columns) are denoted by idx(0,j) == -1.
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx,
-                                                       const Matrix<ElemType>& a, ElemType alpha)
+Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha, bool idxHaveDups)
 {
     DecideAndMoveToRightDevice(*this, idx, a); // TODO: only move target if beta != 0
 
     if (a.GetMatrixType() != this->GetMatrixType())
-        RuntimeError(
-            "Matrix::DoScatterColumnsOf: The source and target matrices must have same storage type (SPARSE/DENSE).");
+        RuntimeError("Matrix::DoScatterColumnsOf: The source and target matrices must have same storage type (SPARSE/DENSE).");
 
-    DISPATCH_MATRIX_ON_FLAG(
-        &a, this, { m_CPUMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
-        { m_GPUMatrix->DoScatterColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
+    DISPATCH_MATRIX_ON_FLAG(&a, this,
+        { m_CPUMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
+        { m_GPUMatrix->DoScatterColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha, idxHaveDups); },
         { m_CPUSparseMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha); },
         {
             // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
 
-            Matrix<ElemType> tempIdx(CPUDEVICE);
-            tempIdx.AssignValuesOf(idx);
+            Matrix<ElemType> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
 
-            CPUSparseMatrix<ElemType> tempA(a.GetFormat(), a.GetNumRows(), a.GetNumCols(),
-                                            a.m_GPUSparseMatrix->GetNumNZElements());
+            CPUSparseMatrix<ElemType> tempA(a.GetFormat(), a.GetNumRows(), a.GetNumCols(), a.m_GPUSparseMatrix->GetNumNZElements());
             a.m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempA);
 
-            CPUSparseMatrix<ElemType> tempThis(m_GPUSparseMatrix->GetFormat(), m_GPUSparseMatrix->GetNumRows(),
-                                               m_GPUSparseMatrix->GetNumCols(), m_GPUSparseMatrix->GetNumNZElements());
+            CPUSparseMatrix<ElemType> tempThis(m_GPUSparseMatrix->GetFormat(), m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols(), m_GPUSparseMatrix->GetNumNZElements());
             m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempThis);
 
             tempThis.DoScatterColumnsOf(beta, *tempIdx.m_CPUMatrix, tempA, alpha);

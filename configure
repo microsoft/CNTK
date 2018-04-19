@@ -20,7 +20,7 @@ enable_java=
 
 # cntk build version
 # Modify both of the following during major release
-default_build_version="2.5"
+default_build_version="2.5.1"
 default_build_public="no"
 build_version=$default_build_version
 build_public=$default_build_public
@@ -343,6 +343,12 @@ function default_use_python ()
 }
 enable_python=$(default_use_python)
 
+function default_python_with_deps ()
+{
+        echo $default_build_public
+}
+python_with_deps=$(default_python_with_deps)
+
 function find_jdk ()
 {
     echo $(find_dir $default_jdk "$jdk_check")
@@ -410,6 +416,7 @@ function show_help ()
     echo "  --with-mpi[=directory] $(show_default $(find_mpi))"
     echo "  --with-halide[=directory] $(show_default $(find_halide))"
     echo "  --with-build-version=[version] $default_build_version"
+    echo "  --with-deps[=(yes|no)] include third party libs in the wheel packages (MKL, CUDA and OpenCV) $(show_default $(default_python_with_deps))"
 
     echo "Libraries search path:"
     for head in $(default_paths)
@@ -960,6 +967,19 @@ do
                 build_public="yes"
             fi
             ;;
+        --with-deps*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                if test x$optarg = xyes
+                then
+                    python_with_deps=$optarg
+                fi
+            else
+                echo "Invalid value for --with-deps $optarg"
+                show_help
+                exit
+            fi
+            ;;
         *)
             echo Invalid option $key
             show_help
@@ -1276,6 +1296,10 @@ fi
 
 if test $enable_asgd = yes ; then
     echo CNTK_ENABLE_ASGD=true >> $config
+fi
+
+if test $python_with_deps = yes ; then
+    echo PYTHON_WITH_DEPS=1 >> $config
 fi
 
 # If we are not in the configure directory, generate a trampoline Makefile

@@ -21,6 +21,8 @@ set p_CNTK_VERSION_BANNER=%~4
 shift
 set p_CNTK_COMPONENT_VERSION=%~4
 set p_SWIG_PATH=%~5
+set p_CNTK_PYTHON_WITH_DEPS=%~6
+shift
 set p_CNTK_PY_VERSIONS=%~6
 set p_CNTK_PY27_PATH=%~7
 set p_CNTK_PY34_PATH=%~8
@@ -124,6 +126,11 @@ if /i %p_GpuBuild% equ true (
   set PYTHON_PROJECT_NAME=cntk-gpu
 )
 
+set PYTHON_WITH_DEPS=
+if /i %p_CNTK_PYTHON_WITH_DEPS% equ true (
+  set PYTHON_WITH_DEPS="--with-deps"
+)
+
 popd
 if errorlevel 1 echo Cannot restore directory.&exit /b 1
 
@@ -133,7 +140,7 @@ for %%p in (%p_CNTK_PY_VERSIONS%) do (
   call set extraPath=!p_CNTK_PY%%~p_PATH!
   echo Building for Python version '%%~p', extra path is !extraPath!
   set PATH=!extraPath!;!oldPath!
-  python.exe .\setup.py --project-name %PYTHON_PROJECT_NAME% ^
+  python.exe .\setup.py --project-name %PYTHON_PROJECT_NAME% %PYTHON_WITH_DEPS% ^
       build_ext --inplace --force --compiler msvc --plat-name=win-amd64 ^
       bdist_wheel --dist-dir "%DIST_DIR%"
   if errorlevel 1 exit /b 1
