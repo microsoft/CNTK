@@ -230,17 +230,17 @@ private:
         return _vscwprintf(format, args);
 #elif defined(__UNIX__)
         // TODO: Really??? Write to file in order to know the length of a string?
-		const int BUF_SIZE = 256;
-		int n = 0;
-		std::vector<wchar_t> vec(BUF_SIZE);
-		do {
-			vec.resize(vec.size() * 2);
-			va_list args2;
-			va_copy(args2, args);
-			n = vswprintf(&vec[0], vec.size(), format, args2);
-			va_end(args2);
-		} while (n < 0);
-		return n;
+        const int BUF_SIZE = 256;
+        int n = 0;
+        std::vector<wchar_t> vec(BUF_SIZE);
+        do {
+            vec.resize(vec.size() * 2);
+            va_list args2;
+            va_copy(args2, args);
+            n = vswprintf(&vec[0], vec.size(), format, args2);
+            va_end(args2);
+        } while (n < 0);
+        return n;
 #endif
     }
     inline size_t _cprintf(const char* format, va_list args)
@@ -248,12 +248,12 @@ private:
 #ifdef _MSC_VER
         return _vscprintf(format, args);
 #elif defined(__UNIX__)
-		int n = vsnprintf(NULL, 0, format, args);
-		if (n < 0)
-		{
-			perror("The following error occurred in basetypes.h:cprintf");
-		}
-		return n;
+        int n = vsnprintf(NULL, 0, format, args);
+        if (n < 0)
+        {
+            perror("The following error occurred in basetypes.h:cprintf");
+        }
+        return n;
 #endif
     }
     inline const wchar_t* _sprintf(wchar_t* buf, size_t bufsiz, const wchar_t* format, va_list args)
