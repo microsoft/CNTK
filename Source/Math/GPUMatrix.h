@@ -202,7 +202,6 @@ public:
 
     static cublasHandle_t GetCublasHandle(int computeDevice = -1);
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
-    ElemType* CopyToCPUArray() const;
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 

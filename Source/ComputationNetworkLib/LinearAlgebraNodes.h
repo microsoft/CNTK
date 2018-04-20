@@ -59,14 +59,15 @@ public:
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
 #ifdef USE_MKLDNN
-        if (m_plusEng && input0.GetShape() == input1.GetShape()) {
+        if (m_plusEng && input0.GetShape() == input1.GetShape())
+        {
             m_plusEng->Forward(input0.GetShape(),
                 input0.GetSOB(), input1.GetSOB(), result.GetSOB());
         }
         else
 #endif
         {
-        result.AssignSumOf(input0, input1);
+            result.AssignSumOf(input0, input1);
         }
     }
 
@@ -90,7 +91,8 @@ public:
             else
             {
 #ifdef USE_MKLDNN
-                if (m_plusEng && inputGradient.GetShape() == gradient.GetShape()) {
+                if (m_plusEng && inputGradient.GetShape() == gradient.GetShape())
+                {
                     m_plusEng->Backward(gradient.GetSOB(), inputGradient.GetSOB());
                 }
                 else

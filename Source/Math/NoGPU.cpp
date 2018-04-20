@@ -855,12 +855,6 @@ ElemType* GPUMatrix<ElemType>::CopyToArray() const
 }
 
 template <class ElemType>
-std::unique_ptr<ElemType[]> CopyToCPUArray() const
-{
-    return nullptr;
-}
-
-template <class ElemType>
 void GPUMatrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
 {
 }

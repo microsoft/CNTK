@@ -347,23 +347,6 @@ ElemType* GPUMatrix<ElemType>::CopyToArray() const
     }
 }
 
-template <class ElemType>
-ElemType* GPUMatrix<ElemType>::CopyToCPUArray() const
-{
-    size_t numElements = GetNumElements();
-    if (numElements != 0)
-    {
-        PrepareDevice();
-        ElemType* pArray = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
-        CUDA_CALL(cudaMemcpy(pArray, Data(), sizeof(ElemType) * m_numRows * m_numCols, cudaMemcpyDeviceToHost));
-        return pArray;
-    }
-    else
-    {
-        return nullptr;
-    }
-}
-
 //memory will be allocated by the callee if not enough but need to be deleted by the caller after it's done
 //return number of elements copied
 template <class ElemType>
@@ -5017,7 +5000,6 @@ template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, 
 template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
 template GPUMatrix<char>::GPUMatrix(GPUMatrix<char>&&);
 template char* GPUMatrix<char>::CopyToArray() const;
-template char* GPUMatrix<char>::CopyToCPUArray() const;
 template void GPUMatrix<char>::ChangeDeviceTo(int);
 template void GPUMatrix<char>::Resize(size_t, size_t, bool);
 template void GPUMatrix<char>::RequireSize(size_t, size_t, bool);
@@ -5043,7 +5025,6 @@ template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols,
 template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&);
 template GPUMatrix<short>::GPUMatrix(GPUMatrix<short>&&);
 template short* GPUMatrix<short>::CopyToArray() const;
-template short* GPUMatrix<short>::CopyToCPUArray() const;
 template void GPUMatrix<short>::ChangeDeviceTo(int);
 template void GPUMatrix<short>::Resize(size_t, size_t, bool);
 template void GPUMatrix<short>::RequireSize(size_t, size_t, bool);

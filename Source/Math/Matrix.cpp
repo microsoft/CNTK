@@ -4342,12 +4342,11 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
                 }
                 else
                 {
-                    ElemType* arr = m_GPUMatrix->CopyToCPUArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
+                    ElemType* arr = m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
                     if (m_CPUMatrix)
                         m_CPUMatrix->SetValue(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr);
                     else
                         m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr, matrixFlagNormal);
-
                     delete[] arr;
                 }
 
