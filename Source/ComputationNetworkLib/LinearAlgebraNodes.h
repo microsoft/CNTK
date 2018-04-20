@@ -59,7 +59,7 @@ public:
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
 #ifdef USE_MKLDNN
-        if (input0.GetShape() == input1.GetShape()) {
+        if (m_plusEng && input0.GetShape() == input1.GetShape()) {
             m_plusEng->Forward(input0.GetShape(),
                 input0.GetSOB(), input1.GetSOB(), result.GetSOB());
         }
@@ -90,7 +90,7 @@ public:
             else
             {
 #ifdef USE_MKLDNN
-                if (inputGradient.GetShape() == gradient.GetShape()) {
+                if (m_plusEng && inputGradient.GetShape() == gradient.GetShape()) {
                     m_plusEng->Backward(gradient.GetSOB(), inputGradient.GetSOB());
                 }
                 else
