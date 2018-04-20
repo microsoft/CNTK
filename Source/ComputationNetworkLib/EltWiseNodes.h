@@ -26,7 +26,7 @@ protected:
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
         auto input = InputRef(0).ValueTensorFor(rank, fr);
-        if (m_reluEng != nullptr)
+        if (m_reluEng != nullptr && fr.IsAllFrames())
         {
             bool inferenceOnly = !Environment().IsTraining();
             m_reluEng->Forward(input.GetSOB(), result.GetSOB(), inferenceOnly);
@@ -48,7 +48,7 @@ protected:
         // If gradient can be compute from output rather than input, then that's better for mem sharing (and faster in
         // most cases). Not possible for Cos().
         auto sliceValue = ValueTensorFor(rank, fr); // using input or output value
-        if (m_reluEng != nullptr)
+        if (m_reluEng != nullptr && fr.IsAllFrames())
         {
             m_reluEng->Backward(sliceValue.GetSOB(), sliceOutputGrad.GetSOB(), sliceInputGrad.GetSOB());
         }
