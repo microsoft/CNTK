@@ -288,7 +288,7 @@ DeviceBoundNumber<ElemType>::~DeviceBoundNumber()
     {
         if (m_computeDevice < 0)
         {
-            BaseMatrixStorage<ElemType>::FreeCPUArray(m_data);
+            delete m_data;
             m_data = NULL;
         }
         else
@@ -337,13 +337,30 @@ ElemType* GPUMatrix<ElemType>::CopyToArray() const
     if (numElements != 0)
     {
         PrepareDevice();
-        ElemType* pArray = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
+        ElemType* pArray = new ElemType[numElements];
         CUDA_CALL(cudaMemcpy(pArray, Data(), sizeof(ElemType) * m_numRows * m_numCols, cudaMemcpyDeviceToHost));
         return pArray;
     }
     else
     {
         return NULL;
+    }
+}
+
+template <class ElemType>
+ElemType* GPUMatrix<ElemType>::CopyToCPUArray() const
+{
+    size_t numElements = GetNumElements();
+    if (numElements != 0)
+    {
+        PrepareDevice();
+        ElemType* pArray = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
+        CUDA_CALL(cudaMemcpy(pArray, Data(), sizeof(ElemType) * m_numRows * m_numCols, cudaMemcpyDeviceToHost));
+        return pArray;
+    }
+    else
+    {
+        return nullptr;
     }
 }
 
@@ -356,8 +373,8 @@ size_t GPUMatrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentA
 
     if (numElements > currentArraySize)
     {
-        BaseMatrixStorage<ElemType>::FreeCPUArray(arrayCopyTo);
-        arrayCopyTo = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
+        delete arrayCopyTo;
+        arrayCopyTo = new ElemType[numElements];
         currentArraySize = numElements;
     }
 
@@ -5000,6 +5017,7 @@ template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, 
 template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
 template GPUMatrix<char>::GPUMatrix(GPUMatrix<char>&&);
 template char* GPUMatrix<char>::CopyToArray() const;
+template char* GPUMatrix<char>::CopyToCPUArray() const;
 template void GPUMatrix<char>::ChangeDeviceTo(int);
 template void GPUMatrix<char>::Resize(size_t, size_t, bool);
 template void GPUMatrix<char>::RequireSize(size_t, size_t, bool);
@@ -5025,6 +5043,7 @@ template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols,
 template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&);
 template GPUMatrix<short>::GPUMatrix(GPUMatrix<short>&&);
 template short* GPUMatrix<short>::CopyToArray() const;
+template short* GPUMatrix<short>::CopyToCPUArray() const;
 template void GPUMatrix<short>::ChangeDeviceTo(int);
 template void GPUMatrix<short>::Resize(size_t, size_t, bool);
 template void GPUMatrix<short>::RequireSize(size_t, size_t, bool);

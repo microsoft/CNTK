@@ -552,7 +552,7 @@ GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
     {
         PrepareDevice();
-        GPUSPARSE_INDEX_TYPE* pArray = BaseMatrixStorage<ElemType>::template NewCPUArray<GPUSPARSE_INDEX_TYPE>(SecondaryIndexCount());
+        GPUSPARSE_INDEX_TYPE* pArray = new GPUSPARSE_INDEX_TYPE[SecondaryIndexCount()];
         CUDA_CALL(cudaMemcpy(pArray, SecondaryIndexLocation(), sizeof(GPUSPARSE_INDEX_TYPE) * SecondaryIndexCount(), cudaMemcpyDeviceToHost));
         return pArray;
     }
@@ -889,9 +889,9 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_
         return;
     else
     {
-        h_Val = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElemAllocated);
-        h_CSRRow = BaseMatrixStorage<ElemType>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(GetNumRows() + 1);
-        h_Col = BaseMatrixStorage<ElemType>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(nz);
+        h_Val = new ElemType[numElemAllocated];
+        h_CSRRow = new CPUSPARSE_INDEX_TYPE[GetNumRows() + 1];
+        h_Col = new CPUSPARSE_INDEX_TYPE[nz];
 
         PrepareDevice();
         CUDA_CALL(cudaMemcpy(h_Val, Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
@@ -1031,9 +1031,9 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_
         return;
     else
     {
-        h_Val = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElemAllocated);
-        h_CSCCol = BaseMatrixStorage<ElemType>::template NewCPUArray<GPUSPARSE_INDEX_TYPE>(GetNumRows() + 1);
-        h_Row = BaseMatrixStorage<ElemType>::template NewCPUArray<GPUSPARSE_INDEX_TYPE>(nz);
+        h_Val = new ElemType[numElemAllocated];
+        h_CSCCol = new GPUSPARSE_INDEX_TYPE[GetNumRows() + 1];
+        h_Row = new GPUSPARSE_INDEX_TYPE[nz];
 
         PrepareDevice();
         CUDA_CALL(cudaMemcpy(h_Val, Data(), GetSizeElemAllocated(), cudaMemcpyDeviceToHost));
@@ -2950,8 +2950,8 @@ void* GPUSparseMatrix<ElemType>::ReserveTempHostBuffer(const size_t sizeInByte) 
 {
     if (GetTempHostBufferSize() < sizeInByte)
     {
-        BaseMatrixStorage<ElemType>::FreeCPUArray((byte*) GetTempHostBuffer());
-        SetTempHostBuffer(BaseMatrixStorage<ElemType>::template NewCPUArray<byte>(sizeInByte));
+        delete[](byte*) GetTempHostBuffer();
+        SetTempHostBuffer(new byte[sizeInByte]);
         SetTempHostBufferSize(sizeInByte);
     }
     return (void*) GetTempHostBuffer();
@@ -3103,9 +3103,9 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
     if (nz > 0)
     {
         size_t compressedSize = (us.GetFormat() == matrixFormatSparseCSC) ? colnum + 1 : rownum + 1;
-        ElemType* dataBuffer = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(nz);
-        CPUSPARSE_INDEX_TYPE* unCompressedIndex = BaseMatrixStorage<ElemType>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(nz);
-        CPUSPARSE_INDEX_TYPE* compressedIndex = BaseMatrixStorage<ElemType>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(compressedSize);
+        ElemType* dataBuffer = new ElemType[nz];
+        CPUSPARSE_INDEX_TYPE* unCompressedIndex = new CPUSPARSE_INDEX_TYPE[nz];
+        CPUSPARSE_INDEX_TYPE* compressedIndex = new CPUSPARSE_INDEX_TYPE[compressedSize];
 
         // read in the sparse matrix info
         for (size_t i = 0; i < nz; ++i)
@@ -3130,9 +3130,9 @@ MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
         else if (us.GetFormat() == matrixFormatSparseCSR)
             us.SetMatrixFromCSRFormat(compressedIndex, unCompressedIndex, dataBuffer, nz, rownum, colnum);
 
-        BaseMatrixStorage<ElemType>::FreeCPUArray(dataBuffer);
-        BaseMatrixStorage<ElemType>::FreeCPUArray(unCompressedIndex);
-        BaseMatrixStorage<ElemType>::FreeCPUArray(compressedIndex);
+        delete[] dataBuffer;
+        delete[] unCompressedIndex;
+        delete[] compressedIndex;
     }
 
     stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
@@ -3189,9 +3189,9 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
             stream << val;
         }
 
-        BaseMatrixStorage<ElemType>::FreeCPUArray(dataBuffer);
-        BaseMatrixStorage<ElemType>::FreeCPUArray(unCompressedIndex);
-        BaseMatrixStorage<ElemType>::FreeCPUArray(compressedIndex);
+        delete[] dataBuffer;
+        delete[] unCompressedIndex;
+        delete[] compressedIndex;
     }
 
     stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));

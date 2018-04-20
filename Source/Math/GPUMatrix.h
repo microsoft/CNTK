@@ -202,6 +202,7 @@ public:
 
     static cublasHandle_t GetCublasHandle(int computeDevice = -1);
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
+    ElemType* CopyToCPUArray() const;
     size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 
@@ -647,12 +648,12 @@ public:
         size_t numRows, numCols;
         int format;
         stream >> matrixNameDummy >> format >> numRows >> numCols;
-        ElemType* d_array = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numRows * numCols);
+        ElemType* d_array = new ElemType[numRows * numCols];
         for (size_t i = 0; i < numRows * numCols; ++i)
             stream >> d_array[i];
         stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         us.SetValue(numRows, numCols, us.GetComputeDeviceId(), d_array, matrixFlagNormal | format);
-        BaseMatrixStorage<ElemType>::FreeCPUArray(d_array);
+        delete[] d_array;
         return stream;
     }
     friend File& operator<<(File& stream, const GPUMatrix<ElemType>& us)
@@ -670,7 +671,7 @@ public:
         for (size_t i = 0; i < us.GetNumElements(); ++i)
             stream << pArray[i];
         
-        BaseMatrixStorage<ElemType>::FreeCPUArray(pArray);
+        delete[] pArray;
 
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;

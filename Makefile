@@ -175,7 +175,8 @@ ifeq ("$(MATHLIB)","mkl")
   # disable MKL-DNN until we pick up the fix for AMD cache size https://github.com/intel/mkl-dnn/commit/ccfbf83ab489b42f7452b6701498b07c28cdb502
   LIBS_LIST += m iomp5 pthread mklml_intel mkldnn
   MKL_LIB_PATH := $(MKL_PATH)/lib
-  LIBPATH += $(MKL_LIB_PATH)
+  MKLDNN_LIB_PATH := /usr/local/lib
+  LIBPATH += $(MKL_LIB_PATH) $(MKLDNN_LIB_PATH)
   COMMON_FLAGS += -DUSE_MKL -DUSE_MKLDNN
 endif
 
@@ -1518,8 +1519,12 @@ java: $(JAVA_LIBS)
 	    cp -p $(MPI_PATH)/lib/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done
-	for so in libiomp5.so libmklml_intel.so libmkldnn.so; do \
+	for so in libiomp5.so libmklml_intel.so; do \
 	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
+	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
+	done
+	for so in libmkldnn.so; do \
+        cp -p $(MKLDNN_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done
 	for so in $(JAVA_LOAD_DEPS); do \
