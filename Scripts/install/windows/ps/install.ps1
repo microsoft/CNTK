@@ -114,13 +114,19 @@ function WhlFileInfoFromVersionFile(
             throw "`nFatal Error: Malformed version information in [$versionFile]."
         }
         $cntkVersion = $cntkVersion -replace "-", "."
+        $cntkVersion = $cntkVersion -replace ".rc", "rc"
         if ($cntkTarget -eq "GPU") {
             $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk_gpu-"
         } else {
             $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk-"
         }
 
-        return @{ Name = "{0}-cp{1}-cp{2}m-win_amd64.whl" -f $cntkVersion, $pyVersion, $pyVersion; CntkUrl = "{0}/{1}" -f $wheelBaseUrl, $cntkTarget }
+        if ($wheelBaseUrl.StartsWith('http')) {
+            $cntkUrl = "{0}/{1}" -f $wheelBaseUrl, $cntkTarget
+        } else {
+            $cntkUrl = "{0}\{1}" -f $wheelBaseUrl, $cntkTarget
+        }
+        return @{ Name = "{0}-cp{1}-cp{2}m-win_amd64.whl" -f $cntkVersion, $pyVersion, $pyVersion; CntkUrl = $cntkUrl }
     }
     finally {
         $reader.close()
@@ -132,8 +138,9 @@ function Get-WheelUrl(
     [Parameter(Mandatory=$true)][string] $pyVersion,
     [string] $WheelBaseUrl)
 {
-    # if a local wheel exists in the cntk\Python directory, we will pip install this wheel
-    # if the file doesn't exist we will pip install the wheel in the specified url
+    # if a local wheel exists in the $path\cntk\Python directory, we will pip install this wheel
+    # if the file doesn't exist we will pip install the wheel in the specified url/path
+    # If $WheelBaseUrl starts with http[s], it is treated as URL and as a local path otherwise
 
     $whlFileInfo = WhlFileInfoFromVersionFile -path $path -pyVersion $pyVersion -wheelBaseUrl $WheelBaseUrl
 
@@ -144,7 +151,12 @@ function Get-WheelUrl(
         return $whlFile
     }
 
-    return "{0}/{1}" -f $whlFileInfo.CntkUrl, $whlFileInfo.Name
+    if ($whlFileInfo.CntkUrl.StartsWith('http')) {
+        $cntkURL = "{0}/{1}" -f $whlFileInfo.CntkUrl, $whlFileInfo.Name
+    } else {
+        $cntkURL = "{0}\{1}" -f $whlFileInfo.CntkUrl, $whlFileInfo.Name
+    }
+    return $cntkURL
 }
 
 Function main
