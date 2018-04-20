@@ -260,9 +260,10 @@ public:
     template <class T>
     static T* NewCPUArray(size_t n, bool zero_data = false)
     {
+        size_t padded_n = AsMultipleOf(n, 2);
+        size_t size = padded_n * sizeof(T);
 #ifdef USE_MKLDNN
         void* ptr;
-        size_t size = AsMultipleOf(n, 2) * sizeof(T);
 #if _MSC_VER
         ptr = _aligned_malloc(size, alignment_);
         if (ptr == NULL)
@@ -276,12 +277,15 @@ public:
             memset(ptr, 0, size);
         return (T*) ptr;
 #else
-        ElemType* p = new ElemType[AsMultipleOf(n, 2)]();
+        ElemType* p = new ElemType[padded_n]();
 #if 0 // _DEBUG
-    ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
-    for (size_t i = 0; i < n; i++)
-      p[i] = nan;
+        ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
+        for (size_t i = 0; i < n; i++)
+          p[i] = nan;
 #endif
+        if (zero_data)
+            memset(p, 0, size);
+
         return p;
 #endif
     }

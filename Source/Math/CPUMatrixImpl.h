@@ -872,7 +872,7 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
     }
     else
 #endif
-        SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
+    SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
 }
 
 #if 0
@@ -1614,24 +1614,8 @@ ElemType* CPUMatrix<ElemType>::CopyToArray() const
     size_t numElements = GetNumElements();
     if (numElements != 0)
     {
-        ElemType* arrayCopyTo = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
-#ifdef USE_MKLDNN
-        if (HEAD_AT_PRV == this->m_mklMem->head_)
-        {
-            std::shared_ptr<PrvMemDescr> prv_descriptor = this->m_mklMem->prv_descriptor_;
-            if (prv_descriptor != nullptr)
-            {
-                prv_descriptor->convert_from_prv(arrayCopyTo);
-            }
-        }
-        else
-        {
-            memcpy(arrayCopyTo, Data(), sizeof(ElemType) * numElements);
-        }
-
-#else
+        ElemType* arrayCopyTo = new ElemType[numElements];
         memcpy(arrayCopyTo, Data(), sizeof(ElemType) * numElements);
-#endif
         return arrayCopyTo;
     }
     else
@@ -1649,8 +1633,8 @@ size_t CPUMatrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentA
 
     if (numElements > currentArraySize)
     {
-        BaseMatrixStorage<ElemType>::FreeCPUArray(arrayCopyTo);
-        arrayCopyTo = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numElements);
+        delete arrayCopyTo;
+        arrayCopyTo = new ElemType[numElements];
         currentArraySize = numElements;
     }
 
