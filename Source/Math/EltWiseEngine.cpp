@@ -251,7 +251,7 @@ std::unique_ptr<BinaryEltWiseEngine<ElemType>> BinaryEltWiseEngine<ElemType>::Cr
             MklDnnBinaryEltWiseEngine<ElemType>::IsSupported(deviceId))
         {
             if (GetMathLibTraceLevel() > 0)
-                fprintf(stderr, "Using CNTK MKL DNN Rectified Linear engine.\n");
+                fprintf(stderr, "Using CNTK MKL DNN BinaryEltWiseEngine engine.\n");
             return std::make_unique<MklDnnBinaryEltWiseEngine<ElemType>>(deviceId);
         }
 #else
@@ -260,7 +260,7 @@ std::unique_ptr<BinaryEltWiseEngine<ElemType>> BinaryEltWiseEngine<ElemType>::Cr
         UNUSED(deviceId);
 #endif
         if (GetMathLibTraceLevel() > 0)
-            fprintf(stderr, "Could not find appropriate Rectified Linear engine.");
+            fprintf(stderr, "Could not find appropriate BinaryEltWiseEngine engine.");
     }
     return nullptr;
 }
