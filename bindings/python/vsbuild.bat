@@ -30,6 +30,8 @@ set p_CNTK_PY35_PATH=%~9
 shift
 set p_CNTK_PY36_PATH=%~9
 
+set p_PYTHON_BINDINGS_DIR=%~dp0
+
 REM Construct p_CNTK_PY_VERSIONS if not explicitly defined
 REM (Note: to disable Python build completely, no CNTK_PYx_PATH variable must be defined)
 if not defined p_CNTK_PY_VERSIONS (
@@ -70,6 +72,7 @@ if not exist "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" (
 )
 
 call "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" amd64 -vcvars_ver=14.11
+cd %p_PYTHON_BINDINGS_DIR%
 
 set CNTK_LIB_PATH=%p_OutDir%
 
