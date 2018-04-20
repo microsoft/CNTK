@@ -884,6 +884,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardKernel)
             size_t crowOut = g->OutputShape().GetNumElements();
             SingleMatrix outBuf(deviceId);
             SingleMatrix out = initMat(outBuf, crowOut, n, buf);
+            CopyVecFromFloatToHalf(buf, bufHalf);
             HalfMatrix outBBuf(deviceId);
             HalfMatrix outB = initMatHalf(outBBuf, crowOut, n, bufHalf);
             testEng->BackwardKernel(grad, in, out, kernel, true, false, workspace);
