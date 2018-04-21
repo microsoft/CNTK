@@ -60,7 +60,7 @@ public:
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
 #ifdef USE_MKLDNN
         // currently MKL-DNN does not support slice
-        if (m_plusEng && fr.IsAllFrames() && input0.GetShape() == input1.GetShape())
+        if (m_plusEng && !result.GetSOB().IsView() && input0.GetShape() == input1.GetShape())
         {
             m_plusEng->Forward(input0.GetShape(),
                 input0.GetSOB(), input1.GetSOB(), result.GetSOB());
@@ -92,7 +92,7 @@ public:
             else
             {
 #ifdef USE_MKLDNN
-                if (m_plusEng && fr.IsAllFrames() && inputGradient.GetShape() == gradient.GetShape())
+                if (m_plusEng && !gradient.GetSOB().IsView() && inputGradient.GetShape() == gradient.GetShape())
                 {
                     m_plusEng->Backward(gradient.GetSOB(), inputGradient.GetSOB());
                 }
