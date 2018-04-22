@@ -170,9 +170,9 @@ else:
 
     if "--without-debug-symbol" in sys.argv:
         sys.argv.remove('--without-debug-symbol')
-#*************************Changed for local testing**************
-LINKER_DEBUG_ARG='/DEBUG'
-#*************************Changed for local testing**************
+#*************************Create debug swig dll for local testing**************
+#LINKER_DEBUG_ARG='/DEBUG'
+#******************************************************************************
 
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set
