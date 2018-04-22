@@ -170,6 +170,9 @@ else:
 
     if "--without-debug-symbol" in sys.argv:
         sys.argv.remove('--without-debug-symbol')
+#*************************Changed**************
+LINKER_DEBUG_ARG='/DEBUG'
+#*************************Changed**************
 
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set

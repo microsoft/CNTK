@@ -8,6 +8,8 @@
 #pragma once
 
 #include <memory>
+#include <iostream>
+#include <mutex>
 
 namespace CNTK
 {
@@ -35,9 +37,20 @@ namespace CNTK
 
     // Wraps a python object pointer into a shared pointer
     // with thread safe destructor.
-    inline PyObjectPtr MakeShared(PyObject* object)
+    int g_objectcount = 0;
+    //std::mutex mtx123;
+    void changeCount(int delta)
+    {
+        //std::lock_guard<std::mutex> lock(mtx123);
+        g_objectcount += delta;
+    }
+
+    /*inline*/ PyObjectPtr MakeShared(PyObject* object)
     {
         Py_XINCREF(object);
+        changeCount(1);
+        std::cout << "Alloc " << g_objectcount << std::endl;
+
         return  PyObjectPtr(object, [](PyObject* p)
         {
             // The destructor can potentially be called on another thread (prefetch, i.e.
@@ -45,8 +58,9 @@ namespace CNTK
             // We should make sure that the state of the thread is properly initialized
             // and GIL is aquired before using any Python API.
             GilStateGuard guard;
-
             Py_XDECREF(p);
+            std::cout << "Delloc " << g_objectcount << std::endl;
+            changeCount(-1);
         });
     }
 
@@ -83,6 +97,10 @@ namespace CNTK
 
         virtual const void* GetDataBuffer() { return m_data; }
         virtual const NDShape& GetSampleShape() { LogicError("All sequences have the same shape, please use stream.shape instead."); }
+
+        ~SparseDataFromPy() {
+
+        }
 
     private:
         void* m_data;
@@ -307,9 +325,15 @@ namespace CNTK
                 RuntimeError("Only float numbers are currently supported.");
 
             auto data = (float*)PyArray_DATA(pyData);
-            auto indices = (SparseIndexType*)PyArray_DATA((PyArrayObject*)PyObject_GetAttrString(o, "indices"));
-            auto indptr = (SparseIndexType*)PyArray_DATA((PyArrayObject*)PyObject_GetAttrString(o, "indptr"));
 
+            //PyArrayObject* indicesObject = (PyArrayObject*)PyObject_GetAttrString(o, "indices");
+            auto indices = (SparseIndexType*)PyArray_DATA((PyArrayObject*)GetProperty(o, "indices"));
+            //Py_XDECREF(indicesObject);
+
+            //PyArrayObject* indptrObject = (PyArrayObject*)PyObject_GetAttrString(o, "indptr");
+            auto indptr = (SparseIndexType*)PyArray_DATA((PyArrayObject*)GetProperty(o, "indptr"));
+            //Py_XDECREF(indptrObject);
+            
             for (size_t i = 0; i < dataSize; ++i)
             {
                 auto sequence = std::make_shared<SparseDataFromPy>(
@@ -393,7 +417,10 @@ namespace CNTK
         {
             // TODO: profile, probably need to have some form of
             // vtable in here, same goes for other places where we use string comparisons.
+            //std::cout << "GetProperty " << propertyName << std::endl;
             auto result = PyObject_GetAttrString(object, propertyName.c_str());
+            Py_XDECREF(result);
+
             if (!result)
                 RuntimeError("PyObject does not have property '%s'.", propertyName.c_str());
             return result;
