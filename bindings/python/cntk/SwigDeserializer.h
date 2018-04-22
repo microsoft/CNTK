@@ -37,8 +37,7 @@ namespace CNTK
     // with thread safe destructor.
     inline PyObjectPtr MakeShared(PyObject* object)
     {
-        Py_XINCREF(object);
-        
+        Py_XINCREF(object);        
         return  PyObjectPtr(object, [](PyObject* p)
         {
             // The destructor can potentially be called on another thread (prefetch, i.e.
@@ -46,6 +45,7 @@ namespace CNTK
             // We should make sure that the state of the thread is properly initialized
             // and GIL is aquired before using any Python API.
             GilStateGuard guard;
+
             Py_XDECREF(p);
         });
     }
