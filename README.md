@@ -150,12 +150,16 @@ Notes on FP16 preview:
 
 To setup build and runtime environment on Windows:
 * Install [Visual Studio 2017](https://www.visualstudio.com/downloads/) with following workloads and components. From command line (use Community version installer as example):
-    vs_community.exe --add Microsoft.VisualStudio.Workload.NativeDesktop --add Microsoft.VisualStudio.Workload.ManagedDesktop --add Microsoft.VisualStudio.Workload.Universal --add Microsoft.Component.PythonTools --add Microsoft.VisualStudio.Component.VC.Tools.14.11
+```
+vs_community.exe --add Microsoft.VisualStudio.Workload.NativeDesktop --add Microsoft.VisualStudio.Workload.ManagedDesktop --add Microsoft.VisualStudio.Workload.Universal --add Microsoft.Component.PythonTools --add Microsoft.VisualStudio.Component.VC.Tools.14.11
+```
 * Install [NVidia CUDA 9](https://developer.nvidia.com/cuda-90-download-archive?target_os=Windows&target_arch=x86_64)
 * From PowerShell, run:
     [DevInstall.ps1](./Tools/devInstall/Windows/DevInstall.ps1)
 * Start VCTools 14.11 command line, run:
+```
     cmd /k "%VS2017INSTALLDIR%\VC\Auxiliary\Build\vcvarsall.bat" x64 --vcvars_ver=14.11
+```    
 * Open [CNTK.sln](./CNTK.sln) from the VCTools 14.11 command line. Note that starting CNTK.sln other than VCTools 14.11 command line, would causes CUDA 9 [build error](https://developercommunity.visualstudio.com/content/problem/163758/vs-2017-155-doesnt-support-cuda-9.html).
 
 To setup build and runtime environment on Linux using docker, please build Unbuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
