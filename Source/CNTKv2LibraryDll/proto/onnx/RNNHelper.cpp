@@ -363,6 +363,7 @@ FunctionPtr GRUComponent(Variable input,
                          Constant &W, Constant &R, Constant &H1, Constant &B)
 {
     auto dh = PlaceholderVariable(cellShape, input.DynamicAxes());
+    auto dh2 = PlaceholderVariable(cellShape, input.DynamicAxes());
     auto inputPlaceholder = PlaceholderVariable(input.Shape(), input.DynamicAxes());
 
     auto gruCell = GRUCell(
@@ -370,11 +371,9 @@ FunctionPtr GRUComponent(Variable input,
         fActivationOp, gActivationOp,
         dh, W, R, H1, B);
 
-    auto actualDh = recurrenceHookH(gruCell);
-
-    gruCell->ReplacePlaceholders({{dh, actualDh}});
-
-    auto gruBlock = AsBlock(std::move(gruCell), {{inputPlaceholder, input}}, L"GRU", L"");
+    auto actualDh = recurrenceHookH(dh2);
+    auto gruBlock = AsBlock(std::move(gruCell), {{inputPlaceholder, input}, {dh, actualDh}}, L"GRU", L"");
+    actualDh->ReplacePlaceholders({{dh2, gruBlock}});
     return gruBlock;
 }
 
@@ -385,6 +384,7 @@ FunctionPtr RNNComponent(Variable input,
                          Constant &W, Constant &R, Constant &B)
 {
     auto dh = PlaceholderVariable(cellShape, input.DynamicAxes());
+    auto dh2 = PlaceholderVariable(cellShape, input.DynamicAxes());
     auto inputPlaceholder = PlaceholderVariable(input.Shape(), input.DynamicAxes());
 
     auto rnnCell = RNNCell(
@@ -392,10 +392,10 @@ FunctionPtr RNNComponent(Variable input,
         activationOp,
         dh, W, R, B);
 
-    auto actualDh = recurrenceHookH(rnnCell);
-
-    rnnCell->ReplacePlaceholders({{inputPlaceholder, input}, {dh, actualDh}});
-    return rnnCell;
+    auto actualDh = recurrenceHookH(dh2);
+    auto rnnBlock = AsBlock(std::move(rnnCell), {{inputPlaceholder, input}, {dh, actualDh}}, L"RNNStep", L"");
+    actualDh->ReplacePlaceholders({{dh2, rnnBlock}});
+    return rnnBlock;
 }
 
 const std::vector<Variable> FindByNameHint(const std::vector<Variable> &inputs, const std::string &hint)
