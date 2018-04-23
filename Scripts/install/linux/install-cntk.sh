@@ -149,8 +149,10 @@ CNTK_WHEEL_PATH="cntk/python/$CNTK_WHEEL_NAME"
 if ! test -f "$CNTK_WHEEL_PATH"; then
   CNTK_WHEEL_PATH="$WHEEL_BASE_URL/$TARGET_CONFIGURATION/$CNTK_WHEEL_NAME"
 
-  wget -q --spider "$CNTK_WHEEL_PATH" ||
-    die "Python wheel not available locally and cannot reach $CNTK_WHEEL_PATH for Python\nwheel installation online. Please double-check Internet connectivity."
+  if ! test -f "$CNTK_WHEEL_PATH"; then
+    wget -q --spider "$CNTK_WHEEL_PATH" ||
+      die "Python wheel not available locally and cannot reach $CNTK_WHEEL_PATH for Python\nwheel installation online. Please double-check Internet connectivity."
+  fi
 
 fi
 
