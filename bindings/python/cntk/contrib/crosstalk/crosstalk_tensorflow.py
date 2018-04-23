@@ -98,16 +98,16 @@ def _rnn_trainable_in_scope(scope):
         bw_M=find_trainable('Matrix', scope=scope+'/BW')
         bw_b=find_trainable('Bias',   scope=scope+'/BW')
     elif tf.VERSION.startswith('1'):
-        if tf.VERSION.startswith('1.2'): #Sadly, parameter names change in tf from version to version
-            fw_M = find_trainable('kernel', scope=scope + '/fw')
-            fw_b = find_trainable('bias', scope=scope + '/fw')
-            bw_M = find_trainable('kernel', scope=scope + '/bw')
-            bw_b = find_trainable('bias', scope=scope + '/bw')
-        else:
+        if tf.VERSION.startswith('1.1'):
             fw_M=find_trainable('weights', scope=scope+'/fw')
             fw_b=find_trainable('biases',   scope=scope+'/fw')
             bw_M=find_trainable('weights', scope=scope+'/bw')
             bw_b=find_trainable('biases',   scope=scope+'/bw')
+        else: # the following changes started with version '1.2' until as of version 1.7 for now
+            fw_M = find_trainable('kernel', scope=scope + '/fw')
+            fw_b = find_trainable('bias', scope=scope + '/fw')
+            bw_M = find_trainable('kernel', scope=scope + '/bw')
+            bw_b = find_trainable('bias', scope=scope + '/bw')
     else:
         raise Exception('only supports 0.12.* and 1.*')
 
