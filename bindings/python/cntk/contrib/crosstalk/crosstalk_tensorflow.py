@@ -67,11 +67,16 @@ def _variable_getter(sess, data):
 def _conv2d_getter(sess):
     def _get(pd, attr):
         W = _trainable_getter(sess)(pd.W)
+        #handling input with sequence axis:
+        W_rank = len(W.shape)
+        #the transpose from tf [H, W, C] to cntk's [C, H, W] happens at the tailing axes excluding the leading dynamic
+        #axes (batch and sequence axes) in the data format:
+        axis_perm = (list(range(W_rank - 3)) if W_rank > 3 else []) + [i + W_rank - 3 for i in [2,0,1]]
         if pd.b:
             b = _trainable_getter(sess)(pd.b)
         else:
             b = None
-        return cstk.Conv2DArgs(W=W.transpose(2,0,1), b=b.reshape(attr.num_filters,))
+        return cstk.Conv2DArgs(W=W.transpose(axis_perm), b=b.reshape(attr.num_filters,))
     return _get
 
 def _conv2d_setter(sess):
@@ -93,10 +98,16 @@ def _rnn_trainable_in_scope(scope):
         bw_M=find_trainable('Matrix', scope=scope+'/BW')
         bw_b=find_trainable('Bias',   scope=scope+'/BW')
     elif tf.VERSION.startswith('1'):
-        fw_M=find_trainable('weights', scope=scope+'/fw')
-        fw_b=find_trainable('biases',   scope=scope+'/fw')
-        bw_M=find_trainable('weights', scope=scope+'/bw')
-        bw_b=find_trainable('biases',   scope=scope+'/bw')
+        if tf.VERSION.startswith('1.1'):
+            fw_M=find_trainable('weights', scope=scope+'/fw')
+            fw_b=find_trainable('biases',   scope=scope+'/fw')
+            bw_M=find_trainable('weights', scope=scope+'/bw')
+            bw_b=find_trainable('biases',   scope=scope+'/bw')
+        else: # the following changes started with version '1.2' until as of version 1.7 for now
+            fw_M = find_trainable('kernel', scope=scope + '/fw')
+            fw_b = find_trainable('bias', scope=scope + '/fw')
+            bw_M = find_trainable('kernel', scope=scope + '/bw')
+            bw_b = find_trainable('bias', scope=scope + '/bw')
     else:
         raise Exception('only supports 0.12.* and 1.*')
 
