@@ -6612,7 +6612,7 @@ void _assignRNNTAlphaScore(
         if (t >= frameNum) continue;
         
         size_t phoneNum = uttPhoneNum[uttId];
-        if (u >= phoneNum + 1) continue;
+        if (u >= phoneNum) continue;
 
         // Current  phone indices in phoneSeq matrix
         size_t labelid = uttId*maxPhoneNum + u ;
@@ -6624,10 +6624,10 @@ void _assignRNNTAlphaScore(
         size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
 
         // phone Index of the current frame in minibatch
-        size_t unitId = (u + uttBeginPhonePos[uttId] * numChannels) + uttToChanInd[uttId];
+        size_t unitId = (u + uttBeginPhonePos[uttId]) * numChannels + uttToChanInd[uttId];
 
         //(t,u) index of outputdistribution in minibatch
-        size_t tuID = timeId * maxPhoneNumInMB + unitId;
+        size_t tuID = timeId * maxPhoneNumInMB*numChannels + unitId;
 
         // Index of outputdistribution of observing phoneId at frame timeId
         //size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u)|t,u)
@@ -6639,7 +6639,7 @@ void _assignRNNTAlphaScore(
         {
             alphaScore[alphaId] = 0.0;
         }
-        else if ((t == 0 && u == 1))
+        else if (t == 0 )
         {
             size_t alphaId_1 = alphaId - 1; // alpha ID for [t,u-1]
             size_t tuID_1 = tuID - numChannels; //tuID for [t,u-1]           
@@ -6647,9 +6647,9 @@ void _assignRNNTAlphaScore(
 
             alphaScore[alphaId] = alphaScore[alphaId_1] + prob[probId_1];
         }
-        else if (t == 1 && u == 0 )
+        else if ( u == 0 )
         {            
-            size_t tuID_2 = tuID - numChannels * maxPhoneNumInMB; //tuID for [t-1,u]
+            size_t tuID_2 = tuID - numChannels * maxPhoneNumInMB*numChannels; //tuID for [t-1,u]
             size_t alphaId_2 = alphaId - numChannels * maxPhoneNum; //alpha ID for [t-1, u]
             size_t probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
             alphaScore[alphaId] = alphaScore[alphaId_2] + prob[probId_2];
@@ -6660,7 +6660,7 @@ void _assignRNNTAlphaScore(
             size_t alphaId_1 = alphaId - 1; // alpha ID for [t,u-1]
             size_t tuID_1 = tuID - numChannels; //tuID for [t,u-1]           
             size_t probId_1 = tuID_1 * totalPhoneNum + phoneId; //ID for p(y(u)|t,u-1)
-            size_t tuID_2 = tuID - numChannels * maxPhoneNumInMB; //tuID for [t-1,u]
+            size_t tuID_2 = tuID - numChannels * maxPhoneNumInMB*numChannels; //tuID for [t-1,u]
             size_t alphaId_2 = alphaId - numChannels * maxPhoneNum; //alpha ID for [t-1, u]
             size_t probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
 
@@ -6704,7 +6704,7 @@ void _assignRNNTBetaScore(
         if (t >= frameNum) continue;
 
         size_t phoneNum = uttPhoneNum[uttId];
-        if (u >= phoneNum + 1) continue;
+        if (u >= phoneNum) continue;
 
         // Current and previous phone indices in phoneSeq matrix
         size_t labelid = uttId*maxPhoneNum + u;
@@ -6716,26 +6716,26 @@ void _assignRNNTBetaScore(
         size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];  //timeid in chunk for t
 
         // Index of the current frame in minibatch
-        size_t unitId = (u + uttBeginPhonePos[uttId] * numChannels) + uttToChanInd[uttId];  //phoneseq id in chunk for u
-        size_t tuID = timeId * maxPhoneNumInMB + unitId;       //tuId for (t,u)
+        size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
+        size_t tuID = timeId * maxPhoneNumInMB*numChannels + unitId;       //tuId for (t,u)
 
         // Index of probability of observing phoneId at frame timeId
         size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u+1)|t,u)
 
         size_t betaId = maxPhoneNum* timeId + u; //betaid for (t,u)
 
-        if (u == phoneNum && t == frameNum - 1)
+        if (u == phoneNum-1 && t == frameNum - 1)
         {
             size_t probId_1 = tuID*totalPhoneNum + blankTokenId;//ID for p(phi|t,u)
             betaScore[betaId] = prob[probId_1];
         }
-        else if (u == phoneNum && t == frameNum - 2)
+        else if (u == phoneNum-1 )
         {
             size_t probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
             size_t betaId_1 = betaId + numChannels * maxPhoneNum ; //beta ID for (t+1,u)
             betaScore[betaId] = betaScore[betaId_1] + prob[probId_1];
         }
-        else if (u == phoneNum - 1 && t == frameNum - 1)
+        else if ( t == frameNum - 1)
         {
             size_t betaId_2 = betaId + 1; //beid for (t,u+1)
             betaScore[betaId] = betaScore[betaId_2] + prob[probId];
@@ -6775,21 +6775,24 @@ void _assignRNNTTotalScore(ElemType *alphaScore,
     for (int uttId = 0; uttId < uttNum; uttId++) {
         if (uttId < uttNum)
         {
-            for (size_t n = 1; n <= uttFrameNum[uttId] + uttPhoneNum[uttId]; n++)
+            for (size_t n = 1; n <= uttFrameNum[uttId] + uttPhoneNum[uttId]-1; n++)
             {
                 x = LZERO;
-                for (size_t t = 0; t <= n; t++)
+                for (size_t t = 1; t <= n; t++)
                 {
                     size_t u = n - t;
-                    size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+                    if (t >= 1 && t <= uttFrameNum[uttId] && u >= 0 && u <= uttPhoneNum[uttId] - 1)
+                    {
+                        size_t timeId = (t - 1 + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
 
-                    size_t alphaId = maxPhoneNum* timeId + u;
-                    x = LogAdd(x, alphaScore[alphaId] + betaScore[alphaId]);
+                        size_t alphaId = maxPhoneNum* timeId + u;
+                        x = LogAdd(x, alphaScore[alphaId] + betaScore[alphaId]);
+                    }
                 }
                 if (n > 2)
                 {
                     if (fabs(x- totalScore[uttId]) > 1e-4)
-                        fprintf(stderr, "bad totalscore for RNNT %f %f\n", x, totalScore[uttId]);
+                        fprintf(stderr, "bad totalscore for RNNT%d: %f %f\n", (int)n, x, totalScore[uttId]);
                 }
                 else
                     totalScore[uttId] = x;
@@ -6824,25 +6827,24 @@ void _assignRNNTScore(
     ElemType x = LZERO, y = LZERO;
     
     for (size_t uttId = 0; uttId < uttNum; uttId++) {
-        size_t zeroID = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+        size_t zeroID = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum; //beta id for (0,0)
+        ElemType P_lx = betaScore[zeroID]; //p(y|x)
 //#pragma omp parallel for
         for (int t = 0; t < uttFrameNum[uttId]; t++) {
             size_t phoneNum = uttPhoneNum[uttId];            
             size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId]; //time ID in MB for t
-            ElemType P_lx = betaScore[zeroID]; //p(y|x)
-
-            for (int u = 0; u < phoneNum + 1; u++)
+            for (int u = 0; u < phoneNum; u++)
             {
                 size_t alphaId = maxPhoneNum* timeId + u;     //alpha ID for (t,u)   
                 // Index of the current phone in minibatch
-                size_t unitId = (u + uttBeginPhonePos[uttId] * numChannels) + uttToChanInd[uttId];  //phoneseq id in chunk for u
-                size_t tuID = timeId * maxPhoneNumInMB + unitId;       //tuId for (t,u)
+                size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
+                size_t tuID = timeId * maxPhoneNumInMB*numChannels + unitId;       //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
 
-                x = alphaScore[alphaId] + betaScore[alphaId] - P_lx;
+                x = alphaScore[alphaId] + betaScore[alphaId] - P_lx;   //log of alpha(t,u)*beta(t,u)/p(y|x)
 
                 for (int k = 0; k < totalPhoneNum; k++)
                 {
-                    size_t ktuID = tuID*totalPhoneNum + k;
+                    size_t ktuID = tuID*totalPhoneNum + k;  //ID for P(k|t,u)
                     y = x + prob[ktuID];
 
                     if (y < LZERO)
@@ -6852,7 +6854,7 @@ void _assignRNNTScore(
                    
                     
                 }
-                if (u < phoneNum)  //k == y(u+1)
+                if (u < phoneNum-1)  //k == y(u+1)
                 {
                     long phoneId = phoneSeq[uttId*maxPhoneNum + u+1];  //actual phone ID for u+1
                     size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u+1)|t,u)
@@ -6865,16 +6867,19 @@ void _assignRNNTScore(
                         y = exp(x);
                     RNNTscore[probId] -= y;      
                 }
-                // k == phi
-                size_t probId = tuID *totalPhoneNum + blankTokenId;
-                size_t betaId = alphaId + numChannels * maxPhoneNum;  //beta ID for(t+1,u)
-                x = alphaScore[alphaId] + betaScore[betaId] + prob[probId] - P_lx;
+                if (t < uttFrameNum[uttId] - 1)
+                {
+                    // k == phi
+                    size_t probId = tuID *totalPhoneNum + blankTokenId;
+                    size_t betaId = alphaId + numChannels * maxPhoneNum;  //beta ID for(t+1,u)
+                    x = alphaScore[alphaId] + betaScore[betaId] + prob[probId] - P_lx;
 
-                if (x < LZERO)
-                    y = 0.0f;
-                else
-                    y = exp(x);
-                RNNTscore[probId] -= y;
+                    if (x < LZERO)
+                        y = 0.0f;
+                    else
+                        y = exp(x);
+                    RNNTscore[probId] -= y;
+                }
             }
             
         }
@@ -6940,21 +6945,48 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1
 
     if (in1.GetNumRows() != in2.GetNumRows() )
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
-    
+    in1.Print("F");
+    in2.Print("G");
+
     size_t nCol1 = in1.GetNumCols();
     size_t nCol2 = in2.GetNumCols();
     auto& us = *this;
     RequireSize(in1.GetNumRows(), nCol1 * nCol2);
    
     long n = (long)GetNumRows(); 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (long k = 0; k < n; k++)
     {
         for (long t = 0; t<(long)nCol1; t++) 
             for (long u = 0; u < (long)nCol2; u++)
             {
-                us(k, t*nCol2+u) = in1(k,t)*in1(k,t) + in2(k,u)*in2(k,u);
+                us(k, t*nCol2+u) = in1(k,t) + in2(k,u);
             }        
+    }
+    return *this;
+
+}
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1, const size_t U, const size_t T)
+{
+
+    size_t nRow = in1.GetNumRows();
+    auto& us = *this;
+    RequireSize(nRow, T);
+
+    
+    //#pragma omp parallel for
+    for (long k = 0; k < (long)nRow; k++)
+    {
+        for (long t = 0; t < (long)T; t++)
+        {
+            us(k, t) = 0.0;
+            for (long u = 0; u < (long)U; u++)
+            {
+                us(k, t) += in1(k, t*U+u);
+            }
+        }
+            
     }
     return *this;
 
@@ -6975,28 +7007,28 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
 
         // Max number of phones in utterances in this minibatch
         size_t maxPhoneNum = phoneSeq.GetNumRows();
-
+        prob.Print("prob");
         for (size_t t = 0; t < maxFrameNum; t++)
         {
-            for(size_t u=0; u<maxPhoneNum+1;u++)
+            for(size_t u=0; u<maxPhoneNum;u++)
                 _assignRNNTAlphaScore(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
                     uttFrameNum, uttBeginFrame, uttBeginPhonePos, uttPhoneNum, numParallelSequences, uttNum, t, u, maxPhoneNum, maxPhoneNumInMB, totalPhoneNum, blankTokenId, delayConstraint);
         }
-
+        alpha.Print("alpha");
         for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
         {
-            for (size_t u = 0; u<maxPhoneNum + 1; u++)
+            for (LONG64 u = maxPhoneNum-1; u>=0; u--)
                 _assignRNNTBetaScore(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
                     uttFrameNum, uttBeginFrame, uttBeginPhonePos, uttPhoneNum, numParallelSequences, uttNum, t, u, maxPhoneNum, maxPhoneNumInMB, totalPhoneNum, blankTokenId, delayConstraint);
         }
-
+        beta.Print("beta");
         std::vector<ElemType> scores(uttNum);
         _assignRNNTTotalScore(alpha.Data(), beta.Data(), scores, uttNum, uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum);
         this->SetValue(0.0);
         _assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
             uttBeginFrame, uttBeginPhonePos, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, maxPhoneNumInMB, totalPhoneNum, blankTokenId);
 
-        
+        this->Print("RNNT score");
         totalScore(0, 0) = 0.0;
         for (size_t utt = 0; utt < uttNum; utt++)
         {

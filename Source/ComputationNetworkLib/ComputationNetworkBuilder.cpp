@@ -106,6 +106,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReduceElementsNode))                   return New<ReduceElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(RNNTNode))                             return New<RNNTNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
@@ -510,6 +511,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ForwardBackward(const ComputationNodePtr graph, const ComputationNodePtr features, int blankTokenId, int delayConstraint, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<ForwardBackwardNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, delayConstraint), { graph, features });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RNNT(const ComputationNodePtr graph, const ComputationNodePtr transcription, const ComputationNodePtr prediction, int blankTokenId, int delayConstraint, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<RNNTNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, delayConstraint), { graph, transcription,prediction });
 }
 
 template <class ElemType>

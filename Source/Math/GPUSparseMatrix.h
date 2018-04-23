@@ -394,8 +394,6 @@ public:
 
     GPUSparseMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
 
-    GPUSparseMatrix<ElemType>& AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2);
-
     ElemType SumOfElements() const;    // sum of all elements
     ElemType SumOfAbsElements() const; // sum of all abs(elements)
     ElemType FrobeniusNorm() const;

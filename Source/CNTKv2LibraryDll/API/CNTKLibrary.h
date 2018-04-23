@@ -4070,6 +4070,11 @@ namespace CNTK
     CNTK_API FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in operation for computing the RNNT for specified operands.
+    ///
+    CNTK_API FunctionPtr RNNT(const Variable& graph, const Variable& transcription, const Variable& prediction, size_t blankTokenId, int delayConstraint, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation for computing the labels to graph for input operands.
     ///
     CNTK_API FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name = L"");

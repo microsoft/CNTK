@@ -496,6 +496,14 @@ namespace CNTK
 
                     opType = PrimitiveOpType::ForwardBackward;
                 }
+                else if (node->OperationName() == OperationNameOf(RNNTNode))
+                {
+                    auto edNode = node->As<RNNTNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDelayConstraint] = edNode->DelayConstraint();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlankTokenId] = edNode->BlankTokenId();
+
+                    opType = PrimitiveOpType::RNNT;
+                }
                 else if (node->OperationName() == OperationNameOf(CosDistanceWithNegativeSamplesNode))
                 {
                     opType = PrimitiveOpType::CosDistanceWithNegativeSamples;

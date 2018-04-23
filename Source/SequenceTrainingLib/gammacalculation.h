@@ -437,7 +437,7 @@ public:
         const size_t numRows = outputDistribution.GetNumRows();
         const size_t numCols = maxIndexes.GetNumCols();
         // for debug 
-        //m_deviceid = outputDistribution.GetDeviceId();
+        m_deviceid_gpu = maxIndexes.GetDeviceId();
         m_deviceid = CPUDEVICE;
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
@@ -576,9 +576,7 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
         rowSum.Resize(1, numCols);
 
-        // Normalize the CTC scores
-        RNNTPosterior.VectorSum(RNNTPosterior, rowSum, /*isColWise=*/true);
-        RNNTPosterior.RowElementDivideBy(rowSum);
+        RNNTPosterior.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
     }
 
 private:
@@ -699,6 +697,7 @@ protected:
     msra::dbn::matrix dengammas;
     msra::dbn::matrix pred;
     int m_deviceid; // -1: cpu
+    int m_deviceid_gpu;
     size_t m_maxframenum;
     float lmf; // Note that 9 was best for Fisher  --these should best be configurable
     float wp;

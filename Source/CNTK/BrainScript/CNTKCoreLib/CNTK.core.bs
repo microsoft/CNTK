@@ -592,6 +592,7 @@ RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRep
 RowStack(inputs, axis=1, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
 EditDistanceError(leftInput, rightInput, subPen=1.0, delPen=1.0, insPen=1.0, squashInputs=false, tokensToIgnore=[||], tag='') = new ComputationNode [ operation = 'EditDistanceError' ; inputs = _AsNodes (leftInput : rightInput) /*plus the function args*/ ]
 ForwardBackward(graph, features, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'ForwardBackward' ; inputs = _AsNodes (graph : features) /*plus the function args*/ ]
+RNNT(graph, transcription, prediction, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'RNNT' ; inputs = _AsNodes (graph : transcription: prediction) /*plus the function args*/ ]
 LabelsToGraph(labels, tag='') = new ComputationNode [ operation = 'LabelsToGraph' ; inputs = _AsNodes (labels) /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
     if axis < 0 then [ # time axis: specify -1

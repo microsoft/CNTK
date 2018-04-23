@@ -1157,7 +1157,7 @@ template class OutputMultiplexerNode<double>;
 // -----------------------------------------------------------------------
 
 template<class ElemType>
-class RNNTNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+class RNNTNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<3>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -1185,11 +1185,19 @@ public:
         {
             BackpropToLeft(*m_outputLogDistribution, InputRef(inputIndex).Gradient(), Gradient());
         }
-        else if (inputIndex == 1)
+        else if (inputIndex == 1)  //backprop to transcription f
         {
             FrameRange frameRange(InputRef(0).GetMBLayout());
-            BackpropToRight(*m_outputDistribution, InputRef(inputIndex).Gradient(), Gradient(), *m_RNNTposterior);
+            BackpropToF(InputRef(inputIndex).Gradient(), Gradient(), *m_RNNTDerivative);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
+            //InputRef(inputIndex).Gradient().Print("derivative for f");
+        }
+        else if (inputIndex == 2)  //backprop to transcription g
+        {
+            FrameRange frameRange(InputRef(2).GetMBLayout());
+            BackpropToG(InputRef(inputIndex).Gradient(), Gradient(), *m_RNNTDerivative);
+            InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
+         //   InputRef(inputIndex).Gradient().Print("derivative for g");
         }
         else
             RuntimeError("RNNTNode criterion expects only two inputs: labels and network output.");
@@ -1211,17 +1219,38 @@ public:
 #endif
     }
 
-    void BackpropToRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-        const Matrix<ElemType> &CTCposterior)
+    void BackpropToF(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+        Matrix<ElemType> &RNNTDerivative)
     {
-#if DUMPOUTPUT
-        softmaxOfRight.Print("RNNTNode Partial-softmaxOfRight");
+#if DUMPOUTPUT        
         inputFunctionValues.Print("RNNTNode Partial-inputFunctionValues");
         gradientValues.Print("RNNTNode Partial-gradientValues");
         inputGradientValues.Print("RNNTNode Partial-Right-in");
 #endif  
+        //sum u for RNNT Derivative
+        m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols());
+        //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
-        Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues);
+        Matrix<ElemType>::Scale(gradientValues.Get00Element(), *m_tmpMatrix, inputGradientValues);
+
+#if DUMPOUTPUT
+        inputGradientValues.Print("RNNTNode Partial-Right");
+#endif
+    }
+
+    void BackpropToG(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+        Matrix<ElemType> &RNNTDerivative)
+    {
+#if DUMPOUTPUT        
+        inputFunctionValues.Print("RNNTNode Partial-inputFunctionValues");
+        gradientValues.Print("RNNTNode Partial-gradientValues");
+        inputGradientValues.Print("RNNTNode Partial-Right-in");
+#endif  
+        //sum u for RNNT Derivative
+        m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(1).Value().GetNumCols(), InputRef(2).Value().GetNumCols());
+        //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
+        // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
+        Matrix<ElemType>::Scale(gradientValues.Get00Element(), *m_tmpMatrix, inputGradientValues);
 
 #if DUMPOUTPUT
         inputGradientValues.Print("RNNTNode Partial-Right");
@@ -1236,6 +1265,7 @@ public:
     virtual void ForwardPropNonLooping() override
     {
         m_outputDensity->AssignUserOp1(InputRef(1).Value(), InputRef(2).Value());
+        m_outputDensity->Print("h");
         m_outputLogDistribution->AssignLogSoftmaxOf(*m_outputDensity, true);
 
         m_outputDistribution->SetValue(*m_outputLogDistribution);
@@ -1243,13 +1273,13 @@ public:
 
 
 
-        m_RNNTposterior->SwitchToMatrixType(m_outputDistribution->GetMatrixType(), m_outputDistribution->GetFormat(), false);
-        m_RNNTposterior->Resize(m_outputDistribution->GetNumRows(), m_outputDistribution->GetNumCols());
+        m_RNNTDerivative->SwitchToMatrixType(m_outputDistribution->GetMatrixType(), m_outputDistribution->GetFormat(), false);
+        m_RNNTDerivative->Resize(m_outputDistribution->GetNumRows(), m_outputDistribution->GetNumCols());
 
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
         // compute CTC score
-        m_GammaCal.twodimForwardBackward(Value(), *m_outputLogDistribution, *m_maxIndexes, *m_maxValues, *m_RNNTposterior, InputRef(0).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId );
+        m_GammaCal.twodimForwardBackward(Value(), *m_outputLogDistribution, *m_maxIndexes, *m_maxValues, *m_RNNTDerivative, InputRef(0).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId );
 
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
@@ -1294,7 +1324,8 @@ public:
             node->m_maxIndexes->SetValue(*m_maxIndexes);
             node->m_maxValues->SetValue(*m_maxValues);
             node->m_delayConstraint = m_delayConstraint;
-            node->m_RNNTposterior->SetValue(*m_RNNTposterior);
+            node->m_RNNTDerivative->SetValue(*m_RNNTDerivative);
+            node->m_tmpMatrix->SetValue(*m_tmpMatrix);
         }
     }
 
@@ -1307,7 +1338,8 @@ public:
         RequestMatrixFromPool(m_outputDistribution, matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
-        RequestMatrixFromPool(m_RNNTposterior, matrixPool);
+        RequestMatrixFromPool(m_RNNTDerivative, matrixPool);
+        RequestMatrixFromPool(m_tmpMatrix, matrixPool);
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
@@ -1318,7 +1350,8 @@ public:
         ReleaseMatrixToPool(m_outputDistribution, matrixPool);
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
-        ReleaseMatrixToPool(m_RNNTposterior, matrixPool);
+        ReleaseMatrixToPool(m_RNNTDerivative, matrixPool);
+        ReleaseMatrixToPool(m_tmpMatrix, matrixPool);
     }
 
     virtual void UpdateFunctionMBSize() override
@@ -1354,7 +1387,8 @@ protected:
     shared_ptr<Matrix<ElemType>> m_outputLogDistribution;
     shared_ptr<Matrix<ElemType>> m_maxIndexes;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    shared_ptr<Matrix<ElemType>> m_RNNTposterior;
+    shared_ptr<Matrix<ElemType>> m_RNNTDerivative;
+    shared_ptr<Matrix<ElemType>> m_tmpMatrix;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
     size_t m_blankTokenId;

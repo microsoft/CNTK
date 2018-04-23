@@ -4787,14 +4787,42 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
     //dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
     //dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM );
+    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM );
         // x dimension is for utterances
         // y dimention is for phone sequence in each utterance
         // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances 
-    dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (nCol1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (nCol1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+    dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (nCol1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
     in1.PrepareDevice();
     SyncGuard syncGuard;
     _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, nCol1, nCol2);
+    //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
+
+    return *this;
+}
+
+//user defined matrix operation 
+//this one is for RNN T output = input1(k,t) + input2(k,u).
+//inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
+template<class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, const size_t U, const size_t T)
+{
+    int nRow = in1.GetNumRows();
+    
+    RequireSize(in1.GetNumRows(),T);
+    
+
+    // the output matrix is of size (nt+1, BS)
+    //dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+    //dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+
+    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM );
+        // x dimension is for utterances
+        // y dimention is for phone sequence in each utterance
+        // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances 
+    dim3 block_tail((nRow + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (T + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+    in1.PrepareDevice();
+    SyncGuard syncGuard;
+    _assignUserOp2<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), nRow, U, T);
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
 
     return *this;

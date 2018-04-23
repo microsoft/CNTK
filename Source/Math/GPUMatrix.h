@@ -376,6 +376,7 @@ public:
         const vector<size_t> & uttBeginPhonePos, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNumInMB,
         const size_t blankTokenId, const int delayConstraint, const bool isColWise);
     GPUMatrix<ElemType>& AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2);
+    GPUMatrix<ElemType>& AssignUserOp2(GPUMatrix<ElemType>& in1, const size_t U, const size_t T);
 
     GPUMatrix<ElemType>& InplaceSqrt();
     GPUMatrix<ElemType>& AssignSqrtOf(const GPUMatrix<ElemType>& a);

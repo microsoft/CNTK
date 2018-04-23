@@ -992,6 +992,13 @@ namespace CNTK
                     computationNodePtr = New<ForwardBackwardNode<ElementType>>(network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
                     break;
                 }
+                case PrimitiveOpType::RNNT:
+                {
+                    auto delayContraint = functionConfig[PrimitiveFunction::AttributeNameDelayConstraint].Value<int>();
+                    auto blankTokenId = functionConfig[PrimitiveFunction::AttributeNameBlankTokenId].Value<size_t>();
+                    computationNodePtr = New<RNNTNode<ElementType>>(network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
+                    break;
+                }
                 case PrimitiveOpType::LambdaRank:
                     computationNodePtr = New<LambdaRankNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;

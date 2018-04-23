@@ -5800,10 +5800,30 @@ __global__ void _assignUserOp1(ElemType* us,
 {
     const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
-    const CUDA_LONG u = blockIdx.z * blockDim.z + threadIdx.z;
+    if(k < BS && t < nCol1 )
+        for(int u=0; u< nCol2; u++)
+        {
+            //printf("K:%d,t:%d,u:%d\n", k,t,u);    
+            us[IDX2C(k, t*nCol2+u,BS)] = in1[IDX2C(k,t,BS)] + in2[IDX2C(k,u,BS)];
+        }
+}
 
-    if(k < BS && t < nCol1 && u < nCol2)
-        us[IDX2C(k, t*nCol2+u,BS)] = in1[IDX2C(k,t,BS)]*in1[IDX2C(k,t,BS)] + in2[IDX2C(k,u,BS)]*in2[IDX2C(k,u,BS)];
+template<class ElemType>
+__global__ void _assignUserOp2(ElemType* us, 
+                              ElemType *in1,  
+                              int nRow,                            
+                              int U,
+                              int T)
+{
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    
+    if(k < nRow && t < T)
+    {
+        us[IDX2C(k,t,nRow)] = 0.0;
+        for (int u=0; u< U; u++)
+            us[IDX2C(k,t,nRow)] += in1[IDX2C(k, t*U+u,nRow)];
+    }        
 }
 
 template<class ElemType>
