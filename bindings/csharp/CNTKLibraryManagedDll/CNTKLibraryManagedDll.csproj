@@ -118,6 +118,8 @@
     <Compile Include="SwigProxyClasses\UnorderedMapStringDictionaryValue.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableMinibatchData.cs" />
     <Compile Include="SwigProxyClasses\UnsignedCharVector.cs" />
+    <Compile Include="SwigProxyClasses\VariablePair.cs" />
+    <Compile Include="SwigProxyClasses\VariablePairVector.cs" />
     <Compile Include="SwigProxyClasses\VectorPairSizeTDouble.cs" />
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />

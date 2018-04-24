@@ -125,6 +125,8 @@ function DownloadFileWebRequest (
     [string] $userAgent,
     [string] $expectedHash)
 {
+    # Use TLS 1.2 because default TLS 1.0 isn't supported by GitHub now.
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Write-Host "Downloading [$SourceFile], please be patient...."
     if (-not $Execute) {
          Write-Host  "$message ** Running in DEMOMODE - no download performed"

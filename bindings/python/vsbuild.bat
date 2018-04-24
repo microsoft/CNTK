@@ -57,7 +57,23 @@ if defined nothingToBuild echo Python support not configured to build.&exit /b 0
 
 if "%p_DebugBuild%" == "true" echo Currently no Python build for Debug configurations, exiting.&exit /b 0
 
-call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall" amd64
+if not defined VS2017INSTALLDIR (
+  @echo Environment variable VS2017INSTALLDIR not defined.
+  @echo Make sure Visual Studion 2017 is installed.
+  exit /b 1
+)
+
+REM vcvarsall.bat scripts changes current working directory,
+REM   so we need to save it and restore it afterwards
+pushd .
+if not exist "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" (
+  echo Error: "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" not found.
+  echo Make sure you have installed Visual Studion 2017 correctly.
+  exit /b 1
+)
+call "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" amd64 -vcvars_ver=14.11
+popd
+
 set CNTK_LIB_PATH=%p_OutDir%
 
 set DIST_DIR=%p_OutDir%\Python

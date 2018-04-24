@@ -834,7 +834,7 @@ def test_Reshape(tmpdir):
     verify_one_input(model, data, tmpdir, 'Reshape_1')
 
 #RNN
-def test_GRU(tmpdir):
+def test_RNN(tmpdir):
     def CreatRNN(cell_dim, 
                  activation, 
                  initial_state,
@@ -869,7 +869,7 @@ def test_GRU(tmpdir):
                                 return_full_state = False, go_backwards=go_backward)])])
 
     def MakeRNNNameFromConfig(direction, num_layers, initial_state, activition):
-        model_name = 'GRU.' + direction + '.'
+        model_name = 'RNN.' + direction + '.'
 
         if num_layers == 1:
             model_name += 'one_layer.'
