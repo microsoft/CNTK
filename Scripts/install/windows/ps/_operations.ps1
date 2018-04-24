@@ -12,21 +12,21 @@ Function Set-OperationsInfo(
           Download = @( ) ;
           Action = @() ;
          },
-        @{Name = "Installation VS2015 Runtime"; ShortName = "VS2015"; Info = "Install VS2015 Runtime";
+        @{Name = "Installation VS2017 Runtime"; ShortName = "VS2017"; Info = "Install VS2017 Runtime";
           Verification = @( @{Function = "VerifyWinProductExists"; Match = "^Microsoft Visual C\+\+ 201(5|7) x64 Additional Runtime" },
                             @{Function = "VerifyWinProductExists"; Match = "^Microsoft Visual C\+\+ 201(5|7) x64 Minimum Runtime" } );
           Download = @( ) ;
-          Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2015\vc_redist.x64.exe"; Param = "/install /passive /norestart"; Message="Installing VS2015 Runtime...." } )
+          Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2017\vc_redist.x64.exe"; Param = "/install /passive /norestart"; Message="Installing VS2017 Runtime...." } )
          },
         @{Name = "MSMPI Installation"; ShortName = "CNTK"; Info = "Install MSMPI";
           Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Microsoft MPI \(\d+\."; Version = "7.0.12437.6" } );
           Download = @( ) ;
           Action = @( @{Function = "InstallExe"; Command = "$cntkRootDir\prerequisites\msmpisetup.EXE"; Param = "/unattend"; Message="Installing MSMPI ...." } )
          },
-        @{Name = "Anaconda3-4.1.1"; ShortName = "ANA3-411"; Info = "Install Anaconda3-4.1.10";
+        @{Name = "Anaconda3-4.3.1"; ShortName = "ANA3-431"; Info = "Install Anaconda3-4.3.1";
           Verification = @( @{Function = "VerifyDirectory"; Path = "$AnacondaBasePath"; } );
-          Download = @( @{Function = "Download"; Source = "https://repo.continuum.io/archive/Anaconda3-4.1.1-Windows-x86_64.exe"; Destination = "$localCache\Anaconda3-4.1.1-Windows-x86_64.exe" } );
-          Action = @( @{Function = "InstallExe"; Command = "$localCache\Anaconda3-4.1.1-Windows-x86_64.exe"; Param = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$AnacondaBasePath"; runAs=$false; Message="Installing Anaconda3-4.1.1. Please be patient ...."} );
+          Download = @( @{Function = "Download"; Source = "https://repo.continuum.io/archive/Anaconda3-4.3.1-Windows-x86_64.exe"; Destination = "$localCache\Anaconda3-4.3.1-Windows-x86_64.exe" } );
+          Action = @( @{Function = "InstallExe"; Command = "$localCache\Anaconda3-4.3.1-Windows-x86_64.exe"; Param = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$AnacondaBasePath"; runAs=$false; Message="Installing Anaconda3-4.3.1. Please be patient ...."} );
          },
         @{Name = "CNTK Python Environment"; ShortName = "CNTKPY"; Info = "Setup CNTK PythonEnvironment $PyVersion";
           Verification  = @( @{Function = "VerifyRunAlways"  } );

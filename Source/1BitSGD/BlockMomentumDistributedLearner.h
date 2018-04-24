@@ -463,6 +463,8 @@ namespace CNTK
                 SynchronizeModel<double>(parameters);
             else if (parameters.front()->GetDataType() == DataType::Float)
                 SynchronizeModel<float>(parameters);
+            else if (parameters.front()->GetDataType() == DataType::Float16)
+                SynchronizeModel<half>(parameters);
             else
                 RuntimeError("Unsupported type.");
 

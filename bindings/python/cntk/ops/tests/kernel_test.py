@@ -15,6 +15,7 @@ import cntk as C
 from .ops_test_utils import unittest_helper, _test_unary_op, AA, precision, PRECISION_TO_TYPE, constant, cntk_device
 from cntk.ops import AVG_POOLING, MAX_POOLING, MAX_UNPOOLING
 from cntk.internal import sanitize_dtype_cntk
+from cntk.cntk_py import should_force_deterministic_algorithms
 
 CONVOLUTION_OPERANDS = [
     ([[[5., 6.],  # (1, 2, 2) map
@@ -962,6 +963,11 @@ GROUP_CONVOLUTION_DATA = [
 # This test point exercises group convolution, and tests against grouping simulated explicitly using convolution without grouping.
 @pytest.mark.parametrize("groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, kernel_channels, batch_size", GROUP_CONVOLUTION_DATA)
 def test_group_conv(groups, num_output_channels, num_input_channels, input_tensor_size, filter_size, kernel_channels, batch_size, device_id, precision):
+    if device_id == -1 and len(input_tensor_size) > 2:
+        pytest.skip('3D or higher dimensions not supported for group convolution on CPU.')
+    if device_id == 0 and should_force_deterministic_algorithms():
+        pytest.skip('Deterministic algorithms not supported on GPU for group convolution.')
+
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
@@ -969,15 +975,19 @@ def test_group_conv(groups, num_output_channels, num_input_channels, input_tenso
     conv_size = tuple([num_output_channels, kernel_channels]+filter_size)
     total_size = np.prod(conv_size)
     y = np.arange(total_size, dtype=dt).reshape(conv_size)
-    conv_map = C.constant(value=y, device=dev)
+    conv_map = C.parameter(init=y, device=dev)
 
     input_size = (num_input_channels, ) + tuple(input_tensor_size)
-    x_test = C.input_variable(input_size, dtype=dt)
+    x_test = C.input_variable(input_size, needs_gradient=True, dtype=dt)
     data = np.random.random((batch_size,) + input_size).astype(dt)
 
     conv_op = C.convolution(conv_map, x_test, auto_padding=[False] + [True]*len(filter_size), groups = groups)
 
-    output_test = conv_op.eval({x_test:data}, device=dev)
+    df_test, fv_test = conv_op.forward({x_test:data}, [conv_op.output], set([conv_op.output]), device=dev)
+    output_test = list(fv_test.values())[0]
+    grad_data = np.random.random(size=output_test.shape)
+    grad_test = conv_op.backward(df_test, {conv_op.output: grad_data}, set([x_test]))
+    output_grad_test = list(grad_test.values())[0]
 
     # Generate reference result. The code below simulates (actually is just another implementation in Python)
     # group convolution using multiple standard convolutions (i.e. groups = 1), to create the reference
@@ -985,19 +995,23 @@ def test_group_conv(groups, num_output_channels, num_input_channels, input_tenso
     num_out_channels_per_group = int(num_output_channels / groups)
     num_in_channels_per_group = int(num_input_channels / groups)
     sub_kernels_init = [y[i * num_out_channels_per_group:(i+1) * num_out_channels_per_group, ...] for i in range(0, groups)]
-    sub_kernels = [C.ops.constant(value=np.ascontiguousarray(sub_kernels_init[i]), device=dev)
-                          for i in range(0, groups)]
+    sub_kernels = [C.ops.parameter(init=np.ascontiguousarray(sub_kernels_init[i]), device=dev)
+                          for i in range(0, groups)]                          
 
-    x_ref = C.input_variable(input_size, dtype=dt)                                             
+    x_ref = C.input_variable(input_size, needs_gradient=True, dtype=dt)                                             
     sub_data = [C.ops.slice(x_ref, axis=0, begin_index=i * num_in_channels_per_group,
                              end_index=(i + 1) * num_in_channels_per_group) for i in range(0, groups)]
     conv_ops_per_group = [C.ops.convolution(group_kernel, data_for_groups, auto_padding=[False] + [True]*len(filter_size)) 
                  for group_kernel, data_for_groups in zip(sub_kernels, sub_data)]
     group_conv = C.ops.splice(*conv_ops_per_group, axis=0)
 
-    output_ref = group_conv.eval({x_ref:data}, device = dev)
+    df_ref, fv_ref = group_conv.forward({x_ref:data}, [group_conv.output], set([group_conv.output]), device=dev)
+    output_ref = list(fv_ref.values())[0]
+    grad_ref = group_conv.backward(df_ref, {group_conv.output: grad_data}, set([x_ref]))
+    output_grad_ref = list(grad_ref.values())[0]
 
     assert np.allclose(output_test, output_ref, atol=1e-4)
+    assert np.allclose(output_grad_test, output_grad_ref, atol=1e-4)
 
 FREE_STATIC_AXES_MAX_POOLING_DATA = [
     ((1, 4, 6, 6), # warmup_input_size: Defines the input size used for first run with free static axes.

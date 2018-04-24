@@ -114,7 +114,7 @@ prev_metric = 1 # metric from previous call to the callback. At very beginning, 
 def adjust_lr_callback(index, average_error, cv_num_samples, cv_num_minibatches):
     global prev_metric
     if (prev_metric - average_error) / prev_metric < 0.05: # relative gain must reduce metric by at least 5% rel
-        learner.reset_learning_rate(C.learning_parameter_per_sample(learner.learning_rate() / 2))
+        learner.reset_learning_rate(C.learning_parameter_schedule_per_sample(learner.learning_rate() / 2))
         if learner.learning_rate() < lr_per_sample / (2**7-0.1): # we are done after the 6-th LR cut
             print("Learning rate {} too small. Training complete.".format(learner.learning_rate()))
             return False # means we are done

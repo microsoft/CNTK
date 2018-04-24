@@ -3009,6 +3009,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
             auto dilations = (NDShape)src->Attributes()[L"dilation"].Value<NDShape>();
             auto transpose = (bool)src->Attributes()[L"transpose"].Value<bool>();
+            auto groups = (size_t)src->Attributes()[L"groups"].Value<size_t>();
 
             //
             // Remove the channel part for ONNX. This is because ONNX, unlike CNTK, does
@@ -3021,7 +3022,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             node->AddAttribute("kernel_shape", ToINTS(kernelShape));
             node->AddAttribute("strides", ToINTS(strides));
             node->AddAttribute("dilations", ToINTS(dilations));
-            node->AddAttribute("group", (int64_t)1);
+            node->AddAttribute("group", (int64_t)groups);
 
             if (transpose)
             {

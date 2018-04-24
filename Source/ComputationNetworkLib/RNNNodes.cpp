@@ -198,7 +198,7 @@ void OptimizedRNNStackNode<ElemType>::BackpropTo(const size_t inputIndex, const 
         }
         else
         {
-            InputRef(1).Gradient().DoScatterColumnsOf(1.0, *(this->m_packingIndex), *m_transposedDInput, 1.0);
+            InputRef(1).Gradient().DoScatterColumnsOf(1.0, *(this->m_packingIndex), *m_transposedDInput, 1.0, /*idxHaveDups*/ false);
         }
     }
 }
@@ -332,7 +332,7 @@ void OptimizedRNNStackNode<ElemType>::UnpackSequencesFromCuDNN(const Matrix<Elem
 {
     // this->scatter(beta,ndx,a,alpha) operation is defined as
     // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
-    dst.DoScatterColumnsOf(0.0, *(this->m_packingIndex), src, 1.0);
+    dst.DoScatterColumnsOf(0.0, *(this->m_packingIndex), src, 1.0, /*idxHaveDups*/ false);
 }
 
 

@@ -146,6 +146,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Learner)
 %template(UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr) std::unordered_map<CNTK::StreamInformation, std::pair<std::shared_ptr<CNTK::NDArrayView>, std::shared_ptr<CNTK::NDArrayView>>>;
 %template(ProgressWriterVector) std::vector<std::shared_ptr<CNTK::ProgressWriter>>;
 %template(LearnerVector) std::vector<std::shared_ptr<CNTK::Learner>>;
+%template(VariablePair) std::pair<CNTK::Variable, CNTK::Variable>;
+%template(VariablePairVector) std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
 %template(UnorderedMapStringDictionaryValue) std::unordered_map<std::wstring, CNTK::DictionaryValue>;
 %template(PairSizeTDouble) std::pair<size_t, double>;
 %template(VectorPairSizeTDouble) std::vector<std::pair<size_t, double>>;
@@ -196,7 +198,6 @@ IGNORE_FUNCTION CNTK::Function::Backward;
 IGNORE_FUNCTION CNTK::Function::Forward;
 IGNORE_FUNCTION CNTK::Function::Serialize;
 IGNORE_FUNCTION CNTK::Function::Deserialize;
-IGNORE_FUNCTION CNTK::Function::BlockArgumentsMapping;
 IGNORE_FUNCTION CNTK::Function::Function;
 IGNORE_FUNCTION CNTK::Function::RestoreFromCheckpoint;
 IGNORE_FUNCTION CNTK::Function::Gradients;
@@ -332,7 +333,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, AllDevices);
 MAKE_GETTER(CNTK::Axis, Name);
 
 // class Function
-IGNORE_FUNCTION CNTK::Function::BlockArgumentsMapping;
 IGNORE_FUNCTION CNTK::GetCorrespondingOutputVariableFromClone;
 IGNORE_FUNCTION CNTK::Function::RegisterUDFDeserializeCallback;
 IGNORE_FUNCTION CNTK::Function::GetUDFDeserializeCallback;
@@ -431,6 +431,7 @@ IGNORE_FUNCTION CNTK::Function::Placeholders;
 IGNORE_FUNCTION CNTK::Function::PrintGraph;
 IGNORE_FUNCTION CNTK::Function::Constants;
 IGNORE_FUNCTION CNTK::Function::Attributes;
+IGNORE_FUNCTION CNTK::Function::BlockArgumentsMapping;
 IGNORE_CLASS CNTK::Parameter;
 IGNORE_CLASS CNTK::Constant;
 IGNORE_ENUM_CLASS CNTK::PoolingType;

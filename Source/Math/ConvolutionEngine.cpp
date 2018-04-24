@@ -906,6 +906,12 @@ protected:
 
         static void GetSizesAndStrides(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount = 0)
         {
+            GetSizesAndStridesWithGroups(shape, lastDim, sizes, strides, 1, mapCount);
+        }
+
+        static void GetSizesAndStridesWithGroups(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t groups=1, size_t mapCount = 0)
+        {
+            UNUSED(groups);
             sizes = shape.GetDims();
             if (mapCount)
             {
@@ -921,13 +927,15 @@ protected:
             {
                 while (sizes.size() < m_dimension - 1) sizes.push_back(1);
             }
-            sizes.push_back(lastDim);
+            assert(lastDim % groups == 0);
+            sizes.push_back(lastDim / groups);
             strides.clear();
             strides.push_back(1);
             for (int i = 1; i <= sizes.size(); i++)
             {
                 strides.push_back(sizes[i - 1] * strides[i - 1]);
             }
+            if (groups > 1) sizes.push_back(groups);
         }
 
         static void GetInputOffsets(const ConvolveGeometry* geometry, SmallVector<int>& inputOffset)
@@ -988,11 +996,12 @@ protected:
             SmallVector<int>    inputOffset;
 
             GetSizesAndStrides(geometry->OutputShape(), batchSize, outputSize, outputStrides, mapCount);
-            GetSizesAndStrides(geometry->KernelShape(), mapCount, filterSize, filterStrides);
+            GetSizesAndStridesWithGroups(geometry->KernelShape(), mapCount, filterSize, filterStrides, geometry->Groups());
             GetSizesAndStrides(geometry->InputShape(), batchSize, inputSize, inputStrides);
             GetInputOffsets(geometry, inputOffset);
 
             const auto& convolutionStride = geometry->Stride().GetDims();
+            const int filter_dimension = m_dimension + (geometry->Groups() > 1 ? 1 : 0); // Or we could do filterSize.size() also.
 
             auto& ctx = m_context[contextIndex];
             ctx.Clear();
@@ -1005,20 +1014,26 @@ protected:
             {
             case ContextIndex_Forward:
                 CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, inputSize.begin(), inputStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], filter_dimension, filterSize.begin(), filterStrides.begin()));
                 CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, outputSize.begin(), outputStrides.begin()));
                 CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
-                CHECK_MKL(dnnConvolutionCreateForward<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                if(geometry->Groups() > 1)
+                    CHECK_MKL(dnnGroupsConvolutionCreateForward<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, geometry->Groups(), m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                else
+                    CHECK_MKL(dnnConvolutionCreateForward<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
                 inputTypes[0] = dnnResourceSrc;
                 inputTypes[1] = dnnResourceFilter;
                 outputType = dnnResourceDst;
                 break;
             case ContextIndex_BackwardData:
                 CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, outputSize.begin(), outputStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], filter_dimension, filterSize.begin(), filterStrides.begin()));
                 CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, inputSize.begin(), inputStrides.begin()));
                 CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
-                CHECK_MKL(dnnConvolutionCreateBackwardData<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                if (geometry->Groups() > 1)
+                    CHECK_MKL(dnnGroupsConvolutionCreateBackwardData<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, geometry->Groups(), m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                else
+                    CHECK_MKL(dnnConvolutionCreateBackwardData<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
                 inputTypes[0] = dnnResourceDiffDst;
                 inputTypes[1] = dnnResourceFilter;
                 outputType = dnnResourceDiffSrc;
@@ -1026,9 +1041,12 @@ protected:
             case ContextIndex_BackwardFilter:
                 CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[0], m_dimension, outputSize.begin(), outputStrides.begin()));
                 CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserInputs[1], m_dimension, inputSize.begin(), inputStrides.begin()));
-                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, m_dimension, filterSize.begin(), filterStrides.begin()));
+                CHECK_MKL(dnnLayoutCreate<ElemType>(&ltUserOutput, filter_dimension, filterSize.begin(), filterStrides.begin()));
                 CHECK_MKL(dnnPrimitiveAttributesCreate<ElemType>(&ctx.attributes));
-                CHECK_MKL(dnnConvolutionCreateBackwardFilter<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                if (geometry->Groups() > 1)
+                    CHECK_MKL(dnnGroupsConvolutionCreateBackwardFilter<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, geometry->Groups(), m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
+                else
+                    CHECK_MKL(dnnConvolutionCreateBackwardFilter<ElemType>(&ctx.primitive, ctx.attributes, dnnAlgorithmConvolutionDirect, m_dimension, inputSize.begin(), outputSize.begin(), filterSize.begin(), convolutionStride.begin(), inputOffset.begin(), dnnBorderZeros));
                 inputTypes[0] = dnnResourceDiffDst;
                 inputTypes[1] = dnnResourceSrc;
                 outputType = dnnResourceDiffFilter;
@@ -1119,6 +1137,15 @@ public:
         return deviceId < 0 &&
                find(begin(geometry->Sharing()), end(geometry->Sharing()), false) == end(geometry->Sharing());
     }
+
+    static bool IsMklEnabled()
+    {
+#ifdef USE_MKL2017DNN
+        return true;
+#else
+        return false;
+#endif
+    }
 };
 
 template <class ElemType>
@@ -1159,21 +1186,46 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
                                                                forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
     }
 
-    if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
+    if (geometry->Groups() == 1)
     {
+        if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
+        {
+            if (GetMathLibTraceLevel() > 0)
+                fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
+
+            return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+        }
+
+        if (!isEnabled(ConvolutionEngineKind::Reference))
+            RuntimeError("Reference convolution is disabled and no other engine supports such configuration (or disabled).");
+
         if (GetMathLibTraceLevel() > 0)
-            fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
+            fprintf(stderr, "%lsusing reference convolution engine for geometry, could be VERY SLOW: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+        return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
     }
+    else if (geometry->Groups() > 1)
+    {
+        if (!(geometry->InputShape().GetRank() < 4))
+        {
+            RuntimeError("Group convolution, i.e. groups > 1, for 3-dimensional convolution or higher is not supported on the CPU. Please use GPU, if possible.");
+        }
+        // For group convolution, MKL 2017 is required. If it is not enabled, we throw an error.
+        if (GemmConvolutionEngine<ElemType>::IsMklEnabled())
+        {
+            if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
+            {
+                if (GetMathLibTraceLevel() > 0)
+                    fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-    if (!isEnabled(ConvolutionEngineKind::Reference))
-        RuntimeError("Reference convolution is disabled and no other engine supports such configuration (or disabled).");
-
-    if (GetMathLibTraceLevel() > 0)
-        fprintf(stderr, "%lsusing reference convolution engine for geometry, could be VERY SLOW: %s.\n", logPrefix.c_str(), engStr.c_str());
-
-    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+                return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+            }
+            RuntimeError("Gemm convolution is not supported/enabled. Cannot execute group convolution (groups > 1) on CPU.");
+        }
+        RuntimeError("MKL 2017 not enabled. For group convolution (groups > 1) on CPU, MKL 2017 is required. Please install/enable MKL 2017.");
+    }
+    else
+        LogicError("Invalid value for 'groups' parameter for convolution: groups must be greater than or equal to 1.");
 }
 
 // only GPU supports fp16 convolution

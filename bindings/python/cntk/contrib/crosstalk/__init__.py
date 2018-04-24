@@ -165,7 +165,7 @@ class Crosstalk(object):
             attr : attributes for the variable that would be used when getting/setting values. Could be one of Conv2DAttr/EmbedAttr/RnnAttr
         '''
         if name in self.vars.keys():
-            raise Exception('var with name {} already exists')
+            raise Exception('var with name {} already exists'.format(name))
         self.vars[name] = _VarInfo(var, var_type if var_type else type(var), attr)
 
     def register_funcs(self, var_type, setter=None, getter=None):

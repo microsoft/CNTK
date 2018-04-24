@@ -3814,6 +3814,9 @@ Test module "ReaderTests" has passed with:
     Test case "ReaderLibTests/CheckGetCurrentCursorForRandomizers" has passed with:
       16 assertions out of 16 passed
 
+    Test case "ReaderLibTests/LTNoRandomizerMultiWorker" has passed with:
+      8 assertions out of 8 passed
+
     Test case "ReaderLibTests/LTNoRandomizerCheckNoDuplicateSequence" has passed with:
       42 assertions out of 42 passed
 
