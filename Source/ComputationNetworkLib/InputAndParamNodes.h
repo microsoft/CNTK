@@ -820,8 +820,8 @@ public:
         {
             result.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
         }
-        result.SetValue(ElemType(0.0));
-        result.SetDiagonalValue(ElemType(1.0));
+        result.SetValue(static_cast<ElemType>(0.0));
+        result.SetDiagonalValue(static_cast<ElemType>(1.0));
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

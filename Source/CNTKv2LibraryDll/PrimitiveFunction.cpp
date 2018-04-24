@@ -361,11 +361,19 @@ namespace CNTK
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
                         case PrimitiveOpType::EyeLikeOp:
+                        {
                             assert(m_inputs.size() == 1);
-                            if (m_inputs[0].DynamicAxes().size() + m_inputs[0].Shape().Rank() > 2)
-                                InvalidArgument("EyeLike: Operand '%S' must have least than 2 axes including dynamic and static axes.", m_inputs[0].AsString().c_str());
+                            const auto& dynAxes = m_inputs[0].DynamicAxes();
+                            if (dynAxes.size() + m_inputs[0].Shape().Rank() != 2)
+                                InvalidArgument("EyeLike: Operand '%S' must have exactly 2 axes including dynamic and static axes.",
+                                    m_inputs[0].AsString().c_str());
+                            if (any_of(dynAxes.begin(), dynAxes.end(), [](const Axis& axis) {return axis.IsSequenceAxis(); }))
+                                InvalidArgument("EyeLike: Operand '%S' must have no sequence axis.",
+                                    m_inputs[0].AsString().c_str());
+
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
+                        }
                         case PrimitiveOpType::Where:
                             assert(m_inputs.size() == 1);
                             outputShape = NDShape{}; // scalar

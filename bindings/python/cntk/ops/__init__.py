@@ -2206,8 +2206,11 @@ def eye_like(x, sparse_output = True, name=''):
     from cntk.cntk_py import eye_like
     x = sanitize_input(x)
     # print('len: ', len(x.dynamic_axes) + len(x.shape))
-    if len(x.dynamic_axes) + len(x.shape) > 2:
+    if len(x.dynamic_axes) + len(x.shape) != 2:
         raise(ValueError('eye_like operand must have exactly two axes (counting both dynamic and static axes) however "%s" is provided as the operand'%x))
+    if any([ax.is_sequence_axis for ax in x.dynamic_axes]):
+        raise (ValueError(
+            'eye_like operand must have no sequence axis however "%s" is provided as the operand' % x))
     return eye_like(x, sparse_output, name)
 
 
