@@ -30,8 +30,6 @@ set p_CNTK_PY35_PATH=%~9
 shift
 set p_CNTK_PY36_PATH=%~9
 
-set p_PYTHON_BINDINGS_DIR=%~dp0
-
 REM Construct p_CNTK_PY_VERSIONS if not explicitly defined
 REM (Note: to disable Python build completely, no CNTK_PYx_PATH variable must be defined)
 if not defined p_CNTK_PY_VERSIONS (
@@ -65,14 +63,16 @@ if not defined VS2017INSTALLDIR (
   exit /b 1
 )
 
+REM vcvarsall.bat scripts changes current working directory,
+REM   so we need to save it and restore it afterwards
+pushd .
 if not exist "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" (
   echo Error: "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" not found.
   echo Make sure you have installed Visual Studion 2017 correctly.
   exit /b 1
 )
-
 call "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" amd64 -vcvars_ver=14.11
-cd %p_PYTHON_BINDINGS_DIR%
+popd
 
 set CNTK_LIB_PATH=%p_OutDir%
 
