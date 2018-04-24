@@ -559,17 +559,17 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
         RNNTPosterior.AssignRNNTScore(outputDistribution, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame, uttBeginPhonePos,
             uttFrameNum, uttPhoneNum, numParallelSequences, mbsize,phone_mbsize, blankTokenId,-1,true);
-        ElemType finalscore = 0;
-        finalscore += -1 * beta.Get00Element();
-        fprintf(stderr, "finalscore:%f\n", finalscore);
-        if (finalscore > 50 || finalscore < 0)
-        {
-            fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[0]));
-            matrixPhoneSeqs.Print("phone seq");
-            matrixPhoneBounds.Print("phone bound");
+        //ElemType finalscore = 0;
+        //finalscore += -1 * beta.Get00Element();
+        //fprintf(stderr, "finalscore:%f\n", finalscore);
+        //if (finalscore > 50 || finalscore < 0)
+        //{
+            //fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[0]));
+            //matrixPhoneSeqs.Print("phone seq");
+            //matrixPhoneBounds.Print("phone bound");
 
 
-        }
+        //}
         /*alpha.Print("alpha");
         beta.Print("beta");
         prob.Print("prob");*/
