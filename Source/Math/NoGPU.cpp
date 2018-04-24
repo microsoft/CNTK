@@ -1486,13 +1486,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, const size_t numParallelSeq)
 {
     return *this;
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, const size_t U, const size_t T)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, const size_t U, const size_t T, const size_t numParallelSeq, const size_t Idx)
 {
     return *this;
 }

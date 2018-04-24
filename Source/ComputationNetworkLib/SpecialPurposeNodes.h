@@ -1190,7 +1190,7 @@ public:
             FrameRange frameRange(InputRef(0).GetMBLayout());
             BackpropToF(InputRef(inputIndex).Gradient(), Gradient(), *m_RNNTDerivative);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
-            //InputRef(inputIndex).Gradient().Print("derivative for f");
+         //   InputRef(inputIndex).Gradient().Print("derivative for f");
         }
         else if (inputIndex == 2)  //backprop to transcription g
         {
@@ -1228,7 +1228,7 @@ public:
         inputGradientValues.Print("RNNTNode Partial-Right-in");
 #endif  
         //sum u for RNNT Derivative
-        m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols());
+        m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 0);
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         Matrix<ElemType>::Scale(gradientValues.Get00Element(), *m_tmpMatrix, inputGradientValues);
@@ -1247,7 +1247,7 @@ public:
         inputGradientValues.Print("RNNTNode Partial-Right-in");
 #endif  
         //sum u for RNNT Derivative
-        m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(1).Value().GetNumCols(), InputRef(2).Value().GetNumCols());
+        m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 1);
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         Matrix<ElemType>::Scale(gradientValues.Get00Element(), *m_tmpMatrix, inputGradientValues);
@@ -1264,8 +1264,12 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        m_outputDensity->AssignUserOp1(InputRef(1).Value(), InputRef(2).Value());
-        m_outputDensity->Print("h");
+        /*auto MBLayoutPhone = InputRef(2).GetMBLayout();*/
+        size_t numParallelSeq = InputRef(0).GetMBLayout()->GetNumParallelSequences();
+        //size_t numSeq = MBLayoutPhone->GetNumSequences();
+        //size_t maxPhoneNum = 
+        m_outputDensity->AssignUserOp1(InputRef(1).Value(), InputRef(2).Value(), numParallelSeq);
+        //m_outputDensity->Print("h");
         m_outputLogDistribution->AssignLogSoftmaxOf(*m_outputDensity, true);
 
         m_outputDistribution->SetValue(*m_outputLogDistribution);

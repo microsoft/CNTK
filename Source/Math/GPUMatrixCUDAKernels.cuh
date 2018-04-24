@@ -42,6 +42,7 @@
 #endif
 
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
+#define IDX3C(i, j, k, ld, numseq) ((((j) * (numseq)+ (k)) * (ld)) + (i))  //index for parallel seq
 
 // On older GPUs, CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
@@ -5795,35 +5796,60 @@ __global__ void _assignUserOp1(ElemType* us,
                               ElemType *in1,
                               ElemType *in2,
                               int BS,
-                              int nCol1,
-                              int nCol2)
+                              int maxFrameNum,
+                              int maxPhoneNum,
+                              int numParallelSeq)
 {
     const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
-    if(k < BS && t < nCol1 )
-        for(int u=0; u< nCol2; u++)
-        {
-            //printf("K:%d,t:%d,u:%d\n", k,t,u);    
-            us[IDX2C(k, t*nCol2+u,BS)] = in1[IDX2C(k,t,BS)] + in2[IDX2C(k,u,BS)];
-        }
+    if(k < BS && t < maxFrameNum )
+    {
+        for(int seqId = 0; seqId < numParallelSeq; seqId ++)
+            for(int u=0; u< maxPhoneNum; u++)
+            {
+                //printf("K:%d,t:%d,u:%d\n", k,t,u);    
+                us[IDX3C(k, t*maxPhoneNum+u,seqId,BS,numParallelSeq)] = in1[IDX3C(k,t,seqId, BS, numParallelSeq)] + in2[IDX3C(k,u,seqId,BS,numParallelSeq)];
+            }
+    }
 }
 
 template<class ElemType>
 __global__ void _assignUserOp2(ElemType* us, 
                               ElemType *in1,  
                               int nRow,                            
-                              int U,
-                              int T)
+                              int maxPhoneNum,
+                              int maxFrameNum,
+                              int numParallelSeq,
+                              int Idx)
 {
     const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
     
-    if(k < nRow && t < T)
+    if(Idx == 0)
     {
-        us[IDX2C(k,t,nRow)] = 0.0;
-        for (int u=0; u< U; u++)
-            us[IDX2C(k,t,nRow)] += in1[IDX2C(k, t*U+u,nRow)];
-    }        
+        if(k < nRow && t < maxFrameNum)
+        {
+            for(int seqId = 0; seqId < numParallelSeq; seqId ++)
+            {
+                us[IDX2C(k,t*numParallelSeq+seqId,nRow)] = 0.0;
+                for (int u=0; u< maxPhoneNum; u++)
+                    us[IDX2C(k,t*numParallelSeq+seqId,nRow)] += in1[IDX3C(k, t*maxPhoneNum+u,seqId,nRow,numParallelSeq)];
+            }
+        }
+    }
+    else
+    {
+        if(k < nRow && t < maxPhoneNum)
+        {
+            for(int seqId = 0; seqId < numParallelSeq; seqId ++)
+            {
+                us[IDX2C(k,t*numParallelSeq+seqId,nRow)] = 0.0;
+                for (int u=0; u< maxFrameNum; u++)
+                    us[IDX2C(k,t*numParallelSeq+seqId,nRow)] += in1[IDX3C(k, u*maxPhoneNum+t,seqId,nRow,numParallelSeq)];
+            }
+        }
+    }
+            
 }
 
 template<class ElemType>

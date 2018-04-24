@@ -398,8 +398,8 @@ public:
         const vector<size_t> & extraUttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep,
         const size_t mbSize, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
     //RNNT
-    Matrix<ElemType>& AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2);
-    Matrix<ElemType>& AssignUserOp2(Matrix<ElemType>& in1, const size_t U, const size_t T);
+    Matrix<ElemType>& AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, const size_t numParallelSeq);
+    Matrix<ElemType>& AssignUserOp2(Matrix<ElemType>& in1, const size_t U, const size_t T, const size_t numParallelSeq, const size_t Idx);
     Matrix<ElemType>& AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq,
         const Matrix<ElemType>& phoneBoundary, Matrix<ElemType>& totalScore, const vector<size_t>& uttToChanInd, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttBeginPhonePos,
         const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNumInMB,

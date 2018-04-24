@@ -6157,20 +6157,20 @@ Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob
 //this one is for RNN T output = input1(k,t) + input2(k,u).
 //inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
 template<class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2)
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, const size_t numParallelSeq)
 {
     
     //in1._transferToDevice(CPUDEVICE);
     //in2._transferToDevice(CPUDEVICE);
     //_transferToDevice(CPUDEVICE);
-    DecideAndMoveToRightDevice(in1, *this);
+    //DecideAndMoveToRightDevice(in1, *this);
     //SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
-    in1.Print("f");
-    in2.Print("g");
+    //in1.Print("f");
+    //in2.Print("g");
     DISPATCH_MATRIX_ON_FLAG(&in1,
         this,
-        this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix),
-        this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix),
+        this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, numParallelSeq),
+        this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, numParallelSeq),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED
     );
@@ -6182,7 +6182,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<
 //this one is for RNN T output = sum of u of (input1(k,t,u)).
 
 template<class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const size_t U, const size_t T)
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const size_t U, const size_t T, const size_t numParallelSeq, const size_t Idx)
 {
 
     //in1._transferToDevice(CPUDEVICE);
@@ -6192,8 +6192,8 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const s
 
     DISPATCH_MATRIX_ON_FLAG(&in1,
         this,
-        this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, U, T),
-        this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, U, T),
+        this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, U, T, numParallelSeq, Idx),
+        this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, U, T, numParallelSeq, Idx),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED
     );

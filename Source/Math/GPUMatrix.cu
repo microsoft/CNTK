@@ -4769,7 +4769,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 //this one is for RNN T output = input1(k,t) + input2(k,u).
 //inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
 template<class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1,  GPUMatrix<ElemType>& in2)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1,  GPUMatrix<ElemType>& in2, const size_t numParallelSeq)
 {
     if (in1.IsEmpty() || in2.IsEmpty())
         LogicError("AssignElementProductOf: Matrix is empty.");
@@ -4780,7 +4780,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
 
     int nCol1 = in1.GetNumCols();
     int nCol2 = in2.GetNumCols();
-    RequireSize(in1.GetNumRows(),nCol1*nCol2);
+
+    int maxPhoneNum = nCol2/numParallelSeq;
+    int maxFrameNum = nCol1/numParallelSeq;
+    RequireSize(in1.GetNumRows(),maxPhoneNum * maxFrameNum * numParallelSeq);
     int BS = in1.GetNumRows();
 
     // the output matrix is of size (nt+1, BS)
@@ -4794,7 +4797,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
     dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (nCol1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
     in1.PrepareDevice();
     SyncGuard syncGuard;
-    _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, nCol1, nCol2);
+    _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, maxFrameNum, maxPhoneNum, numParallelSeq );
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
 
     return *this;
@@ -4804,13 +4807,22 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
 //this one is for RNN T output = input1(k,t) + input2(k,u).
 //inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
 template<class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, const size_t U, const size_t T)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, const size_t U, const size_t T, const size_t numParallelSeq, const size_t Idx)
 {
     int nRow = in1.GetNumRows();
-    
-    RequireSize(in1.GetNumRows(),T);
-    
-
+    int nCol = 0;
+    if(Idx == 0)
+    {
+        RequireSize(in1.GetNumRows(),T);
+        nCol = T;
+    }
+    else
+    {
+        RequireSize(in1.GetNumRows(),U);
+        nCol = U;
+    }
+    int maxPhoneNum = U/numParallelSeq;
+    int maxFrameNum = T/numParallelSeq;
     // the output matrix is of size (nt+1, BS)
     //dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
     //dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
@@ -4819,10 +4831,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
         // x dimension is for utterances
         // y dimention is for phone sequence in each utterance
         // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances 
-    dim3 block_tail((nRow + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (T + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+    dim3 block_tail((nRow + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (nCol + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
     in1.PrepareDevice();
     SyncGuard syncGuard;
-    _assignUserOp2<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), nRow, U, T);
+    _assignUserOp2<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), nRow, maxPhoneNum, maxFrameNum, numParallelSeq, Idx);
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
 
     return *this;

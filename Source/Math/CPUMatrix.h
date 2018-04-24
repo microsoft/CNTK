@@ -246,8 +246,8 @@ public:
     CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
 
     //RNNT
-    CPUMatrix<ElemType>& AssignUserOp1(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& in2);
-    CPUMatrix<ElemType>& AssignUserOp2(CPUMatrix<ElemType>& in1, const size_t U, const size_t T);
+    CPUMatrix<ElemType>& AssignUserOp1(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& in2, const size_t numParallelSeq);
+    CPUMatrix<ElemType>& AssignUserOp2(CPUMatrix<ElemType>& in1, const size_t U, const size_t T, const size_t numParallelSeq, const size_t Idx);
     CPUMatrix<ElemType>& AssignRNNTScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, 
         const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const vector<size_t>& uttToChanInd, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttBeginPhonePos,
         const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNumInMB,
