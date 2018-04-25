@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug_UWP</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
@@ -17,12 +18,10 @@
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{A5A43C5B-DE2A-4C0C-9213-0A381AF9435A};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <PackageCertificateKeyFile>ImageRecognitionAppCS_TemporaryKey.pfx</PackageCertificateKeyFile>
-    <CNTKRoot>$(SolutionDir)</CNTKRoot>
-    <AppSrcDir>$(SolutionDir)Examples\Evaluation\UWPImageRecognition\App</AppSrcDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug_UWP|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>$(CNTKRoot)$(Platform)\$(Configuration)\</OutputPath>
+    <OutputPath>$(RepoRootPath)$(Platform)\$(Configuration)\</OutputPath>
     <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_UWP</DefineConstants>
     <NoWarn>;2008</NoWarn>
     <DebugType>full</DebugType>
@@ -32,7 +31,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_UWP|x64'">
-    <OutputPath>$(CNTKRoot)$(Platform)\$(Configuration)\</OutputPath>
+    <OutputPath>$(RepoRootPath)$(Platform)\$(Configuration)\</OutputPath>
     <DefineConstants>TRACE;NETFX_CORE;WINDOWS_UWP</DefineConstants>
     <Optimize>true</Optimize>
     <NoWarn>;2008</NoWarn>
@@ -45,7 +44,9 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
-    <Content Include="Assets\imagenet1000_clsid.txt" />
+    <Content Include="Assets\imagenet1000_clsid.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.xaml.cs">
@@ -55,7 +56,9 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="$(AppSrcDir)\ImageRecognizerDriver.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(SolutionDir)Examples\Evaluation\UWPImageRecognition\App\ImageRecognizerDriver.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -63,12 +66,6 @@
     </AppxManifest>
     <Content Include="ImageRecognitionAppCS_TemporaryKey.pfx" />
   </ItemGroup>
-  <PropertyGroup>
-    <CntkVersion>2.5</CntkVersion>
-    <CntkVersion Condition=" '$(BUILD_CNTK_VERSION)' != '' ">$(BUILD_CNTK_VERSION)</CntkVersion>
-    <CntkComponentVersion>$(CntkVersion)</CntkComponentVersion>
-    <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">$(CntkComponentVersion)d</CntkComponentVersion>
-  </PropertyGroup>
   <ItemGroup>
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
@@ -78,14 +75,19 @@
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
-    <Content Include="$(CNTKRoot)\$(Platform)\$(Configuration)\Cntk.Core_app-$(CntkComponentVersion).dll">
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(RepoRootPath)\$(Platform)\$(Configuration)\Cntk.Core_app-$(CntkComponentVersion).dll">
       <DeploymentContent>true</DeploymentContent>
+      <Visible>false</Visible>
     </Content>
-    <Content Include="$(CNTKRoot)\$(Platform)\$(Configuration)\Cntk.Math_app-$(CntkComponentVersion).dll">
+    <Content Include="$(RepoRootPath)\$(Platform)\$(Configuration)\Cntk.Math_app-$(CntkComponentVersion).dll">
       <DeploymentContent>true</DeploymentContent>
+      <Visible>false</Visible>
     </Content>
-    <Content Include="$(CNTKRoot)\$(Platform)\$(Configuration)\libopenblas.dll">
+    <Content Include="$(RepoRootPath)\$(Platform)\$(Configuration)\libopenblas.dll">
       <DeploymentContent>true</DeploymentContent>
+      <Visible>false</Visible>
     </Content>
   </ItemGroup>
   <ItemGroup>
@@ -99,14 +101,14 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="ImageRecognizerLib, Version=255.255.255.255, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(CNTKRoot)$(Platform)\$(Configuration)\ImageRecognizerLib.winmd</HintPath>
-    </Reference>
+    <ProjectReference Include="..\ImageRecognizerLib\ImageRecognizerLib.vcxproj">
+      <Project>{c5e944ba-a7c4-482f-be01-077a7dfc159c}</Project>
+      <Name>ImageRecognizerLib</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
-      <Version>5.2.2</Version>
+      <Version>6.0.8</Version>
     </PackageReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
