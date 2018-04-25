@@ -1,0 +1,6 @@
+root = true
+[*.cs]
+indent_style = space
+indent_size = 4
+dotnet_style_require_accessibility_modifiers = always:warning
+dotnet_sort_system_directives_first = true
