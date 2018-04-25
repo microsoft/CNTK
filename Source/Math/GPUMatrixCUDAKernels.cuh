@@ -1425,12 +1425,13 @@ template <class ElemType>
 __global__ void _setDiagonalValueFromVector(
     ElemType* a,
     const ElemType* b,
-    const CUDA_LONG N)
+    const CUDA_LONG N,
+    const CUDA_LONG ld)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[IDX2C(id, id, N)] = b[id];
+    a[IDX2C(id, id, ld)] = b[id];
 }
 
 template <class ElemType>
@@ -5851,6 +5852,48 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
 
         if (index == 0)
             secondaryIndices[0] = 0;
+    }
+}
+
+template<class ElemType>
+__global__ void _setSparseDiagonalValue(ElemType v,
+    GPUSPARSE_INDEX_TYPE *secondaryIndices,
+    GPUSPARSE_INDEX_TYPE *majorIndices,
+    ElemType *targetBuffer,
+    size_t diagSize,
+    size_t num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < diagSize)
+    {
+        majorIndices[index] = index;
+        targetBuffer[index] = v;
+        secondaryIndices[index] = index;
+    }
+    else if (index < num_elements)
+    {
+        secondaryIndices[index] = diagSize;
+    }
+}
+
+template<class ElemType>
+__global__ void _setSparseDiagonalValue(ElemType *vector,
+    GPUSPARSE_INDEX_TYPE *secondaryIndices,
+    GPUSPARSE_INDEX_TYPE *majorIndices,
+    ElemType *targetBuffer,
+    size_t diagSize,
+    size_t num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < diagSize)
+    {
+        majorIndices[index] = index;
+        targetBuffer[index] = vector[index];
+        secondaryIndices[index] = index;
+    }
+    else if (index < num_elements)
+    {
+        secondaryIndices[index] = diagSize;
     }
 }
 

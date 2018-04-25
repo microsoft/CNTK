@@ -1291,7 +1291,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
-    CUDA_LONG N = (CUDA_LONG) GetNumRows();
+    CUDA_LONG N = (CUDA_LONG) GetDiagSize();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
     SyncGuard syncGuard;
@@ -1304,24 +1304,21 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
     if (IsEmpty() || vector.IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: input vector must be a vector.");
 
     if (vector.GetNumElements() == 1) // reduce to simple form
         SetDiagonalValue(vector.Data()[0]);
 
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
-        CUDA_LONG N = (CUDA_LONG) GetNumRows();
+        CUDA_LONG N = (CUDA_LONG) GetDiagSize();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
         SyncGuard syncGuard;
-        _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N);
+        _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N, (CUDA_LONG) GetNumRows());
     }
 }
 
@@ -4400,6 +4397,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
     _assignOneHot<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (a.Data(), Data(), num_class, item_size, N);
     return *this;
 }
+
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::GatherFromTarget(const GPUMatrix<ElemType>& indices, const GPUMatrix<ElemType>& target, size_t row_elements)
