@@ -312,14 +312,14 @@ public:
     virtual bool /*ComputationNodeBase::*/ InputUsedInComputingInputNodesGradients(size_t childIndex) const override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* computationNodeBase) const override
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
     {
         switch (m_reductionOp)
         {
         case ElementWiseOperator::opArgmin:
         case ElementWiseOperator::opArgmax:
             //no optimization will happen; the child should not use the parent's gradients as no gradients will be passed
-            return Base::ImplementsGradientOptimization(computationNodeBase);
+            return ParentGradientOptimization::None;
         default:
             return ParentGradientOptimization::Overwrite;
         }
