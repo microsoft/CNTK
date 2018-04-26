@@ -280,6 +280,57 @@ def test_op_reduce_argmax(input_data, axis, device_id, precision):
     _test_unary_op(precision, device_id, argmax, input_data,
                    expected_forward, None, {'axis': axis})
 
+REDUCE_NO_BACKPROP_TEST_OPERANDS = [
+    #(input_data,  axis)
+    ([[1]], 0),
+    ([[1,2],[4,5]], 0),
+    ([[1,2],[4,5]], 1),
+    ([[1,2],[4,5]], -1),
+    ([[[1,2],[3,4]],[[5,6],[7,8]]], -2),
+    ([[[1,2],[3,4]],[[5,6],[7,8]]], 2),
+]
+
+
+@pytest.mark.parametrize("input_data, axis", REDUCE_NO_BACKPROP_TEST_OPERANDS)
+def test_op_reduce_no_back_prop_ops(input_data, axis,  precision):
+    from .. import argmax, argmin
+    no_backprop_reduce_ops = [argmax, argmin]
+    dt = PRECISION_TO_TYPE[precision]
+    data = AA(input_data, dtype=dt)
+
+    x = C.input_variable(shape=data.shape,
+              dtype=sanitize_dtype_cntk(dt),
+              needs_gradient=True,
+              name='a')
+    w = C.parameter(x.shape, init=np.ones(x.shape).astype(dt) * 3.0)
+    # create batch
+    data.shape = (1,) + data.shape
+    expected_x_backward = np.zeros_like(data)
+    expected_w_backward = np.zeros_like(w)
+
+    for op in no_backprop_reduce_ops:
+        #test direct input: no gradients pass through to inputs
+        op_func = op(x, axis)
+        grad = op_func.grad({x: data}, [x])
+        np.testing.assert_almost_equal(grad, expected_x_backward)
+
+        #test inputs through sub-expressions: no gradients pass through to inputs (e.g. x, w) of the subexpressoin (e.g. x * w here)
+        op_func = op(x * w)
+        grad = op_func.grad({x: data}, [w, x])
+        np.testing.assert_almost_equal(grad[x], expected_x_backward)
+        np.testing.assert_almost_equal(grad[w], expected_w_backward)
+
+        #testing inputs through shared sub-expressions: no gradients pass through reduce arg ops to inputs (e.g. x, w) of the subexpressoin
+        # (e.g. x * w here), therefore the gradients will depend on how the shared expressions participate in other experssions:
+        shared_exp = x * w
+        op_func = op(shared_exp) + x + w + shared_exp
+        ref_op_func = x + w + shared_exp
+        grad = op_func.grad({x: data}, [w, x])
+        ref_grad = ref_op_func.grad({x: data}, [w, x])
+        np.testing.assert_almost_equal(grad[x], ref_grad[x])
+        np.testing.assert_almost_equal(grad[w], ref_grad[w])
+
+
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_argmin(input_data, axis, device_id, precision):
     if isinstance(axis, list):

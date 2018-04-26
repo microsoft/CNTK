@@ -312,9 +312,17 @@ public:
     virtual bool /*ComputationNodeBase::*/ InputUsedInComputingInputNodesGradients(size_t childIndex) const override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* computationNodeBase) const override
     {
-        return ParentGradientOptimization::Overwrite;
+        switch (m_reductionOp)
+        {
+        case ElementWiseOperator::opArgmin:
+        case ElementWiseOperator::opArgmax:
+            //no optimization will happen; the child should not use the parent's gradients as no gradients will be passed
+            return Base::ImplementsGradientOptimization(computationNodeBase);
+        default:
+            return ParentGradientOptimization::Overwrite;
+        }
     }
 
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
@@ -335,7 +343,15 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
+        switch (m_reductionOp)
+        {
+            case ElementWiseOperator::opArgmin:
+            case ElementWiseOperator::opArgmax:
+                //no need to request for backprop matrix as no backprop will happen
+                break;
+            default:
+                RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
+        }
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override

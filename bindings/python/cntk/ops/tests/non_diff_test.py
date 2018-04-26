@@ -13,6 +13,7 @@ import numpy as np
 import cntk as C
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, precision, PRECISION_TO_TYPE
+from cntk.internal import sanitize_dtype_cntk
 
 TENSORS = [
     ([12.3, -12.3]),
@@ -149,3 +150,63 @@ def test_ones_like(operand, device_id, precision):
     from .. import ones_like
     _test_unary_op(precision, device_id, ones_like, operand,
                    expected_forward, expected_backward)
+
+Matrices = [
+    ([[2.1, 4.7], [2.1, 2.1]], True),
+    ([[2.1, 2., 2.], [4.7, 3, 5], [5.1, 2, 5]], True),
+    ([[2.1], [4.7], [5.1], [5.8]], True),
+    ([[2.1, 4.7], [2.1, 2.1]], False),
+    ([[2.1, 2., 2.], [4.7, 3, 5], [5.1, 2, 5]], False),
+    ([[2.1], [4.7], [5.1], [5.8]], False),
+]
+
+NO_BACKPROP_TEST_OPERANDS = [
+    # (input_data, )
+    ([[1]], ),
+    ([[1, 2], [4, 5]], ),
+    ([[1, 2], [4, 5]], ),
+    ([[1, 2], [4, 5]], ),
+    ([[[1, 2], [3, 4]], [[5, 6], [7, 8]]], ),
+    ([[[1, 2], [3, 4]], [[5, 6], [7, 8]]], ),
+]
+
+
+@pytest.mark.parametrize("input_data", NO_BACKPROP_TEST_OPERANDS)
+def test_constant_like_no_backprop(input_data, precision):
+    from .. import eye_like, ones_like, zeros_like
+    no_backprop_ops = [ones_like, zeros_like]
+    dt = PRECISION_TO_TYPE[precision]
+    data = AA(input_data, dtype=dt)
+
+    x = C.input_variable(shape=data.shape,
+              dtype=sanitize_dtype_cntk(dt),
+              needs_gradient=True,
+              name='a')
+    w = C.parameter(x.shape, init=np.ones(x.shape).astype(dt) * 3.0)
+    # create batch
+    data.shape = (1,) + data.shape
+    expected_x_backward = np.zeros_like(data)
+    expected_w_backward = np.zeros_like(w)
+
+    # numpy argmax doesn't support keepdims
+    for op in no_backprop_ops:
+        #test direct input: no gradients pass through to inputs
+        op_func = op(x)
+        grad = op_func.grad({x: data}, [x])
+        np.testing.assert_almost_equal(grad, expected_x_backward)
+
+        #test inputs through sub-expressions: no gradients pass through to inputs (e.g. x, w) of the subexpressoin (e.g. x * w here)
+        op_func = op(x * w)
+        grad = op_func.grad({x: data}, [w, x])
+        np.testing.assert_almost_equal(grad[x], expected_x_backward)
+        np.testing.assert_almost_equal(grad[w], expected_w_backward)
+
+        #testing inputs through shared sub-expressions: no gradients pass through reduce arg ops to inputs (e.g. x, w) of the subexpressoin
+        # (e.g. x * w here), therefore the gradients will depend on how the shared expressions participate in other experssions:
+        shared_exp = x * w
+        op_func = op(shared_exp) + x + w + shared_exp
+        ref_op_func = x + w + shared_exp
+        grad = op_func.grad({x: data}, [w, x])
+        ref_grad = ref_op_func.grad({x: data}, [w, x])
+        np.testing.assert_almost_equal(grad[x], ref_grad[x])
+        np.testing.assert_almost_equal(grad[w], ref_grad[w])
