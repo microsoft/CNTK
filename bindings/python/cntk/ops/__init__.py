@@ -306,12 +306,14 @@ def forward_backward(labels_graph, network_out, blank_token_id,
             # Then, we replicate the last label as one-hot-1 encoded
             expanded_labels[len(labels):, labels[-1].argmax()] = 1
             # expanded_labels = [[2,0,0,...,0,0], [0,0,2,...,0,0], ...,
-                                 [0,0,0,...,2,0], [0,0,0,...,1,0], ...,
-                                 [0,0,0,...,1,0]]
+            #                     [0,0,0,...,2,0], [0,0,0,...,1,0], ...,
+            #                     [0,0,0,...,1,0]]
 
             # We can define the model and the variables
             input_var = sequence.input_variable((input.shape[-1]), name='input')
             labels_var = sequence.input_variable((6), name='label')
+            
+            # The model should be defined here
             # model = ...
 
             # Now, we can use the forward-backward algorithm
