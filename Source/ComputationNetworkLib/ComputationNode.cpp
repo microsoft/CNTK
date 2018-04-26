@@ -119,8 +119,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
             SMART_NODE_INVOKE(ComputationNode, child, VerifyGradientOptimization, this);
 
             // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
-            if (m_gradientInitializedBy)
-                BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
+            BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
 
             //child->DebugLogMinibatch(/*gradient*/true);
         }
