@@ -223,9 +223,10 @@ public:
             // first see if we find a row that has enough space
             // TODO: Should we use a proper priority_queue?
             size_t s;
-            for (s = 0; s < rowAllocations.size(); s++)
-                if (rowAllocations[s] + len <= width)
-                    break; // yep, it fits
+            //for (s = 0; s < rowAllocations.size(); s++)
+            //    if (rowAllocations[s] + len <= width)
+            //        break; // yep, it fits
+            s = rowAllocations.size();  //zhaorui for debug
             // we did not find a s that fit then create a new one
             if (s == rowAllocations.size())
                 rowAllocations.push_back(0);

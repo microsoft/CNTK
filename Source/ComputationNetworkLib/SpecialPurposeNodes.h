@@ -1264,7 +1264,35 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        /*auto MBLayoutPhone = InputRef(2).GetMBLayout();*/
+        /*auto MBLayoutPhone = InputRef(2).GetMBLayout();
+        auto MBLayoutFrame = InputRef(1).GetMBLayout();
+        size_t numchannelphone = MBLayoutPhone->GetNumParallelSequences();
+        size_t numchannelframe = MBLayoutFrame->GetNumParallelSequences();
+
+        size_t numuttphone = MBLayoutPhone->GetNumSequences();
+        size_t numuttframe = MBLayoutFrame->GetNumSequences();
+
+        fprintf(stderr, "numchannelphone:%zu, numchannelframe:%zu, numuttphone:%zu, numuttframe:%zu\n", numchannelphone, numchannelframe, numuttphone, numuttframe);
+
+        for (const auto& seq : MBLayoutFrame->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {               
+                continue;
+            }
+
+            fprintf(stderr, "FRAME: channelID:%zu beginframe:%zu, numframe:%zu\n", seq.s, seq.tBegin, seq.GetNumTimeSteps());
+        }
+        for (const auto& seq : MBLayoutPhone->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+
+            fprintf(stderr, "PHONE: channelID:%zu beginframe:%zu, numframe:%zu\n", seq.s, seq.tBegin, seq.GetNumTimeSteps());
+        }
+         */
         size_t numParallelSeq = InputRef(0).GetMBLayout()->GetNumParallelSequences();
         //size_t numSeq = MBLayoutPhone->GetNumSequences();
         //size_t maxPhoneNum = 
@@ -1272,13 +1300,12 @@ public:
         //m_outputDensity->Print("h");
         m_outputLogDistribution->AssignLogSoftmaxOf(*m_outputDensity, true);
 
-        m_outputDistribution->SetValue(*m_outputLogDistribution);
-        m_outputDistribution->InplaceExp();
+        m_outputDensity->Resize(1, 1);
 
 
 
-        m_RNNTDerivative->SwitchToMatrixType(m_outputDistribution->GetMatrixType(), m_outputDistribution->GetFormat(), false);
-        m_RNNTDerivative->Resize(m_outputDistribution->GetNumRows(), m_outputDistribution->GetNumCols());
+        m_RNNTDerivative->SwitchToMatrixType(m_outputLogDistribution->GetMatrixType(), m_outputLogDistribution->GetFormat(), false);
+        m_RNNTDerivative->Resize(m_outputLogDistribution->GetNumRows(), m_outputLogDistribution->GetNumCols());
 
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
@@ -1323,7 +1350,7 @@ public:
             auto node = dynamic_pointer_cast<RNNTNode<ElemType>>(nodeP);
 
             node->m_outputDensity->SetValue(*m_outputDensity);
-            node->m_outputDistribution->SetValue(*m_outputDistribution);
+            //node->m_outputDistribution->SetValue(*m_outputDistribution);
             node->m_outputLogDistribution->SetValue(*m_outputLogDistribution);
             node->m_maxIndexes->SetValue(*m_maxIndexes);
             node->m_maxValues->SetValue(*m_maxValues);
@@ -1339,7 +1366,7 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_outputDensity, matrixPool);
         RequestMatrixFromPool(m_outputLogDistribution, matrixPool);
-        RequestMatrixFromPool(m_outputDistribution, matrixPool);
+        //RequestMatrixFromPool(m_outputDistribution, matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
         RequestMatrixFromPool(m_RNNTDerivative, matrixPool);
@@ -1351,7 +1378,7 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_outputDensity, matrixPool);
         ReleaseMatrixToPool(m_outputLogDistribution, matrixPool);
-        ReleaseMatrixToPool(m_outputDistribution, matrixPool);
+        //ReleaseMatrixToPool(m_outputDistribution, matrixPool);
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
         ReleaseMatrixToPool(m_RNNTDerivative, matrixPool);
@@ -1387,7 +1414,7 @@ public:
 protected:
     virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     shared_ptr<Matrix<ElemType>> m_outputDensity;
-    shared_ptr<Matrix<ElemType>> m_outputDistribution;
+   // shared_ptr<Matrix<ElemType>> m_outputDistribution;
     shared_ptr<Matrix<ElemType>> m_outputLogDistribution;
     shared_ptr<Matrix<ElemType>> m_maxIndexes;
     shared_ptr<Matrix<ElemType>> m_maxValues;
