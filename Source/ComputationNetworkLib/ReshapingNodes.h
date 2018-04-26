@@ -314,7 +314,15 @@ public:
 
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
     {
-        return ParentGradientOptimization::Overwrite;
+        switch (m_reductionOp)
+        {
+        case ElementWiseOperator::opArgmin:
+        case ElementWiseOperator::opArgmax:
+            //no optimization will happen; the child should not use the parent's gradients as no gradients will be passed
+            return ParentGradientOptimization::None;
+        default:
+            return ParentGradientOptimization::Overwrite;
+        }
     }
 
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
@@ -335,7 +343,15 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
+        switch (m_reductionOp)
+        {
+            case ElementWiseOperator::opArgmin:
+            case ElementWiseOperator::opArgmax:
+                //no need to request for backprop matrix as no backprop will happen
+                break;
+            default:
+                RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
+        }
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
