@@ -278,7 +278,7 @@ def forward_backward(labels_graph, network_out, blank_token_id,
         CNTK requires that both features and labels have the same time dimension.
         This forward-backward code expects the duplication of these labels to
         fulfill the requirements. The labels must be encoded as one-hot vectors,
-        where the positive index has values 1 or 2 (from now on referred to as
+        where the populated index has values 1 or 2 (from now on referred to as
         one-hot-1 and one-hot-2, respectively).
 
         If the labels are frame-aligned, one could encode the vector as one-hot-2
@@ -297,13 +297,13 @@ def forward_backward(labels_graph, network_out, blank_token_id,
             # labels = [[2,0,0,...,0,0], [0,0,2,...,0,0], ..., [0,0,0,...,2,0]]
 
             # Retrieve the input time dimension
-            time_dim = input.shape[-2]
+            sequence_dim = input.shape[-2]
 
-            expanded_labels = np.zeros((time_dim, labels.shape[-1]))
+            expanded_labels = np.zeros((sequence_dim, labels.shape[-1]))
             # We first copy the original one-hot labels
             expanded_labels[:len(labels)] = labels
 
-            # Then, we replicate the last label as one-1-hot encoded
+            # Then, we replicate the last label as one-hot-1 encoded
             expanded_labels[len(labels):, labels[-1].argmax()] = 1
             # expanded_labels = [[2,0,0,...,0,0], [0,0,2,...,0,0], ...,
                                  [0,0,0,...,2,0], [0,0,0,...,1,0], ...,
@@ -329,7 +329,7 @@ def forward_backward(labels_graph, network_out, blank_token_id,
             training that allows to have shorter delay during inference.
             This is using the original time information to enforce that CTC
             tokens only get aligned within a time margin. Setting this parameter
-            smaller will result in shorted delay between label output during
+            smaller will result in shortened delay between label output during
             decoding, yet may hurt accuracy. delay_constraint=-1 means no
             constraint.
     Returns:
