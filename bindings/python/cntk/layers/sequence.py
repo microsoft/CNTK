@@ -311,8 +311,8 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
         return _recurrence_from_n(h, c, a, b, d, e, f, g, x)
     def recurrence_from_9(h, c, a, b, d, e, f, g, i, x):
         return _recurrence_from_n(h, c, a, b, d, e, f, g, i, x)
-    def recurrence_from_10(h, c, a, b, d, e, f, g, j, x):
-        return _recurrence_from_n(h, c, a, b, d, e, f, g, j, x)
+    def recurrence_from_10(h, c, a, b, d, e, f, g, i, j, x):
+        return _recurrence_from_n(h, c, a, b, d, e, f, g, i, j, x)
 
     recurrence_from_functions = [recurrence_from_1, recurrence_from_2, recurrence_from_3, recurrence_from_4, recurrence_from_5,
                                  recurrence_from_6, recurrence_from_7, recurrence_from_8, recurrence_from_9, recurrence_from_10]
