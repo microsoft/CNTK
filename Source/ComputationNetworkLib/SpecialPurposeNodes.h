@@ -1183,21 +1183,21 @@ public:
         // Left node must be a scalar
         if (inputIndex == 0)  //left derivative
         {
-            BackpropToLeft(*m_outputLogDistribution, InputRef(inputIndex).Gradient(), Gradient());
+            BackpropToLeft(*m_derivativeForF, InputRef(inputIndex).Gradient(), Gradient());
         }
         else if (inputIndex == 1)  //backprop to transcription f
         {
-            FrameRange frameRange(InputRef(0).GetMBLayout());
-            BackpropToF(InputRef(inputIndex).Gradient(), Gradient(), *m_RNNTDerivative);
+            FrameRange frameRange(InputRef(1).GetMBLayout());
+            BackpropToF(InputRef(inputIndex).Gradient(), Gradient(), *m_derivativeForF);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
-         //   InputRef(inputIndex).Gradient().Print("derivative for f");
+            //InputRef(inputIndex).Gradient().Print("derivative for f");
         }
         else if (inputIndex == 2)  //backprop to transcription g
         {
             FrameRange frameRange(InputRef(2).GetMBLayout());
-            BackpropToG(InputRef(inputIndex).Gradient(), Gradient(), *m_RNNTDerivative);
+            BackpropToG(InputRef(inputIndex).Gradient(), Gradient(), *m_derivativeForG);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
-         //   InputRef(inputIndex).Gradient().Print("derivative for g");
+            //InputRef(inputIndex).Gradient().Print("derivative for g");
         }
         else
             RuntimeError("RNNTNode criterion expects only two inputs: labels and network output.");
@@ -1228,10 +1228,10 @@ public:
         inputGradientValues.Print("RNNTNode Partial-Right-in");
 #endif  
         //sum u for RNNT Derivative
-        m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 0);
+        //m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 0);
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
-        Matrix<ElemType>::Scale(gradientValues.Get00Element(), *m_tmpMatrix, inputGradientValues);
+        Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, inputGradientValues);
 
 #if DUMPOUTPUT
         inputGradientValues.Print("RNNTNode Partial-Right");
@@ -1247,10 +1247,10 @@ public:
         inputGradientValues.Print("RNNTNode Partial-Right-in");
 #endif  
         //sum u for RNNT Derivative
-        m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 1);
+        //m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 1);
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
-        Matrix<ElemType>::Scale(gradientValues.Get00Element(), *m_tmpMatrix, inputGradientValues);
+        Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, inputGradientValues);
 
 #if DUMPOUTPUT
         inputGradientValues.Print("RNNTNode Partial-Right");
@@ -1264,7 +1264,7 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        auto MBLayoutPhone = InputRef(2).GetMBLayout();
+        /*auto MBLayoutPhone = InputRef(2).GetMBLayout();
         auto MBLayoutFrame = InputRef(1).GetMBLayout();
         size_t numchannelphone = MBLayoutPhone->GetNumParallelSequences();
         size_t numchannelframe = MBLayoutFrame->GetNumParallelSequences();
@@ -1291,25 +1291,25 @@ public:
             }
 
             fprintf(stderr, "PHONE: channelID:%zu beginframe:%zu, numframe:%zu\n", seq.s, seq.tBegin, seq.GetNumTimeSteps());
-        }
+        }*/
          
-        size_t numParallelSeq = InputRef(0).GetMBLayout()->GetNumParallelSequences();
+//        size_t numParallelSeq = InputRef(0).GetMBLayout()->GetNumParallelSequences();
         //size_t numSeq = MBLayoutPhone->GetNumSequences();
         //size_t maxPhoneNum = 
-        m_outputDensity->AssignUserOp1(InputRef(1).Value(), InputRef(2).Value(), numParallelSeq);
+        //m_outputDensity->AssignUserOp1(InputRef(1).Value(), InputRef(2).Value(), numParallelSeq);
         //m_outputDensity->Print("h");
-        m_outputLogDistribution->AssignLogSoftmaxOf(*m_outputDensity, true);
+        //m_outputLogDistribution->AssignLogSoftmaxOf(*m_outputDensity, true);
 
-        m_outputDensity->Resize(1, 1);
+        //m_outputDensity->Resize(1, 1);
 
 
-        m_RNNTDerivative->SwitchToMatrixType(m_outputLogDistribution->GetMatrixType(), m_outputLogDistribution->GetFormat(), false);
-        m_RNNTDerivative->Resize(m_outputLogDistribution->GetNumRows(), m_outputLogDistribution->GetNumCols());
+        //m_RNNTDerivative->SwitchToMatrixType(m_outputLogDistribution->GetMatrixType(), m_outputLogDistribution->GetFormat(), false);
+        //m_RNNTDerivative->Resize(m_outputLogDistribution->GetNumRows(), m_outputLogDistribution->GetNumCols());
 
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
         // compute CTC score
-        m_GammaCal.twodimForwardBackward(Value(), *m_outputLogDistribution, *m_maxIndexes, *m_maxValues, *m_RNNTDerivative, InputRef(0).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId );
+        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_maxIndexes, *m_derivativeForF, *m_derivativeForG,  InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId );
 
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
@@ -1326,9 +1326,9 @@ public:
 
         if (isFinalValidationPass)
         {
-            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match vector dimension
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() && // match vector dimension
                 Input(0)->HasMBLayout() &&
-                Input(0)->GetMBLayout() == Input(1)->GetMBLayout()))
+                Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
             {
                 LogicError("The Matrix dimension in the RNNTNode operation does not match.");
             }
@@ -1348,13 +1348,13 @@ public:
         {
             auto node = dynamic_pointer_cast<RNNTNode<ElemType>>(nodeP);
 
-            node->m_outputDensity->SetValue(*m_outputDensity);
+            node->m_derivativeForF->SetValue(*m_derivativeForG);
             //node->m_outputDistribution->SetValue(*m_outputDistribution);
-            node->m_outputLogDistribution->SetValue(*m_outputLogDistribution);
+            node->m_derivativeForG->SetValue(*m_derivativeForF);
             node->m_maxIndexes->SetValue(*m_maxIndexes);
             node->m_maxValues->SetValue(*m_maxValues);
             node->m_delayConstraint = m_delayConstraint;
-            node->m_RNNTDerivative->SetValue(*m_RNNTDerivative);
+            //node->m_RNNTDerivative->SetValue(*m_RNNTDerivative);
             node->m_tmpMatrix->SetValue(*m_tmpMatrix);
         }
     }
@@ -1363,24 +1363,24 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_outputDensity, matrixPool);
-        RequestMatrixFromPool(m_outputLogDistribution, matrixPool);
+        RequestMatrixFromPool(m_derivativeForG, matrixPool);
+        RequestMatrixFromPool(m_derivativeForF, matrixPool);
         //RequestMatrixFromPool(m_outputDistribution, matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
-        RequestMatrixFromPool(m_RNNTDerivative, matrixPool);
+        //RequestMatrixFromPool(m_RNNTDerivative, matrixPool);
         RequestMatrixFromPool(m_tmpMatrix, matrixPool);
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_outputDensity, matrixPool);
-        ReleaseMatrixToPool(m_outputLogDistribution, matrixPool);
+        ReleaseMatrixToPool(m_derivativeForG, matrixPool);
+        ReleaseMatrixToPool(m_derivativeForF, matrixPool);
         //ReleaseMatrixToPool(m_outputDistribution, matrixPool);
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
-        ReleaseMatrixToPool(m_RNNTDerivative, matrixPool);
+        //ReleaseMatrixToPool(m_RNNTDerivative, matrixPool);
         ReleaseMatrixToPool(m_tmpMatrix, matrixPool);
     }
 
@@ -1414,10 +1414,10 @@ protected:
     virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     shared_ptr<Matrix<ElemType>> m_outputDensity;
    // shared_ptr<Matrix<ElemType>> m_outputDistribution;
-    shared_ptr<Matrix<ElemType>> m_outputLogDistribution;
+    shared_ptr<Matrix<ElemType>> m_derivativeForF;
     shared_ptr<Matrix<ElemType>> m_maxIndexes;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    shared_ptr<Matrix<ElemType>> m_RNNTDerivative;
+    shared_ptr<Matrix<ElemType>> m_derivativeForG;
     shared_ptr<Matrix<ElemType>> m_tmpMatrix;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;

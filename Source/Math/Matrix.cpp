@@ -6121,9 +6121,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob,
 //      delayConstraint=-1 means no constraint
 template<class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
-    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType> &totalScore, const std::vector<size_t> & uttToChanInd,
-    const std::vector<size_t> & uttBeginFrame, const vector<size_t> & uttBeginPhonePos, const std::vector<size_t> & uttFrameNum, const std::vector<size_t> & uttPhoneNum,
-    const size_t numParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNumInMB, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution,
+    const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
+    Matrix<ElemType>& totalScore, const size_t blankTokenId,   const int delayConstraint, const bool isColWise)
 {
     //DecideAndMoveToRightDevice(prob, *this);
     
@@ -6142,10 +6142,10 @@ Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob
 
     DISPATCH_MATRIX_ON_FLAG(&prob,
         this,
-        this->m_CPUMatrix->AssignRNNTScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, *totalScore.m_CPUMatrix,
-            uttToChanInd, uttBeginFrame, uttBeginPhonePos, uttFrameNum, uttPhoneNum, numParallelSequences, maxFrameNum, maxPhoneNumInMB, blankTokenId, delayConstraint, isColWise),
-        this->m_GPUMatrix->AssignRNNTScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, *totalScore.m_GPUMatrix,
-            uttToChanInd, uttBeginFrame, uttBeginPhonePos, uttFrameNum, uttPhoneNum, numParallelSequences, maxFrameNum, maxPhoneNumInMB, blankTokenId, delayConstraint, isColWise),
+        this->m_CPUMatrix->AssignRNNTScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, uttFrameToChanInd, uttFrameBeginIdx, 
+            uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_CPUMatrix, blankTokenId, delayConstraint, isColWise),
+        this->m_GPUMatrix->AssignRNNTScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, uttFrameToChanInd, uttFrameBeginIdx,
+            uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_GPUMatrix, blankTokenId, delayConstraint, isColWise),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED
     );
@@ -6157,20 +6157,24 @@ Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob
 //this one is for RNN T output = input1(k,t) + input2(k,u).
 //inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
 template<class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, const size_t numParallelSeq)
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
+    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
+    const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
 {
     
     //in1._transferToDevice(CPUDEVICE);
     //in2._transferToDevice(CPUDEVICE);
     //_transferToDevice(CPUDEVICE);
-    //DecideAndMoveToRightDevice(in1, *this);
+    DecideAndMoveToRightDevice(in1, *this);
     //SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
     //in1.Print("f");
     //in2.Print("g");
     DISPATCH_MATRIX_ON_FLAG(&in1,
         this,
-        this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, numParallelSeq),
-        this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, numParallelSeq),
+        this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, 
+            uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences),
+        this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, 
+            uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED
     );
@@ -6182,7 +6186,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<
 //this one is for RNN T output = sum of u of (input1(k,t,u)).
 
 template<class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const size_t U, const size_t T, const size_t numParallelSeq, const size_t Idx)
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
+    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
+    const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
 {
 
     //in1._transferToDevice(CPUDEVICE);
@@ -6192,8 +6198,10 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const s
 
     DISPATCH_MATRIX_ON_FLAG(&in1,
         this,
-        this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, U, T, numParallelSeq, Idx),
-        this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, U, T, numParallelSeq, Idx),
+        this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
+        this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED
     );

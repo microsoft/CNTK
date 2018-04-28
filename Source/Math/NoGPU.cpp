@@ -1478,21 +1478,25 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-    const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, GPUMatrix<ElemType> & totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame,
-    const vector<size_t> & uttBeginPhonePos, const std::vector<size_t> & uttFrameNum, const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences,
-    const size_t maxFrameNum, const size_t maxPhoneNumInMB, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+    const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution,
+    const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
+    GPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise)
 {
     return *this;
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, const size_t numParallelSeq)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
+    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
+    const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
 {
     return *this;
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, const size_t U, const size_t T, const size_t numParallelSeq, const size_t Idx)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
+    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
+    const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
 {
     return *this;
 }
