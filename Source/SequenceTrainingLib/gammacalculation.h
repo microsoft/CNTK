@@ -441,7 +441,7 @@ public:
         const size_t numPhoneCols = G.GetNumCols();
 
         size_t maxFrameNum = numCols / numParallelSequences;
-        size_t maxPhoneNum = numPhoneCols / numParallelSequences;
+        size_t maxPhoneNum = numPhoneCols / numPhoneParallelSequences;
 
         // Prepare data structures from the reader
         // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
