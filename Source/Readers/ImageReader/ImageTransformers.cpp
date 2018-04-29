@@ -370,11 +370,11 @@ StreamInformation ScaleTransformer::Transform(const StreamInformation& inputStre
     return m_outputStream;
 }
 
-void ScaleTransformer::Apply(uint8_t, cv::Mat& mat, int /* indexInBatch */)
+void ScaleTransformer::Apply(uint8_t, cv::Mat &mat, int /* indexInBatch */)
 {
     if (m_scaleMode == ScaleMode::Fill)
     { // warp the image to the given target size
-        cv::resize(mat, mat, cv::Size((int) m_imgWidth, (int) m_imgHeight), 0, 0, m_interp);
+        cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp);
     }
     else
     {
@@ -393,33 +393,33 @@ void ScaleTransformer::Apply(uint8_t, cv::Mat& mat, int /* indexInBatch */)
         size_t targetW, targetH;
         if (scaleW)
         {
-            targetW = (size_t) m_imgWidth;
-            targetH = (size_t) round(height * m_imgWidth / (double) width);
+            targetW = (size_t)m_imgWidth;
+            targetH = (size_t)round(height * m_imgWidth / (double)width);
         }
         else
         {
-            targetH = (size_t) m_imgHeight;
-            targetW = (size_t) round(width * m_imgHeight / (double) height);
+            targetH = (size_t)m_imgHeight;
+            targetW = (size_t)round(width * m_imgHeight / (double)height);
         }
 
-        cv::resize(mat, mat, cv::Size((int) targetW, (int) targetH), 0, 0, m_interp);
+        cv::resize(mat, mat, cv::Size((int)targetW, (int)targetH), 0, 0, m_interp);
 
         if (m_scaleMode == ScaleMode::Crop)
         { // crop the overlap
-            size_t xOff = max((size_t) 0, (targetW - m_imgWidth) / 2);
-            size_t yOff = max((size_t) 0, (targetH - m_imgHeight) / 2);
-            mat = mat(cv::Rect((int) xOff, (int) yOff, (int) m_imgWidth, (int) m_imgHeight));
+            size_t xOff = max((size_t)0, (targetW - m_imgWidth) / 2);
+            size_t yOff = max((size_t)0, (targetH - m_imgHeight) / 2);
+            mat = mat(cv::Rect((int)xOff, (int)yOff, (int)m_imgWidth, (int)m_imgHeight));
         }
         else
         { // ScaleMode::PAD --> center it and pad the rest
-            size_t hdiff = max((size_t) 0, (m_imgHeight - mat.rows) / 2);
-            size_t wdiff = max((size_t) 0, (m_imgWidth - mat.cols) / 2);
+            size_t hdiff = max((size_t)0, (m_imgHeight - mat.rows) / 2);
+            size_t wdiff = max((size_t)0, (m_imgWidth - mat.cols) / 2);
 
             size_t top = hdiff;
             size_t bottom = m_imgHeight - top - mat.rows;
             size_t left = wdiff;
             size_t right = m_imgWidth - left - mat.cols;
-            cv::copyMakeBorder(mat, mat, (int) top, (int) bottom, (int) left, (int) right, m_borderType, cv::Scalar(m_padValue, m_padValue, m_padValue));
+            cv::copyMakeBorder(mat, mat, (int)top, (int)bottom, (int)left, (int)right, m_borderType, cv::Scalar(m_padValue, m_padValue, m_padValue));
         }
     }
 }
