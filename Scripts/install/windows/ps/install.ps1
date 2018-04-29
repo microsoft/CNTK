@@ -9,8 +9,8 @@
 
  By default the script will:
 
- - Create or reuse Anaconda3 in the folder `C:\local\Anaconda3-4.1.1-Windows-x86_64`
- - Create or update a CNTK Python 3.5 environment in `C:\local\Anaconda3-4.1.1-Windows-x86_64\envs\cntk-py35`
+ - Create or reuse Anaconda3 in the folder `C:\local\Anaconda3-4.3.1-Windows-x86_64`
+ - Create or update a CNTK Python 3.5 environment in `C:\local\Anaconda3-4.3.1-Windows-x86_64\envs\cntk-py35`
 
  .DESCRIPTION
  The script will download and install the CNTK prerequisites and Anaconda environment.
@@ -19,7 +19,7 @@
  The required components will be downloaded and cached.
  Repeated operation of this script will reuse already downloaded components.
 
- - If required VS2015 Runtime will be installed
+ - If required VS2017 Runtime will be installed
  - If required MSMPI will be installed
  - Anaconda3 will be installed into [<AnacondaBasePath>]
  - A CNTK-PY<version> environment will be created or updated in [<AnacondaBasePath>\envs]
@@ -34,8 +34,8 @@
  .PARAMETER AnacondaBasePath
  This optional parameter allows you to specify the location of an Anaconda installation to be used or created on your 
  machine. If the directory exists on your machine, the script will continue under the assumption that this is a working 
- Anaconda 3 (4.1.1) (or compatible) installation, and will create the CNTK Python environment in that location.
- By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-4.1.1-Windows-x86_64]
+ Anaconda 3 (4.3.1) (or compatible) installation, and will create the CNTK Python environment in that location.
+ By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-4.3.1-Windows-x86_64]
 
  .PARAMETER PyVersion
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
@@ -60,8 +60,8 @@
 
 [CmdletBinding()]
 Param(
-    [Parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
-    [Parameter(Mandatory=$false)] [ValidateSet("27", "34", "35", "36")] [string] $PyVersion = "35",
+    [Parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.3.1-Windows-x86_64",
+    [Parameter(Mandatory=$false)] [ValidateSet("27", "35", "36")] [string] $PyVersion = "35",
     [Parameter(Mandatory=$false)] [switch] $Execute = $true,
     [Parameter(Mandatory=$false)] [switch] $NoConfirm,
     [Parameter(Mandatory=$false)] [string] $WheelBaseUrl = "https://cntk.ai/PythonWheel")
@@ -87,7 +87,7 @@ function VerifyInstallationContent(
     [Parameter(Mandatory=$true)][string] $path)
 {
     $structureCorrect = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
-    $structureCorrect = (join-path $path prerequisites\VS2015\vc_redist.x64.exe | test-path -PathType Leaf) -and $structureCorrect
+    $structureCorrect = (join-path $path prerequisites\VS2017\vc_redist.x64.exe | test-path -PathType Leaf) -and $structureCorrect
     $structureCorrect = (join-path $path version.txt | test-path -PathType Leaf) -and $structureCorrect
     
     Write-Verbose "[VerifyInstallationContent]: [$path] result [$structureCorrect]"
@@ -114,9 +114,19 @@ function WhlFileInfoFromVersionFile(
             throw "`nFatal Error: Malformed version information in [$versionFile]."
         }
         $cntkVersion = $cntkVersion -replace "-", "."
-        $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk-"
+        $cntkVersion = $cntkVersion -replace ".rc", "rc"
+        if ($cntkTarget -eq "GPU") {
+            $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk_gpu-"
+        } else {
+            $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk-"
+        }
 
-        return @{ Name = "{0}-cp{1}-cp{2}m-win_amd64.whl" -f $cntkVersion, $pyVersion, $pyVersion; CntkUrl = "{0}/{1}" -f $wheelBaseUrl, $cntkTarget }
+        if ($wheelBaseUrl.StartsWith('http')) {
+            $cntkUrl = "{0}/{1}" -f $wheelBaseUrl, $cntkTarget
+        } else {
+            $cntkUrl = "{0}\{1}" -f $wheelBaseUrl, $cntkTarget
+        }
+        return @{ Name = "{0}-cp{1}-cp{2}m-win_amd64.whl" -f $cntkVersion, $pyVersion, $pyVersion; CntkUrl = $cntkUrl }
     }
     finally {
         $reader.close()
@@ -128,8 +138,9 @@ function Get-WheelUrl(
     [Parameter(Mandatory=$true)][string] $pyVersion,
     [string] $WheelBaseUrl)
 {
-    # if a local wheel exists in the cntk\Python directory, we will pip install this wheel
-    # if the file doesn't exist we will pip install the wheel in the specified url
+    # if a local wheel exists in the $path\cntk\Python directory, we will pip install this wheel
+    # if the file doesn't exist we will pip install the wheel in the specified url/path
+    # If $WheelBaseUrl starts with http[s], it is treated as URL and as a local path otherwise
 
     $whlFileInfo = WhlFileInfoFromVersionFile -path $path -pyVersion $pyVersion -wheelBaseUrl $WheelBaseUrl
 
@@ -140,7 +151,12 @@ function Get-WheelUrl(
         return $whlFile
     }
 
-    return "{0}/{1}" -f $whlFileInfo.CntkUrl, $whlFileInfo.Name
+    if ($whlFileInfo.CntkUrl.StartsWith('http')) {
+        $cntkURL = "{0}/{1}" -f $whlFileInfo.CntkUrl, $whlFileInfo.Name
+    } else {
+        $cntkURL = "{0}\{1}" -f $whlFileInfo.CntkUrl, $whlFileInfo.Name
+    }
+    return $cntkURL
 }
 
 Function main

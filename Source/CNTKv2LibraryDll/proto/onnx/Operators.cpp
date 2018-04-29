@@ -79,6 +79,13 @@ namespace ONNX
             { L"epsilon", "epsilon" },
             // { L"", "momentum" },
         } } },
+        { L"OptimizedRNNStack",{ {
+            { L"OptimizedRNNStack", "OptimizedRNNStack" },
+            { L"hidden_size", "hidden_size" },
+            { L"num_layers", "num_layers" },
+            { L"bidirectional", "bidirectional" },
+            { L"recurrent_op", "recurrent_op" },
+        } } },
         { L"LayerNormalization",{ {
             { L"LayerNormalization", "LayerNormalization" },
             { L"initial_scale", "initial_scale" },
@@ -373,6 +380,12 @@ namespace ONNX
         { L"Embedding",{ {
             { L"Embedding", "Gather" },
             } } },
+        { L"NoOp",{ {
+            { L"NoOp", "Identity" },
+            } } },
+        { L"Alias",{ {
+            { L"Alias", "Identity" },
+            } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -435,7 +448,7 @@ namespace ONNX
 
     bool Operators::IsRNNOp(const std::string &opName)
     {
-        return opName == "LSTM" || opName == "GRU" || opName == "RNN";
+        return opName == "LSTM" || opName == "GRU" || opName == "RNN" || opName == "RNNStep";
     }
         std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"Clip",{ 1, 2 } },
@@ -475,6 +488,18 @@ namespace ONNX
             { L"ConvolutionTranspose" },
             { L"BatchNormalization" },
             { L"Dropout" },
+        };
+
+        std::set<std::wstring> Operators::_optimizedRnnStackOpNames = {
+            { L"lstm" },
+            { L"rnnReLU" },
+            { L"rnnTanh" },
+        };
+
+        std::unordered_map<std::wstring, std::string> Operators::_optimizedRnnOpNameToOnnxOpName = {
+            { L"lstm", "LSTM" },
+            { L"rnnReLU", "RNN" },
+            { L"rnnTanh","RNN" },
         };
 
     }

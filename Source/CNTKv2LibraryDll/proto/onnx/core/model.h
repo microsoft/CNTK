@@ -20,16 +20,13 @@ namespace ONNXIR
             bool p_isONNX = false,
             const ModelMetaData& p_modelMetaData = ModelMetaData());
 
-        Model(const std::string& p_graphName,
-            const std::string& p_graphDocString,
-            const std::string& p_producerName,
-            const std::string& p_producerVersion,
-            const std::string& p_domain,
-            VERSION p_modelVersion,
-            const std::string& p_modelDocString,
-            const ModelMetaData& p_modelMetaData = ModelMetaData());
-
+        // NOTE: after calling this contructor, <*this> model will
+        // hold a copy of <p_modelProto>.
         Model(const ModelProto& p_modelProto);
+
+        // NOTE: after calling this constructor, <*this> model will
+        // own the <p_modelProto>.
+        Model(std::unique_ptr<ModelProto> p_modelProto);
 
         // Get model's IR version.
         // Return <c_noVersion> if not specified.
@@ -73,7 +70,7 @@ namespace ONNXIR
         const Graph* MainGraph() const;
 
         // Get model's serlization proto data.
-        const ModelProto& ToProto();
+        ModelProto ToProto();
 
 #ifdef _WIN32
         static Status Save(Model& p_model, const std::wstring& p_filePath);
@@ -93,11 +90,22 @@ namespace ONNXIR
 
     private:
 
+        // Set <m_domainToVersion> and <m_modelProto> to contain related domains
+        // with latest version in OpSchemaRegistry.
+        // if <p_isONNX> is true, then only onnx domain will be contained.
+        // otherwise, ml domain will also be contained.
+        void AddImportOpSets(bool p_isONNX);
+
         // Model data.
-        ModelProto m_modelProto;
+        std::unique_ptr<ModelProto> m_modelProto;
+
         // This is a duplication of <m_modelProto.metadata_props()>.
         // It gives better accessibility.
         ModelMetaData m_modelMetaData;
+
+        // Operator set used by this model.
+        // It contains <domain, version> pairs.
+        std::unordered_map<std::string, int> m_domainToVersion;
 
         // Main graph of the model.
         std::unique_ptr<Graph> m_graph;

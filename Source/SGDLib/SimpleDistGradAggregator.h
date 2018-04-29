@@ -6,7 +6,9 @@
 
 #pragma once
 
+#undef _SCL_SECURE_NO_WARNINGS
 #include "Constants.h"
+#include "CNTKLibrary.h"
 #include "IDistGradAggregator.h"
 #include "CUDAPageLockedMemAllocator.h"
 #include "NcclComm.h"
@@ -25,7 +27,7 @@ class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
 public:
     SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace),
-        m_iterationCount(0), m_nccl(deviceId, mpi), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
+        m_iterationCount(0), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
     {}
 
     ~SimpleDistGradAggregator()
@@ -40,6 +42,14 @@ public:
     // Aggregate the gradient matrices across all nodes
     bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool resetState) override
     {
+        if (m_mpi->NumNodesInUse() == 1) // No need to aggregate anything.
+            return (headerCPU->numSamples != 0);
+
+
+        // Initialize NCCL
+        if (m_nccl == nullptr)
+            m_nccl.reset(new NcclComm(::CNTK::DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
+
         ResetState(gradients, headerCPU->numEvalNode, resetState);
         bool showSyncPerfStats = (m_syncStatsTrace > 0) && ((m_iterationCount % m_syncStatsTrace) == 0);
         m_iterationCount++;
@@ -145,7 +155,7 @@ private:
             return false;
 
         // Do not copy if NCCL is supported or GPUDirect RDMA is used
-        if (m_nccl.IsSupported() || m_mpi->UseGpuGdr() == true)
+        if (m_nccl->IsSupported() || m_mpi->UseGpuGdr() == true)
             return false;
 
         return true;
@@ -316,7 +326,7 @@ private:
         if (numGradientIndex > 0)
         {
             // non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU
-            if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl.IsSupported())
+            if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl->IsSupported())
             {
                 Matrix<ElemType>* gpuCopyBuffer = m_aggregationBuffer.get();
 
@@ -377,7 +387,7 @@ private:
                 }
             }
             // non-NCCL, using CPU, using GDR
-            else if (!m_nccl.IsSupported())
+            else if (!m_nccl->IsSupported())
             {
                 ElemType* reductionBuffer;
                 for (size_t i : m_gradientIndexToAggregate)
@@ -398,14 +408,14 @@ private:
                     }
                 }
             } 
-            else if (m_nccl.IsSupported())
+            else if (m_nccl->IsSupported())
             {
                 std::vector<Matrix<ElemType>*> ncclReduceGradients;
                 for (size_t i : m_gradientIndexToAggregate)
                 {
                     ncclReduceGradients.push_back((i == -1) ? m_aggregationBuffer.get() : gradients[i]);
                 }
-                m_nccl.AllReduce(ncclReduceGradients);
+                m_nccl->AllReduce(ncclReduceGradients);
             }
         }
 
@@ -433,9 +443,9 @@ private:
         // Broadcast the aggregated header to all nodes
         m_mpi->Bcast(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank());
 
-        if (m_nccl.IsSupported())
+        if (m_nccl->IsSupported())
         {
-            m_nccl.Sync();
+            m_nccl->Sync();
         }
         // Non-GDR && GPU
         else if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE))
@@ -506,6 +516,6 @@ private:
 
     bool m_initialized;
 
-    NcclComm m_nccl;
+    std::unique_ptr<NcclComm> m_nccl;
 };
 } } }

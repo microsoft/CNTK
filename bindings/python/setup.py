@@ -12,6 +12,13 @@ IS_WINDOWS = platform.system() == 'Windows'
 
 IS_PY2 = sys.version_info.major == 2
 
+# Utility function to read the specified file, located in the current directory, into memory
+# It is useful to separate markdown texts from distutils/setuptools source code
+def read_file(fname):
+    with open(os.path.join(os.path.dirname(__file__), fname)) as f:
+        content = f.read()
+    return content
+
 # TODO should handle swig path specified via build_ext --swig-path
 if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     print("Please install swig (>= 3.0.10) and include it in your path.\n")
@@ -260,6 +267,7 @@ setup(name=project_name,
       version=os.environ['CNTK_VERSION'],
       url="http://cntk.ai",
       description = 'CNTK is an open-source, commercial-grade deep learning framework.',
+      long_description = read_file('setup_py_long_description.md'),
       author = 'Microsoft Corporation',
       author_email = 'ai-opensource@microsoft.com',
       license='MIT',

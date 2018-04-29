@@ -590,7 +590,7 @@ template <class ElemType>
         let&  index          = InputRef(INDEXDATA) .Value();    // column indices to copy from
         auto& sourceGradient = InputRef(SOURCEDATA).Gradient(); // source to propagate the gradient intpu
         auto& outputGradient =                      Gradient(); // output gradient to propagate
-        sourceGradient.DoScatterColumnsOf(/*beta=*/1, index, outputGradient, /*alpha=*/1);
+        sourceGradient.DoScatterColumnsOf(/*beta=*/1, index, outputGradient, /*alpha=*/1, true);
     }
 }
 
@@ -654,7 +654,7 @@ template <class ElemType>
                                                                source.GetFormat());
 
     auto& output =                      Value(); // output goes here
-    output.DoScatterColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
+    output.DoScatterColumnsOf(/*beta=*/0, index, source, /*alpha=*/1, true);
 }
 
 template <class ElemType>

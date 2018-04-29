@@ -244,10 +244,11 @@ protected:
         return result;
     }
 
-    TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
+    virtual TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
+        const size_t DEAFULT_NUM_GROUPS = 1;
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, ceilOutDim,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, DEAFULT_NUM_GROUPS, ceilOutDim,
             Base::NeedsDynamicValidation(), isFinalValidationPass);
     }
 
@@ -308,14 +309,15 @@ class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2
     static const std::wstring TypeName() { return L"Convolution"; }
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_dilation(TensorShape(1))
+        : Base(deviceId, name), m_dilation(TensorShape(1)), m_groups(1)
     {
     }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1))
+                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1),
+                    size_t groups=1)
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
-        m_convolution2D(false), m_dilation(dilation)
+        m_convolution2D(false), m_dilation(dilation), m_groups(groups)
     {
         // Make sure not using dilation on CPU
         if(deviceId < 0)
@@ -531,9 +533,10 @@ public:
                 {
                     // In case of convolution transpose (deconvolution), node input (inputShape) is really the output of the convolution
                     // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
+                    const size_t DEAFULT_NUM_GROUPS = 1;
                     outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
-                                                                      Base::NeedsDynamicValidation(), isFinalValidationPass);
+                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), DEAFULT_NUM_GROUPS,
+                                                                       false, Base::NeedsDynamicValidation(), isFinalValidationPass);
                 }
                 else
                 {
@@ -583,7 +586,7 @@ public:
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
                                                                    m_kernelShape, m_mapCount, m_stride,
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation);
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, false, m_groups);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
                                                                 ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
@@ -659,7 +662,16 @@ private:
         return (inputIndex == 1);
     }
 
+    virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape, 
+        const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
+    {
+        return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, m_groups, ceilOutDim,
+            Base::NeedsDynamicValidation(), isFinalValidationPass);
+    }
+
     TensorShape m_dilation;
+    size_t m_groups;
 
 protected:
     // Flag that indicates whether the node is created using 2D-syntax.

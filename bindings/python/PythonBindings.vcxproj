@@ -40,7 +40,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <NMakeBuildCommandLine>.\vsbuild.bat "$(OutDir)" "$(DebugBuild)" "$(GpuBuild)" "$(CntkVersion)" "$(CntkVersionBanner)" "$(CntkComponentVersion)" "$(SWIG_PATH)" "$(CNTK_PY_VERSIONS)" "$(CNTK_PY27_PATH)" "$(CNTK_PY34_PATH)" "$(CNTK_PY35_PATH)" "$(CNTK_PY36_PATH)"</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>.\vsbuild.bat "$(OutDir)" "$(DebugBuild)" "$(GpuBuild)" "$(CntkVersion)" "$(CntkVersionBanner)" "$(CntkComponentVersion)" "$(SWIG_PATH)" "$(PythonWithDeps)" "$(CNTK_PY_VERSIONS)" "$(CNTK_PY27_PATH)" "$(CNTK_PY34_PATH)" "$(CNTK_PY35_PATH)" "$(CNTK_PY36_PATH)"</NMakeBuildCommandLine>
     <NMakeOutput>dist/pythonwheel</NMakeOutput>
     <NMakeCleanCommandLine>rmdir /s /q build</NMakeCleanCommandLine>
   </PropertyGroup>

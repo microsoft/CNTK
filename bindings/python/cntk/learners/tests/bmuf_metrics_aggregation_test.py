@@ -27,7 +27,7 @@ class SimpleBMUFTrainer():
     def __init__(self, frame_mode=False):
         self.create_model(frame_mode)
         self.create_trainer()
-    
+
     def create_model(self, frame_mode=False):
         if frame_mode:
             self.feat = cntk.input_variable(shape=(feat_dim,))
@@ -35,7 +35,7 @@ class SimpleBMUFTrainer():
             
             net = cntk.layers.Sequential([cntk.layers.Dense(cell_dim), cntk.layers.Dense(label_dim)])
             self.output = net(self.feat)
-        else:    
+        else:
             #sequence mode
             self.feat = cntk.sequence.input_variable(shape=(feat_dim,))
             self.label = cntk.sequence.input_variable((label_dim,))
@@ -45,22 +45,24 @@ class SimpleBMUFTrainer():
         
         self.ce = cntk.cross_entropy_with_softmax(self.output, self.label)
         self.err = cntk.classification_error(self.output, self.label)
-    
+
     def create_trainer(self):
         try:
             learner = cntk.block_momentum_distributed_learner(cntk.momentum_sgd(self.output.parameters, cntk.learning_parameter_schedule(0.0001), cntk.momentum_as_time_constant_schedule(1000)), 
                                                               block_size=1000, block_learning_rate=0.01, block_momentum_as_time_constant=1000)
-            
+
             comm_rank = cntk.distributed.Communicator.rank()
             self.trainer = cntk.Trainer(self.output, (self.ce, self.err), [learner], [cntk.logging.ProgressPrinter(freq=progress_freq, tag="Training", rank=comm_rank)])
         except RuntimeError:
             self.trainer = None
         return
-        
-def get_minibatch(bmuf, working_dir, mb_source):
+
+def get_minibatch(bmuf, working_dir, mb_source, num_data_partitions=1, partition_index=0):
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
-    
+
     if mb_source == "numpy":
+        assert(num_data_partitions == 1) # numpy option does not support more than one partition in this impl.
+        assert(partition_index == 0) 
         for i in range(num_batches):
             features = []
             labels = []
@@ -71,7 +73,7 @@ def get_minibatch(bmuf, working_dir, mb_source):
                 features.append(x)    
                 labels.append(y)
             yield {bmuf.feat: features, bmuf.label: labels}
-    
+
     if mb_source in ("ctf_utterance", "ctf_frame", "ctf_bptt"):
         if mb_source == "ctf_frame":
             #frame mode data without sequence ids.
@@ -103,42 +105,48 @@ def get_minibatch(bmuf, working_dir, mb_source):
         ctf_file = os.path.join(working_dir, '2seqtest.txt')
         with open(ctf_file, 'w') as f:
             f.write(ctf_data)
-    
+
         # ctf_utterance model
         frame_mode = False
         truncation_length = 0
-        
+
         if mb_source == "ctf_frame":
             frame_mode = True
         elif mb_source == "ctf_bptt":
             truncation_length = 2
-            
+
         mbs = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
             features  = StreamDef(field='S0', shape=feat_dim,  is_sparse=False),
             labels    = StreamDef(field='S1', shape=label_dim,  is_sparse=False)
         )), randomize=False, max_samples = batch_size*num_batches, 
             frame_mode=frame_mode, truncation_length=truncation_length)
-        
+
         for i in range(num_batches):
-            minibatch = mbs.next_minibatch(batch_size, {bmuf.feat: mbs.streams.features, bmuf.label: mbs.streams.labels})
+            minibatch = mbs.next_minibatch(
+                minibatch_size_in_samples=batch_size, 
+                input_map={bmuf.feat: mbs.streams.features, bmuf.label: mbs.streams.labels}, 
+                num_data_partitions=num_data_partitions, 
+                partition_index=partition_index
+            )
             if not minibatch:
                 break
             yield minibatch
-    
+
 def mpi_worker(working_dir, mb_source, gpu):
     comm_rank = cntk.distributed.Communicator.rank()
     np.random.seed(comm_rank)
-    
+
     if gpu:
         # test with only one GPU
         cntk.try_set_default_device(cntk.gpu(0))
-        
+
     frame_mode = (mb_source == "ctf_frame")
     bmuf = SimpleBMUFTrainer(frame_mode)
     for i, data in enumerate(get_minibatch(bmuf, working_dir, mb_source)):        
         bmuf.trainer.train_minibatch(data)        
         if i % 50 == 0:
-            bmuf.trainer.summarize_training_progress()       
+            bmuf.trainer.summarize_training_progress()
+    print("SAMPLES %d"%(bmuf.trainer.total_number_of_samples_seen))
 
 MB_SOURCES = ["numpy", "ctf_utterance", "ctf_frame", "ctf_bptt"]
 #MB_SOURCES = ["numpy"]    
@@ -146,22 +154,22 @@ MB_SOURCES = ["numpy", "ctf_utterance", "ctf_frame", "ctf_bptt"]
 def test_bmuf_correct_metrics_averaging(tmpdir, device_id, mb_source):
     if platform.system() == 'Linux':
         pytest.skip('test only runs on Windows due to mpiexec -l option')
-    
+
     # check whether trainer can be initialized or not
     bmuf = SimpleBMUFTrainer()
     if not bmuf.trainer:
         pytest.skip('BMUF not available on this build')
-        
+
     launch_args = []
     if device_id >= 0:
         launch_args += ['--gpu']
-        
+
     launch_args += ["--outputdir", str(tmpdir)]
     launch_args += ["--mb_source", mb_source]
-    
+
     ret_str = mpiexec_execute(__file__, ['-n', str(NUM_WORKERS), '-l'], launch_args)
     #print(ret_str)
-    
+
     # [0]Finished Epoch[1]: [Training] loss = 1.663636 * 10, metric = 52.40% * 10 0.890s ( 11.2 samples/s);
     regex_pattern = r"\[(?P<worker_rank>\d)\].*? Epoch\[(?P<epoch>\d+)\].*? loss = (?P<loss>\d+\.\d+) .*? metric = (?P<metric>\d+\.\d+)"
     loss_perepoch_perworker = {i:{} for i in range(NUM_WORKERS)}
@@ -171,26 +179,25 @@ def test_bmuf_correct_metrics_averaging(tmpdir, device_id, mb_source):
         loss = match.groupdict()["loss"]
         metric = match.groupdict()["metric"]
         loss_perepoch_perworker[rank].update({epoch:(loss, metric)})
-       
+
     num_epochs_per_worker = list(map(len,loss_perepoch_perworker.values()))
-    
+
     #assert that data exists
     assert len(num_epochs_per_worker) != 0
-    
+
     #assert that number of epochs isn't zero for 1st worker.
     assert num_epochs_per_worker[0] != 0
-    
+
     # assert all workers have same number of epochs
     assert min(num_epochs_per_worker) == max(num_epochs_per_worker)
-    
+
     # assert all workers have same loss and metric values
     loss_per_worker = loss_perepoch_perworker.values()
     loss_per_worker_epochsort = []
     for epoch_losses in loss_per_worker:
         loss_per_worker_epochsort.append([epoch_losses[i] for i in sorted(epoch_losses)])
-        
+
     assert all([loss_per_worker_epochsort[0] == i for i in loss_per_worker_epochsort])
-       
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -198,6 +205,6 @@ if __name__ == "__main__":
     parser.add_argument('-mb_source', '--mb_source')
     parser.add_argument('-gpu', '--gpu', action='store_true')
     args = vars(parser.parse_args())
-    
+
     mpi_worker(args["outputdir"], args["mb_source"], args["gpu"])    
     cntk.distributed.Communicator.finalize()

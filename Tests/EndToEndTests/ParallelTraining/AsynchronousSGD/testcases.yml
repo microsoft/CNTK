@@ -16,7 +16,7 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - CE = {{float,tolerance=2}}
+      - CE = {{float,tolerance=3}}
       - Err = {{float,tolerance=2}}
 
   Per-minibatch training results must match for each MPI Rank:
@@ -24,7 +24,7 @@ testCases:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - CE = {{float,tolerance=2}}
+      - CE = {{float,tolerance=3}}
       - Err = {{float,tolerance=2}}
 
   DataParallelASGD training parameters must match for each MPI Rank:

@@ -2733,7 +2733,8 @@ def gather(reference, indices, axis=None, name=''):
     Args:
         reference: A tensor of values
         indices: A tensor of indices
-        axis: The axis along which the indices refer to. Default (None) means the  first axis.
+        axis: The axis along which the indices refer to. Default (None) means the  first axis. Only one axis is supported;
+        and only static axis is supported.
         name (str, optional): the name of the Function instance in the network
 
     Returns:

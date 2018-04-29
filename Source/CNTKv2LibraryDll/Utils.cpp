@@ -1169,6 +1169,7 @@ namespace CNTK
 
         bool metricAggregatorUpdated = false;
         bool anyUpdatesPerformed = false;
+        size_t metricAggregatorIndex = 0;
         for (size_t i = 0; i < m_learners.size(); i++)
         {
             auto l  = m_learners[i];
@@ -1179,6 +1180,7 @@ namespace CNTK
             {
                 mbInfoPerLearner[i] = minibatch;
                 metricAggregatorUpdated = true;
+                metricAggregatorIndex = i;
             }
             else
             {
@@ -1193,11 +1195,8 @@ namespace CNTK
             RuntimeError("Update failed: Metric aggregation did not happen, none of the learners was marked as metric aggregator.");
 
         // In a single trainer, the number of samples should be same for each learner. 
-        // We use the learner marked as MetricAggregator to set the number of samples. 
-        for (size_t i = 0; i < m_learners.size(); i++)
-        {
-            mbInfoPerLearner[i].numberOfSamples = minibatch.numberOfSamples;
-        }
+        // Assign the minibatch to the information from the matrix aggregating learner. 
+        minibatch = mbInfoPerLearner[metricAggregatorIndex];
         return anyUpdatesPerformed;
     }
 

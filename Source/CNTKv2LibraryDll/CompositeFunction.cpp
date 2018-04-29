@@ -1082,12 +1082,15 @@ namespace CNTK
                     NDShape outputShape = NDShape::Unknown();
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
                         outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+                    auto groups = PrimitiveFunction::convolutionOpDefaultValueForGroups;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameGroups))
+                        groups = functionConfig[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
                     ASSIGN_NEW_NODE(ConvolutionNode, network->GetDeviceId(), internalNodeName,
                                                                            AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
                                                                            sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
                                                                            outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
-                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation));
+                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
                     break;
                 }
                 case PrimitiveOpType::CosDistance:
@@ -1430,7 +1433,22 @@ namespace CNTK
             return GetNode(variable.BlockFunctionVariableMapping(), network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
         }
         else
-            computationNodePtr = CreateComputationNode<ElementType>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+        {
+            switch (variable.GetDataType())
+            {
+            case DataType::Float:
+                computationNodePtr = CreateComputationNode<float>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+                break;
+            case DataType::Double:
+                computationNodePtr = CreateComputationNode<double>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+                break;
+            case DataType::Float16:
+                computationNodePtr = CreateComputationNode<half>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+                break;
+            default:
+                RuntimeError("Unsupported variable data type for CreateComputationNode");
+            }
+        }
 
         PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
         if (!primitiveFunction || (primitiveFunction->OpType() != PrimitiveOpType::Combine))

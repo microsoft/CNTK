@@ -113,6 +113,9 @@ private:
     // Refills the current window of sequences.
     void Refill();
 
+    // Refill and wait for data. Does not issue the next async refill.
+    void RefillCurrentWindowNow();
+
     // Gets next sequences not exceeding localSampleCount for this worker and globalSampleCount across workers.
     void GetNextSequenceDescriptions(size_t maxSampleCount, Sequences& result);
 
