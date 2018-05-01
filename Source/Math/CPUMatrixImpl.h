@@ -7269,6 +7269,7 @@ template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 template void CPUMatrix<char>::SetValue(const char);
 template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char* pArray, size_t matrixFlags);
 template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
+template bool CPUMatrix<char>::IsEqualTo(const CPUMatrix<char>& a, const char threshold) const;
 //template void CPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
@@ -7277,6 +7278,9 @@ template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols
 template char* CPUMatrix<char>::CopyToArray(void) const;
 template void CPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
 template void CPUMatrix<char>::Reshape(const size_t, const size_t);
+template void CPUMatrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
+template void CPUMatrix<char>::SetUniformRandomValue(RNGHandle& rngHandle, const char low, const char high);
+template void CPUMatrix<char>::SetGaussianRandomValue(const char mean, const char sigma, unsigned long seed);
 
 // Support <short>
 template CPUMatrix<short>::CPUMatrix(const size_t numRows, const size_t numCols);

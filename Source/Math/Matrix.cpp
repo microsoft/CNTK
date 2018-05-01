@@ -6245,6 +6245,7 @@ void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperato
 template class Matrix<float>;
 template class Matrix<double>;
 template class Matrix<half>;
+//template class Matrix<char>;
 
 // instantiate some templated methods
 template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<float>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
@@ -6286,6 +6287,14 @@ template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, c
 template void Matrix<char>::Reshape(const size_t, const size_t);
 template char* Matrix<char>::CopyToArray(void) const;
 template bool Matrix<char>::IsView() const;
+template Matrix<char> Matrix<char>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const char low, const char high, unsigned long seed);
+template void Matrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
+template void Matrix<char>::SetUniformRandomValue(RNGHandle& rngHandle, const char low, const char high);
+template Matrix<char> Matrix<char>::RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const char mean, const char sigma, unsigned long seed);
+template void Matrix<char>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const char* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer);
+template void Matrix<char>::AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+template void Matrix<char>::TransferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved, bool emptyTransfer/* = false*/, bool updatePreferredDevice/* = true*/) const;
 
 // Matrix<short> methods
 template Matrix<short>::Matrix(DEVICEID_TYPE);
