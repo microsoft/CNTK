@@ -6850,11 +6850,10 @@ void _assignRNNTScore(
                     if (y < LZERO)
                         RNNTscore[ktuID] = 0.0f;
                     else
-                        RNNTscore[ktuID] = exp(y);
-                   
+                        RNNTscore[ktuID] = exp(y);           
                     
                 }
-                if (u < phoneNum-1)  //k == y(u+1)
+                if (u < phoneNum-1 )  //k == y(u+1)
                 {
                     long phoneId = phoneSeq[uttId*maxPhoneNum + u+1];  //actual phone ID for u+1
                     size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u+1)|t,u)
@@ -6880,10 +6879,241 @@ void _assignRNNTScore(
                         y = exp(x);
                     RNNTscore[probId] -= y;
                 }
+                //for (size_t k == 0; k < totalPhoneNum; k++)
+                
             }
             
         }
     }
+}
+
+
+template<class ElemType>
+void _assignRNNTScore2(
+    ElemType *RNNTscore,
+    ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    const size_t uttNum,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttPhoneNum,
+    const std::vector<size_t>& uttFrameBeginIdx,
+    const std::vector<size_t>& uttPhoneBeginIdx,
+    const std::vector<size_t>& uttFrameToChanInd,
+    const std::vector<size_t>& uttPhoneToChanInd,
+    const std::vector<size_t>& uttBeginForOutputditribution,
+    const size_t numChannels,
+    const size_t numPhoneChannels,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum,
+    const size_t blankTokenId,
+    ElemType *derivativeF,
+    ElemType *derivativeG)
+
+{
+   for (size_t uttId = 0; uttId < uttNum; uttId++) {
+        size_t zeroID = (uttFrameBeginIdx[uttId] * numChannels + uttFrameToChanInd[uttId]) * maxPhoneNum; //beta id for (0,0)
+        ElemType P_lx = betaScore[zeroID]; //p(y|x)
+                                           //#pragma omp parallel for
+        for (int t = 0; t < uttFrameNum[uttId]; t++) {
+            size_t phoneNum = uttPhoneNum[uttId];
+            size_t timeId = (t + uttFrameBeginIdx[uttId])*numChannels + uttFrameToChanInd[uttId]; //time ID in MB for t
+            for (int u = 0; u < phoneNum; u++)
+            {
+                size_t alphaId = maxPhoneNum* timeId + u;     //alpha ID for (t,u)   
+                                                              // Index of the current phone in minibatch
+                                                              //                size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
+                size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;      //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
+
+               // x = alphaScore[alphaId] + betaScore[alphaId] - P_lx;   //log of alpha(t,u)*beta(t,u)/p(y|x)
+                long phoneId = (long)phoneSeq[uttId*maxPhoneNum + u + 1];  //actual phone ID for u+1
+                for (int k = 0; k < totalPhoneNum; k++)
+                {
+                    size_t ktuID = tuID*totalPhoneNum + k;  //ID for P(k|t,u)
+                    if (t<uttFrameNum[uttId] - 1 && k == blankTokenId)
+                    {
+                        //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_t_u;
+                        size_t betaId = alphaId + numChannels * maxPhoneNum; //beta if for (t+1,u)
+                        RNNTscore[ktuID] = -exp(alphaScore[alphaId] - P_lx + betaScore[betaId]);
+                    }
+                    else if (u<phoneNum - 1 && k == phoneId)
+                    {
+                        //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_tu_;
+                        size_t betaId = alphaId + 1; //beta if for (t,u+1)
+                        RNNTscore[ktuID] = -exp(alphaScore[alphaId] - P_lx + betaScore[betaId]);
+
+                    }
+                    else
+                    {
+                        RNNTscore[ktuID] = 0;
+                    }
+
+                }
+               
+
+            }
+
+        }
+        for (int t = 0; t < uttFrameNum[uttId]; t++) {
+            size_t timeId = (t + uttFrameBeginIdx[uttId])*numChannels + uttFrameToChanInd[uttId];
+            size_t phoneNum = uttPhoneNum[uttId];
+            for (int k = 0; k<totalPhoneNum; k++)
+            {
+                for (int u = 0; u<phoneNum; u++)
+                {
+                    size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;
+                    for (int k_tmp = 0; k_tmp<totalPhoneNum; k_tmp++)
+                    {
+                        size_t ktuID = tuID*totalPhoneNum + k_tmp;
+                        derivativeF[timeId*totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 : 0 - exp(prob[tuID*totalPhoneNum+k]));
+                    }
+
+                }
+            }
+        }
+
+        for (int u = 0; u<uttPhoneNum[uttId]; u++)
+        {
+            size_t phoneNum = uttPhoneNum[uttId];
+            size_t timeId = (u + uttPhoneBeginIdx[uttId])*numPhoneChannels + uttPhoneToChanInd[uttId];
+            for (int k = 0; k<totalPhoneNum; k++)
+            {
+                for (int t = 0; t<uttFrameNum[uttId]; t++)
+                {
+                    size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;
+                    
+                    for (int k_tmp = 0; k_tmp<totalPhoneNum; k_tmp++)
+                    {
+                        size_t ktuID = tuID*totalPhoneNum + k_tmp;
+                        derivativeG[timeId*totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 : 0 - exp(prob[tuID*totalPhoneNum + k]));
+                    }
+                }
+            }
+        }
+    }
+}
+template<typename ElemType>
+ElemType compute_alphas(const ElemType* const probs_tuk, ElemType* const alphas, int T, int U, const ElemType* label)
+{
+    alphas[0] = 1;
+    int tuk_null_index, tuk_forward_index;
+    int alphabet_size_ = 5;
+    int null_label_ = 4;
+    int alphabet_index = 0;
+    for (int t = 0; t<T; t++)
+    {
+        alphabet_index = t*U;
+        for (int u = 0; u<U; u++)
+        {
+            if (t>0)
+            {
+                int tuk_index_tmp = (t - 1)*U*alphabet_size_;
+                tuk_null_index = tuk_index_tmp + u*alphabet_size_ + null_label_;
+                alphas[alphabet_index + u] += alphas[(t - 1)*(U)+u] * exp(probs_tuk[tuk_null_index]);
+            }
+            if (u>0)
+            {
+                int tuk_index_tmp = t*U*alphabet_size_;
+                tuk_forward_index = tuk_index_tmp + (u - 1)*alphabet_size_ + (int)label[u ];
+                alphas[alphabet_index + u] += alphas[alphabet_index + u - 1] * exp(probs_tuk[tuk_forward_index]);
+            }
+        }
+    }
+    tuk_null_index = (T - 1)*U*alphabet_size_ + (U - 1)*alphabet_size_ + null_label_;
+    ElemType loglike = alphas[(T - 1)*U + (U - 1)] * exp(probs_tuk[tuk_null_index]);
+    return std::log(loglike);
+}
+
+template<typename ElemType>
+ElemType compute_betas_and_grad(ElemType* trans_grads, ElemType* predict_grads, const ElemType* const probs_tuk, 
+    ElemType* const grads_tuk, const ElemType * const label, int T, int U, ElemType* alphas, ElemType* betas) {
+    int alphabet_size_ = 5;
+    int null_label_ = 4;
+    //std::fill(trans_grads, trans_grads + T*alphabet_size_, 0.0);
+    //std::fill(predict_grads, predict_grads + U*alphabet_size_, 0.0);
+    int tuk_null_index = (T - 1)*U*alphabet_size_ + (U - 1)*alphabet_size_ + null_label_;
+    //std::fill(betas, betas + U, exp(probs_tuk[tuk_null_index]));
+    ElemType pr_yx = alphas[(T - 1)*U + (U - 1)] + probs_tuk[tuk_null_index];
+    ElemType beta_tu = exp(probs_tuk[tuk_null_index]), beta_tu_ = exp(probs_tuk[tuk_null_index]), beta_t_u = exp(probs_tuk[tuk_null_index]);
+    for (int t = T - 1; t >= 0; t--)
+    {
+        int alphas_index = t*U;
+        for (int u = U - 1; u >= 0; u--)
+        {
+            beta_tu_ = beta_tu;
+            beta_t_u = betas[u];
+            int tu_index = t*U*alphabet_size_ + u*alphabet_size_;
+            beta_tu = 0;
+            if (t<T - 1)
+            {
+                beta_tu += beta_t_u*exp(probs_tuk[tu_index + null_label_]);
+            }
+            if (u<U - 1)
+            {
+                beta_tu += beta_tu_*exp(probs_tuk[tu_index + (int)label[u+1]]);
+            }
+            if (t == T - 1 && u == U - 1)
+            {
+                beta_tu = exp(probs_tuk[tuk_null_index]);
+            }
+            //betas[u] = beta_tu;
+            int grads_tuk_index = (u + t*U)*alphabet_size_;
+            for (int k = 0; k<alphabet_size_; k++)
+            {
+                if (t<T - 1 && k == null_label_)
+                {
+                    //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_t_u;
+                    
+                        grads_tuk[grads_tuk_index + k] = -exp(alphas[alphas_index + u] - pr_yx + betas[(t+1)*U+u]);
+                }
+                else if (u<U - 1 && k == (int)label[u+1])
+                {
+                    //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_tu_;
+                    
+                        grads_tuk[grads_tuk_index + k] = -exp(alphas[alphas_index + u] - pr_yx + betas[(t )*U + u+1]);
+
+                }
+                else
+                {
+                    grads_tuk[grads_tuk_index + k] = 0;
+                }
+            }
+        }
+    }
+    for (int t = 0; t<T; t++)
+    {
+        int trans_grads_index = t*alphabet_size_;
+        for (int k = 0; k<alphabet_size_; k++)
+        {
+            for (int u = 0; u<U; u++)
+            {
+                int tuk_index = (u + t*U)*alphabet_size_;
+
+                for (int k_tmp = 0; k_tmp<alphabet_size_; k_tmp++)
+                {
+                    trans_grads[trans_grads_index + k] += grads_tuk[tuk_index + k_tmp] * exp(probs_tuk[tuk_index + k_tmp]) * (k == k_tmp ? 1 : 0 - exp(probs_tuk[tuk_index + k]));
+                }
+
+            }
+        }
+    }
+    for (int u = 0; u<U; u++)
+    {
+        int predict_grads_index = u*alphabet_size_;
+        for (int k = 0; k<alphabet_size_; k++)
+        {
+            for (int t = 0; t<T; t++)
+            {
+                int tuk_index = (u + t*U)*alphabet_size_;
+                for (int k_tmp = 0; k_tmp<alphabet_size_; k_tmp++)
+                {
+                    predict_grads[predict_grads_index + k] += grads_tuk[tuk_index + k_tmp] * exp(probs_tuk[tuk_index + k_tmp]) * (1 - exp(probs_tuk[tuk_index + k]));
+                }
+            }
+        }
+    }
+    return std::log(beta_tu);
 }
 template<class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
@@ -7030,8 +7260,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1
 template<class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq,
     const CPUMatrix<ElemType>& phoneBoundary, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution, 
-    const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum, 
-    CPUMatrix<ElemType>& totalScore, const size_t blankTokenId,   const int delayConstraint, const bool isColWise)
+    const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx,
+    const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
+    CPUMatrix<ElemType>& totalScore, const size_t blankTokenId, CPUMatrix<ElemType>& m_derivativeForF, CPUMatrix<ElemType>& m_derivativeForG,  const int delayConstraint, const bool isColWise)
 
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
@@ -7065,16 +7296,31 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
         std::vector<ElemType> scores(uttNum);
         _assignRNNTTotalScore(alpha.Data(), beta.Data(), scores, uttNum, uttFrameToChanInd, uttFrameBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum);
         this->SetValue(0.0);
-        _assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
-            uttBeginForOutputditribution, numParallelSequences, maxPhoneNum,  totalPhoneNum, blankTokenId);
-
+        
+        m_derivativeForF.SetValue(0.0);
+        m_derivativeForG.SetValue(0.0);
+        //_assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
+        //    uttBeginForOutputditribution, numParallelSequences, maxPhoneNum,  totalPhoneNum, blankTokenId);
+            _assignRNNTScore2(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttPhoneBeginIdx, uttFrameToChanInd, uttPhoneToChanInd,
+                uttBeginForOutputditribution, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, m_derivativeForF.Data(), m_derivativeForG.Data());
         //this->Print("RNNT score");
         totalScore(0, 0) = 0.0;
         for (size_t utt = 0; utt < uttNum; utt++)
         {
             totalScore(0, 0) -= scores[utt];
         }
-
+        //alpha.SetValue(0.0);
+        //ElemType score= compute_alphas(prob.Data(), alpha.Data(), (int)maxFrameNum, (int)maxPhoneNum, phoneSeq.Data());
+        //CPUMatrix<ElemType> trans_grads, predict_grads;
+        //predict_grads.RequireSize(totalPhoneNum, maxPhoneNum);
+        //trans_grads.RequireSize(totalPhoneNum, maxFrameNum);
+        //beta.SetValue(0.0);
+        //trans_grads.SetValue(0.0);
+        //predict_grads.SetValue(0.0);
+        
+        //ElemType score = compute_betas_and_grad(m_derivativeForF.Data(), m_derivativeForG.Data(), prob.Data(),
+        //    Data(), phoneSeq.Data(), (int)maxFrameNum, (int)maxPhoneNum, alpha.Data(), beta.Data());
+        //printf("%f\n", score);
         return *this;
 
     }
@@ -7084,6 +7330,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
 
     return *this;
 }
+
 /// the kernel function for RCRF backward computation
 template <class ElemType>
 void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,

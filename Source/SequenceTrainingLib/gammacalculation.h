@@ -547,8 +547,8 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> RNNTPosterior(CPUDEVICE);
-        RNNTPosterior.AssignRNNTScore(matrixOutputDistribution, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd,  uttFrameBeginIdx, uttBeginForOutputditribution,
-            uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId,-1,true);
+        RNNTPosterior.AssignRNNTScore(matrixOutputDistribution, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd,  uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
+            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, m_derivativeForF , m_derivativeForG ,-1,true);
         //ElemType finalscore = 0;
         //finalscore += -1 * beta.Get00Element();
         //fprintf(stderr, "finalscore:%f\n", finalscore);
@@ -568,16 +568,16 @@ public:
         matrixOutputDistribution.ReleaseMemory();
 
         //compute derivatives for F and G
-        m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
-        m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
+        //m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+         //   numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
+        //m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+           // numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
 
         //m_derivativeForF.Print("derivative for F");
         //m_derivativeForG.Print("derivative for G");
 
-        //m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
-        //m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
 
     }
 
