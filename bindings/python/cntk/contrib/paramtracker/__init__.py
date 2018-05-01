@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+1# Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -142,6 +142,15 @@ class ParameterTracker(object):
         self.key_value_store_create_func = key_value_store_create_func
         self._init_stores(to_path, from_path)
         self.name_space = []
+        self.active = True
+
+    def disable(self):
+        self.active = False
+        return self
+
+    def enable(self):
+        self.active = True
+        return self
 
     def _enter_key_space(self, name):
         assert(name is not None)
@@ -229,6 +238,10 @@ class ParameterTracker(object):
             A list of parameters which have been set. If the parameters have been set more than once, there will be duplicated 
             items in the list for debugging purpose. 
         '''
+        if not self.active:
+            #the tracker is disabled
+            return []
+
         if self.from_store is None:
             raise(ValueError('Parameter tracker working path is not set. Please use set_workingpath to set the value.'))
         set_params = []
@@ -259,6 +272,10 @@ class ParameterTracker(object):
             A list of parameters which have been saved for loading. If the parameters have been saved more than once,
                there will be duplicated items in the list for debugging purpose.
         '''
+        if not self.active:
+            #the tracker is disabled
+            return []
+
         if self.to_store is None:
             raise (
             ValueError('Parameter tracker working path is not set. Please use set_workingpath to set the value.'))
