@@ -3261,6 +3261,34 @@ namespace CNTK
             return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
         }
 
+        FunctionPtr ConvolutionBias(const Variable& convolutionMap, const Variable& convolutionBias, const Variable& operand,
+                                    const NDShape& strides, const std::vector<bool>& sharing,
+                                    const std::vector<bool>& autoPadding, const NDShape& dilation, bool transpose,
+                                    const NDShape& outputShape, size_t maxTempMemSizeInSamples, const std::wstring& name)
+        {
+            // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
+            // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as
+            // the sample shape and considering the rest to be part of the batch axis
+            if (operand.DynamicAxes().empty())
+                LogicError("Convolution currently requires the main operand to have dynamic axes");
+
+            auto additionalProperties = Dictionary();
+            additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+            additionalProperties[PrimitiveFunction::AttributeNameDilation] = dilation;
+            additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+            additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+            additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
+            additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
+            additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
+            additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
+            additionalProperties[PrimitiveFunction::AttributeNameKernelShape] = NDShape({0});
+            additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+
+            std::vector<Variable> operands = {convolutionMap, convolutionBias, operand};
+            return MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ConvolutionBias, std::move(operands),
+                                                       std::move(additionalProperties), name);
+    }
+
         FunctionPtr SpatialConvolution(const Variable& convolutionMap,
             const Variable& operand,
             const NDShape& strides,

@@ -2407,12 +2407,13 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
-                           double epsilon = 0, bool useCntkEngine = true, bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
+                           double epsilon = 0, bool useCntkEngine = true, bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, bool reluFuse = false) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
         m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_disableRegularization(disableRegularization), m_imageLayoutKind(imageLayoutKind),
         m_runCountUntied(0),
         m_one(1, 1, deviceId),
-        m_convertRunningVariancePending(false)
+        m_convertRunningVariancePending(false),
+        m_reluFuse(reluFuse), m_dBias(deviceId)
     {
         m_one.SetValue((StatType)1); // (constant value used for GPU-side update of runCount)
     }
@@ -2420,7 +2421,7 @@ public:
         BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
                                configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"),
                                configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), configp->Get(L"disableRegularization"),
-                               ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+                               ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"reluFuse"))
     {
         //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         // To support legacy models, runCount is optional. Hence, we cannot use NumInputs<>, and must check ourselves in Validation.
@@ -2443,6 +2444,7 @@ public:
 #endif
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
+        fstream << m_reluFuse;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -2471,6 +2473,7 @@ public:
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
+            fstream >> m_reluFuse;
         }
         else
         {
@@ -2548,6 +2551,7 @@ public:
             node->m_epsilon               = m_epsilon;
             node->m_useCntkEngine         = m_useCntkEngine;
             node->m_disableRegularization = m_disableRegularization;
+            node->m_reluFuse              = m_reluFuse;
         }
     }
 
@@ -2722,7 +2726,7 @@ public:
             auto sliceInputValue          = Input(DATA)->ValueFor(fr);
             const Matrix<StatType>& scale = this->template TypedInput<StatType>(SCALE)->Value();
             const Matrix<StatType>& bias  = this->template TypedInput<StatType>(BIAS)->Value();
-
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
             // If inputIndex is not DATA and we get here, then it means that DATA receives no gradient.
             // However, the underlying engine does not foresee this case, and thus always needs a place
             // to store the gradient. Hence, in that case, we create a dummy object and use that instead.
@@ -2734,18 +2738,18 @@ public:
             auto sliceInputGrad = needsInputGradient ? Input(DATA)->GradientFor(fr) : m_dDataDummy->AsReference();
 
             m_dScale->Resize(scale); // gradients for scale and bias get stored here
-            m_dBias->Resize(bias);
+            m_dBias.Resize(bias);
 
             double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
             // TODO: Move this out. Follow the same pattern as the RNN node. But can't without requiring another buffer.
-            m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
+            m_bnEng->Backward(sliceInputValue, sliceOutputValue, sliceOutputGrad, // (in)  input from below, gradient from above
                               sliceInputGrad,                   // (out) gradient for data input goes here  --TODO: Check if cudnn engine adds the gradient, or just overwrites (BUGBUG). CNTK engine is OK.
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
                               *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
-                              *m_dScale, *m_dBias,              // (out) gradients for scale and bias
+                              *m_dScale, m_dBias,              // (out) gradients for scale and bias
                               !Input(DATA)->IsGradientInitializedBy(this)); // whether data gradient should be accumulated
 
             m_gradientValid = true;
@@ -2764,9 +2768,9 @@ public:
             assert(m_gradientValid);
 
             if (this->template TypedInput<StatType>(BIAS)->IsGradientInitializedBy(this))
-                this->template TypedInput<StatType>(BIAS)->Gradient().AssignValuesOf(*m_dBias);
+                this->template TypedInput<StatType>(BIAS)->Gradient().AssignValuesOf(m_dBias);
             else
-                this->template TypedInput<StatType>(BIAS)->Gradient() += *m_dBias;
+                this->template TypedInput<StatType>(BIAS)->Gradient() += m_dBias;
         }
         // No derivatives with respect to running mean and variance.
     }
@@ -2906,7 +2910,7 @@ public:
             {
                 auto shape = GetSampleLayout();
                 m_bnEng = BatchNormEngine<ElemType, StatType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
-                                                            m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
+                                                            m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn, m_reluFuse);
             }
 
             if (m_disableRegularization)
@@ -2928,7 +2932,6 @@ public:
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_dDataDummy, matrixPool);
         this->template TypedRequestMatrixFromPool<StatType>(m_dScale, matrixPool);
-        this->template TypedRequestMatrixFromPool<StatType>(m_dBias, matrixPool);
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
@@ -2938,7 +2941,6 @@ public:
         this->template TypedReleaseMatrixToPool<StatType>(m_savedInvStdDev, matrixPool);
         ReleaseMatrixToPool(m_dDataDummy, matrixPool);
         this->template TypedReleaseMatrixToPool<StatType>(m_dScale, matrixPool);
-        this->template TypedReleaseMatrixToPool<StatType>(m_dBias, matrixPool);
     }
 
     void SetNormalizationTimeConstants(double normalizationTimeConstant, double prevNormalizationTimeConstant,
@@ -3058,13 +3060,14 @@ private:
     // Not used for blendFactor=1 in CNTK engine.
     shared_ptr<Matrix<ElemType>> m_dDataDummy;
     shared_ptr<Matrix<StatType>> m_dScale;
-    shared_ptr<Matrix<StatType>> m_dBias;
+    Matrix<StatType> m_dBias; //Fix Exception for  memory sharing mechanics
 
     bool m_gradientValid = false;
 
     std::unique_ptr<BatchNormEngine<ElemType, StatType>> m_bnEng;
 
     bool m_convertRunningVariancePending;
+    bool m_reluFuse = false;
 };
 
 }}}

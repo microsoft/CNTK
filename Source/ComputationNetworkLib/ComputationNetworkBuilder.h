@@ -93,6 +93,18 @@ public:
                                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                    bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                    const std::wstring nodeName = L"");
+    ComputationNodePtr ConvolutionBias(const ComputationNodePtr weight,
+        const ComputationNodePtr inputValues, const ComputationNodePtr bias,
+        const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+        const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
+        const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0,
+        const std::wstring nodeName = L"");
+    ComputationNodePtr ConvolutionBias(const ComputationNodePtr weight,
+        const ComputationNodePtr inputValues, const ComputationNodePtr bias,
+        const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+        const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+        bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+        const std::wstring nodeName = L"");
     ComputationNodePtr Pooling(const ComputationNodePtr inputValues, 
                                PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim, const bool includePad,
@@ -181,6 +193,9 @@ public:
     ComputationNodePtr Reciprocal(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr RandomSample(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr RandomSampleInclusionFrequency(const ComputationNodePtr a, const std::wstring nodeName = L"");
+#ifdef USE_MKLDNN
+    ComputationNodePtr RectifiedLinearV2(const ComputationNodePtr a, const std::wstring nodeName = L"");
+#endif
     ComputationNodePtr RectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Reshape(const ComputationNodePtr a, const TensorShape& imageLayout, const std::wstring nodeName = L"");
     ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"");
@@ -202,6 +217,9 @@ public:
     ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, size_t outputRank = 1, const std::wstring nodeName = L"");
     ComputationNodePtr TransposeDimensions(const ComputationNodePtr matrix, int dim1, int dim2, const std::wstring nodeName = L"");
     ComputationNodePtr TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+#ifdef USE_MKLDNN
+    ComputationNodePtr TimesTranspose(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+#endif
     ComputationNodePtr QuantizedTimes(const ComputationNodePtr a, const ComputationNodePtr b, size_t bitSmoothingA = 1, size_t bitSmoothingB = 1, size_t outputRank = 1, const std::wstring nodeName = L"");
 #if 1 // legacy
     ComputationNodePtr LegacyReshape(const ComputationNodePtr a, const size_t num_rows, const TensorShape& imageLayout, const std::wstring nodeName = L"");

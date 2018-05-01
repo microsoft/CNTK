@@ -18,8 +18,7 @@ enum class BatchNormEngineKind
     None  = 0,
     Cntk  = 1,
     CuDnn = 1 << 1,
-
-    All  = Cntk  | CuDnn
+    All  = CPU | CuDnn
 };
 
 #pragma warning(push)
@@ -38,12 +37,12 @@ public:
     void Forward(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
                  InoutMat& out, double epsilon, StatMat& saveMean, StatMat& saveInvStdDev);
 
-    void Backward(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& saveMean, const StatMat& saveInvStdDev,
+    void Backward(const InoutMat& in, const InoutMat& out, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& saveMean, const StatMat& saveInvStdDev,
                   StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad);
 
     static std::unique_ptr<BatchNormEngine<InoutType, StatType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
                                                              bool spatial, ImageLayoutKind imageLayout,
-                                                             BatchNormEngineKind enabledEngines = BatchNormEngineKind::All);
+                                                             BatchNormEngineKind enabledEngines = BatchNormEngineKind::All, bool relu = false);
 
     DISABLE_COPY_AND_MOVE(BatchNormEngine);
 
@@ -60,7 +59,7 @@ protected:
     virtual void ForwardCore(const InoutMat& in, const StatMat& scale, const StatMat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, StatMat& runMean, StatMat& runVariance,
                  InoutMat& out, double epsilon, StatMat& saveMean, StatMat& saveInvStdDev) = 0;
 
-    virtual void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& saveMean, const StatMat& saveInvStdDev,
+    virtual void BackwardCore(const InoutMat& in, const InoutMat& out, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& saveMean, const StatMat& saveInvStdDev,
                   StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) = 0;
 
 protected:

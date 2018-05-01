@@ -55,7 +55,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)Source\SequenceTrainingLib;$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(SolutionDir)Source\PerformanceProfilerDll;</AdditionalIncludeDirectories>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_CONSOLE;$(MathDefine);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -77,7 +77,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
-      <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CPUONLY;$(MathDefine);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
@@ -121,6 +121,7 @@
     <ClInclude Include="ConvolutionalNodes.h" />
     <ClInclude Include="DeprecatedNodes.h" />
     <ClInclude Include="PreComputeNodes.h" />
+    <ClInclude Include="EltWiseNodes.h" />
     <ClInclude Include="RNNNodes.h" />
     <ClInclude Include="SequenceReshapeNodes.h" />
     <ClInclude Include="SpecialPurposeNodes.h" />
@@ -133,6 +134,7 @@
     <ClInclude Include="ReshapingNodes.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TimesTransposeNode.h" />
     <ClInclude Include="TrainingNodes.h" />
     <ClInclude Include="UserDefinedV2FunctionNode.h" />
   </ItemGroup>

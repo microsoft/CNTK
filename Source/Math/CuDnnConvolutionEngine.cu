@@ -269,7 +269,7 @@ protected:
         }
     }
 
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool /*inferenceOnly*/, Mat* /*pBias*/) override
     {
         size_t batchSize = in.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
@@ -388,7 +388,7 @@ protected:
         CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& /*out*/, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace, Mat* /*pBiasGrad*/) override
     {
         size_t batchSize = in.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
@@ -468,7 +468,7 @@ protected:
             m_pool = std::make_unique<CuDnnPool>(*m_geometry, m_poolKind, m_forceDeterministicAlgorithms, m_poolIncludePad);
     }
 
-    void ForwardPoolingCore(const Mat& in, Mat& out) override
+    void ForwardPoolingCore(const Mat& in, Mat& out, bool /*inferenceOnly*/) override
     {
         size_t batchSize = in.GetNumCols();
         m_inT.UpdateBatchSize(batchSize);
@@ -476,7 +476,7 @@ protected:
         CUDNN_CALL(cudnnPoolingForward(*m_cudnn, *(m_pool), &C::One, m_inT, ptr(in), &C::Zero, m_outT, ptr(out)));
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient, Mat& /*workspace*/) override
     {
         size_t batchSize = in.GetNumCols();
         m_inT.UpdateBatchSize(batchSize);

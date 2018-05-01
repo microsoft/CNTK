@@ -1189,7 +1189,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         ProfilerTimeEnd(profGetMinibatch, profilerEvtMainGetMinibatch);
         auto profForwardBackward = ProfilerTimeBegin();
-
+        auto profForward = ProfilerTimeBegin();
         nSamplesSinceLastModelSync += actualMBSize;
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
@@ -1249,7 +1249,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
                 net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
-
+                ProfilerTimeEnd(profForward, profilerEvtMainForward);
                 // ===========================================================
                 // backprop
                 // ===========================================================
@@ -1289,6 +1289,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         size_t aggregateNumSamples = actualMBSize; // (0 for empty MB)
         size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork); // (0 for empty MB)
 
+        if(!DisabledGradientAgg())
+        {
         if (!useGradientAggregation)
         {
             // accumulate criterion values (objective, eval)
@@ -1364,10 +1366,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];
             }
         }
-
+        }
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
-
+        if (!DisabledWeightsUpdate())
+        {
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -1447,7 +1450,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 nSamplesSinceLastModelSync = 0;
             } 
         }
-
+        }
 
         ProfilerTimeEnd(profWeights, profilerEvtMainWeights);
         auto profPost = ProfilerTimeBegin();
