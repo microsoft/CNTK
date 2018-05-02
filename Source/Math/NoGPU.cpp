@@ -2482,6 +2482,9 @@ template void MatrixQuantizerGPU<double>::QuantizeAsync(const Matrix<double>&, c
 template void GPUMatrix<char>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
 template void GPUMatrix<char>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
 template void GPUMatrix<char>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);
+template void GPUMatrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
+template void GPUMatrix<char>::SetUniformRandomValue(RNGHandle& rngHandle, const char low, const char high);
+template void GPUMatrix<char>::SetGaussianRandomValue(const char mean, const char sigma, unsigned long seed);
 template void GPUMatrix<short>::CastAssignValuesOf<float>(const GPUMatrix<float>* other);
 template void GPUMatrix<short>::CastAssignValuesOf<double>(const GPUMatrix<double>* other);
 template void GPUMatrix<short>::CastAssignValuesOf<half>(const GPUMatrix<half>* other);

@@ -380,12 +380,16 @@ namespace CNTK
             m_rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_aggregatedLossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Shape(), computeDevice), outputs.at(m_aggregatedLossFunction)->Mask());
         }
 
-        if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Float)
+        DataType aggregateDataType = m_aggregatedLossFunction->Output().GetDataType();
+
+        if (aggregateDataType == DataType::Float)
             m_rootGradientValue->Data()->SetValue(1.0f);
-        else if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Double)
+        else if (aggregateDataType == DataType::Double)
             m_rootGradientValue->Data()->SetValue(1.0);
+        else if (aggregateDataType == DataType::Float16)
+            m_rootGradientValue->Data()->SetValue(float16(1.0));
         else
-            m_rootGradientValue->Data()->SetValue(half(1.0));
+            RuntimeError("DataType %s is not supported for root gradients", DataTypeName(aggregateDataType));
 
         for (const auto& parameter : m_learnerParameters)
             parameterGradients[parameter] = nullptr;

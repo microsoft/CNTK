@@ -348,6 +348,14 @@ void LearnableParameter<ElemType>::InitBilinear(Matrix<ElemType>& valueMatrix, c
     valueMatrix.TransferToDeviceIfNotThere(deviceId, true);
 }
 
+// Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
+template<>
+void LearnableParameter<char>::InitBilinear(Matrix<char>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight, DEVICEID_TYPE deviceId)
+{
+    RuntimeError("Unsupported template argument(char) in InitBilinear");
+}
+
+
 // initialize by reading a matrix from a text file
 template <class ElemType>
 void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)

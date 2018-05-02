@@ -300,7 +300,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 max_temp_mem_size_in_samples=0,
                 op_name='Convolution', name=''):
     '''
-    Convolution(filter_shape, num_filters=None, sequential=False, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, reduction_rank=1, transpose_weight=False, max_temp_mem_size_in_samples=0, op_name='Convolution', name='')
+    Convolution(filter_shape, num_filters=None, sequential=False, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, reduction_rank=1, transpose_weight=False, dilation=1, groups=1, max_temp_mem_size_in_samples=0, op_name='Convolution', name='')
 
     Layer factory function to create a convolution layer.
 
