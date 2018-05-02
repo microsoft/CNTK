@@ -639,19 +639,47 @@ class TestCaseRunResult:
     self.diagnostics = diagnostics
     self.expectedLines = [] # list of remaining unmatched expected lines from the baseline file for this test case run
 
+def enumerateCommandLineTests(args):
+  """Enumerates tests on the command line."""
+  if not args.test:
+    return
+
+  if len(args.test) == 1 and args.test[0].startswith('@'):
+    filename = os.path.realpath(args.test[0][1:])
+    if not os.path.isfile(filename):
+      print("ERROR: file not found", filename, file=sys.stderr)
+      sys.exit(1)
+
+    with open(filename) as f:
+      for line in f.readlines():
+        line = line.strip()
+        if not line:
+          continue
+       
+        if line.startswith('#'):
+          continue
+
+        yield line.rstrip('/')
+
+    return
+
+  for arg in args.test:
+    yield arg.rstrip('/')
+
 # Lists all available tests
 def listCommand(args):
   testsByTag = {}
-  args.test = [t.rstrip('/').lower() for t in args.test]
+  args.test = [ arg.lower() for arg in enumerateCommandLineTests(args) ]
+
   for test in list(Test.allTestsIndexedByFullName.values()):
      if not args.test or test.fullName.lower() in args.test:
         for flavor in args.flavors:
            for device in args.devices:
-              for os in args.oses:
+              for operating_system in args.oses:
                 for build_sku in args.buildSKUs:
                   if build_sku=="cpu" and device=="gpu":
                     continue
-                  tag = test.matchesTag(args.tag, flavor, device, os, build_sku) if args.tag else '*'
+                  tag = test.matchesTag(args.tag, flavor, device, operating_system, build_sku) if args.tag else '*'
                   if tag:
                     if tag in list(testsByTag.keys()):
                       testsByTag[tag].add(test.fullName)
@@ -665,19 +693,20 @@ def listCommand(args):
 
 # Runs given test(s) or all tests
 def runCommand(args):
-  if len(args.test) > 0:
-     testsToRun = []
-     for name in args.test:
-       if name[len(name)-1] == '/':
-         name = name[:-1]
-       if name.lower() in Test.allTestsIndexedByFullName:
-         testsToRun.append(Test.allTestsIndexedByFullName[name.lower()])
-       else:
-         print("ERROR: test not found", name, file=sys.stderr)
-         sys.exit(1)
-  else:
-     testsToRun = list(sorted(Test.allTestsIndexedByFullName.values(), key=lambda test: test.fullName))
+  testsToRun = []
 
+  for arg in enumerateCommandLineTests(args):
+    arg_lower = arg.lower()
+
+    if arg_lower not in Test.allTestsIndexedByFullName:
+      print("ERROR: test not found", arg, file=sys.stderr)
+      sys.exit(1)
+
+    testsToRun.append(Test.allTestsIndexedByFullName[arg_lower])
+
+  if not testsToRun:
+    testsToRun = list(sorted(Test.allTestsIndexedByFullName.values(), key=lambda test: test.fullName))
+  
   devices = args.devices
   flavors = args.flavors
 
@@ -789,7 +818,10 @@ if __name__ == "__main__":
   runSubparser.add_argument("test", nargs="*",
                             help="optional test name(s) to run, specified as Suite/TestName. "
                                  "Use list command to list available tests. "
-                                 "If not specified then all tests will be run.")
+                                 "If not specified then all tests will be run."
+                                 " "
+                                 "'@<filename>' can be used to specify a line-delimited list "
+                                 "of tests.")
 
   defaultBuildSKU = "gpu"
 
@@ -819,7 +851,10 @@ if __name__ == "__main__":
   listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu - list tests only for a specified build SKU")
   listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
   listSubparser.add_argument("test", nargs="*",
-                             help="optional test name(s) to list, specified as Suite/TestName. ")
+                             help="optional test name(s) to list, specified as Suite/TestName. "
+                                  " "
+                                  "'@<filename>' can be used to specify a line-delimited list "
+                                  "of tests.")
 
   listSubparser.set_defaults(func=listCommand)
 

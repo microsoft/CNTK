@@ -1,0 +1,15 @@
+# CPU and GPU
+CNTKv2CSharp/ExampleTests/LogisticRegressionTest
+CNTKv2CSharp/ExampleTests/LSTMSequenceClassifierTest
+CNTKv2CSharp/ExampleTests/MNISTClassifierTest
+EvalClientTests/CNTKLibraryCSEvalExamplesTest
+
+# CPU Only
+CNTKv2CSharp/ExampleTests/SimpleFeedForwardClassifierTest
+EvalClientTests/CSEvalClientTest
+UnitTests/ManagedEvalTests
+UnitTests/V2LibraryCSTests
+
+# GPU Only
+CNTKv2CSharp/ExampleTests/CifarResNetClassifierTest
+CNTKv2CSharp/ExampleTests/TransferLearningTest
