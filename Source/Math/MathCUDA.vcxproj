@@ -60,7 +60,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>NO_SYNC; WIN32; _WINDOWS; _USRDLL; MATH_EXPORTS; $(CuDnnDefine); %(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_SYNC; WIN32; _WINDOWS; _USRDLL; MATH_EXPORTS; $(CuDnnDefine); $(MathDefine); %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(CudaInclude);$(CUB_PATH);$(CuDnnIncPath)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
