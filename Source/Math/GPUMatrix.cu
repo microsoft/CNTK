@@ -3550,7 +3550,9 @@ void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix
     if ((a.GetComputeDeviceId() != b.GetComputeDeviceId()) || (b.GetComputeDeviceId() != c.GetComputeDeviceId())) // different GPUs
         InvalidArgument("All matrices must be on the same GPU");
 
+    fprintf(stderr, "Before calling GetCublasHandle.\n");
     cublasHandle_t cuHandle = GetCublasHandle(b.GetComputeDeviceId());
+    fprintf(stderr, "After calling GetCublasHandle.\n");
     cublasOperation_t transA = transposeA ? CUBLAS_OP_T : CUBLAS_OP_N;
     cublasOperation_t transB = transposeB ? CUBLAS_OP_T : CUBLAS_OP_N;
     int m = int(transposeA ? a.m_numCols : a.m_numRows);
@@ -3568,6 +3570,7 @@ void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix
     if (k != l)
         RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
     CUBLAS_CALL(cublasgemmHelper(cuHandle, transA, transB, m, n, k, &alpha, a.Data(), (int) a.m_numRows, b.Data(), (int) b.m_numRows, &beta, c.Data(), (int) c.m_numRows));
+    fprintf(stderr, "Finished MultiplyAndWeightedAdd.\n");
 }
 
 template <class ElemType>

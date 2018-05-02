@@ -5044,6 +5044,8 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
 {
     DecideAndMoveToRightDevice(a, b, c);
 
+    fprintf(stderr, "Before multiplyAndWeightedAdd.\n");
+
     if (c.GetDeviceId() < 0) // CPU
     {
         if (a.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * ANY -> ANY
@@ -5186,6 +5188,8 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
             NOT_IMPLEMENTED;
         }
     }
+
+    fprintf(stderr, "After multiplyAndWeightedAdd.\n");
 }
 
 template <class ElemType>

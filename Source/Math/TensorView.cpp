@@ -399,10 +399,15 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     let  B = b.Reshaped(shapeB).AsMatrix();
     auto C =   Reshaped(shapeC).AsMatrix();
     // and go
+
+    fprintf(stderr, "TensorView:: Before multiplyAndWeightedAdd.\n");
+
     if (!transC)
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C, pQuantizedMultiplier);
     else // C' = A * B  <==>  C = (A * B)' = B' * A'
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C, pQuantizedMultiplier);
+
+   fprintf(stderr, "TensorView:: Before multiplyAndWeightedAdd.\n");
 }
 
 template class TensorView<float>;
