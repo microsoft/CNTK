@@ -2473,7 +2473,10 @@ public:
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
-            fstream >> m_reluFuse;
+            if (modelVersion >= CNTK_MODEL_VERSION_31)
+                fstream >> m_reluFuse;
+            else
+                m_reluFuse = false;
         }
         else
         {

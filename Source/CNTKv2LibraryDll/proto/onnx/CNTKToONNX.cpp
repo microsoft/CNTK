@@ -3004,12 +3004,15 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
         // Some nodes map one to many.
         if (src->OpName() == L"Convolution")
         {
-            auto kernelShape = (NDShape)src->Attributes()[L"kernelShape"].Value<NDShape>();
-            auto strides = (NDShape)src->Attributes()[L"strides"].Value<NDShape>();
-            auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
-            auto dilations = (NDShape)src->Attributes()[L"dilation"].Value<NDShape>();
-            auto transpose = (bool)src->Attributes()[L"transpose"].Value<bool>();
-            auto groups = (size_t)src->Attributes()[L"groups"].Value<size_t>();
+            auto& srcConfig = src->Attributes();
+            auto kernelShape = (NDShape)srcConfig[L"kernelShape"].Value<NDShape>();
+            auto strides = (NDShape)srcConfig[L"strides"].Value<NDShape>();
+            auto autoPadding = AsVector<bool>(srcConfig[L"autoPadding"].Value<std::vector<DictionaryValue>>());
+            auto dilations = (NDShape)srcConfig[L"dilation"].Value<NDShape>();
+            auto transpose = (bool)srcConfig[L"transpose"].Value<bool>();
+            auto groups = PrimitiveFunction::convolutionOpDefaultValueForGroups;
+            if(srcConfig.Contains(PrimitiveFunction::AttributeNameGroups))
+                groups = (size_t)srcConfig[L"groups"].Value<size_t>();
 
             //
             // Remove the channel part for ONNX. This is because ONNX, unlike CNTK, does
