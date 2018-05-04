@@ -1348,7 +1348,6 @@ void CNTKToONNXHelper::PrepareLSTMInitialStateNode(ONNXIR::Graph* graph, std::un
     std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
     std::vector<ONNXIR::NodeArg> varInputs;
     std::string inputName = inputArg.Name();
-    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
 
     std::vector<NDArrayViewPtr> srcTensors;
     for (int i = 0; i < initialVariables.size(); i++)
@@ -1367,12 +1366,11 @@ void CNTKToONNXHelper::PrepareLSTMInitialStateNode(ONNXIR::Graph* graph, std::un
     }
 
     onnx::TensorProto dstTensor;
+	dstTensor.set_name(inputName);
     FillTensorWithScalar(srcTensors, dstTensor, shape);
 
-    variableNode->AddAttribute("value", dstTensor);
+	graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
-
-    variableNodes.emplace(initialVariables[0], variableNode);
 }
 
 void CNTKToONNXHelper::PrepareLSTMPeepholeNode(ONNXIR::Graph* graph,
@@ -1391,7 +1389,6 @@ void CNTKToONNXHelper::PrepareLSTMPeepholeNode(ONNXIR::Graph* graph,
     std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
     std::vector<ONNXIR::NodeArg> varInputs;
     std::string inputName = inputArg.Name();
-    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", std::vector<ONNXIR::NodeArg>(), varOutputs);
 
     std::vector<NDArrayViewPtr> srcTensors;
     std::vector<double> multipliers;
@@ -1421,13 +1418,11 @@ void CNTKToONNXHelper::PrepareLSTMPeepholeNode(ONNXIR::Graph* graph,
     }
 
     onnx::TensorProto dstTensor;
-
+	dstTensor.set_name(inputName);
     CopyTensorsWithMultipliers(srcTensors, multipliers, dstTensor, inputArgType);
 
-    variableNode->AddAttribute("value", dstTensor);
+	graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
-
-    variableNodes.emplace(Ps[0], variableNode);
 }
 
 void CNTKToONNXHelper::PrepareLSTMBiasNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
@@ -1450,7 +1445,6 @@ void CNTKToONNXHelper::PrepareLSTMBiasNode(ONNXIR::Graph* graph, std::unordered_
     std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
     std::vector<ONNXIR::NodeArg> varInputs;
     std::string inputName = inputArg.Name();
-    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
 
     std::vector<NDArrayViewPtr> srcTensors;
     for (int i = 0; i < Bs.size(); i++)
@@ -1460,12 +1454,11 @@ void CNTKToONNXHelper::PrepareLSTMBiasNode(ONNXIR::Graph* graph, std::unordered_
     }
 
     onnx::TensorProto dstTensor;
-
+	dstTensor.set_name(inputName);
     CopyTensorsWithCNTKToONNXLSTMWeightLayoutConversion(srcTensors, nullptr, dstTensor, inputArgType);
-    variableNode->AddAttribute("value", dstTensor);
+ 
+	graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
-
-    variableNodes.emplace(Bs[0], variableNode);
 }
 
 void CNTKToONNXHelper::PrepareLSTMWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
@@ -1485,7 +1478,6 @@ void CNTKToONNXHelper::PrepareLSTMWeightNode(ONNXIR::Graph* graph, std::unordere
     std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
     std::vector<ONNXIR::NodeArg> varInputs;
     std::string inputName = inputArg.Name(); 
-    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
 
     std::vector<NDArrayViewPtr> srcTensors;
     for (int i = 0; i < Ws.size(); i++)
@@ -1495,12 +1487,11 @@ void CNTKToONNXHelper::PrepareLSTMWeightNode(ONNXIR::Graph* graph, std::unordere
     }
 
     onnx::TensorProto dstTensor;
-    
+	dstTensor.set_name(inputName);
     CopyTensorsWithCNTKToONNXLSTMWeightLayoutConversion(srcTensors, stabilizerConstants, dstTensor, inputArgType);
-    variableNode->AddAttribute("value", dstTensor);
+    
+	graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
-
-    variableNodes.emplace(Ws[0], variableNode);
 }
 
 std::string DeriveDirectionString(const std::vector<FunctionPtr> lstms,
@@ -1791,7 +1782,6 @@ void CNTKToONNXHelper::PrepareGRUBiasNode(ONNXIR::Graph* graph, std::unordered_m
     std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
     std::vector<ONNXIR::NodeArg> varInputs;
     std::string inputName = inputArg.Name();
-    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
 
     std::vector<NDArrayViewPtr> srcTensors;
     for (int i = 0; i < Bs.size(); i++)
@@ -1801,12 +1791,11 @@ void CNTKToONNXHelper::PrepareGRUBiasNode(ONNXIR::Graph* graph, std::unordered_m
     }
 
     onnx::TensorProto dstTensor;
-
+	dstTensor.set_name(inputName);
     CopyRNNBiasTensors(srcTensors, dstTensor, inputArgType);
-    variableNode->AddAttribute("value", dstTensor);
-    nodeInputs.push_back(inputArg);
 
-    variableNodes.emplace(Bs[0], variableNode);
+	graph->AddInitialTensor(dstTensor);
+    nodeInputs.push_back(inputArg);
 }
 
 void CNTKToONNXHelper::PrepareGRUZRHWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes, 
@@ -1821,7 +1810,6 @@ void CNTKToONNXHelper::PrepareGRUZRHWeightNode(ONNXIR::Graph* graph, std::unorde
     std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
     std::vector<ONNXIR::NodeArg> varInputs;
     std::string inputName = inputArg.Name();
-    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
 
     std::vector<NDArrayViewPtr> srcZRTensors, srcHTensors;
     for (int i = 0; i < Rzrs.size(); i++)
@@ -1834,12 +1822,11 @@ void CNTKToONNXHelper::PrepareGRUZRHWeightNode(ONNXIR::Graph* graph, std::unorde
     }
 
     onnx::TensorProto dstTensor;
-
+	dstTensor.set_name(inputName);
     CopyGRUStateWeightTensors(srcZRTensors, srcHTensors, dstTensor, inputArgType);
-    variableNode->AddAttribute("value", dstTensor);
-    nodeInputs.push_back(inputArg);
 
-    variableNodes.emplace(Rzrs[0], variableNode);
+	graph->AddInitialTensor(dstTensor);
+    nodeInputs.push_back(inputArg);
 }
 
 void CNTKToONNXHelper::PrepareRNNWeightNode(ONNXIR::Graph* graph, std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
@@ -1857,7 +1844,6 @@ void CNTKToONNXHelper::PrepareRNNWeightNode(ONNXIR::Graph* graph, std::unordered
     std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
     std::vector<ONNXIR::NodeArg> varInputs;
     std::string inputName = inputArg.Name();
-    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
 
     std::vector<NDArrayViewPtr> srcTensors;
     for (int i = 0; i < Ws.size(); i++)
@@ -1867,12 +1853,11 @@ void CNTKToONNXHelper::PrepareRNNWeightNode(ONNXIR::Graph* graph, std::unordered
     }
 
     onnx::TensorProto dstTensor;
-
+	dstTensor.set_name(inputName);
     weightConverter(srcTensors, dstTensor, inputArgType);
-    variableNode->AddAttribute("value", dstTensor);
-    nodeInputs.push_back(inputArg);
 
-    variableNodes.emplace(Ws[0], variableNode);
+	graph->AddInitialTensor(dstTensor);
+    nodeInputs.push_back(inputArg);
 }
 
 ONNXIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
@@ -2079,7 +2064,6 @@ void CNTKToONNXHelper::PrepareRNNBiasNode(ONNXIR::Graph* graph, std::unordered_m
     std::vector<ONNXIR::NodeArg> varOutputs({ inputArg });
     std::vector<ONNXIR::NodeArg> varInputs;
     std::string inputName = inputArg.Name();
-    ONNXIR::Node* variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
 
     std::vector<NDArrayViewPtr> srcTensors;
     for (int i = 0; i < Bs.size(); i++)
@@ -2089,12 +2073,11 @@ void CNTKToONNXHelper::PrepareRNNBiasNode(ONNXIR::Graph* graph, std::unordered_m
     }
 
     onnx::TensorProto dstTensor;
-
+	dstTensor.set_name(inputName);
     CopyRNNBiasTensors(srcTensors, dstTensor, inputArgType);
-    variableNode->AddAttribute("value", dstTensor);
-    nodeInputs.push_back(inputArg);
 
-    variableNodes.emplace(Bs[0], variableNode);
+	graph->AddInitialTensor(dstTensor);
+    nodeInputs.push_back(inputArg);
 }
 
 
@@ -3780,11 +3763,12 @@ void CNTKToONNXHelper::CreateRecurrentWeightONNXNodes(ONNXIR::Graph* graph, std:
     std::vector<ONNXIR::NodeArg> varOutputs;
 
     varOutputs.push_back({ WArg });
-    ONNXIR::Node* variableNode = graph->AddNode(WArgName, "Constant", "", varInputs, varOutputs);
+
     onnx::TensorProto dstTensor;
+	dstTensor.set_name(WArgName);
     CopyTensor(W, dstTensor, &WArgType);
-    variableNode->AddAttribute("value", dstTensor);
-    variableNodes.emplace(Wcombined, variableNode);
+
+	graph->AddInitialTensor(dstTensor);
 }
 
 ONNXIR::NodeArg CNTKToONNXHelper::LSTMOutputShapeAdapter(ONNXIR::NodeArg& inputArg, onnx::TypeProto& inputArgType, ONNXIR::Graph* graph,
