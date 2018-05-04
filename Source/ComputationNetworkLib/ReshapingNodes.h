@@ -343,15 +343,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        switch (m_reductionOp)
-        {
-            case ElementWiseOperator::opArgmin:
-            case ElementWiseOperator::opArgmax:
-                //no need to request for backprop matrix as no backprop will happen
-                break;
-            default:
-                RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
-        }
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
