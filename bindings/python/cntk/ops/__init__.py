@@ -262,7 +262,7 @@ def labels_to_graph(labels, name=''):
 
 @typemap
 def forward_backward(labels_graph, network_out, blank_token_id,
-                     delay_constraint=-1, name=''):
+                     delayConstraint=-1, name=''):
     '''
     Criterion node for training methods that rely on forward-backward Viterbi-like
     passes, e.g. Connectionist Temporal Classification (CTC) training.
@@ -312,7 +312,7 @@ def forward_backward(labels_graph, network_out, blank_token_id,
             # We can define the model and the variables
             input_var = sequence.input_variable((input.shape[-1]), name='input')
             labels_var = sequence.input_variable((6), name='label')
-            
+
             # The model should be defined here
             # model = ...
 
@@ -327,12 +327,12 @@ def forward_backward(labels_graph, network_out, blank_token_id,
         labels_graph: labels graph
         network_out: network output
         blank_token_id: id of the CTC blank label
-        delay_constraint: label output delay constraint introduced during
+        delayConstraint: label output delay constraint introduced during
             training that allows to have shorter delay during inference.
             This is using the original time information to enforce that CTC
             tokens only get aligned within a time margin. Setting this parameter
             smaller will result in shortened delay between label output during
-            decoding, yet may hurt accuracy. delay_constraint=-1 means no
+            decoding, yet may hurt accuracy. delayConstraint=-1 means no
             constraint.
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -343,7 +343,7 @@ def forward_backward(labels_graph, network_out, blank_token_id,
     labels_graph = sanitize_input(labels_graph, dtype)
 
     return forward_backward(labels_graph, network_out, blank_token_id,
-                            delay_constraint, name)
+                            delayConstraint, name)
 
 ##########################################################################
 # convolution ops
@@ -3963,13 +3963,13 @@ def space_to_depth(operand, block_size, name=''):
 def cast(node_input, dtype, name=''):
     '''
     cast input to dtype, with the same shape and dynamic axes. This function currently only support forward.
-    
+
     Args:
         node_input: class:`~cntk.input_variable` that needs the dtype conversion
         dtype: data_type (np.float32, np.float64, np.float16): data type of the converted output
         name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`~cntk.ops.functions.Function`    
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import cast
     arg_node_input = sanitize_input(node_input, get_data_type(node_input))
@@ -3979,13 +3979,13 @@ def cast(node_input, dtype, name=''):
 @typemap
 def mean_variance_normalization(operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True, name=''):
     '''
-    Computes mean-variance normalization of the specified input operand. 
+    Computes mean-variance normalization of the specified input operand.
 
-    This operation computes and mean and variance for the entire tensor if use_stats_across_channels is True. 
-    If use_stats_across_channels is False the computes mean and variance per channel and normalizes each 
+    This operation computes and mean and variance for the entire tensor if use_stats_across_channels is True.
+    If use_stats_across_channels is False the computes mean and variance per channel and normalizes each
     channel with its own mean and variance. If do_variance_scaling is False, only the mean is subtracted,
     and the variance scaling is omitted.
-    
+
     Example:
         >>> data = np.array([[[0., 2], [4., 6.]], [[0., 4], [8., 12.]]]).astype(np.float32)
         >>> data
@@ -4014,10 +4014,10 @@ def mean_variance_normalization(operand, epsilon=0.00001, use_stats_across_chann
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
-    
+
     '''
     from cntk.cntk_py import mean_variance_normalization
     if epsilon < 0:
         raise ValueError('epsilon must be non-negative.')
-    operand = sanitize_input(operand, get_data_type(operand))  
+    operand = sanitize_input(operand, get_data_type(operand))
     return mean_variance_normalization(operand, epsilon, use_stats_across_channels, do_variance_scaling, name)
