@@ -1366,10 +1366,10 @@ void CNTKToONNXHelper::PrepareLSTMInitialStateNode(ONNXIR::Graph* graph, std::un
     }
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(inputName);
+    dstTensor.set_name(inputName);
     FillTensorWithScalar(srcTensors, dstTensor, shape);
 
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
 }
 
@@ -1418,10 +1418,10 @@ void CNTKToONNXHelper::PrepareLSTMPeepholeNode(ONNXIR::Graph* graph,
     }
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(inputName);
+    dstTensor.set_name(inputName);
     CopyTensorsWithMultipliers(srcTensors, multipliers, dstTensor, inputArgType);
 
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
 }
 
@@ -1454,10 +1454,10 @@ void CNTKToONNXHelper::PrepareLSTMBiasNode(ONNXIR::Graph* graph, std::unordered_
     }
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(inputName);
+    dstTensor.set_name(inputName);
     CopyTensorsWithCNTKToONNXLSTMWeightLayoutConversion(srcTensors, nullptr, dstTensor, inputArgType);
  
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
 }
 
@@ -1487,10 +1487,10 @@ void CNTKToONNXHelper::PrepareLSTMWeightNode(ONNXIR::Graph* graph, std::unordere
     }
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(inputName);
+    dstTensor.set_name(inputName);
     CopyTensorsWithCNTKToONNXLSTMWeightLayoutConversion(srcTensors, stabilizerConstants, dstTensor, inputArgType);
     
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
 }
 
@@ -1791,10 +1791,10 @@ void CNTKToONNXHelper::PrepareGRUBiasNode(ONNXIR::Graph* graph, std::unordered_m
     }
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(inputName);
+    dstTensor.set_name(inputName);
     CopyRNNBiasTensors(srcTensors, dstTensor, inputArgType);
 
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
 }
 
@@ -1822,10 +1822,10 @@ void CNTKToONNXHelper::PrepareGRUZRHWeightNode(ONNXIR::Graph* graph, std::unorde
     }
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(inputName);
+    dstTensor.set_name(inputName);
     CopyGRUStateWeightTensors(srcZRTensors, srcHTensors, dstTensor, inputArgType);
 
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
 }
 
@@ -1853,10 +1853,10 @@ void CNTKToONNXHelper::PrepareRNNWeightNode(ONNXIR::Graph* graph, std::unordered
     }
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(inputName);
+    dstTensor.set_name(inputName);
     weightConverter(srcTensors, dstTensor, inputArgType);
 
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
 }
 
@@ -2073,10 +2073,10 @@ void CNTKToONNXHelper::PrepareRNNBiasNode(ONNXIR::Graph* graph, std::unordered_m
     }
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(inputName);
+    dstTensor.set_name(inputName);
     CopyRNNBiasTensors(srcTensors, dstTensor, inputArgType);
 
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
     nodeInputs.push_back(inputArg);
 }
 
@@ -2520,10 +2520,10 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                         auto srcTensor = input.IsParameter() ? Parameter(input).Value() : Constant(input).Value();
 
                         onnx::TensorProto dstTensor;
-						dstTensor.set_name(inputName);
+					    dstTensor.set_name(inputName);
 						CopyTensor(srcTensor, dstTensor, &inputArgType);
 
-						graph->AddInitialTensor(dstTensor);
+					    graph->AddInitialTensor(dstTensor);
                     }
                 }
             }
@@ -3765,10 +3765,10 @@ void CNTKToONNXHelper::CreateRecurrentWeightONNXNodes(ONNXIR::Graph* graph, std:
     varOutputs.push_back({ WArg });
 
     onnx::TensorProto dstTensor;
-	dstTensor.set_name(WArgName);
+    dstTensor.set_name(WArgName);
     CopyTensor(W, dstTensor, &WArgType);
 
-	graph->AddInitialTensor(dstTensor);
+    graph->AddInitialTensor(dstTensor);
 }
 
 ONNXIR::NodeArg CNTKToONNXHelper::LSTMOutputShapeAdapter(ONNXIR::NodeArg& inputArg, onnx::TypeProto& inputArgType, ONNXIR::Graph* graph,
