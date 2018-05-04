@@ -118,6 +118,9 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
         return;
     }
 
+    fprintf(stderr, "NcclComm: Before cudaDeviceSync.\n");
+    cudaDeviceSynchronize();
+
     cudaStreamCreateWithFlags(&m_stream, cudaStreamDefault)
         || "cudaStreamCreateWithFlags failed";
     fprintf(stderr, "NcclComm: initialized\n");
