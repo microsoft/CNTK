@@ -591,7 +591,7 @@ def test_LSTM(tmpdir):
     activation_options = [C.tanh]
 
     #Recurrence attributes
-    initial_state_options = [0]
+    initial_state_options = [0, 0.23]
 
     input_dim = 2
     cell_dim = 3
@@ -716,8 +716,9 @@ def test_Neg(tmpdir):
     verify_no_input(model, tmpdir, 'Neg_0')
 
 #OptimizedRNNStack
-OPTIM_RNN_STACK_CONFIGS = ((True, 2, 2, 3, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
-                           (True, 4, 2, 3, 'lstm'), (False, 2, 2, 3, 'lstm'),
+OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
+                           (True, 2, 2, 3, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
+                           (True, 4, 2, 3, 'lstm'), (False, 2, 2, 3, 'lstm'), (False, 2, 6, 8, 'lstm'), (False, 4, 4, 8, 'lstm'),
                            (True, 1, 2, 3, 'rnnReLU'), (True, 4, 4, 8, 'rnnReLU'), (False, 2, 6, 8, 'rnnReLU'), 
                            (True, 4, 2, 3, 'rnnTanh'), (False, 2, 2, 3, 'rnnTanh'), (True, 1, 2, 3, 'rnnTanh'))
 @pytest.mark.parametrize("bidirectional, num_layers, input_size, hidden_size, recurrent_op", OPTIM_RNN_STACK_CONFIGS)
