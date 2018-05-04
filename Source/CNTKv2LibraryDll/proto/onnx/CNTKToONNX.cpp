@@ -2532,17 +2532,15 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                     std::vector<ONNXIR::NodeArg> varOutputs;
 
                     varOutputs.push_back({ inputArg });
-                    ONNXIR::Node* variableNode = nullptr;
                     if (input.IsParameter() || input.IsConstant())
                     {
-                        variableNode = graph->AddNode(inputName, "Constant", "", varInputs, varOutputs);
                         auto srcTensor = input.IsParameter() ? Parameter(input).Value() : Constant(input).Value();
 
                         onnx::TensorProto dstTensor;
-                        CopyTensor(srcTensor, dstTensor, &inputArgType);
+						dstTensor.set_name(inputName);
+						CopyTensor(srcTensor, dstTensor, &inputArgType);
 
-                        variableNode->AddAttribute("value", dstTensor);
-                        variableNodes.emplace(input, variableNode);
+						graph->AddInitialTensor(dstTensor);
                     }
                 }
             }
