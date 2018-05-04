@@ -2892,7 +2892,7 @@ void GPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
     if (NzCount() > 0)
         //So far only support SetDiagonalValue for zero sparse matrix for now
-        NOT_IMPLEMENTED;
+        LogicError("Not implemented: SetDiagonalValue is not implemented for non-zero sparse GPU matrices.");
     //TODO: because sparse setting value on non-zero sparse matrix involves
     //shifting values, we need a more involved implementation. We should consider
     //the current implemenation as AssignAsDiagonalMatrix(...).

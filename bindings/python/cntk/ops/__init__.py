@@ -2198,14 +2198,13 @@ def eye_like(x, sparse_output = True, name=''):
                 [ 0.,  0.,  1.,  0.]]], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor of rank 2
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import eye_like
     x = sanitize_input(x)
-    # print('len: ', len(x.dynamic_axes) + len(x.shape))
     if len(x.dynamic_axes) + len(x.shape) != 2:
         raise(ValueError('eye_like operand must have exactly two axes (counting both dynamic and static axes) however "%s" is provided as the operand'%x))
     if any([ax.is_sequence_axis for ax in x.dynamic_axes]):

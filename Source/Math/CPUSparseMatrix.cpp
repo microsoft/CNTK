@@ -182,12 +182,12 @@ void CPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
     if (NzCount() > 0)
         //So far only support SetDiagonalValue for zero sparse matrix for now
-        NOT_IMPLEMENTED;
+        LogicError("Not implemented: SetDiagonalValue is not implemented for non-zero sparse CPU matrices.");
+
     RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize(), true, false);
     CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
     CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
     ElemType* data = Data();
-#pragma omp parallel for
     for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); j++)
     {
         //The same logic for both CSC and CSR format:
@@ -220,27 +220,11 @@ void CPUSparseMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vect
         CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
         ElemType* data = Data();
         //The same logic for both CSC and CSR format:
-        if (vector.GetNumRows() == 1) // row vector
+        for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); j++)
         {
-#pragma omp parallel for
-            for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); j++)
-            {
-                data[j] = vector(0, j);
-                secondaryIndices[j] = j;
-                majorIndices[j] = j;
-            }
-        }
-        else //column vector
-        {
-            for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); ++j)
-                this->SetValue(j, j, vector(j, 0));
-#pragma omp parallel for
-            for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); j++)
-            {
-                data[j] = vector(j, 0);
-                secondaryIndices[j] = j;
-                majorIndices[j] = j;
-            }
+            data[j] = vector.Data()[j];
+            secondaryIndices[j] = j;
+            majorIndices[j] = j;
         }
         for (size_t j = GetDiagSize(); j < SecondaryIndexCount(); ++j)
             secondaryIndices[j] = (CPUSPARSE_INDEX_TYPE)GetDiagSize();
@@ -757,7 +741,6 @@ CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::DiagonalToDense() const
 
     return diag;
 }
-
 
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,

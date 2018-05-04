@@ -929,7 +929,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
     auto& us = *this;
-    long m = (long) GetDiagSize();
+    long m = static_cast<long>(GetDiagSize());
 #pragma omp parallel for
     // four-way unrolling
     for (long i = 0; i < (m & ~3); i += 4)

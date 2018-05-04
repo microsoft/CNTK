@@ -368,7 +368,7 @@ namespace CNTK
                                 InvalidArgument("EyeLike: Operand '%S' must have exactly 2 axes including dynamic and static axes.",
                                     m_inputs[0].AsString().c_str());
                             if (any_of(dynAxes.begin(), dynAxes.end(), [](const Axis& axis) {return axis.IsSequenceAxis(); }))
-                                InvalidArgument("EyeLike: Operand '%S' must have no sequence axis.",
+                                InvalidArgument("EyeLike: Operand '%S' can not have sequence axis.",
                                     m_inputs[0].AsString().c_str());
 
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());

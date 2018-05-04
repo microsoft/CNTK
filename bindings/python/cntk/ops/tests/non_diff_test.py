@@ -171,10 +171,17 @@ def test_eye_like(operand, sparse_output, device_id, precision):
     my_eval = (lambda f, arg: f.eval(arg).todense()) if sparse_output else (lambda f, arg: f.eval(arg))
 
     from .. import eye_like
+    import cntk as C
+
+    #testing with direct numpy input
+    y =  C.eye_like(operand, sparse_output=sparse_output)
+    actual = y.eval().todense() if sparse_output else y.eval()
+    np.testing.assert_almost_equal(actual, expected)
+
+    #testing through input_variable
     #test load and save:
     import tempfile
     import os
-    import cntk as C
     x = C.input_variable(operand.shape[1:], dtype=np.float32, needs_gradient=True)
     cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
     actual = my_eval(cntk_eye_like, {x: operand})
@@ -235,3 +242,19 @@ def test_eye_like(operand, sparse_output, device_id, precision):
     ref_grad = ref_op_func.grad({x: data}, [w, x])
     np.testing.assert_almost_equal(grad[x], ref_grad[x])
     np.testing.assert_almost_equal(grad[w], ref_grad[w])
+
+    #test expecting exception with sequence axis
+    with pytest.raises(Exception) as info:
+        #no sequence axis is allowed
+        x = C.sequence.input_variable(operand.shape[1:], dtype=np.float32, needs_gradient=True)
+        cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
+
+    with pytest.raises(Exception) as info:
+        #no more than 2 axes is allowed (including any dynamic axes)
+        x = C.input_variable((3, 3), dtype=np.float32, needs_gradient=True)
+        cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
+
+    with pytest.raises(Exception) as info:
+        #no less than 2 axes is allowed (including any dynamic axes)
+        x = C.input_variable((), dtype=np.float32, needs_gradient=True)
+        cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
