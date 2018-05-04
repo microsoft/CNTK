@@ -1020,3 +1020,24 @@ def test_TransposeAxes(tmpdir):
     #model = C.swapaxes(x, 1, 2)
     #verify_one_input(model, data, tmpdir, 'TransposeAxes_1')
 
+# Select
+def test_Select(tmpdir):
+    flag = np.asarray([-100., -1.2, -1.0, -0.5, 0.0, 0.1, 1.0, 100.], dtype=np.float32)
+    if_true = np.asarray([1., 2., 3., 4., 5., 6., 7., 8.], dtype=np.float32)
+    if_false = np.asarray([11., 12., 13., 14., 15., 16., 17., 18.], dtype=np.float32)
+
+    model = C.element_select(flag, if_true, if_false)
+    verify_no_input(model, tmpdir, 'Select_0')
+
+    flag_var = C.input_variable(np.shape(flag))
+    if_true_var = C.input_variable(np.shape(if_true))
+    if_false_var = C.input_variable(np.shape(if_false))
+
+    model = C.element_select(flag_var, if_true, if_false)
+    verify_one_input(model, flag, tmpdir, 'Select_1_flag')
+
+    model = C.element_select(flag, if_true_var, if_false)
+    verify_one_input(model, if_true, tmpdir, 'Select_1_if_true')
+
+    model = C.element_select(flag, if_true, if_false_var)
+    verify_one_input(model, if_false, tmpdir, 'Select_1_if_false')

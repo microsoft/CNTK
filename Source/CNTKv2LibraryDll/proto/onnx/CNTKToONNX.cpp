@@ -96,6 +96,13 @@ namespace CNTK
             std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
             const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
+        // Processes inputs of a src CNTK op, creating ONNX nodes needed for the inputs.
+        static std::vector<ONNXIR::NodeArg> ProcessInputs(const FunctionPtr& src,
+            ONNXIR::Graph* graph,
+            std::unordered_map<FunctionPtr, ONNXIR::Node*>& functionNodes,
+            std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+            const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+
         static ONNXIR::Node *AddReshapeNode(const ONNXIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName, ONNXIR::Graph* graph);
         static ONNXIR::Node *AddMatMulNode(const ONNXIR::NodeArg &nodeArg1, const ONNXIR::NodeArg &nodeArg2, ONNXIR::Graph* graph);
         static ONNXIR::Node *AddArgMaxNode(const ONNXIR::NodeArg &nodeArg, ONNXIR::Graph* graph, int axis);
@@ -344,6 +351,13 @@ namespace CNTK
         //
         static ONNXIR::NodeArg LSTMOutputShapeAdapter(ONNXIR::NodeArg& inputArg, onnx::TypeProto& inputArgType, ONNXIR::Graph* graph,
             size_t numDirections, size_t hiddenSize, CNTK::DataType outputType, string adapterBasename = "");
+
+        // Takes CNTK's Select node and converts it into a series of ONNX nodes.
+        static ONNXIR::Node * CreateONNXNodesForSelect(const FunctionPtr & src,
+            ONNXIR::Graph * graph, std::unordered_map<FunctionPtr,
+            ONNXIR::Node*>& functionNodes,
+            std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+            const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
         // A helper function, to reverse any iterable container and return a copy
         // of the reversed container.
@@ -2387,7 +2401,14 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
         return nullptr;
     }
     else if (opName == "OptimizedRNNStack")
+    {
         return CreateONNXNodesForOptimizedRNNStack(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
+    else if (opName == "Select")
+    {
+        return CreateONNXNodesForSelect(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
+
     //
     // If this block node equivalent to a primitive ONNX OP, then treated as such.
     // And just maps its argument to ONNX node.
@@ -2403,9 +2424,9 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     else if (Operators::IsSupportedCNTKOP(src->OpName()))
     {
-        std::vector<ONNXIR::NodeArg> inputs;
-        std::vector<ONNXIR::NodeArg> outputs;
+        std::vector<ONNXIR::NodeArg> inputs = ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap);
 
+        std::vector<ONNXIR::NodeArg> outputs;
         for (const auto& output : src->Outputs())
         {
             auto outputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
@@ -2415,104 +2436,125 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
             outputs.push_back(outputArg);
         }
 
-        for (size_t inputIndex = 0; inputIndex < src->Inputs().size(); ++inputIndex)
+        //
+        // Finally add a new node to ONNX graph.
+        //
+        functionNode = AddNode(src, graph, inputs, outputs);
+    }
+    else
+        LogicError("Node '%S': Unsupported node.", src->AsString().c_str());
+
+    functionNodes.emplace(src, functionNode);
+    return functionNode;
+}
+
+std::vector<ONNXIR::NodeArg> CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
+    ONNXIR::Graph* graph,
+    std::unordered_map<FunctionPtr, ONNXIR::Node*>& functionNodes,
+    std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    std::vector<ONNXIR::NodeArg> inputs;
+    std::string opName = ToString(src->OpName());
+
+    for (size_t inputIndex = 0; inputIndex < src->Inputs().size(); ++inputIndex)
+    {
+        auto input = src->Inputs()[inputIndex];
+
+        if (input.IsPlaceholder())
         {
-            auto input = src->Inputs()[inputIndex];
-
+            input = input.BlockFunctionVariableMapping();
             if (input.IsPlaceholder())
-            {
-                input = input.BlockFunctionVariableMapping();
-                if (input.IsPlaceholder())
-                    LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
-            }
+                LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
+        }
 
-            // Special case handling of LayerNormalization layer because it changes
-            // ops dynamically based on value of inputs. If more such cases ops are seen, 
-            // this should be abstracted out from here. 
-            if (ToString(src->OpName()) == "LayerNormalization")
-            {
-                // If non-zero epsilon was specified, a fourth input is included 
-                // which must be ignored because we cannot export epsilon to ONNX.
-                // See LayerNormalization branch in AddNode() below.
-                if (src->Inputs().size() == 4 && inputIndex == 0 && input.IsConstant())
-                    continue;
-            }
+        // Special case handling of LayerNormalization layer because it changes
+        // ops dynamically based on value of inputs. If more such cases ops are seen,
+        // this should be abstracted out from here.
+        if (ToString(src->OpName()) == "LayerNormalization")
+        {
+            // If non-zero epsilon was specified, a fourth input is included
+            // which must be ignored because we cannot export epsilon to ONNX.
+            // See LayerNormalization branch in AddNode() below.
+            if (src->Inputs().size() == 4 && inputIndex == 0 && input.IsConstant())
+                continue;
+        }
 
-            if (FilterInput(src, input, inputIndex))
+        if (FilterInput(src, input, inputIndex))
+            continue;
+
+        //
+        // Use user defined name if available otherwise use our internel unique name ID.
+        //
+        std::string inputName = ToString(input.Uid());
+        auto inputItr = compositeOutputsMap.find(input);
+        if (inputItr != compositeOutputsMap.end())
+            inputName = ToString(inputItr->second.Uid());
+
+        bool isConstant = (input.IsParameter() || input.IsConstant()) &&
+            !Operators::IgnoreConstantAndParameter(src->OpName(), inputIndex);
+
+        onnx::TypeProto inputArgType;
+
+        bool broadcastSwapped = false;
+        if (Operators::SupportBroadcast(src->OpName()))
+        {
+            std::pair<std::vector<int>, std::vector<int>> adjustedDims;
+            bool broadcast = false;
+            int axis = 0;
+            int index0, index1;
+            std::tie<int, int>(index0, index1) = Operators::GetElementWiseInputIndices(src->OpName());
+
+            if (index0 != inputIndex && index1 != inputIndex)
                 continue;
 
-            //
-            // Use user defined name if available otherwise use our internel unique name ID.
-            //
-            std::string inputName = ToString(input.Uid());
-            auto inputItr = compositeOutputsMap.find(input);
-            if (inputItr != compositeOutputsMap.end())
-                inputName = ToString(inputItr->second.Uid());
-
-            bool isConstant = (input.IsParameter() || input.IsConstant()) &&
-                !Operators::IgnoreConstantAndParameter(src->OpName(), inputIndex);
-
-            onnx::TypeProto inputArgType;
-
-            bool broadcastSwapped = false;
-            if (Operators::SupportBroadcast(src->OpName()))
-            {
-                std::pair<std::vector<int>, std::vector<int>> adjustedDims;
-                bool broadcast = false;
-                int axis = 0;
-                int index0, index1;
-                std::tie<int, int>(index0, index1) = Operators::GetElementWiseInputIndices(src->OpName());
-
-                if (index0 != inputIndex && index1 != inputIndex)
-                    continue;
-
-                std::tie<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool>(adjustedDims, broadcast, axis, broadcastSwapped) =
-                    AdjustForBroadcastShape(src->Inputs()[index0], src->Inputs()[index1]);
-                if (inputIndex == index0)
-                    inputArgType = ToTypeProto(adjustedDims.first, false);
-                else if (inputIndex == index1)
-                    inputArgType = ToTypeProto(adjustedDims.second, false);
-            }
-            else if (opName == "Splice")
-            {
-                // for ops like Concat, batch axis may exist in one of the operand
-                // CNTK allows the other operand(s) not having batch axis. But ONNX 
-                // requires operands to have the same rank
-                inputArgType = ToTypeProto(input.Shape(), OpInputsHasBatchAxis(src));
-            }
-            else if (opName == "Hardmax" || opName == "ImageScaler")
-            {
-                // ONNX specifies that hardmax, ImageScaler always need a batch axis
-                inputArgType = ToTypeProto(input.Shape(), true);
-            }
+            std::tie<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool>(adjustedDims, broadcast, axis, broadcastSwapped) =
+                AdjustForBroadcastShape(src->Inputs()[index0], src->Inputs()[index1]);
+            if (inputIndex == index0)
+                inputArgType = ToTypeProto(adjustedDims.first, false);
+            else if (inputIndex == index1)
+                inputArgType = ToTypeProto(adjustedDims.second, false);
+        }
+        else if (opName == "Splice")
+        {
+            // for ops like Concat, batch axis may exist in one of the operand
+            // CNTK allows the other operand(s) not having batch axis. But ONNX
+            // requires operands to have the same rank
+            inputArgType = ToTypeProto(input.Shape(), OpInputsHasBatchAxis(src));
+        }
+        else if (opName == "Hardmax" || opName == "ImageScaler")
+        {
+            // ONNX specifies that hardmax, ImageScaler always need a batch axis
+            inputArgType = ToTypeProto(input.Shape(), true);
+        }
+        else
+        {
+            if (isConstant && opName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
+                && input.Shape().Rank() == 2)
+                // this is a workaround for brainscript models that have rank = 2 for BN inputs.
+                inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
             else
+                inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
+            if (input.IsInput() && input.HasSequenceAxis())
+                (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
+        }
+
+        UpdateONNXType(input.GetDataType(), inputArgType);
+        ONNXIR::NodeArg inputArg(inputName, &inputArgType);
+
+        inputs.push_back(inputArg);
+
+        if (broadcastSwapped && inputs.size() == 2)
+            swap(inputs[0], inputs[1]);
+        //
+        // Leaf nodes are data entry to the graph and need their own node with only output arg.
+        //
+        if (isConstant)
+        {
+            if (variableNodes.find(input) == variableNodes.end())
             {
-                if (isConstant && opName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
-                    && input.Shape().Rank() == 2)
-                    // this is a workaround for brainscript models that have rank = 2 for BN inputs.
-                    inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
-                else
-                    inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
-                if (input.IsInput() && input.HasSequenceAxis())
-                    (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
-            }
-
-            UpdateONNXType(input.GetDataType(), inputArgType);
-            ONNXIR::NodeArg inputArg(inputName, &inputArgType);
-
-            inputs.push_back(inputArg);
-
-            if (broadcastSwapped && inputs.size() == 2)
-                swap(inputs[0], inputs[1]);
-            //
-            // Leaf nodes are data entry to the graph and need their own node with only output arg.
-            //
-            if (isConstant)
-            {
-                if (variableNodes.find(input) == variableNodes.end())
-                {
-                    std::vector<ONNXIR::NodeArg> varInputs;
-                    std::vector<ONNXIR::NodeArg> varOutputs;
+                std::vector<ONNXIR::NodeArg> varInputs;
+                std::vector<ONNXIR::NodeArg> varOutputs;
 
                     varOutputs.push_back({ inputArg });
                     if (input.IsParameter() || input.IsConstant())
@@ -2535,16 +2577,7 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                 CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
         }
 
-        //
-        // Finally add a new node to ONNX graph.
-        //
-        functionNode = AddNode(src, graph, inputs, outputs);
-    }
-    else
-        LogicError("Node '%S': Unsupported node.", src->AsString().c_str());
-
-    functionNodes.emplace(src, functionNode);
-    return functionNode;
+    return inputs;
 }
 
 void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
@@ -3825,4 +3858,59 @@ ONNXIR::NodeArg CNTKToONNXHelper::LSTMOutputShapeAdapter(ONNXIR::NodeArg& inputA
     reshapeNode->AddAttribute("shape", shape);
 
     return reshapeOutputArg;
+}
+
+ONNXIR::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src,
+    ONNXIR::Graph* graph,
+    std::unordered_map<FunctionPtr, ONNXIR::Node*>& functionNodes,
+    std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    std::vector<ONNXIR::NodeArg> inputs = ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+
+    std::vector<ONNXIR::NodeArg> outputs;
+    for (const auto& output : src->Outputs())
+    {
+        auto outputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
+        UpdateONNXType(output.GetDataType(), outputArgType);
+
+        ONNXIR::NodeArg outputArg(ToString(output.Uid()), &outputArgType);
+        outputs.push_back(outputArg);
+    }
+
+    // CNTK's select(flag, value_if_true, value_if_false) can be represented with ONNX ops as
+    // flag01 * value_if_true + (1 - flag01) * value_if_false,
+    // where flag01 = ceil(min(abs(flag), 1)).
+
+    const std::string & outputName = outputs[0].Name();
+
+    ONNXIR::NodeArg absOutputArg(outputName + "_abs_out", nullptr);
+    graph->AddNode(outputName + "_abs", "Abs", "", { inputs[0] }, { absOutputArg });
+
+    ONNXIR::NodeArg oneOutputArg(outputName + "_one_out", nullptr);
+    ONNXIR::Node* oneNode = graph->AddNode(outputName + "_one", "Constant", "", {}, { oneOutputArg });
+    onnx::TensorProto oneTensor;
+    oneTensor.set_data_type(onnx::TensorProto::FLOAT);
+    oneTensor.add_float_data(1);
+    oneNode->AddAttribute("value", oneTensor);
+
+    ONNXIR::NodeArg minOutputArg(outputName + "_min_out", nullptr);
+    graph->AddNode(outputName + "_min", "Min", "", { absOutputArg, oneOutputArg }, { minOutputArg });
+
+    ONNXIR::NodeArg ceilOutputArg(outputName + "_ceil_out", nullptr);
+    graph->AddNode(outputName + "_ceil", "Ceil", "", { minOutputArg }, { ceilOutputArg });
+
+    ONNXIR::NodeArg mulTrueOutputArg(outputName + "_mul_true_out", nullptr);
+    graph->AddNode(outputName + "_mul_true", "Mul", "", { ceilOutputArg, inputs[1] }, { mulTrueOutputArg });
+
+    ONNXIR::NodeArg oneSubOutputArg(outputName + "_one_sub_out", nullptr);
+    graph->AddNode(outputName + "_one_sub", "Sub", "", { oneOutputArg, ceilOutputArg }, { oneSubOutputArg });
+
+    ONNXIR::NodeArg mulFalseOutputArg(outputName + "_mul_false_out", nullptr);
+    graph->AddNode(outputName + "_mul_false", "Mul", "", { oneSubOutputArg, inputs[2] }, { mulFalseOutputArg });
+
+    ONNXIR::Node* sumNode = graph->AddNode(outputName + "_sum", "Sum", "", { mulTrueOutputArg, mulFalseOutputArg }, { outputs[0] });
+
+    functionNodes.emplace(src, sumNode);
+    return sumNode;
 }
