@@ -110,6 +110,7 @@
     <Compile Include="SwigProxyClasses\StreamInformation.cs" />
     <Compile Include="SwigProxyClasses\StringVector.cs" />
     <Compile Include="SwigProxyClasses\SWIGTYPE_p_void.cs" />
+    <Compile Include="SwigProxyClasses\SWIGTYPE_p_int8_t.cs" />
     <Compile Include="SwigProxyClasses\Trainer.cs" />
     <Compile Include="SwigProxyClasses\TrainingParameterScheduleDouble.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapParameterNDArrayViewPtr.cs" />

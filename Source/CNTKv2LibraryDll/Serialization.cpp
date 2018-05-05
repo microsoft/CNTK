@@ -244,6 +244,17 @@ namespace CNTK
                     dst->mutable_data()[i] = (DstT)buffer[i];
         }
 
+        static void WriteInt8Data(const NDArrayView& src, io::CodedOutputStream& output)
+        {
+            auto size = src.Shape().TotalSize();
+            const int8_t* buffer = src.DataBuffer<int8_t>();
+            for (auto i = 0; i < size; i++)
+            {
+                auto value = buffer[i];
+                output.WriteVarint32SignExtended(Encode<int8_t, int8_t>(value));
+            }
+        }
+
         template <typename T>
         static void WriteData(const NDArrayView& src, io::CodedOutputStream& output)
         {
@@ -294,8 +305,6 @@ namespace CNTK
             }
         }
 
-        
-
         UsingUTF8 m_locale;
         Arena m_arena;
         Message* m_proto;
@@ -332,6 +341,10 @@ namespace CNTK
             {
                 CopyData<float16, float>(src, dst->mutable_float_values()->mutable_value());
             }
+            else if (src.GetDataType() == DataType::Int8)
+            {
+                CopyData<int8_t, int32>(src, dst->mutable_sint32_values()->mutable_value());
+            }
         }
     }
 
@@ -351,6 +364,10 @@ namespace CNTK
             else if (src.GetDataType() == DataType::Float16)
             {
                 WriteData<float16>(src, output);
+            }
+            else if (src.GetDataType() == DataType::Int8)
+            {
+                WriteInt8Data(src, output);
             }
         }
     }
@@ -377,6 +394,11 @@ namespace CNTK
             else if (dst.GetDataType() == DataType::Float16)
             {
                 if (!ReadData<float, float16>(wrapper, dst))
+                    return false;
+            }
+            else if (dst.GetDataType() == DataType::Int8)
+            {
+                if (!ReadData<int8_t, int8_t>(wrapper, dst))
                     return false;
             }
         }
@@ -479,6 +501,13 @@ namespace CNTK
         {
             if (src.float_values().value().size() == shape->TotalSize())
                 CopyData<float, float16>(src.float_values().value(), dst);
+            else
+                m_arrayViews.push_back({ dst, nullptr });
+        }
+        else if (dataType == DataType::Int8)
+        {
+            if (src.sint32_values().value().size() == shape->TotalSize())
+                CopyData<int32, int8_t>(src.sint32_values().value(), dst);
             else
                 m_arrayViews.push_back({ dst, nullptr });
         }
