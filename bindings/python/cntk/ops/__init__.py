@@ -2193,9 +2193,9 @@ def eye_like(x, sparse_output = True, name=''):
         >>> x0 = np.arange(12).reshape((3, 4)).astype('f')
         >>> x = C.input_variable(4)
         >>> C.eye_like(x).eval({x: x0}).todense()
-        array([[[ 1.,  0.,  0.,  0.],
+        array([[ 1.,  0.,  0.,  0.],
                 [ 0.,  1.,  0.,  0.],
-                [ 0.,  0.,  1.,  0.]]], dtype=float32)
+                [ 0.,  0.,  1.,  0.]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor of rank 2
