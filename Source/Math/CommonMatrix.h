@@ -521,6 +521,8 @@ public:
 
     size_t GetNumRows() const { return m_numRows; }
     size_t GetNumCols() const { return m_numCols; }
+    //for non-squared matrix, the major diagonal size is defined by the row or col with smaller dimension
+    size_t GetDiagSize() const { return GetNumRows() < GetNumCols() ? GetNumRows() : GetNumCols(); }
 
 protected:
 
