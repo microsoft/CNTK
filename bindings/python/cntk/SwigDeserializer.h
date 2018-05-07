@@ -119,21 +119,17 @@ namespace CNTK
 
         SequenceDataPtr FromCSR(PyObject* object, const StreamInformation& info)
         {
-            //auto data = (PyArrayObject*)GetProperty(object, "data");
             PyObjectPtr data = GetProperty(object, "data");
             PyArrayObject* dataRaw = (PyArrayObject*)data.get();
             auto type = PyArray_TYPE(dataRaw);
             if (type != NPY_FLOAT32)
                 RuntimeError("Only csr_matrix of float is currently supported.");
 
-            //auto indptr = (PyArrayObject*)GetProperty(object, "indptr");
-            //auto indices = (PyArrayObject*)GetProperty(object, "indices");
             PyObjectPtr indptr = GetProperty(object, "indptr");
             PyArrayObject* indptrRaw = (PyArrayObject*)indptr.get();
             PyObjectPtr indices = GetProperty(object, "indices");
             PyArrayObject* indicesRaw = (PyArrayObject*)indices.get();
 
-            //auto shape = GetProperty(object, "shape");
             PyObjectPtr shape = GetProperty(object, "shape");
             auto numElements = PyTuple_GET_ITEM(shape.get(), 0);
 
@@ -309,7 +305,6 @@ namespace CNTK
         // Fills chunk data with sparse samples.
         void FillDataWithSparseSamples(size_t streamIndex, PyObject* o, size_t dataSize)
         {
-            //auto pyData = (PyArrayObject*)GetProperty(o, "data");
             PyObjectPtr pyData = GetProperty(o, "data");
             PyArrayObject* pyDataRaw = (PyArrayObject*)pyData.get();
 
@@ -319,8 +314,6 @@ namespace CNTK
 
             auto data = (float*)PyArray_DATA(pyDataRaw);
 
-            //auto indices = (SparseIndexType*)PyArray_DATA((PyArrayObject*)GetProperty(o, "indices"));
-            //auto indptr = (SparseIndexType*)PyArray_DATA((PyArrayObject*)GetProperty(o, "indptr"));
             PyObjectPtr indices = GetProperty(o, "indices");
             SparseIndexType* indicesRaw = (SparseIndexType*)PyArray_DATA((PyArrayObject*)indices.get());
             PyObjectPtr indptr = GetProperty(o, "indptr");
