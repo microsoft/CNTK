@@ -408,6 +408,9 @@ namespace CNTK
 
             if (!result)
                 RuntimeError("PyObject does not have property '%s'.", propertyName.c_str());
+
+            // PyObject_GetAttrString() increases the refcount internally, so when we wrap the pointer in shared_ptr, 
+            // we pass false to not increase refcount again. During delete, the refcount is decreased normally in shared_ptr's deleter.
             return MakeShared(result, false);
         }
 
