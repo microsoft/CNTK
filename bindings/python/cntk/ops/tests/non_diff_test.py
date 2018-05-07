@@ -13,6 +13,7 @@ import numpy as np
 import cntk as C
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, precision, PRECISION_TO_TYPE
+from cntk.internal import sanitize_dtype_cntk
 
 TENSORS = [
     ([12.3, -12.3]),
