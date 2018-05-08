@@ -216,33 +216,6 @@ def test_eye_like(operand, sparse_output, device_id, precision):
     np.testing.assert_almost_equal(my_eval(cntk_eye_like2, {cntk_eye_like2.arguments[0]: operand}), expected.transpose())
     os.remove(tempdir)
 
-    #test pass through gradients
-    #test direct input: no gradients pass through to inputs
-    data = operand
-    op = lambda x: eye_like(x, sparse_output=False) #sparse are not supported for some of the following basic operations
-    w = C.parameter(x.shape, init=np.ones(x.shape).astype(np.float32) * 3.0)
-    expected_x_backward = np.zeros_like(data)
-    expected_w_backward = np.zeros_like(w)
-    op_func = op(x)
-    grad = op_func.grad({x: data}, [x])
-    np.testing.assert_almost_equal(grad, expected_x_backward)
-
-    # test inputs through sub-expressions: no gradients pass through to inputs (e.g. x, w) of the subexpressoin (e.g. x * w here)
-    op_func = op(x * w)
-    grad = op_func.grad({x: data}, [w, x])
-    np.testing.assert_almost_equal(grad[x], expected_x_backward)
-    np.testing.assert_almost_equal(grad[w], expected_w_backward)
-
-    # testing inputs through shared sub-expressions: no gradients pass through reduce arg ops to inputs (e.g. x, w) of the subexpressoin
-    # (e.g. x * w here), therefore the gradients will depend on how the shared expressions participate in other experssions:
-    shared_exp = x * w
-    op_func = op(shared_exp) + x + w + shared_exp
-    ref_op_func = x + w + shared_exp
-    grad = op_func.grad({x: data}, [w, x])
-    ref_grad = ref_op_func.grad({x: data}, [w, x])
-    np.testing.assert_almost_equal(grad[x], ref_grad[x])
-    np.testing.assert_almost_equal(grad[w], ref_grad[w])
-
     #test expecting exception with sequence axis
     with pytest.raises(Exception) as info:
         #no sequence axis is allowed
