@@ -261,7 +261,7 @@ def labels_to_graph(labels, name=''):
     return labels_to_graph(labels, name)
 
 @typemap
-def forward_backward(labels_graph, network_out, blank_token_id,
+def forward_backward(labels_graph, network_out, blankTokenId,
                      delayConstraint=-1, name=''):
     '''
     Criterion node for training methods that rely on forward-backward Viterbi-like
@@ -326,7 +326,7 @@ def forward_backward(labels_graph, network_out, blank_token_id,
     Args:
         labels_graph: labels graph
         network_out: network output
-        blank_token_id: id of the CTC blank label
+        blankTokenId: id of the CTC blank label
         delayConstraint: label output delay constraint introduced during
             training that allows to have shorter delay during inference.
             This is using the original time information to enforce that CTC
@@ -342,7 +342,7 @@ def forward_backward(labels_graph, network_out, blank_token_id,
     network_out = sanitize_input(network_out, dtype)
     labels_graph = sanitize_input(labels_graph, dtype)
 
-    return forward_backward(labels_graph, network_out, blank_token_id,
+    return forward_backward(labels_graph, network_out, blankTokenId,
                             delayConstraint, name)
 
 ##########################################################################
