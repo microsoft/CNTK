@@ -370,6 +370,9 @@
     <None Include="cntk\tests\onnx_op_test.py">
       <Filter>cntk\tests</Filter>
     </None>
+    <None Include="cntk\internal\tests\types_test.py">
+      <Filter>cntk\internal\tests</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cntk\cntk_py_wrap.h">

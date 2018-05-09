@@ -63,6 +63,7 @@
     <None Include="cntk\internal\sanitize.py" />
     <None Include="cntk\internal\swig_helper.py" />
     <None Include="cntk\internal\tests\swig_helper_tests.py" />
+    <None Include="cntk\internal\tests\types_test.py" />
     <None Include="cntk\internal\tests\utils_test.py" />
     <None Include="cntk\internal\tests\__init__.py" />
     <None Include="cntk\internal\utils.py" />
