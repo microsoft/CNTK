@@ -56,6 +56,7 @@ public:
     using Base::Buffer;
     using Base::GetNumRows;
     using Base::GetNumCols;
+    using Base::GetDiagSize;
     using Base::SetNumRows;
     using Base::SetNumCols;
     using Base::GetNumElements;
@@ -396,6 +397,8 @@ public:
     GPUSparseMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
 
     GPUSparseMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
+    void SetDiagonalValue(const ElemType v);
+    void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
 
     ElemType SumOfElements() const;    // sum of all elements
     ElemType SumOfAbsElements() const; // sum of all abs(elements)

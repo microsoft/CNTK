@@ -117,6 +117,7 @@ namespace CNTK
         {PrimitiveOpType::ConstantOp, L"ConstantOp"},
         {PrimitiveOpType::Squeeze, L"Squeeze"},
         {PrimitiveOpType::Cast, L"Cast" },
+        { PrimitiveOpType::EyeLikeOp, L"EyeLikeOp" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -289,6 +290,7 @@ namespace CNTK
         static const std::wstring AttributeNameSeqGammarWordPen;
         static const std::wstring AttributeNameNumClass;
         static const std::wstring AttributeNameOneHotOutputSparse;
+        static const std::wstring AttributeNameOutputSparse;
         static const std::wstring AttributeNameOneHotAxis;
         static const std::wstring AttributeNameSequenceAxisNamePrefix;
         static const std::wstring AttributeNameSequenceUnpackPaddingValue;
@@ -833,7 +835,8 @@ namespace CNTK
         // Version 18: Add Crop node.
         // Version 19: Add TopK
         // Version 20: Add squeeze, expand dims, zeros like, ones like
-        static const size_t s_serializationVersion = 20;
+        // Version 21: Add EyeLikeOp
+        static const size_t s_serializationVersion = 21;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);
