@@ -340,6 +340,8 @@ std::tuple<FunctionPtr, FunctionPtr> LSTMPComponent(Variable input,
 {
     auto dh = PlaceholderVariable(cellShape, input.DynamicAxes());
     auto dc = PlaceholderVariable(cellShape, input.DynamicAxes());
+    auto dh2 = PlaceholderVariable(cellShape, input.DynamicAxes());
+    auto dc2 = PlaceholderVariable(cellShape, input.DynamicAxes());
     auto inputPlaceholder = PlaceholderVariable(input.Shape(), input.DynamicAxes());
 
     auto LSTMCell = LSTMPCell(
@@ -347,14 +349,21 @@ std::tuple<FunctionPtr, FunctionPtr> LSTMPComponent(Variable input,
         iofActivationOp, cellActivationOp, hiddenActivationOp,
         dh, dc, W, R, B, Ci, Cf, Co);
 
-    auto actualDh = recurrenceHookH(LSTMCell.first);
-    auto actualDc = recurrenceHookC(LSTMCell.second);
+    auto actualDh = recurrenceHookH(dh2);
+    auto actualDc = recurrenceHookC(dc2);
 
-    // Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    LSTMCell.first->ReplacePlaceholders({{inputPlaceholder, input}, {dh, actualDh}, {dc, actualDc}});
-    return std::make_tuple(LSTMCell.first, LSTMCell.second);
+    auto LSTMCellcombined = Combine({LSTMCell.first, LSTMCell.second});
+
+    auto LSTMCellcombinedBlk = AsBlock(std::move(LSTMCellcombined), {{inputPlaceholder, input}, {dh, actualDh}, {dc, actualDc}}, L"LSTM", L"");
+
+    actualDh->ReplacePlaceholders({{dh2, LSTMCellcombinedBlk->Outputs()[0]}});
+    actualDc->ReplacePlaceholders({{dc2, LSTMCellcombinedBlk->Outputs()[1]}});
+
+    // Because state and cell variables share the same owner function, we need
+    // to use Alias so that they can be differenciated when building subsequent graph.
+    return std::make_tuple(Alias(LSTMCellcombinedBlk->Outputs()[0]),
+                           Alias(LSTMCellcombinedBlk->Outputs()[1]));
 }
-
 FunctionPtr GRUComponent(Variable input,
                          const NDShape &cellShape,
                          const std::function<FunctionPtr(const Variable &)> &fActivationOp,
