@@ -81,10 +81,20 @@ public:
         return m_numRows * m_numCols * sizeof(ElemType);
     }
 
+    ElemType* Buffer() const 
+    { 
+        ElemType* data_ptr = Base::Buffer();
+#ifdef USE_MKLDNN
+        if (m_mklMem != nullptr)
+            m_mklMem->check_and_prv_to_cpu(data_ptr);
+#endif
+        return data_ptr;
+    }
+
     // Returns pointer into underlying data buffer corresponding to slice-view. This makes it different from method Buffer()
     ElemType* Data() const
     {
-        ElemType* data_ptr = Buffer() + m_sliceViewOffset;
+        ElemType* data_ptr = Base::Buffer() + m_sliceViewOffset;
 #ifdef USE_MKLDNN
         if (m_mklMem != nullptr)
             m_mklMem->check_and_prv_to_cpu(data_ptr);
