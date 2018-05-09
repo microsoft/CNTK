@@ -178,6 +178,60 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 }
 
 template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
+{
+    if (NzCount() > 0)
+        //So far only support SetDiagonalValue for zero sparse matrix for now
+        LogicError("Not implemented: SetDiagonalValue is not implemented for non-zero sparse CPU matrices.");
+
+    RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize(), true, false);
+    CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* data = Data();
+    for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); j++)
+    {
+        //The same logic for both CSC and CSR format:
+        data[j] = v;
+        secondaryIndices[j] = j;
+        majorIndices[j] = j;
+    }
+    for (size_t j = GetDiagSize(); j < SecondaryIndexCount(); ++j)
+        secondaryIndices[j] = (CPUSPARSE_INDEX_TYPE)GetDiagSize();
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vector)
+{
+    if (NzCount() > 0)
+        //So far only support SetDiagonalValue for zero sparse matrix for now
+        NOT_IMPLEMENTED;
+
+    if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
+        LogicError("SetDiagonalValue: input vector must be a vector.");
+
+    if (vector.GetNumElements() == 1) // reduce to simple form
+        SetDiagonalValue(vector(0, 0));
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
+        LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
+    else
+    {
+        RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize(), true, false);
+        CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+        CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+        ElemType* data = Data();
+        //The same logic for both CSC and CSR format:
+        for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); j++)
+        {
+            data[j] = vector.Data()[j];
+            secondaryIndices[j] = j;
+            majorIndices[j] = j;
+        }
+        for (size_t j = GetDiagSize(); j < SecondaryIndexCount(); ++j)
+            secondaryIndices[j] = (CPUSPARSE_INDEX_TYPE)GetDiagSize();
+    }
+}
+
+template <class ElemType>
 CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
 {
     if (a.IsEmpty())

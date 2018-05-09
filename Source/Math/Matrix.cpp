@@ -1473,27 +1473,21 @@ void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
     if (IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
                             m_CPUMatrix->SetDiagonalValue(v),
                             m_GPUMatrix->SetDiagonalValue(v),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+                            m_CPUSparseMatrix->SetDiagonalValue(v),
+                            m_GPUSparseMatrix->SetDiagonalValue(v));
 }
 
 template <class ElemType>
 void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
 {
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: Input vector must be a vector.");
 
-    if (vector.GetNumRows() * vector.GetNumCols() != GetNumRows())
+    if (vector.GetNumRows() * vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: Input vector must match matrix dimension.");
 
     if (IsEmpty())
@@ -1511,7 +1505,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 SetDiagonalValue(vector.m_GPUMatrix->Get00Element()) // BUGBUG: efficiency
                                 );
     }
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
@@ -1522,8 +1516,10 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 m_CPUMatrix->SetDiagonalValue(*vector.m_CPUMatrix),
                                 assert(vector.m_GPUMatrix);
                                 m_GPUMatrix->SetDiagonalValue(*vector.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
+                                assert(vector.m_CPUMatrix);
+                                m_CPUSparseMatrix->SetDiagonalValue(*vector.m_CPUMatrix),
+                                assert(vector.m_GPUSparseMatrix);
+                                m_GPUSparseMatrix->SetDiagonalValue(*vector.m_GPUMatrix));
     }
 }
 
@@ -1987,6 +1983,12 @@ template <class ElemType>
 size_t Matrix<ElemType>::GetNumCols() const
 {
     return m_baseMatrix->GetNumCols();
+}
+
+template <class ElemType>
+size_t Matrix<ElemType>::GetDiagSize() const
+{
+    return m_baseMatrix->GetDiagSize();
 }
 
 template <class ElemType>

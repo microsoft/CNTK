@@ -2184,6 +2184,36 @@ def zeros_like(x, name=''):
 
 
 @typemap
+def eye_like(x, sparse_output = True, name=''):
+    '''
+    Creates a matrix with diagonal set to 1s and of the same shape and the same dynamic axes as ``x``. To be a matrix,
+     ``x`` must have exactly two axes (counting both dynamic and static axes).
+
+    Example:
+        >>> x0 = np.arange(12).reshape((3, 4)).astype('f')
+        >>> x = C.input_variable(4)
+        >>> C.eye_like(x).eval({x: x0}).toarray()
+        array([[ 1.,  0.,  0.,  0.],
+                [ 0.,  1.,  0.,  0.],
+                [ 0.,  0.,  1.,  0.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor of rank 2
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import eye_like
+    x = sanitize_input(x)
+    if len(x.dynamic_axes) + len(x.shape) != 2:
+        raise(ValueError('eye_like operand must have exactly two axes (counting both dynamic and static axes) however "%s" is provided as the operand'%x))
+    if any([ax.is_sequence_axis for ax in x.dynamic_axes]):
+        raise (ValueError(
+            'eye_like operand must have no sequence axis however "%s" is provided as the operand' % x))
+    return eye_like(x, sparse_output, name)
+
+
+@typemap
 def element_select(flag, value_if_true, value_if_false, name=''):
     '''
     return either ``value_if_true`` or ``value_if_false`` based on the value of ``flag``.

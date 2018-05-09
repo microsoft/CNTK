@@ -207,23 +207,149 @@ BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniform, RandomSeedFixture)
     BOOST_CHECK(has_big);
 }
 
-BOOST_FIXTURE_TEST_CASE(MatrixInitRandomUniformSeed, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethodsWithDoubleInstantiation, RandomSeedFixture)
 {
-    const float low = -0.01f;
-    const float high = 0.01f;
-    SingleMatrix a = SingleMatrix::RandomUniform(429, 1024, c_deviceIdZero, low, high, IncrementCounter());
-    foreach_coord (i, j, a)
+    //Test on ElemType = double
+    // void SetValue(const ElemType v);
+    DoubleMatrix a(32, 12, c_deviceIdZero);
+    BOOST_CHECK_EQUAL(32, a.GetNumRows());
+    BOOST_CHECK_EQUAL(12, a.GetNumCols());
+    BOOST_CHECK_EQUAL(12 * 32, a.GetNumElements());
+    const double v = -32.3451f;
+    a.SetValue(v);
+    foreach_coord(i, j, a)
     {
-        BOOST_CHECK_GE(a(i, j), low);
-        BOOST_CHECK_LE(a(i, j), high);
+        BOOST_CHECK_EQUAL(v, a(i, j));
     }
 
-    // SingleMatrix b = SingleMatrix::RandomUniform(429, 1024, (float)-0.01, (float) 0.01, IncrementCounter());
-    // BOOST_CHECK(a.IsEqualTo(b));
+    // void SetValue(const Matrix<ElemType>& deepCopyFrom);
+    DoubleMatrix b(c_deviceIdZero);
+    b.SetValue(a);
+    foreach_coord(i, j, b)
+    {
+        BOOST_CHECK_EQUAL(v, b(i, j));
+    }
+
+    // void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const bool srcIsColMajor);
+    std::array<double, 7> arrVector = { 123.0f, 0.23f, -22.0f, 63.0f, 43.42f, 324.3f, 99912.0f };
+
+    double *arr = arrVector.data();
+    b.SetValue(2, 3, b.GetDeviceId(), arr, matrixFlagNormal);
+
+    DoubleMatrix b1(c_deviceIdZero);
+    b1.SetValue(2, 3, b.GetDeviceId(), arr);
+    foreach_coord(i, j, b1)
+    {
+        BOOST_CHECK_EQUAL(arr[IDX2C(i, j, 2)], b(i, j));
+        BOOST_CHECK_EQUAL(arr[IDX2C(i, j, 2)], b1(i, j));
+    }
+
+    DoubleMatrix bbbb = DoubleMatrix::Zeros(6, 8, c_deviceIdZero);
+    bbbb.SetColumn(arr, 3);
+    for (int i = 0; i < 6; ++i)
+    {
+        BOOST_CHECK_EQUAL(arr[i], bbbb(i, 3));
+    }
+
+    // void SetDiagonalValue(const ElemType v);
+    DoubleMatrix c(4, 4, c_deviceIdZero);
+    const double val = -0.00332f;
+    c.SetDiagonalValue(val);
+    foreach_coord(i, j, c)
+    {
+        if (i == j)
+            BOOST_CHECK_EQUAL(val, c(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c(i, j));
+    }
+
+    // void SetDiagonalValue(const Matrix<ElemType>& vector);
+    DoubleMatrix d(4, 1, c_deviceIdZero);
+    const double val1 = 43.324f;
+    d.SetValue(val1);
+    c.SetDiagonalValue(d);
+    foreach_coord(i, j, c)
+    {
+        if (i == j)
+            BOOST_CHECK_EQUAL(val1, c(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c(i, j));
+    }
+
+    // void SetDiagonalValue(const ElemType v);//on non-squared matrix row < col
+    DoubleMatrix c_ns1(4, 6, c_deviceIdZero);
+    const double val_ns1 = -0.00332f;
+    c_ns1.SetValue(0.0f);
+    c_ns1.SetDiagonalValue(val_ns1);
+    foreach_coord(i, j, c_ns1)
+    {
+        if (i == j && i <= 4)
+            BOOST_CHECK_EQUAL(val_ns1, c_ns1(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c_ns1(i, j));
+    }
+
+    // void SetDiagonalValue(const Matrix<ElemType>& vector);
+    const double val1_ns1 = 43.324f;
+    c_ns1.SetValue(0.0f);
+    d.SetValue(val1_ns1);
+    c_ns1.SetDiagonalValue(d);
+    foreach_coord(i, j, c_ns1)
+    {
+        if (i == j && i <= 4)
+            BOOST_CHECK_EQUAL(val1, c_ns1(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c_ns1(i, j));
+    }
+
+    // void SetDiagonalValue(const ElemType v);//on non-squared matrix row > col
+    DoubleMatrix c_ns2(7, 4, c_deviceIdZero);
+    const double val_ns2 = -0.00332f;
+    c_ns2.SetValue(0.0f);
+    c_ns2.SetDiagonalValue(val_ns2);
+    foreach_coord(i, j, c_ns2)
+    {
+        if (i == j && i <= 4)
+            BOOST_CHECK_EQUAL(val_ns2, c_ns2(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c_ns2(i, j));
+    }
+
+    // void SetDiagonalValue(const Matrix<ElemType>& vector);
+    DoubleMatrix c_ns2_1(7, 4, c_deviceIdZero);
+    DoubleMatrix dd(4, 1, c_deviceIdZero);
+    const double val1_ns2 = 43.324f;
+    dd.SetValue(val1_ns2);
+    c_ns2_1.SetValue(0.0f);
+    c_ns2_1.SetDiagonalValue(dd);
+    foreach_coord(i, j, c_ns2)
+    {
+        if (i == j && i <= 4)
+            BOOST_CHECK_EQUAL(val1_ns2, c_ns2_1(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c_ns2_1(i, j));
+    }
+
+
+    DoubleMatrix c1(5, 5, c_deviceIdZero);
+    DoubleMatrix d1(1, 5, c_deviceIdZero);
+    double val2 = 0.53f;
+    c1.SetValue(0.0f);
+    d1 = d1.Transpose();
+    d1.SetValue(val2);
+    c1.SetDiagonalValue(d1);
+    foreach_coord(i, j, c1)
+    {
+        if (i == j)
+            BOOST_CHECK_EQUAL(val2, c1(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c1(i, j));
+    }
 }
 
 BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
 {
+    //Test on ElemType = float
     // void SetValue(const ElemType v);
     SingleMatrix a(32, 12, c_deviceIdZero);
     BOOST_CHECK_EQUAL(32, a.GetNumRows());
@@ -290,9 +416,65 @@ BOOST_FIXTURE_TEST_CASE(MatrixSetValueMethods, RandomSeedFixture)
             BOOST_CHECK_EQUAL(0, c(i, j));
     }
 
+    // void SetDiagonalValue(const ElemType v);//on non-squared matrix row < col
+    SingleMatrix c_ns1(4, 6, c_deviceIdZero);
+    const float val_ns1 = -0.00332f;
+    c_ns1.SetValue(0.0f);
+    c_ns1.SetDiagonalValue(val_ns1);
+    foreach_coord(i, j, c_ns1)
+    {
+        if (i == j && i <= 4)
+            BOOST_CHECK_EQUAL(val_ns1, c_ns1(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c_ns1(i, j));
+    }
+
+    // void SetDiagonalValue(const Matrix<ElemType>& vector);
+    const float val1_ns1 = 43.324f;
+    c_ns1.SetValue(0.0f);
+    d.SetValue(val1_ns1);
+    c_ns1.SetDiagonalValue(d);
+    foreach_coord(i, j, c_ns1)
+    {
+        if (i == j && i <= 4)
+            BOOST_CHECK_EQUAL(val1, c_ns1(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c_ns1(i, j));
+    }
+
+    // void SetDiagonalValue(const ElemType v);//on non-squared matrix row > col
+    SingleMatrix c_ns2(7, 4, c_deviceIdZero);
+    const float val_ns2 = -0.00332f;
+    c_ns2.SetValue(0.0f);
+    c_ns2.SetDiagonalValue(val_ns2);
+    foreach_coord(i, j, c_ns2)
+    {
+        if (i == j && i <= 4)
+            BOOST_CHECK_EQUAL(val_ns2, c_ns2(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c_ns2(i, j));
+    }
+
+    // void SetDiagonalValue(const Matrix<ElemType>& vector);
+    SingleMatrix c_ns2_1(7, 4, c_deviceIdZero);
+    SingleMatrix dd(4, 1, c_deviceIdZero);
+    const float val1_ns2 = 43.324f;
+    dd.SetValue(val1_ns2);
+    c_ns2_1.SetValue(0.0f);
+    c_ns2_1.SetDiagonalValue(dd);
+    foreach_coord(i, j, c_ns2)
+    {
+        if (i == j && i <= 4)
+            BOOST_CHECK_EQUAL(val1_ns2, c_ns2_1(i, j));
+        else
+            BOOST_CHECK_EQUAL(0, c_ns2_1(i, j));
+    }
+
+
     SingleMatrix c1(5, 5, c_deviceIdZero);
     SingleMatrix d1(1, 5, c_deviceIdZero);
     float val2 = 0.53f;
+    c1.SetValue(0.0f);
     d1 = d1.Transpose();
     d1.SetValue(val2);
     c1.SetDiagonalValue(d1);

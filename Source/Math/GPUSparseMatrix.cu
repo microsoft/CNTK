@@ -2888,6 +2888,72 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatr
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
+{
+    if (NzCount() > 0)
+        //So far only support SetDiagonalValue for zero sparse matrix for now
+        LogicError("Not implemented: SetDiagonalValue is not implemented for non-zero sparse GPU matrices.");
+    //TODO: because sparse setting value on non-zero sparse matrix involves
+    //shifting values, we need a more involved implementation. We should consider
+    //the current implemenation as AssignAsDiagonalMatrix(...).
+    if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+        LogicError("SetDiagonalValue: Matrix format is not supported.");
+
+    this->RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize());
+    this->PrepareDevice();
+
+    GPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    GPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* targetData = NzValues();
+    CUDA_LONG N = (CUDA_LONG)SecondaryIndexCount();
+    int blocksPerGrid = (int)ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _setSparseDiagonalValue<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(v,
+        secondaryIndices,
+        majorIndices,
+        targetData,
+        GetDiagSize(),
+        N);
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
+{
+    if (NzCount() > 0)
+        //So far only support SetDiagonalValue for zero sparse matrix for now
+        NOT_IMPLEMENTED;
+
+    if (vector.IsEmpty())
+        LogicError("SetDiagonalValue: Input vector is empty.");
+
+    if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
+        LogicError("SetDiagonalValue: input tensor must be a vector.");
+
+    if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
+        LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
+
+    if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+        LogicError("SetDiagonalValue: Matrix format is not supported.");
+
+    this->RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize());
+    this->PrepareDevice();
+
+    GPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    GPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* v = vector.Data();
+    ElemType* targetData = NzValues();
+    CUDA_LONG N = (CUDA_LONG)SecondaryIndexCount();
+    int blocksPerGrid = (int)ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _setSparseDiagonalValue<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(v,
+        secondaryIndices,
+        majorIndices,
+        targetData,
+        GetDiagSize(),
+        N);
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
     VerifyWritable(__FUNCTION__);
