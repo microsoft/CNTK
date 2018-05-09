@@ -392,3 +392,28 @@ def test_conv_with_freedim_model(tmpdir):
 
     filename3 = os.path.join(str(tmpdir), R'conv_with_freedim2.cntkmodel')
     loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
+
+def test_save_no_junk(tmpdir):
+    """ Test for an issue with save() not having O_TRUNC mode
+    resulting in possible junk at the end of file if it already exists
+    """
+    try:
+        import onnx
+    except ImportError:
+        pytest.skip('ONNX is not installed.')
+
+    filename = os.path.join(str(tmpdir), R'no_junk.onnx')
+    filename_new = os.path.join(str(tmpdir), R'no_junk_new.onnx')
+
+    # Save a large model.
+    g = C.ceil([1, 2, 3, 4, 5, 6, 7, 8] * 100)
+    g.save(filename, format=C.ModelFormat.ONNX)
+
+    # Save a smaller model using the same file name and a new file name.
+    g = C.ceil([1, 2, 3, 4, 5, 6, 7] * 100)
+    g.save(filename, format=C.ModelFormat.ONNX)
+    g.save(filename_new, format=C.ModelFormat.ONNX)
+
+    # Check the files can be loaded as standard ONNX files,
+    # and both result in the same model.
+    assert onnx.load(filename) == onnx.load(filename_new)
