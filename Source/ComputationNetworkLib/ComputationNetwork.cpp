@@ -257,7 +257,7 @@ void ComputationNetwork::ReadPersistableParameters(size_t modelVersion, File& fs
         ComputationNodeBasePtr node;
         if (!create) // reloading existing
             node = GetNodeFromName(nodeName);
-        else if (precision == L"float")
+        else if (precision == L"float" || precision == L"loat")
             node = ComputationNetworkBuilder<float>::NewNode(opName, m_deviceId, nodeName);
         else if (precision == L"double")
             node = ComputationNetworkBuilder<double>::NewNode(opName, m_deviceId, nodeName);
