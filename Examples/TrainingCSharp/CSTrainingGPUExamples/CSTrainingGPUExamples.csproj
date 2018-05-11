@@ -35,10 +35,6 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Cntk.Core.Managed-2.5.1, Version=1.0.0.0, Culture=neutral, PublicKeyToken=a82c1f3f67b62253, processorArchitecture=AMD64">
-      <HintPath>..\packages\CNTK.GPU.2.5.1\lib\net45\x64\Cntk.Core.Managed-2.5.1.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -48,6 +44,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <ProjectReference Include="..\..\..\bindings\csharp\CNTKLibraryManagedDll\CNTKLibraryManagedDll.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\Evaluation\ImageExtension\CNTKImageProcessing.cs">

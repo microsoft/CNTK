@@ -200,6 +200,11 @@ Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
 # test output
 Tests/UnitTests/ReaderTests/Control/**/*_Output.txt
 Tests/UnitTests/NetworkTests/Output/
+Tests/EndToEndTests/CNTKv2CSharp/ExampleTests/MNISTClassifierTest/*.model
+Tests/EndToEndTests/CNTKv2CSharp/ExampleTests/SimpleFeedForwardClassifierTest/feedForward.net*
+Tests/EndToEndTests/CNTKv2CSharp/ExampleTests/SimpleFeedForwardClassifierTest/SimpleDataTrain_cntk_text.txt
+Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
+Tests/EndToEndTests/CNTKv2Python/Keras/keras-*
 Tests/EndToEndTests/UnitTests/MathTests/M.txt
 Tests/EndToEndTests/UnitTests/MathTests/MCPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MGPU.txt
@@ -249,7 +254,9 @@ bindings/python/cntk/i_plus_i_0.mod
 # CSharp bindings
 bindings/csharp/Swig/cntk_cs_wrap.h
 bindings/csharp/Swig/cntk_cs_wrap.cxx
-bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
+bindings/csharp/Swig/cntk_cs_wrap.cxx
+bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/GeneratedCode/Debug/*.cs
+bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/GeneratedCode/Release/*.cs
 
 # Java bindings
 bindings/java/Swig/cntk_java_wrap.h
@@ -271,6 +278,7 @@ Examples/Image/Classification/AlexNet/Python/Models/
 Examples/Image/Classification/ConvNet/Python/Models/
 Examples/Image/Classification/GoogLeNet/BN-Inception/Python/Models/
 Examples/Image/Classification/ResNet/Python/Models/
+Examples/Image/Classification/ResNet/ResNet_18.model
 Examples/Image/DataSets/Animals/Test/
 Examples/Image/DataSets/Animals/Train/
 Examples/Image/DataSets/CIFAR-10/model.cmf
@@ -311,8 +319,6 @@ Examples/Image/PretrainedModels/*.cntkmodel
 Examples/SequenceToSequence/CMUDict/Python/Models/
 Examples/Speech/AN4/Python/Models/
 Examples/Text/CharacterLM/data/tinyshakespeare.txt.vocab
-Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
-Tests/EndToEndTests/CNTKv2Python/Keras/keras-*
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
 Tutorials/.ipynb_checkpoints/
