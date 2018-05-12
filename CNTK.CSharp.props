@@ -1,0 +1,25 @@
+﻿<Project>
+  <Import Project="$(SolutionDir)\CNTK.Common.props" />
+  <PropertyGroup>
+    <Configurations>$(Configurations);Debug_CpuOnly;Debug_UWP;Release_CpuOnly;Release_NoOpt;Release_UWP</Configurations>
+    <Platforms>x64</Platforms>
+    <IntermediateOutputPath>$(IntDir)obj\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>$(IntDir)obj\</BaseIntermediateOutputPath>
+    <OutputPath>$(OutDir)</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(DebugBuild)">
+    <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(ReleaseBuild)">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(CpuOnlyBuild)">
+    <DefineConstants>$(DefineConstants);CPUONLY</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(NoOptBuild)">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+</Project>
