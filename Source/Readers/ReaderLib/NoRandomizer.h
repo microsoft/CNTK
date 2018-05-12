@@ -64,7 +64,7 @@ private:
     EpochConfiguration m_config;
 
     // Chunk descriptions.
-    std::vector<ChunkInfo> m_chunkDescriptions;
+    virtual const std::vector<ChunkInfo>& GetChunkDescriptions() const { return m_deserializer->ChunkInfos(); }
 
     // m_chunkDescription defines the complete sweep of samples: [0 .. N]
     // m_chunkSampleOffset for each chunk contains the sample offset in the sweep where the chunk begins.

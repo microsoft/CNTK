@@ -21,8 +21,8 @@ LTNoRandomizer::LTNoRandomizer(DataDeserializerPtr deserializer, bool multithrea
 
 void LTNoRandomizer::Prefetch() const
 {
-    auto chunkId = m_originalChunkDescriptions[m_currentChunkPosition].m_id;
-    m_prefetchedChunk.m_info = m_originalChunkDescriptions[m_currentChunkPosition];
+    auto chunkId = GetOriginalChunkDescriptions()[m_currentChunkPosition].m_id;
+    m_prefetchedChunk.m_info = GetOriginalChunkDescriptions()[m_currentChunkPosition];
     m_prefetchedChunk.m_data = m_deserializer->GetChunk(chunkId);
     m_prefetchedChunk.m_sequenceInfos.clear();
     m_prefetchedChunk.m_data->SequenceInfos(m_prefetchedChunk.m_sequenceInfos);
@@ -49,14 +49,14 @@ void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
     }
 
     // If last chunk, add the sweep marker.
-    if (m_currentChunkPosition == m_originalChunkDescriptions.size() - 1)
+    if (m_currentChunkPosition == GetOriginalChunkDescriptions().size() - 1)
     {
         window.m_sequences.push_back(s_endOfSweep);
         m_currentSequencePosition = 0;
     }
 
     // Moving to the next chunk.
-    m_currentChunkPosition = (m_currentChunkPosition + 1) % m_originalChunkDescriptions.size();
+    m_currentChunkPosition = (m_currentChunkPosition + 1) % GetOriginalChunkDescriptions().size();
 }
 
 std::map<std::wstring, size_t> LTNoRandomizer::GetInnerState()

@@ -24,10 +24,9 @@ LocalTimelineRandomizerBase::LocalTimelineRandomizerBase(
   m_cleaner(maxNumberOfInvalidSequences),
   m_sweepCount(0),
   m_sampleCount(0),
-  m_originalChunkDescriptions(deserializer->ChunkInfos()),
   m_currentState(initialState)
 {
-    if (m_originalChunkDescriptions.empty())
+    if (GetOriginalChunkDescriptions().empty())
         RuntimeError("The deserializer does not have any data, the number of chunks is 0.");
 }
 

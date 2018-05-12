@@ -24,10 +24,9 @@ namespace CNTK {
 {
     assert(deserializer != nullptr);
     m_streams = m_deserializer->StreamInfos();
-    m_chunkDescriptions = m_deserializer->ChunkInfos();
 
     size_t sampleCount = 0;
-    for (const auto& chunk : m_chunkDescriptions)
+    for (const auto& chunk : GetChunkDescriptions())
     {
         // Check that position corresponds to chunk id.
         assert(m_chunkSampleOffset.size() == chunk.m_id);
@@ -69,10 +68,10 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
 // Moving the cursor to the next sequence. Possibly updating the chunk information if needed.
 void NoRandomizer::MoveToNextSequence()
 {
-    if (m_currentSequencePositionInChunk + 1 >= m_chunkDescriptions[m_currentChunkPosition].m_numberOfSequences)
+    if (m_currentSequencePositionInChunk + 1 >= GetChunkDescriptions()[m_currentChunkPosition].m_numberOfSequences)
     {
         // Moving to the next chunk.
-        m_currentChunkPosition = (m_currentChunkPosition + 1) % m_chunkDescriptions.size();
+        m_currentChunkPosition = (m_currentChunkPosition + 1) % GetChunkDescriptions().size();
         m_currentSequencePositionInChunk = 0;
         m_sequenceWindow.clear();
         m_deserializer->SequenceInfosForChunk(m_currentChunkPosition, m_sequenceWindow);
@@ -94,7 +93,7 @@ void NoRandomizer::GetNextSequenceDescriptions(size_t numGlobalSamplesToLoad, si
         RuntimeError("Global and local size of the minibatch cannot exceed max int.");
 
     assert(m_sequenceWindow.size() != 0);
-    assert(m_chunkDescriptions[m_currentChunkPosition].m_numberOfSequences > m_currentSequencePositionInChunk);
+    assert(GetChunkDescriptions()[m_currentChunkPosition].m_numberOfSequences > m_currentSequencePositionInChunk);
 
     size_t numGlobalSamplesLoaded = 0, numLocalSamplesLoaded = 0, endOfEpochPosition = GetEndOfEpochPosition();
 
@@ -284,12 +283,12 @@ void NoRandomizer::SetState(const std::map<std::wstring, size_t>& state)
 
     // Updating the global position
     m_globalSamplePosition = m_globalSamplePosition - sampleOffsetInsideChunk + numberOfSamples;
-    assert(m_chunkDescriptions[m_currentChunkPosition].m_numberOfSequences > m_currentSequencePositionInChunk);
+    assert(GetChunkDescriptions()[m_currentChunkPosition].m_numberOfSequences > m_currentSequencePositionInChunk);
 
     m_globalSequencePosition = 0;
     for (size_t i = 0; i < m_currentChunkPosition; ++i)
     {
-        m_globalSequencePosition += m_chunkDescriptions[i].m_numberOfSequences;
+        m_globalSequencePosition += GetChunkDescriptions()[i].m_numberOfSequences;
     }
     m_globalSequencePosition += m_currentSequencePositionInChunk;
 }

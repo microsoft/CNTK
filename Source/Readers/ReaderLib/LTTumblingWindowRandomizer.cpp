@@ -43,7 +43,7 @@ void LTTumblingWindowRandomizer::RandomizeWindow(size_t sweepCount, size_t chunk
 
 void LTTumblingWindowRandomizer::RandomizeChunks(size_t sweepCount) const
 {
-    m_prefetchedChunkDescriptions = m_originalChunkDescriptions;
+    m_prefetchedChunkDescriptions = GetOriginalChunkDescriptions();
     m_rng.seed((unsigned long)sweepCount + m_seedOffset);
     RandomShuffleMT(m_prefetchedChunkDescriptions, m_rng);
 }
@@ -85,7 +85,7 @@ void LTTumblingWindowRandomizer::Prefetch() const
             m_prefetchedChunks.push_back(std::make_tuple(ChunkInfo{}, nullptr));
         }
 
-        if (position == m_originalChunkDescriptions.size() - 1)
+        if (position == GetOriginalChunkDescriptions().size() - 1)
         {
             // Sweep boundary, randomize all sequences in the window from the previous sweep.
             RandomizeWindow(sweepIndex, lastWindowPosition, lastSequencePositionInWindow);
@@ -100,7 +100,7 @@ void LTTumblingWindowRandomizer::Prefetch() const
             lastSequencePositionInWindow = m_prefetchedSequences.size();
         }
 
-        position = (position + 1) % m_originalChunkDescriptions.size();
+        position = (position + 1) % GetOriginalChunkDescriptions().size();
     }
 
     // Rerandomize the last part of the sequences.
@@ -118,7 +118,7 @@ void LTTumblingWindowRandomizer::RefillSequenceWindow(SequenceWindow& window)
     for (const auto& c : m_prefetchedChunks)
         window.m_dataChunks.insert(std::make_pair(std::get<0>(c).m_id, std::get<1>(c)));
 
-    m_chunkPosition = (ChunkIdType)(m_chunkPosition + m_prefetchedChunks.size()) % m_originalChunkDescriptions.size();
+    m_chunkPosition = (ChunkIdType)(m_chunkPosition + m_prefetchedChunks.size()) % GetOriginalChunkDescriptions().size();
 }
 
 std::map<std::wstring, size_t> LTTumblingWindowRandomizer::GetInnerState()
