@@ -21,6 +21,8 @@ import cntk.io.transforms
 
 import numpy as np
 import uuid
+from functools import partial, reduce
+
 
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 '''int: constant used to specify a minibatch scheduling unit to equal the size of the full data sweep.'''
@@ -1216,3 +1218,175 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
         # take place.
         self._last_chunk = self.get_chunk(chunk_id=chunk_id)
         return self._last_chunk;
+
+
+_make_partial = lambda f: f if isinstance(f, partial) else partial(f)
+
+
+def compose_chunk_function(chunk_functions):
+    def chunk_func(chunk_id):
+        return {name: _make_partial(chunk_func)(chunk_id) for name, chunk_func in chunk_functions.items()}
+
+    return partial(chunk_func)
+
+def chunk_function_from_index_data_function(index_data_function,
+                                            num_seq_per_chunk,
+                                            total_num_seq):
+    def chunk_func(chunk_id):
+        num_calls = num_seq_per_chunk
+        index_data_function_actual = _make_partial(index_data_function)
+        iter_index = (chunk_id * num_seq_per_chunk) % total_num_seq
+        first_item = index_data_function_actual(iter_index)
+        data = {key: [d] for key, d in first_item.items()}
+        for i in range(num_calls - 1):
+            iter_index = (iter_index + 1) % total_num_seq
+            item = index_data_function_actual(iter_index)
+            for key, d in item.items():
+                data[key].append(d)
+        data = {key: reduce(lambda x, y: _join_minibatch_data_list(x, y), ds) for key, ds in data.items()}
+        return data
+
+    return partial(chunk_func)
+
+
+def chunk_function_from_index_batch_function(index_batch_function,
+                                            num_batch_per_chunk,
+                                            total_num_batch):
+    def chunk_func(chunk_id):
+        num_calls = num_batch_per_chunk
+        index_batch_function_actual = _make_partial(index_batch_function)
+        iter_index = (chunk_id * num_batch_per_chunk) % total_num_batch
+        first_item = index_batch_function_actual(iter_index)
+        data = {key: [d] for key, d in first_item.items()}
+        for i in range(num_calls - 1):
+            iter_index = (iter_index + 1) % total_num_batch
+            item = index_batch_function_actual(iter_index)
+            for key, d in item.items():
+                data[key].append(d)
+        data = {key: reduce(lambda x, y: _join_minibatch_data_list(x, y), ds) for key, ds in data.items()}
+        return data
+
+    return partial(chunk_func)
+
+
+def stream_info_from_variable(v, index):
+    assert v.name, 'variable must be named: ' + str(v)
+    return StreamInformation(v.name, index, ['dense', 'sparse'][v.is_sparse], v.dtype, v.shape)
+
+
+def stream_infos_from_variables(variables):
+    return [stream_info_from_variable(v, i) for i, v in enumerate(variables)]
+
+
+def _join_minibatch_data_list(mb_data_1, mb_data_2):
+    if isinstance(mb_data_1, list):
+        return mb_data_1 + mb_data_2
+    elif isinstance(mb_data_1, np.ndarray):
+        return np.vstack((mb_data_1, mb_data_2))
+    else:
+        raise ValueError('not supporting date types: {}, {}' % (type(mb_data_1), type(mb_data_2)))
+
+
+def compose_next_minibatch_function(minibatch_functions):
+    '''
+    
+    Args:
+        minibatch_functions: A mapping from stream names to their corresponding next minibatch function in the form
+         of {name: next_minibatch_func}. Each next_minibatch_func takes the number of minibatch in the number of 
+         sequences.
+
+    Returns:
+        A function which takes the number of minibatch size in sequenes and return the data mapping from names to their
+        corresponding minibatch data.
+    '''
+    def next_minibatch_func(batch_size):
+        return {name: _make_partial(next_minibatch)(batch_size) for name, next_minibatch in minibatch_functions.items()}
+
+    return partial(next_minibatch_func)
+
+
+def next_chunk_function_from_nextminbatch_function(next_minibatch_func,
+                                                   mb_size_in_num_of_seq,
+                                                   num_mb_per_chunk):
+    def next_chunk_func():
+        num_calls = num_mb_per_chunk
+        next_minibatch_func_actual = _make_partial(next_minibatch_func)
+        first_batch = next_minibatch_func_actual(mb_size_in_num_of_seq)
+        data = {key: [d] for key, d in first_batch.items()}
+        for i in range(num_calls - 1):
+            batch = next_minibatch_func_actual(mb_size_in_num_of_seq)
+            for key, d in batch.items():
+                data[key].append(d)
+        data = {key: reduce(lambda x, y: _join_minibatch_data_list(x, y), ds) for key, ds in data.items()}
+        return data
+
+    return partial(next_chunk_func)
+
+class LambdaDeserializer(UserDeserializer):
+    def __init__(self, data_meta_info, get_chunk_function, num_chunk):
+        '''
+        data_meta_info = [dict(name = name, shape = sample_shape, is_sparse = is_sparse, dtype=dtype)]
+        '''
+        super(LambdaDeserializer, self).__init__()
+        self._num_chunk = num_chunk
+        self._get_chunk_function = get_chunk_function
+        self._data_meta_info = data_meta_info if data_meta_info else []
+
+    # Return meta information about streams
+    def stream_infos(self):
+        return self._data_meta_info
+
+    # We have a single chunk only
+    def num_chunks(self):
+        return self._num_chunk
+
+    # actually return out chunk data as a dictionary name => data
+    # where the data is a list of sequences or a csr_matrix/ndarray of samples
+    def get_chunk(self, chunk_id):
+        if chunk_id >= self.num_chunks():
+            raise ValueError("Unexpected chunk id")
+        data = self._get_chunk_function(chunk_id)
+        return data
+
+
+class LambdaSequentialDeserializer(UserDeserializer):
+    def __init__(self, data_meta_info, init_get_next_chunk_function, num_chunk=None):
+        '''
+        data_meta_info = [dict(name = name, shape = sample_shape, is_sparse = is_sparse, dtype=dtype)]
+        '''
+        super(LambdaSequentialDeserializer, self).__init__()
+        self._num_chunk  = num_chunk
+        self._init_get_next_chunk_function = init_get_next_chunk_function
+        self._get_next_chunk_function = init_get_next_chunk_function()
+        self._data_meta_info = data_meta_info if data_meta_info else []
+
+    # Return meta information about streams
+    def stream_infos(self):
+        return self._data_meta_info
+
+    # We have a single chunk only
+    def num_chunks(self):
+        if self._num_chunk:
+            return self._num_chunk
+        else:
+            # total sequential feeding, don't know when it will end so fake the number of chunks to be 2
+            # to enable prefetching
+            return 2
+
+    # actually return out chunk data as a dictionary name => data
+    # where the data is a list of sequences or a csr_matrix/ndarray of samples
+    def get_chunk(self, chunk_id):
+        if chunk_id < self.num_chunks():
+            try:
+                data = self._get_next_chunk_function()
+            except StopIteration:
+                #end of iteration
+                self._get_next_chunk_function = self._init_get_next_chunk_function()
+                data = self._get_next_chunk_function()
+
+            if self.num_chunks() and chunk_id == self.num_chunks() - 1:
+                #reinitialize the get_next_chunk_funciton for the next call
+                self._get_next_chunk_function = self._init_get_next_chunk_function()
+        else:
+            raise ValueError('chunk_id exceeds number of expected chunk')
+        return data
