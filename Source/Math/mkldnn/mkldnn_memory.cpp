@@ -23,13 +23,14 @@
 #include <assert.h>
 #include <iostream>
 #pragma warning(disable : 4996)
-#include "mkl_cblas.h"
 #include "../Matrix.h"
-#include "mkl_memory.h"
 
 #ifdef USE_MKLDNN
+#include "mkl_cblas.h"
+#include "mkl_memory.h"
 #include "mkldnn_sum-inl.h"
 #include "mkldnn_memory-inl.h"
+
 
 namespace Microsoft
 {

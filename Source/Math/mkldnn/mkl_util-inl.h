@@ -24,8 +24,10 @@
 #include <vector>
 #include <assert.h>
 #include <string.h>
-#include <mkldnn.hpp>
 #include "../Matrix.h"
+#ifdef USE_MKLDNN
+#include <mkldnn.hpp>
+#endif
 
 #define STRINGIFy(s) #s
 #define STRINGIFY(s) STRINGIFy(s)
