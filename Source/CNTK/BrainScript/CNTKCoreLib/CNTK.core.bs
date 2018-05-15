@@ -550,6 +550,8 @@ CNTK2 = [
                                                                                         inputs = _ /*plus the function args*/ ]
 ]
 
+StraightThrough(_, tag='') = new ComputationNode [ operation = 'StraightThrough' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+
 # Parameter{} can do several forms of initialization.
 #  - initValue=scalar, value=array --> initialize from this value  --array form not implemented yet
 #  - initFromFilePath="..." --> read from a data file

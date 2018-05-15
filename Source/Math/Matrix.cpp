@@ -5000,6 +5000,40 @@ void Matrix<ElemType>::RNNBackwardWeights(const Matrix<ElemType>& inputX, const 
                             NOT_IMPLEMENTED);
 }
 
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::StraightThroughForward(const Matrix<ElemType>& a, Matrix<ElemType>& b)
+{
+    if (a.GetDeviceId() < 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+    else if (a.GetMatrixType() == MatrixType::SPARSE)
+    {
+        NOT_IMPLEMENTED;
+    }
+    else
+    {
+        GPUMatrix<ElemType>::StraightThroughForward(*a.m_GPUMatrix, *b.m_GPUMatrix);
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::StraightThroughBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad)
+{
+    if (a.GetDeviceId() < 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+    else if (a.GetMatrixType() == MatrixType::SPARSE)
+    {
+        NOT_IMPLEMENTED;
+    }
+    else
+    {
+        GPUMatrix<ElemType>::StraightThroughBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix);
+    }
+}
+
 #pragma region Static BLAS Functions
 
 template <class ElemType>

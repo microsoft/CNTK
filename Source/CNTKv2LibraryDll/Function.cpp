@@ -1403,6 +1403,11 @@ namespace CNTK
         LogicError("Slice: Invalid axis argument provided. Slice along the dynamic batch axis is currently unsupported. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
     }
 
+	FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::StraightThrough, operand, Dictionary(), name);
+    }
+
     FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();

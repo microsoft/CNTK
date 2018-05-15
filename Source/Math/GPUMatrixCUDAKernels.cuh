@@ -684,6 +684,24 @@ __global__ void _scaleAndAddScalar(
 };
 
 template <class ElemType>
+__global__ void _straightThroughForward(const ElemType* a, ElemType* b, CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    b[id] = a[id] <= 0 ? -1 : 1;
+}
+
+template <class ElemType>
+__global__ void _straightThroughBackward(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    ingrad[id] = fabs_(a[id]) <= 1 ? outgrad[id] : 0;
+}
+
+template <class ElemType>
 __global__ void _multiply1x1AndWeightedAdd(
     ElemType alpha, const ElemType* a, const ElemType* b, ElemType beta, ElemType* c, CUDA_LONG N)
 {

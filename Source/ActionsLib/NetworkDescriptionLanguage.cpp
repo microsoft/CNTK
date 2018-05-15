@@ -231,6 +231,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LatticeSequenceWithSoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(StraightThroughNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;

@@ -231,6 +231,16 @@ void GPUSparseMatrix<ElemType>::Reset()
 {
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::StraightThroughForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::StraightThroughBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad)
+{
+}
+
 #pragma endregion Constructors and Destructor
 
 #pragma region Static BLAS Functions

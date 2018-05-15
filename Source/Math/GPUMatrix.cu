@@ -3537,6 +3537,40 @@ void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, 
     m_rnnExecutor->BackwardWeightsCore(inputX, outputY, dw, rnnAttributes, reserve, workspace);
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::StraightThroughForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b)
+{
+    a.PrepareDevice();
+    if (a.GetComputeDeviceId() != b.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("Matrices must be on the same GPU");
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+        RuntimeError("Matrices should be in the same shape");
+    size_t m = a.GetNumRows();
+    size_t n = a.GetNumCols();
+    CUDA_LONG N = (CUDA_LONG)(m * n);
+
+    size_t blocksPerGrid = (size_t) ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _straightThroughForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), N);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::StraightThroughBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad)
+{
+    a.PrepareDevice();
+    if (a.GetComputeDeviceId() != outgrad.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("Matrices must be on the same GPU");
+    if (a.GetNumRows() != outgrad.GetNumRows() || a.GetNumCols() != outgrad.GetNumCols())
+        RuntimeError("Matrices should be in the same shape");
+
+    size_t m = a.GetNumRows();
+    size_t n = a.GetNumCols();
+    CUDA_LONG N = (CUDA_LONG)(m * n);
+    size_t blocksPerGrid = (size_t) ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _straightThroughBackward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
+}
+
 #pragma region Static BLAS Functions
 
 template <class ElemType>

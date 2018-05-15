@@ -116,6 +116,7 @@ namespace CNTK
         {PrimitiveOpType::TopK, L"TopK"},
         {PrimitiveOpType::ConstantOp, L"ConstantOp"},
         {PrimitiveOpType::Squeeze, L"Squeeze"},
+        {PrimitiveOpType::StraightThrough, L"StraightThrough"},
         {PrimitiveOpType::Cast, L"Cast" },
         { PrimitiveOpType::EyeLikeOp, L"EyeLikeOp" },
     };

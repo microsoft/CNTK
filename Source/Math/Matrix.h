@@ -596,6 +596,10 @@ public:
     ElemType LogAdd(ElemType x, ElemType y);
 
 public:
+    static void StraightThroughForward(const Matrix<ElemType>& a, Matrix<ElemType>& b);
+    static void StraightThroughBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad);
+
+public:
     // static BLAS functions
 
     // singular value decomposition of A as A = U*SIGMA*VT

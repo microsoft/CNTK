@@ -695,6 +695,61 @@ template class ClipNode<double>;
 
 
 // -----------------------------------------------------------------------
+// StraightThroughNode (tensor)
+// -----------------------------------------------------------------------
+// This node binarizes the values in a tensor elements-wise into {-1, 1}
+// The gradient (per element) is 1 if |x| <= 1, 0 otherwise
+
+template <class ElemType>
+class StraightThroughNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"StraightThrough";
+    }
+
+public:
+    StraightThroughNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    StraightThroughNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : StraightThroughNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> result = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+        Matrix<ElemType>::StraightThroughForward(inputm, result);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //NOT_IMPLEMENTED;
+        Matrix<ElemType> gradient = GradientFor(fr);
+        Matrix<ElemType> output = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+
+        Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
+        Matrix<ElemType>::StraightThroughBackward(inputm, output, gradient, inputGrad);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+};
+
+template class StraightThroughNode<float>;
+template class StraightThroughNode<double>; 
+
+// -----------------------------------------------------------------------
 // CompareNode(a,b)
 // -----------------------------------------------------------------------
 // Template parameters compType (-1, 0, 1) and polarity (0, 1) are used selecting one of the six basic comparison operations. 

@@ -234,6 +234,17 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.RowRepeat(NULL, num_repeat, name);
         }
     }
+    else if (cnNodeType == OperationNameOf(StraightThroughNode))
+    {
+        if (parameter.size() != 1)
+            RuntimeError("StraightThroughNode Usage: StraightThrough(NodeName).");
+        nodeParamCount = 1;
+        nodeParamStart = 0;
+        if (pass == ndlPassInitial)
+        {
+            nodePtr = builder.StraightThrough(NULL, name);
+        }
+    }
     else if (cnNodeType == OperationNameOf(DiagonalNode))
     {
         if (parameter.size() != 1)

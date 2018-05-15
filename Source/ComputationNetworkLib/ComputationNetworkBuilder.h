@@ -192,6 +192,7 @@ public:
     ComputationNodePtr SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName = L"");
     ComputationNodePtr LatticeSequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const ComputationNodePtr lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& LatticeSequenceWithSoftmax, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring nodeName = L"");
     ComputationNodePtr Sigmoid(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr StraightThrough(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sin(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sinh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");

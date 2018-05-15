@@ -210,6 +210,8 @@ namespace CNTK
         }
         else if (op == PrimitiveOpType::ScatterPacked)
             outputDynamicAxes = inputs[2].DynamicAxes();
+        else if (op == PrimitiveOpType::StraightThrough)
+            outputDynamicAxes = inputs[0].DynamicAxes();
         else if ((op == PrimitiveOpType::PackedIndex) || (op == PrimitiveOpType::GatherPacked))
             outputDynamicAxes = inputs[1].DynamicAxes();
         else if ((op == PrimitiveOpType::ReconcileDynamicAxis) || (op == PrimitiveOpType::ToSequenceLike))
@@ -1099,6 +1101,12 @@ namespace CNTK
                                 outputShape[0] = k;
                             else if (k != 1)
                                 RuntimeError("Function '%S': cannot get k>1 items from a scalar.", AsString().c_str());
+                            break;
+                        }
+                        case PrimitiveOpType::StraightThrough:
+                        {
+                            assert(m_inputs.size() == 1);
+                            outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
                         }
                         default:

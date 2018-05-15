@@ -879,6 +879,11 @@ namespace CNTK
                     ASSIGN_NEW_NODE(SliceNode, network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis), strides);
                     break;
                 }
+                case PrimitiveOpType::StraightThrough:
+                {
+                    computationNodePtr = New<StraightThroughNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::RandomSample:
                 {
                     auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
