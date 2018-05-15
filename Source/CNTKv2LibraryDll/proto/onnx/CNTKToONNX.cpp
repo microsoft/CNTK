@@ -2520,10 +2520,10 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                         auto srcTensor = input.IsParameter() ? Parameter(input).Value() : Constant(input).Value();
 
                         onnx::TensorProto dstTensor;
-					    dstTensor.set_name(inputName);
-						CopyTensor(srcTensor, dstTensor, &inputArgType);
+                        dstTensor.set_name(inputName);
+                        CopyTensor(srcTensor, dstTensor, &inputArgType);
 
-					    graph->AddInitialTensor(dstTensor);
+                        graph->AddInitialTensor(dstTensor);
                     }
                 }
             }
