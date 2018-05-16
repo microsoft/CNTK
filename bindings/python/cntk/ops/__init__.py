@@ -2655,42 +2655,42 @@ def splice(*inputs, **kw_axis_name):
 
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
-@typemap
-def straight_through(x, name=''):
-    '''
-    element-wise binarization node using the straight through estimator
+#@typemap
+#def straight_through(x, name=''):
+#    '''
+#    element-wise binarization node using the straight through estimator
 
-    Example:
-        >>> # create 2x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data1 = np.asarray([[[1, 2],
-        ...                      [4, 5]]], dtype=np.float32)
+#    Example:
+#        >>> # create 2x2 matrix in a sequence of length 1 in a batch of one sample
+#        >>> data1 = np.asarray([[[1, 2],
+#        ...                      [4, 5]]], dtype=np.float32)
 
-        >>> x = C.constant(value=data1)
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data2 = np.asarray([[[10, 20],
-        ...                       [30, 40],
-        ...                       [50, 60]]],dtype=np.float32)
-        >>> y = C.constant(value=data2)
-        >>> # splice both inputs on axis=0 returns a 5x2 matrix
-        >>> C.splice(x, y, axis=1).eval()
-        array([[[  1.,   2.],
-                [  4.,   5.],
-                [ 10.,  20.],
-                [ 30.,  40.],
-                [ 50.,  60.]]], dtype=float32)
+#        >>> x = C.constant(value=data1)
+#        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+#        >>> data2 = np.asarray([[[10, 20],
+#        ...                       [30, 40],
+#        ...                       [50, 60]]],dtype=np.float32)
+#        >>> y = C.constant(value=data2)
+#        >>> # splice both inputs on axis=0 returns a 5x2 matrix
+#        >>> C.splice(x, y, axis=1).eval()
+#        array([[[  1.,   2.],
+#                [  4.,   5.],
+#                [ 10.,  20.],
+#                [ 30.,  40.],
+#                [ 50.,  60.]]], dtype=float32)
 
-    Args:
-        inputs: one or more input tensors
-        axis (int or :class:`~cntk.axis.Axis`, optional, keyword only): axis along which the
-         concatenation will be performed
-        name (str, optional, keyword only): the name of the Function instance in the network
+#    Args:
+#        inputs: one or more input tensors
+#        axis (int or :class:`~cntk.axis.Axis`, optional, keyword only): axis along which the
+#         concatenation will be performed
+#        name (str, optional, keyword only): the name of the Function instance in the network
 
-    Returns:
-        :class:`~cntk.ops.functions.Function`
-    '''
+#    Returns:
+#        :class:`~cntk.ops.functions.Function`
+#    '''
 
-    from cntk.cntk_py import straight_through
-    return straight_through(x, name) # C++ projection expects inputs as a list
+#    from cntk.cntk_py import straight_through
+#    return straight_through(x, name) # C++ projection expects inputs as a list
 
 @typemap
 def unpack_batch(x, name=''):
