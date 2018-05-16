@@ -5085,7 +5085,7 @@ void CPUMatrix<ElemType>::StraightThroughForward(const CPUMatrix<ElemType>& a, C
         for (size_t row = 0; row < a.GetNumRows(); row++)
         {
 
-            b(row, sample) = a(row, sample) <= 0 ? -1 : 1;
+            b(row, sample) = a(row, sample) <= (ElemType)0 ? (ElemType)(-1) : (ElemType)1;
         }
     }
 }
@@ -5103,7 +5103,7 @@ void CPUMatrix<ElemType>::StraightThroughBackward(const CPUMatrix<ElemType>& a, 
     {
         for (size_t row = 0; row < a.GetNumRows(); row++)
         {
-            ingrad(row, sample) = abs(a(row, sample)) <= 1 ? outgrad(row, sample) : 0;
+            ingrad(row, sample) = abs(a(row, sample)) <= (ElemType)1 ? outgrad(row, sample) : (ElemType)0;
         }
     }
 }
