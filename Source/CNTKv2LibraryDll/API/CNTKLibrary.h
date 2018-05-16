@@ -4030,8 +4030,8 @@ namespace CNTK
     /// Only batch axis is supported now.
     ///
     CNTK_API FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name);
-    
-	///
+
+    ///
     /// Create an instance of the CNTK built-in element-wise max with # of words operation
     ///
     CNTK_API FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name = L"");

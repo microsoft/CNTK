@@ -803,7 +803,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixStraightThroughForward, RandomSeedFixture)
     const size_t nRows = 100;
     const size_t nCols = 50;
     auto value = GPUMatrix<float>::RandomUniform(nRows, nCols, c_deviceIdZero, low, high, IncrementCounter());
-	GPUMatrix<float> result(nRows, nCols, c_deviceIdZero);
+    GPUMatrix<float> result(nRows, nCols, c_deviceIdZero);
     GPUMatrix<float>::StraightThroughForward(value, result);
     unique_ptr<float[]> value_carray(value.CopyToArray());
     unique_ptr<float[]> result_carray(result.CopyToArray());
