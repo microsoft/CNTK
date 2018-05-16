@@ -239,7 +239,7 @@ ifeq ("$(BUILDTYPE)","debug")
     GENCODE_FLAGS := $(GENCODE_SM30)
   endif
 
-  CXXFLAGS += -g
+  CXXFLAGS += -g3 -ggdb3 -O0
   LDFLAGS += -rdynamic
   COMMON_FLAGS += -D_DEBUG -DNO_SYNC
   CUFLAGS += -O0 -g -use_fast_math -lineinfo  $(GENCODE_FLAGS)
@@ -252,7 +252,7 @@ ifeq ("$(BUILDTYPE)","release")
     GENCODE_FLAGS := $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50) $(GENCODE_SM60) $(GENCODE_SM61) $(GENCODE_SM70)
   endif
 
-  CXXFLAGS += -g -O4
+  CXXFLAGS += -g3 -ggdb3 -O4
   LDFLAGS += -rdynamic
   COMMON_FLAGS += -DNDEBUG -DNO_SYNC
   CUFLAGS += -O3 -g -use_fast_math $(GENCODE_FLAGS)

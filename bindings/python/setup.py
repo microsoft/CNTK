@@ -157,10 +157,13 @@ if '--project-name' in sys.argv:
 
 WITH_DEBUG_SYMBOL=False
 LINKER_DEBUG_ARG=''
+COMPILER_DEBUG_ARG=''
 if "--with-debug-symbol" in sys.argv:
     WITH_DEBUG_SYMBOL=True
     if IS_WINDOWS:
         LINKER_DEBUG_ARG='/DEBUG'
+    else:
+        COMPILER_DEBUG_ARG=['-g3', '-ggdb3', '-O0']
     sys.argv.remove("--with-debug-symbol")
 else:
     if IS_WINDOWS:
@@ -212,6 +215,7 @@ if IS_WINDOWS:
 else:
     extra_compile_args += [
         '--std=c++11',
+        COMPILER_DEBUG_ARG
     ]
     extra_link_args = [] # TODO: LINKER_DEBUG_ARG is not passed in to avoid compilation error
 

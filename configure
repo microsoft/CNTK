@@ -357,6 +357,12 @@ function default_python_with_deps ()
 }
 python_with_deps=$(default_python_with_deps)
 
+function default_python_with_debug ()
+{
+        echo no
+}
+python_with_debug=$(default_python_with_debug)
+
 function find_jdk ()
 {
     echo $(find_dir $default_jdk "$jdk_check")
@@ -425,6 +431,7 @@ function show_help ()
     echo "  --with-halide[=directory] $(show_default $(find_halide))"
     echo "  --with-build-version=[version] $default_build_version"
     echo "  --with-deps[=(yes|no)] include third party libs in the wheel packages (MKL, CUDA and OpenCV) $(show_default $(default_python_with_deps))"
+    echo "  --with-debug[=(yes|no)] include debug symbols in the wheel packages $(show_default $(default_python_with_debug))"
 
     echo "Libraries search path:"
     for head in $(default_paths)
@@ -988,6 +995,19 @@ do
                 exit
             fi
             ;;
+        --with-debug*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                if test x$optarg = xyes
+                then
+                    python_with_debug=$optarg
+                fi
+            else
+                echo "Invalid value for --with-debug $optarg"
+                show_help
+                exit
+            fi
+            ;;
         *)
             echo Invalid option $key
             show_help
@@ -1308,6 +1328,10 @@ fi
 
 if test $python_with_deps = yes ; then
     echo PYTHON_WITH_DEPS=1 >> $config
+fi
+
+if test $python_with_debug = yes ; then
+    echo PYTHON_WITH_DEBUG=1 >> $config
 fi
 
 # If we are not in the configure directory, generate a trampoline Makefile
