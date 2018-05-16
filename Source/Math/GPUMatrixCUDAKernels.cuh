@@ -686,19 +686,21 @@ __global__ void _scaleAndAddScalar(
 template <class ElemType>
 __global__ void _straightThroughForward(const ElemType* a, ElemType* b, CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    b[id] = a[id] <= 0 ? -1 : 1;
+    b[id] = (comp_t)a[id] <= (comp_t)0 ? (comp_t)(-1) : (comp_t)1;
 }
 
 template <class ElemType>
 __global__ void _straightThroughBackward(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    ingrad[id] = fabs_(a[id]) <= 1 ? outgrad[id] : 0;
+    ingrad[id] = fabs_((comp_t)a[id]) <= (comp_t)1 ? (comp_t)outgrad[id] : (comp_t)0;
 }
 
 template <class ElemType>

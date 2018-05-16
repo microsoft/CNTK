@@ -5074,11 +5074,38 @@ void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& 
 template <class ElemType>
 void CPUMatrix<ElemType>::StraightThroughForward(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& b)
 {
+    if (a.IsEmpty() || b.IsEmpty())
+    {
+        return;
+    }
+
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t) a.GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < a.GetNumRows(); row++)
+        {
+
+            b(row, sample) = a(row, sample) <= 0 ? -1 : 1;
+        }
+    }
 }
 
 template <class ElemType>
 void CPUMatrix<ElemType>::StraightThroughBackward(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& output, const CPUMatrix<ElemType>& outgrad, CPUMatrix<ElemType>& ingrad)
 {
+    if (a.IsEmpty() || output.IsEmpty() || outgrad.IsEmpty() || ingrad.IsEmpty())
+    {
+        return;
+    }
+
+#pragma omp parallel for
+    for (int64_t sample = 0; sample < (int64_t) a.GetNumCols(); sample++)
+    {
+        for (size_t row = 0; row < a.GetNumRows(); row++)
+        {
+            ingrad(row, sample) = abs(a(row, sample)) <= 1 ? outgrad(row, sample) : 0;
+        }
+    }
 }
 
 #pragma region Static BLAS Functions

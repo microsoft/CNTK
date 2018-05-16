@@ -1195,6 +1195,49 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixGatherFromTarget, RandomSeedFixture)
     BOOST_CHECK(m2.IsEqualTo(expect, 1e-6));
 }
 
+BOOST_FIXTURE_TEST_CASE(CPUMatrixStraightThroughForward, RandomSeedFixture)
+{
+    const float low = -5.f;
+    const float high = 5.f;
+    const size_t nRows = 100;
+    const size_t nCols = 50;
+    const unsigned long seed = 4711;
+    auto value = CPUMatrix<float>::RandomUniform(nRows, nCols, low, high, seed);
+    CPUMatrix<float> result(nRows, nCols);
+    CPUMatrix<float>::StraightThroughForward(value, result);
+    unique_ptr<float[]> value_carray(value.CopyToArray());
+    unique_ptr<float[]> result_carray(result.CopyToArray());
+
+    for (int i = 0; i < nRows * nCols; ++i)
+    {
+        float binary_val = value_carray[i] <= 0 ? -1.f : 1.f;
+        BOOST_CHECK_EQUAL(result_carray[i], binary_val);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(CPUMatrixStraightThroughBackward, RandomSeedFixture)
+{
+    const float low = -5.f;
+    const float high = 5.f;
+    const size_t nRows = 100;
+    const size_t nCols = 50;
+    const unsigned long seed = 4711;
+    auto value = CPUMatrix<float>::RandomUniform(nRows, nCols, low, high, seed);
+    auto outgrad = CPUMatrix<float>::RandomUniform(nRows, nCols, low, high, seed);
+    auto result = CPUMatrix<float>::RandomUniform(nRows, nCols, low, high, seed);
+    CPUMatrix<float> ingrad(nRows, nCols);
+    CPUMatrix<float>::StraightThroughBackward(value, result, outgrad, ingrad);
+    unique_ptr<float[]> value_carray(value.CopyToArray());
+    unique_ptr<float[]> outgrad_carray(outgrad.CopyToArray());
+    unique_ptr<float[]> ingrad_carray(ingrad.CopyToArray());
+
+    for (int i = 0; i < nRows * nCols; ++i)
+    {
+        float ingrad_check = abs(value_carray[i]) <= 1 ? outgrad_carray[i] : 0.f;
+        BOOST_CHECK_EQUAL(ingrad_carray[i], ingrad_check);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }
 } } }
