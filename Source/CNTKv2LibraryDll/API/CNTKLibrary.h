@@ -908,11 +908,6 @@ namespace CNTK
         CNTK_API NDArrayViewPtr Alias(bool readOnly = false) const;
 
         ///
-        /// Create an instance of the CNTK built-in element-wise max with # of words operation
-        ///
-        CNTK_API FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name = L"");
-
-        ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data
         /// corresponding to the specified slice of 'this' view.
         ///
@@ -4035,6 +4030,11 @@ namespace CNTK
     /// Only batch axis is supported now.
     ///
     CNTK_API FunctionPtr UnpackBatch(const Variable& operand, const std::wstring& name);
+    
+	///
+    /// Create an instance of the CNTK built-in element-wise max with # of words operation
+    ///
+    CNTK_API FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name = L"");
 
     enum class PaddingMode
     {
