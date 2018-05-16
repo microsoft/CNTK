@@ -2391,8 +2391,8 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     /* guoye: end */
     bool softalign = true;
     /* guoye: start */
-    // bool softalignstates = false;      // true if soft alignment within edges, currently we only support soft within edge in cpu mode
-    bool softalignstates = true;      // true if soft alignment within edges, currently we only support soft within edge in cpu mode
+    bool softalignstates = false;      // true if soft alignment within edges, currently we only support soft within edge in cpu mode
+    // bool softalignstates = true;      // true if soft alignment within edges, currently we only support soft within edge in cpu mode
     /* guoye: end */
     bool softalignlattice = softalign; // w.r.t. whole lattice
 
