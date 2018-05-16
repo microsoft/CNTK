@@ -975,7 +975,7 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
                  pathscore -= double(accWeightInNbest*wer);
 
                  // If you only want WER to affect the selection of Nbest, disable the below line. If you aslo want the WER as weight in error computation, enable this line
-                 // prevtokeninfo.path_score = pathscore;
+                 prevtokeninfo.path_score = pathscore;
             }
                 
             mp_itr = tokenlattice[e.E].mp_score_token_infos.find(pathscore);
@@ -2390,7 +2390,10 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     
     /* guoye: end */
     bool softalign = true;
-    bool softalignstates = false;      // true if soft alignment within edges, currently we only support soft within edge in cpu mode
+    /* guoye: start */
+    // bool softalignstates = false;      // true if soft alignment within edges, currently we only support soft within edge in cpu mode
+    bool softalignstates = true;      // true if soft alignment within edges, currently we only support soft within edge in cpu mode
+    /* guoye: end */
     bool softalignlattice = softalign; // w.r.t. whole lattice
 
     edgealignments thisedgealignments(*this);   // alignments memory allocate for this lattice
