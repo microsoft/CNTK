@@ -1209,6 +1209,7 @@ std::tuple<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool> CNTKT
 
     if ((shape1.TotalSize() > 1 && shape2.TotalSize() == 1) || (shape1.TotalSize() == 1 && shape2.TotalSize() > 1))
     {
+        // this is the case where one of the operands is a scalar.
         broadcast = true;
         swapInput = (shape1.TotalSize() == 1 && shape2.TotalSize() > 1);
 
@@ -1222,7 +1223,7 @@ std::tuple<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool> CNTKT
         return make_tuple(std::pair<std::vector<int>, std::vector<int>>(dims1, dims2), broadcast, axis, swapInput);
     }
 
-    if (shape1.Rank() < shape2.Rank())
+    if (dims1.size() < dims2.size())
     {
         // This is a case of [b, c] + [a, b, c].
         // Need to swap the inputs to fit into ONNX spec - only right-hand-side argument will be broadcasted.
@@ -3157,44 +3158,15 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
 
     if (L"Embedding" == src->OpName())
     {
-        // WinML does not allow Cast between float and int. To workaround it, set workaroundWinMLNotSupportCastOfInt = true.
-        // otherwise use argmax, cast, gather which make more sense for an embedding operation.
-        bool workaroundWinMLNotSupportCastOfInt = true;
-        if (workaroundWinMLNotSupportCastOfInt)
-        {
-            ONNXIR::Node* argMatMul = AddMatMulNode(orderedInputs[1], orderedInputs[0], graph);
-            int input_size = src->Output().Shape()[0];
-            std::vector<int> newShape({ FreeSequenceLen, 1, input_size });
-            AddReshapeNode(argMatMul->OutputDefs()[0], newShape, outputs[0].Name(), graph);
-        }
-        else
-        {
-            int inputDataAxis = src->Inputs()[1].DynamicAxes().size();
-            ONNXIR::Node* argMax = AddArgMaxNode(orderedInputs[1], graph, inputDataAxis);
-            ONNXIR::Node* int32Cast = AddCastNode(argMax->OutputDefs()[0], graph, "INT32");
+        ONNXIR::Node* argMatMul = AddMatMulNode(orderedInputs[1], orderedInputs[0], graph);
+        int input_size = src->Output().Shape()[0];
 
-            bool reshapeGather = true;
-            if (reshapeGather)
-            {
-                ONNXIR::NodeArg gatherIndexInputNodeArg(int32Cast->OutputDefs()[0].Name(), nullptr);
-                ONNXIR::NodeArg gatherSourceInputNodeArg(orderedInputs[0].Name(), nullptr);
-                ONNXIR::NodeArg gatherOutputArg(nodeName + "_gather_tmp", nullptr);
-                ONNXIR::Node* gatherNode = graph->AddNode(nodeName + "_tmp", "Gather", "", { gatherSourceInputNodeArg , gatherIndexInputNodeArg }, { gatherOutputArg });
-
-                ONNXIR::NodeArg reshapeInputNodeArg(gatherNode->OutputDefs()[0].Name(), nullptr);
-                ONNXIR::Node* reshapedGather = graph->AddNode(nodeName, "Reshape", "", { reshapeInputNodeArg }, outputs);
-                int input_size = src->Output().Shape()[0];
-                // std::vector<int> newShape({ SequenceLen, 1, input_size });
-                std::vector<int> newShape({ FreeSequenceLen, 1, input_size });
-                reshapedGather->AddAttribute("shape", ToINTS(newShape, false));
-                return reshapedGather;
-            }
-            else
-            {
-                ONNXIR::NodeArg gatherIndexInputNodeArg(int32Cast->OutputDefs()[0].Name(), nullptr);
-                graph->AddNode(nodeName, "Gather", "", { orderedInputs[0] , gatherIndexInputNodeArg }, outputs);
-            }
-        }
+        // MatMul implementation in WinML/LotusRT does not follow ONNX specification.
+        // It only support 2D MatMul. Sequence dimension are lost.
+        // Following code is to workaround this issue. Here we assume batch size if 1.
+        // TODO: batch size are not supported with ONNX model
+        std::vector<int> newShape({ FreeSequenceLen, 1, input_size });
+        AddReshapeNode(argMatMul->OutputDefs()[0], newShape, outputs[0].Name(), graph);
     }
     else if (Operators::SupportBroadcast(src->OpName()))
     {
