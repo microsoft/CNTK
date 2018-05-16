@@ -443,6 +443,10 @@ public:
 
     static void SetCompatibleMode();
 
+    // straight through functions
+    static void StraightThroughForward(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& b);
+    static void StraightThroughBackward(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& output, const CPUMatrix<ElemType>& outgrad, CPUMatrix<ElemType>& ingrad);
+
     // static BLAS functions
     static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W);
 

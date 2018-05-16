@@ -5071,6 +5071,15 @@ void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& 
     RuntimeError("Batch normalization training on CPU is not yet implemented.");
 }
 
+template <class ElemType>
+void CPUMatrix<ElemType>::StraightThroughForward(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& b)
+{
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::StraightThroughBackward(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& output, const CPUMatrix<ElemType>& outgrad, CPUMatrix<ElemType>& ingrad)
+{
+}
 
 #pragma region Static BLAS Functions
 

@@ -5020,17 +5020,21 @@ template <class ElemType>
 template <class ElemType>
 void Matrix<ElemType>::StraightThroughBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad)
 {
-    if (a.GetDeviceId() < 0)
-    {
-        NOT_IMPLEMENTED;
-    }
-    else if (a.GetMatrixType() == MatrixType::SPARSE)
+
+    if (a.GetMatrixType() == MatrixType::SPARSE)
     {
         NOT_IMPLEMENTED;
     }
     else
     {
-        GPUMatrix<ElemType>::StraightThroughBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix);
+        if (a.GetDeviceId() < 0)
+        {
+             CPUMatrix<ElemType>::StraightThroughBackward(*a.m_CPUMatrix, *output.m_CPUMatrix, *outgrad.m_CPUMatrix, *ingrad.m_CPUMatrix);
+        }
+        else
+        {
+            GPUMatrix<ElemType>::StraightThroughBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix);
+        }
     }
 }
 
