@@ -5898,6 +5898,11 @@ namespace CNTK
         /// Deserializers to be used in the composite reader.
         ///
         std::vector<Deserializer> deserializers;
+
+        ///
+        /// Maximum number of errors in the dataset to ignore.
+        ///
+        size_t maxErrors{ 0 };
     };
 
     ///

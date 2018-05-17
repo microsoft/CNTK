@@ -54,6 +54,7 @@ namespace CNTK
         size_t m_maxNumSamplesToRead;
         size_t m_maxNumSweepsToRead;
         size_t m_truncationLength;
+        size_t m_maxErrors;
         std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
 
         // Inner state of the underlying reader.
