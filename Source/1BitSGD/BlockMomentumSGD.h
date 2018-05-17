@@ -30,6 +30,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_useNesterovMomentum;
         double m_blockLearningRate; 
         double m_blockMomentumAsTimeConstantPerWorker; 
+        float m_workerCompleteRatioOnSync;
         size_t m_syncPeriodPerWorker; 
         map < wstring, shared_ptr<Matrix<ElemType>>>     m_prevParameters;       // parameters at the last model aggregation point
         map < wstring, shared_ptr<Matrix<ElemType>>>    m_blockLevelSmoothedGradient; 
@@ -38,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         BlockMomentumSGD(const MPIWrapperPtr& pMPI, size_t reportFreq, DEVICEID_TYPE devID, 
                         bool useNestrovMomentum, bool resetSGDM, 
                         double blockLearningRate, 
-                        double blockMomentumAsTimeConstant, size_t syncPeriod)
+                        double blockMomentumAsTimeConstant, size_t syncPeriod, float workerCompleteRatioOnSync)
             :IMASGD<ElemType>(pMPI, reportFreq, devID)
         {
             m_syncPeriodPerWorker = syncPeriod / pMPI->NumNodesInUse();
@@ -46,6 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_useNesterovMomentum = useNestrovMomentum;
             m_resetSGDMomentumAfterAggregation = resetSGDM; 
             m_blockLearningRate = blockLearningRate;
+            m_workerCompleteRatioOnSync = workerCompleteRatioOnSync;
         }
 
         /*virtual*/ void OnEpochStart(const std::list<ComputationNodeBasePtr>& LearnableNodes) override
@@ -83,6 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             "block size per worker = %d samples, "
                             "%s"
                             "%s"
+                            "with %6.4f workerCompleteRatioOnSync."
                             "\n",
                             (int)m_pMPI->NumNodesInUse(),      
                             BlockMomentumSGD<double>::TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_syncPeriodPerWorker), 
@@ -90,7 +93,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_blockLearningRate, 
                             (int)m_syncPeriodPerWorker, 
                             m_useNesterovMomentum ? "using Nesterov-style block momentum, " : "" , 
-                            m_resetSGDMomentumAfterAggregation ? "resetting SGD momentum after sync." : "."
+                            m_resetSGDMomentumAfterAggregation ? "resetting SGD momentum after sync, " : ", ",
+                            m_workerCompleteRatioOnSync
                 );
         }
         /*virtual*/ void OnEpochEnd(const std::list<ComputationNodeBasePtr>& LearnableNodes, 

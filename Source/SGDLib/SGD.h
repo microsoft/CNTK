@@ -297,6 +297,7 @@ protected:
     // Parallel training related with MA / BM
     size_t m_modelAggregationBlockSize;
     bool   m_resetSGDMomentum; 
+    float  m_workerCompleteRatioOnSync;
     bool   m_useNesterovBlockMomentum;
     double m_blockLearningRate; 
     double m_blockMomentumAsTimeConstant;

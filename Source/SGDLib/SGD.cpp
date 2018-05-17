@@ -1417,7 +1417,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // aggregation by model averaging or block momentum 
         if (useModelAggregation)
         {
-            if (nSamplesSinceLastModelSync >= blockSizePerWorker)
+            if (nSamplesSinceLastModelSync >= blockSizePerWorker || m_pMASGDHelper->isTimeToSync(m_workerCompleteRatioOnSync))
             {
                 bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
                 if (synced)
@@ -2332,7 +2332,7 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
             m_pMASGDHelper = make_shared<BlockMomentumSGD<ElemType>>(m_mpi, traceLevel, devID, 
                                                                  m_useNesterovBlockMomentum, m_resetSGDMomentum, 
                                                                  m_blockLearningRate, m_blockMomentumAsTimeConstant, 
-                                                                 m_modelAggregationBlockSize);
+                                                                 m_modelAggregationBlockSize, m_workerCompleteRatioOnSync);
 #endif 
     }
 }
@@ -3229,6 +3229,12 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             }
 #endif 
             m_resetSGDMomentum = configBMSGD(L"resetSGDMomentum", true);
+            // Ratio of workers that have to complete the block prior to sync
+            m_workerCompleteRatioOnSync = configBMSGD(L"workerCompleteRatioOnSync", 1.0f);
+            if (m_workerCompleteRatioOnSync > 1 || m_workerCompleteRatioOnSync < 1 / numMPIWorkers) 
+            {
+                LogicError("workerCompleteRatioOnSync allowed configuration is in [1/numMPIWorkers,1]:\n 1/numMPIWorkers: at least 1 worker has to complete\n 1: all workers have to complete");
+            }
             m_useNesterovBlockMomentum = configBMSGD(L"useNesterovMomentum", true);
             m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0); 
 

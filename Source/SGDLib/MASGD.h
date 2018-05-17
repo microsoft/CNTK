@@ -26,8 +26,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     enum class MAWorkerStatus
     {
         DataProcessing = 0,
-        DataEnd = 1, 
-        NOTSTARTED = 2 
+        ReadyToSync = 1,
+        DataEnd = 2, 
+        NOTSTARTED = 3 
     };
 
     class MASGDPerfStats
@@ -173,6 +174,56 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              m_perfReporter.OnEpochEnd();
          }
 
+         virtual bool isTimeToSync(float workerCompleteRatioOnSync)
+         {
+             bool retval = false;
+
+             vector<MPI_Request> sendRequests(m_numWorkers);
+             int sentSignal = (int)m_MAworkerStatus[m_myRank];
+             // 1. send my status to notify peers 
+             for (int dest = 0; dest < (int)m_numWorkers; dest++)
+             {
+                 if (dest != m_myRank)
+                 {
+                     m_pMPI->Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, &sendRequests[dest]);
+                 }
+             }
+             // 2. recv others 
+             for (int src = 0; src < m_numWorkers; src++)
+             {
+                 if (src != m_myRank && m_MAworkerStatus[src] == MAWorkerStatus::DataProcessing)
+                 {
+                     int recvSignal = 0;
+                     MPI_Status status;
+                     m_pMPI->Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, &status);
+                     m_MAworkerStatus[src] = (MAWorkerStatus)recvSignal;
+#if 0
+                     assert(status.MPI_SOURCE == src);
+                     assert(status.MPI_TAG == m_numSyncPerformed);
+#endif 
+                 }
+             }
+             // 3. make sure sending operation finished 
+             for (int dest = 0; dest < m_numWorkers; dest++)
+             {
+                 if (dest != m_myRank)
+                 {
+                     m_pMPI->Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
+                 }
+             }
+
+             size_t workersReadyToSync = 0;
+             for (int i = 0; i < m_numWorkers; i++)
+             {
+                 if (m_MAworkerStatus[i] == MAWorkerStatus::ReadyToSync)
+                 {
+                     workersReadyToSync++;
+                 }
+             }
+
+             return (workersReadyToSync / m_numWorkers > (workerCompleteRatioOnSync - 0.00001)) ;
+         }
+
          virtual bool OnArrivingAtSyncPoint(
             const std::list<ComputationNodeBasePtr>& LearnableNodes,        /* input/output: */
             std::list<Matrix<ElemType>>& smoothedGradient,                  /* input/output: under some setup, it will reset to zero*/
@@ -181,7 +232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
          {
              Timer syncPointTimer; 
              syncPointTimer.Start();
-             bool read2Sync=UpdateWorkerStatus(MAWorkerStatus::DataProcessing);
+             bool read2Sync=UpdateWorkerStatus(MAWorkerStatus::ReadyToSync);
              syncPointTimer.Stop();
              m_perfReporter.OnArriveAtSyncPoint(syncPointTimer.ElapsedSeconds(),read2Sync);
 
@@ -255,14 +306,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 retval = true; 
             }
-            else if (myStatus == MAWorkerStatus::DataProcessing)
+            else if (myStatus == MAWorkerStatus::ReadyToSync)
             {
-                // in this case, we return true if all nodes are ready to sync (meaning all of them are in DataProcessing State)
-                // otherwise, return false
                 retval = false;
                 if (!somePeersHaveArrivedAtEnd())
                 {
-                    int sentSignal = (int)MAWorkerStatus::DataProcessing; 
+                    int sentSignal = (int)MAWorkerStatus::ReadyToSync; 
                     vector<MPI_Request> sendRequests(m_numWorkers); 
                     // 1. send my status to peers 
                     for (int dest = 0; dest < (int)m_numWorkers; dest++)
