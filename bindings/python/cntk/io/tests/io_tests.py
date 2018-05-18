@@ -1229,7 +1229,7 @@ def test_compare_cbf_and_ctf(input_pair, device_id, tmpdir):
 
 class SimpleDeserailizer(UserDeserializer):
     def __init__(self, stream_infos, chunk_data):
-        super(UserDeserializer, self).__init__()
+        super(SimpleDeserailizer, self).__init__()
         self._streams = stream_infos
         self._chunk_data = chunk_data
 
