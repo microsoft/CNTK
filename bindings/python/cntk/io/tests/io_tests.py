@@ -1262,11 +1262,12 @@ def test_user_deserializer():
                            chunk_data=chunk_data)
     mbs = MinibatchSource([d], randomize=False)
     input_map = {x: mbs['x'], y: mbs['y']}
-    batch = mbs.next_minibatch(5, input_map)
-    assert(batch[x].number_of_sequences == 5)
-    assert(batch[x].number_of_samples == 5 * N_seq)
-    assert(batch[y].number_of_sequences == 5)
-    assert(batch[y].number_of_samples == 5)
+    mb_size = 5
+    batch = mbs.next_minibatch(mb_size, input_map)
+    assert(batch[x].number_of_sequences == mb_size)
+    assert(batch[x].number_of_samples == mb_size * N_seq)
+    assert(batch[y].number_of_sequences == mb_size)
+    assert(batch[y].number_of_samples == mb_size)
 
 
     #test StreamInformation without defines_mb_size set
@@ -1275,7 +1276,8 @@ def test_user_deserializer():
                            chunk_data=chunk_data)
     mbs = MinibatchSource([d], randomize=False)
     input_map = {x: mbs['x'], y: mbs['y']}
-    batch = mbs.next_minibatch(5, input_map)
+    batch = mbs.next_minibatch(mb_size, input_map)
+    # one sequence with 3 samples is retrieved
     assert(batch[x].number_of_sequences == 1)
     assert(batch[x].number_of_samples == N_seq)
     assert(batch[y].number_of_sequences == 1)
