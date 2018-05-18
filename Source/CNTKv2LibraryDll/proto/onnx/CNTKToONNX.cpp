@@ -97,11 +97,16 @@ namespace CNTK
             const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
         // Processes inputs of a src CNTK op, creating ONNX nodes needed for the inputs.
-        static std::vector<ONNXIR::NodeArg> ProcessInputs(const FunctionPtr& src,
+        static void ProcessInputs(const FunctionPtr& src,
             ONNXIR::Graph* graph,
             std::unordered_map<FunctionPtr, ONNXIR::Node*>& functionNodes,
             std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
-            const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+            const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+            std::vector<ONNXIR::NodeArg>& inputs);
+
+        // Processes outputs of a src CNTK op.
+        static void ProcessOutputs(const FunctionPtr& src,
+            std::vector<ONNXIR::NodeArg>& outputs);
 
         static ONNXIR::Node *AddReshapeNode(const ONNXIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName, ONNXIR::Graph* graph);
         static ONNXIR::Node *AddMatMulNode(const ONNXIR::NodeArg &nodeArg1, const ONNXIR::NodeArg &nodeArg2, ONNXIR::Graph* graph);
@@ -2424,17 +2429,11 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     else if (Operators::IsSupportedCNTKOP(src->OpName()))
     {
-        std::vector<ONNXIR::NodeArg> inputs = ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+        std::vector<ONNXIR::NodeArg> inputs;
+        ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
         std::vector<ONNXIR::NodeArg> outputs;
-        for (const auto& output : src->Outputs())
-        {
-            auto outputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
-            UpdateONNXType(output.GetDataType(), outputArgType);
-
-            ONNXIR::NodeArg outputArg(ToString(output.Uid()), &outputArgType);
-            outputs.push_back(outputArg);
-        }
+        ProcessOutputs(src, outputs);
 
         //
         // Finally add a new node to ONNX graph.
@@ -2448,13 +2447,13 @@ ONNXIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     return functionNode;
 }
 
-std::vector<ONNXIR::NodeArg> CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
+void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
     ONNXIR::Graph* graph,
     std::unordered_map<FunctionPtr, ONNXIR::Node*>& functionNodes,
     std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
-    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    std::vector<ONNXIR::NodeArg>& inputs)
 {
-    std::vector<ONNXIR::NodeArg> inputs;
     std::string opName = ToString(src->OpName());
 
     for (size_t inputIndex = 0; inputIndex < src->Inputs().size(); ++inputIndex)
@@ -2484,7 +2483,7 @@ std::vector<ONNXIR::NodeArg> CNTKToONNXHelper::ProcessInputs(const FunctionPtr& 
             continue;
 
         //
-        // Use user defined name if available otherwise use our internel unique name ID.
+        // Use user-defined name if available, otherwise use our internal unique name ID.
         //
         std::string inputName = ToString(input.Uid());
         auto inputItr = compositeOutputsMap.find(input);
@@ -2566,18 +2565,26 @@ std::vector<ONNXIR::NodeArg> CNTKToONNXHelper::ProcessInputs(const FunctionPtr& 
                         CopyTensor(srcTensor, dstTensor, &inputArgType);
 
                         graph->AddInitialTensor(dstTensor);
-                    }
                 }
             }
-            //
-            // If this input is output, then it is the ouput of an up stream node. Recursively add all upstream nodes.
-            // Pretty much, we are doing DFS.
-            //
-            else if (input.IsOutput())
-                CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
         }
+        //
+        // If this input is output, then it is the ouput of an up stream node. Recursively add all upstream nodes.
+        // Pretty much, we are doing DFS.
+        //
+        else if (input.IsOutput())
+            CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
 
-    return inputs;
+void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
+    std::vector<ONNXIR::NodeArg>& outputs)
+{
+    for (const auto& output : src->Outputs())
+    {
+        auto outputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
+        UpdateONNXType(output.GetDataType(), outputArgType);
+        outputs.emplace_back(ToString(output.Uid()), &outputArgType);
+    }
 }
 
 void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
@@ -3866,17 +3873,12 @@ ONNXIR::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src,
     std::unordered_map<Variable, ONNXIR::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    std::vector<ONNXIR::NodeArg> inputs = ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    std::vector<ONNXIR::NodeArg> inputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
     std::vector<ONNXIR::NodeArg> outputs;
-    for (const auto& output : src->Outputs())
-    {
-        auto outputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
-        UpdateONNXType(output.GetDataType(), outputArgType);
-
-        ONNXIR::NodeArg outputArg(ToString(output.Uid()), &outputArgType);
-        outputs.push_back(outputArg);
-    }
+    ProcessOutputs(src, outputs);
+    assert(outputs.size() == 1);
 
     // CNTK's select(flag, value_if_true, value_if_false) can be represented with ONNX ops as
     // flag01 * value_if_true + (1 - flag01) * value_if_false,
@@ -3891,7 +3893,7 @@ ONNXIR::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src,
     ONNXIR::Node* oneNode = graph->AddNode(outputName + "_one", "Constant", "", {}, { oneOutputArg });
     onnx::TensorProto oneTensor;
     oneTensor.set_data_type(onnx::TensorProto::FLOAT);
-    oneTensor.add_float_data(1);
+    oneTensor.add_float_data(1.0f);
     oneNode->AddAttribute("value", oneTensor);
 
     ONNXIR::NodeArg minOutputArg(outputName + "_min_out", nullptr);

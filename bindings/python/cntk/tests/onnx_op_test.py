@@ -1020,11 +1020,23 @@ def test_TransposeAxes(tmpdir):
     #model = C.swapaxes(x, 1, 2)
     #verify_one_input(model, data, tmpdir, 'TransposeAxes_1')
 
+
 # Select
-def test_Select(tmpdir):
-    flag = np.asarray([-100., -1.2, -1.0, -0.5, 0.0, 0.1, 1.0, 100.], dtype=np.float32)
-    if_true = np.asarray([1., 2., 3., 4., 5., 6., 7., 8.], dtype=np.float32)
-    if_false = np.asarray([11., 12., 13., 14., 15., 16., 17., 18.], dtype=np.float32)
+@pytest.mark.parametrize("flag, if_true, if_false", (
+    ((-100., -1.2, -1.0, -0.5, 0.0, 0.1, 1.0, 100.),
+     (1., 2., 3., 4., 5., 6., 7., 8.),
+     (11., 12., 13., 14., 15., 16., 17., 18.)),
+    (((1, 0, 3), (4, 5, 0)),
+     ((1, 2, 3), (4, 5, 6)),
+     ((-1, -2, -3), (-4, -5, -6))),
+    ((((0, 1), (0, 1)), ((0, 1), (0, 1))),
+     (((1, 2), (3, 4)), ((5, 6), (7, 8))),
+     (((9, 10), (11, 12)), ((13, 14), (15, 16)))),
+))
+def test_Select(flag, if_true, if_false, tmpdir):
+    flag = np.asarray(flag, dtype=np.float32)
+    if_true = np.asarray(if_true, dtype=np.float32)
+    if_false = np.asarray(if_false, dtype=np.float32)
 
     model = C.element_select(flag, if_true, if_false)
     verify_no_input(model, tmpdir, 'Select_0')
