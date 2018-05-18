@@ -387,8 +387,8 @@ class StreamInformation(cntk_py.StreamInformation):
         storage_format (str): 'dense' or 'sparse'
         dtype (NumPy type): data type
         shape (tuple): shape of the elements
-        defines_mb_size (bool, default to False): whether this stream defines the minibatch size when there are more
-         than 1 stream.
+        defines_mb_size (bool, default to False): whether this stream defines the minibatch size when there are multiple
+          streams.
     '''
 
     _storage = {'dense': cntk_py.StorageFormat_Dense,
