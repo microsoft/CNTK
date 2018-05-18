@@ -5047,1361 +5047,1362 @@ template <class ElemType>
     {
         if (a.GetDeviceId() < 0)
         {
-            CPUMatrix<ElemType>::StraightThroughForward(*a.m_CPUMatrix, *b.m_CPUMatrix);
+        
+        CPUMatrix<ElemType>::StraightThroughForward(*a.m_CPUMatrix, *b.m_CPUMatrix);
         }
         else
         {
-            CPUMatrix<ElemType>::StraightThroughForward(*a.m_CPUMatrix, *b.m_CPUMatrix);
+            GPUMatrix<ElemType>::StraightThroughForward(*a.m_GPUMatrix, *b.m_GPUMatrix);
         }
     }
 }
 
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::StraightThroughBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad)
-    {
+void Matrix<ElemType>::StraightThroughBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad)
+{
 
-        if (a.GetMatrixType() == MatrixType::SPARSE)
+    if (a.GetMatrixType() == MatrixType::SPARSE)
+    {
+        NOT_IMPLEMENTED;
+    }
+    else
+    {
+        if (a.GetDeviceId() < 0)
         {
-            NOT_IMPLEMENTED;
+            CPUMatrix<ElemType>::StraightThroughBackward(*a.m_CPUMatrix, *output.m_CPUMatrix, *outgrad.m_CPUMatrix, *ingrad.m_CPUMatrix);
         }
         else
         {
-            if (a.GetDeviceId() < 0)
-            {
-                CPUMatrix<ElemType>::StraightThroughBackward(*a.m_CPUMatrix, *output.m_CPUMatrix, *outgrad.m_CPUMatrix, *ingrad.m_CPUMatrix);
-            }
-            else
-            {
-                GPUMatrix<ElemType>::StraightThroughBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix);
-            }
+            GPUMatrix<ElemType>::StraightThroughBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix);
         }
     }
+}
 
 #pragma region Static BLAS Functions
 
-    template <class ElemType>
-    void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W)
+template <class ElemType>
+void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W)
+{
+    if (A.IsEmpty())
+        LogicError("SVD:  the input matrix is empty.");
+
+    DecideAndMoveToRightDevice(A, SIGMA, U);
+    VT._transferToDevice(A.GetDeviceId());
+    W._transferToDevice(A.GetDeviceId());
+
+    SIGMA.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
+    U.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
+    VT.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
+    W.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&A, nullptr,
+                            {
+                                Matrix<ElemType> tA = A.DeepClone();
+                                CPUMatrix<ElemType>::SVD(*tA.m_CPUMatrix, *SIGMA.m_CPUMatrix, *U.m_CPUMatrix, *VT.m_CPUMatrix, *W.m_CPUMatrix);
+                                SIGMA.SetDataLocation(CPU);
+                                U.SetDataLocation(CPU);
+                                VT.SetDataLocation(CPU);
+                                W.SetDataLocation(CPU);
+                                // need to SetDataLocation() on all matrices we write to
+                            },
+                            { NOT_IMPLEMENTED; },
+                            { NOT_IMPLEMENTED; },
+                            { NOT_IMPLEMENTED; });
+}
+
+/// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="transposeA">Whether matrix a is transposed</param>
+/// <param name="b">Input matrix</param>
+/// <param name="transposeB">Whether matrix b is transposed</param>
+/// <param name="beta">Scalar</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
+                                              ElemType beta, Matrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier)
+{
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (c.GetDeviceId() < 0) // CPU
     {
-        if (A.IsEmpty())
-            LogicError("SVD:  the input matrix is empty.");
-
-        DecideAndMoveToRightDevice(A, SIGMA, U);
-        VT._transferToDevice(A.GetDeviceId());
-        W._transferToDevice(A.GetDeviceId());
-
-        SIGMA.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
-        U.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
-        VT.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
-        W.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
-
-        DISPATCH_MATRIX_ON_FLAG(&A, nullptr,
-                                {
-                                    Matrix<ElemType> tA = A.DeepClone();
-                                    CPUMatrix<ElemType>::SVD(*tA.m_CPUMatrix, *SIGMA.m_CPUMatrix, *U.m_CPUMatrix, *VT.m_CPUMatrix, *W.m_CPUMatrix);
-                                    SIGMA.SetDataLocation(CPU);
-                                    U.SetDataLocation(CPU);
-                                    VT.SetDataLocation(CPU);
-                                    W.SetDataLocation(CPU);
-                                    // need to SetDataLocation() on all matrices we write to
-                                },
-                                { NOT_IMPLEMENTED; },
-                                { NOT_IMPLEMENTED; },
-                                { NOT_IMPLEMENTED; });
-    }
-
-    /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="transposeA">Whether matrix a is transposed</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="transposeB">Whether matrix b is transposed</param>
-    /// <param name="beta">Scalar</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
-                                                  ElemType beta, Matrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier)
-    {
-        DecideAndMoveToRightDevice(a, b, c);
-
-        if (c.GetDeviceId() < 0) // CPU
+        if (a.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * ANY -> ANY
         {
-            if (a.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * ANY -> ANY
+            if (b.GetMatrixType() == MatrixType::DENSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * DENSE  -> DENSE
             {
-                if (b.GetMatrixType() == MatrixType::DENSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * DENSE  -> DENSE
+                CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
+                c.SetDataLocation(CPU, DENSE);
+            }
+            else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * SPARSE -> DENSE
+            {
+                NOT_IMPLEMENTED;
+            }
+            else if (b.GetMatrixType() == MatrixType::DENSE && c.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * DENSE  -> SPARSE
+            {
+                NOT_IMPLEMENTED;
+            }
+            else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * SPARSE -> SPARSE
+            {
+                NOT_IMPLEMENTED;
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else // CPU, DENSE  * ANY -> ANY
+        {
+            if (b.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> ANY
+            {
+                if (c.GetMatrixType() == MatrixType::DENSE) // CPU, DENSE * SPARSE -> DENSE
                 {
-                    CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
+                    CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, beta, *c.m_CPUMatrix);
                     c.SetDataLocation(CPU, DENSE);
                 }
-                else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * SPARSE -> DENSE
+                else if (c.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> SPARSE
                 {
-                    NOT_IMPLEMENTED;
-                }
-                else if (b.GetMatrixType() == MatrixType::DENSE && c.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * DENSE  -> SPARSE
-                {
-                    NOT_IMPLEMENTED;
-                }
-                else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * SPARSE -> SPARSE
-                {
-                    NOT_IMPLEMENTED;
-                }
-                else
-                {
-                    NOT_IMPLEMENTED;
-                }
-            }
-            else // CPU, DENSE  * ANY -> ANY
-            {
-                if (b.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> ANY
-                {
-                    if (c.GetMatrixType() == MatrixType::DENSE) // CPU, DENSE * SPARSE -> DENSE
+                    if (beta != 0 && beta != 1)
                     {
-                        CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, beta, *c.m_CPUMatrix);
-                        c.SetDataLocation(CPU, DENSE);
-                    }
-                    else if (c.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> SPARSE
-                    {
-                        if (beta != 0 && beta != 1)
-                        {
-                            NOT_IMPLEMENTED;
-                        }
-                        else
-                        {
-                            if (beta == 0)
-                            {
-                                c.Reset();
-                            }
-                            CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
-                        }
-                        c.SetDataLocation(CPU, SPARSE);
+                        NOT_IMPLEMENTED;
                     }
                     else
-                        NOT_IMPLEMENTED; // CPU, DENSE * SPARSE -> UNDETERMINED ?
-                }
-                else // CPU, DENSE * DENSE -> DENSE (matrix c enforced to be DENSE)
-                {
-                    c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
-                    CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix, pQuantizedMultiplier);
-                    c.SetDataLocation(CPU, DENSE);
-                }
-            }
-        }
-        else // GPU operations
-        {
-            if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * DENSE -> DENSE
-            {
-                GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, *c.m_GPUMatrix);
-                c.SetDataLocation(GPU, DENSE);
-            }
-            else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * DENSE -> DENSE
-            {
-                GPUMatrix<ElemType> second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
-                GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, second, false, beta, *c.m_GPUMatrix);
-                c.SetDataLocation(GPU, DENSE);
-            }
-            else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * SPARSE -> DENSE
-            {
-                GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix);
-                c.SetDataLocation(GPU, DENSE);
-            }
-            else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * SPARSE -> SPARSE
-            {
-                if (beta != 0 && beta != 1)
-                {
-                    NOT_IMPLEMENTED;
+                    {
+                        if (beta == 0)
+                        {
+                            c.Reset();
+                        }
+                        CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
+                    }
+                    c.SetDataLocation(CPU, SPARSE);
                 }
                 else
-                {
-                    if (beta == 0)
-                    {
-                        c.Reset();
-                    }
-                    GPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
-                }
-                c.SetDataLocation(GPU, SPARSE);
+                    NOT_IMPLEMENTED; // CPU, DENSE * SPARSE -> UNDETERMINED ?
             }
-            else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * SPARSE -> SPARSE
+            else // CPU, DENSE * DENSE -> DENSE (matrix c enforced to be DENSE)
             {
-                GPUSparseMatrix<ElemType> firstDummy = alpha == 1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix) * alpha;
-                GPUSparseMatrix<ElemType>& first = firstDummy; // By Malcolm.. gcc doesn't support auto
+                c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
+                CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix, pQuantizedMultiplier);
+                c.SetDataLocation(CPU, DENSE);
+            }
+        }
+    }
+    else // GPU operations
+    {
+        if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * DENSE -> DENSE
+        {
+            GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, *c.m_GPUMatrix);
+            c.SetDataLocation(GPU, DENSE);
+        }
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * DENSE -> DENSE
+        {
+            GPUMatrix<ElemType> second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
+            GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, second, false, beta, *c.m_GPUMatrix);
+            c.SetDataLocation(GPU, DENSE);
+        }
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * SPARSE -> DENSE
+        {
+            GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix);
+            c.SetDataLocation(GPU, DENSE);
+        }
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * SPARSE -> SPARSE
+        {
+            if (beta != 0 && beta != 1)
+            {
+                NOT_IMPLEMENTED;
+            }
+            else
+            {
                 if (beta == 0)
                 {
-                    GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
-                    c.SetDataLocation(GPU, SPARSE);
+                    c.Reset();
                 }
-                else
-                {
-                    GPUSparseMatrix<ElemType> tmp(b.m_GPUSparseMatrix->GetComputeDeviceId());
-                    GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, tmp);
-                    *c.m_GPUSparseMatrix = tmp + (*c.m_GPUSparseMatrix) * beta;
-                    c.SetDataLocation(GPU, SPARSE);
-                }
+                GPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
             }
-            else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * DENSE -> SPARSE
+            c.SetDataLocation(GPU, SPARSE);
+        }
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * SPARSE -> SPARSE
+        {
+            GPUSparseMatrix<ElemType> firstDummy = alpha == 1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix) * alpha;
+            GPUSparseMatrix<ElemType>& first = firstDummy; // By Malcolm.. gcc doesn't support auto
+            if (beta == 0)
             {
-                GPUMatrix<ElemType> tmp(a.m_GPUMatrix->GetComputeDeviceId());
-                GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, (ElemType) 0.0, tmp);
-                if (beta != 0)
-                {
-                    GPUSparseMatrix<ElemType> tmpSparse(a.m_GPUMatrix->GetComputeDeviceId());
-                    tmpSparse.SetValue(tmp);
-                    *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix) * beta;
-                }
-                else
-                {
-                    c.m_GPUSparseMatrix->SetValue(tmp);
-                }
+                GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
                 c.SetDataLocation(GPU, SPARSE);
             }
-            else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * SPARSE -> DENSE
+            else
             {
-                NOT_IMPLEMENTED;
-            }
-            else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * DENSE -> SPARSE
-            {
-                NOT_IMPLEMENTED;
-            }
-            else // No combination left
-            {
-                NOT_IMPLEMENTED;
+                GPUSparseMatrix<ElemType> tmp(b.m_GPUSparseMatrix->GetComputeDeviceId());
+                GPUSparseMatrix<ElemType>::Multiply(first, transposeA, *b.m_GPUSparseMatrix, transposeB, tmp);
+                *c.m_GPUSparseMatrix = tmp + (*c.m_GPUSparseMatrix) * beta;
+                c.SetDataLocation(GPU, SPARSE);
             }
         }
-    }
-
-    template <class ElemType>
-    /*static*/ void Matrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c)
-    {
-        // special case: a is a 1x1 matrix
-        // The only alternative is to Get00Elements(), which makes things inefficient.
-        if (a.GetNumElements() != 1)
-            InvalidArgument("Multiply1x1AndWeightedAdd: first arg must be a scalar.");
-
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                nullptr,
-                                CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(alpha, *a.m_CPUMatrix, *b.m_CPUMatrix, beta, *c.m_CPUMatrix),
-                                GPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(alpha, *a.m_GPUMatrix, *b.m_GPUMatrix, beta, *c.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
-
-    /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c =  op(a) * op(b) + c</summary>
-    /// <param name="a">Input matrix</param>
-    /// <param name="transposeA">Whether matrix a is transposed</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="transposeB">Whether matrix b is transposed</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::MultiplyAndAdd(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
-                                          Matrix<ElemType>& c)
-    {
-        return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 1.0, c);
-    }
-
-    /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c =  op(a) * op(b)</summary>
-    /// <param name="a">Input matrix</param>
-    /// <param name="transposeA">Whether matrix a is transposed</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="transposeB">Whether matrix b is transposed</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
-                                    Matrix<ElemType>& c)
-    {
-        return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 0.0, c);
-    }
-
-    /// <summary>Matrix-matrix multiply with col-major matrices (a and b are not transposed): c =  a * b</summary>
-    /// <param name="a">Input matrix</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
-    {
-        return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, false, b, false, 0.0, c);
-    }
-
-    /// <summary>1-D Convolution with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c. MultiplyAndWeightedAdd is just a special case of this.</summary>
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="transposeA">Whether matrix a is transposed</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="transposeB">Whether matrix b is transposed</param>
-    /// <param name="beta">Scalar</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
-                                                  ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
-    {
-        DecideAndMoveToRightDevice(a, b, c);
-
-        if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * DENSE -> SPARSE
         {
-            GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix, numChannels, horizontalSubsample, padding, channelwise);
+            GPUMatrix<ElemType> tmp(a.m_GPUMatrix->GetComputeDeviceId());
+            GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, (ElemType) 0.0, tmp);
+            if (beta != 0)
+            {
+                GPUSparseMatrix<ElemType> tmpSparse(a.m_GPUMatrix->GetComputeDeviceId());
+                tmpSparse.SetValue(tmp);
+                *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix) * beta;
+            }
+            else
+            {
+                c.m_GPUSparseMatrix->SetValue(tmp);
+            }
+            c.SetDataLocation(GPU, SPARSE);
         }
-        else
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * SPARSE -> DENSE
+        {
+            NOT_IMPLEMENTED;
+        }
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * DENSE -> SPARSE
+        {
+            NOT_IMPLEMENTED;
+        }
+        else // No combination left
         {
             NOT_IMPLEMENTED;
         }
     }
+}
 
-    /// <summary>Columnwise scale with col-major matrix and accumulate.</summary>
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="v">Input scale vector for each column of a</param>
-    /// <param name="beta">Scalar</param>
-    /// <param name="c">Resulting matrix, the same shape as a</param>
-    template <class ElemType>
-    void Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& v, ElemType beta, Matrix<ElemType>& c)
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c)
+{
+    // special case: a is a 1x1 matrix
+    // The only alternative is to Get00Elements(), which makes things inefficient.
+    if (a.GetNumElements() != 1)
+        InvalidArgument("Multiply1x1AndWeightedAdd: first arg must be a scalar.");
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            nullptr,
+                            CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(alpha, *a.m_CPUMatrix, *b.m_CPUMatrix, beta, *c.m_CPUMatrix),
+                            GPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(alpha, *a.m_GPUMatrix, *b.m_GPUMatrix, beta, *c.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+/// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c =  op(a) * op(b) + c</summary>
+/// <param name="a">Input matrix</param>
+/// <param name="transposeA">Whether matrix a is transposed</param>
+/// <param name="b">Input matrix</param>
+/// <param name="transposeB">Whether matrix b is transposed</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::MultiplyAndAdd(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
+                                      Matrix<ElemType>& c)
+{
+    return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 1.0, c);
+}
+
+/// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c =  op(a) * op(b)</summary>
+/// <param name="a">Input matrix</param>
+/// <param name="transposeA">Whether matrix a is transposed</param>
+/// <param name="b">Input matrix</param>
+/// <param name="transposeB">Whether matrix b is transposed</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
+                                Matrix<ElemType>& c)
+{
+    return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 0.0, c);
+}
+
+/// <summary>Matrix-matrix multiply with col-major matrices (a and b are not transposed): c =  a * b</summary>
+/// <param name="a">Input matrix</param>
+/// <param name="b">Input matrix</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+{
+    return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, false, b, false, 0.0, c);
+}
+
+/// <summary>1-D Convolution with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c. MultiplyAndWeightedAdd is just a special case of this.</summary>
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="transposeA">Whether matrix a is transposed</param>
+/// <param name="b">Input matrix</param>
+/// <param name="transposeB">Whether matrix b is transposed</param>
+/// <param name="beta">Scalar</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
+                                              ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
+{
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
     {
-        DecideAndMoveToRightDevice(a, v, c);
-
-        DISPATCH_MATRIX_ON_FLAG(&a,
-                                nullptr,
-                                CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
-                                GPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix),
-                                CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
-                                GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix));
+        GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix, numChannels, horizontalSubsample, padding, channelwise);
     }
-
-    /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
-    /// if a is a column vector, add to all columns of c
-    /// if a is a row vector, add to all rows of c
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    /*static*/ void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
+    else
     {
-        if (a.IsEmpty() || c.IsEmpty())
-            LogicError("ScaleAndAdd:  one of the input matrices is empty.");
-
-        DecideAndMoveToRightDevice(c, a);
-
-        if (a.GetMatrixType() == c.GetMatrixType())
-        {
-            DISPATCH_MATRIX_ON_FLAG(&c, &c,
-                                    { CPUMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_CPUMatrix, *c.m_CPUMatrix); },
-                                    { GPUMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUMatrix, *c.m_GPUMatrix); },
-                                    { NOT_IMPLEMENTED; },
-                                    { GPUSparseMatrix<ElemType> b = move(*c.m_GPUSparseMatrix); GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUSparseMatrix, 1, b, *c.m_GPUSparseMatrix); });
-        }
-        else
-        {
-            DISPATCH_MATRIX_ON_FLAG(&c, nullptr,
-                                    {
-                                        CPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_CPUSparseMatrix, *c.m_CPUMatrix);
-                                        c.SetDataLocation(CPU);
-                                    },
-                                    {
-                                        if (a.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSC)
-                                            GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUSparseMatrix, 1, *c.m_GPUMatrix, *c.m_GPUMatrix);
-                                        else // new GPU sparse matrix code
-                                            GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUSparseMatrix, *c.m_GPUMatrix);
-                                        c.SetDataLocation(GPU);
-                                    },
-                                    { NOT_IMPLEMENTED; },
-                                    {
-                                        c.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(c.m_GPUSparseMatrix->CopyToDenseMatrix());
-                                        GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUMatrix, 1, *c.m_GPUSparseMatrix, *c.m_GPUMatrix);
-                                        c.SetDataLocation(GPU, DENSE);
-                                        c.m_GPUSparseMatrix = nullptr;
-                                    });
-        }
+        NOT_IMPLEMENTED;
     }
+}
 
-    /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + beta * c</summary>
-    /// if a is a column vector, add to all columns of c
-    /// if a is a row vector, add to all rows of c
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="beta">Scalar</param>
-    /// <param name="c">Resulting matrix, caller is responsible for allocating this</param>
-    template <class ElemType>
-    /*static*/ void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c)
+/// <summary>Columnwise scale with col-major matrix and accumulate.</summary>
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="v">Input scale vector for each column of a</param>
+/// <param name="beta">Scalar</param>
+/// <param name="c">Resulting matrix, the same shape as a</param>
+template <class ElemType>
+void Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& v, ElemType beta, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(a, v, c);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            nullptr,
+                            CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
+                            GPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix),
+                            CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
+                            GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix));
+}
+
+/// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
+/// if a is a column vector, add to all columns of c
+/// if a is a row vector, add to all rows of c
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
+{
+    if (a.IsEmpty() || c.IsEmpty())
+        LogicError("ScaleAndAdd:  one of the input matrices is empty.");
+
+    DecideAndMoveToRightDevice(c, a);
+
+    if (a.GetMatrixType() == c.GetMatrixType())
     {
-        if (beta == 1)
-            ScaleAndAdd(alpha, a, c);
-        else if (beta == 0)
-            Scale(alpha, a, c);
-        else
-        {
-            ScaleAndAdd(alpha / beta, a, c); // c1=alpha/beta * a + c
-            Scale(beta, c);                  // c/beta * beta
-            // TODO: two lines above should be changed as follows:
-            // Scale(beta, c);                  // c1 = c * beta
-            // ScaleAndAdd(alpha, a, c); // c=alpha * a + c1 = alpha * a + beta * c
-        }
+        DISPATCH_MATRIX_ON_FLAG(&c, &c,
+                                { CPUMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_CPUMatrix, *c.m_CPUMatrix); },
+                                { GPUMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUMatrix, *c.m_GPUMatrix); },
+                                { NOT_IMPLEMENTED; },
+                                { GPUSparseMatrix<ElemType> b = move(*c.m_GPUSparseMatrix); GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUSparseMatrix, 1, b, *c.m_GPUSparseMatrix); });
     }
-
-    // tensor swapping and addition: c <- keepWeight * b + scaleFactor * swap_dimensions(a, S, K)
-    // where
-    //  - a is interpreted as a tensor of dimension (D x S x M x K x T)         // column-major, as usual
-    //  - b and c as a tensor of dimension          (D x K x M x S x T)   // note: K and S swapped
-    // The main point of this function is to reshuffle a tensor w.r.t. two dimensions that get swapped in memory,
-    // but for gradients, we will need to add, hence the keepWeight.
-    // Notes:
-    //  - c and b may be the same (in-place operation is expressly allowed).
-    //  - D, M, and/or T may be 1. For example, D == M == T == 1 implements a 2D matrix transpose from (S x K) to (K x S).
-    //  - If keepWeight == 0, then b will just get overwritten (straight assignment, b may be uninitialized or contain NaNs).
-    //  - The original matrix dimensions are ignored except that sizes must match (rows x cols == D x S x M x K x T).
-    //    For diagnostics purposes, this function also enforces the rows % D == 0 and cols % T == 0, but this is not a functional requirement and can be removed if that helps.
-    //  - Dense matrices only.
-    // TODO: Handle these cases:
-    //  - no swapping happening  --just do a block copy
-    //  - swapping can be implemented by cuDNN  --do so
-    template <class ElemType>
-    /*static*/ void Matrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+    else
     {
-        if (a.GetNumElements() != c.GetNumElements() || b.GetNumElements() != c.GetNumElements()) // allocations must match (but not dimensions, since we reinterpret the dimensions anyway)
-            InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c must have same number of elements.");
-        if (c.IsEmpty()) // operating on empty minibatch slices is perfectly cromulent
-            return;
-
-        // sanity checks for current use cases--these are not strictly necessary and can be deleted
-        if (a.GetNumRows() % D != 0 || b.GetNumRows() % D != 0 || c.GetNumRows() % D != 0)
-            InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c are meant to have a row dimension that is a multiple of D.");
-        if (a.GetNumCols() % T != 0 || b.GetNumCols() % T != 0 || c.GetNumCols() % T != 0)
-            InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c are meant to have a column dimension that is a multiple of T.");
-
-        DecideAndMoveToRightDevice(a, b, c);
-
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                nullptr,
-                                CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_CPUMatrix, D, S, M, K, T, scaleFactor, *b.m_CPUMatrix, *c.m_CPUMatrix),
-                                GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUMatrix, *c.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUSparseMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUSparseMatrix, *c.m_GPUSparseMatrix));
+        DISPATCH_MATRIX_ON_FLAG(&c, nullptr,
+                                {
+                                    CPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_CPUSparseMatrix, *c.m_CPUMatrix);
+                                    c.SetDataLocation(CPU);
+                                },
+                                {
+                                    if (a.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+                                        GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUSparseMatrix, 1, *c.m_GPUMatrix, *c.m_GPUMatrix);
+                                    else // new GPU sparse matrix code
+                                        GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUSparseMatrix, *c.m_GPUMatrix);
+                                    c.SetDataLocation(GPU);
+                                },
+                                { NOT_IMPLEMENTED; },
+                                {
+                                    c.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(c.m_GPUSparseMatrix->CopyToDenseMatrix());
+                                    GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUMatrix, 1, *c.m_GPUSparseMatrix, *c.m_GPUMatrix);
+                                    c.SetDataLocation(GPU, DENSE);
+                                    c.m_GPUSparseMatrix = nullptr;
+                                });
     }
+}
 
-    /// <summary>c += alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::AddScaledDifference(const ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+/// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + beta * c</summary>
+/// if a is a column vector, add to all columns of c
+/// if a is a row vector, add to all rows of c
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="beta">Scalar</param>
+/// <param name="c">Resulting matrix, caller is responsible for allocating this</param>
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c)
+{
+    if (beta == 1)
+        ScaleAndAdd(alpha, a, c);
+    else if (beta == 0)
+        Scale(alpha, a, c);
+    else
     {
-        DecideAndMoveToRightDevice(c, a, b);
-        if (!(a.GetMatrixType() == b.GetMatrixType() && a.GetMatrixType() == c.GetMatrixType()))
-            NOT_IMPLEMENTED;
+        ScaleAndAdd(alpha / beta, a, c); // c1=alpha/beta * a + c
+        Scale(beta, c);                  // c/beta * beta
+        // TODO: two lines above should be changed as follows:
+        // Scale(beta, c);                  // c1 = c * beta
+        // ScaleAndAdd(alpha, a, c); // c=alpha * a + c1 = alpha * a + beta * c
+    }
+}
 
+// tensor swapping and addition: c <- keepWeight * b + scaleFactor * swap_dimensions(a, S, K)
+// where
+//  - a is interpreted as a tensor of dimension (D x S x M x K x T)         // column-major, as usual
+//  - b and c as a tensor of dimension          (D x K x M x S x T)   // note: K and S swapped
+// The main point of this function is to reshuffle a tensor w.r.t. two dimensions that get swapped in memory,
+// but for gradients, we will need to add, hence the keepWeight.
+// Notes:
+//  - c and b may be the same (in-place operation is expressly allowed).
+//  - D, M, and/or T may be 1. For example, D == M == T == 1 implements a 2D matrix transpose from (S x K) to (K x S).
+//  - If keepWeight == 0, then b will just get overwritten (straight assignment, b may be uninitialized or contain NaNs).
+//  - The original matrix dimensions are ignored except that sizes must match (rows x cols == D x S x M x K x T).
+//    For diagnostics purposes, this function also enforces the rows % D == 0 and cols % T == 0, but this is not a functional requirement and can be removed if that helps.
+//  - Dense matrices only.
+// TODO: Handle these cases:
+//  - no swapping happening  --just do a block copy
+//  - swapping can be implemented by cuDNN  --do so
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+{
+    if (a.GetNumElements() != c.GetNumElements() || b.GetNumElements() != c.GetNumElements()) // allocations must match (but not dimensions, since we reinterpret the dimensions anyway)
+        InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c must have same number of elements.");
+    if (c.IsEmpty()) // operating on empty minibatch slices is perfectly cromulent
+        return;
+
+    // sanity checks for current use cases--these are not strictly necessary and can be deleted
+    if (a.GetNumRows() % D != 0 || b.GetNumRows() % D != 0 || c.GetNumRows() % D != 0)
+        InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c are meant to have a row dimension that is a multiple of D.");
+    if (a.GetNumCols() % T != 0 || b.GetNumCols() % T != 0 || c.GetNumCols() % T != 0)
+        InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c are meant to have a column dimension that is a multiple of T.");
+
+    DecideAndMoveToRightDevice(a, b, c);
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            nullptr,
+                            CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_CPUMatrix, D, S, M, K, T, scaleFactor, *b.m_CPUMatrix, *c.m_CPUMatrix),
+                            GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUMatrix, *c.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUSparseMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUSparseMatrix, *c.m_GPUSparseMatrix));
+}
+
+/// <summary>c += alpha * (a-b)</summary>
+/// if a, b, c  must have same dim
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="b">Input matrix</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::AddScaledDifference(const ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(c, a, b);
+    if (!(a.GetMatrixType() == b.GetMatrixType() && a.GetMatrixType() == c.GetMatrixType()))
+        NOT_IMPLEMENTED;
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            &c,
+                            CPUMatrix<ElemType>::AddScaledDifference(alpha, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix),
+                            GPUMatrix<ElemType>::AddScaledDifference(alpha, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+/// <summary> c = alpha * (a-b)</summary>
+/// if a, b, c  must have same dim
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="b">Input matrix</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::AssignScaledDifference(const ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (!(a.GetMatrixType() == b.GetMatrixType()))
+        NOT_IMPLEMENTED;
+
+    c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            &c,
+                            CPUMatrix<ElemType>::AssignScaledDifference(alpha, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix),
+                            GPUMatrix<ElemType>::AssignScaledDifference(alpha, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+/// <summary>c += alpha * (a-b)</summary>
+/// if a, b, c  must have same dim
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="b">Input matrix</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::AddScaledDifference(const Matrix<ElemType>& alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(c, a, b);
+    alpha._transferToDevice(c.GetDeviceId());
+
+    if (!(a.GetMatrixType() == b.GetMatrixType() && a.GetMatrixType() == c.GetMatrixType() && a.GetMatrixType() == alpha.GetMatrixType()))
+        NOT_IMPLEMENTED;
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            &c,
+                            CPUMatrix<ElemType>::AddScaledDifference(*alpha.m_CPUMatrix, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix),
+                            GPUMatrix<ElemType>::AddScaledDifference(*alpha.m_GPUMatrix, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+/// <summary> c = alpha * (a-b)</summary>
+/// if a, b, c  must have same dim
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="b">Input matrix</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::AssignScaledDifference(const Matrix<ElemType>& alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(a, b, alpha);
+    c._transferToDevice(a.GetDeviceId());
+
+    if (!(a.GetMatrixType() == b.GetMatrixType() && a.GetMatrixType() == alpha.GetMatrixType()))
+        NOT_IMPLEMENTED;
+
+    c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            nullptr,
+                            CPUMatrix<ElemType>::AssignScaledDifference(*alpha.m_CPUMatrix, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix),
+                            GPUMatrix<ElemType>::AssignScaledDifference(*alpha.m_GPUMatrix, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+//c[ci,cj] += a[ai,aj]
+template <class ElemType>
+void Matrix<ElemType>::AddElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj)
+{
+    DecideAndMoveToRightDevice(c, a);
+
+    if (c.GetMatrixType() != a.GetMatrixType())
+        NOT_IMPLEMENTED;
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            &c,
+                            CPUMatrix<ElemType>::AddElementToElement(1, *a.m_CPUMatrix, ai, aj, *c.m_CPUMatrix, ci, cj),
+                            GPUMatrix<ElemType>::AddElementToElement(1, *a.m_GPUMatrix, ai, aj, *c.m_GPUMatrix, ci, cj),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+//c[ci,cj] = a[ai,aj]
+template <class ElemType>
+void Matrix<ElemType>::AssignElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj)
+{
+    DecideAndMoveToRightDevice(c, a);
+
+    if (c.GetMatrixType() != a.GetMatrixType())
+        NOT_IMPLEMENTED;
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            &c,
+                            CPUMatrix<ElemType>::AddElementToElement(0, *a.m_CPUMatrix, ai, aj, *c.m_CPUMatrix, ci, cj),
+                            GPUMatrix<ElemType>::AddElementToElement(0, *a.m_GPUMatrix, ai, aj, *c.m_GPUMatrix, ci, cj),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+//for each column of this, we add row slice of a starting from startIndex
+template <class ElemType>
+void Matrix<ElemType>::MinusOneAt(Matrix<ElemType>& a, const size_t position)
+{
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            &a,
+                            CPUMatrix<ElemType>::MinusOneAt(*a.m_CPUMatrix, position),
+                            GPUMatrix<ElemType>::MinusOneAt(*a.m_GPUMatrix, position),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+/// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a</summary>
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+void Matrix<ElemType>::Scale(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(c, a);
+
+    c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    if (alpha == 0)
+    {
+        c.Resize(a);
+        c.SetValue(0); // this is a little faster, and also does not propagate NaNs, which we'd expect from 'beta' parameters
+        return;
+    }
+    else
         DISPATCH_MATRIX_ON_FLAG(&c,
                                 &c,
-                                CPUMatrix<ElemType>::AddScaledDifference(alpha, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix),
-                                GPUMatrix<ElemType>::AddScaledDifference(alpha, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+                                CPUMatrix<ElemType>::Scale(alpha, *a.m_CPUMatrix, *c.m_CPUMatrix),
+                                GPUMatrix<ElemType>::Scale(alpha, *a.m_GPUMatrix, *c.m_GPUMatrix),
+                                NOT_IMPLEMENTED, *c.m_GPUSparseMatrix = (*a.m_GPUSparseMatrix) * alpha);
+}
 
-    /// <summary> c = alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::AssignScaledDifference(const ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
-    {
-        DecideAndMoveToRightDevice(a, b, c);
-
-        if (!(a.GetMatrixType() == b.GetMatrixType()))
-            NOT_IMPLEMENTED;
-
-        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
-
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                &c,
-                                CPUMatrix<ElemType>::AssignScaledDifference(alpha, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix),
-                                GPUMatrix<ElemType>::AssignScaledDifference(alpha, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
-
-    /// <summary>c += alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::AddScaledDifference(const Matrix<ElemType>& alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
-    {
-        DecideAndMoveToRightDevice(c, a, b);
-        alpha._transferToDevice(c.GetDeviceId());
-
-        if (!(a.GetMatrixType() == b.GetMatrixType() && a.GetMatrixType() == c.GetMatrixType() && a.GetMatrixType() == alpha.GetMatrixType()))
-            NOT_IMPLEMENTED;
-
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                &c,
-                                CPUMatrix<ElemType>::AddScaledDifference(*alpha.m_CPUMatrix, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix),
-                                GPUMatrix<ElemType>::AddScaledDifference(*alpha.m_GPUMatrix, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
-
-    /// <summary> c = alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::AssignScaledDifference(const Matrix<ElemType>& alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c)
-    {
-        DecideAndMoveToRightDevice(a, b, alpha);
-        c._transferToDevice(a.GetDeviceId());
-
-        if (!(a.GetMatrixType() == b.GetMatrixType() && a.GetMatrixType() == alpha.GetMatrixType()))
-            NOT_IMPLEMENTED;
-
-        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
-
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                nullptr,
-                                CPUMatrix<ElemType>::AssignScaledDifference(*alpha.m_CPUMatrix, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix),
-                                GPUMatrix<ElemType>::AssignScaledDifference(*alpha.m_GPUMatrix, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
-
-    //c[ci,cj] += a[ai,aj]
-    template <class ElemType>
-    void Matrix<ElemType>::AddElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj)
-    {
-        DecideAndMoveToRightDevice(c, a);
-
-        if (c.GetMatrixType() != a.GetMatrixType())
-            NOT_IMPLEMENTED;
-
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                &c,
-                                CPUMatrix<ElemType>::AddElementToElement(1, *a.m_CPUMatrix, ai, aj, *c.m_CPUMatrix, ci, cj),
-                                GPUMatrix<ElemType>::AddElementToElement(1, *a.m_GPUMatrix, ai, aj, *c.m_GPUMatrix, ci, cj),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
-
-    //c[ci,cj] = a[ai,aj]
-    template <class ElemType>
-    void Matrix<ElemType>::AssignElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj)
-    {
-        DecideAndMoveToRightDevice(c, a);
-
-        if (c.GetMatrixType() != a.GetMatrixType())
-            NOT_IMPLEMENTED;
-
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                &c,
-                                CPUMatrix<ElemType>::AddElementToElement(0, *a.m_CPUMatrix, ai, aj, *c.m_CPUMatrix, ci, cj),
-                                GPUMatrix<ElemType>::AddElementToElement(0, *a.m_GPUMatrix, ai, aj, *c.m_GPUMatrix, ci, cj),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
-
-    //for each column of this, we add row slice of a starting from startIndex
-    template <class ElemType>
-    void Matrix<ElemType>::MinusOneAt(Matrix<ElemType> & a, const size_t position)
-    {
+/// <summary>Matrix-scalar multiply with col-major matrices: a = alpha * a</summary>
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+template <class ElemType>
+void Matrix<ElemType>::Scale(ElemType alpha, Matrix<ElemType>& a)
+{
+    if (alpha == 0)
+        a.SetValue(0); // this is a little faster, and also does not propagate NaNs, which we'd expect from 'beta' parameters
+    else if (a.IsEmpty())
+        return;
+    else
         DISPATCH_MATRIX_ON_FLAG(&a,
                                 &a,
-                                CPUMatrix<ElemType>::MinusOneAt(*a.m_CPUMatrix, position),
-                                GPUMatrix<ElemType>::MinusOneAt(*a.m_GPUMatrix, position),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+                                CPUMatrix<ElemType>::Scale(alpha, *a.m_CPUMatrix),
+                                GPUMatrix<ElemType>::Scale(alpha, *a.m_GPUMatrix),
+                                CPUSparseMatrix<ElemType>::Scale(alpha, *a.m_CPUSparseMatrix),
+                                GPUSparseMatrix<ElemType>::Scale(alpha, *a.m_GPUSparseMatrix));
+}
 
-    /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a</summary>
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    void Matrix<ElemType>::Scale(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
+/// <summary>Matrix scalar matrix multiply with col-major matrices: a = alpha[0,0] * a</summary>
+/// <param name="alpha">1x1 matrix</param>
+/// <param name="a">Input matrix</param>
+template <class ElemType>
+void Matrix<ElemType>::Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        return;
+
+    DecideAndMoveToRightDevice(a, alpha);
+
+    if (a.GetMatrixType() != alpha.GetMatrixType())
+        NOT_IMPLEMENTED;
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            nullptr,
+                            CPUMatrix<ElemType>::Scale(*alpha.m_CPUMatrix, *a.m_CPUMatrix),
+                            GPUMatrix<ElemType>::Scale(*alpha.m_GPUMatrix, *a.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("InnerProduct:  one of the input matrix is empty.");
+
+    DecideAndMoveToRightDevice(a, b, c);
+
+    // TODO: consider swapping the arguments in this case
+    if (b.GetMatrixType() != DENSE) // only support a being sparse/dense. Both b and c should be dense
+        NOT_IMPLEMENTED;
+
+    c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            &a,
+                            CPUMatrix<ElemType>::InnerProduct(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
+                            GPUMatrix<ElemType>::InnerProduct(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, isColWise),
+                            CPUSparseMatrix<ElemType>::InnerProduct(*a.m_CPUSparseMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
+                            GPUSparseMatrix<ElemType>::InnerProduct(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, isColWise));
+}
+
+template <class ElemType>
+void Matrix<ElemType>::BatchMatMul(ElemType beta, const Matrix<ElemType>& a, const bool transposeA, const int m, const Matrix<ElemType>& b, const bool transposeB, const int n, Matrix<ElemType>& c, const bool isColWise)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("BatchMatMul: one of the input matrix is empty.");
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (a.GetMatrixType() != DENSE || b.GetMatrixType() != DENSE) // only support a & b being dense
+        NOT_IMPLEMENTED;
+
+    c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            &a,
+                            CPUMatrix<ElemType>::BatchMatMul(beta, *a.m_CPUMatrix, transposeA, m, *b.m_CPUMatrix, transposeB, n, *c.m_CPUMatrix, isColWise),
+                            GPUMatrix<ElemType>::BatchMatMul(beta, *a.m_GPUMatrix, transposeA, m, *b.m_GPUMatrix, transposeB, n, *c.m_GPUMatrix, isColWise),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+ElemType Matrix<ElemType>::InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
+
+    DecideAndMoveToRightDevice(a, b);
+
+    if (a.GetMatrixType() == b.GetMatrixType())
     {
-        DecideAndMoveToRightDevice(c, a);
-
-        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
-
-        if (alpha == 0)
-        {
-            c.Resize(a);
-            c.SetValue(0); // this is a little faster, and also does not propagate NaNs, which we'd expect from 'beta' parameters
-            return;
-        }
-        else
-            DISPATCH_MATRIX_ON_FLAG(&c,
-                                    &c,
-                                    CPUMatrix<ElemType>::Scale(alpha, *a.m_CPUMatrix, *c.m_CPUMatrix),
-                                    GPUMatrix<ElemType>::Scale(alpha, *a.m_GPUMatrix, *c.m_GPUMatrix),
-                                    NOT_IMPLEMENTED, *c.m_GPUSparseMatrix = (*a.m_GPUSparseMatrix) * alpha);
-    }
-
-    /// <summary>Matrix-scalar multiply with col-major matrices: a = alpha * a</summary>
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    template <class ElemType>
-    void Matrix<ElemType>::Scale(ElemType alpha, Matrix<ElemType> & a)
-    {
-        if (alpha == 0)
-            a.SetValue(0); // this is a little faster, and also does not propagate NaNs, which we'd expect from 'beta' parameters
-        else if (a.IsEmpty())
-            return;
-        else
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                                    &a,
-                                    CPUMatrix<ElemType>::Scale(alpha, *a.m_CPUMatrix),
-                                    GPUMatrix<ElemType>::Scale(alpha, *a.m_GPUMatrix),
-                                    CPUSparseMatrix<ElemType>::Scale(alpha, *a.m_CPUSparseMatrix),
-                                    GPUSparseMatrix<ElemType>::Scale(alpha, *a.m_GPUSparseMatrix));
-    }
-
-    /// <summary>Matrix scalar matrix multiply with col-major matrices: a = alpha[0,0] * a</summary>
-    /// <param name="alpha">1x1 matrix</param>
-    /// <param name="a">Input matrix</param>
-    template <class ElemType>
-    void Matrix<ElemType>::Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a)
-    {
-        if (a.IsEmpty())
-            return;
-
-        DecideAndMoveToRightDevice(a, alpha);
-
-        if (a.GetMatrixType() != alpha.GetMatrixType())
-            NOT_IMPLEMENTED;
-
         DISPATCH_MATRIX_ON_FLAG(&a,
                                 nullptr,
-                                CPUMatrix<ElemType>::Scale(*alpha.m_CPUMatrix, *a.m_CPUMatrix),
-                                GPUMatrix<ElemType>::Scale(*alpha.m_GPUMatrix, *a.m_GPUMatrix),
+                                return CPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_CPUMatrix, *b.m_CPUMatrix),
+                                return GPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_GPUMatrix, *b.m_GPUMatrix),
                                 NOT_IMPLEMENTED,
                                 NOT_IMPLEMENTED);
     }
-
-    template <class ElemType>
-    void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise)
+    else
     {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("InnerProduct:  one of the input matrix is empty.");
-
-        DecideAndMoveToRightDevice(a, b, c);
-
-        // TODO: consider swapping the arguments in this case
-        if (b.GetMatrixType() != DENSE) // only support a being sparse/dense. Both b and c should be dense
-            NOT_IMPLEMENTED;
-
-        c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
-
         DISPATCH_MATRIX_ON_FLAG(&a,
-                                &a,
-                                CPUMatrix<ElemType>::InnerProduct(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
-                                GPUMatrix<ElemType>::InnerProduct(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, isColWise),
-                                CPUSparseMatrix<ElemType>::InnerProduct(*a.m_CPUSparseMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
-                                GPUSparseMatrix<ElemType>::InnerProduct(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, isColWise));
-    }
-
-    template <class ElemType>
-    void Matrix<ElemType>::BatchMatMul(ElemType beta, const Matrix<ElemType>& a, const bool transposeA, const int m, const Matrix<ElemType>& b, const bool transposeB, const int n, Matrix<ElemType>& c, const bool isColWise)
-    {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("BatchMatMul: one of the input matrix is empty.");
-        DecideAndMoveToRightDevice(a, b, c);
-
-        if (a.GetMatrixType() != DENSE || b.GetMatrixType() != DENSE) // only support a & b being dense
-            NOT_IMPLEMENTED;
-
-        c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
-
-        DISPATCH_MATRIX_ON_FLAG(&a,
-                                &a,
-                                CPUMatrix<ElemType>::BatchMatMul(beta, *a.m_CPUMatrix, transposeA, m, *b.m_CPUMatrix, transposeB, n, *c.m_CPUMatrix, isColWise),
-                                GPUMatrix<ElemType>::BatchMatMul(beta, *a.m_GPUMatrix, transposeA, m, *b.m_GPUMatrix, transposeB, n, *c.m_GPUMatrix, isColWise),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
-
-    template <class ElemType>
-    ElemType Matrix<ElemType>::InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
-    {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
-
-        DecideAndMoveToRightDevice(a, b);
-
-        if (a.GetMatrixType() == b.GetMatrixType())
-        {
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                                    nullptr,
-                                    return CPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_CPUMatrix, *b.m_CPUMatrix),
-                                    return GPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_GPUMatrix, *b.m_GPUMatrix),
-                                    NOT_IMPLEMENTED,
-                                    NOT_IMPLEMENTED);
-        }
-        else
-        {
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                                    nullptr,
-                                    NOT_IMPLEMENTED,
-                                    return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(*a.m_GPUMatrix, *b.m_GPUSparseMatrix),
-                                    NOT_IMPLEMENTED,
-                                    return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(*a.m_GPUSparseMatrix, *b.m_GPUMatrix));
-        }
-    }
-
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
-    {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
-
-        Resize(1, 1);
-
-        DecideAndMoveToRightDevice(a, b, *this);
-
-        if (a.GetMatrixType() == b.GetMatrixType())
-        {
-            SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
-
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                                    this,
-                                    m_CPUMatrix->SetValue(CPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_CPUMatrix, *b.m_CPUMatrix)),
-                                    m_GPUMatrix->AssignInnerProductOfMatrices(*a.m_GPUMatrix, *b.m_GPUMatrix),
-                                    NOT_IMPLEMENTED,
-                                    NOT_IMPLEMENTED);
-        }
-        else
-        {
-            NOT_IMPLEMENTED;
-        }
-
-        return *this;
-    }
-
-    template <class ElemType>
-    void Matrix<ElemType>::ElementWisePower(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
-    {
-        if (a.IsEmpty())
-            return;
-
-        DecideAndMoveToRightDevice(a, c);
-        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
-
-        DISPATCH_MATRIX_ON_FLAG(&c,
                                 nullptr,
-                                CPUMatrix<ElemType>::ElementWisePower(alpha, *a.m_CPUMatrix, *c.m_CPUMatrix),
-                                GPUMatrix<ElemType>::ElementWisePower(alpha, *a.m_GPUMatrix, *c.m_GPUMatrix),
                                 NOT_IMPLEMENTED,
-                                GPUSparseMatrix<ElemType>::ElementWisePower(alpha, *a.m_GPUSparseMatrix, *c.m_GPUSparseMatrix));
+                                return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(*a.m_GPUMatrix, *b.m_GPUSparseMatrix),
+                                NOT_IMPLEMENTED,
+                                return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(*a.m_GPUSparseMatrix, *b.m_GPUMatrix));
     }
+}
 
-    template <class ElemType>
-    bool Matrix<ElemType>::AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold /*= 1e-8*/)
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
+
+    Resize(1, 1);
+
+    DecideAndMoveToRightDevice(a, b, *this);
+
+    if (a.GetMatrixType() == b.GetMatrixType())
     {
-        if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
-            return false;
-
-        DecideAndMoveToRightDevice(a, b);
-
-        if (a.GetMatrixType() == b.GetMatrixType())
-        {
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                                    nullptr,
-                                    return CPUMatrix<ElemType>::AreEqual(*a.m_CPUMatrix, *b.m_CPUMatrix, threshold),
-                                    return GPUMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUMatrix, threshold),
-                                    return CPUSparseMatrix<ElemType>::AreEqual(*a.m_CPUSparseMatrix, *b.m_CPUSparseMatrix, threshold),
-                                    return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, threshold));
-        }
-        else
-        {
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                                    nullptr,
-                                    NOT_IMPLEMENTED;
-                                    return false,
-                                           return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUSparseMatrix, threshold),
-                                           NOT_IMPLEMENTED;
-                                    return false,
-                                           return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, threshold));
-        }
-    }
-
-    template <class ElemType>
-    bool Matrix<ElemType>::HasElement(const Matrix<ElemType>& a, const ElemType value)
-    {
-        if (a.IsEmpty())
-            return false;
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
-                                &a,
-                                return CPUMatrix<ElemType>::HasElement(*a.m_CPUMatrix, value),
-                                return GPUMatrix<ElemType>::HasElement(*a.m_GPUMatrix, value),
+                                this,
+                                m_CPUMatrix->SetValue(CPUMatrix<ElemType>::InnerProductOfMatrices(*a.m_CPUMatrix, *b.m_CPUMatrix)),
+                                m_GPUMatrix->AssignInnerProductOfMatrices(*a.m_GPUMatrix, *b.m_GPUMatrix),
+                                NOT_IMPLEMENTED,
+                                NOT_IMPLEMENTED);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    return *this;
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ElementWisePower(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
+{
+    if (a.IsEmpty())
+        return;
+
+    DecideAndMoveToRightDevice(a, c);
+    c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            nullptr,
+                            CPUMatrix<ElemType>::ElementWisePower(alpha, *a.m_CPUMatrix, *c.m_CPUMatrix),
+                            GPUMatrix<ElemType>::ElementWisePower(alpha, *a.m_GPUMatrix, *c.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            GPUSparseMatrix<ElemType>::ElementWisePower(alpha, *a.m_GPUSparseMatrix, *c.m_GPUSparseMatrix));
+}
+
+template <class ElemType>
+bool Matrix<ElemType>::AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold /*= 1e-8*/)
+{
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+        return false;
+
+    DecideAndMoveToRightDevice(a, b);
+
+    if (a.GetMatrixType() == b.GetMatrixType())
+    {
+        DISPATCH_MATRIX_ON_FLAG(&a,
+                                nullptr,
+                                return CPUMatrix<ElemType>::AreEqual(*a.m_CPUMatrix, *b.m_CPUMatrix, threshold),
+                                return GPUMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUMatrix, threshold),
+                                return CPUSparseMatrix<ElemType>::AreEqual(*a.m_CPUSparseMatrix, *b.m_CPUSparseMatrix, threshold),
+                                return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, threshold));
+    }
+    else
+    {
+        DISPATCH_MATRIX_ON_FLAG(&a,
+                                nullptr,
                                 NOT_IMPLEMENTED;
                                 return false,
+                                       return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUSparseMatrix, threshold),
                                        NOT_IMPLEMENTED;
-                                return false);
+                                return false,
+                                       return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, threshold));
     }
+}
 
-    // diagnostics helper to check if matrix has a NaN
-    // This is very slow.
-    template <class ElemType>
-    bool Matrix<ElemType>::HasNan(const char* name) const
-    {
-        // Not implemented for sparse matrices.
-        // Return false as a workaround to at
-        // least evaluate the dense matrices.
-        if (m_matrixType == MatrixType::SPARSE)
-            return false;
-
-        if (IsEmpty())
-            return false;
-
-        // if GPU then first detect NaN there, will be faster
-        if (GetDeviceId() != CPUDEVICE)
-        {
-            Matrix<ElemType> sum(GetDeviceId());
-            sum.AssignSumOfElements(*this);
-            auto x = sum.Get00Element();
-            if (!std::isnan(x))
-                return false;
-        }
-
-        // const auto & us = *this;
-        const Matrix<ElemType>& us = *this;
-
-        foreach_coord (i, j, us)
-            if (std::isnan(us(i, j)))
-            {
-                fprintf(stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int) GetNumRows(), (int) GetNumCols());
-                return true;
-            }
+template <class ElemType>
+bool Matrix<ElemType>::HasElement(const Matrix<ElemType>& a, const ElemType value)
+{
+    if (a.IsEmpty())
         return false;
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            &a,
+                            return CPUMatrix<ElemType>::HasElement(*a.m_CPUMatrix, value),
+                            return GPUMatrix<ElemType>::HasElement(*a.m_GPUMatrix, value),
+                            NOT_IMPLEMENTED;
+                            return false,
+                                   NOT_IMPLEMENTED;
+                            return false);
+}
+
+// diagnostics helper to check if matrix has a NaN
+// This is very slow.
+template <class ElemType>
+bool Matrix<ElemType>::HasNan(const char* name) const
+{
+    // Not implemented for sparse matrices.
+    // Return false as a workaround to at
+    // least evaluate the dense matrices.
+    if (m_matrixType == MatrixType::SPARSE)
+        return false;
+
+    if (IsEmpty())
+        return false;
+
+    // if GPU then first detect NaN there, will be faster
+    if (GetDeviceId() != CPUDEVICE)
+    {
+        Matrix<ElemType> sum(GetDeviceId());
+        sum.AssignSumOfElements(*this);
+        auto x = sum.Get00Element();
+        if (!std::isnan(x))
+            return false;
     }
+
+    // const auto & us = *this;
+    const Matrix<ElemType>& us = *this;
+
+    foreach_coord (i, j, us)
+        if (std::isnan(us(i, j)))
+        {
+            fprintf(stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int) GetNumRows(), (int) GetNumCols());
+            return true;
+        }
+    return false;
+}
 #define CheckNan(m) m.HasNan(#m)
 
-    // another diagnostics helper to check if matrix has a NaN
-    // This is used at load and save time. This test is slow.
+// another diagnostics helper to check if matrix has a NaN
+// This is used at load and save time. This test is slow.
 
-    template <class ElemType>
-    size_t Matrix<ElemType>::CountNanInf() const
+template <class ElemType>
+size_t Matrix<ElemType>::CountNanInf() const
+{
+    const auto& us = *this;
+    size_t n = 0; // number of NaNs/INF found
+    foreach_coord (i, j, us)
     {
-        const auto& us = *this;
-        size_t n = 0; // number of NaNs/INF found
-        foreach_coord (i, j, us)
-        {
-            auto val = us(i, j);
-            if (std::isnan(val) || !std::isfinite(val))
-                n++;
-        }
-        return n;
+        auto val = us(i, j);
+        if (std::isnan(val) || !std::isfinite(val))
+            n++;
+    }
+    return n;
+}
+
+// TODO: these are scalar operations--why are they in Matrix?
+template <class ElemType>
+ElemType Matrix<ElemType>::Exp10(ElemType num)
+{
+    return (ElemType) exp(num * 2.302585093);
+}
+
+template <class ElemType>
+ElemType Matrix<ElemType>::Mod(ElemType x, ElemType y)
+{
+    assert(y > 0);
+    if (y <= 0)
+        LogicError("y is smaller than zero");
+
+    return x - y * floor(x / y);
+}
+
+// TODO: use static LogAdd() as defined in TensorOps.h
+//       Not doing this currently because that one uses ElemType for all ops, while this one uses double inside. Must compare before making this change.
+template <class ElemType>
+ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
+{
+    ElemType temp, diff, z;
+
+    if (x < y)
+    {
+        temp = x;
+        x = y;
+        y = temp; // TODO: ::swap(x,y)?
+    }
+    diff = y - x;
+    if (diff < MINLOGEXP)
+    {
+        return (ElemType)((x < LSMALL) ? (ElemType) LZERO : x);
+    }
+    else
+    {
+        z = exp(diff);
+        return (ElemType)(x + log(1.0 + z));
+    }
+}
+
+//Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, size_t shift)
+//[this]= (a right shift by n), padded with zeros
+// shift left, shift needs to be negative value
+// shift right, shift needs to be positive value
+// BUGBUG: Leaves uninitialized values in the opened-up columns.
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
+{
+    if (a.IsEmpty())
+        LogicError("Shift: Matrix is empty.");
+    else
+        LogicError("Shift: BUGBUG This function currently leaves uninitialized values. Fix the code or contact fseide@microsoft.com.");
+
+    auto& us = *this;
+    if (this != &a)
+    {
+        Resize(a.GetNumRows(), a.GetNumCols());
     }
 
-    // TODO: these are scalar operations--why are they in Matrix?
-    template <class ElemType>
-    ElemType Matrix<ElemType>::Exp10(ElemType num)
-    {
-        return (ElemType) exp(num * 2.302585093);
-    }
+    long n = (long) GetNumCols();
 
-    template <class ElemType>
-    ElemType Matrix<ElemType>::Mod(ElemType x, ElemType y)
-    {
-        assert(y > 0);
-        if (y <= 0)
-            LogicError("y is smaller than zero");
+    if (shift >= 0 && shift < n)
+        us.ColumnSlice(shift, n - shift).AssignValuesOf(a.ColumnSlice(0, n - shift));
+    if (shift < 0 && shift > -n)
+        us.ColumnSlice(0, n + shift).AssignValuesOf(a.ColumnSlice(-shift, n + shift));
+    return *this;
+}
 
-        return x - y * floor(x / y);
-    }
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-    // TODO: use static LogAdd() as defined in TensorOps.h
-    //       Not doing this currently because that one uses ElemType for all ops, while this one uses double inside. Must compare before making this change.
-    template <class ElemType>
-    ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
-    {
-        ElemType temp, diff, z;
+    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+        InvalidArgument("The input matrix dimensions do not match.");
 
-        if (x < y)
-        {
-            temp = x;
-            x = y;
-            y = temp; // TODO: ::swap(x,y)?
-        }
-        diff = y - x;
-        if (diff < MINLOGEXP)
-        {
-            return (ElemType)((x < LSMALL) ? (ElemType) LZERO : x);
-        }
-        else
-        {
-            z = exp(diff);
-            return (ElemType)(x + log(1.0 + z));
-        }
-    }
+    if (a.GetNumRows() != 1)
+        InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
 
-    //Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, size_t shift)
-    //[this]= (a right shift by n), padded with zeros
-    // shift left, shift needs to be negative value
-    // shift right, shift needs to be positive value
-    // BUGBUG: Leaves uninitialized values in the opened-up columns.
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
-    {
-        if (a.IsEmpty())
-            LogicError("Shift: Matrix is empty.");
-        else
-            LogicError("Shift: BUGBUG This function currently leaves uninitialized values. Fix the code or contact fseide@microsoft.com.");
+    DecideAndMoveToRightDevice(a, b, *this);
+    if (!(a.GetMatrixType() == b.GetMatrixType()))
+        NOT_IMPLEMENTED;
 
-        auto& us = *this;
-        if (this != &a)
-        {
-            Resize(a.GetNumRows(), a.GetNumCols());
-        }
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-        long n = (long) GetNumCols();
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, shift, negnumber),
+                            m_GPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, shift, negnumber),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+    return *this;
+}
 
-        if (shift >= 0 && shift < n)
-            us.ColumnSlice(shift, n - shift).AssignValuesOf(a.ColumnSlice(0, n - shift));
-        if (shift < 0 && shift > -n)
-            us.ColumnSlice(0, n + shift).AssignValuesOf(a.ColumnSlice(-shift, n + shift));
-        return *this;
-    }
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber)
+{
+    InnerProductWithShiftNeg(a, b, *this, isColWise, shift, negnumber);
+    return *this;
+}
 
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber)
-    {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
+template <class ElemType>
+void Matrix<ElemType>::InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("InnerProduct:  one of the input matrix is empty.");
 
-        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-            InvalidArgument("The input matrix dimensions do not match.");
+    DecideAndMoveToRightDevice(a, b, c);
 
-        if (a.GetNumRows() != 1)
-            InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+    if (a.GetMatrixType() != b.GetMatrixType())
+        NOT_IMPLEMENTED;
 
-        DecideAndMoveToRightDevice(a, b, *this);
-        if (!(a.GetMatrixType() == b.GetMatrixType()))
-            NOT_IMPLEMENTED;
+    c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            &c,
+                            CPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise, shift, negnumber),
+                            GPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, negnumber),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
 
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, shift, negnumber),
-                                m_GPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, shift, negnumber),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-        return *this;
-    }
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::GetARowByIndex(const Matrix<ElemType>& a, size_t index)
+{
+    if (a.IsEmpty())
+        LogicError("GetARowByIndex: Matrix is empty.");
 
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber)
-    {
-        InnerProductWithShiftNeg(a, b, *this, isColWise, shift, negnumber);
-        return *this;
-    }
+    // WARNING: a and this must have same type
+    if (!(GetMatrixType() == a.GetMatrixType()))
+        NOT_IMPLEMENTED;
 
-    template <class ElemType>
-    void Matrix<ElemType>::InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber)
-    {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("InnerProduct:  one of the input matrix is empty.");
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-        DecideAndMoveToRightDevice(a, b, c);
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->GetARowByIndex(*a.m_CPUMatrix, index),
+                            m_GPUMatrix->GetARowByIndex(*a.m_GPUMatrix, index),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
 
-        if (a.GetMatrixType() != b.GetMatrixType())
-            NOT_IMPLEMENTED;
+    return *this;
+}
 
-        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+template <class ElemType>
+void Matrix<ElemType>::ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("InnerProduct:  one of the input matrix is empty.");
 
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                &c,
-                                CPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise, shift, negnumber),
-                                GPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, negnumber),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+    DecideAndMoveToRightDevice(a, b, c);
 
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::GetARowByIndex(const Matrix<ElemType>& a, size_t index)
-    {
-        if (a.IsEmpty())
-            LogicError("GetARowByIndex: Matrix is empty.");
+    if (a.GetMatrixType() != b.GetMatrixType())
+        NOT_IMPLEMENTED;
 
-        // WARNING: a and this must have same type
-        if (!(GetMatrixType() == a.GetMatrixType()))
-            NOT_IMPLEMENTED;
+    c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+    DISPATCH_MATRIX_ON_FLAG(&c,
+                            &c,
+                            CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, shift, bFirstmatrixfixed),
+                            GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, bFirstmatrixfixed),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
 
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->GetARowByIndex(*a.m_CPUMatrix, index),
-                                m_GPUMatrix->GetARowByIndex(*a.m_GPUMatrix, index),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("AssignElementProductOfWithShift: Matrix is empty.");
 
-        return *this;
-    }
+    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+        InvalidArgument("The input matrix dimensions do not match.");
 
-    template <class ElemType>
-    void Matrix<ElemType>::ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed)
-    {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("InnerProduct:  one of the input matrix is empty.");
+    if (a.GetNumRows() != 1)
+        InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
 
-        DecideAndMoveToRightDevice(a, b, c);
+    DecideAndMoveToRightDevice(a, b, *this);
+    if (!(a.GetMatrixType() == b.GetMatrixType()))
+        NOT_IMPLEMENTED;
 
-        if (a.GetMatrixType() != b.GetMatrixType())
-            NOT_IMPLEMENTED;
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
-        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->AssignElementProductOfWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, shift),
+                            m_GPUMatrix->AssignElementProductOfWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, shift),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+    return *this;
+}
 
-        DISPATCH_MATRIX_ON_FLAG(&c,
-                                &c,
-                                CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, shift, bFirstmatrixfixed),
-                                GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, bFirstmatrixfixed),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+template <class ElemType>
+void Matrix<ElemType>::RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+                                           Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
+                                           const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
+{
+    DecideAndMoveToRightDevice(alpha, beta);
+    functionValues._transferToDevice(alpha.GetDeviceId());
+    beta._transferToDevice(alpha.GetDeviceId());
 
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift)
-    {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("AssignElementProductOfWithShift: Matrix is empty.");
+    DISPATCH_MATRIX_ON_FLAG(&alpha,
+                            &beta,
+                            CPUMatrix<ElemType>::RCRFBackwardCompute(
+                                *alpha.m_CPUMatrix,
+                                *beta.m_CPUMatrix,
+                                *lbls.m_CPUMatrix,
+                                *pair_scores.m_CPUMatrix),
+                            GPUMatrix<ElemType>::RCRFBackwardCompute(
+                                *alpha.m_GPUMatrix,
+                                *beta.m_GPUMatrix,
+                                *lbls.m_GPUMatrix,
+                                *pos_scores.m_GPUMatrix,
+                                *pair_scores.m_GPUMatrix, shift),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
 
-        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-            InvalidArgument("The input matrix dimensions do not match.");
+template <class ElemType>
+void Matrix<ElemType>::RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
+                                           const Matrix<ElemType>& alpha,
+                                           const Matrix<ElemType>& beta,
+                                           const Matrix<ElemType>& pair_scores,
+                                           Matrix<ElemType>& grd,
+                                           const int startLbl,
+                                           const int shift)
+{
+    DecideAndMoveToRightDevice(alpha, grd);
+    grd._transferToDevice(alpha.GetDeviceId());
 
-        if (a.GetNumRows() != 1)
-            InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+    DISPATCH_MATRIX_ON_FLAG(&alpha,
+                            &grd,
+                            CPUMatrix<ElemType>::RCRFTransGrdCompute(
+                                *lbls.m_CPUMatrix,
+                                *alpha.m_CPUMatrix,
+                                *beta.m_CPUMatrix,
+                                *pair_scores.m_CPUMatrix,
+                                *grd.m_CPUMatrix),
+                            GPUMatrix<ElemType>::RCRFTransGrdCompute(
+                                *lbls.m_GPUMatrix,
+                                *alpha.m_GPUMatrix,
+                                *beta.m_GPUMatrix,
+                                *pair_scores.m_GPUMatrix,
+                                *grd.m_GPUMatrix,
+                                startLbl,
+                                shift),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
 
-        DecideAndMoveToRightDevice(a, b, *this);
-        if (!(a.GetMatrixType() == b.GetMatrixType()))
-            NOT_IMPLEMENTED;
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType& threshhold)
+{
+    DecideAndMoveToRightDevice(*this, label, gamma);
 
-        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+    if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
+        LogicError("DropFrame: label matrix is not in the same size as gamm matrix.");
+    SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
 
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->AssignElementProductOfWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, shift),
-                                m_GPUMatrix->AssignElementProductOfWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, shift),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-        return *this;
-    }
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
+                            m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
 
-    template <class ElemType>
-    void Matrix<ElemType>::RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
-                                               Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
-                                               const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
-    {
-        DecideAndMoveToRightDevice(alpha, beta);
-        functionValues._transferToDevice(alpha.GetDeviceId());
-        beta._transferToDevice(alpha.GetDeviceId());
+    return *this;
+}
 
-        DISPATCH_MATRIX_ON_FLAG(&alpha,
-                                &beta,
-                                CPUMatrix<ElemType>::RCRFBackwardCompute(
-                                    *alpha.m_CPUMatrix,
-                                    *beta.m_CPUMatrix,
-                                    *lbls.m_CPUMatrix,
-                                    *pair_scores.m_CPUMatrix),
-                                GPUMatrix<ElemType>::RCRFBackwardCompute(
-                                    *alpha.m_GPUMatrix,
-                                    *beta.m_GPUMatrix,
-                                    *lbls.m_GPUMatrix,
-                                    *pos_scores.m_GPUMatrix,
-                                    *pair_scores.m_GPUMatrix, shift),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+/// <summary> c = alpha * (a-b)</summary>
+/// if a, b, c  must have same dim
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="b">Input matrix</param>
+/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label,
+                                                        const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
+{
+    DecideAndMoveToRightDevice(label, dnnoutput, gamma);
 
-    template <class ElemType>
-    void Matrix<ElemType>::RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
-                                               const Matrix<ElemType>& alpha,
-                                               const Matrix<ElemType>& beta,
-                                               const Matrix<ElemType>& pair_scores,
-                                               Matrix<ElemType>& grd,
-                                               const int startLbl,
-                                               const int shift)
-    {
-        DecideAndMoveToRightDevice(alpha, grd);
-        grd._transferToDevice(alpha.GetDeviceId());
+    if (!(label.GetMatrixType() == gamma.GetMatrixType()))
+        NOT_IMPLEMENTED;
 
-        DISPATCH_MATRIX_ON_FLAG(&alpha,
-                                &grd,
-                                CPUMatrix<ElemType>::RCRFTransGrdCompute(
-                                    *lbls.m_CPUMatrix,
-                                    *alpha.m_CPUMatrix,
-                                    *beta.m_CPUMatrix,
-                                    *pair_scores.m_CPUMatrix,
-                                    *grd.m_CPUMatrix),
-                                GPUMatrix<ElemType>::RCRFTransGrdCompute(
-                                    *lbls.m_GPUMatrix,
-                                    *alpha.m_GPUMatrix,
-                                    *beta.m_GPUMatrix,
-                                    *pair_scores.m_GPUMatrix,
-                                    *grd.m_GPUMatrix,
-                                    startLbl,
-                                    shift),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+    SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
 
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType& threshhold)
-    {
-        DecideAndMoveToRightDevice(*this, label, gamma);
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+                            m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+    return *this;
+}
 
-        if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
-            LogicError("DropFrame: label matrix is not in the same size as gamm matrix.");
-        SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+// Calculate CTC score
+// prob (input): the posterior output from the network
+// alpha, beta (output): alpha and beta for forward-backward calculation.
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance
+// totalScore (output): total CTC score
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numParallelSequences (input): num of parallel sequences
+// mbsize (input): the maximum channel frame number
+// blankTokenId (input): id of the CTC blank token
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+//      delayConstraint=-1 means no constraint
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+                                                   const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType>& totalScore, const std::vector<size_t>& uttToChanInd,
+                                                   const std::vector<size_t>& uttBeginFrame, const std::vector<size_t>& uttFrameNum, const std::vector<size_t>& uttPhoneNum,
+                                                   const size_t numParallelSequences, const size_t mbsize, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+{
+    DecideAndMoveToRightDevice(prob, *this);
+    alpha.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
+    beta.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
+    Resize(prob.GetNumRows(), prob.GetNumCols());
 
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
-                                m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
+    alpha.SetValue(LZERO);
+    beta.SetValue(LZERO);
+    SetValue(LZERO);
+    SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
 
-        return *this;
-    }
+    DISPATCH_MATRIX_ON_FLAG(&prob,
+                            this,
+                            this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, *totalScore.m_CPUMatrix,
+                                                              uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, isColWise),
+                            this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, *totalScore.m_GPUMatrix,
+                                                              uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, isColWise),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
 
-    /// <summary> c = alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim
-    /// <param name="alpha">Scalar</param>
-    /// <param name="a">Input matrix</param>
-    /// <param name="b">Input matrix</param>
-    /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label,
-                                                            const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
-    {
-        DecideAndMoveToRightDevice(label, dnnoutput, gamma);
-
-        if (!(label.GetMatrixType() == gamma.GetMatrixType()))
-            NOT_IMPLEMENTED;
-
-        SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
-
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
-                                m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-        return *this;
-    }
-
-    // Calculate CTC score
-    // prob (input): the posterior output from the network
-    // alpha, beta (output): alpha and beta for forward-backward calculation.
-    // phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance
-    // phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance
-    // totalScore (output): total CTC score
-    // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
-    // uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
-    // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
-    // uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
-    // numParallelSequences (input): num of parallel sequences
-    // mbsize (input): the maximum channel frame number
-    // blankTokenId (input): id of the CTC blank token
-    // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
-    //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
-    //      delayConstraint=-1 means no constraint
-    template <class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
-                                                       const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType>& totalScore, const std::vector<size_t>& uttToChanInd,
-                                                       const std::vector<size_t>& uttBeginFrame, const std::vector<size_t>& uttFrameNum, const std::vector<size_t>& uttPhoneNum,
-                                                       const size_t numParallelSequences, const size_t mbsize, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
-    {
-        DecideAndMoveToRightDevice(prob, *this);
-        alpha.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
-        beta.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
-        Resize(prob.GetNumRows(), prob.GetNumCols());
-
-        alpha.SetValue(LZERO);
-        beta.SetValue(LZERO);
-        SetValue(LZERO);
-        SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
-
-        DISPATCH_MATRIX_ON_FLAG(&prob,
-                                this,
-                                this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, *totalScore.m_CPUMatrix,
-                                                                  uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, isColWise),
-                                this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, *totalScore.m_GPUMatrix,
-                                                                  uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, isColWise),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-
-        return *this;
-    }
+    return *this;
+}
 
 #pragma endregion Static BLAS Functions
 
-    // TensorView currently does not interface with sparse matrices. For now, we just catch this and throw.
-    template <class ElemType>
-    static bool VerifyIsDense(const Matrix<ElemType>& a)
-    {
-        if (a.GetMatrixType() != DENSE)
-            RuntimeError("TensorOp: Tensor operations are currently not supported for sparse matrices.");
-        return true;
-    }
+// TensorView currently does not interface with sparse matrices. For now, we just catch this and throw.
+template <class ElemType>
+static bool VerifyIsDense(const Matrix<ElemType>& a)
+{
+    if (a.GetMatrixType() != DENSE)
+        RuntimeError("TensorOp: Tensor operations are currently not supported for sparse matrices.");
+    return true;
+}
 
-    template <class ElemType>
-    void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                    const array<size_t, 2>& offsets,
-                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
-    {
-        VerifyIsDense(*this) && VerifyIsDense(a);
+template <class ElemType>
+void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                const array<size_t, 2>& offsets,
+                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    VerifyIsDense(*this) && VerifyIsDense(a);
 
-        DecideAndMoveToRightDevice(*this, a);
+    DecideAndMoveToRightDevice(*this, a);
 
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                                m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
 
-    template <class ElemType>
-    void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                    const array<size_t, 3>& offsets,
-                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
-                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
-    {
-        VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b);
+template <class ElemType>
+void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                const array<size_t, 3>& offsets,
+                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
+                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
+{
+    VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b);
 
-        DecideAndMoveToRightDevice(*this, a, b);
+    DecideAndMoveToRightDevice(*this, a, b);
 
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                                m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
 
-    template <class ElemType>
-    void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-                                    const array<size_t, 4>& offsets,
-                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
-                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
-    {
-        VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b) && VerifyIsDense(c);
+template <class ElemType>
+void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                const array<size_t, 4>& offsets,
+                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
+                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
+{
+    VerifyIsDense(*this) && VerifyIsDense(a) && VerifyIsDense(b) && VerifyIsDense(c);
 
-        DecideAndMoveToRightDevice(*this, a, b, c);
+    DecideAndMoveToRightDevice(*this, a, b, c);
 
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                                m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
-    template <class ElemType>
-    void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
-                                       const array<size_t, 2>& offsets,
-                                       const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-                                       const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
-    {
-        VerifyIsDense(*this) && VerifyIsDense(a);
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+template <class ElemType>
+void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
+                                   const array<size_t, 2>& offsets,
+                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                   const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    VerifyIsDense(*this) && VerifyIsDense(a);
 
-        DecideAndMoveToRightDevice(*this, a);
+    DecideAndMoveToRightDevice(*this, a);
 
-        DISPATCH_MATRIX_ON_FLAG(this,
-                                this,
-                                m_CPUMatrix->TensorArgOp(*a.m_CPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                                m_GPUMatrix->TensorArgOp(*a.m_GPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
-    }
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->TensorArgOp(*a.m_CPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            m_GPUMatrix->TensorArgOp(*a.m_GPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
 
-    //template class Matrix<short>;
-    template class Matrix<float>;
-    template class Matrix<double>;
-    template class Matrix<half>;
-    //template class Matrix<char>;
+//template class Matrix<short>;
+template class Matrix<float>;
+template class Matrix<double>;
+template class Matrix<half>;
+//template class Matrix<char>;
 
-    // instantiate some templated methods
-    template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<float> & gradients, Matrix<float> & functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
-    template MATH_API void Matrix<double>::AdaDeltaUpdate(Matrix<double> & gradients, Matrix<double> & functionvalues, double learningRatePerSample, double rho, double epsilon, int* timestamps, int currentTimestamp);
-    template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<half> & gradients, Matrix<float> & functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
+// instantiate some templated methods
+template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<float>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
+template MATH_API void Matrix<double>::AdaDeltaUpdate(Matrix<double>& gradients, Matrix<double>& functionvalues, double learningRatePerSample, double rho, double epsilon, int* timestamps, int currentTimestamp);
+template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<half>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
 
-    template MATH_API void Matrix<float>::BatchNormalizationForward(const Matrix<float>& scale, const Matrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<float>& runMean, Matrix<float>& runVariance, Matrix<float>& out, double epsilon, Matrix<float>& saveMean, Matrix<float>& saveInvStdDev) const;
-    template MATH_API void Matrix<double>::BatchNormalizationForward(const Matrix<double>& scale, const Matrix<double>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<double>& runMean, Matrix<double>& runVariance, Matrix<double>& out, double epsilon, Matrix<double>& saveMean, Matrix<double>& saveInvStdDev) const;
-    template MATH_API void Matrix<half>::BatchNormalizationForward(const Matrix<float>& scale, const Matrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<float>& runMean, Matrix<float>& runVariance, Matrix<half>& out, double epsilon, Matrix<float>& saveMean, Matrix<float>& saveInvStdDev) const;
+template MATH_API void Matrix<float>::BatchNormalizationForward(const Matrix<float>& scale, const Matrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<float>& runMean, Matrix<float>& runVariance, Matrix<float>& out, double epsilon, Matrix<float>& saveMean, Matrix<float>& saveInvStdDev) const;
+template MATH_API void Matrix<double>::BatchNormalizationForward(const Matrix<double>& scale, const Matrix<double>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<double>& runMean, Matrix<double>& runVariance, Matrix<double>& out, double epsilon, Matrix<double>& saveMean, Matrix<double>& saveInvStdDev) const;
+template MATH_API void Matrix<half>::BatchNormalizationForward(const Matrix<float>& scale, const Matrix<float>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Matrix<float>& runMean, Matrix<float>& runVariance, Matrix<half>& out, double epsilon, Matrix<float>& saveMean, Matrix<float>& saveInvStdDev) const;
 
-    template MATH_API void Matrix<float>::BatchNormalizationBackward(const Matrix<float>& in, Matrix<float>& grad, const Matrix<float>& scale, double blendFactor, const Matrix<float>& saveMean, const Matrix<float>& saveInvStdDev, Matrix<float>& scaleGrad, Matrix<float>& biasGrad) const;
-    template MATH_API void Matrix<double>::BatchNormalizationBackward(const Matrix<double>& in, Matrix<double>& grad, const Matrix<double>& scale, double blendFactor, const Matrix<double>& saveMean, const Matrix<double>& saveInvStdDev, Matrix<double>& scaleGrad, Matrix<double>& biasGrad) const;
-    template MATH_API void Matrix<half>::BatchNormalizationBackward(const Matrix<half>& in, Matrix<half>& grad, const Matrix<float>& scale, double blendFactor, const Matrix<float>& saveMean, const Matrix<float>& saveInvStdDev, Matrix<float>& scaleGrad, Matrix<float>& biasGrad) const;
+template MATH_API void Matrix<float>::BatchNormalizationBackward(const Matrix<float>& in, Matrix<float>& grad, const Matrix<float>& scale, double blendFactor, const Matrix<float>& saveMean, const Matrix<float>& saveInvStdDev, Matrix<float>& scaleGrad, Matrix<float>& biasGrad) const;
+template MATH_API void Matrix<double>::BatchNormalizationBackward(const Matrix<double>& in, Matrix<double>& grad, const Matrix<double>& scale, double blendFactor, const Matrix<double>& saveMean, const Matrix<double>& saveInvStdDev, Matrix<double>& scaleGrad, Matrix<double>& biasGrad) const;
+template MATH_API void Matrix<half>::BatchNormalizationBackward(const Matrix<half>& in, Matrix<half>& grad, const Matrix<float>& scale, double blendFactor, const Matrix<float>& saveMean, const Matrix<float>& saveInvStdDev, Matrix<float>& scaleGrad, Matrix<float>& biasGrad) const;
 
-    // We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
-    // Let's explicitly instantiate the methods we need for that purpose
-    template Matrix<char>::Matrix(DEVICEID_TYPE);
-    template Matrix<char>::Matrix(Matrix<char> &&);
-    template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
-    template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
-    template Matrix<char>::~Matrix();
-    template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
-    template char* Matrix<char>::Data() const;
-    template int Matrix<char>::GetDeviceId() const;
-    template size_t Matrix<char>::GetNumElements() const;
-    template Matrix<char> Matrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
-    template void Matrix<char>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
-    template void Matrix<char>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
-    template size_t Matrix<char>::GetNumRows() const;
-    template size_t Matrix<char>::GetNumCols() const;
-    template void Matrix<char>::SetValue(const char);
-    template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer);
-    //template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
-    template void Matrix<char>::SetValue(const Matrix<char>&);
-    template void Matrix<char>::AssignValuesOf(const Matrix<char>&);
-    template void Matrix<char>::CastAssignValuesOf(const MatrixBase& other);
-    template bool Matrix<char>::IsEmpty() const;
-    template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly, bool keepValue);
-    template void Matrix<char>::Reshape(const size_t, const size_t);
-    template char* Matrix<char>::CopyToArray(void) const;
-    template bool Matrix<char>::IsView() const;
-    template Matrix<char> Matrix<char>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const char low, const char high, unsigned long seed);
-    template void Matrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
-    template void Matrix<char>::SetUniformRandomValue(RNGHandle & rngHandle, const char low, const char high);
-    template Matrix<char> Matrix<char>::RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const char mean, const char sigma, unsigned long seed);
-    template void Matrix<char>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const char* h_Val,
-                                                       const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer);
-    template void Matrix<char>::AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
-    template void Matrix<char>::TransferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved, bool emptyTransfer /* = false*/, bool updatePreferredDevice /* = true*/) const;
+// We use Matrix<char> as the backing store for QuantizedMatrix, and also as a flag matrix.
+// Let's explicitly instantiate the methods we need for that purpose
+template Matrix<char>::Matrix(DEVICEID_TYPE);
+template Matrix<char>::Matrix(Matrix<char>&&);
+template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
+template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
+template Matrix<char>::~Matrix();
+template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
+template char* Matrix<char>::Data() const;
+template int Matrix<char>::GetDeviceId() const;
+template size_t Matrix<char>::GetNumElements() const;
+template Matrix<char> Matrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template void Matrix<char>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
+template void Matrix<char>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
+template size_t Matrix<char>::GetNumRows() const;
+template size_t Matrix<char>::GetNumCols() const;
+template void Matrix<char>::SetValue(const char);
+template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer);
+//template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
+template void Matrix<char>::SetValue(const Matrix<char>&);
+template void Matrix<char>::AssignValuesOf(const Matrix<char>&);
+template void Matrix<char>::CastAssignValuesOf(const MatrixBase& other);
+template bool Matrix<char>::IsEmpty() const;
+template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly, bool keepValue);
+template void Matrix<char>::Reshape(const size_t, const size_t);
+template char* Matrix<char>::CopyToArray(void) const;
+template bool Matrix<char>::IsView() const;
+template Matrix<char> Matrix<char>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const char low, const char high, unsigned long seed);
+template void Matrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
+template void Matrix<char>::SetUniformRandomValue(RNGHandle& rngHandle, const char low, const char high);
+template Matrix<char> Matrix<char>::RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const char mean, const char sigma, unsigned long seed);
+template void Matrix<char>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const char* h_Val,
+                                                   const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer);
+template void Matrix<char>::AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+template void Matrix<char>::TransferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved, bool emptyTransfer /* = false*/, bool updatePreferredDevice /* = true*/) const;
 
-    // Matrix<short> methods
-    template Matrix<short>::Matrix(DEVICEID_TYPE);
-    template Matrix<short>::Matrix(Matrix<short> &&);
-    template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
-    template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, short* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
-    template Matrix<short>::~Matrix();
-    template Matrix<short>& Matrix<short>::operator=(Matrix<short>&& moveFrom);
-    template short* Matrix<short>::Data() const;
-    template int Matrix<short>::GetDeviceId() const;
-    template size_t Matrix<short>::GetNumElements() const;
-    template Matrix<short> Matrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
-    template void Matrix<short>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
-    template void Matrix<short>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
-    template size_t Matrix<short>::GetNumRows() const;
-    template size_t Matrix<short>::GetNumCols() const;
-    template void Matrix<short>::SetValue(const short);
-    template void Matrix<short>::SetValue(size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags, DataTransferer* transferer);
-    //template void Matrix<short>::SetValue(const Matrix<short>&, MatrixFormat);
-    template void Matrix<short>::SetValue(const Matrix<short>&);
-    template void Matrix<short>::AssignValuesOf(const Matrix<short>&);
-    template void Matrix<short>::CastAssignValuesOf(const MatrixBase& other);
-    template bool Matrix<short>::IsEmpty() const;
-    template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly, bool keepValue);
-    template void Matrix<short>::Reshape(const size_t, const size_t);
-    template short* Matrix<short>::CopyToArray(void) const;
-    template bool Matrix<short>::IsView() const;
+// Matrix<short> methods
+template Matrix<short>::Matrix(DEVICEID_TYPE);
+template Matrix<short>::Matrix(Matrix<short>&&);
+template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
+template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, short* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
+template Matrix<short>::~Matrix();
+template Matrix<short>& Matrix<short>::operator=(Matrix<short>&& moveFrom);
+template short* Matrix<short>::Data() const;
+template int Matrix<short>::GetDeviceId() const;
+template size_t Matrix<short>::GetNumElements() const;
+template Matrix<short> Matrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template void Matrix<short>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
+template void Matrix<short>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
+template size_t Matrix<short>::GetNumRows() const;
+template size_t Matrix<short>::GetNumCols() const;
+template void Matrix<short>::SetValue(const short);
+template void Matrix<short>::SetValue(size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags, DataTransferer* transferer);
+//template void Matrix<short>::SetValue(const Matrix<short>&, MatrixFormat);
+template void Matrix<short>::SetValue(const Matrix<short>&);
+template void Matrix<short>::AssignValuesOf(const Matrix<short>&);
+template void Matrix<short>::CastAssignValuesOf(const MatrixBase& other);
+template bool Matrix<short>::IsEmpty() const;
+template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly, bool keepValue);
+template void Matrix<short>::Reshape(const size_t, const size_t);
+template short* Matrix<short>::CopyToArray(void) const;
+template bool Matrix<short>::IsView() const;
 
-    template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
+template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 }
 }
 }
