@@ -472,7 +472,7 @@ namespace CNTK
             const auto& key = s.m_streamName;
             Dictionary stream;
             std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
-            stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast, L"maxSequenceLength", s.m_maxSequenceLength);
+            stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast, L"maxSequenceSize", s.m_maxSequenceLength);
             stream[L"definesMBSize"] = s.m_definesMbSize;
             input[key] = stream;
             htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
