@@ -1226,6 +1226,71 @@ def test_compare_cbf_and_ctf(input_pair, device_id, tmpdir):
         for (num_mbs, mb_size) in zip([1, 1, 3, 10], [1, 10, 100, 2]):
             compare_cbf_and_ctf(num_mbs, mb_size, randomize)
 
+
+class SimpleDeserailizer(UserDeserializer):
+    def __init__(self, stream_infos, chunk_data):
+        super(UserDeserializer, self).__init__()
+        self._streams = stream_infos
+        self._chunk_data = chunk_data
+
+    def stream_infos(self):
+        return self._streams
+
+    def num_chunks(self):
+        return len(self._chunk_data)
+
+    def get_chunk(self, chunk_id):
+        return self._chunk_data[chunk_id % self.num_chunks()]
+
+def test_user_deserializer():
+    N = 5
+    N_seq = 3
+    chunk_data = [
+        {'x': [d for d in np.arange(N * N_seq * 3).reshape((N, N_seq, 3)).astype(np.float32)],
+         'y': [d for d in np.arange(N * 1).reshape((N, 1)).astype(np.float32)],
+         },
+        {'x': [d for d in np.arange(N * N_seq * 3).reshape((N, N_seq, 3)).astype(np.float32)],
+         'y': [d for d in np.arange(N * 1).reshape((N, 1)).astype(np.float32)],
+         }
+    ]
+    x = C.sequence.input_variable(3, name='x')
+    y = C.input_variable(1, name='y')
+
+    #test StreamInformation with defines_mb_size set
+    d = SimpleDeserailizer(stream_infos=[StreamInformation('x', 0, 'dense', np.float32, (3,)),
+                                         StreamInformation('y', 1, 'dense', np.float32, (1,), True)],
+                           chunk_data=chunk_data)
+    mbs = MinibatchSource([d], randomize=False)
+    input_map = {x: mbs['x'], y: mbs['y']}
+    batch = mbs.next_minibatch(5, input_map)
+    assert(batch[x].number_of_sequences == 5)
+    assert(batch[x].number_of_samples == 5 * N_seq)
+    assert(batch[y].number_of_sequences == 5)
+    assert(batch[y].number_of_samples == 5)
+
+
+    #test StreamInformation without defines_mb_size set
+    d = SimpleDeserailizer(stream_infos=[StreamInformation('x', 0, 'dense', np.float32, (3,)),
+                                         StreamInformation('y', 1, 'dense', np.float32, (1,))],
+                           chunk_data=chunk_data)
+    mbs = MinibatchSource([d], randomize=False)
+    input_map = {x: mbs['x'], y: mbs['y']}
+    batch = mbs.next_minibatch(5, input_map)
+    assert(batch[x].number_of_sequences == 1)
+    assert(batch[x].number_of_samples == N_seq)
+    assert(batch[y].number_of_sequences == 1)
+    assert(batch[y].number_of_samples == 1)
+
+    #test more than one defines_mb_size set
+    with pytest.raises(Exception):
+        d = SimpleDeserailizer(stream_infos=[StreamInformation('x', 0, 'dense', np.float32, (3,), True),
+                                             StreamInformation('y', 1, 'dense', np.float32, (1,), True)],
+                               chunk_data=chunk_data)
+        mbs = MinibatchSource([d], randomize=False)
+        input_map = {x: mbs['x'], y: mbs['y']}
+        batch = mbs.next_minibatch(5, input_map)
+
+
 # Helper generator
 class GenDeserializer(UserDeserializer):
     def __init__(self, stream_infos, num_chunks, num_sequences, max_sequence_len = 1):

@@ -387,13 +387,14 @@ class StreamInformation(cntk_py.StreamInformation):
         storage_format (str): 'dense' or 'sparse'
         dtype (NumPy type): data type
         shape (tuple): shape of the elements
+        defines_mb_size (bool, defaults to False): whether this stream defines the minibatch size.
     '''
 
     _storage = {'dense': cntk_py.StorageFormat_Dense,
                 'sparse': cntk_py.StorageFormat_SparseCSC}
 
     def __init__(self, name, stream_id, storage_format, dtype,
-                 shape):
+                 shape, defines_mb_size=False):
         super(StreamInformation, self).__init__()
         self.m_name = name
         self.m_id = stream_id
@@ -403,6 +404,7 @@ class StreamInformation(cntk_py.StreamInformation):
         self.m_sample_layout = cntk_py.NDShape(list(reversed(shape)))
         self.sample_shape = shape
         self.storage_format = storage_format
+        self.m_defines_mb_size = defines_mb_size
 
     @property
     def name(self):
