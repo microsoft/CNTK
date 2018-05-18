@@ -385,7 +385,7 @@ namespace CNTK
                             RuntimeError("Only a single stream is allowed to define minibatch size, but at least two are found.");
                     }
                 }
-                // Scan over the data to set sampleCount for each sequences
+                // Scan over the data to set sampleCount for each sequence
                 unsigned int sampleCount = 1;
                 for (size_t i = 0, j = 0; i < m_data.size(); ++i)
                 {
