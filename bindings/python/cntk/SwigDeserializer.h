@@ -373,15 +373,35 @@ namespace CNTK
             }
             else
             {
-                // Performing max over sequences.
-                // TODO: Implement logic to specify mbsize based on a stream.
+                // Implement logic to specify mbsize based on a stream.
+                const StreamInformation* pDefMbInfo = nullptr;
+                for (const StreamInformation& info : m_streamInfos)
+                {
+                    if (info.m_definesMbSize)
+                    {
+                        if (pDefMbInfo == nullptr)
+                            pDefMbInfo = &info;
+                        else
+                            RuntimeError("Only a single stream is allowed to define minibatch size, but at least two are found.");
+                    }
+                }
+                // Scan over the data to set sampleCount for each sequence
                 unsigned int sampleCount = 1;
                 for (size_t i = 0, j = 0; i < m_data.size(); ++i)
                 {
-                    sampleCount = std::max(sampleCount, m_data[i]->m_numberOfSamples);
+                    //Note that the stream streamIndex of sequence j is at m_data[j * m_streamInfos.size() + streamIndex]
+                    size_t streamIndex = i % m_streamInfos.size();
+                    if (pDefMbInfo == nullptr)
+                        //No stream is specified to define the minibatch size, the number of samples in the sequence
+                        //is defined by the stream with maximum number of samples
+                        sampleCount = std::max(sampleCount, m_data[i]->m_numberOfSamples);
+                    else if (pDefMbInfo == &m_streamInfos[streamIndex])
+                        //A stream is specified to define the minibatch size, the number of samples in the sequence
+                        //is defined by this stream
+                        sampleCount = m_data[i]->m_numberOfSamples;
 
-                    // Last sequence across streams, remember the max sample count.
-                    if (i % m_streamInfos.size() == m_streamInfos.size() - 1)
+                    // Last stream of the sequence, remember the max sample count as the sequence sample count.
+                    if (streamIndex == m_streamInfos.size() - 1)
                     {
                         descriptions.push_back(SequenceInfo{ j++, sampleCount, (ChunkIdType)m_chunkId });
                         sampleCount = 1;
