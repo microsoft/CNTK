@@ -169,16 +169,44 @@ def test_recurrence_step_fun():
     rec = Recurrence(step_f)
 
     def step_f(prev1, prev2, x):
-        return prev1 * prev2 * x, prev1 * x
+        return prev1 * x, prev2 * x
     rec = Recurrence(step_f)
 
     def step_f(prev1, prev2, prev3, x):
-        return prev1 * prev2 * prev3 * x, prev1 * x, prev2 * x
+        return prev1 * x, prev2 * x, prev3 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, prev3, prev4, x):
+        return prev1 * x, prev2 * x, prev3 * x, prev4 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, prev3, prev4, prev5, x):
+        return prev1 * x, prev2 * x, prev3 * x, prev4 * x, prev5 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, prev3, prev4, prev5, prev6, x):
+        return prev1 * x, prev2 * x, prev3 * x, prev4 * x, prev5 * x, prev6 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, prev3, prev4, prev5, prev6, prev7, x):
+        return prev1 * x, prev2 * x, prev3 * x, prev4 * x, prev5 * x, prev6 * x, prev7 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, prev3, prev4, prev5, prev6, prev7, prev8, x):
+        return prev1 * x, prev2 * x, prev3 * x, prev4 * x, prev5 * x, prev6 * x, prev7 * x, prev8 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, prev3, prev4, prev5, prev6, prev7, prev8, prev9, x):
+        return prev1 * x, prev2 * x, prev3 * x, prev4 * x, prev5 * x, prev6 * x, prev7 * x, prev8 * x, prev9 * x
+    rec = Recurrence(step_f)
+
+    def step_f(prev1, prev2, prev3, prev4, prev5, prev6, prev7, prev8, prev9, prev10, x):
+        return prev1 * x, prev2 * x, prev3 * x, prev4 * x, prev5 * x, prev6 * x, prev7 * x, prev8 * x, prev9 * x, prev10 * x
     rec = Recurrence(step_f)
 
     with pytest.raises(ValueError):
-        def step_f(prev1, prev2, prev3, prev4, x):
-            return prev1 * prev2 * prev3 * x, prev1 * x, prev2 * x, prev4 * x
+        def step_f(prev1, prev2, prev3, prev4, prev5, prev6, prev7, prev8, prev9, prev10, prev11, x):
+            return prev1 * x, prev2 * x, prev3 * x, prev4 * x, prev5 * x, prev6 * x, prev7 * x, prev8 * x, prev9 * x, prev10 * x, prev11 * x
         rec = Recurrence(step_f)
 
     with pytest.raises(TypeError):
