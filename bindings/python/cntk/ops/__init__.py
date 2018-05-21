@@ -3990,3 +3990,31 @@ def mean_variance_normalization(operand, epsilon=0.00001, use_stats_across_chann
         raise ValueError('epsilon must be non-negative.')
     operand = sanitize_input(operand, get_data_type(operand))  
     return mean_variance_normalization(operand, epsilon, use_stats_across_channels, do_variance_scaling, name)
+
+@typemap
+def custom_proxy_op(custom_op, output_shape, output_data_type, *operands, **kw_name):
+    '''
+    A proxy node that helps saving a model with different number of operands. 
+
+    Example:
+
+    Args:
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import custom_proxy_op
+    if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
+    if isinstance(operands, tuple):
+        operands = list(operands)
+    operands_unfold = []
+    for o in operands:
+        if hasattr(o, 'outputs') and len(o.outputs) > 1:
+            operands_unfold += o.outputs
+        else:
+            operands_unfold += [o]
+
+    name = (lambda name='': (name))(**kw_name) # Python 2.7 does not allow (*inputs, name='')
+    output_dtype = sanitize_dtype_cntk(output_data_type)
+    return custom_proxy_op(operands_unfold, custom_op, output_shape, output_dtype, name)

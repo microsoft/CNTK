@@ -355,6 +355,19 @@ void LearnableParameter<char>::InitBilinear(Matrix<char>& valueMatrix, const Ten
     RuntimeError("Unsupported template argument(char) in InitBilinear");
 }
 
+template <>
+std::tuple<size_t, size_t, char> LearnableParameter<char>::InitRandom(Matrix<char>& valueMatrix,
+    const TensorShape& sampleShape,
+    const wstring& type,
+    const unsigned long randomSeed,
+    const char initValueScale,
+    const size_t initFilterRank,
+    const int initOutputRank,
+    const bool initOnCPUOnly,
+    DEVICEID_TYPE deviceId)
+{
+    RuntimeError("Unsupported template argument(char) in InitRandom");
+}
 
 // initialize by reading a matrix from a text file
 template <class ElemType>

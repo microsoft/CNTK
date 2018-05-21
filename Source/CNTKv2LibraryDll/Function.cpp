@@ -1688,6 +1688,16 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr CustomProxyOp(const std::vector<Variable>& operands, const std::wstring& customOp, const NDShape& outputShape, DataType outputType, const std::wstring& name)
+    {
+        auto attributes = Dictionary();
+        attributes[PrimitiveFunction::AttributeNameCustomOp] = customOp;
+        attributes[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
+        attributes.Add(PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(outputType));
+        auto op = AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CustomProxyOp, operands, std::move(attributes), name));
+        return op;
+    }
+    
     FunctionPtr EyeLike(const Variable& operand, bool isOutputSparse, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();

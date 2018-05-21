@@ -1432,4 +1432,41 @@ private:
 template class OutputMultiplexerNode<float>;
 template class OutputMultiplexerNode<double>;
 
+// -----------------------------------------------------------------------
+// CustomProxyOpNode is a placeholder node for a quantized operations.
+// It enables saving a model with its parameters so that they can be loaded
+// from the optimized implementation (Halide) for execution.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class CustomProxyOpNode : public ComputationNode<ElemType> /* Not deriving from NumInputs, public NumInputs<4>*/
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"CustomProxyOpNode"; }
+
+public:
+    CustomProxyOpNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    CustomProxyOpNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : CustomProxyOpNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp);
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        NOT_IMPLEMENTED
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        NOT_IMPLEMENTED
+    }
+};
+
+template class CustomProxyOpNode<float>;
+
 } } }
