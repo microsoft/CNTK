@@ -345,7 +345,15 @@ enable_python=$(default_use_python)
 
 function default_python_with_deps ()
 {
-        echo $default_build_public
+    if [[ $default_build_public == "yes" ]]; then
+        echo yes
+    else
+        if [[ -z "$PYTHON_WITH_DEPS" ]]; then
+            echo no
+        else
+            echo $PYTHON_WITH_DEPS
+        fi
+    fi
 }
 python_with_deps=$(default_python_with_deps)
 
