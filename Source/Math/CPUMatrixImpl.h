@@ -5459,6 +5459,7 @@ void CPUMatrix<ElemType>::Multiply(const CPUMatrix<ElemType>& a, const CPUMatrix
     return CPUMatrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, false, b, false, 0.0, c);
 }
 
+#ifdef USE_MKLDNN
 template<typename ElemType>
 inline ElemType * mkl_prv_data(const CPUMatrix<ElemType> &b) {
     std::shared_ptr<MKLMemHolder> bottom_data_mem = b.MklMem();
@@ -5468,6 +5469,7 @@ inline ElemType * mkl_prv_data(const CPUMatrix<ElemType> &b) {
     }
     return NULL;
 }
+#endif
 /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
 /// if a is a column vector, add to all columns of c
 /// if a is a row vector, add to all rows of c
@@ -5492,6 +5494,9 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
         if ((int) c.GetNumRows() != m || (int) c.GetNumCols() != n)
             InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
+
+#ifdef USE_MKLDNN
+
         ElemType * prv_a = mkl_prv_data<ElemType>(a);
         ElemType * prv_c = mkl_prv_data<ElemType>(c);
         if (prv_a != NULL && prv_c != NULL)
@@ -5526,6 +5531,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
             cblas_saxpy(len, alpha, reinterpret_cast<float*>(aBufPtr), incx, reinterpret_cast<float*>(cBufPtr), incy);
         }
         else
+#endif // For #ifdef USE_MKLDNM
         {
             if (std::is_same<ElemType, double>::value)
             {
@@ -5596,12 +5602,15 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     }
     else // row vector, add it to all rows
     {
+#ifdef USE_MKLDNN
         ElemType * prv_a = mkl_prv_data<ElemType>(a);
         ElemType * prv_c = mkl_prv_data<ElemType>(c);
+#endif
         int m = (int) c.GetNumRows();
         int n = (int) c.GetNumCols();
         if (n != (int) a.GetNumCols())
             InvalidArgument("To add row vector, cols should match.");
+#ifdef USE_MKLDNN
         if (prv_a != NULL && prv_c != NULL)
         {
             ElemType* aBufPtr = prv_a;
@@ -5649,6 +5658,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 
         }
         else
+#endif // For #ifdef USE_MKLDNN
         {
         ElemType* aBufPtr = a.Data();
         ElemType* cBufPtr = c.Data();
@@ -5691,6 +5701,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
         if ((int)c.GetNumRows() != m || (int)c.GetNumCols() != n)
             InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
+#ifdef USE_MKLDNN
         ElemType * prv_a = mkl_prv_data<ElemType>(a);
         ElemType * prv_c = mkl_prv_data<ElemType>(c);
         if (prv_a != NULL && prv_c != NULL)
@@ -5727,6 +5738,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
             cblas_saxpby(len, alpha, reinterpret_cast<float*>(aBufPtr), incx, beta, reinterpret_cast<float*>(cBufPtr), incy);
         }
         else
+#endif // For #ifdef USE_MKLDNN
         {
             if (std::is_same<ElemType, double>::value)
             {
@@ -5799,12 +5811,15 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     }
     else // row vector, add it to all rows
     {
+#ifdef USE_MKLDNN
         ElemType * prv_a = mkl_prv_data<ElemType>(a);
         ElemType * prv_c = mkl_prv_data<ElemType>(c);
+#endif
         int m = (int)c.GetNumRows();
         int n = (int)c.GetNumCols();
         if (n != (int)a.GetNumCols())
             InvalidArgument("To add row vector, cols should match.");
+#ifdef USE_MKLDNN
         if (prv_a != NULL && prv_c != NULL)
         {
             ElemType* aBufPtr = prv_a;
@@ -5849,6 +5864,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
             }
         }
         else
+#endif // For #ifdef USE_MKLDNN
         {
             ElemType* aBufPtr = a.Data();
             ElemType* cBufPtr = c.Data();
