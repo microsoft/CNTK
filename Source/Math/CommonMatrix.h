@@ -298,7 +298,7 @@ public:
         free(ptr);
 #endif
 #else
-        delete[] ptr;
+        delete[] (char*)ptr;
 #endif
     }
 
