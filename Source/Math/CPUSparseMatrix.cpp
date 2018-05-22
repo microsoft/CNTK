@@ -1928,6 +1928,8 @@ template CPUMatrix<short> CPUSparseMatrix<short>::CopyColumnSliceToDense(size_t 
 template void CPUSparseMatrix<short>::AssignColumnSliceToDense(CPUMatrix<short>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<short>& CPUSparseMatrix<short>::operator=(const CPUSparseMatrix<short>& deepCopyFrom);
 template void CPUSparseMatrix<short>::ScaleAndAdd(short, class Microsoft::MSR::CNTK::CPUSparseMatrix<short> const &, class Microsoft::MSR::CNTK::CPUMatrix<short> &);
+template void CPUSparseMatrix<short>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const short* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols);
 
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);
 template CPUSparseMatrix<int>::~CPUSparseMatrix();

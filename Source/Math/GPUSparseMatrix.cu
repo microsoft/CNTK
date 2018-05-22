@@ -3122,6 +3122,7 @@ template GPUSparseMatrix<short>::GPUSparseMatrix(GPUSparseMatrix<short>&&);
 template void GPUSparseMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
 template void GPUSparseMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
 template void GPUSparseMatrix<short>::SetValue(GPUMatrix<short> const&);
+template short* GPUSparseMatrix<short>::NzValues();
 //template void GPUSparseMatrix<short>::SetValue(CPUMatrix<short> const&);
 template GPUMatrix<short> GPUSparseMatrix<short>::CopyToDenseMatrix() const;
 template void GPUSparseMatrix<short>::CopyToDenseMatrix(GPUMatrix<short>&) const;
@@ -3139,6 +3140,9 @@ template GPUSparseMatrix<short>& GPUSparseMatrix<short>::operator=(GPUSparseMatr
 template void GPUSparseMatrix<short>::Reshape(const size_t, const size_t);
 template void GPUSparseMatrix<short>::ScaleAndAdd(short, GPUSparseMatrix<short> const &, GPUMatrix<short> &);
 template void GPUSparseMatrix<short>::ColumnwiseScaleAndWeightedAdd(short, const GPUSparseMatrix<short>&, const GPUMatrix<short>&, short, GPUMatrix<short>&);
+template void GPUSparseMatrix<short>::AdjustCol2BlockId(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+template void GPUSparseMatrix<short>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE*, const CPUSPARSE_INDEX_TYPE*, const short*,
+    const size_t, const size_t, const size_t, const bool, const DEVICEID_TYPE, DataTransferer*);
 
 template GPUSparseMatrix<int>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<int>::~GPUSparseMatrix();

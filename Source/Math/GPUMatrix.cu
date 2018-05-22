@@ -5045,6 +5045,10 @@ template void GPUMatrix<short>::CopySection(size_t numRows, size_t numCols, shor
 template void GPUMatrix<short>::Reshape(const size_t, const size_t);
 template GPUMatrix<short>& GPUMatrix<short>::operator*=(short);
 template DEVICEID_TYPE GPUMatrix<short>::PrepareDevice(DEVICEID_TYPE deviceId) const;
+template void GPUMatrix<short>::SetUniformRandomValue(const short low, const short high, unsigned long seed);
+template void GPUMatrix<short>::SetUniformRandomValue(RNGHandle& rngHandle, const short low, const short high);
+template void GPUMatrix<short>::SetGaussianRandomValue(const short mean, const short sigma, unsigned long seed);
+template void GPUMatrix<short>::SetGaussianRandomValue(RNGHandle& rngHandle, const short mean, const short stdev);
 
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();

@@ -138,7 +138,7 @@ namespace CNTK
         proto::NDShape* CreateProto(const NDShape& src, Arena* arena = nullptr);
 
         void Copy(const DictionaryValue& src, proto::DictionaryValue& dst, Arena* arena = nullptr);
-        
+
         void CopyNDArrayViewDataToProtos();
         void WriteNDArrayViewData(io::CodedOutputStream& output);
 
@@ -158,7 +158,7 @@ namespace CNTK
 
         bool ReadNDArrayViewData(io::ZeroCopyInputStream& input);
 
-        size_t GetTotalByteSize() 
+        size_t GetTotalByteSize()
         {
             return m_byteSize + m_proto->ByteSizeLong();
         }
@@ -231,7 +231,7 @@ namespace CNTK
             return DictionaryValue::Type(type);
         }
 
-        template <typename SrcT, typename DstT=SrcT>
+        template <typename SrcT, typename DstT = SrcT>
         static void CopyData(const NDArrayView& src, RepeatedField<DstT>* dst)
         {
             auto size = src.Shape().TotalSize();
@@ -250,6 +250,17 @@ namespace CNTK
             auto size = src.Shape().TotalSize();
             const int8_t* buffer = src.DataBuffer<int8_t>();
             output.WriteRaw(buffer, size);
+        }
+
+        static void WriteInt16Data(const NDArrayView& src, io::CodedOutputStream& output)
+        {
+            auto size = src.Shape().TotalSize();
+            const int16_t* buffer = src.DataBuffer<int16_t>();
+            for (auto i = 0; i < size; i++)
+            {
+                auto value = buffer[i];
+                output.WriteVarint32SignExtended(Encode<int16_t, int16_t>(value));
+            }
         }
 
         template <typename T>
@@ -376,6 +387,10 @@ namespace CNTK
                 const int8_t* buffer = src.DataBuffer<int8_t>();
                 dst->mutable_bytes_value()->set_value(buffer, size);
             }
+            else if (src.GetDataType() == DataType::Int16)
+            {
+               CopyData<int16_t, int32>(src, dst->mutable_sint32_values()->mutable_value());
+            }
         }
     }
 
@@ -399,6 +414,10 @@ namespace CNTK
             else if (src.GetDataType() == DataType::Int8)
             {
                 WriteInt8Data(src, output);
+            }
+            else if (src.GetDataType() == DataType::Int16)
+            {
+                WriteInt16Data(src, output);
             }
         }
     }
@@ -431,6 +450,11 @@ namespace CNTK
             {
                 if (!ReadInt8Data(input, dst))
                     return false;
+            }
+            else if (dst.GetDataType() == DataType::Int16)
+            {
+                if (!ReadData<int16_t, int16_t>(wrapper, dst))
+                     return false;
             }
         }
         return true;
@@ -541,6 +565,13 @@ namespace CNTK
                 CopyInt8Data(src.bytes_value().value(), dst);
             else
                 m_arrayViews.push_back({ dst, nullptr });
+        }
+        else if (dataType == DataType::Int16)
+        {
+            if (src.sint32_values().value().size() == shape->TotalSize())
+                 CopyData<int32, int16_t>(src.sint32_values().value(), dst);
+            else
+                 m_arrayViews.push_back({ dst, nullptr });
         }
         return dst;
     }

@@ -87,6 +87,7 @@ namespace CNTK
         UChar = 3, // So far only used internally in deserializers.
         Float16 = 4,
         Int8 = 5,
+        Int16 = 6,
 
         /* TODO:
         Bit,
@@ -120,6 +121,8 @@ namespace CNTK
             return DataType::Int8;
         else if (std::is_same<ElementType, char>())
             return DataType::Int8;
+        else if (std::is_same<ElementType, int16_t>())
+            return DataType::Int16;
         else
             NOT_IMPLEMENTED;
     }
@@ -134,6 +137,8 @@ namespace CNTK
             return "Float16";
         else if (dataType == DataType::Int8)
             return "Int8";
+        else if (dataType == DataType::Int16)
+            return "Int16";
         else
             LogicError("Unknown DataType.");
     }
@@ -148,6 +153,8 @@ namespace CNTK
             return sizeof(float16);
         else if (dataType == DataType::Int8)
             return sizeof(int8_t);
+        else if (dataType == DataType::Int16)
+            return sizeof(int16_t);
         else
             LogicError("Unknown DataType.");
     }
@@ -777,6 +784,9 @@ namespace CNTK
             case DataType::Int8:
                 SetValue((int8_t)value);
                 break;
+            case DataType::Int16:
+                SetValue((int16_t)value);
+                break;
             default:
                 LogicError("Unsupported DataType %s.", DataTypeName(m_dataType));
                 break;
@@ -880,6 +890,11 @@ namespace CNTK
         /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Int8.
         ///
         CNTK_API void SetValue(int8_t value);
+
+        ///
+        /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Int16.
+        ///
+        CNTK_API void SetValue(int16_t value);
 
         ///
         /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.

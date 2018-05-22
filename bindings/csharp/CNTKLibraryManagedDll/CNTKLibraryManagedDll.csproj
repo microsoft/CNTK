@@ -119,6 +119,7 @@
     <Compile Include="SwigProxyClasses\GeneratedCode\$(FlavorName)\StreamInformation.cs" />
     <Compile Include="SwigProxyClasses\GeneratedCode\$(FlavorName)\StringVector.cs" />
     <Compile Include="SwigProxyClasses\GeneratedCode\$(FlavorName)\SWIGTYPE_p_int8_t.cs" />
+    <Compile Include="SwigProxyClasses\GeneratedCode\$(FlavorName)\SWIGTYPE_p_int16_t.cs" />
     <Compile Include="SwigProxyClasses\GeneratedCode\$(FlavorName)\SWIGTYPE_p_void.cs" />
     <Compile Include="SwigProxyClasses\GeneratedCode\$(FlavorName)\TraceLevel.cs" />
     <Compile Include="SwigProxyClasses\GeneratedCode\$(FlavorName)\Trainer.cs" />

@@ -7288,6 +7288,7 @@ template CPUMatrix<short>& CPUMatrix<short>::operator=(CPUMatrix<short>&&);
 template void CPUMatrix<short>::SetValue(const short);
 template void CPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, short* pArray, size_t matrixFlags);
 template void CPUMatrix<short>::SetValue(CPUMatrix<short> const&);
+template bool CPUMatrix<short>::IsEqualTo(const CPUMatrix<short>& a, const short threshold) const;
 //template void CPUMatrix<short>::SetValue(GPUMatrix<short> const&);
 //template void CPUMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
 //template void CPUMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
@@ -7296,6 +7297,9 @@ template void CPUMatrix<short>::Resize(const size_t numRows, const size_t numCol
 template short* CPUMatrix<short>::CopyToArray(void) const;
 template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, short* dst, size_t colStride) const;
 template void CPUMatrix<short>::Reshape(const size_t, const size_t);
+template void CPUMatrix<short>::SetUniformRandomValue(const short low, const short high, unsigned long seed);
+template void CPUMatrix<short>::SetUniformRandomValue(RNGHandle& rngHandle, const short low, const short high);
+template void CPUMatrix<short>::SetGaussianRandomValue(const short mean, const short sigma, unsigned long seed);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 
