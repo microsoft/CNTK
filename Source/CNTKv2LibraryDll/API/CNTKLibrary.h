@@ -4803,6 +4803,11 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = L"");
 
+    ///
+    /// Creates an instance of custom proxy op, which is used to relay inputs and parameters to an optimized implementation. E.g. Halide.
+    ///
+    CNTK_API FunctionPtr CustomProxyOp(const std::vector<Variable>& operands, const std::wstring& customOp, const NDShape& outputShape, DataType outputType, const std::wstring& name = L"");
+
     namespace Sequence
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");

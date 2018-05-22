@@ -1332,6 +1332,11 @@ namespace CNTK
                     }
                     break;
                 }
+                case PrimitiveOpType::CustomProxyOp:
+                {
+                    ASSIGN_NEW_NODE(CustomProxyOpNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 default:
                     CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                     break;

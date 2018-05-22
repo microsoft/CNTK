@@ -249,6 +249,30 @@ namespace CNTK
             outputs.assign(m_inputs.begin(), m_inputs.end());
         else if (m_op == PrimitiveOpType::NoOp)
             outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), Name()));
+        else if (m_op == PrimitiveOpType::CustomProxyOp)
+        {
+            // Set the output data type and shape using attributes.
+            DataType outputDataType = DataType::Unknown;
+            if (m_attributes.Contains(PrimitiveFunction::AttributeNameNewDataType))
+            {
+                outputDataType = static_cast<DataType>(m_attributes[PrimitiveFunction::AttributeNameNewDataType].Value<int>());
+            }
+            else
+            {
+                InvalidArgument("Output type must be specified for CustomProxyOp.");
+            }
+            NDShape outputShape = NDShape::Unknown();
+            if (m_attributes.Contains(PrimitiveFunction::AttributeNameOutputShape))
+            {
+                outputShape = m_attributes[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+            }
+            else
+            {
+                InvalidArgument("Output shape must be specified for CustomProxyOp.");
+            }
+            
+            outputs.push_back(OutputVariable(outputShape, outputDataType, m_inputs[0].DynamicAxes(), false, Name().empty() ? L"" : Name()));
+        }
         else
         {
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);

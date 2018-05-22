@@ -118,6 +118,7 @@ namespace CNTK
         {PrimitiveOpType::Squeeze, L"Squeeze"},
         {PrimitiveOpType::Cast, L"Cast" },
         { PrimitiveOpType::EyeLikeOp, L"EyeLikeOp" },
+        { PrimitiveOpType::CustomProxyOp, L"CustomProxyOp" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -317,6 +318,7 @@ namespace CNTK
         static const std::wstring AttributeNameUseStatsAcrossChannels;
         static const std::wstring AttributeNameDoVarianceScaling;
         static const std::wstring AttributeNameGroups;
+        static const std::wstring AttributeNameCustomOp;
 
         static const size_t convolutionOpDefaultValueForGroups = 1;
 
