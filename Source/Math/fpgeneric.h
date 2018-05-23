@@ -404,7 +404,12 @@ inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, half *outpu
 
 inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, char *, size_t)
 {
-    RuntimeError("Unsupported template argument(half) in GPUSparseMatrix");
+    RuntimeError("Unsupported template argument(char) in GPUSparseMatrix");
+}
+
+inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, short *, size_t)
+{
+    RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
 }
 
 inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t generator, float *outputPtr, size_t n, float mean, float stddev)
@@ -430,7 +435,12 @@ inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, half *output
 
 inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, char*, size_t, char, char)
 {
-    RuntimeError("Unsupported template argument(half) in GPUSparseMatrix");
+    RuntimeError("Unsupported template argument(char) in GPUSparseMatrix");
+}
+
+inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, short*, size_t, short, short)
+{
+    RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
 }
 
 // cusparse

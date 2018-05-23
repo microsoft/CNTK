@@ -476,6 +476,9 @@ namespace CNTK
             if (view1.GetDataType() == DataType::Int8)
                 return AreEqual<int8_t>(view1, view2, relativeTolerance, absoluteTolerance);
 
+            if (view1.GetDataType() == DataType::Int16)
+                return AreEqual<int16_t>(view1, view2, relativeTolerance, absoluteTolerance);
+
             LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }
 

@@ -25,6 +25,7 @@ message NDArrayView {
     Double = 2;
     Float16 = 4;
     Int8 = 5;
+    Int16 = 6;
   }
 
   enum StorageFormat {
@@ -49,13 +50,18 @@ message NDArrayView {
     bytes value = 1;
   }
 
+  message IntValues {
+    repeated sint32 value = 1 [packed = true];
+  }
+
   oneof values {
     FloatValues float_values = 4;
     DoubleValues double_values = 5;
     BytesValue bytes_value = 6;
+    IntValues sint32_values = 7;
   }
 
-  // TODO: bool read_only = 7;
+  // TODO: bool read_only = 8;
 }
 
 message Vector {

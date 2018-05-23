@@ -63,6 +63,8 @@ def sanitize_precision(precision):
         return np.float16
     elif precision in [cntk_py.DataType_Int8, 'int8_t', 'int8', np.int8]:
         return np.int8
+    elif precision in [cntk_py.DataType_Int16, 'int16_t', 'int16', np.int16]:
+        return np.int16
     elif precision in [cntk_py.DataType_Unknown]:
         return None
     else:
@@ -448,6 +450,8 @@ def data_type_to_dtype(data_type):
         return np.float16
     elif data_type == cntk_py.DataType_Int8:
         return np.int8
+    elif data_type == cntk_py.DataType_Int16:
+        return np.int16
     elif data_type == cntk_py.DataType_Unknown:
         return object
     else:
@@ -471,12 +475,15 @@ def sanitize_dtype_numpy(dtype):
     elif is_type and dtype in (int, np.int8) or \
             is_str and dtype in ('int8'):
         return np.int8
+    elif is_type and dtype in (int, np.int16) or \
+            is_str and dtype in ('int16'):
+        return np.int16
     else:
         raise ValueError('data type "%s" is not supported' % dtype)
 
 
 def sanitize_dtype_cntk(dtype):
-    if isinstance(dtype, int) and dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double, cntk_py.DataType_Float16,cntk_py.DataType_Int8, cntk_py.DataType_Unknown):
+    if isinstance(dtype, int) and dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double, cntk_py.DataType_Float16, cntk_py.DataType_Int8, cntk_py.DataType_Int16, cntk_py.DataType_Unknown):
         return dtype
     if dtype is None:
         return cntk_py.DataType_Unknown
@@ -490,6 +497,8 @@ def sanitize_dtype_cntk(dtype):
         return cntk_py.DataType_Float16
     elif dtype == np.int8:
         return cntk_py.DataType_Int8
+    elif dtype == np.int16:
+        return cntk_py.DataType_Int16
     elif dtype == object:
         return cntk_py.DataType_Unknown
     else:

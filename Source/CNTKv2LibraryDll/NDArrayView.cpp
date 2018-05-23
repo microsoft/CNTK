@@ -32,13 +32,19 @@ namespace CNTK
     template <>
     inline char quiet_NaN<char>()
     {
-        return char(std::numeric_limits<int>::quiet_NaN());
+        return char(std::numeric_limits<int8_t>::quiet_NaN());
     }
 
     template <>
     inline int8_t quiet_NaN<int8_t>()
     {
-        return char(std::numeric_limits<int>::quiet_NaN());
+        return char(std::numeric_limits<int8_t>::quiet_NaN());
+    }
+
+    template <>
+    inline int16_t quiet_NaN<int16_t>()
+    {
+        return char(std::numeric_limits<int16_t>::quiet_NaN());
     }
 
     template <typename V1ElemType>
@@ -75,6 +81,8 @@ namespace CNTK
             return AllocateTensorView<half>(viewShape, device, dataBuffer, bufferSizeInBytes);
         case DataType::Int8:
             return AllocateTensorView<char>(viewShape, device, dataBuffer, bufferSizeInBytes);
+        case DataType::Int16:
+            return AllocateTensorView<short>(viewShape, device, dataBuffer, bufferSizeInBytes);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
@@ -113,6 +121,8 @@ namespace CNTK
             return AllocateTensorView<half>(viewShape, storageType, device, numNonZeroValues);
         case DataType::Int8:
             return AllocateTensorView<char>(viewShape, storageType, device, numNonZeroValues);
+        case DataType::Int16:
+            return AllocateTensorView<short>(viewShape, storageType, device, numNonZeroValues);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
@@ -158,6 +168,13 @@ namespace CNTK
                     sparseMatrix->GetNumRows(), sparseMatrix->GetNumCols());
                 break;
             }
+            case DataType::Int16:
+            {
+                auto sparseMatrix = GetWritableMatrix<short>(1);
+                sparseMatrix->SetMatrixFromCSCFormat(colStarts, rowIndices, (const short*)nonZeroValues, numNonZeroValues,
+                    sparseMatrix->GetNumRows(), sparseMatrix->GetNumCols());
+                break;
+            }
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(dataType));
                 break;
@@ -182,6 +199,9 @@ namespace CNTK
                 break;
             case DataType::Int8:
                 delete GetTensorView<char>();
+                break;
+            case DataType::Int16:
+                delete GetTensorView<short>();
                 break;
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
@@ -228,6 +248,14 @@ namespace CNTK
         GetWritableMatrix<char>()->SetValue(value);
     }
 
+    void NDArrayView::SetValue(int16_t value)
+    {
+        if (IsSparse())
+            LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a scalar is only allowed for objects with dense storage format.");
+
+        GetWritableMatrix<short>()->SetValue(value);
+    }
+
     bool NDArrayView::IsSliceView()
     {
         switch (m_dataType)
@@ -250,6 +278,11 @@ namespace CNTK
         case DataType::Int8:
         {
             auto currentMatrix = GetMatrix<char>();
+            return currentMatrix->IsView();
+        }
+        case DataType::Int16:
+        {
+            auto currentMatrix = GetMatrix<short>();
             return currentMatrix->IsView();
         }
         }
@@ -330,6 +363,8 @@ namespace CNTK
             return GetMatrixImpl<half>(GetTensorView<half>(), rowColSplitPoint);
         case DataType::Int8:
             return GetMatrixImpl<char>(GetTensorView<char>(), rowColSplitPoint);
+        case DataType::Int16:
+            return GetMatrixImpl<short>(GetTensorView<short>(), rowColSplitPoint);
         default:
             LogicError("Unknown m_dataType %d", (int)m_dataType);
         }
@@ -348,6 +383,8 @@ namespace CNTK
             return GetMatrixImpl<half>(GetWritableTensorView<half>(), rowColSplitPoint);
         case DataType::Int8:
             return GetMatrixImpl<char>(GetWritableTensorView<char>(), rowColSplitPoint);
+        case DataType::Int16:
+            return GetMatrixImpl<short>(GetWritableTensorView<short>(), rowColSplitPoint);
         default:
             LogicError("Unknown m_dataType %d", (int)m_dataType);
         }
@@ -405,6 +442,13 @@ namespace CNTK
             newMatrix->AssignValuesOf(*thisMatrix);
             break;
         }
+        case DataType::Int16:
+        {
+            auto newMatrix = newView->GetWritableMatrix<short>();
+            auto thisMatrix = GetMatrix<short>();
+            newMatrix->AssignValuesOf(*thisMatrix);
+            break;
+        }
         default:
             LogicError("NDArrayView::DeepClone: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
@@ -453,6 +497,13 @@ namespace CNTK
             destMatrix->AssignValuesOf(*sourceMatrix);
             break;
         }
+        case DataType::Int16:
+        {
+            auto sourceMatrix = source.GetMatrix<short>();
+            auto destMatrix = GetWritableMatrix<short>();
+            destMatrix->AssignValuesOf(*sourceMatrix);
+            break;
+        }
         default:
             LogicError("NDArrayView::CopyFrom: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
@@ -475,6 +526,9 @@ namespace CNTK
             break;
         case DataType::Int8:
             tensorView = new TensorView<char>(*(GetTensorView<char>()));
+            break;
+        case DataType::Int16:
+            tensorView = new TensorView<short>(*(GetTensorView<short>()));
             break;
         default:
             LogicError("NDArrayView::Alias: Unsupported DataType %s", DataTypeName(m_dataType));
@@ -577,6 +631,22 @@ namespace CNTK
             tensorView = new TensorView<char>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
             break;
         }
+        case DataType::Int16:
+        {
+            auto currentMatrix = GetMatrix<short>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            std::shared_ptr<Matrix<short>> slicedMatrixView;
+            if (sliceViewMatrixDims.first != currentMatrixDims.first)
+                slicedMatrixView =
+                make_shared<Matrix<short>>(currentMatrix->Reshaped(1, currentMatrix->GetNumElements())
+                    .ColumnSlice(flatBufferOffset, sliceViewShape.TotalSize()));
+            else
+                slicedMatrixView = make_shared<Matrix<short>>(
+                    currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+
+            tensorView = new TensorView<short>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            break;
+        }
         default:
             LogicError("NDArrayView::SliceView: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
@@ -610,6 +680,9 @@ namespace CNTK
         case DataType::Int8:
             tensorView = new TensorView<char>(*(GetTensorView<char>()), newTensorShape);
             break;
+        case DataType::Int16:
+            tensorView = new TensorView<short>(*(GetTensorView<short>()), newTensorShape);
+            break;
         default:
             LogicError("NDArrayView::AsShape: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
@@ -634,6 +707,12 @@ namespace CNTK
     const int8_t* NDArrayView::DataBuffer<int8_t>() const
     {
         return const_cast<int8_t*>(_DataBuffer<int8_t, char>());
+    }
+
+    template<>
+    const int16_t* NDArrayView::DataBuffer<int16_t>() const
+    {
+        return const_cast<int16_t*>(_DataBuffer<int16_t, short>());
     }
 
     // TODO: This could actually be strided?
@@ -671,6 +750,15 @@ namespace CNTK
         return const_cast<int8_t*>(DataBuffer<int8_t>());
     }
 
+    template <>
+    int16_t* NDArrayView::WritableDataBuffer()
+    {
+        if (IsReadOnly())
+            InvalidArgument("NDArrayView::WritableDataBuffer: Cannot get writable data buffer from a read-only NDArrayView.");
+
+        return const_cast<int16_t*>(DataBuffer<int16_t>());
+    }
+
     template <typename ElementType>
     std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers() const
     {
@@ -687,6 +775,12 @@ namespace CNTK
     std::tuple<const int8_t *, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<int8_t>() const
     {
         return _SparseCSCDataBuffers<int8_t, char>();
+    }
+
+    template <>
+    std::tuple<const int16_t *, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<int16_t>() const
+    {
+        return _SparseCSCDataBuffers<int16_t, short>();
     }
 
     template <typename ElementType, typename V1ElemType>
@@ -762,6 +856,12 @@ namespace CNTK
         return _SparseBlockColumnDataBuffers<int8_t, char>();
     }
 
+    template <>
+    std::tuple<const void *, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers<int16_t>() const
+    {
+        return _SparseBlockColumnDataBuffers<int16_t, short>();
+    }
+
     template <typename ElementType, typename V1ElemType>
     std::tuple<const void *, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::_SparseBlockColumnDataBuffers() const
     {
@@ -825,6 +925,12 @@ namespace CNTK
             matrix->AdjustSparseBlockColumn(cpuCol2BlockId, numBlocks, useBlockId2Col);
             break;
         }
+        case DataType::Int16:
+        {
+            auto matrix = GetWritableMatrix<short>();
+            matrix->AdjustSparseBlockColumn(cpuCol2BlockId, numBlocks, useBlockId2Col);
+            break;
+        }
         default:
             LogicError("NDArrayView::AdjustSparseBlockColumn: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
@@ -866,6 +972,13 @@ namespace CNTK
             matrix->CollapseDataLocation();
             break;
         }
+        case DataType::Int16:
+        {
+            auto matrix = GetMatrix<short>();
+            matrix->TransferFromDeviceToDevice(matrix->GetDeviceId(), AsCNTKImplDeviceId(device), /*isBeingMoved = */ true, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ true);
+            matrix->CollapseDataLocation();
+            break;
+        }
         default:
             LogicError("NDArrayView::ChangeDevice: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
@@ -890,6 +1003,12 @@ namespace CNTK
     /*static*/ NDArrayViewPtr NDArrayView::RandomNormal<int8_t>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device)
     {
         return NDArrayView::_RandomNormal<int8_t, char>(shape, mean, stdDev, seed, device);
+    }
+
+    template <>
+    /*static*/ NDArrayViewPtr NDArrayView::RandomNormal<int16_t>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device)
+    {
+        return NDArrayView::_RandomNormal<int16_t, short>(shape, mean, stdDev, seed, device);
     }
 
     template <typename ElementType, typename V1ElemType>
@@ -920,6 +1039,12 @@ namespace CNTK
         return NDArrayView::_RandomUniform<int8_t, char>(shape, rangeBegin, rangeEnd, seed, device);
     }
 
+    template <>
+    /*static*/ NDArrayViewPtr NDArrayView::RandomUniform<int16_t>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device)
+    {
+        return NDArrayView::_RandomUniform<int16_t, short>(shape, rangeBegin, rangeEnd, seed, device);
+    }
+
     template <typename ElementType, typename V1ElemType>
     /*static*/ NDArrayViewPtr NDArrayView::_RandomUniform(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/)
     {
@@ -948,6 +1073,12 @@ namespace CNTK
         return _AsScalar<int8_t, char>();
     }
 
+    template <>
+    int16_t NDArrayView::AsScalar<int16_t>() const
+    {
+        return _AsScalar<int16_t, short>();
+    }
+
     template <typename ElementType, typename V1ElemType>
     ElementType NDArrayView::_AsScalar() const
     {
@@ -974,6 +1105,8 @@ namespace CNTK
             scalar = static_cast<ElementType>(*(cpuData->DataBuffer<float16>()));
         else if (scalarData->GetDataType() == DataType::Int8)
             scalar = static_cast<ElementType>(*(cpuData->DataBuffer<char>()));
+        else if (scalarData->GetDataType() == DataType::Int16)
+            scalar = static_cast<ElementType>(*(cpuData->DataBuffer<short>()));
         else
             LogicError("NDArrayView::AsScalar: Unsupported DataType");
 
@@ -993,53 +1126,64 @@ namespace CNTK
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<double>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<float16>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<int8_t>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
+    template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<int16_t>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
 
     template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<float>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<double>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<float16>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<int8_t>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
+    template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<int16_t>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
 
     template CNTK_API const float* NDArrayView::DataBuffer<float>() const;
     template CNTK_API const double* NDArrayView::DataBuffer<double>() const;
     template CNTK_API const float16* NDArrayView::DataBuffer<float16>() const;
     template CNTK_API const int8_t* NDArrayView::DataBuffer<int8_t>() const;
+    template CNTK_API const int16_t* NDArrayView::DataBuffer<int16_t>() const;
 
     template CNTK_API const TensorView<float>* NDArrayView::GetTensorView<float>() const;
     template CNTK_API const TensorView<double>* NDArrayView::GetTensorView<double>() const;
     template CNTK_API const TensorView<half>* NDArrayView::GetTensorView<half>() const;
     template CNTK_API const TensorView<char>* NDArrayView::GetTensorView<char>() const;
+    template CNTK_API const TensorView<short>* NDArrayView::GetTensorView<short>() const;
 
     template CNTK_API std::tuple<const float*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<float>() const;
     template CNTK_API std::tuple<const double*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<double>() const;
     template CNTK_API std::tuple<const float16*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<float16>() const;
     template CNTK_API std::tuple<const int8_t*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<int8_t>() const;
+    template CNTK_API std::tuple<const int16_t*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<int16_t>() const;
 
     template CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers<float>() const;
     template CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers<double>() const;
     template CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers<float16>() const;
     template CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers<int8_t>() const;
+    template CNTK_API std::tuple<const void*, const SparseIndexType*, const SparseIndexType*, size_t, size_t, size_t> NDArrayView::SparseBlockColumnDataBuffers<int16_t>() const;
 
     template CNTK_API float* NDArrayView::WritableDataBuffer<float>();
     template CNTK_API double* NDArrayView::WritableDataBuffer<double>();
     template CNTK_API float16* NDArrayView::WritableDataBuffer<float16>();
     template CNTK_API int8_t* NDArrayView::WritableDataBuffer<int8_t>();
+    template CNTK_API int16_t* NDArrayView::WritableDataBuffer<int16_t>();
 
     template std::shared_ptr<const Matrix<float>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
     template std::shared_ptr<const Matrix<double>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
     template std::shared_ptr<const Matrix<half>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
     template std::shared_ptr<const Matrix<char>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
+    template std::shared_ptr<const Matrix<short>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const;
 
     template std::shared_ptr<Matrix<float>> NDArrayView::GetWritableMatrix<float>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     template std::shared_ptr<Matrix<double>> NDArrayView::GetWritableMatrix<double>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     template std::shared_ptr<Matrix<half>> NDArrayView::GetWritableMatrix<half>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     template std::shared_ptr<Matrix<char>> NDArrayView::GetWritableMatrix<char>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
+    template std::shared_ptr<Matrix<short>> NDArrayView::GetWritableMatrix<short>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     template TensorView<float>* NDArrayView::GetWritableTensorView<float>();
     template TensorView<double>* NDArrayView::GetWritableTensorView<double>();
     template TensorView<half>* NDArrayView::GetWritableTensorView<half>();
     template TensorView<char>* NDArrayView::GetWritableTensorView<char>();
+    template TensorView<short>* NDArrayView::GetWritableTensorView<short>();
 
     template float NDArrayView::AsScalar<float>() const;
     template double NDArrayView::AsScalar<double>() const;
     template float16 NDArrayView::AsScalar<float16>() const;
     template int8_t NDArrayView::AsScalar<int8_t>() const;
+    template int16_t NDArrayView::AsScalar<int16_t>() const;
 }

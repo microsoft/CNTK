@@ -6324,7 +6324,15 @@ template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, 
 template void Matrix<short>::Reshape(const size_t, const size_t);
 template short* Matrix<short>::CopyToArray(void) const;
 template bool Matrix<short>::IsView() const;
-
+template Matrix<short> Matrix<short>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const short low, const short high, unsigned long seed);
+template void Matrix<short>::SetUniformRandomValue(const short low, const short high, unsigned long seed);
+template void Matrix<short>::SetUniformRandomValue(RNGHandle& rngHandle, const short low, const short high);
+template Matrix<short> Matrix<short>::RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const short mean, const short sigma, unsigned long seed);
+template void Matrix<short>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const short* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer);
+template void Matrix<short>::AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+template void Matrix<short>::TransferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved, bool emptyTransfer/* = false*/, bool updatePreferredDevice/* = true*/) const;
+template void Matrix<short>::CollapseDataLocation() const;
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 
 }}}
