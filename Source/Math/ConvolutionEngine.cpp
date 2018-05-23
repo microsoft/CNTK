@@ -21,7 +21,7 @@ namespace CNTK
 {
 
 void GetSizesAndStrides(int dimension, const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes,
-                        SmallVector<size_t>& strides, size_t mapCount = 0)
+                        SmallVector<size_t>& strides, size_t mapCount)
 {
     sizes = shape.GetDims();
     if (mapCount)

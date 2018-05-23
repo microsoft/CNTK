@@ -86,9 +86,9 @@ struct MKLMemHolder
     {
         b_eager_mode = eager_mode;
     }
-    void set_prv_descriptor(std::shared_ptr<PrvMemDescr> descriptor)
+    void set_prv_descriptor(std::shared_ptr<PrvMemDescr> descriptor, bool prv_desc = true)
     {
-        if (descriptor != nullptr)
+        if (descriptor != nullptr && prv_desc)
             head_ = HEAD_AT_PRV;
         prv_descriptor_ = descriptor;
     }
