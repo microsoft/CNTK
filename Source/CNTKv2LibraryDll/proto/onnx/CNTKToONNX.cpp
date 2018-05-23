@@ -2645,7 +2645,12 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             node->AddAttribute(attributesMap[L"alpha"], alpha);
             node->AddAttribute(attributesMap[L"beta"], beta);
         }
-        else if ((src->OpName() == L"LeakyReLU") || (src->OpName() == L"ELU"))
+        else if (src->OpName() == L"ELU")
+        {
+            auto alpha = 1.0f;
+            node->AddAttribute("alpha", alpha);
+        }
+        else if (src->OpName() == L"LeakyReLU")
         {
             auto alpha = 0.01f;
             if (src->Attributes().Contains(L"alpha"))
