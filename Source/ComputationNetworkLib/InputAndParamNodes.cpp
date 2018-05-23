@@ -11,6 +11,9 @@
 
 #include <string>
 
+//
+// Note: Some template specializations have not been implemented in this file.
+//
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
