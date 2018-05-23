@@ -171,6 +171,18 @@
     <ClInclude Include="DataTransferer.h" />
     <ClInclude Include="MatrixQuantizerImpl.h" />
     <ClInclude Include="MklDnnCommon.h" />
+    <ClInclude Include="mkldnn\mkldnn_base-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_batch_norm-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_convolution-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_fully_connected-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_memory-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_pooling-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_relu-inl.h" />
+    <ClInclude Include="mkldnn\mkldnn_sum-inl.h" />
+    <ClInclude Include="mkldnn\mkl_conv-common-inl.h" />
+    <ClInclude Include="mkldnn\mkl_memory.h" />
+    <ClInclude Include="mkldnn\mkl_util-inl.h" />
+    <ClInclude Include="EltWiseEngine.h" />
     <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="RNNCommon.h" />
     <ClInclude Include="TensorOps.h" />
@@ -217,6 +229,9 @@
     </ClCompile>
     <ClCompile Include="MatrixQuantizerCPU.cpp" />
     <ClCompile Include="MatrixQuantizerImpl.cpp" />
+    <ClCompile Include="mkldnn\mkldnn_base.cpp" />
+    <ClCompile Include="mkldnn\mkldnn_memory.cpp" />
+    <ClCompile Include="mkldnn\mkldnn_util.cpp" />
     <ClCompile Include="NoGPU.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="QuantizedMatrix.cpp" />

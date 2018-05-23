@@ -77,7 +77,7 @@ protected:
         }
     }
 
-    void BackwardCore(const InoutMat& in, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
+    void BackwardCore(const InoutMat& in, const InoutMat& /*out*/, const InoutMat& srcGrad, InoutMat& grad, const StatMat& scale, double blendFactor, const StatMat& savedMean, const StatMat& savedInvStdDev,
                       StatMat& scaleGrad, StatMat& biasGrad, bool accumulateDataGrad) override
     {
         UNUSED(blendFactor);  // BUGBUG: It should be used.

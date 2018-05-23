@@ -254,6 +254,53 @@ template <class ElemType>
 class BaseMatrixStorage : public enable_shared_from_this<BaseMatrixStorage<ElemType>>
 {
     template <class ElemType2> friend class BaseMatrix;
+    static const size_t alignment_ = 4096;
+
+public:
+    template <class T>
+    static T* NewCPUArray(size_t n, bool zero_data = false)
+    {
+        size_t padded_n = AsMultipleOf(n, 2);
+        size_t size = padded_n * sizeof(T);
+#ifdef USE_MKLDNN
+        void* ptr;
+#if _MSC_VER
+        ptr = _aligned_malloc(size, alignment_);
+        if (ptr == NULL)
+            throw std::bad_alloc();
+#else
+        int ret = posix_memalign(&ptr, alignment_, size);
+        if (ret != 0)
+            throw std::bad_alloc();
+#endif
+        if (zero_data)
+            memset(ptr, 0, size);
+        return (T*) ptr;
+#else
+        ElemType* p = new ElemType[padded_n]();
+#if 0 // _DEBUG
+        ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
+        for (size_t i = 0; i < n; i++)
+          p[i] = nan;
+#endif
+        if (zero_data)
+            memset(p, 0, size);
+
+        return p;
+#endif
+    }
+    static void FreeCPUArray(void* ptr)
+    {
+#ifdef USE_MKLDNN
+#if _MSC_VER
+        _aligned_free(ptr);
+#else
+        free(ptr);
+#endif
+#else
+        delete[] (char*)ptr;
+#endif
+    }
 
 private:
     BaseMatrixStorage<ElemType>(const BaseMatrixStorage<ElemType>& ) = delete;
@@ -283,17 +330,17 @@ public:
         {
             if (m_computeDevice < 0)
             {
-                delete[] m_pArray;
+                FreeCPUArray(m_pArray);
                 m_pArray = nullptr;
                 m_nzValues = nullptr;
 
-                delete[] m_unCompIndex;
+                FreeCPUArray(m_unCompIndex);
                 m_unCompIndex = nullptr;
 
-                delete[] m_compIndex;
+                FreeCPUArray(m_compIndex);
                 m_compIndex = nullptr;
 
-                delete[] m_blockIds;
+                FreeCPUArray(m_blockIds);
                 m_blockIds = nullptr;
             }
             else
@@ -309,7 +356,7 @@ public:
                 m_tempDeviceBufferSize = 0;
 #endif
 
-                delete[](byte*) m_tempHostBuffer;
+                FreeCPUArray((byte*) m_tempHostBuffer);
                 m_tempHostBuffer = nullptr;
             }
             m_elemSizeAllocated = 0;

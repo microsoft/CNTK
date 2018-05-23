@@ -21,6 +21,9 @@
 #include <initializer_list>
 #include "QuantizedOperations.h"
 #include "half.hpp"
+#ifdef USE_MKLDNN
+#include "./mkldnn/mkl_memory.h"
+#endif
 
 // Forward declarations
 namespace CNTK
@@ -101,6 +104,9 @@ private:
     static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
 
 public:
+    shared_ptr<CPUMatrix <ElemType> > getCpuMatrix() const {
+        return m_CPUMatrix;
+    }
     // Constructors, destructors and other static matrix builders
     // Each constructor can take deviceId as parameter.
     // If deviceId<0 then the matrix will be based in RAM (CPUMatrix)
@@ -183,6 +189,9 @@ public:
     bool IsEmpty() const;
     size_t BufferSize() const;
     ElemType* Data() const;
+#ifdef USE_MKLDNN
+    std::shared_ptr<MKLMemHolder> MklMem() const;
+#endif
     bool IsView() const;
 
     ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller

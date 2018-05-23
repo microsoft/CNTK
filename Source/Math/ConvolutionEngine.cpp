@@ -4,14 +4,92 @@
 //
 
 #include "stdafx.h"
+#include <typeinfo>
 #include "ConvolutionEngine.h"
 #include "CuDnnFactories.h"
 #include "MklDnnCommon.h"
+#pragma warning(disable : 4661)
+#ifdef USE_MKLDNN
+#include "./mkldnn/mkldnn_convolution-inl.h"
+#include "./mkldnn/mkldnn_pooling-inl.h"
+#endif
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+void GetSizesAndStrides(int dimension, const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes,
+                        SmallVector<size_t>& strides, size_t mapCount)
+{
+    sizes = shape.GetDims();
+    if (mapCount)
+    {
+        if (mapCount != shape.GetDim(shape.GetRank() - 1))
+            RuntimeError("Mismatching outputShape and mapCount");
+
+        // for outputShape, pad 1 before mapCount (the last dim in shape)
+        sizes.pop_back();
+        while (sizes.size() < dimension - 2)
+            sizes.push_back(1);
+        sizes.push_back(mapCount);
+    }
+    else
+    {
+        while (sizes.size() < dimension - 1)
+            sizes.push_back(1);
+    }
+    sizes.push_back(lastDim);
+    strides.clear();
+    strides.push_back(1);
+    for (int i = 1; i <= sizes.size(); i++)
+    {
+        strides.push_back(sizes[i - 1] * strides[i - 1]);
+    }
+}
+
+void GetSizesAndStridesWithGroups(int dimension, const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t groups = 1, size_t mapCount = 0)
+{
+    UNUSED(groups);
+    sizes = shape.GetDims();
+    if (mapCount)
+    {
+        if (mapCount != shape.GetDim(shape.GetRank() - 1))
+            RuntimeError("Mismatching outputShape and mapCount");
+
+        // for outputShape, pad 1 before mapCount (the last dim in shape)
+        sizes.pop_back();
+        while (sizes.size() < dimension - 2) sizes.push_back(1);
+        sizes.push_back(mapCount);
+    }
+    else
+    {
+        while (sizes.size() < dimension - 1) sizes.push_back(1);
+    }
+    assert(lastDim % groups == 0);
+    sizes.push_back(lastDim / groups);
+    strides.clear();
+    strides.push_back(1);
+    for (int i = 1; i <= sizes.size(); i++)
+    {
+        strides.push_back(sizes[i - 1] * strides[i - 1]);
+    }
+    if (groups > 1) sizes.push_back(groups);
+}
+
+void GetInputOffsets(const ConvolveGeometry* geometry, SmallVector<int>& inputOffset)
+{
+    size_t dim_size = geometry->InputShape().GetRank();
+    for (size_t i = 0; i < dim_size; i++)
+    {
+        inputOffset.push_back(-geometry->GetLowerPad(i));
+    }
+}
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace)
+void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace,
+                                          bool inferenceOnly, Mat* pBias)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
@@ -27,7 +105,7 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat&
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    ForwardCore(in, kernel, out, workspace);
+    ForwardCore(in, kernel, out, workspace, inferenceOnly, pBias);
 }
 
 template <class ElemType>
@@ -50,7 +128,9 @@ void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& ke
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernel, bool accumulateGradient, bool allowReuse, Mat& workspace)
+void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernel,
+                                                 bool accumulateGradient, bool allowReuse, Mat& workspace,
+                                                 Mat* pbiasGrad)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
@@ -65,11 +145,11 @@ void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& 
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    BackwardKernelCore(srcGrad, in, kernel, accumulateGradient, allowReuse, workspace);
+    BackwardKernelCore(srcGrad, in, out, kernel, accumulateGradient, allowReuse, workspace, pbiasGrad);
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::ForwardPooling(const Mat& in, Mat& out)
+void ConvolutionEngine<ElemType>::ForwardPooling(const Mat& in, Mat& out, bool inferenceOnly)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
@@ -83,11 +163,12 @@ void ConvolutionEngine<ElemType>::ForwardPooling(const Mat& in, Mat& out)
 
     EnsureCompatible();
     EnsurePoolingInitialized();
-    ForwardPoolingCore(in, out);
+    ForwardPoolingCore(in, out, inferenceOnly);
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient)
+void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad,
+                                                  bool accumulateGradient, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
@@ -105,7 +186,7 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
 
     EnsureCompatible();
     EnsurePoolingInitialized();
-    BackwardPoolingCore(out, srcGrad, in, grad, accumulateGradient);
+    BackwardPoolingCore(out, srcGrad, in, grad, accumulateGradient, workspace);
 }
 
 template <class ElemType>
@@ -178,7 +259,8 @@ protected:
         }
     }
 
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& /*workspace*/) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& /*workspace*/,
+                     bool /*inferenceOnly*/, Mat* /*pBias*/) override
     {
         in.ConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
     }
@@ -188,7 +270,9 @@ protected:
         srcGrad.ConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& /*workspace*/) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& /*out*/, Mat& kernelGrad,
+                            bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& /*workspace*/,
+                            Mat* /*pbiasGrad*/) override
     {
         srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
     }
@@ -205,7 +289,7 @@ protected:
         }
     }
 
-    void ForwardPoolingCore(const Mat& in, Mat& out) override
+    void ForwardPoolingCore(const Mat& in, Mat& out, bool /*inferenceOnly*/) override
     {
         if (m_poolKind == PoolKind::Max)
         {
@@ -220,7 +304,8 @@ protected:
 
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient,
+                             Mat& /*workspace*/) override
     {
         if (m_poolKind == PoolKind::Max)
         {
@@ -292,7 +377,8 @@ protected:
     {
     }
 
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace,
+                     bool /*inferenceOnly*/, Mat* /*pBias*/) override
     {
         size_t batchSize = in.GetNumCols();
         size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
@@ -414,7 +500,8 @@ protected:
         assert(batchSize == srcGrad.GetNumCols());
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool allowReuse, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& /*out*/, Mat& kernelGrad,
+                            bool /*accumulateGradient*/, bool allowReuse, Mat& workspace, Mat* /*pbiasGrad*/) override
     {
         size_t batchSize = in.GetNumCols();
         size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
@@ -490,7 +577,7 @@ protected:
     {
     }
 
-    void ForwardPoolingCore(const Mat& in, Mat& out) override
+    void ForwardPoolingCore(const Mat& in, Mat& out, bool /*inferenceOnly*/) override
     {
         if (m_poolKind == PoolKind::Max)
         {
@@ -508,7 +595,8 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
-    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient) override
+    void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad, bool accumulateGradient,
+                             Mat& /*workspace*/) override
     {
         if (!accumulateGradient)
             grad.SetValue(0);
@@ -550,6 +638,167 @@ private:
     bool m_gpuSparse1D;
 };
 
+#ifdef USE_MKLDNN
+template <class ElemType>
+class MklDnnConvolutionEngine : public ConvolutionEngine<ElemType>
+{
+private:
+    MKLDNNConvolutionOp<ElemType>* m_mkldnnConv;
+    MKLDNNPoolingOp<ElemType>* m_mkldnnPooling;
+    size_t m_prevConvBatchSize = 0;
+    size_t m_prevPoolingBatchSize = 0;
+    ConvolveGeometryPtr m_geometry;
+    ImageLayoutKind m_imageLayout;
+    PoolKind m_poolKind;
+    bool m_poolIncludePad;
+    bool m_hasBias;
+    bool m_relu;
+
+public:
+    using Mat = Matrix<ElemType>;
+
+public:
+    MklDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
+                            size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad,
+                            bool hasBias = false, bool relu = false)
+        : ConvolutionEngine<ElemType>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
+                                      poolIncludePad),
+          m_prevConvBatchSize(0),
+          m_mkldnnConv(nullptr),
+          m_mkldnnPooling(nullptr),
+          m_geometry(geometry),
+          m_imageLayout(imageLayout),
+          m_poolKind(poolKind),
+          m_poolIncludePad(poolIncludePad),
+          m_hasBias(hasBias),
+          m_relu(relu)
+    {
+    }
+    ~MklDnnConvolutionEngine()
+    {
+        if (m_mkldnnConv != nullptr)
+            delete m_mkldnnConv;
+        if (m_mkldnnPooling != nullptr)
+            delete m_mkldnnPooling;
+    }
+    virtual void EnsureCompatible()
+    {
+        if (m_imageLayout != ImageLayoutKind::CHW)
+            LogicError("MKL convolution engine supports only CHW layout.");
+    }
+
+    virtual void EnsureConvolutionInitialized()
+    {
+        if (m_mkldnnConv == nullptr)
+            m_mkldnnConv = new MKLDNNConvolutionOp<ElemType>(m_geometry, m_imageLayout, m_hasBias, m_relu);
+    }
+    virtual void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace, bool inferenceOnly, Mat* pBias)
+    {
+        UNUSED(workspace);
+        size_t batchSize = in.GetNumCols();
+        if (m_prevConvBatchSize == 0)
+            m_prevConvBatchSize = batchSize;
+        bool samBatchSize = batchSize == m_prevConvBatchSize;
+        if (!samBatchSize && m_mkldnnConv != nullptr)
+        {
+            delete m_mkldnnConv;
+            m_mkldnnConv = nullptr;
+            m_prevConvBatchSize = batchSize;
+        }
+        if (m_mkldnnConv == nullptr)
+        {
+            m_mkldnnConv = new MKLDNNConvolutionOp<ElemType>(m_geometry, m_imageLayout, m_hasBias, m_relu);
+        }
+
+        m_mkldnnConv->Forward(in, kernel, out, inferenceOnly, pBias);
+    }
+
+    virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient,
+                                  Mat& workspace)
+    {
+        m_mkldnnConv->BackwardData(srcGrad, kernel, grad, accumulateGradient, workspace);
+    }
+
+    virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& out, Mat& kernelGrad,
+                                    bool accumulateGradient, bool allowReuse, Mat& workspace, Mat* pbiasGrad)
+    {
+        UNUSED(allowReuse);
+        m_mkldnnConv->BackwardKernel(srcGrad, in, out, kernelGrad, accumulateGradient, workspace, pbiasGrad);
+    }
+
+    virtual void EnsurePoolingInitialized()
+    {
+        if (m_mkldnnPooling == nullptr)
+            m_mkldnnPooling = new MKLDNNPoolingOp<ElemType>(m_geometry, m_imageLayout, m_poolKind, m_poolIncludePad);
+    }
+
+    virtual void ForwardPoolingCore(const Mat& in, Mat& out, bool inferenceOnly)
+    {
+        size_t batchSize = in.GetNumCols();
+        if (m_prevPoolingBatchSize == 0)
+            m_prevPoolingBatchSize = batchSize;
+        bool samBatchSize = batchSize == m_prevPoolingBatchSize;
+        if (!samBatchSize && m_mkldnnPooling != nullptr)
+        {
+            delete m_mkldnnPooling;
+            m_mkldnnPooling = nullptr;
+            m_prevPoolingBatchSize = batchSize;
+        }
+        EnsurePoolingInitialized();
+        m_mkldnnPooling->Forward(in, out, inferenceOnly);
+    }
+
+    virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad,
+                                     bool accumulateGradient, Mat& workspace)
+    {
+        if (accumulateGradient)
+        {
+            workspace.Resize(grad);
+            workspace.AssignValuesOf(grad);
+        }
+        m_mkldnnPooling->Backward(out, srcGrad, in, grad);
+        if (accumulateGradient)
+            grad.AssignSumOf(grad, workspace);
+    }
+
+    virtual void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in)
+    {
+        // TODO
+        UNUSED(out);
+        UNUSED(poolIn);
+        UNUSED(in);
+        // Not implemented but potentially can make a fallback to reference engine.
+        LogicError("MaxUnpooling is not implemented for MKLDNN engine.");
+    }
+    virtual bool ImplementsGradientOverwriteOptimization() const override
+    {
+        return true;
+    }
+
+public:
+    static bool IsSupported(DEVICEID_TYPE deviceId, ConvolveGeometryPtr geometry, PoolKind poolKind)
+    {
+        const auto& input = geometry->InputShape();
+        const auto& kernel = geometry->KernelShape();
+        const auto& inputRank = input.GetRank();
+        const auto& kernelRank = kernel.GetRank();
+
+        bool retVal = (inputRank <= 3);
+        if (!retVal)
+            return false;
+        // MKL DNN do not support double
+        const std::type_info& ti1 = typeid(ElemType);
+        const std::type_info& ti2 = typeid(float);
+        if (ti1.hash_code() != ti2.hash_code())
+        {
+            return false;
+        }
+        return deviceId < 0 &&
+               find(begin(geometry->Sharing()), end(geometry->Sharing()), false) == end(geometry->Sharing()) &&
+               (poolKind == PoolKind::None || inputRank <= 3 && (kernelRank < 3 || kernel[2] == 1));
+    }
+};
+#endif
 //------------------------------------------------------------------
 // GEMM convolution engine implementation.
 // This engine supports arbitrary convolution configuration with full
@@ -611,10 +860,12 @@ protected:
     //    [XYC x NW'H']^T * [XYC x K] -> [NW'H' x K]
     // 3. Reshape and transpose result: [NW'H' x K] -> [N x W'H'K]^T -> [W'H'K x N]
     //    In case minibatch size == 1 this step is not required and step 2 writes results directly to output (out).
-    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
+    void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace,
+                     bool /*inferenceOnly*/, Mat* /*pBias*/) override
     {
 #ifdef USE_MKL2017DNN
-        if (ForwardCoreMKL(in, kernel, out)) return;
+        if (ForwardCoreMKL(in, kernel, out, nullptr))
+            return;
 #endif
 
         size_t batchSize = in.GetNumCols();
@@ -785,7 +1036,8 @@ protected:
     // 2. Unrolling convolution input (in) into a matrix of [NW'H' x WHC] layout.
     // 3. Performing matrix multiplication of unrolled input with transposed output:
     //    [NW'H' x WHC]^T * [NW'H' x K] -> [WHC x K] - kernel gradients.
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, const Mat& /*out*/, Mat& kernelGrad, bool accumulateGradient,
+                            bool /*allowReuse*/, Mat& workspace, Mat* /*pbiasGrad*/) override
     {
 #ifdef USE_MKL2017DNN
         if (BackwardKernelMKL(srcGrad, in, kernelGrad, accumulateGradient, workspace)) return;
@@ -904,49 +1156,6 @@ protected:
             }
         } m_context[ContextIndex_Total];
 
-        static void GetSizesAndStrides(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t mapCount = 0)
-        {
-            GetSizesAndStridesWithGroups(shape, lastDim, sizes, strides, 1, mapCount);
-        }
-
-        static void GetSizesAndStridesWithGroups(const TensorShape& shape, size_t lastDim, SmallVector<size_t>& sizes, SmallVector<size_t>& strides, size_t groups=1, size_t mapCount = 0)
-        {
-            UNUSED(groups);
-            sizes = shape.GetDims();
-            if (mapCount)
-            {
-                if (mapCount != shape.GetDim(shape.GetRank() - 1))
-                    RuntimeError("Mismatching outputShape and mapCount");
-
-                // for outputShape, pad 1 before mapCount (the last dim in shape)
-                sizes.pop_back();
-                while (sizes.size() < m_dimension - 2) sizes.push_back(1);
-                sizes.push_back(mapCount);
-            }
-            else
-            {
-                while (sizes.size() < m_dimension - 1) sizes.push_back(1);
-            }
-            assert(lastDim % groups == 0);
-            sizes.push_back(lastDim / groups);
-            strides.clear();
-            strides.push_back(1);
-            for (int i = 1; i <= sizes.size(); i++)
-            {
-                strides.push_back(sizes[i - 1] * strides[i - 1]);
-            }
-            if (groups > 1) sizes.push_back(groups);
-        }
-
-        static void GetInputOffsets(const ConvolveGeometry* geometry, SmallVector<int>& inputOffset)
-        {
-            size_t dim_size = geometry->InputShape().GetRank();
-            for (size_t i = 0; i < dim_size; i++)
-            {
-                inputOffset.push_back(-geometry->GetLowerPad(i));
-            }
-        }
-
     public:
         MKLConvolutionContext() :
             m_prevBatchSize(0),
@@ -955,15 +1164,10 @@ protected:
 
         bool Supported(const ConvolveGeometry* geometry, bool forward)
         {
-#ifdef USE_MKLDNN
-            //TODO: test code for linking with mkldnn.dll, will extend to support dilated convolution with MKL-DNN later
-            mkldnn_primitive_attr_t attr;
-            mkldnn_primitive_attr_create(&attr);
-            mkldnn_primitive_attr_destroy(attr);
-#endif
-
-            //MKL2017 does not support asymmetric padding yet
+            // MKL2017 does not support asymmetric padding yet
             if (geometry->IsAsymmetricPadding()) return false;
+
+            if (geometry->IsDilation()) return false;
 
             //MKL-DNN calls does not support 4th dimention now, we will update the code once MKL release the update.
             return forward ? (geometry->InputShape().GetRank() < m_dimension) : (geometry->OutputShape().GetRank() < m_dimension);
@@ -995,9 +1199,9 @@ protected:
             SmallVector<size_t> outputSize, outputStrides, filterSize, filterStrides, inputSize,  inputStrides;
             SmallVector<int>    inputOffset;
 
-            GetSizesAndStrides(geometry->OutputShape(), batchSize, outputSize, outputStrides, mapCount);
-            GetSizesAndStridesWithGroups(geometry->KernelShape(), mapCount, filterSize, filterStrides, geometry->Groups());
-            GetSizesAndStrides(geometry->InputShape(), batchSize, inputSize, inputStrides);
+            GetSizesAndStrides(m_dimension, geometry->OutputShape(), batchSize, outputSize, outputStrides, mapCount);
+            GetSizesAndStridesWithGroups(m_dimension, geometry->KernelShape(), mapCount, filterSize, filterStrides, geometry->Groups());
+            GetSizesAndStrides(m_dimension, geometry->InputShape(), batchSize, inputSize, inputStrides);
             GetInputOffsets(geometry, inputOffset);
 
             const auto& convolutionStride = geometry->Stride().GetDims();
@@ -1085,7 +1289,7 @@ protected:
     MKLConvolutionContext m_mklContext;
 
     // convolution implementation with MKL 2017 DNN functions
-    bool ForwardCoreMKL(const Mat& in, const Mat& kernel, Mat& out)
+    bool ForwardCoreMKL(const Mat& in, const Mat& kernel, Mat& out, Mat* /*pBias*/)
     {
         if (!m_mklContext.Supported(m_geometry.get(), true)) return false;
         
@@ -1149,11 +1353,10 @@ public:
 };
 
 template <class ElemType>
-std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
-                                                                                 ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
-                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix,
-                                                                                 bool forceDeterministicAlgorithms, bool poolIncludePad,
-                                                                                 bool inputHasFreeDimension)
+std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(
+    ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+    PoolKind poolKind, ConvolutionEngineKind enabledEngines, std::wstring logPrefix, bool forceDeterministicAlgorithms,
+    bool poolIncludePad, bool inputHasFreeDimension, bool hasBias, bool relu)
 {
     if (!logPrefix.empty())
         logPrefix += L": ";
@@ -1185,6 +1388,22 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
                                                                forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
     }
+
+#ifdef USE_MKLDNN
+    if (isEnabled(ConvolutionEngineKind::MKLDNN) &&
+        MklDnnConvolutionEngine<ElemType>::IsSupported(deviceId, geometry, poolKind))
+    {
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "%lsusing MKLDNN convolution engine for geometry: %s.\n", logPrefix.c_str(),
+                    engStr.c_str());
+
+        return std::make_unique<MklDnnConvolutionEngine<ElemType>>(
+            geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad, hasBias, relu);
+    }
+#else
+    UNUSED(relu);
+    UNUSED(hasBias);
+#endif
 
     if (geometry->Groups() == 1)
     {
@@ -1229,13 +1448,17 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
 }
 
 // only GPU supports fp16 convolution
+// TODO: Add mkl dnn support for CPU
 template <>
 std::unique_ptr<ConvolutionEngine<half>> ConvolutionEngine<half>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
     ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
     ConvolutionEngineKind enabledEngines, std::wstring logPrefix,
     bool forceDeterministicAlgorithms, bool poolIncludePad,
-    bool inputHasFreeDimension)
+    bool inputHasFreeDimension, bool hasBias, bool relu)
 {
+    // TODO: Cudnn could support bias
+    UNUSED(hasBias);
+    UNUSED(relu);
     if (!logPrefix.empty())
         logPrefix += L": ";
 

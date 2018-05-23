@@ -172,13 +172,11 @@ endif
 
 ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/include
-  # disable MKL-DNN until we pick up the fix for AMD cache size https://github.com/intel/mkl-dnn/commit/ccfbf83ab489b42f7452b6701498b07c28cdb502
-  #LIBS_LIST += m iomp5 pthread mklml_intel mkldnn
-  LIBS_LIST += m iomp5 pthread mklml_intel
+  LIBS_LIST += m iomp5 pthread mklml_intel mkldnn
   MKL_LIB_PATH := $(MKL_PATH)/lib
-  LIBPATH += $(MKL_LIB_PATH)
-  #COMMON_FLAGS += -DUSE_MKL -DUSE_MKLDNN
-  COMMON_FLAGS += -DUSE_MKL
+  MKLDNN_LIB_PATH := $(MKL_PATH)/lib
+  LIBPATH += $(MKL_LIB_PATH) $(MKLDNN_LIB_PATH)
+  COMMON_FLAGS += -DUSE_MKL -DUSE_MKLDNN
 endif
 
 ifeq ($(CUDA_GDR),1)
@@ -401,6 +399,13 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/NcclComm.cpp \
+
+
+
+MATH_SRC +=\
+	$(SOURCEDIR)/Math/mkldnn/mkldnn_base.cpp \
+	$(SOURCEDIR)/Math/mkldnn/mkldnn_memory.cpp \
+	$(SOURCEDIR)/Math/mkldnn/mkldnn_util.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -1511,8 +1516,12 @@ java: $(JAVA_LIBS)
 	    cp -p $(MPI_PATH)/lib/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done
-	for so in libiomp5.so libmklml_intel.so; do \
+	for so in libiomp5.so libmklml_intel.so libmkldnn.so; do \
 	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
+	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
+	done
+	for so in libmkldnn.so; do \
+        cp -p $(MKLDNN_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done
 	for so in $(JAVA_LOAD_DEPS); do \

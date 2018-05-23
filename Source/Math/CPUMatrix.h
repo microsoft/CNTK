@@ -15,6 +15,9 @@
 #include <limits.h>
 #include "QuantizedOperations.h"
 #include "half.hpp"
+#ifdef USE_MKLDNN
+#include "./mkldnn/mkl_memory.h"
+#endif
 
 //#include "GPUMatrix.h"
 //#include "CPUSparseMatrix.h"
@@ -79,11 +82,39 @@ public:
         return m_numRows * m_numCols * sizeof(ElemType);
     }
 
+    ElemType* Buffer() const 
+    { 
+        ElemType* data_ptr = Base::Buffer();
+#ifdef USE_MKLDNN
+        if (m_mklMem != nullptr)
+            m_mklMem->check_and_prv_to_cpu(data_ptr);
+#endif
+        return data_ptr;
+    }
+
     // Returns pointer into underlying data buffer corresponding to slice-view. This makes it different from method Buffer()
     ElemType* Data() const
     {
-        return Buffer() + m_sliceViewOffset;
+        ElemType* data_ptr = Base::Buffer() + m_sliceViewOffset;
+#ifdef USE_MKLDNN
+        if (m_mklMem != nullptr)
+            m_mklMem->check_and_prv_to_cpu(data_ptr);
+#endif
+        return data_ptr;
     }
+
+#ifdef USE_MKLDNN
+    std::shared_ptr<MKLMemHolder> MklMem() const
+    {
+        return m_mklMem;
+    }
+
+    void MklMemClear()
+    {
+        if (m_mklMem)
+            m_mklMem->clear();
+    }
+#endif
 
     CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
     CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
@@ -455,6 +486,7 @@ public:
     static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c);
 
     static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
+    static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, ElemType beta, CPUMatrix<ElemType>& c);
     static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
     static void AssignScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
     static void AddScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);    // alpha must be 1X1
@@ -527,13 +559,13 @@ public:
         size_t numRows, numCols;
         int format;
         stream >> matrixName >> format >> numRows >> numCols;
-        ElemType* d_array = new ElemType[numRows * numCols];
+        ElemType* d_array = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numRows * numCols);
         for (size_t i = 0; i < numRows * numCols; ++i)
             stream >> d_array[i];
         stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         us.SetValue(numRows, numCols, d_array, matrixFlagNormal);
 
-        delete[] d_array;
+        BaseMatrixStorage<ElemType>::FreeCPUArray(d_array);
         return stream;
     }
     friend File& operator<<(File& stream, const CPUMatrix<ElemType>& us)
@@ -590,6 +622,11 @@ private:
 
 private:
     static int m_optimizationFlags;
+
+private:
+#ifdef USE_MKLDNN
+    mutable std::shared_ptr<MKLMemHolder> m_mklMem;
+#endif
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;
@@ -619,5 +656,38 @@ void CPUMatrixTensorArgOpImpl(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>&
     const array<size_t, 2>& offsets,
     const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
     const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+
+template <class ElemType>
+class ColMajorBuffer
+{
+private:
+    ElemType* m_buf;
+    size_t m_numRows;
+    size_t m_numCols;
+
+public:
+    ColMajorBuffer(ElemType* buf, size_t m, size_t n)
+        : m_buf(buf), m_numRows(m), m_numCols(n) {}
+    size_t LocateColumn(const size_t col) const
+    {
+        // For performance reason avoid extra validation in release.
+        assert(col == 0 || col < m_numCols);
+        return col * m_numRows; // matrix in column-wise storage
+    }
+    size_t LocateElement(const size_t row, const size_t col) const
+    {
+        // For performance reason avoid extra validation in release.
+        assert(row < m_numRows);
+        return LocateColumn(col) + row; // matrix in column-wise storage
+    }
+    inline ElemType& operator()(const size_t row, const size_t col)
+    {
+        return m_buf[LocateElement(row, col)];
+    }
+    inline const ElemType& operator()(const size_t row, const size_t col) const
+    {
+        return m_buf[LocateElement(row, col)];
+    }
+};
 
 }}}

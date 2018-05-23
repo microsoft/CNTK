@@ -654,7 +654,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
+void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& slice_, size_t startColumn, size_t numCols) const
 {
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
@@ -663,9 +663,10 @@ void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& sl
         NOT_IMPLEMENTED;
 
     // We can either error out or RequireSize. Because RequireSize will error out if it's not allowed, I think this makes more sense.
-    slice.RequireSize(m_numRows, numCols);
+    slice_.RequireSize(m_numRows, numCols);
 
-    memset(slice.Data(), 0, sizeof(ElemType) * slice.GetNumElements());
+    memset(slice_.Data(), 0, sizeof(ElemType) * slice_.GetNumElements());
+    ColMajorBuffer<ElemType> slice(slice_.Data(), slice_.GetNumRows(), slice_.GetNumCols()); // Addtional copy needed to curcumvent issue between openmp and mkldnn memory.
 
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
@@ -804,9 +805,9 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
         {
             // The initialization of the following buffer is done by new []().
-            auto* pArray      = new ElemType[numNZElemToReserve]();
-            auto* unCompIndex = new CPUSPARSE_INDEX_TYPE[numNZElemToReserve]();
-            auto* compIndex   = new CPUSPARSE_INDEX_TYPE[newCompIndexSize]();
+            auto* pArray      = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numNZElemToReserve);
+            auto* unCompIndex = BaseMatrixStorage<CPUSPARSE_INDEX_TYPE>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(numNZElemToReserve);
+            auto* compIndex   = BaseMatrixStorage<CPUSPARSE_INDEX_TYPE>::template NewCPUArray<CPUSPARSE_INDEX_TYPE>(newCompIndexSize);
 
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Allocate: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
@@ -818,11 +819,17 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
                 memcpy(unCompIndex, GetUnCompIndex(), MajorIndexSize());
                 memcpy(compIndex, GetCompIndex(), SecondaryIndexSize());
             }
+            else
+            {
+                memset(unCompIndex, 0, numNZElemToReserve * sizeof(CPUSPARSE_INDEX_TYPE));
+                memset(compIndex, 0, newCompIndexSize * sizeof(CPUSPARSE_INDEX_TYPE));
+                memset(pArray, 0, numNZElemToReserve * sizeof(ElemType));
+            }
 
             // TODO: This is super ugly. The internals of the storage object should be a shared_ptr.
-            delete[] Buffer();
-            delete[] GetUnCompIndex();
-            delete[] GetCompIndex();
+            BaseMatrixStorage<ElemType>::FreeCPUArray(Buffer());
+            BaseMatrixStorage<ElemType>::FreeCPUArray(GetUnCompIndex());
+            BaseMatrixStorage<ElemType>::FreeCPUArray(GetCompIndex());
 
             SetBuffer(pArray, numNZElemToReserve, false);
             SetUnCompIndex(unCompIndex);
@@ -830,8 +837,8 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         }
         else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
         {
-            ElemType* blockVal = new ElemType[numNZElemToReserve];
-            size_t* blockIds = new size_t[newCompIndexSize];
+            ElemType* blockVal = BaseMatrixStorage<ElemType>::template NewCPUArray<ElemType>(numNZElemToReserve);
+            size_t* blockIds = BaseMatrixStorage<size_t>::template NewCPUArray<size_t>(newCompIndexSize);
 
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
@@ -843,8 +850,8 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
                 memcpy(blockIds, GetBlockIds(), sizeof(size_t) * GetCompIndexSize());
             }
 
-            delete[] Buffer();
-            delete[] GetBlockIds();
+            BaseMatrixStorage<ElemType>::FreeCPUArray(Buffer());
+            BaseMatrixStorage<ElemType>::FreeCPUArray(GetBlockIds());
 
             SetBuffer(blockVal, numNZElemToReserve, false);
             SetBlockIds(blockIds);

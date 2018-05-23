@@ -861,7 +861,7 @@ DEVICEID_TYPE GPUMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/)
 template <class ElemType>
 ElemType* GPUMatrix<ElemType>::CopyToArray() const
 {
-    return NULL;
+    return nullptr;
 }
 
 template <class ElemType>
