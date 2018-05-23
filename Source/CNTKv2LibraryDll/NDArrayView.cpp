@@ -32,19 +32,19 @@ namespace CNTK
     template <>
     inline char quiet_NaN<char>()
     {
-        return char(std::numeric_limits<int>::quiet_NaN());
+        return char(std::numeric_limits<int8_t>::quiet_NaN());
     }
 
     template <>
     inline int8_t quiet_NaN<int8_t>()
     {
-        return char(std::numeric_limits<int>::quiet_NaN());
+        return char(std::numeric_limits<int8_t>::quiet_NaN());
     }
 
     template <>
     inline int16_t quiet_NaN<int16_t>()
     {
-        return char(std::numeric_limits<int>::quiet_NaN());
+        return char(std::numeric_limits<int16_t>::quiet_NaN());
     }
 
     template <typename V1ElemType>
