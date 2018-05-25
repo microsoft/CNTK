@@ -270,8 +270,9 @@ namespace CNTK
             {
                 InvalidArgument("Output shape must be specified for CustomProxyOp.");
             }
-            
-            outputs.push_back(OutputVariable(outputShape, outputDataType, m_inputs[0].DynamicAxes(), false, Name().empty() ? L"" : Name()));
+
+            std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
+            outputs.push_back(OutputVariable(outputShape, outputDataType, outputDynamicAxes, false, Name().empty() ? L"" : Name()));
         }
         else
         {
