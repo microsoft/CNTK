@@ -291,6 +291,7 @@ protected:
 
     // Data parallel SGD training parameters
     intargvector m_numGradientBits;
+    intargvector m_topK;
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
 
@@ -513,7 +514,7 @@ protected:
                          ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr,
                          const int startEpoch = 0);
 
-    void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
+    void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel, int topK);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
     // UpdateWeights() - actual weight update, implementing various update rules

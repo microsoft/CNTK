@@ -29,9 +29,16 @@ public:
     void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) override;
     void WaitUnquantizeAsyncDone() override;
 
+    void TopKAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, struct stream &sendbuf, Matrix<ElemType>& outResidual, int topK) override;
+    void WaitTopKAsyncDone() override;
+
+    void UnTopKAsync(struct stream &recvbuf, Matrix<ElemType>& outMatrix) override;
+    void WaitUnTopKAsyncDone() override;
+
 private:
     // Helper function to get a temporary intermediate matrix on the GPU to store quantization results
     QuantizedMatrix<ElemType>& GetTempGPUQuantizedMatrix(size_t numRows, size_t numCols, size_t nBits, bool& newlyAllocated);
+    Matrix<char>& GetTempBuffer(size_t nofItems, size_t dim, bool& newlyAllocated);
 
 #ifndef CPUONLY
     // Record a event to flag the completion of quantization/unquantization kernel on the compute stream
@@ -79,6 +86,7 @@ private:
 
     // A temporary intermediate QuantizedMatrix buffer on the GPU
     QuantizedMatrix<ElemType>* m_tempGPUQuantizedMatrix;
+    Matrix<char>* m_tempBuffer;
 };
 
 // This type records and synchronizes events on the main

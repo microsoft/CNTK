@@ -8,7 +8,8 @@
 
 // Constants used in SGD distributed gradient aggregation.
 // The default threshold size to pack a gradient into a continuous buffer during aggregation for less MPI ops.
-const std::size_t DEFAULT_PACK_THRESHOLD_SIZE_IN_KB = 32 * 1024;
+const std::size_t DEFAULT_PACK_THRESHOLD_SIZE_IN_KB = 32;
 const std::size_t DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES = DEFAULT_PACK_THRESHOLD_SIZE_IN_KB * 1024;
+const std::size_t DEFAULT_BUCKET_SIZE = 512; // If you change this -> change the preprocessor instruction in MatrixQuantizer_kernel.cu as well!
 
 #endif

@@ -2,6 +2,7 @@
 
 #include "ColumnQuantizer.h"
 #include "QuantizedMatrix.h"
+#include "c_common.h"
 
 #ifdef _WIN32
 #ifdef MATH_EXPORTS
@@ -30,8 +31,14 @@ public:
     virtual void QuantizeAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, QuantizedMatrix<ElemType>& outQMatrix, Matrix<ElemType>& outResidual, bool zeroThresholdFor1Bit) = 0;
     virtual void WaitQuantizeAsyncDone() = 0;
 
+    virtual void TopKAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, struct stream &sendbuf, Matrix<ElemType>& outResidual, int topK) = 0;
+    virtual void WaitTopKAsyncDone() = 0;
+
     virtual void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) = 0;
     virtual void WaitUnquantizeAsyncDone() = 0;
+
+    virtual void UnTopKAsync(struct stream &recvbuf, Matrix<ElemType>& outMatrix) = 0;
+    virtual void WaitUnTopKAsyncDone() = 0;
 
     int GetDeviceId() const
     {

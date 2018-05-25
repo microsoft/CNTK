@@ -33,5 +33,11 @@ public:
 
     void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) override;
     void WaitUnquantizeAsyncDone() override;
+
+    void TopKAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, struct stream &sendbuf, Matrix<ElemType>& outResidual, int topK) override;
+    void WaitTopKAsyncDone() override;
+
+    void UnTopKAsync(struct stream &recvbuf, Matrix<ElemType>& outMatrix) override;
+    void WaitUnTopKAsyncDone() override;
 };
 } } }

@@ -105,6 +105,29 @@ void MatrixQuantizerCPU<ElemType>::WaitUnquantizeAsyncDone()
     // TODO: Currently this is a no-op since the actual quantization is synchronous
 }
 
+template <class ElemType>
+void MatrixQuantizerCPU<ElemType>::TopKAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, struct stream &sendbuf, Matrix<ElemType>& outResidual, int topK)
+{
+    RuntimeError("Not implemented.");
+}
+
+template <class ElemType>
+void MatrixQuantizerCPU<ElemType>::WaitTopKAsyncDone()
+{
+    RuntimeError("Not implemented.");
+}
+
+template <class ElemType>
+void MatrixQuantizerCPU<ElemType>::UnTopKAsync(struct stream &recvbuf, Matrix<ElemType>& outMatrix)
+{
+    RuntimeError("Not implemented.");
+}
+
+template <class ElemType>
+void MatrixQuantizerCPU<ElemType>::WaitUnTopKAsyncDone()
+{
+    RuntimeError("Not implemented.");
+}
 //The explicit instantiation part will make the linker happy
 template class MatrixQuantizerCPU<float>;
 template class MatrixQuantizerCPU<double>;

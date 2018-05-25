@@ -16,18 +16,43 @@
 #include "GPUDataTransferer.h"
 #include "TimerUtility.h"
 #include "MatrixQuantizerImpl.h"
+#include "c_allreduce_ring.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
+        class MyStreamAlloc
+        {
+            public:
+                struct stream* m_buffer;
+                Matrix<char>* m_data;
+                MemAllocator* m_allocator;
+
+                MyStreamAlloc(MemAllocator* allocator, size_t size) : m_allocator(allocator) {
+                    m_data = new Matrix<char>(1, size, (char*)m_allocator->Malloc(size), CPUDEVICE, matrixFlagDontOwnBuffer);
+                    m_buffer = (struct stream*)m_data->Data();
+                }
+
+                ~MyStreamAlloc() {
+                    if (nullptr != m_data)
+                    {
+                        if(m_allocator != nullptr) {
+                            m_allocator->Free(m_data->Data());
+                        }
+                        delete m_data;
+                        m_data = nullptr;
+                    }
+                }
+        };
+    template <class ElemType>
 class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
 {
     UsingIDistGradAggregatorMembers;
 
 public:
-    SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
-        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace),
-        m_iterationCount(0), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
+        SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES, int topK = -1)
+            : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace),
+            m_iterationCount(0), m_packThresholdSizeInBytes(packThresholdSizeInBytes), m_topK(topK)
     {}
 
     ~SimpleDistGradAggregator()
@@ -39,6 +64,17 @@ public:
             DistGradHeader::Destroy(m_bufferedGradHeader);
     }
 
+        static size_t GetNumElementsPerBuckets(int currNumElementsPerBuckets, size_t numRows)
+        {
+            if (currNumElementsPerBuckets != -1) return currNumElementsPerBuckets;
+            return numRows;
+        }
+
+        static size_t GetTopK(int currNumElementsPerBuckets, int m_topK)
+        {
+            if (m_topK == -1) return currNumElementsPerBuckets;
+            return m_topK;
+        }
     // Aggregate the gradient matrices across all nodes
     bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool resetState) override
     {
@@ -222,13 +258,48 @@ private:
 
             if (ShouldCopyDataToCPU(deviceId))
             {
-                for (size_t i : m_gradientIndexToAggregate)
-                {
-                    m_gpuDataTransferers.push_back(std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation));
-                    m_intermediateCPUBuffers.push_back(AllocateIntermediateBuffer(deviceId,
-                        (i == -1) ? packedGradientsSizeInElements : gradients[i]->GetNumElements()));
+                    size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                    if ((sizeof(unsigned) + sizeof(ElemType)) * topK >= DEFAULT_BUCKET_SIZE * sizeof(ElemType))
+                    {
+                        // NO TOPK
+                        for (size_t i : m_gradientIndexToAggregate)
+                        {
+                            m_gpuDataTransferers.push_back(std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation));
+                            m_intermediateCPUBuffers.push_back(AllocateIntermediateBuffer(deviceId,
+                                        (i == -1) ? packedGradientsSizeInElements : gradients[i]->GetNumElements()));
+                        }
+                    }
+                    else
+                    {
+                        // WITH TOPK
+                        int cnt = 0;
+                        Matrix<ElemType>* gpuCopyBuffer = m_aggregationBuffer.get();
+                        for (size_t i : m_gradientIndexToAggregate)
+                        {
+                            if (i != -1)
+                            {
+                                gpuCopyBuffer = gradients[i];
+                            }
+
+                            size_t nRow = gpuCopyBuffer->GetNumRows();
+                            size_t nCol = gpuCopyBuffer->GetNumCols();
+                            size_t dim = nRow * nCol;
+
+                            size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                            size_t numBuckets = dim / DEFAULT_BUCKET_SIZE;
+
+                            m_preAggGradQuantizers.push_back(std::unique_ptr<MatrixQuantizerImpl<ElemType>>(MatrixQuantizerImpl<ElemType>::Create(deviceId, m_useAsyncAggregation)));
+                            m_residuals.push_back(std::make_shared<Matrix<ElemType>>(nRow, nCol, deviceId, DENSE));
+
+                            m_sendbufs.push_back(std::unique_ptr<MyStreamAlloc<ElemType>>(new MyStreamAlloc<ElemType>(m_allocator.get(), sizeof(unsigned) + topK * numBuckets * (sizeof(unsigned) + sizeof(ElemType)))));
+                            m_sendbufs[cnt]->m_buffer->nofitems = topK * numBuckets;
+
+                            m_recvbufs.push_back(std::unique_ptr<MyStreamAlloc<ElemType>>(new MyStreamAlloc<ElemType>(m_allocator.get(), sizeof(unsigned) + (dim * sizeof(ElemType)))));
+
+                            cnt++;
+                        }
+                    }
                 }
-            }
 
             if (m_useAsyncAggregation)
             {
@@ -248,11 +319,14 @@ private:
             if (m_useAsyncAggregation && m_pendingAsyncAggregation.valid())
                 LogicError("Unexpected pending async gradient aggregation found when resetting aggregator state!");
 
-            // Zero out the buffered gradients if resetting state
-            if (m_useAsyncAggregation)
-            {
-                for (size_t i = 0; i < gradients.size(); i++)
-                    m_bufferedGradients[gradients[i]]->SetValue(0);
+                for (size_t i = 0; i < m_residuals.size(); ++i)
+                    m_residuals[i]->SetValue(0.0);
+
+                // Zero out the buffered gradients if resetting state
+                if (m_useAsyncAggregation)
+                {
+                    for (size_t i = 0; i < gradients.size(); i++)
+                        m_bufferedGradients[gradients[i]]->SetValue(0);
 
                 m_bufferedGradHeader->Clear();
             }
@@ -319,15 +393,19 @@ private:
         // New aggregation pipeline for non-GDR, perform sync allreduce on the gradient data
         // For CPU, still use async allreduce
         std::vector<MPI_Request> allReduceRequests;
-        size_t gpuToCpuIndex = 0;
-        size_t cpuToGpuIndex = 0;
-        size_t allReduceIndex = 0;
-        size_t numGradientIndex = m_gradientIndexToAggregate.size();
-        if (numGradientIndex > 0)
-        {
-            // non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU
-            if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl->IsSupported())
+            size_t allReduceIndex = 0;
+            size_t gpuToCpuIndex = 0;
+            size_t cpuToGpuIndex = 0;
+            size_t numGradientIndex = m_gradientIndexToAggregate.size();
+            if (numGradientIndex > 0)
             {
+                // non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU
+                if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl->IsSupported())
+                {
+                    size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                    if ((sizeof(unsigned) + sizeof(ElemType)) * topK >= DEFAULT_BUCKET_SIZE * sizeof(ElemType))
+                    {
+                        // NO TOPK
                 Matrix<ElemType>* gpuCopyBuffer = m_aggregationBuffer.get();
 
                 ElemType* reductionBuffer;
@@ -385,13 +463,73 @@ private:
                     gpuToCpuIndex ++;
                     currentGradientIndex = nextGradientIndex;
                 }
-            }
-            // non-NCCL, using CPU, using GDR
-            else if (!m_nccl->IsSupported())
-            {
-                ElemType* reductionBuffer;
-                for (size_t i : m_gradientIndexToAggregate)
+                    }
+                    else
+                    {
+                        // WITH TOPK
+
+                        Matrix<ElemType>* gpuCopyBuffer = m_aggregationBuffer.get();
+                        size_t currentGradientIndex = m_gradientIndexToAggregate[0];
+                        size_t nextGradientIndex = 0; // o is for initialization only
+                        if (currentGradientIndex != -1)
+                        {
+                            gpuCopyBuffer = gradients[currentGradientIndex];
+                        }
+
+                        // Start async copy of next gradient
+                        // Async D-to-H copy (next gradient)
+                        size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                        m_preAggGradQuantizers[gpuToCpuIndex]->TopKAsync(*(gradients[nextGradientIndex]), *m_residuals[gpuToCpuIndex], *(m_sendbufs[gpuToCpuIndex]->m_buffer), *m_residuals[gpuToCpuIndex], topK);
+
+                        gpuToCpuIndex++;
+
+                        for(size_t i = 1; i <= numGradientIndex; ++i) {
+                            // Get next gradient
+                            if (i < numGradientIndex)
+                            {
+                                nextGradientIndex = m_gradientIndexToAggregate[i];
+                                if (nextGradientIndex != -1)
+                                {
+                                    gpuCopyBuffer = gradients[nextGradientIndex];
+                                }
+                                else
+                                {
+                                    RuntimeError("Unallowed!");
+                                }
+                                // Async D-to-H copy (next gradient)
+                                size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                                m_preAggGradQuantizers[gpuToCpuIndex]->TopKAsync(*gpuCopyBuffer, *m_residuals[gpuToCpuIndex], *(m_sendbufs[gpuToCpuIndex]->m_buffer), *m_residuals[gpuToCpuIndex], topK);
+                            }
+
+                            if (currentGradientIndex != -1)
+                            {
+                                gpuCopyBuffer = gradients[currentGradientIndex];
+                            }
+
+                            m_preAggGradQuantizers[allReduceIndex]->WaitTopKAsyncDone();
+
+                            size_t nRow = gpuCopyBuffer->GetNumRows();
+                            size_t nCol = gpuCopyBuffer->GetNumCols();
+                            size_t dim = nRow * nCol;
+
+                            // ReC: TODO Sparse AllReduce
+                            c_allreduce_ring<unsigned, ElemType>(m_sendbufs[allReduceIndex]->m_buffer, m_recvbufs[allReduceIndex]->m_buffer, dim);
+
+                            // Create async H-to-G copy
+                            cpuToGpuIndex = allReduceIndex;
+                            m_preAggGradQuantizers[cpuToGpuIndex]->UnTopKAsync(*(m_recvbufs[cpuToGpuIndex]->m_buffer), *gpuCopyBuffer);
+                            allReduceIndex = gpuToCpuIndex;
+                            gpuToCpuIndex++;
+                            currentGradientIndex = nextGradientIndex;
+                        }
+                    }
+                }
+                // non-NCCL, using CPU, using GDR
+                else if (!m_nccl->IsSupported())
                 {
+                    ElemType* reductionBuffer;
+                    for (size_t i : m_gradientIndexToAggregate)
+                    {
                     allReduceRequests.push_back(MPI_Request());
                     reductionBuffer = (i == -1)? m_aggregationBuffer->Data() : gradients[i]->Data();
                     // CPU
@@ -445,17 +583,31 @@ private:
 
         if (m_nccl->IsSupported())
         {
-            m_nccl->Sync();
-        }
-        // Non-GDR && GPU
-        else if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE))
-        {
-            // Wait for async CPU-to-GPU copy (non-GDR)
-            for (size_t i = 0; i < allReduceIndex; i++)
-                m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
-        }
-        // CPU
-        else if (m_mpi->UseGpuGdr() == 0)
+                m_nccl->Sync();
+            }
+            // Non-GDR && GPU
+            else if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE))
+            {
+                size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                if ((sizeof(unsigned) + sizeof(ElemType)) * topK >= DEFAULT_BUCKET_SIZE * sizeof(ElemType))
+                {
+                    // NO TOPK
+
+                    // Wait for async CPU-to-GPU copy (non-GDR)
+                    for (size_t i = 0; i < allReduceIndex; i++)
+                        m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
+                }
+                else
+                {
+                    // WITH TOPK 
+                    
+                    // Wait for async CPU-to-GPU copy (non-GDR)
+                    for (size_t i = 0; i < allReduceIndex; i++)
+                        m_preAggGradQuantizers[i]->WaitUnTopKAsyncDone();
+                }
+            }
+            // CPU
+            else if (m_mpi->UseGpuGdr() == 0)
         {
             // Wait for the Iallreduce operations to finish
             for (size_t i = 0; i < allReduceIndex; i++)
@@ -487,15 +639,21 @@ private:
 private:
     std::unique_ptr<CUDAPageLockedMemAllocator> m_allocator;
 
-    std::vector<std::shared_ptr<ElemType>> m_intermediateCPUBuffers;
-    std::vector<std::unique_ptr<GPUDataTransferer>> m_gpuDataTransferers;
+        std::vector<std::unique_ptr<MatrixQuantizerImpl<ElemType>>> m_preAggGradQuantizers;
+        std::vector<std::shared_ptr<Matrix<ElemType>>> m_residuals;
+        std::vector<std::unique_ptr<MyStreamAlloc<ElemType>>> m_sendbufs;
+        std::vector<std::unique_ptr<MyStreamAlloc<ElemType>>> m_recvbufs;
 
-    std::vector<DistGradHeader*> m_recvHeaders;
+        std::vector<std::shared_ptr<ElemType>> m_intermediateCPUBuffers;
+        std::vector<std::unique_ptr<GPUDataTransferer>> m_gpuDataTransferers;
 
-    // Perform aysnchronous gradient aggregation using double buffering of the gradient matrices
-    bool m_useAsyncAggregation;
+        std::vector<DistGradHeader*> m_recvHeaders;
 
-    // Future corresponding to the current in-flight async gradient aggregation
+        // Perform aysnchronous gradient aggregation using double buffering of the gradient matrices
+        bool m_useAsyncAggregation;
+        int m_topK;
+
+        // Future corresponding to the current in-flight async gradient aggregation
     std::future<void> m_pendingAsyncAggregation;
 
     // Buffered gradients that we asynchronously aggregate
