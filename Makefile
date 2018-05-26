@@ -158,12 +158,12 @@ ifdef CUDA_PATH
   endif
 
 # Set up NCCL if needed
-  ifdef NCCL_PATH
-    INCLUDEPATH += $(NCCL_PATH)/include
-    LIBPATH += $(NCCL_PATH)/lib
-    LIBS_LIST += nccl
-    COMMON_FLAGS += -DUSE_NCCL
-  endif
+  # ifdef NCCL_PATH
+  #   INCLUDEPATH += $(NCCL_PATH)/include
+  #   LIBPATH += $(NCCL_PATH)/lib
+  #   LIBS_LIST += nccl
+  #   COMMON_FLAGS += -DUSE_NCCL
+  # endif
 else
   DEVICE = cpu
 
