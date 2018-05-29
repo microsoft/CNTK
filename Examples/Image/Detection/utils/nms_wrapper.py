@@ -6,22 +6,17 @@
 
 import numpy as np
 from utils.cython_modules.cpu_nms import cpu_nms
-try:
-    from utils.cython_modules.gpu_nms import gpu_nms
-    gpu_nms_available = True
-except ImportError:
-    gpu_nms_available = False
+import warnings
 
-def nms(dets, thresh, use_gpu_nms=True, device_id=0):
+def nms(dets, thresh, use_gpu_nms=False, device_id=0):
     '''
     Dispatches the call to either CPU or GPU NMS implementations
     '''
     if dets.shape[0] == 0:
         return []
-    if gpu_nms_available and use_gpu_nms:
-        return gpu_nms(dets, thresh, device_id=device_id)
-    else:
-        return cpu_nms(dets, thresh)
+    if use_gpu_nms:
+       warnings.warn('GPU NMS is currently unavailable, falling back to CPU NMS.', Warning)
+    return cpu_nms(dets, thresh)
 
 def apply_nms_to_single_image_results(coords, labels, scores, use_gpu_nms, device_id, nms_threshold=0.5, conf_threshold=0.0):
     '''
