@@ -347,7 +347,7 @@ namespace CNTK
             {
                 auto firstValue = data1[i];
                 auto secondValue = data2[i];
-                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
+                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)std::abs((ElementType)absoluteTolerance), (ElementType)std::abs(((ElementType)relativeTolerance) * firstValue));
                 if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
             }
@@ -369,7 +369,7 @@ namespace CNTK
             {
                 auto firstValue = values1[i];
                 auto secondValue = values2[i];
-                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
+                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)std::abs((ElementType)absoluteTolerance), (ElementType)std::abs(((ElementType)relativeTolerance) * firstValue));
                 if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
             }
@@ -472,6 +472,12 @@ namespace CNTK
 
             if (view1.GetDataType() == DataType::Double)
                 return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
+
+            if (view1.GetDataType() == DataType::Int8)
+                return AreEqual<int8_t>(view1, view2, relativeTolerance, absoluteTolerance);
+
+            if (view1.GetDataType() == DataType::Int16)
+                return AreEqual<int16_t>(view1, view2, relativeTolerance, absoluteTolerance);
 
             LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }

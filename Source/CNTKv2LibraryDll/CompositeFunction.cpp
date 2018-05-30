@@ -964,6 +964,12 @@ namespace CNTK
                     computationNodePtr = New<ConstantNode<ElementType>>(network->GetDeviceId(), internalNodeName, fillValue);
                     break;
                 }
+                case PrimitiveOpType::EyeLikeOp:
+                {
+                    bool outputSparse = functionConfig[PrimitiveFunction::AttributeNameOutputSparse].Value<bool>();
+                    ASSIGN_NEW_NODE(EyeLikeNode, network->GetDeviceId(), internalNodeName, outputSparse);
+                    break;
+                }
                 case PrimitiveOpType::ROIPooling:
                 {
                     PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
@@ -1363,6 +1369,11 @@ namespace CNTK
                         ASSIGN_NEW_NODE2(CastNode, half, network->GetDeviceId(), internalNodeName);
                         break;
                     }
+                    break;
+                }
+                case PrimitiveOpType::CustomProxyOp:
+                {
+                    ASSIGN_NEW_NODE(CustomProxyOpNode, network->GetDeviceId(), internalNodeName);
                     break;
                 }
                 default:

@@ -249,6 +249,31 @@ namespace CNTK
             outputs.assign(m_inputs.begin(), m_inputs.end());
         else if (m_op == PrimitiveOpType::NoOp)
             outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), Name()));
+        else if (m_op == PrimitiveOpType::CustomProxyOp)
+        {
+            // Set the output data type and shape using attributes.
+            DataType outputDataType = DataType::Unknown;
+            if (m_attributes.Contains(PrimitiveFunction::AttributeNameNewDataType))
+            {
+                outputDataType = static_cast<DataType>(m_attributes[PrimitiveFunction::AttributeNameNewDataType].Value<int>());
+            }
+            else
+            {
+                InvalidArgument("Output type must be specified for CustomProxyOp.");
+            }
+            NDShape outputShape = NDShape::Unknown();
+            if (m_attributes.Contains(PrimitiveFunction::AttributeNameOutputShape))
+            {
+                outputShape = m_attributes[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+            }
+            else
+            {
+                InvalidArgument("Output shape must be specified for CustomProxyOp.");
+            }
+
+            std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
+            outputs.push_back(OutputVariable(outputShape, outputDataType, outputDynamicAxes, false, Name().empty() ? L"" : Name()));
+        }
         else
         {
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
@@ -360,6 +385,20 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
+                        case PrimitiveOpType::EyeLikeOp:
+                        {
+                            assert(m_inputs.size() == 1);
+                            const auto& dynAxes = m_inputs[0].DynamicAxes();
+                            if (dynAxes.size() + m_inputs[0].Shape().Rank() != 2)
+                                InvalidArgument("EyeLike: Operand '%S' must have exactly 2 axes including dynamic and static axes.",
+                                    m_inputs[0].AsString().c_str());
+                            if (any_of(dynAxes.begin(), dynAxes.end(), [](const Axis& axis) {return axis.IsSequenceAxis(); }))
+                                InvalidArgument("EyeLike: Operand '%S' can not have sequence axis.",
+                                    m_inputs[0].AsString().c_str());
+
+                            outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
+                            break;
+                        }
                         case PrimitiveOpType::Where:
                             assert(m_inputs.size() == 1);
                             outputShape = NDShape{}; // scalar

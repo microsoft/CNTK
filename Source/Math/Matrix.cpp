@@ -1486,27 +1486,21 @@ void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
     if (IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
                             m_CPUMatrix->SetDiagonalValue(v),
                             m_GPUMatrix->SetDiagonalValue(v),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+                            m_CPUSparseMatrix->SetDiagonalValue(v),
+                            m_GPUSparseMatrix->SetDiagonalValue(v));
 }
 
 template <class ElemType>
 void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
 {
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: Input vector must be a vector.");
 
-    if (vector.GetNumRows() * vector.GetNumCols() != GetNumRows())
+    if (vector.GetNumRows() * vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: Input vector must match matrix dimension.");
 
     if (IsEmpty())
@@ -1524,7 +1518,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 SetDiagonalValue(vector.m_GPUMatrix->Get00Element()) // BUGBUG: efficiency
                                 );
     }
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
@@ -1535,8 +1529,10 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 m_CPUMatrix->SetDiagonalValue(*vector.m_CPUMatrix),
                                 assert(vector.m_GPUMatrix);
                                 m_GPUMatrix->SetDiagonalValue(*vector.m_GPUMatrix),
-                                NOT_IMPLEMENTED,
-                                NOT_IMPLEMENTED);
+                                assert(vector.m_CPUMatrix);
+                                m_CPUSparseMatrix->SetDiagonalValue(*vector.m_CPUMatrix),
+                                assert(vector.m_GPUSparseMatrix);
+                                m_GPUSparseMatrix->SetDiagonalValue(*vector.m_GPUMatrix));
     }
 }
 
@@ -2000,6 +1996,12 @@ template <class ElemType>
 size_t Matrix<ElemType>::GetNumCols() const
 {
     return m_baseMatrix->GetNumCols();
+}
+
+template <class ElemType>
+size_t Matrix<ElemType>::GetDiagSize() const
+{
+    return m_baseMatrix->GetDiagSize();
 }
 
 template <class ElemType>
@@ -6257,6 +6259,7 @@ void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperato
 template class Matrix<float>;
 template class Matrix<double>;
 template class Matrix<half>;
+//template class Matrix<char>;
 
 // instantiate some templated methods
 template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<float>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);
@@ -6298,6 +6301,14 @@ template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, c
 template void Matrix<char>::Reshape(const size_t, const size_t);
 template char* Matrix<char>::CopyToArray(void) const;
 template bool Matrix<char>::IsView() const;
+template Matrix<char> Matrix<char>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const char low, const char high, unsigned long seed);
+template void Matrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
+template void Matrix<char>::SetUniformRandomValue(RNGHandle& rngHandle, const char low, const char high);
+template Matrix<char> Matrix<char>::RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const char mean, const char sigma, unsigned long seed);
+template void Matrix<char>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const char* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer);
+template void Matrix<char>::AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+template void Matrix<char>::TransferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved, bool emptyTransfer/* = false*/, bool updatePreferredDevice/* = true*/) const;
 
 // Matrix<short> methods
 template Matrix<short>::Matrix(DEVICEID_TYPE);
@@ -6325,7 +6336,15 @@ template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, 
 template void Matrix<short>::Reshape(const size_t, const size_t);
 template short* Matrix<short>::CopyToArray(void) const;
 template bool Matrix<short>::IsView() const;
-
+template Matrix<short> Matrix<short>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const short low, const short high, unsigned long seed);
+template void Matrix<short>::SetUniformRandomValue(const short low, const short high, unsigned long seed);
+template void Matrix<short>::SetUniformRandomValue(RNGHandle& rngHandle, const short low, const short high);
+template Matrix<short> Matrix<short>::RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const short mean, const short sigma, unsigned long seed);
+template void Matrix<short>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const short* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer);
+template void Matrix<short>::AdjustSparseBlockColumn(const GPUSPARSE_INDEX_TYPE* cpuCol2BlockId, size_t numBlocks, bool useBlockId2Col);
+template void Matrix<short>::TransferFromDeviceToDevice(int from_id, int to_id, bool isBeingMoved, bool emptyTransfer/* = false*/, bool updatePreferredDevice/* = true*/) const;
+template void Matrix<short>::CollapseDataLocation() const;
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 
 }}}

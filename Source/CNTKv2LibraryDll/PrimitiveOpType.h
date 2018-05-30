@@ -101,10 +101,13 @@ namespace CNTK
         ConstantOp = 89,
         LatticeSequenceWithSoftmax = 90,
         Cast = 91,
+        EyeLikeOp = 92,
+        CustomProxyOp = 93,
 #ifdef USE_MKLDNN
-        TimesTranspose = 92,
-        ConvolutionBias = 93,
+        TimesTranspose = 94,
+        ConvolutionBias = 95,
 #endif
+
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

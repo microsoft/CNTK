@@ -135,7 +135,8 @@ namespace CNTK
           m_maxNumSweepsToRead(configuration.maxSweeps),
           m_truncationLength(0),
           m_numWorkers(1),
-          m_workerRank(0)
+          m_workerRank(0),
+          m_maxErrors(configuration.maxErrors)
     {
         m_truncationLength = configuration.truncationLength;
 
@@ -252,6 +253,7 @@ namespace CNTK
                 newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 newConfig.m_truncationSize = m_truncationLength;
                 newConfig.m_allowMinibatchesToCrossSweepBoundaries = true;
+                newConfig.m_maxErrors = m_maxErrors;
 
                 if (m_state.IsInitialized())
                 {
@@ -573,6 +575,11 @@ namespace CNTK
 
             augmentedConfiguration[L"frameMode"] = configuration.isFrameModeEnabled;
             augmentedConfiguration[L"traceLevel"] = static_cast<size_t>(configuration.traceLevel);
+
+            if (configuration.maxErrors != 0)
+            {
+                augmentedConfiguration[L"maxErrors"] = configuration.maxErrors;
+            }
 
             bool defaultMultithreaded = false;
             // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified

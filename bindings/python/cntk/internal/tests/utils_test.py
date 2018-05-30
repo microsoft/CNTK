@@ -23,12 +23,20 @@ def test_sanitize_dtype_numpy():
         assert sanitize_dtype_numpy(dtype) == np.float32, dtype
     for dtype in [float, 'float64', np.float64]:
         assert sanitize_dtype_numpy(dtype) == np.float64, dtype
+    for dtype in ['int8', np.int8]:
+        assert sanitize_dtype_numpy(dtype) == np.int8, dtype
+    for dtype in ['int16', np.int16]:
+        assert sanitize_dtype_numpy(dtype) == np.int16, dtype
 
 def test_sanitize_dtype_cntk():
     for dtype in ['float', 'float32', np.float32, int]:
         assert sanitize_dtype_cntk(dtype) == C.cntk_py.DataType_Float, dtype
     for dtype in [float, 'float64', np.float64]:
         assert sanitize_dtype_cntk(dtype) == C.cntk_py.DataType_Double, dtype
+    for dtype in ['int8', np.int8]:
+        assert sanitize_dtype_cntk(dtype) == C.cntk_py.DataType_Int8, dtype
+    for dtype in ['int16', np.int16]:
+        assert sanitize_dtype_cntk(dtype) == C.cntk_py.DataType_Int16, dtype
 
 @pytest.mark.parametrize("data, dtype", [
     ([1], np.float32),

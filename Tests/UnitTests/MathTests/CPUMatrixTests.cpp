@@ -37,6 +37,46 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixConstructorNoFlags, RandomSeedFixture)
     BOOST_CHECK(m1.IsEqualTo(m));
 }
 
+BOOST_FIXTURE_TEST_CASE(CPUMatrixCharConstructorNoFlags, RandomSeedFixture)
+{
+    CPUMatrix<char> m;
+    BOOST_CHECK(m.IsEmpty());
+
+    m.Resize(2, 3);
+    BOOST_CHECK(!m.IsEmpty());
+    BOOST_CHECK_EQUAL(m.GetNumRows(), 2);
+    BOOST_CHECK_EQUAL(m.GetNumCols(), 3);
+    BOOST_CHECK_EQUAL(m.GetNumElements(), 6);
+
+    m(0, 0) = 1;
+    m(1, 2) = 2;
+    BOOST_CHECK_EQUAL(m(0, 0), 1);
+    BOOST_CHECK_EQUAL(m(1, 2), 2);
+
+    CPUMatrix<char> m1(m);
+    BOOST_CHECK(m1.IsEqualTo(m));
+}
+
+BOOST_FIXTURE_TEST_CASE(CPUMatrixShortConstructorNoFlags, RandomSeedFixture)
+{
+    CPUMatrix<short> m;
+    BOOST_CHECK(m.IsEmpty());
+
+    m.Resize(2, 3);
+    BOOST_CHECK(!m.IsEmpty());
+    BOOST_CHECK_EQUAL(m.GetNumRows(), 2);
+    BOOST_CHECK_EQUAL(m.GetNumCols(), 3);
+    BOOST_CHECK_EQUAL(m.GetNumElements(), 6);
+
+    m(0, 0) = 1;
+    m(1, 2) = 2;
+    BOOST_CHECK_EQUAL(m(0, 0), 1);
+    BOOST_CHECK_EQUAL(m(1, 2), 2);
+
+    CPUMatrix<short> m1(m);
+    BOOST_CHECK(m1.IsEqualTo(m));
+}
+
 BOOST_FIXTURE_TEST_CASE(CPUMatrixConstructorFlagNormal, RandomSeedFixture)
 {
     std::array<float, 6> array = {1, 2, 3, 4, 5, 6};

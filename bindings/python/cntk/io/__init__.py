@@ -110,7 +110,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
-    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=None, frame_mode=False, truncation_length=0, randomize=True)
+    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=None, frame_mode=False, truncation_length=0, randomize=True, max_errors=0)
 
     Args:
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
@@ -150,6 +150,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           if frame mode is enabled and the truncation length is non-zero).
         randomize (`bool`, defaults to `True`): Enables or disables randomization; use randomization_window_in_chunks or
           randomization_window_in_samples to specify the randomization range
+        max_errors (`int`, defaults to `0`): maximum number of errors in the dataset to ignore
     '''
     _runtime_deserializer_table = {}
     _deserializer_factory = None
@@ -191,7 +192,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
         multithreaded_deserializer=None,
         frame_mode=False,
         truncation_length=0,
-        randomize=True):
+        randomize=True,
+        max_errors=0):
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [ deserializers ]
@@ -218,6 +220,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             trace_level = trace_level.value
 
         config.trace_level = trace_level
+        config.max_errors = max_errors
 
         if not randomize:
             config.randomization_window_in_chunks = 0
@@ -387,13 +390,15 @@ class StreamInformation(cntk_py.StreamInformation):
         storage_format (str): 'dense' or 'sparse'
         dtype (NumPy type): data type
         shape (tuple): shape of the elements
+        defines_mb_size (bool, default to False): whether this stream defines the minibatch size when there are multiple
+          streams.
     '''
 
     _storage = {'dense': cntk_py.StorageFormat_Dense,
                 'sparse': cntk_py.StorageFormat_SparseCSC}
 
     def __init__(self, name, stream_id, storage_format, dtype,
-                 shape):
+                 shape, defines_mb_size=False):
         super(StreamInformation, self).__init__()
         self.m_name = name
         self.m_id = stream_id
@@ -403,6 +408,7 @@ class StreamInformation(cntk_py.StreamInformation):
         self.m_sample_layout = cntk_py.NDShape(list(reversed(shape)))
         self.sample_shape = shape
         self.storage_format = storage_format
+        self.m_defines_mb_size = defines_mb_size
 
     @property
     def name(self):

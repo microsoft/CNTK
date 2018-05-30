@@ -1,9 +1,12 @@
 dataDir: .
 
 tags:
-    - bvt-e ((build_sku == 'uwp') and (flavor == 'release') and (os == 'windows'))
-    - nightly-e ((build_sku == 'uwp') and (flavor == 'release') and (os == 'windows'))
-    - weekly-e ((build_sku == 'uwp') and (flavor == 'release') and (os == 'windows'))
+    # Temporarily disabling this test as it is producing inconsistent results. I (broda) have time scheduled
+    # with the original author to debug the test and improve its reliability.
+    #
+    # - bvt-e ((build_sku == 'uwp') and (flavor == 'release') and (os == 'windows'))
+    # - nightly-e ((build_sku == 'uwp') and (flavor == 'release') and (os == 'windows'))
+    # - weekly-e ((build_sku == 'uwp') and (flavor == 'release') and (os == 'windows'))
 
 
 testCases:

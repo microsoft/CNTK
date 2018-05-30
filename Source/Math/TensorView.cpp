@@ -409,4 +409,18 @@ template class TensorView<float>;
 template class TensorView<double>;
 template class TensorView<half>;
 
+template Microsoft::MSR::CNTK::TensorView<char>::TensorView(const MatrixBasePtr& sob, const TensorShape& shape);
+template Microsoft::MSR::CNTK::TensorView<char>::TensorView(const TensorView<char>& other, const TensorShape& shape);
+template Microsoft::MSR::CNTK::TensorView<char>::TensorView(const TensorView<char>& other);
+template Microsoft::MSR::CNTK::TensorView<char> Microsoft::MSR::CNTK::TensorView<char>::Reshaped(const TensorShape& shape) const;
+template shared_ptr<Matrix<char>> Microsoft::MSR::CNTK::TensorView<char>::AsMatrix() const;
+template const TensorShape& Microsoft::MSR::CNTK::TensorView<char>::GetShape() const;
+
+template Microsoft::MSR::CNTK::TensorView<short>::TensorView(const MatrixBasePtr& sob, const TensorShape& shape);
+template Microsoft::MSR::CNTK::TensorView<short>::TensorView(const TensorView<short>& other, const TensorShape& shape);
+template Microsoft::MSR::CNTK::TensorView<short>::TensorView(const TensorView<short>& other);
+template Microsoft::MSR::CNTK::TensorView<short> Microsoft::MSR::CNTK::TensorView<short>::Reshaped(const TensorShape& shape) const;
+template shared_ptr<Matrix<short>> Microsoft::MSR::CNTK::TensorView<short>::AsMatrix() const;
+template const TensorShape& Microsoft::MSR::CNTK::TensorView<short>::GetShape() const;
+
 }}}

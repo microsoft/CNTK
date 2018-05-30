@@ -111,6 +111,16 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
+{
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
+{
+}
+
+template <class ElemType>
 GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 {
     return NULL;

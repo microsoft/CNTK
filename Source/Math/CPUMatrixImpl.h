@@ -961,11 +961,8 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
 template <class ElemType>
 void CPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     auto& us = *this;
-    long m = (long) GetNumRows();
+    long m = static_cast<long>(GetDiagSize());
 #pragma omp parallel for
     // four-way unrolling
     for (long i = 0; i < (m & ~3); i += 4)
@@ -988,21 +985,18 @@ void CPUMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vector)
     if (IsEmpty() || vector.IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: input vector must be a vector.");
 
     if (vector.GetNumElements() == 1) // reduce to simple form
         SetDiagonalValue(vector(0, 0));
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
         auto& us = *this;
 
-        long m = (long) GetNumRows();
+        long m = (long) GetDiagSize();
         if (vector.GetNumRows() == 1) // row vector
         {
 #pragma omp parallel for
@@ -7606,6 +7600,7 @@ template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 template void CPUMatrix<char>::SetValue(const char);
 template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char* pArray, size_t matrixFlags);
 template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
+template bool CPUMatrix<char>::IsEqualTo(const CPUMatrix<char>& a, const char threshold) const;
 //template void CPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void CPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
@@ -7614,6 +7609,9 @@ template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols
 template char* CPUMatrix<char>::CopyToArray(void) const;
 template void CPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
 template void CPUMatrix<char>::Reshape(const size_t, const size_t);
+template void CPUMatrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
+template void CPUMatrix<char>::SetUniformRandomValue(RNGHandle& rngHandle, const char low, const char high);
+template void CPUMatrix<char>::SetGaussianRandomValue(const char mean, const char sigma, unsigned long seed);
 
 // Support <short>
 template CPUMatrix<short>::CPUMatrix(const size_t numRows, const size_t numCols);
@@ -7627,6 +7625,7 @@ template CPUMatrix<short>& CPUMatrix<short>::operator=(CPUMatrix<short>&&);
 template void CPUMatrix<short>::SetValue(const short);
 template void CPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, short* pArray, size_t matrixFlags);
 template void CPUMatrix<short>::SetValue(CPUMatrix<short> const&);
+template bool CPUMatrix<short>::IsEqualTo(const CPUMatrix<short>& a, const short threshold) const;
 //template void CPUMatrix<short>::SetValue(GPUMatrix<short> const&);
 //template void CPUMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
 //template void CPUMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
@@ -7635,6 +7634,9 @@ template void CPUMatrix<short>::Resize(const size_t numRows, const size_t numCol
 template short* CPUMatrix<short>::CopyToArray(void) const;
 template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, short* dst, size_t colStride) const;
 template void CPUMatrix<short>::Reshape(const size_t, const size_t);
+template void CPUMatrix<short>::SetUniformRandomValue(const short low, const short high, unsigned long seed);
+template void CPUMatrix<short>::SetUniformRandomValue(RNGHandle& rngHandle, const short low, const short high);
+template void CPUMatrix<short>::SetGaussianRandomValue(const short mean, const short sigma, unsigned long seed);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 

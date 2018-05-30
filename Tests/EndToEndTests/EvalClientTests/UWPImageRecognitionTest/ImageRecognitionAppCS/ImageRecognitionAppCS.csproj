@@ -1,6 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <!-- $(SolutionDir) isn't defined when nuget attempts to restore packages, and it (nuget) will stop processing the file if CNTK.Common.props can't be found (meaning it will not 
+       install the referenced packages below. Because of this, use a relative path when importing CNTK.Common.props rather than relying on $(SolutionDir); nuget is able to resolve 
+       this path and continue to import referenced packages.
+       
+       <Import Project="$(SolutionDir)\CNTK.Common.props" />
+  -->
+  <Import Project="..\..\..\..\..\CNTK.Common.props" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug_UWP</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
@@ -11,8 +18,8 @@
     <AssemblyName>ImageRecognitionAppCS</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
-    <TargetPlatformVersion>10.0.16299.0</TargetPlatformVersion>
-    <TargetPlatformMinVersion>10.0.10586.0</TargetPlatformMinVersion>
+    <TargetPlatformVersion>$(UCRTVersion)</TargetPlatformVersion>
+    <TargetPlatformMinVersion>10.0.10586.0</TargetPlatformMinVersion> <!-- Windows 10, November 2015 -->
     <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{A5A43C5B-DE2A-4C0C-9213-0A381AF9435A};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -64,7 +71,6 @@
     <Content Include="ImageRecognitionAppCS_TemporaryKey.pfx" />
   </ItemGroup>
   <PropertyGroup>
-    <CntkVersion>2.5</CntkVersion>
     <CntkVersion Condition=" '$(BUILD_CNTK_VERSION)' != '' ">$(BUILD_CNTK_VERSION)</CntkVersion>
     <CntkComponentVersion>$(CntkVersion)</CntkComponentVersion>
     <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">$(CntkComponentVersion)d</CntkComponentVersion>
@@ -98,16 +104,17 @@
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
+  <ItemGroup> 
+    <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform"> 
+      <!-- Was 5.2.2 -->
+      <Version>6.1.2</Version> 
+    </PackageReference> 
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="ImageRecognizerLib, Version=255.255.255.255, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(CNTKRoot)$(Platform)\$(Configuration)\ImageRecognizerLib.winmd</HintPath>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
-      <Version>5.2.2</Version>
-    </PackageReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>

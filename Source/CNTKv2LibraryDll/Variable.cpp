@@ -145,6 +145,16 @@ namespace CNTK
                     m_dataFields->m_value = CreateValueFromParameterInitializer<half>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
                     break;
                 }
+                case DataType::Int8:
+                {
+                    m_dataFields->m_value = CreateValueFromParameterInitializer<char>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
+                    break;
+                }
+                case DataType::Int16:
+                {
+                    m_dataFields->m_value = CreateValueFromParameterInitializer<short>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
+                    break;
+                }
                 default:
                     LogicError("Variable '%S' Value(): Unsupported DataType %s", AsString().c_str(), DataTypeName(GetDataType()));
                     break;
@@ -507,7 +517,9 @@ namespace CNTK
         if (dataType != DataType::Unknown &&
             dataType != DataType::Float &&
             dataType != DataType::Double &&
-            dataType != DataType::Float16)
+            dataType != DataType::Float16 &&
+            dataType != DataType::Int8 &&
+            dataType != DataType::Int16)
         {
             LogicError("Unexpected variable datatype '%ls':'%u' (%s).", 
                        dataTypeKey.c_str(), 

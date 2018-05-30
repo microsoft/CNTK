@@ -35,9 +35,11 @@ namespace CNTK
 
     // Wraps a python object pointer into a shared pointer
     // with thread safe destructor.
-    inline PyObjectPtr MakeShared(PyObject* object)
+    inline PyObjectPtr MakeShared(PyObject* object, bool increaseRefCount = true)
     {
-        Py_XINCREF(object);
+        if (increaseRefCount)
+            Py_XINCREF(object);
+
         return  PyObjectPtr(object, [](PyObject* p)
         {
             // The destructor can potentially be called on another thread (prefetch, i.e.
@@ -117,27 +119,29 @@ namespace CNTK
 
         SequenceDataPtr FromCSR(PyObject* object, const StreamInformation& info)
         {
-            auto data = (PyArrayObject*)GetProperty(object, "data");
-
-            auto type = PyArray_TYPE(data);
+            PyObjectPtr data = GetProperty(object, "data");
+            PyArrayObject* dataRaw = (PyArrayObject*)data.get();
+            auto type = PyArray_TYPE(dataRaw);
             if (type != NPY_FLOAT32)
                 RuntimeError("Only csr_matrix of float is currently supported.");
 
-            auto indptr = (PyArrayObject*)GetProperty(object, "indptr");
-            auto indices = (PyArrayObject*)GetProperty(object, "indices");
+            PyObjectPtr indptr = GetProperty(object, "indptr");
+            PyArrayObject* indptrRaw = (PyArrayObject*)indptr.get();
+            PyObjectPtr indices = GetProperty(object, "indices");
+            PyArrayObject* indicesRaw = (PyArrayObject*)indices.get();
 
-            auto shape = GetProperty(object, "shape");
-            auto numElements = PyTuple_GET_ITEM(shape, 0);
+            PyObjectPtr shape = GetProperty(object, "shape");
+            auto numElements = PyTuple_GET_ITEM(shape.get(), 0);
 
             auto result = std::make_shared<SparseDataFromPy>(
-                PyArray_DATA(data),
-                (SparseIndexType*)PyArray_DATA(indices),
-                static_cast<SparseIndexType>(PyArray_SIZE(data)),
+                PyArray_DATA(dataRaw),
+                (SparseIndexType*)PyArray_DATA(indicesRaw),
+                static_cast<SparseIndexType>(PyArray_SIZE(dataRaw)),
                 static_cast<uint32_t>(PyLong_AsLong(numElements)),
                 MakeShared(object));
 
             // Checking the type
-            type = PyArray_TYPE(indptr);
+            type = PyArray_TYPE(indptrRaw);
             size_t elementSize = 0;
             switch (type)
             {
@@ -155,9 +159,9 @@ namespace CNTK
                 RuntimeError("Number of bits for index is unsupported for type '%d'", type);
 
             // Filling in nnzCount
-            auto nnzCountsSize = PyArray_SIZE(indptr);
+            auto nnzCountsSize = PyArray_SIZE(indptrRaw);
             result->m_nnzCounts.resize(nnzCountsSize);
-            memcpy(&result->m_nnzCounts[0], PyArray_DATA(indptr), nnzCountsSize * elementSize);
+            memcpy(&result->m_nnzCounts[0], PyArray_DATA(indptrRaw), nnzCountsSize * elementSize);
             for (size_t i = 0; i < result->m_nnzCounts.size() - 1; ++i)
                 result->m_nnzCounts[i] = result->m_nnzCounts[i + 1] - result->m_nnzCounts[i];
             result->m_nnzCounts.resize(result->m_nnzCounts.size() - 1);
@@ -249,7 +253,7 @@ namespace CNTK
             else if (o->ob_type->tp_name == std::string("csr_matrix"))
             {
                 auto shape = GetProperty(o, "shape");
-                return static_cast<uint32_t>(PyLong_AsLong(PyTuple_GET_ITEM(shape, 0)));
+                return static_cast<uint32_t>(PyLong_AsLong(PyTuple_GET_ITEM(shape.get(), 0)));
             }
             else
                 RuntimeError("Unexpected type %s, only list, numpy or csr_matrix are expected.", o->ob_type->tp_name);
@@ -301,25 +305,30 @@ namespace CNTK
         // Fills chunk data with sparse samples.
         void FillDataWithSparseSamples(size_t streamIndex, PyObject* o, size_t dataSize)
         {
-            auto pyData = (PyArrayObject*)GetProperty(o, "data");
-            auto type = PyArray_TYPE(pyData);
+            PyObjectPtr pyData = GetProperty(o, "data");
+            PyArrayObject* pyDataRaw = (PyArrayObject*)pyData.get();
+
+            auto type = PyArray_TYPE(pyDataRaw);
             if (type != NPY_FLOAT32)
                 RuntimeError("Only float numbers are currently supported.");
 
-            auto data = (float*)PyArray_DATA(pyData);
-            auto indices = (SparseIndexType*)PyArray_DATA((PyArrayObject*)PyObject_GetAttrString(o, "indices"));
-            auto indptr = (SparseIndexType*)PyArray_DATA((PyArrayObject*)PyObject_GetAttrString(o, "indptr"));
+            auto data = (float*)PyArray_DATA(pyDataRaw);
+
+            PyObjectPtr indices = GetProperty(o, "indices");
+            SparseIndexType* indicesRaw = (SparseIndexType*)PyArray_DATA((PyArrayObject*)indices.get());
+            PyObjectPtr indptr = GetProperty(o, "indptr");
+            SparseIndexType* indptrRaw = (SparseIndexType*)PyArray_DATA((PyArrayObject*)indptr.get());
 
             for (size_t i = 0; i < dataSize; ++i)
             {
                 auto sequence = std::make_shared<SparseDataFromPy>(
-                    data + indptr[i],
-                    indices + indptr[i],
-                    indptr[i + 1] - indptr[i],
+                    data + indptrRaw[i],
+                    indicesRaw + indptrRaw[i],
+                    indptrRaw[i + 1] - indptrRaw[i],
                     1,
                     m_pyChunk);
 
-                sequence->m_nnzCounts.resize(1, indptr[i + 1] - indptr[i]);
+                sequence->m_nnzCounts.resize(1, indptrRaw[i + 1] - indptrRaw[i]);
                 m_data[i * m_streamInfos.size() + streamIndex] = sequence;
             }
         }
@@ -364,15 +373,35 @@ namespace CNTK
             }
             else
             {
-                // Performing max over sequences.
-                // TODO: Implement logic to specify mbsize based on a stream.
+                // Implement logic to specify mbsize based on a stream.
+                const StreamInformation* pDefMbInfo = nullptr;
+                for (const StreamInformation& info : m_streamInfos)
+                {
+                    if (info.m_definesMbSize)
+                    {
+                        if (pDefMbInfo == nullptr)
+                            pDefMbInfo = &info;
+                        else
+                            RuntimeError("Only a single stream is allowed to define minibatch size, but at least two are found.");
+                    }
+                }
+                // Scan over the data to set sampleCount for each sequence
                 unsigned int sampleCount = 1;
                 for (size_t i = 0, j = 0; i < m_data.size(); ++i)
                 {
-                    sampleCount = std::max(sampleCount, m_data[i]->m_numberOfSamples);
+                    //Note that the stream streamIndex of sequence j is at m_data[j * m_streamInfos.size() + streamIndex]
+                    size_t streamIndex = i % m_streamInfos.size();
+                    if (pDefMbInfo == nullptr)
+                        //No stream is specified to define the minibatch size, the number of samples in the sequence
+                        //is defined by the stream with maximum number of samples
+                        sampleCount = std::max(sampleCount, m_data[i]->m_numberOfSamples);
+                    else if (pDefMbInfo == &m_streamInfos[streamIndex])
+                        //A stream is specified to define the minibatch size, the number of samples in the sequence
+                        //is defined by this stream
+                        sampleCount = m_data[i]->m_numberOfSamples;
 
-                    // Last sequence across streams, remember the max sample count.
-                    if (i % m_streamInfos.size() == m_streamInfos.size() - 1)
+                    // Last stream of the sequence, remember the max sample count as the sequence sample count.
+                    if (streamIndex == m_streamInfos.size() - 1)
                     {
                         descriptions.push_back(SequenceInfo{ j++, sampleCount, (ChunkIdType)m_chunkId });
                         sampleCount = 1;
@@ -389,14 +418,18 @@ namespace CNTK
         }
 
         // Get property of python object by name.
-        PyObject* GetProperty(PyObject* object, const std::string& propertyName)
+        PyObjectPtr GetProperty(PyObject* object, const std::string& propertyName)
         {
             // TODO: profile, probably need to have some form of
             // vtable in here, same goes for other places where we use string comparisons.
             auto result = PyObject_GetAttrString(object, propertyName.c_str());
+            
             if (!result)
                 RuntimeError("PyObject does not have property '%s'.", propertyName.c_str());
-            return result;
+
+            // PyObject_GetAttrString() increases the refcount internally, so when we wrap the pointer in shared_ptr, 
+            // we pass false to not increase refcount again. During delete, the refcount is decreased normally in shared_ptr's deleter.
+            return MakeShared(result, false);
         }
 
     private:

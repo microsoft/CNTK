@@ -591,7 +591,7 @@ def test_LSTM(tmpdir):
     activation_options = [C.tanh]
 
     #Recurrence attributes
-    initial_state_options = [0]
+    initial_state_options = [0, 0.23]
 
     input_dim = 2
     cell_dim = 3
@@ -716,8 +716,9 @@ def test_Neg(tmpdir):
     verify_no_input(model, tmpdir, 'Neg_0')
 
 #OptimizedRNNStack
-OPTIM_RNN_STACK_CONFIGS = ((True, 2, 2, 3, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
-                           (True, 4, 2, 3, 'lstm'), (False, 2, 2, 3, 'lstm'),
+OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
+                           (True, 2, 2, 3, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
+                           (True, 4, 2, 3, 'lstm'), (False, 2, 2, 3, 'lstm'), (False, 2, 6, 8, 'lstm'), (False, 4, 4, 8, 'lstm'),
                            (True, 1, 2, 3, 'rnnReLU'), (True, 4, 4, 8, 'rnnReLU'), (False, 2, 6, 8, 'rnnReLU'), 
                            (True, 4, 2, 3, 'rnnTanh'), (False, 2, 2, 3, 'rnnTanh'), (True, 1, 2, 3, 'rnnTanh'))
 @pytest.mark.parametrize("bidirectional, num_layers, input_size, hidden_size, recurrent_op", OPTIM_RNN_STACK_CONFIGS)
@@ -1019,3 +1020,36 @@ def test_TransposeAxes(tmpdir):
     #model = C.swapaxes(x, 1, 2)
     #verify_one_input(model, data, tmpdir, 'TransposeAxes_1')
 
+
+# Select
+@pytest.mark.parametrize("flag, if_true, if_false", (
+    ((-100., -1.2, -1.0, -0.5, 0.0, 0.1, 1.0, 100.),
+     (1., 2., 3., 4., 5., 6., 7., 8.),
+     (11., 12., 13., 14., 15., 16., 17., 18.)),
+    (((1, 0, 3), (4, 5, 0)),
+     ((1, 2, 3), (4, 5, 6)),
+     ((-1, -2, -3), (-4, -5, -6))),
+    ((((0, 1), (0, 1)), ((0, 1), (0, 1))),
+     (((1, 2), (3, 4)), ((5, 6), (7, 8))),
+     (((9, 10), (11, 12)), ((13, 14), (15, 16)))),
+))
+def test_Select(flag, if_true, if_false, tmpdir):
+    flag = np.asarray(flag, dtype=np.float32)
+    if_true = np.asarray(if_true, dtype=np.float32)
+    if_false = np.asarray(if_false, dtype=np.float32)
+
+    model = C.element_select(flag, if_true, if_false)
+    verify_no_input(model, tmpdir, 'Select_0')
+
+    flag_var = C.input_variable(np.shape(flag))
+    if_true_var = C.input_variable(np.shape(if_true))
+    if_false_var = C.input_variable(np.shape(if_false))
+
+    model = C.element_select(flag_var, if_true, if_false)
+    verify_one_input(model, flag, tmpdir, 'Select_1_flag')
+
+    model = C.element_select(flag, if_true_var, if_false)
+    verify_one_input(model, if_true, tmpdir, 'Select_1_if_true')
+
+    model = C.element_select(flag, if_true, if_false_var)
+    verify_one_input(model, if_false, tmpdir, 'Select_1_if_false')

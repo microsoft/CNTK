@@ -1291,7 +1291,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
-    CUDA_LONG N = (CUDA_LONG) GetNumRows();
+    CUDA_LONG N = (CUDA_LONG) GetDiagSize();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
     SyncGuard syncGuard;
@@ -1304,24 +1304,21 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
     if (IsEmpty() || vector.IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: input vector must be a vector.");
 
     if (vector.GetNumElements() == 1) // reduce to simple form
         SetDiagonalValue(vector.Data()[0]);
 
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
-        CUDA_LONG N = (CUDA_LONG) GetNumRows();
+        CUDA_LONG N = (CUDA_LONG) GetDiagSize();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
         SyncGuard syncGuard;
-        _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N);
+        _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N, (CUDA_LONG) GetNumRows());
     }
 }
 
@@ -4401,6 +4398,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
     return *this;
 }
 
+
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::GatherFromTarget(const GPUMatrix<ElemType>& indices, const GPUMatrix<ElemType>& target, size_t row_elements)
 {
@@ -5018,6 +5016,10 @@ template void GPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char*
 template void GPUMatrix<char>::Reshape(const size_t, const size_t);
 template GPUMatrix<char>& GPUMatrix<char>::operator*=(char);
 template DEVICEID_TYPE GPUMatrix<char>::PrepareDevice(DEVICEID_TYPE deviceId) const;
+template void GPUMatrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
+template void GPUMatrix<char>::SetUniformRandomValue(RNGHandle& rngHandle, const char low, const char high);
+template void GPUMatrix<char>::SetGaussianRandomValue(const char mean, const char sigma, unsigned long seed);
+template void GPUMatrix<char>::SetGaussianRandomValue(RNGHandle& rngHandle, const char mean, const char stdev);
 
 // Support <short>
 template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
@@ -5043,6 +5045,10 @@ template void GPUMatrix<short>::CopySection(size_t numRows, size_t numCols, shor
 template void GPUMatrix<short>::Reshape(const size_t, const size_t);
 template GPUMatrix<short>& GPUMatrix<short>::operator*=(short);
 template DEVICEID_TYPE GPUMatrix<short>::PrepareDevice(DEVICEID_TYPE deviceId) const;
+template void GPUMatrix<short>::SetUniformRandomValue(const short low, const short high, unsigned long seed);
+template void GPUMatrix<short>::SetUniformRandomValue(RNGHandle& rngHandle, const short low, const short high);
+template void GPUMatrix<short>::SetGaussianRandomValue(const short mean, const short sigma, unsigned long seed);
+template void GPUMatrix<short>::SetGaussianRandomValue(RNGHandle& rngHandle, const short mean, const short stdev);
 
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();

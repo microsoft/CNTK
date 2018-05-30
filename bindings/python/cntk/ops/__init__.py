@@ -2184,6 +2184,36 @@ def zeros_like(x, name=''):
 
 
 @typemap
+def eye_like(x, sparse_output = True, name=''):
+    '''
+    Creates a matrix with diagonal set to 1s and of the same shape and the same dynamic axes as ``x``. To be a matrix,
+     ``x`` must have exactly two axes (counting both dynamic and static axes).
+
+    Example:
+        >>> x0 = np.arange(12).reshape((3, 4)).astype('f')
+        >>> x = C.input_variable(4)
+        >>> C.eye_like(x).eval({x: x0}).toarray()
+        array([[ 1.,  0.,  0.,  0.],
+                [ 0.,  1.,  0.,  0.],
+                [ 0.,  0.,  1.,  0.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor of rank 2
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import eye_like
+    x = sanitize_input(x)
+    if len(x.dynamic_axes) + len(x.shape) != 2:
+        raise(ValueError('eye_like operand must have exactly two axes (counting both dynamic and static axes) however "%s" is provided as the operand'%x))
+    if any([ax.is_sequence_axis for ax in x.dynamic_axes]):
+        raise (ValueError(
+            'eye_like operand must have no sequence axis however "%s" is provided as the operand' % x))
+    return eye_like(x, sparse_output, name)
+
+
+@typemap
 def element_select(flag, value_if_true, value_if_false, name=''):
     '''
     return either ``value_if_true`` or ``value_if_false`` based on the value of ``flag``.
@@ -3960,3 +3990,31 @@ def mean_variance_normalization(operand, epsilon=0.00001, use_stats_across_chann
         raise ValueError('epsilon must be non-negative.')
     operand = sanitize_input(operand, get_data_type(operand))  
     return mean_variance_normalization(operand, epsilon, use_stats_across_channels, do_variance_scaling, name)
+
+@typemap
+def custom_proxy_op(custom_op, output_shape, output_data_type, *operands, **kw_name):
+    '''
+    A proxy node that helps saving a model with different number of operands. 
+
+    Example:
+
+    Args:
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import custom_proxy_op
+    if len(operands) == 1 and isinstance(operands[0], (tuple, list)):
+        operands = operands[0]
+    if isinstance(operands, tuple):
+        operands = list(operands)
+    operands_unfold = []
+    for o in operands:
+        if hasattr(o, 'outputs') and len(o.outputs) > 1:
+            operands_unfold += o.outputs
+        else:
+            operands_unfold += [o]
+
+    name = (lambda name='': (name))(**kw_name) # Python 2.7 does not allow (*inputs, name='')
+    output_dtype = sanitize_dtype_cntk(output_data_type)
+    return custom_proxy_op(operands_unfold, custom_op, output_shape, output_dtype, name)

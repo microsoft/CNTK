@@ -280,6 +280,7 @@ def test_op_reduce_argmax(input_data, axis, device_id, precision):
     _test_unary_op(precision, device_id, argmax, input_data,
                    expected_forward, None, {'axis': axis})
 
+
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_argmin(input_data, axis, device_id, precision):
     if isinstance(axis, list):
