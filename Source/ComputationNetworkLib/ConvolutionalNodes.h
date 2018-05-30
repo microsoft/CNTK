@@ -488,7 +488,7 @@ public:
         if (!m_transpose)
         {
           outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, false,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, m_groups, false,
             this->NeedsDynamicValidation(), isFinalValidationPass);
 
           if (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0))    // user have explicitly set m_outputShape, we check if it's the same as outputShape
@@ -518,7 +518,7 @@ public:
             // in case the user specifies the output shape, we make sure the input shape can be the result of
             // convolution from the specified output shape
             auto inferredShape = ConvolveGeometry::ComputeOutputShape(m_outputShape, m_kernelShape, m_mapCount, m_stride,
-              m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
+              m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), m_groups, false,
               this->NeedsDynamicValidation(), isFinalValidationPass);
             if (inputShape != inferredShape)
               InvalidArgument("%ls %ls the shape of the convolution transpose operand %ls is different from "
@@ -602,6 +602,7 @@ protected:
         return (inputIndex == 1);
     }
 
+    // TODO: This method may not be used anymore. Maybe remove?
     virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape, 
         const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {

@@ -2421,7 +2421,8 @@ public:
         BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
                                configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"),
                                configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), configp->Get(L"disableRegularization"),
-                               ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"reluFuse"))
+                               ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+                               (configp->Find(L"reluFuse") != nullptr) ? configp->Get(L"reluFuse") : false) // Legacy models before version 31 do not have reluFuse.
     {
         //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         // To support legacy models, runCount is optional. Hence, we cannot use NumInputs<>, and must check ourselves in Validation.
@@ -2473,7 +2474,10 @@ public:
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
+            if (modelVersion >= CNTK_MODEL_VERSION_31)
             fstream >> m_reluFuse;
+            else
+                m_reluFuse = false;
         }
         else
         {

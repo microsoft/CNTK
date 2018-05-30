@@ -28,8 +28,11 @@
 #include "mkl_memory.h"
 
 #ifdef USE_MKLDNN
+#include "mkl_cblas.h"
+#include "mkl_memory.h"
 #include "mkldnn_sum-inl.h"
 #include "mkldnn_memory-inl.h"
+
 
 namespace Microsoft
 {
@@ -221,6 +224,10 @@ std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv
             this->_cpu_data = cpu_data;
             this->_usr_memory.reset(new mkldnn::memory(*this->usr_memory_pd(), const_cast<Dtype*>(cpu_data)));
         }
+        if (set_prv_ptr)
+        {
+            blob->set_prv_descriptor(this->get_shared_ptr(), false);
+        }
         return this->_usr_memory;
     }
 }
@@ -258,6 +265,7 @@ std::shared_ptr<mkldnn::memory> MKLDNNMemoryDescriptor<Dtype>::create_output_mem
                 *b_same = *b_same && false;
             this->_cpu_data = cpu_data;
             this->_usr_memory.reset(new mkldnn::memory(*this->usr_memory_pd(), cpu_data));
+            b.MklMem()->set_prv_descriptor(thisData, false);
     }
         return this->_usr_memory;
     }

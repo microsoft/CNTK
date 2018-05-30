@@ -61,7 +61,8 @@
 #define CNTK_MODEL_VERSION_28 28 // Padding op
 #define CNTK_MODEL_VERSION_29 29 // Expose StopGradient in BS
 #define CNTK_MODEL_VERSION_30 30 // LatticeWithSequenceSoftmax node
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_30
+#define CNTK_MODEL_VERSION_31 31 // BatchNormalizationNode - adding a new attribute reluFuse
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_31
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.

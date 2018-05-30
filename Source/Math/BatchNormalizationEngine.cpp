@@ -100,6 +100,9 @@ public:
         m_mkldnnBM = NULL;
         m_relu = relu;
 #endif
+#ifndef USE_MKLDNN
+        UNUSED(relu); // To turn off 'unused parameter' warning. If 'out' is ever used below, remove this.
+#endif
     }
 
 protected:
@@ -141,6 +144,9 @@ protected:
             std::is_same<InoutType, StatType>::value &&
             BackwardCoreMKLDNN(*(const StatMat*)&in, *(const StatMat*)&out, *(const StatMat*)&srcGrad, *(StatMat*)&grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad, accumulateDataGrad))
             return;
+#endif
+#ifndef USE_MKLDNN
+        UNUSED(out); // To turn off 'unused parameter' warning. If 'out' is ever used in the sections below, remove this.
 #endif
 #ifdef USE_MKL2017DNN
         if (srcGrad.GetCurrentMatrixLocation() == CPU &&

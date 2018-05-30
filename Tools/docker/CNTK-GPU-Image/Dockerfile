@@ -111,9 +111,10 @@ RUN mkdir /usr/local/mklml && \
     ln -s /usr/local external && \
     mkdir -p build && \
     cd build && \
-    cmake .. && \
+    cmake .. -DCMAKE_INSTALL_PREFIX=/ && \
     make && \
-    make install && \
+    make install DESTDIR=/usr/local && \
+    make install DESTDIR=/usr/local/mklml/mklml_lnx_2018.0.1.20171227 && \
     cd ../.. && \
     rm -rf mkl-dnn-0.12
 

@@ -654,7 +654,7 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
+void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& slice_, size_t startColumn, size_t numCols) const
 {
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
@@ -663,9 +663,10 @@ void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& sl
         NOT_IMPLEMENTED;
 
     // We can either error out or RequireSize. Because RequireSize will error out if it's not allowed, I think this makes more sense.
-    slice.RequireSize(m_numRows, numCols);
+    slice_.RequireSize(m_numRows, numCols);
 
-    memset(slice.Data(), 0, sizeof(ElemType) * slice.GetNumElements());
+    memset(slice_.Data(), 0, sizeof(ElemType) * slice_.GetNumElements());
+    ColMajorBuffer<ElemType> slice(slice_.Data(), slice_.GetNumRows(), slice_.GetNumCols()); // Addtional copy needed to curcumvent issue between openmp and mkldnn memory.
 
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
