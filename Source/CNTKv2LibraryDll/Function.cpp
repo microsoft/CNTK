@@ -805,7 +805,7 @@ namespace CNTK
 
                             if (existingPlaceholderReplacement == placeholderReplacements.end())
                             {
-                                clonedInput = PlaceholderVariable();
+								clonedInput = PlaceholderLike(cloneeInput);
                                 placeholderReplacements[clonedInput] = cloneeInput;
                             }
                             else
