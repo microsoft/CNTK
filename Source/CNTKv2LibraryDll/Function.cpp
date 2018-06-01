@@ -805,7 +805,9 @@ namespace CNTK
 
                             if (existingPlaceholderReplacement == placeholderReplacements.end())
                             {
-								clonedInput = PlaceholderLike(cloneeInput);
+								//we need to carry the shape information to the new placeholder otherwise, deep chained recurrence with reshaping ops will fail (e.g. expand_dims);
+								//however, we can not carry over the dynamic axis, as the placeholder might be replaced with different dynamic axes
+								clonedInput = PlaceholderVariable(cloneeInput.Shape());
                                 placeholderReplacements[clonedInput] = cloneeInput;
                             }
                             else
