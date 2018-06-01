@@ -402,15 +402,6 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/TensorView.cpp \
 	$(SOURCEDIR)/Math/NcclComm.cpp \
 
-
-
-MATH_SRC +=\
-	$(SOURCEDIR)/Math/mkldnn/mkldnn_base.cpp \
-	$(SOURCEDIR)/Math/mkldnn/mkldnn_memory.cpp \
-	$(SOURCEDIR)/Math/mkldnn/mkldnn_util.cpp \
-
-
-
 MATH_SRC +=\
 	$(SOURCEDIR)/Math/mkldnn/mkldnn_base.cpp \
 	$(SOURCEDIR)/Math/mkldnn/mkldnn_memory.cpp \
@@ -1525,7 +1516,7 @@ java: $(JAVA_LIBS)
 	    cp -p $(MPI_PATH)/lib/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done
-	for so in libiomp5.so libmklml_intel.so libmkldnn.so; do \
+	for so in libiomp5.so libmklml_intel.so; do \
 	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
 	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
 	done

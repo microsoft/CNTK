@@ -563,7 +563,7 @@ public:
         {
           auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
             m_kernelShape, m_mapCount, m_stride,
-            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation);
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, m_ceilOutDim, m_groups);
           m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
             m_maxTempMemSizeInSamples, m_poolKind,
             ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
