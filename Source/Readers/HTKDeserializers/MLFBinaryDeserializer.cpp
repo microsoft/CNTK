@@ -12,7 +12,7 @@
 #include "ReaderConstants.h"
 #include "FileWrapper.h"
 #include "Index.h"
-#include "MLFIndexBuilder.h"
+#include "MLFBinaryIndexBuilder.h"
 
 namespace CNTK {
 
@@ -404,7 +404,7 @@ void MLFBinaryDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, con
     {
         attempt(5, [this, path, enableCaching, corpus]()
         {
-            MLFIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
+            MLFBinaryIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
             builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
             m_indices.emplace_back(builder.Build());
         });
