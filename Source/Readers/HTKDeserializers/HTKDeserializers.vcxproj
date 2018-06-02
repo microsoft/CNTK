@@ -100,6 +100,7 @@
     <ClInclude Include="LatticeDeserializer.h" />
     <ClInclude Include="LatticeIndexBuilder.h" />
     <ClInclude Include="MLFBinaryDeserializer.h" />
+    <ClInclude Include="MLFBinaryIndexBuilder.h" />
     <ClInclude Include="MLFDeserializer.h" />
     <ClInclude Include="MLFUtils.h" />
     <ClInclude Include="MLFIndexBuilder.h" />
@@ -119,6 +120,7 @@
     <ClCompile Include="LatticeDeserializer.cpp" />
     <ClCompile Include="LatticeIndexBuilder.cpp" />
     <ClCompile Include="MLFBinaryDeserializer.cpp" />
+    <ClCompile Include="MLFBinaryIndexBuilder.cpp" />
     <ClCompile Include="MLFDeserializer.cpp" />
     <ClCompile Include="MLFUtils.cpp" />
     <ClCompile Include="MLFIndexBuilder.cpp" />
