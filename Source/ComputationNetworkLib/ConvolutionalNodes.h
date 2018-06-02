@@ -246,9 +246,9 @@ protected:
 
     virtual TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
-        const size_t DEAFULT_NUM_GROUPS = 1;
+        const size_t DEFAULT_NUM_GROUPS = 1;
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, DEAFULT_NUM_GROUPS, ceilOutDim,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, DEFAULT_NUM_GROUPS, ceilOutDim,
             Base::NeedsDynamicValidation(), isFinalValidationPass);
     }
 
@@ -475,8 +475,9 @@ public:
             Input(0)->NodeName().c_str(), (int)mapCount, (int)weightCols);
         }
 
-        outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-          m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+        /*outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+          m_sharing, m_autoPad, m_lowerPad, m_upperPad);*/
+        outputShape = this->ComputeOutputShape(inputShape, TensorShape(1), /*ceilOutDim*/false, isFinalValidationPass);
         // ConvolveGeometry always uses CHW.
         SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
       }
@@ -487,9 +488,10 @@ public:
         InferReductionDims(inputShape, inputShape);
         if (!m_transpose)
         {
-          outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+          /*outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
             m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, m_groups, false,
-            this->NeedsDynamicValidation(), isFinalValidationPass);
+            this->NeedsDynamicValidation(), isFinalValidationPass);*/
+          outputShape = this->ComputeOutputShape(inputShape, m_dilation, /*ceilOutDim*/false, isFinalValidationPass);
 
           if (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0))    // user have explicitly set m_outputShape, we check if it's the same as outputShape
           {
@@ -509,17 +511,19 @@ public:
           {
             // In case of convolution transpose (deconvolution), node input (inputShape) is really the output of the convolution
             // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
+            const size_t DEFAULT_NUM_GROUPS = 1;
             outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-              m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), false,
+              m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), DEFAULT_NUM_GROUPS, false,
               this->NeedsDynamicValidation(), isFinalValidationPass);
           }
           else
           {
             // in case the user specifies the output shape, we make sure the input shape can be the result of
             // convolution from the specified output shape
-            auto inferredShape = ConvolveGeometry::ComputeOutputShape(m_outputShape, m_kernelShape, m_mapCount, m_stride,
+            /*auto inferredShape = ConvolveGeometry::ComputeOutputShape(m_outputShape, m_kernelShape, m_mapCount, m_stride,
               m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), m_groups, false,
-              this->NeedsDynamicValidation(), isFinalValidationPass);
+              this->NeedsDynamicValidation(), isFinalValidationPass);*/
+            auto inferredShape = this->ComputeOutputShape(m_outputShape, TensorShape(1), false, isFinalValidationPass);
             if (inputShape != inferredShape)
               InvalidArgument("%ls %ls the shape of the convolution transpose operand %ls is different from "
                 "the result of convoluting the specified output argument using "
@@ -563,7 +567,7 @@ public:
         {
           auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
             m_kernelShape, m_mapCount, m_stride,
-            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation);
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, false, m_groups);
           m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
             m_maxTempMemSizeInSamples, m_poolKind,
             ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
