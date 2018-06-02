@@ -27,6 +27,9 @@
     <ClCompile Include="MLFBinaryDeserializer.cpp">
       <Filter>MLF</Filter>
     </ClCompile>
+    <ClCompile Include="MLFBinaryIndexBuilder.cpp">
+      <Filter>MLF</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -79,6 +82,9 @@
       <Filter>Lattice</Filter>
     </ClInclude>
     <ClInclude Include="MLFBinaryDeserializer.h">
+      <Filter>MLF</Filter>
+    </ClInclude>
+    <ClInclude Include="MLFBinaryIndexBuilder.h">
       <Filter>MLF</Filter>
     </ClInclude>
   </ItemGroup>
