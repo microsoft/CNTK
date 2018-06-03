@@ -113,6 +113,13 @@ namespace CNTK {
             RuntimeError("Offset '%zu': not enough bits to represent a class id '%zu'.", byteOffset, uid);
     }
 
+    void MLFFrameRange::Save(unsigned int firstFrame, unsigned int numFrames, size_t uid)
+    {
+        m_firstFrame = firstFrame;
+        m_numFrames = numFrames;
+        m_classId = (ClassIdType)uid;
+    }
+
     pair<size_t, size_t> MLFFrameRange::ParseFrameRange(const vector<boost::iterator_range<char*>>& tokens, size_t byteOffset)
     {
         if (tokens.size() < 2)

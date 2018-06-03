@@ -22,10 +22,6 @@ using namespace Microsoft::MSR::CNTK;
 static float s_oneFloat = 1.0;
 static double s_oneDouble = 1.0;
 
-// A constant used in 1-hot vectors to identify the first frame of a phone.
-// Used only in CTC-type training.
-static float s_phoneBoundary = 2.0f;
-
 // Sparse labels for an utterance.
 template <class ElemType>
 struct MLFSequenceData : SparseSequenceData
@@ -49,13 +45,6 @@ struct MLFSequenceData : SparseSequenceData
         m_numberOfSamples = (uint32_t)numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
         m_indices = &m_indexBuffer[0];
-    }
-
-    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries, const NDShape& frameShape) :
-        MLFSequenceData(numberOfSamples, frameShape)
-    {
-        for (auto boundary : phoneBoundaries)
-            m_values[boundary] = s_phoneBoundary;
     }
 
     const void* GetDataBuffer() override
@@ -138,17 +127,24 @@ public:
 
     void CacheSequence(const SequenceDescriptor& sequence, size_t index)
     {
-        auto start = m_buffer.data() + sequence.OffsetInChunk();
-        auto end = start + sequence.SizeInBytes();
-
         vector<MLFFrameRange> utterance;
-        auto absoluteOffset = m_descriptor.StartOffset() + sequence.OffsetInChunk();
-        bool parsed = m_parser.Parse(boost::make_iterator_range(start, end), utterance, absoluteOffset);
-        if (!parsed) // cannot parse
+
+        auto start = m_buffer.data() + sequence.OffsetInChunk();
+        ushort stateCount = *(ushort*)start;
+        utterance.resize(stateCount);
+        start += sizeof(ushort);
+        uint firstFrame = 0;
+        for (size_t i = 0;i < stateCount;i++)
         {
-            fprintf(stderr, "WARNING: Cannot parse the utterance '%s'\n", KeyOf(sequence).c_str());
-            m_valid[index] = false;
-            return;
+            // Read state label and count
+            ushort stateLabel = *(ushort*)start;
+            start += sizeof(ushort);
+
+            ushort frameCount = *(ushort*)start;
+            start += sizeof(ushort);
+
+            utterance[i].Save(firstFrame, frameCount, stateLabel);
+            firstFrame += stateCount;
         }
 
         m_sequences[index] = move(utterance);
@@ -179,15 +175,8 @@ public:
         const auto& utterance = m_sequences[sequenceIndex];
         const auto& sequence = m_descriptor.Sequences()[sequenceIndex];
 
-        // Packing labels for the utterance into sparse sequence.
-        vector<size_t> sequencePhoneBoundaries(m_deserializer.m_withPhoneBoundaries ? utterance.size() : 0);
-        if (m_deserializer.m_withPhoneBoundaries)
-        {
-            for (size_t i = 0; i < utterance.size(); ++i)
-                sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
-        }
 
-        auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
+        auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, m_deserializer.m_streams.front().m_sampleLayout);
         auto* startRange = s->m_indices;
         for (const auto& range : utterance)
         {

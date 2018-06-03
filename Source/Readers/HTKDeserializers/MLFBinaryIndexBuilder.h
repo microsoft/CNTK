@@ -7,8 +7,18 @@
 
 #include <boost/noncopyable.hpp>
 #include "IndexBuilder.h"
+#include <limits>
 
 namespace CNTK {
+
+    typedef unsigned int uint;
+    typedef unsigned short ushort;
+
+    const uint MAX_UTT_ID = std::numeric_limits<uint>::max();
+    const uint MAX_SENONE_COUNT = std::numeric_limits<ushort>::max();
+    const std::string MLF_BIN_LABEL = "MLF";
+    const short MODEL_VERSION = 1;
+    const size_t SENONE_ZEROS = 100000;
 
     class MLFBinaryIndexBuilder : public IndexBuilder
     {
@@ -27,8 +37,6 @@ namespace CNTK {
             UtteranceKey,
             UtteranceFrames
         };
-
-        inline bool TryParseSequenceKey(const std::string& line, size_t& id, std::function<size_t(const std::string&)> keyToId);
     };
 
 } // namespace

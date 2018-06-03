@@ -8,6 +8,7 @@
 #include "MLFBinaryIndexBuilder.h"
 #include "MLFUtils.h"
 #include "ReaderUtil.h"
+#include "assert.h"
 
 namespace CNTK {
 
@@ -62,120 +63,44 @@ namespace CNTK {
    
         if (!m_corpus)
             RuntimeError("MLFBinaryIndexBuilder: corpus descriptor was not specified.");
+        vector<char> buffer(4);
 
+        // Validate file label
+        assert(reader.TryReadBinaryChunk(3, buffer.data()));
+        std::string mlfLabel(buffer.data(),3);
+        assert(mlfLabel == MLF_BIN_LABEL);
 
-        size_t id = 0;
-        State currentState = State::Header;
-        vector<boost::iterator_range<char*>> tokens;
-        bool isValid = true; // Flag indicating whether the current sequence is valid.
-        size_t sequenceStartOffset = 0; // Offset in file where current sequence starts.
-        string lastNonEmptyLine; // Needed to parse information about last frame
-        IndexedSequence sequence;
-        string line;
-        while (true)
+        //Validate MLF format version
+        assert(reader.TryReadBinaryChunk(sizeof(short), buffer.data()));
+        short* pModelVersion = (short*)buffer.data();
+        assert(*pModelVersion == MODEL_VERSION);
+
+        // Iterate over the bin MLF
+        while (reader.TryReadBinaryChunk(sizeof(uint), buffer.data()))
         {
-            auto offset = reader.GetFileOffset();
+            uint uttrKey = *(uint*)buffer.data();
+            auto uttrId = m_corpus->KeyToId(std::to_string(uttrKey));
 
-            if (!reader.TryReadLine(line))
-                break;
+            auto sequenceStartOffset = reader.GetFileOffset();
 
-            if (!line.empty() && line.back() == '\r')
-                line.pop_back();
+            // Read size of this uttrs
+            assert(reader.TryReadBinaryChunk(sizeof(ushort), buffer.data()));
+            ushort uttrSamplesCount = *(ushort*)buffer.data();
 
-            if (line.empty())
-                continue;
+            // sample count, senone/count pairs
+            size_t uttrSize = sizeof(ushort) + uttrSamplesCount * 2 * sizeof(ushort);
 
-            switch (currentState)
-            {
-            case State::Header:
-            {
-                if (line != "#!MLF!#")
-                    RuntimeError("Expected MLF header was not found.");
-                currentState = State::UtteranceKey;
-            }
-            break;
-            case State::UtteranceKey:
-            {
-                // When several files are appended to a big mlf, there can be
-                // an MLF header between the utterances.
-                if (line == "#!MLF!#")
-                    continue;
-
-                lastNonEmptyLine.clear();
-
-                sequenceStartOffset = offset;
-                isValid = TryParseSequenceKey(line, id, m_corpus->KeyToId);
-                currentState = State::UtteranceFrames;
-            }
-            break;
-            case State::UtteranceFrames:
-            {
-                if (line != ".")
-                {
-                    // Remembering last non empty string to be able to retrieve time frame information 
-                    // when the dot is just at the beginning of the next buffer.
-                    lastNonEmptyLine = line;
-                    continue; // Still current utterance.
-                }   
-
-                // Ok, a single . on a line means we found the end of the utterance.
-                auto sequenceEndOffset = reader.GetFileOffset();
-
-                uint32_t numberOfSamples = 0;
-                if (lastNonEmptyLine.empty())
-                    isValid = false;
-                else
-                {
-                    tokens.clear();
-                    
-                    const static vector<bool> delim = DelimiterHash({ ' ' });
-                    Split(&lastNonEmptyLine[0], &lastNonEmptyLine[0] + lastNonEmptyLine.size(), delim, tokens);
-
-                    auto range = MLFFrameRange::ParseFrameRange(tokens, sequenceEndOffset);
-                    numberOfSamples = static_cast<uint32_t>(range.second);
-                }
-
-                if (isValid)
-                {
-                    sequence.SetKey(id)
-                        .SetNumberOfSamples(numberOfSamples)
+            IndexedSequence sequence;
+            sequence.SetKey(uttrId)
+                        .SetNumberOfSamples(uttrSamplesCount)
                         .SetOffset(sequenceStartOffset)
-                        .SetSize(sequenceEndOffset - sequenceStartOffset);
-                    index->AddSequence(sequence);
-                }
-                else
-                    fprintf(stderr, "WARNING: Cannot parse the utterance '%s' at offset (%" PRIu64 ")\n", m_corpus->IdToKey(id).c_str(), sequenceStartOffset);
-                currentState = State::UtteranceKey; // Let's try the next one.
-            }
-            break;
-            default:
-                LogicError("Unexpected MLF state.");
-            }  
+                        .SetSize(uttrSize);
+            index->AddSequence(sequence);
+             
+            sequenceStartOffset += uttrSize;
+                    
+            reader.SetFileOffset(sequenceStartOffset);
         }
     }
 
-
-    // Tries to parse sequence key
-    // In MLF a sequence key should be in quotes. During parsing the extension should be removed.
-    bool MLFBinaryIndexBuilder::TryParseSequenceKey(const string& line, size_t& id, function<size_t(const string&)> keyToId)
-    {
-        id = 0;
-
-        string key(line);
-
-        boost::trim_right(key);
-
-        if (key.size() <= 2 || key.front() != '"' || key.back() != '"')
-            return false;
-
-        key = key.substr(1, key.size() - 2);
-        if (key.size() > 2 && key[0] == '*' && key[1] == '/') // Preserving the old behavior
-            key = key.substr(2);
-
-        // Remove extension if specified.
-        key = key.substr(0, key.find_last_of("."));
-
-        id = keyToId(key);
-        return true;
-    }
 }
