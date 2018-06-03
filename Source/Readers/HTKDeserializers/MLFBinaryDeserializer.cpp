@@ -337,12 +337,13 @@ MLFBinaryDeserializer::MLFBinaryDeserializer(CorpusDescriptorPtr corpus, const C
             "value '%ud'\n", m_dimension, numeric_limits<ClassIdType>::max());
 
     m_withPhoneBoundaries = streamConfig(L"phoneBoundaries", false);
-    if (m_frameMode && m_withPhoneBoundaries)
-        LogicError("frameMode and phoneBoundaries are mutually exclusive options.");
+    if (m_withPhoneBoundaries)
+    {
+        LogicError("TODO: enable phoneBoundaries in binary MLF format.");
+    }
 
-    wstring labelMappingFile = streamConfig(L"labelMappingFile", L"");
     InitializeStream(inputName);
-    InitializeChunkInfos(corpus, config, labelMappingFile);
+    InitializeChunkInfos(corpus, config);
 }
 
 // TODO: Should be removed. Currently a lot of end to end tests still use this one.
@@ -373,10 +374,12 @@ MLFBinaryDeserializer::MLFBinaryDeserializer(CorpusDescriptorPtr corpus, const C
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? DataType::Float : DataType::Double;
 
     m_withPhoneBoundaries = labelConfig(L"phoneBoundaries", "false");
+    if (m_withPhoneBoundaries) {
+        LogicError("TODO: enable phoneBoundaries for binary MLF format");
+    }
 
-    wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
     InitializeStream(name);
-    InitializeChunkInfos(corpus, config, labelMappingFile);
+    InitializeChunkInfos(corpus, config);
 }
 
 static inline bool LessByFirstItem(const std::tuple<size_t, size_t, size_t>& a, const std::tuple<size_t, size_t, size_t>& b)
@@ -384,17 +387,11 @@ static inline bool LessByFirstItem(const std::tuple<size_t, size_t, size_t>& a, 
     return std::get<0>(a) < std::get<0>(b);
 }
 
-void MLFBinaryDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config, const wstring& stateListPath)
+void MLFBinaryDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config)
 {
     // Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
     // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
     vector<wstring> mlfPaths = config.GetMlfPaths();
-
-    if (!stateListPath.empty())
-    {
-        m_stateTable = make_shared<StateTable>();
-        m_stateTable->ReadStateList(stateListPath);
-    }
 
     auto emptyPair = make_pair(numeric_limits<uint32_t>::max(), numeric_limits<uint32_t>::max());
     size_t totalNumSequences = 0;
