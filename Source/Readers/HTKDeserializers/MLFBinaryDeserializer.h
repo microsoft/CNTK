@@ -42,7 +42,7 @@ private:
     class FrameChunk;
 
     // Initializes chunk descriptions.
-    void InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config, const std::wstring& stateListPath);
+    void InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config);
 
     // Initializes a single stream this deserializer exposes.
     void InitializeStream(const std::wstring& name);
