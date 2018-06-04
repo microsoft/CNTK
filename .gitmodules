@@ -1,3 +1,7 @@
 [submodule "Source/Multiverso"]
 	path = Source/Multiverso
 	url = https://github.com/Microsoft/Multiverso
+[submodule "external/gsl"]
+	path = external/gsl
+	url = https://github.com/Microsoft/GSL.git
+	branch = d846fe5

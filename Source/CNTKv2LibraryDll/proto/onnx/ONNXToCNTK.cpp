@@ -4,7 +4,8 @@
 //
 
 #include "ONNXToCNTK.h"
-#include "proto/onnx/core/graph.h"
+#include "proto/onnx/core/graph/graph.h"
+#include "proto/onnx/core/graph/tensorutils.h"
 #include "Utils.h"
 #include "Operators.h"
 #include <algorithm>
@@ -17,6 +18,7 @@ using namespace CNTK::ONNX;
 
 namespace CNTK
 {
+    bool IsONNX1_2Supported();
 
 typedef std::unordered_map<const Node *, std::vector<FunctionPtr>> ONNXToCNTKMap;
 typedef std::unordered_map<std::string, Variable> ONNXToCNTKVariableMap;
@@ -31,18 +33,22 @@ public:
                                                  const Graph *graph, const DeviceDescriptor &computeDevice);
 
 private:
-    static FunctionPtr CreateCNTKNode(const Node *node, const std::vector<Variable> &inputs,
+    static FunctionPtr CreateCNTKNode(const Node *node, const std::vector<Variable> &inputs, const Graph *graph,
                                       const DeviceDescriptor &computeDevice);
     static std::vector<size_t> GetNodeDims(const Node *node);
     static Constant CreateConstant(const Node *node, const DeviceDescriptor &computeDevice);
     static Constant CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
                                    const DeviceDescriptor &computeDevice);
+    template <typename T>
+    static const CNTK::Constant CreateConstantWithTensorData(CNTK::NDShape &shape, onnx::TensorProto_DataType tensorProtoDataType,
+        CNTK::DataType cntkDataType, const T *srcData, CNTK::NDShape &reversedShape, 
+        const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName);
     static Variable CreateLeafVariableOrConstant(const NodeArg *nodeArg, const Node *parentNode, const Graph *graph,
                                                  const DeviceDescriptor &computeDevice);
     static std::vector<Variable> CreateRNNLeafVariableOrConstant(const NodeArg *nodeArg,
                                                                  const Node *parentNode, const Graph *graph,
                                                                  ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const DeviceDescriptor &computeDevice);
-    static FunctionPtr CreateFunction(const Node *node, const std::vector<Variable> &inputs);
+    static FunctionPtr CreateFunction(const Node *node, const std::vector<Variable> &inputs, const Graph *graph);
 
     static bool IsSecondInputOfElementWiseOpsWithBroadcast(const Node *parentNode, const NodeArg *nodeArg);
     static bool FixConstantShapeForConstantVariableInputPair(const std::vector<Variable> &inputs,
@@ -95,7 +101,7 @@ private:
     static std::vector<int64_t> VecIntToVecInt64(const std::vector<int> &vecInt);
     static std::vector<Axis> GetAxisVecFromIntVec(const std::vector<int> &vecInt);
 
-    static std::vector<size_t> VecFloatToVecSize_t(const std::vector<float> &vecFloat);
+    static std::vector<size_t> VecInt64ToVecSize_t(const std::vector<int64_t> &vecFloat);
 
     static std::vector<Axis> ConvertPermutationONNXToCNTK(const std::vector<int64_t> &permutation, bool hasBatchAxis, bool hasSequenceAxis);
 
@@ -155,6 +161,8 @@ private:
                                                                                          ONNXToCNTKMap &constructedNodeMap, ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const Graph *graph, const DeviceDescriptor &computeDevice);
 
     static ConvAutoPadType ConvertStrToConvAutoPadType(const string &str);
+
+    static NDShape GetShapeFromInput(const NodeArg* shapeInput, const Graph *graph);
 };
 
 } // namespace CNTK
@@ -238,14 +246,20 @@ std::vector<bool> ONNXToCNTKHelper::FromTypeProtoAsBool(const onnx::TypeProto &t
     return dimensions;
 }
 
-DataType ONNXToCNTKHelper::FromONNXType(onnx::TypeProto type)
+CNTK::DataType ONNXToCNTKHelper::FromONNXType(onnx::TypeProto type)
 {
     switch (type.tensor_type().elem_type())
     {
+        // CNTK only support ONNX float and double data types.
+        // For ops that take data types other than float and double,
+        // CNTK will accept these data types as float.
+    case onnx::TensorProto_DataType_INT64:
+    case onnx::TensorProto_DataType_INT32:
+    case onnx::TensorProto_DataType_BOOL:
     case onnx::TensorProto_DataType_FLOAT:
-        return DataType::Float;
+        return CNTK::DataType::Float;
     case onnx::TensorProto_DataType_DOUBLE:
-        return DataType::Double;
+        return CNTK::DataType::Double;
         break;
     default:
         NOT_IMPLEMENTED;
@@ -272,9 +286,9 @@ float UnpackFloat(const char *buf, int i)
     else
     {
         temp = ((buf[0] << 24) |
-                (buf[1] << 16) |
-                (buf[2] << 8) |
-                buf[3]);
+            (buf[1] << 16) |
+            (buf[2] << 8) |
+            buf[3]);
     }
     return temp;
 }
@@ -344,11 +358,11 @@ std::vector<size_t> ONNXToCNTKHelper::GetNodeDims(const Node *node)
     else
     {
         std::vector<size_t> ret;
-        const std::vector<NodeArg> &outputArgs = node->OutputDefs();
-        std::vector<NodeArg>::const_iterator it = outputArgs.begin();
+        const ConstPointerContainer<std::vector<NodeArg *>> &outputArgs = node->OutputDefs();
+        ConstPointerContainer<std::vector<NodeArg *>>::ConstIterator it = outputArgs.begin();
         if (it != outputArgs.end())
         {
-            const TensorShapeProto *shape = (*it).Shape();
+            const TensorShapeProto *shape = (*it)->Shape();
             int rank = shape->dim_size();
             for (int i = 0; i < rank; i++)
                 ret.push_back(shape->dim(i).dim_value());
@@ -365,127 +379,83 @@ Constant ONNXToCNTKHelper::CreateConstant(const Node *node, const DeviceDescript
     return CreateConstant(valueProto, node->Name(), computeDevice);
 }
 
-Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
-                                          const DeviceDescriptor &computeDevice)
+Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName, 
+    const DeviceDescriptor &computeDevice)
 {
-    auto dataType = valueProto.data_type();
+    auto tensorProtoDataType = valueProto.data_type();
 
     NDShape shape(std::vector<size_t>(valueProto.dims().begin(), valueProto.dims().end()));
 
     // the following code is to revert CNTKToONNXHelper::ToTensorShape.to restore a CNTK NDArray
     NDShape reversedShape = ReverseShape(shape);
 
-    auto totalSize = shape.TotalSize();
-
-    switch (dataType)
+    switch (tensorProtoDataType)
     {
+    case TensorProto_DataType_BOOL:
+    {
+        // It does not work using vector<bool> because resulted memory layout is not what we expect.
+        bool *srcData = new bool[shape.TotalSize()];
+        ::ONNX::Utils::TensorUtils::UnpackTensor(valueProto, srcData, shape.TotalSize());
+
+        // CNTK does not support bool. We need to convert to float.
+        std::vector<float> srcFloatData(shape.TotalSize());
+        for (int i = 0; i < shape.TotalSize(); i++)
+            srcFloatData[i] = srcData[i];
+        delete[] srcData;
+
+        return CreateConstantWithTensorData<float>(shape, tensorProtoDataType, CNTK::DataType::Float,
+            &srcFloatData[0], reversedShape, computeDevice, nodeName);
+    }
+    break;
+    case TensorProto_DataType_INT32:
+    {
+        std::vector<int32_t> srcData(shape.TotalSize());
+        ::ONNX::Utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+
+        // CNTK does not support int. We need to convert to float.
+        std::vector<float> srcFloatData(shape.TotalSize());
+        for (int i = 0; i < shape.TotalSize(); i++)
+            srcFloatData[i] = srcData[i];
+
+        return CreateConstantWithTensorData<float>(shape, tensorProtoDataType, CNTK::DataType::Float,
+            &srcFloatData[0], reversedShape, computeDevice, nodeName);
+    }
+    break;
+    case TensorProto_DataType_INT64:
+    {
+        std::vector<int64_t> srcData(shape.TotalSize());
+        ::ONNX::Utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+
+        // CNTK does not support int64_t. We need to convert to float.
+        std::vector<float> srcFloatData(shape.TotalSize());
+        for (int i = 0; i < shape.TotalSize(); i++)
+            srcFloatData[i] = srcData[i];
+
+        return CreateConstantWithTensorData<float>(shape, tensorProtoDataType, CNTK::DataType::Float,
+            &srcFloatData[0], reversedShape, computeDevice, nodeName);
+    }
+    break;
     case TensorProto_DataType_FLOAT:
     {
-        float *data = new float[totalSize];
         if (valueProto.float_data().empty())
         {
             RetrieveRawDataAsFloat(valueProto);
         }
 
-        if (shape.Rank() <= 2)
-        {
-            for (size_t index = 0; index < totalSize; index++)
-            {
-                data[index] = valueProto.float_data()[index];
-            }
-        }
-        else
-        {
-            int outputChannels = shape[0], inputChanndels = shape[1];
-            NDShape channelKernelShape(std::vector<size_t>(shape.Dimensions().begin() + 2, shape.Dimensions().end()));
-            NDShape channelReversedShape = ReverseShape(channelKernelShape);
-            int channelKernelSize = channelKernelShape.TotalSize();
-            for (int oC = 0; oC < outputChannels; oC++)
-            {
-                for (int iC = 0; iC < inputChanndels; iC++)
-                {
-                    int channelIndex = (oC * inputChanndels + iC);
-                    for (int pixel = 0; pixel < channelKernelSize; pixel++)
-                    {
-                        data[channelIndex * channelKernelSize + pixel] =
-                            valueProto.float_data()[channelIndex * channelKernelSize + pixel];
-                    }
-                }
-            }
-        }
-
-        NDArrayViewPtr dstFinal(new NDArrayView(DataType::Float, reversedShape, &data[0],
-                                                totalSize * sizeof(float), computeDevice.CPUDevice()));
-
-        if (computeDevice.Type() == DeviceKind::CPU)
-        {
-            Constant constantVariable(dstFinal, ToWString(nodeName));
-            return constantVariable;
-        }
-        else
-        {
-            // this is the way to load values into GPU:
-            // Create a GPU NDArrayView and CopyFrom a CPU NDArrayView that holding the data.
-            NDArrayViewPtr dstFinalGPU(new NDArrayView(DataType::Float, StorageFormat::Dense, reversedShape, computeDevice));
-            dstFinalGPU->CopyFrom(*dstFinal);
-            Constant constantVariable(dstFinalGPU, ToWString(nodeName));
-            return constantVariable;
-        }
+        return CreateConstantWithTensorData<float>(shape, tensorProtoDataType, CNTK::DataType::Float,
+            &(valueProto.float_data()[0]), reversedShape, computeDevice, nodeName);
     }
     break;
     case TensorProto_DataType_DOUBLE:
     {
         // TODO: refactore commom code for float and double
-        double *data = new double[totalSize];
         if (valueProto.double_data().empty())
         {
             RetrieveRawDataAsDouble(valueProto);
         }
 
-        if (shape.Rank() <= 2)
-        {
-            for (size_t index = 0; index < totalSize; index++)
-            {
-                data[index] = valueProto.double_data()[index];
-            }
-        }
-        else
-        {
-            int outputChannels = shape[0], inputChanndels = shape[1];
-            NDShape channelKernelShape(std::vector<size_t>(shape.Dimensions().begin() + 2, shape.Dimensions().end()));
-            NDShape channelReversedShape = ReverseShape(channelKernelShape);
-            int channelKernelSize = channelKernelShape.TotalSize();
-            for (int oC = 0; oC < outputChannels; oC++)
-            {
-                for (int iC = 0; iC < inputChanndels; iC++)
-                {
-                    int channelIndex = (oC * inputChanndels + iC);
-                    for (int pixel = 0; pixel < channelKernelSize; pixel++)
-                    {
-                        data[channelIndex * channelKernelSize + pixel] =
-                            valueProto.double_data()[channelIndex * channelKernelSize + pixel];
-                    }
-                }
-            }
-        }
-
-        NDArrayViewPtr dstFinal(new NDArrayView(DataType::Double, reversedShape, &data[0],
-                                                totalSize * sizeof(double), computeDevice.CPUDevice()));
-
-        if (computeDevice.Type() == DeviceKind::CPU)
-        {
-            Constant constantVariable(dstFinal, ToWString(nodeName));
-            return constantVariable;
-        }
-        else
-        {
-            // this is the way to load values into GPU:
-            // Create a GPU NDArrayView and CopyFrom a CPU NDArrayView that holding the data.
-            NDArrayViewPtr dstFinalGPU(new NDArrayView(DataType::Double, StorageFormat::Dense, reversedShape, computeDevice));
-            dstFinalGPU->CopyFrom(*dstFinal);
-            Constant constantVariable(dstFinalGPU, ToWString(nodeName));
-            return constantVariable;
-        }
+        return CreateConstantWithTensorData<double>(shape, tensorProtoDataType, CNTK::DataType::Double,
+            &(valueProto.double_data()[0]), reversedShape, computeDevice, nodeName);
     }
     break;
     default:
@@ -493,12 +463,72 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     }
 }
 
+template <typename T>
+const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::NDShape &shape, onnx::TensorProto_DataType tensorProtoDataType, 
+    CNTK::DataType cntkDataType, const T *srcData, CNTK::NDShape &reversedShape, const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName)
+{
+    auto totalSize = shape.TotalSize();
+    T *data = new T[totalSize];
+
+    if (shape.Rank() <= 2)
+    {
+        for (size_t index = 0; index < totalSize; index++)
+        {
+            data[index] = srcData[index];
+        }
+    }
+    else
+    {
+        int outputChannels = shape[0], inputChanndels = shape[1];
+        NDShape channelKernelShape(std::vector<size_t>(shape.Dimensions().begin() + 2, shape.Dimensions().end()));
+        NDShape channelReversedShape = ReverseShape(channelKernelShape);
+        int channelKernelSize = channelKernelShape.TotalSize();
+        for (int oC = 0; oC < outputChannels; oC++)
+        {
+            for (int iC = 0; iC < inputChanndels; iC++)
+            {
+                int channelIndex = (oC * inputChanndels + iC);
+                for (int pixel = 0; pixel < channelKernelSize; pixel++)
+                {
+                    data[channelIndex * channelKernelSize + pixel] =
+                        srcData[channelIndex * channelKernelSize + pixel];
+                }
+            }
+        }
+    }
+
+    NDArrayViewPtr dstFinal(new NDArrayView(cntkDataType, reversedShape, &data[0],
+                                            totalSize * sizeof(T), computeDevice.CPUDevice()));
+
+    if (computeDevice.Type() == DeviceKind::CPU)
+    {
+        Constant constantVariable(dstFinal, ToWString(nodeName));
+        return constantVariable;
+    }
+    else
+    {
+        // this is the way to load values into GPU:
+        // Create a GPU NDArrayView and CopyFrom a CPU NDArrayView that holding the data.
+        NDArrayViewPtr dstFinalGPU(new NDArrayView(cntkDataType, StorageFormat::Dense, reversedShape, computeDevice));
+        dstFinalGPU->CopyFrom(*dstFinal);
+        Constant constantVariable(dstFinalGPU, ToWString(nodeName));
+        return constantVariable;
+    }
+}
+
 const Node *ONNXToCNTKHelper::GetChildNode(const Node *parentNode, const NodeArg *nodeArg)
 {
-    const Node::EdgeEnd *inputEdgeSrcEnd = nullptr;
-    if (parentNode->InputEdgeSrcEnd(const_cast<NodeArg *>(nodeArg), &inputEdgeSrcEnd))
+    Node::NodeConstIterator itChildNode = parentNode->InputNodesBegin();
+    for (; itChildNode != parentNode->InputNodesEnd(); ++itChildNode)
     {
-        return inputEdgeSrcEnd->GetNode();
+        const Node *childNode = *itChildNode;
+        const ConstPointerContainer<std::vector<NodeArg *>> &childOutputDefs = childNode->OutputDefs();
+        for (ConstPointerContainer<std::vector<NodeArg *>>::ConstIterator itChildOutput = childOutputDefs.begin(); itChildOutput != childOutputDefs.end(); ++itChildOutput)
+        {
+            const NodeArg *childOutput = *itChildOutput;
+            if (childOutput == nodeArg)
+                return childNode;
+        }
     }
     return nullptr;
 }
@@ -509,11 +539,11 @@ bool ONNXToCNTKHelper::IsSecondInputOfElementWiseOpsWithBroadcast(const Node *pa
     {
         if (HasNamedAttribute(parentNode, "broadcast") && 1 == static_cast<int>(GetNamedAttributeAsInt64(parentNode, "broadcast")))
         {
-            const std::vector<NodeArg> &inputNodeArgs = parentNode->InputDefs();
+            const ConstPointerContainer<std::vector<NodeArg *>> &inputNodeArgs = parentNode->InputDefs();
             for (int index = 0; index < inputNodeArgs.size(); index++)
             {
-                const NodeArg &childNodeArg = inputNodeArgs[index];
-                if (childNodeArg.Name() == nodeArg->Name())
+                const NodeArg *childNodeArg = inputNodeArgs[index];
+                if (childNodeArg->Name() == nodeArg->Name())
                 {
                     return index == 1;
                 }
@@ -571,21 +601,21 @@ bool ONNXToCNTKHelper::FixConstantShapeForConstantVariableInputPair(const std::v
 
 int CalculateNodeArgInputIndex(const NodeArg *nodeArg, const Node *parentNode)
 {
-    std::vector<NodeArg>::const_iterator it = std::find_if(parentNode->InputDefs().cbegin(),
-                                                           parentNode->InputDefs().cend(), [nodeArg](const NodeArg &other) { return other.Name() == nodeArg->Name(); });
-    if (it == parentNode->InputDefs().cend())
+    const ConstPointerContainer<std::vector<NodeArg *>> &inputDefs = parentNode->InputDefs();
+    for (int i = 0; i < inputDefs.size(); i++)
     {
-        return -1;
+        if (inputDefs[i]->Name() == nodeArg->Name())
+            return i;
     }
-    else
-        return it - parentNode->InputDefs().cbegin();
+
+    return -1;
 }
 
 template <typename DType>
 Constant CreateConstantWithRawData(DType *data, const NDShape &shape, const std::string &name,
                                    const DeviceDescriptor &computeDevice)
 {
-    DataType dataType = AsDataType<DType>();
+    CNTK::DataType dataType = AsDataType<DType>();
 
     int totalSize = shape.TotalSize();
     NDArrayViewPtr dstFinal(new NDArrayView(dataType, shape, data,
@@ -655,12 +685,12 @@ std::vector<Variable> CreateRNNConstant(
 
                 int input_size = cols;
                 int cell_size = rows / 4;
-
+                
                 for (int dir = 0; dir < num_directions; dir++)
                 {
                     std::string nodeName = name + (index == 1 ? "_W_" : "_R_") + (char) ('0' + dir);
                     int totalSizePerDirection = rows * cols;
-
+                    
                     // TODO: what about double?
                     float *data = new float[totalSizePerDirection];
                     for (size_t count = 0; count < totalSizePerDirection; count++)
@@ -1064,7 +1094,7 @@ std::vector<FunctionPtr> CreateRNNConstantOp(const Graph *graph, const Node *nod
                                              const DeviceDescriptor &computeDevice)
 {
     const onnx::TensorProto *valueProto;
-    if (!graph->GetInitialTensor(node->Name(), &valueProto))
+    if (!graph->GetInitializedTensor(node->Name(), &valueProto))
     {
         NodeAttributes::const_iterator itValue = node->GetAttributes().find("value");
         if (itValue == node->GetAttributes().cend())
@@ -1088,7 +1118,7 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
     string parentONNXOpName = parentNode->OpType();
     std::string nodeName = nodeArg->Name();
     const onnx::TensorProto *valueProto;
-    if (graph->GetInitialTensor(nodeName, &valueProto))
+    if (graph->GetInitializedTensor(nodeName, &valueProto))
     {
         int index = CalculateNodeArgInputIndex(nodeArg, parentNode);
         return CreateRNNConstant(parentNode, index, nodeName, *valueProto, computeDevice);
@@ -1211,7 +1241,7 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
 
     std::string nodeName = nodeArg->Name();
     const onnx::TensorProto *valueProto;
-    if (graph->GetInitialTensor(nodeName, &valueProto))
+    if (graph->GetInitializedTensor(nodeName, &valueProto))
     {
         return CreateConstant(*valueProto, nodeName, computeDevice);
     }
@@ -1236,13 +1266,16 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     // This requires support from LotusIR.
     // Now traversing starts from arbitray nodes which may miss the RNN op.
     bool hasSequenceAxis = false;
-    for (Graph::NodeIterator nodeIt = (const_cast<Graph *>(graph))->Nodes_begin();
-         nodeIt != (const_cast<Graph *>(graph))->Nodes_end(); ++nodeIt)
-        if (Operators::IsRNNOp((*nodeIt)->OpType()))
+    const GraphNodes &nodes = graph->Nodes();
+    for (GraphNodes::ConstNodeIterator it = nodes.cbegin(); it != nodes.cend(); ++it)
+    {
+        const Node &node = *it;
+        if (Operators::IsRNNOp(node.OpType()))
         {
             hasSequenceAxis = true;
             break;
         }
+    }
 
     if (hasSequenceAxis)
     {
@@ -1253,13 +1286,13 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     auto dataType = FromONNXType(nodeArg->ToProto().type());
     switch (dataType)
     {
-    case DataType::Float:
+    case CNTK::DataType::Float:
     {
-        return InputVariable(shape, DataType::Float, ToWString(nodeArg->Name()), dynamicAxes);
+        return InputVariable(shape, CNTK::DataType::Float, ToWString(nodeArg->Name()), dynamicAxes);
     }
-    case DataType::Double:
+    case CNTK::DataType::Double:
     {
-        return InputVariable(shape, DataType::Double, ToWString(nodeArg->Name()), dynamicAxes);
+        return InputVariable(shape, CNTK::DataType::Double, ToWString(nodeArg->Name()), dynamicAxes);
     }
     default:
         NOT_IMPLEMENTED;
@@ -1284,6 +1317,21 @@ ConvAutoPadType ONNXToCNTKHelper::ConvertStrToConvAutoPadType(const string &str)
         return ConvAutoPadType::SAME_LOWER;
     else
         LogicError("Unknown value for %s attribute: %s", "auto_pad", str.c_str());
+}
+
+NDShape ONNXToCNTKHelper::GetShapeFromInput(const NodeArg* shapeInput, const Graph *graph)
+{
+    const onnx::TensorProto *valueProto;
+    graph->GetInitializedTensor(shapeInput->Name(), &valueProto);
+
+    std::vector<size_t> dimensions;
+    for (int d = 0; d < valueProto->dims(0); d++)
+    {
+        dimensions.push_back((size_t)(valueProto->int64_data()[d]));
+    }
+    std::reverse(dimensions.begin(), dimensions.end());
+    NDShape shape(dimensions);
+    return shape;
 }
 
 } // namespace CNTK
@@ -1530,7 +1578,7 @@ std::vector<int64_t> ONNXToCNTKHelper::VecIntToVecInt64(const std::vector<int> &
     return vecInt64;
 }
 
-std::vector<size_t> ONNXToCNTKHelper::VecFloatToVecSize_t(const std::vector<float> &vecFloat)
+std::vector<size_t> ONNXToCNTKHelper::VecInt64ToVecSize_t(const std::vector<int64_t> &vecFloat)
 {
     std::vector<size_t> vecSize_t(vecFloat.size());
     for (int i = 0; i < vecFloat.size(); i++)
@@ -1755,11 +1803,11 @@ std::pair<std::vector<size_t>, std::vector<size_t>> ONNXToCNTKHelper::AdjustONNX
     return SplitAndReverseVec(pads);
 }
 
-FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector<Variable> &inputs)
+FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector<Variable> &inputs, const Graph *graph)
 {
     string onnxOpName = node->OpType();
 
-    if (onnxOpName == "Cast" && inputs[0].GetDataType() == DataType::Float && inputs[0].Owner() != nullptr)
+    if (onnxOpName == "Cast" && inputs[0].GetDataType() == CNTK::DataType::Float && inputs[0].Owner() != nullptr)
     {
         // CNTK does not support cast op. Only float is available with ONNX support.
         // Question for having a cast op: Why not cast data as necessary internally.
@@ -1827,8 +1875,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         double minValue = GetNamedAttributeAsFloat(node, "min");
         double maxValue = GetNamedAttributeAsFloat(node, "max");
-        Constant minVariable = Constant::Scalar(DataType::Float, minValue);
-        Constant maxVariable = Constant::Scalar(DataType::Float, maxValue);
+        Constant minVariable = Constant::Scalar(CNTK::DataType::Float, minValue);
+        Constant maxVariable = Constant::Scalar(CNTK::DataType::Float, maxValue);
         FunctionPtr cntkFunction = Clip(inputs[0], minVariable, maxVariable, ToWString(node->Name()));
         return cntkFunction;
     }
@@ -1895,8 +1943,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "MaxRoiPool")
     {
         // ONNX spec is list of ints - however current IR spec is AttrType::AttributeProto_AttributeType_FLOATS
-        std::vector<float> pooled_shape = GetNamedAttributeAsFloatVec(node, "pooled_shape");
-        std::vector<size_t> dims = VecFloatToVecSize_t(pooled_shape);
+        std::vector<int64_t> pooled_shape = GetNamedAttributeAsInt64Vec(node, "pooled_shape");
+        std::vector<size_t> dims = VecInt64ToVecSize_t(pooled_shape);
         NDShape roiOutputShape(dims);
 
         float spatialScale = GetNamedAttributeAsFloat(node, "spatial_scale");
@@ -1947,7 +1995,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             // because 1e-5 is a common value for epsilon (ONNX default) and we do not want the model
             // to run slow for this common case because of any floating point differences. But for anything
             // clearly lower than 1e-5, we will not use cuDNN's batch normalization engine, because it floors
-            // epsilon at 1e-5, and that can produce wrong numbers. For the special case when epsilon happens 
+            // epsilon at 1e-5, and that can produce wrong numbers. For the special case when epsilon happens
             // to be within (1e-5 , 1e-5 - std::numeric_limits<float>::epsilon()] range, cuDNN engine will be
             // used but it will print a warning that it is flooring epsilon to 1e-5.
             fprintf(stderr, "Epsilon = %0.7f, which is < 1e-5. CuDNN engine cannot be used for Batch Normalization. Could be slow.", epsilon);
@@ -1989,8 +2037,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         if (broadcast == 0 && hasSingletonDim) // Bad ONNX node - such model/node shouldn't be serializable in ONNX at all.
             LogicError("The rank of input C in GEMM operator (A*B + C) is not 2. Either specify a value with rank=2, or set the broadcast attribute to 1.");
 
-        FunctionPtr A = ElementTimes(input0, Constant(NDShape({1, 1}), DataType::Float, static_cast<double>(alpha)));
-        FunctionPtr C = ElementTimes(input2, Constant(NDShape({1, 1}), DataType::Float, static_cast<double>(beta)));
+        FunctionPtr A = ElementTimes(input0, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(alpha)));
+        FunctionPtr C = ElementTimes(input2, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(beta)));
         if (!transA && transB && broadcast) // Special case: Equivalent to FC (fully-connected) op. Takes in account broadcast of B, if needed.
         {
             return CreateCNTKFCNode(ToWString(node->Name()), {(Variable) A, input1, (Variable) C});
@@ -2014,7 +2062,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         const NDShape &shape = GetNamedAttributeAsShape(node, "shape", false);
 
         // ONNX only has float type for random generators
-        DataType dataType = DataType::Float;
+        CNTK::DataType dataType = CNTK::DataType::Float;
 
         double low = GetNamedAttributeAsFloat(node, "low");
         double high = GetNamedAttributeAsFloat(node, "high");
@@ -2025,7 +2073,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "RandomNormal")
     {
         const NDShape &shape = GetNamedAttributeAsShape(node, "shape", false);
-        DataType dataType = DataType::Float;
+        CNTK::DataType dataType = CNTK::DataType::Float;
         double mean = GetNamedAttributeAsFloat(node, "mean");
         double scale = GetNamedAttributeAsFloat(node, "scale");
         unsigned long seed = GetNamedAttributeAsInt64(node, "seed");
@@ -2338,18 +2386,24 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Reshape")
     {
+        NDShape newShape;
+        if (!IsONNX1_2Supported())
+            newShape = GetNamedAttributeAsShape(node, "shape", false);
+        else
+        {
+            newShape = GetShapeFromInput(node->InputDefs()[1], graph);
+        }
+
         // Skip reshape is it follows a LSTM.
-        const Node *childNode = GetChildNode(node, &node->InputDefs()[0]);
+        const Node *childNode = GetChildNode(node, node->InputDefs()[0]);
         if (childNode != nullptr && childNode->OpType() == "LSTM")
         {
             // TODO: this is to undo reshape after LSTM in CNTKToONNX to workaround
             // output shape mismatch with input to the nexk LSTM layer.
-            NDShape newShape = GetNamedAttributeAsShape(node, "shape", false);
             newShape = newShape.SubShape(0, newShape.Rank() - inputs[0].DynamicAxes().size());
             return Reshape(inputs[0], newShape, ToWString(node->Name()));
         }
 
-        NDShape newShape = GetNamedAttributeAsShape(node, "shape", false);
         if (inputs[0].DynamicAxes().size() > 0)
         {
             if (newShape.Rank() == 1)
@@ -2551,15 +2605,15 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
 
 std::pair<const Node *, int> FindParent(const Node *node)
 {
-    Node::NodeConstIterator it = node->OutputNodes_begin();
-    if (it != node->OutputNodes_end())
+    Node::NodeConstIterator it = node->OutputNodesBegin();
+    if (it != node->OutputNodesEnd())
     {
         const Node *parent = *it;
         int index = 0;
         for (auto nodeArg : parent->InputDefs())
         {
             // TODO: Check whether we should use node output arg name for the check below.
-            if (nodeArg.Name() == node->Name())
+            if (nodeArg->Name() == node->Name())
             {
                 return std::make_pair(parent, index);
             }
@@ -2571,15 +2625,15 @@ std::pair<const Node *, int> FindParent(const Node *node)
 
 std::pair<const Node *, int> FindParentAndChildIndex(const Node *node)
 {
-    Node::NodeConstIterator it = node->OutputNodes_begin();
-    if (it != node->OutputNodes_end())
+    Node::NodeConstIterator it = node->OutputNodesBegin();
+    if (it != node->OutputNodesEnd())
     {
         const Node *parent = *it;
         int index = 0;
         for (auto nodeArg : parent->InputDefs())
         {
             // TODO: Check whether we should use node output arg name for the check below.
-            if (nodeArg.Name() == node->Name())
+            if (nodeArg->Name() == node->Name())
             {
                 return std::make_pair(parent, index);
             }
@@ -2626,13 +2680,13 @@ std::vector<FunctionPtr> ONNXToCNTKHelper::FromONNXNode(const Node *node, ONNXTo
     }
     else
     {
-        FunctionPtr cntkFunction = CreateCNTKNode(node, inputs, computeDevice);
+        FunctionPtr cntkFunction = CreateCNTKNode(node, inputs, graph, computeDevice);
         constructedNodeMap.insert(ONNXToCNTKMap::value_type(node, std::vector<FunctionPtr>({cntkFunction})));
         return std::vector<FunctionPtr>({cntkFunction});
     }
 }
 
-FunctionPtr ONNXToCNTKHelper::CreateCNTKNode(const Node *node, const std::vector<Variable> &inputs,
+FunctionPtr ONNXToCNTKHelper::CreateCNTKNode(const Node *node, const std::vector<Variable> &inputs, const Graph *graph,
                                              const DeviceDescriptor &computeDevice)
 {
     string onnxOpName = node->OpType();
@@ -2651,14 +2705,14 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKNode(const Node *node, const std::vector
     }
     else
     {
-        return CreateFunction(node, inputs);
+        return CreateFunction(node, inputs, graph);
     }
 }
 
 Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool> &cntkConvAutoPadding,
                                                              NDShape &strides, const Node *node, const std::vector<Variable> &inputs, const double padValue)
 {
-    bool hasAutoPad = HasNamedAttribute(node, "auto_pad");
+    bool hasAutoPad = HasNamedAttribute(node, "auto_pad") && GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER") != "NOTSET";
     bool hasPads = HasNamedAttribute(node, "pads");
     Variable operand = inputs[0];
     Variable convOperand = operand; // Important initial condition.
@@ -2886,13 +2940,15 @@ FunctionPtr ONNXToCNTK::CreateGraph(ONNXIR::Graph *src, const DeviceDescriptor &
     // To use depth-first-traversal, keeps a collection of visited nodes.
     ONNXToCNTKMap constructedFunctions;
     ONNXToCNTKVariableMap constructedNodeArgVariableMap;
-    for (Graph::NodeIterator it = src->Nodes_begin(); it != src->Nodes_end(); ++it)
-    {
-        const Node *node = *it;
 
-        if (constructedFunctions.find(node) == constructedFunctions.end())
+    const GraphNodes &nodes = src->Nodes();
+    for (GraphNodes::ConstNodeIterator it = nodes.cbegin(); it != nodes.cend(); ++it)
+    {
+        const Node &node = *it;
+
+        if (constructedFunctions.find(&node) == constructedFunctions.end())
         {
-            std::vector<FunctionPtr> cntkNode = ONNXToCNTKHelper::FromONNXNode(node,
+            std::vector<FunctionPtr> cntkNode = ONNXToCNTKHelper::FromONNXNode(&node,
                                                                                constructedFunctions, constructedNodeArgVariableMap, src, computeDevice);
         }
     }
@@ -2906,7 +2962,7 @@ FunctionPtr ONNXToCNTK::CreateGraph(ONNXIR::Graph *src, const DeviceDescriptor &
     }
 
     std::vector<FunctionPtr> functions;
-    for (Node::NodeConstIterator it = itNodeFn->first->InputNodes_begin(); it != itNodeFn->first->InputNodes_end(); ++it)
+    for (Node::NodeConstIterator it = itNodeFn->first->InputNodesBegin(); it != itNodeFn->first->InputNodesEnd(); ++it)
     {
         // TODO: consulting ONNXIR to see how to do this solidly.
         // https://msasg.visualstudio.com/DefaultCollection/Shared%20Data/AIToolkits-CNTK/_queries?id=1134732&_a=edit&triage=true
@@ -2938,11 +2994,11 @@ std::vector<Variable> ONNXToCNTKHelper::CreateCNTKInputsStartingFromIndex(const 
                                                                           ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const Graph *graph, size_t startIndex, const DeviceDescriptor &computeDevice)
 {
     std::vector<Variable> inputs;
-    const std::vector<NodeArg> &inputDefs = node->InputDefs();
-    for (std::vector<NodeArg>::const_iterator it = inputDefs.begin() + startIndex; it != inputDefs.end(); ++it)
+    const ConstPointerContainer<std::vector<NodeArg *>> &inputDefs = node->InputDefs();
+    for (int i = startIndex; i < inputDefs.size(); i++)
     {
-        const NodeArg *nodeArg = &(*it);
-        const Node *inputNode = GetChildNode(node, &(*it));
+        const NodeArg *nodeArg = inputDefs[i];
+        const Node *inputNode = GetChildNode(node, nodeArg);
         if (inputNode != nullptr)
         {
             ONNXToCNTKMap::iterator itNodeMap = constructedNodeMap.find(const_cast<Node *>(inputNode));
@@ -3006,15 +3062,15 @@ std::pair<bool, std::vector<FunctionPtr>> ONNXToCNTKHelper::CheckNodeBelongsToOp
     {
         std::vector<int64_t> permutation = GetNamedAttributeAsInt64Vec(node, "perm");
         const Node *firstParentNode(nullptr), *grandParentNode(nullptr);
-        Node::NodeConstIterator it = node->OutputNodes_begin();
-        if (it != node->OutputNodes_end())
+        Node::NodeConstIterator it = node->OutputNodesBegin();
+        if (it != node->OutputNodesEnd())
         {
             firstParentNode = *it;
         }
         if (firstParentNode != nullptr)
         {
-            it = firstParentNode->OutputNodes_begin();
-            if (it != node->OutputNodes_end())
+            it = firstParentNode->OutputNodesBegin();
+            if (it != node->OutputNodesEnd())
             {
                 grandParentNode = *it;
             }
@@ -3032,7 +3088,7 @@ std::pair<bool, std::vector<FunctionPtr>> ONNXToCNTKHelper::CheckNodeBelongsToOp
             std::vector<Variable> inputsnextLSTMInputs = CreateCNTKInputsStartingFromIndex(grandParentNode, constructedNodeMap,
                                                                                            constructedNodeArgVariableMap, graph, 1, computeDevice);
             inputsnextLSTMInputs.insert(inputsnextLSTMInputs.begin(), inputs[0]);
-            FunctionPtr cntkFunction = CreateCNTKNode(grandParentNode, inputsnextLSTMInputs, computeDevice);
+            FunctionPtr cntkFunction = CreateCNTKNode(grandParentNode, inputsnextLSTMInputs, graph, computeDevice);
             lstmCntkFunction.push_back(cntkFunction);
             constructedNodeMap.insert(ONNXToCNTKMap::value_type(grandParentNode, lstmCntkFunction));
             isOptimizedRnnStack = true;

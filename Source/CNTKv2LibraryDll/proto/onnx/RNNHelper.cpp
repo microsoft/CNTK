@@ -302,7 +302,7 @@ FunctionPtr GRUCell(Variable input,
 
     FunctionPtr ct = gActivationOp(ct_proj + Times(H1, rs));
 
-    Constant one = W.GetDataType() == DataType::Float ? Constant::Scalar<float>(1.0f) : Constant::Scalar<double>(1.0);
+    Constant one = W.GetDataType() == CNTK::DataType::Float ? Constant::Scalar<float>(1.0f) : Constant::Scalar<double>(1.0);
 
     FunctionPtr ht = ElementTimes(one - zt, ct) + ElementTimes(zt, prevOutput);
 
@@ -421,9 +421,9 @@ const std::vector<Variable> FindByNameHint(const std::vector<Variable> &inputs, 
 }
 
 Variable GetInitialStateVariable(const std::vector<Variable> &inputs, int numDirections,
-                                 const std::string &nameHint, DataType datatype)
+                                 const std::string &nameHint, CNTK::DataType datatype)
 {
-    Variable initialVariable = datatype == DataType::Double ? Constant::Scalar(0.0) : Constant::Scalar(0.0f);
+    Variable initialVariable = datatype == CNTK::DataType::Double ? Constant::Scalar(0.0) : Constant::Scalar(0.0f);
     const std::vector<Variable> initialVariables = FindByNameHint(inputs, nameHint);
     if (numDirections == 1 && initialVariables.size() >= 1)
     {
@@ -760,9 +760,9 @@ double GetScaler(Variable variable)
 
     switch (variable.GetDataType())
     {
-    case DataType::Float:
+    case CNTK::DataType::Float:
         return *((float *) cpuV->DataBuffer<float>());
-    case DataType::Double:
+    case CNTK::DataType::Double:
         return *((double *) cpuV->DataBuffer<double>());
     default:
         NOT_IMPLEMENTED;

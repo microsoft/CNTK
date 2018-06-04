@@ -66,7 +66,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>.\API;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\API;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll;..\..\external\gsl\include</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'!$(IsUWP)'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'!$(IsUWP)'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>true</OpenMPSupport>
@@ -174,18 +174,43 @@
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
-    <ClInclude Include="proto\onnx\core\constants.h" />
-    <ClInclude Include="proto\onnx\core\graph.h" />
-    <ClInclude Include="proto\onnx\core\model.h" />
-    <ClInclude Include="proto\onnx\core\op.h" />
-    <ClInclude Include="proto\onnx\core\opsignature.h" />
-    <ClInclude Include="proto\onnx\core\record.h" />
-    <ClInclude Include="proto\onnx\core\shape_inference.h" />
-    <ClInclude Include="proto\onnx\core\status.h" />
-    <ClInclude Include="proto\onnx\core\tensorutils.h" />
-    <ClInclude Include="proto\onnx\core\utils.h" />
+    <ClInclude Include="proto\onnx\core\common\code_location.h" />
+    <ClInclude Include="proto\onnx\core\common\common.h" />
+    <ClInclude Include="proto\onnx\core\common\CommonSTD.h" />
+    <ClInclude Include="proto\onnx\core\common\const_pointer_container.h" />
+    <ClInclude Include="proto\onnx\core\common\exceptions.h" />
+    <ClInclude Include="proto\onnx\core\common\logging\capture.h" />
+    <ClInclude Include="proto\onnx\core\common\logging\isink.h" />
+    <ClInclude Include="proto\onnx\core\common\logging\logging.h" />
+    <ClInclude Include="proto\onnx\core\common\logging\macros.h" />
+    <ClInclude Include="proto\onnx\core\common\logging\severity.h" />
+    <ClInclude Include="proto\onnx\core\common\status.h" />
+    <ClInclude Include="proto\onnx\core\graph\constants.h" />
+    <ClInclude Include="proto\onnx\core\graph\function.h" />
+    <ClInclude Include="proto\onnx\core\graph\graph.h" />
+    <ClInclude Include="proto\onnx\core\graph\graph_nodes.h" />
+    <ClInclude Include="proto\onnx\core\graph\graph_transformer.h" />
+    <ClInclude Include="proto\onnx\core\graph\model.h" />
+    <ClInclude Include="proto\onnx\core\graph\op.h" />
+    <ClInclude Include="proto\onnx\core\graph\record.h" />
+    <ClInclude Include="proto\onnx\core\graph\rewrite_rule.h" />
+    <ClInclude Include="proto\onnx\core\graph\schema_registry.h" />
+    <ClInclude Include="proto\onnx\core\graph\tensorutils.h" />
+    <ClInclude Include="proto\onnx\core\graph\utils.h" />
+    <ClInclude Include="proto\onnx\core\inc\ml_status.h" />
+    <ClInclude Include="proto\onnx\core\inc\op_kernel_author.h" />
+    <ClInclude Include="proto\onnx\core\inc\op_kernel_author_helper.h" />
     <ClInclude Include="proto\onnx\ONNX.h" />
     <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
+    <ClInclude Include="proto\onnx\onnx\checker.h" />
+    <ClInclude Include="proto\onnx\onnx\common\stl_backports.h" />
+    <ClInclude Include="proto\onnx\onnx\defs\data_type_utils.h" />
+    <ClInclude Include="proto\onnx\onnx\defs\schema.h" />
+    <ClInclude Include="proto\onnx\onnx\defs\shape_inference.h" />
+    <ClInclude Include="proto\onnx\onnx\onnx-operators_pb.h" />
+    <ClInclude Include="proto\onnx\onnx\onnx_pb.h" />
+    <ClInclude Include="proto\onnx\onnx\proto_utils.h" />
+    <ClInclude Include="proto\onnx\onnx\string_utils.h" />
     <ClInclude Include="proto\onnx\Operators.h" />
     <ClInclude Include="proto\onnx\RNNHelper.h" />
     <ClInclude Include="Serialization.h" />
@@ -222,28 +247,35 @@
     <ClCompile Include="PrimitiveFunction.cpp" />
     <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="proto\onnx\CNTKToONNX.cpp" />
-    <ClCompile Include="proto\onnx\core\constants.cpp" />
-    <ClCompile Include="proto\onnx\core\graph.cpp" />
-    <ClCompile Include="proto\onnx\core\model.cpp" />
-    <ClCompile Include="proto\onnx\core\op.cpp" />
-    <ClCompile Include="proto\onnx\core\opsignature.cpp" />
-    <ClCompile Include="proto\onnx\core\shape_inference.cpp" />
-    <ClCompile Include="proto\onnx\core\status.cpp" />
-    <ClCompile Include="proto\onnx\core\tensorutils.cpp" />
-    <ClCompile Include="proto\onnx\core\utils.cpp" />
-    <ClCompile Include="proto\onnx\defs\activation\defs.cpp" />
-    <ClCompile Include="proto\onnx\defs\generator\defs.cpp" />
-    <ClCompile Include="proto\onnx\defs\logical\defs.cpp" />
-    <ClCompile Include="proto\onnx\defs\math\defs.cpp" />
-    <ClCompile Include="proto\onnx\defs\nn\defs.cpp" />
-    <ClCompile Include="proto\onnx\defs\reduction\defs.cpp" />
-    <ClCompile Include="proto\onnx\defs\rnn\defs.cpp" />
-    <ClCompile Include="proto\onnx\defs\tensor\defs.cpp" />
-    <ClCompile Include="proto\onnx\defs\traditionalml\defs.cpp" />
+    <ClCompile Include="proto\onnx\core\common\logging\capture.cpp" />
+    <ClCompile Include="proto\onnx\core\common\logging\logging.cpp" />
+    <ClCompile Include="proto\onnx\core\common\status.cpp" />
+    <ClCompile Include="proto\onnx\core\graph\graph.cpp" />
+    <ClCompile Include="proto\onnx\core\graph\graph_transformer.cpp" />
+    <ClCompile Include="proto\onnx\core\graph\model.cpp" />
+    <ClCompile Include="proto\onnx\core\graph\op.cpp" />
+    <ClCompile Include="proto\onnx\core\graph\tensorutils.cpp" />
     <ClCompile Include="proto\onnx\ONNX.cpp" />
     <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
+    <ClCompile Include="proto\onnx\onnx\checker.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\controlflow\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\data_type_utils.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\experiments\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\generator\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\logical\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\math\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\math\old.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\nn\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\nn\old.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\reduction\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\rnn\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\rnn\old.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\schema.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\tensor\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\tensor\old.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\traditionalml\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\protobuf\onnx-ml.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="proto\onnx\Operators.cpp" />
-    <ClCompile Include="proto\onnx\protobuf\onnx-ml.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="proto\onnx\RNNHelper.cpp" />
     <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -262,8 +294,14 @@
   </ItemGroup>
   <ItemGroup>
     <Proto Include="proto\CNTK.proto" />
-    <Proto Include="proto\onnx\protobuf\onnx-ml.proto" />
     <Proto Include="tensorboard\tensorboard.proto" />
+    <Proto Include="proto\onnx\onnx\protobuf\onnx-ml.proto" />
+    <Proto Include="proto\onnx\onnx\protobuf\onnx-operators-ml.proto" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="proto\onnx\onnx\protobuf\onnx-operators-ml.pb.cc.VS_wrapper.cpp">
+      <FileType>Document</FileType>
+    </ClCompile>
   </ItemGroup>
   <Target Name="ProtoGen" Inputs="@(Proto)" Outputs="@(Proto->'%(RelativeDir)%(Filename).pb.cc')">
     <Message Text="Compiling %(Proto.Identity)" />

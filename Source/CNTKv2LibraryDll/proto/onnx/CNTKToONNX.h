@@ -17,7 +17,6 @@ const std::string CNTK_ONNX_PRODUCER_VERSION = CNTK_VERSION;
 const std::string CNTK_ONNX_PRODUCER_VERSION = MACRO_TO_STRING(CNTK_VERSION);
 #endif
 
-
 namespace ONNXIR
 {
     class Model;
