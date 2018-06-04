@@ -95,8 +95,8 @@ public:
     void init_properties(int batchSize)
     {
         this->num_ = batchSize;
-        this->group_ = 1; // TODO: CNTK support group?
-        // Check ComputeOutputShape
+        this->group_ = m_geometry->Groups() > 1 ? static_cast<int>(m_geometry->Groups()) : 1;
+
         if (m_geometry->InputShape().GetRank() == 3)
         {
             ImageDimensions inT(m_geometry->InputShape(), m_imageLayout);
