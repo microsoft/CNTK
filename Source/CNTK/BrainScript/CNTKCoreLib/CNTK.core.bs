@@ -377,6 +377,7 @@ ReduceMax               = CNTK2.ReduceMax
 
 Round                   = CNTK2.Round
 Sigmoid                 = CNTK2.Sigmoid
+StraightThrough         = CNTK2.StraightThrough
 
 ##############################################################################
 # ComputationNodes
@@ -494,6 +495,7 @@ CNTK2 = [
     Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+    StraightThrough(_, tag='') = new ComputationNode [ operation = 'StraightThrough' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the

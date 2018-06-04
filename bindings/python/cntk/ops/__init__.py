@@ -1437,6 +1437,31 @@ def leaky_relu(x, alpha = 0.01, name=''):
     return leaky_re_lu(x, alpha, name)
 
 @typemap
+def straight_through(x, name=''):
+    '''
+    element-wise binarization node using the straight through estimator
+
+    Example:
+        >>> # create (1,3) matrix 
+        >>> data = np.asarray([[-3, 4, -2]], dtype=np.float32)
+        >>> x = C.input_variable((3))
+        >>> C.straightthrough(x).eval({x:data})
+        array([[-1., 1., -1.]], dtype=float32)
+
+    Args:
+        inputs: one input tensor
+        name (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.cntk_py import straight_through
+    x = sanitize_input(x)
+    return straight_through(x, name) # C++ projection expects inputs as a list
+
+
+@typemap
 def param_relu(alpha, x, name=''):
     '''
     Parametric rectified linear operation. Computes the element-wise parameteric rectified linear

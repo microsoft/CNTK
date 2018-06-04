@@ -378,6 +378,7 @@ namespace CNTK
                         case PrimitiveOpType::LabelsToGraph:
                         case PrimitiveOpType::StopGradient:
                         case PrimitiveOpType::ELU:
+                        case PrimitiveOpType::StraightThrough:
                         case PrimitiveOpType::StableSigmoid:
                         case PrimitiveOpType::ConstantOp:
                         case PrimitiveOpType::Cast:

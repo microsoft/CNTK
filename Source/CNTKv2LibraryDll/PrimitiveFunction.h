@@ -119,6 +119,7 @@ namespace CNTK
         {PrimitiveOpType::Cast, L"Cast" },
         { PrimitiveOpType::EyeLikeOp, L"EyeLikeOp" },
         { PrimitiveOpType::CustomProxyOp, L"CustomProxyOp" },
+        {PrimitiveOpType::StraightThrough, L"StraightThrough"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -838,7 +839,8 @@ namespace CNTK
         // Version 19: Add TopK
         // Version 20: Add squeeze, expand dims, zeros like, ones like
         // Version 21: Add EyeLikeOp
-        static const size_t s_serializationVersion = 21;
+        // Version 22: Add StraightThrough
+        static const size_t s_serializationVersion = 22;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

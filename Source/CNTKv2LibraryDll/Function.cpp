@@ -2742,6 +2742,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
     }
 
+    FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::StraightThrough, operand, Dictionary(), name);
+    }
+
     FunctionPtr SELU(const Variable& operand, double gamma, double alpha, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
