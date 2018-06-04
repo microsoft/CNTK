@@ -66,40 +66,54 @@ namespace CNTK {
         vector<char> buffer(4);
 
         // Validate file label
-        assert(reader.TryReadBinaryChunk(3, buffer.data()));
+        assert(reader.TryReadBinarySegment(3, buffer.data()));
         std::string mlfLabel(buffer.data(),3);
         assert(mlfLabel == MLF_BIN_LABEL);
 
         //Validate MLF format version
-        assert(reader.TryReadBinaryChunk(sizeof(short), buffer.data()));
+        assert(reader.TryReadBinarySegment(sizeof(short), buffer.data()));
         short* pModelVersion = (short*)buffer.data();
         assert(*pModelVersion == MODEL_VERSION);
 
+        auto sequenceStartOffset = reader.GetFileOffset();
+
         // Iterate over the bin MLF
-        while (reader.TryReadBinaryChunk(sizeof(uint), buffer.data()))
+        while (reader.TryReadBinarySegment(sizeof(uint), buffer.data()))
         {
+            
             uint uttrKey = *(uint*)buffer.data();
             auto uttrId = m_corpus->KeyToId(std::to_string(uttrKey));
+            fprintf(stderr, "Reading: %zu\n", uttrId);
 
-            auto sequenceStartOffset = reader.GetFileOffset();
-
+            uint32_t uttrFrameCount = 0;
             // Read size of this uttrs
-            assert(reader.TryReadBinaryChunk(sizeof(ushort), buffer.data()));
+            assert(reader.TryReadBinarySegment(sizeof(ushort), buffer.data()));
             ushort uttrSamplesCount = *(ushort*)buffer.data();
 
-            // sample count, senone/count pairs
-            size_t uttrSize = sizeof(ushort) + uttrSamplesCount * 2 * sizeof(ushort);
+            //fprintf(stderr, "uttrSamplesCount: %zu\n", uttrSamplesCount);
+
+            for (size_t k = 0;k < uttrSamplesCount;k++) {
+                assert(reader.TryReadBinarySegment(sizeof(ushort), buffer.data()));
+                assert(reader.TryReadBinarySegment(sizeof(ushort), buffer.data()));
+                ushort stateCount = *(ushort*)buffer.data();
+                uttrFrameCount += stateCount;
+            }
+            fprintf(stderr, "uttrFrameCount: %lu\n", uttrFrameCount);
+
+            // uttrid, sample count, senone/count pairs
+            size_t uttrSize = sizeof(uint) + sizeof(ushort) + uttrSamplesCount * 2 * sizeof(ushort);
 
             IndexedSequence sequence;
             sequence.SetKey(uttrId)
-                        .SetNumberOfSamples(uttrSamplesCount)
+                        .SetNumberOfSamples(uttrFrameCount)
                         .SetOffset(sequenceStartOffset)
                         .SetSize(uttrSize);
             index->AddSequence(sequence);
              
-            sequenceStartOffset += uttrSize;
+            sequenceStartOffset = reader.GetFileOffset();
+            fprintf(stderr, "sequenceStartOffset: %zu\n", sequenceStartOffset);
                     
-            reader.SetFileOffset(sequenceStartOffset);
+           // reader.SetFileOffset(sequenceStartOffset);
         }
     }
 

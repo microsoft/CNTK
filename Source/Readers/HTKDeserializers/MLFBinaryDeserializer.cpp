@@ -130,6 +130,12 @@ public:
         vector<MLFFrameRange> utterance;
 
         auto start = m_buffer.data() + sequence.OffsetInChunk();
+
+        // Read uttid
+        uint uttrId = *(uint*)start;
+        start += sizeof(uint);
+        assert(uttrId == sequence.m_key);
+
         ushort stateCount = *(ushort*)start;
         utterance.resize(stateCount);
         start += sizeof(ushort);
