@@ -8,7 +8,6 @@
 #include "MLFBinaryIndexBuilder.h"
 #include "MLFUtils.h"
 #include "ReaderUtil.h"
-#include "assert.h"
 
 namespace CNTK {
 
@@ -66,42 +65,33 @@ namespace CNTK {
         vector<char> buffer(4);
 
         // Validate file label
-        assert(reader.TryReadBinarySegment(3, buffer.data()));
+        reader.TryReadBinarySegment(3, buffer.data());
         std::string mlfLabel(buffer.data(),3);
-        assert(mlfLabel == MLF_BIN_LABEL);
+        if (mlfLabel != MLF_BIN_LABEL)
+            RuntimeError("MLFBinaryIndexBuilder: MLF binary file is malformed.");
 
         //Validate MLF format version
-        assert(reader.TryReadBinarySegment(sizeof(short), buffer.data()));
+        reader.TryReadBinarySegment(sizeof(short), buffer.data());
         short* pModelVersion = (short*)buffer.data();
-        assert(*pModelVersion == MODEL_VERSION);
-
-        auto sequenceStartOffset = reader.GetFileOffset();
-
+        if (*pModelVersion != MODEL_VERSION)
+            RuntimeError("MLFBinaryIndexBuilder: not supported version of MLF binary file.");
         // Iterate over the bin MLF
         while (reader.TryReadBinarySegment(sizeof(uint), buffer.data()))
         {
-            
             uint uttrKey = *(uint*)buffer.data();
             auto uttrId = m_corpus->KeyToId(std::to_string(uttrKey));
-            fprintf(stderr, "Reading: %zu\n", uttrId);
 
-            uint32_t uttrFrameCount = 0;
+            reader.TryReadBinarySegment(sizeof(uint), buffer.data());
+            uint uttrFrameCount = *(uint*)buffer.data();
+
+            auto sequenceStartOffset = reader.GetFileOffset();
+
             // Read size of this uttrs
-            assert(reader.TryReadBinarySegment(sizeof(ushort), buffer.data()));
+            reader.TryReadBinarySegment(sizeof(ushort), buffer.data());
             ushort uttrSamplesCount = *(ushort*)buffer.data();
 
-            //fprintf(stderr, "uttrSamplesCount: %zu\n", uttrSamplesCount);
-
-            for (size_t k = 0;k < uttrSamplesCount;k++) {
-                assert(reader.TryReadBinarySegment(sizeof(ushort), buffer.data()));
-                assert(reader.TryReadBinarySegment(sizeof(ushort), buffer.data()));
-                ushort stateCount = *(ushort*)buffer.data();
-                uttrFrameCount += stateCount;
-            }
-            fprintf(stderr, "uttrFrameCount: %lu\n", uttrFrameCount);
-
-            // uttrid, sample count, senone/count pairs
-            size_t uttrSize = sizeof(uint) + sizeof(ushort) + uttrSamplesCount * 2 * sizeof(ushort);
+            // sample count, senone/count pairs
+            size_t uttrSize =sizeof(ushort) + uttrSamplesCount * 2 * sizeof(ushort);
 
             IndexedSequence sequence;
             sequence.SetKey(uttrId)
@@ -109,11 +99,7 @@ namespace CNTK {
                         .SetOffset(sequenceStartOffset)
                         .SetSize(uttrSize);
             index->AddSequence(sequence);
-             
-            sequenceStartOffset = reader.GetFileOffset();
-            fprintf(stderr, "sequenceStartOffset: %zu\n", sequenceStartOffset);
-                    
-           // reader.SetFileOffset(sequenceStartOffset);
+            reader.SetFileOffset(reader.GetFileOffset() + uttrSamplesCount * 2 * sizeof(ushort));
         }
     }
 
