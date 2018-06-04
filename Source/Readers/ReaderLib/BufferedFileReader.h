@@ -67,7 +67,7 @@ public:
     // string reference (omitting the trailing EOL). Returns false upon reaching the EOF.
     bool TryReadLine(std::string& str);
 
-    bool TryReadBinaryChunk(size_t size, char* data);
+    bool TryReadBinarySegment(size_t size, char* data);
     
     // Returns the current line number.
     inline size_t CurrentLineNumber() const { return m_lineNumber; }

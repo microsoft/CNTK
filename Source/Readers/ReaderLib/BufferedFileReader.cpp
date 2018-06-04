@@ -92,7 +92,7 @@ namespace CNTK {
         return result;
     }
     
-    bool BufferedFileReader::TryReadBinaryChunk(size_t size, char* data)
+    bool BufferedFileReader::TryReadBinarySegment(size_t size, char* data)
     {
         if (m_done)
             return false;
