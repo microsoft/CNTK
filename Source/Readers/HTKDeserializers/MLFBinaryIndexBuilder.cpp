@@ -42,6 +42,33 @@ namespace CNTK {
         return wss.str();
     }
 
+    bool readUtteranceLabel(short modelVersion, BufferedFileReader& reader, vector<char>& buffer, std::string& out)
+    {
+        bool result = false;
+        if (modelVersion == 1)
+        {
+            result = reader.TryReadBinarySegment(sizeof(uint), buffer.data());
+            uint uttrKey = *(uint*)buffer.data();
+            out = std::to_string(uttrKey);
+        }
+        else if (modelVersion == 2)
+        {
+            result = reader.TryReadBinarySegment(sizeof(ushort), buffer.data());
+            ushort uttLabelLength = *(ushort*)buffer.data();
+            if (uttLabelLength > MAX_UTTERANCE_LABEL_LENGTH)
+                RuntimeError("Utterance label length is greater than limit.");
+
+            result = result && reader.TryReadBinarySegment(sizeof(char) * uttLabelLength, buffer.data());
+            out = std::string(buffer.data()).substr(0, uttLabelLength);
+        }
+        else 
+        {
+            RuntimeError("Not supported MLF model version.");
+        }
+
+        return result;
+    }
+
     // Building an index of the MLF file:
     //     MLF file -> MLF Header [MLF Utterance]+
     //     MLF Utterance -> Key EOL [Frame Range EOL]+ "." EOL
@@ -62,7 +89,7 @@ namespace CNTK {
    
         if (!m_corpus)
             RuntimeError("MLFBinaryIndexBuilder: corpus descriptor was not specified.");
-        vector<char> buffer(4);
+        vector<char> buffer(MAX_UTTERANCE_LABEL_LENGTH);
 
         // Validate file label
         reader.TryReadBinarySegment(3, buffer.data());
@@ -72,14 +99,13 @@ namespace CNTK {
 
         //Validate MLF format version
         reader.TryReadBinarySegment(sizeof(short), buffer.data());
-        short* pModelVersion = (short*)buffer.data();
-        if (*pModelVersion != MODEL_VERSION)
-            RuntimeError("MLFBinaryIndexBuilder: not supported version of MLF binary file.");
+        short modelVersion = *(short*)buffer.data();
+
         // Iterate over the bin MLF
-        while (reader.TryReadBinarySegment(sizeof(uint), buffer.data()))
+        string uttrKey;
+        while (readUtteranceLabel(modelVersion, reader, buffer, uttrKey))
         {
-            uint uttrKey = *(uint*)buffer.data();
-            auto uttrId = m_corpus->KeyToId(std::to_string(uttrKey));
+            auto uttrId = m_corpus->KeyToId(uttrKey);
 
             reader.TryReadBinarySegment(sizeof(uint), buffer.data());
             uint uttrFrameCount = *(uint*)buffer.data();
