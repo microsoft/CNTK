@@ -17,8 +17,8 @@ namespace CNTK {
     const uint MAX_UTT_ID = std::numeric_limits<uint>::max();
     const uint MAX_SENONE_COUNT = std::numeric_limits<ushort>::max();
     const std::string MLF_BIN_LABEL = "MLF";
-    const short MODEL_VERSION = 1;
     const size_t SENONE_ZEROS = 100000;
+    const ushort MAX_UTTERANCE_LABEL_LENGTH = 256;
 
     class MLFBinaryIndexBuilder : public IndexBuilder
     {
